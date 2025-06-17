@@ -7,6 +7,7 @@ namespace MultiSocks.Aries.Messages
     {
         public abstract string _Name { get; }
         public string PlaintextData = string.Empty;
+        public uint ErrorCode { get; set; }
         public Dictionary<string, string?> OutputCache = new();
         private Dictionary<string, string?> InputCache = new();
 
@@ -131,8 +132,7 @@ namespace MultiSocks.Aries.Messages
             MemoryStream mem = new();
             BinaryWriter io = new(mem);
             io.Write(Encoding.ASCII.GetBytes(_Name));
-            if (!plaintext)
-                io.Write(0); //4 byte pad
+            io.Write(new byte[] { (byte)(ErrorCode >> 24), (byte)(ErrorCode >> 16), (byte)(ErrorCode >> 8), (byte)ErrorCode });
             io.Write(new byte[] { (byte)(size >> 24), (byte)(size >> 16), (byte)(size >> 8), (byte)size });
             io.Write(Encoding.ASCII.GetBytes(body));
 

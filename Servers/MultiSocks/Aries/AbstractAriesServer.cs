@@ -141,7 +141,7 @@ namespace MultiSocks.Aries
             }
         }
 
-        public virtual void HandleMessage(string name, byte[] data, AriesClient client)
+        public virtual void HandleMessage(string name, uint errorCode, byte[] data, AriesClient client)
         {
             try
             {
