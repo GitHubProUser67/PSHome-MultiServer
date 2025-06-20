@@ -5,16 +5,25 @@ WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
-COPY ["Servers/SSFWServer/", "SSFWServer/"]
-RUN dotnet restore "SSFWServer/SSFWServer_docker.csproj"
+COPY ["Servers/SSFWServer/SSFWServer.csproj", "Servers/SSFWServer/"]
+COPY ["AuxiliaryServices/HomeTools/HomeTools.csproj", "AuxiliaryServices/HomeTools/"]
+COPY ["BackendServices/NetworkLibrary/NetworkLibrary.csproj", "BackendServices/NetworkLibrary/"]
+COPY ["BackendServices/CastleLibrary/CastleLibrary.csproj", "BackendServices/CastleLibrary/"]
+COPY ["BackendServices/CustomLogger/CustomLogger.csproj", "BackendServices/CustomLogger/"]
+COPY ["BackendServices/EndianTools/EndianTools.csproj", "BackendServices/EndianTools/"]
+COPY ["BackendServices/CompressionLibrary/CompressionLibrary.csproj", "BackendServices/CompressionLibrary/"]
+COPY ["AuxiliaryServices/WebAPIService/WebAPIService.csproj", "AuxiliaryServices/WebAPIService/"]
+COPY ["BackendServices/NetCoreServer/NetCoreServer.csproj", "BackendServices/NetCoreServer/"]
+COPY ["BackendServices/TechnitiumLibrary.Net.Firewall/TechnitiumLibrary.Net.Firewall.csproj", "BackendServices/TechnitiumLibrary.Net.Firewall/"]
+RUN dotnet restore "Servers/SSFWServer/SSFWServer.csproj"
 COPY . .
-WORKDIR "/src/SSFWServer"
-RUN dotnet build "SSFWServer_docker.csproj" -c Release -o /app/build
+WORKDIR "/src/Servers/SSFWServer"
+RUN dotnet build "SSFWServer.csproj" -c Release -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "SSFWServer_docker.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "SSFWServer.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "SSFWServer_docker.dll"]
+ENTRYPOINT ["dotnet", "SSFWServer.dll"]

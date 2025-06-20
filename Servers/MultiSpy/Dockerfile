@@ -5,10 +5,17 @@ WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
-COPY ["Servers/MultiSpy/MultiSpy.csproj", "MultiSpy/"]
+COPY ["Servers/MultiSpy/MultiSpy.csproj", "Servers/MultiSpy/"]
+COPY ["AuxiliaryServices/MultiSpyService/MultiSpyService.csproj", "AuxiliaryServices/MultiSpyService/"]
+COPY ["BackendServices/NetworkLibrary/NetworkLibrary.csproj", "BackendServices/NetworkLibrary/"]
+COPY ["BackendServices/CastleLibrary/CastleLibrary.csproj", "BackendServices/CastleLibrary/"]
+COPY ["BackendServices/CustomLogger/CustomLogger.csproj", "BackendServices/CustomLogger/"]
+COPY ["BackendServices/EndianTools/EndianTools.csproj", "BackendServices/EndianTools/"]
+COPY ["BackendServices/CompressionLibrary/CompressionLibrary.csproj", "BackendServices/CompressionLibrary/"]
+COPY ["BackendServices/TechnitiumLibrary.Net.Firewall/TechnitiumLibrary.Net.Firewall.csproj", "BackendServices/TechnitiumLibrary.Net.Firewall/"]
 RUN dotnet restore "Servers/MultiSpy/MultiSpy.csproj"
 COPY . .
-WORKDIR "/src/MultiSpy"
+WORKDIR "/src/Servers/MultiSpy"
 RUN dotnet build "MultiSpy.csproj" -c Release -o /app/build
 
 FROM build AS publish

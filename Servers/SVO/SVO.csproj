@@ -38,7 +38,7 @@
   
   <Target Name="ModifyDepsFile" AfterTargets="AfterBuild">
     <!-- Path to the JSON file you want to modify -->
-    <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath $(OutDir)$(ProjectName).deps.json -targetFramework $(TargetFramework)" />
+    <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath $(OutDir)$(ProjectName).deps.json -targetFramework $(TargetFramework)" />
   </Target>
 
 </Project>
