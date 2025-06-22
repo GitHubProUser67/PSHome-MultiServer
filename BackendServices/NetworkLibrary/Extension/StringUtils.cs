@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
-
 #if NETCOREAPP3_0_OR_GREATER
 using System.Runtime.Intrinsics.X86;
 #else
@@ -25,6 +24,20 @@ namespace NetworkLibrary.Extension
         [DllImport("kernel32.dll")]
         private static extern bool IsProcessorFeaturePresent(int processorFeature);
 #endif
+
+        public static string GenerateRandomString(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            Random random = new Random();
+            StringBuilder stringBuilder = new StringBuilder();
+
+            for (int i = 0; i < length; i++)
+            {
+                stringBuilder.Append(chars[random.Next(chars.Length)]);
+            }
+
+            return stringBuilder.ToString();
+        }
 
         public static string ChopOffBefore(this string s, string Before)
         {
@@ -96,11 +109,6 @@ namespace NetworkLibrary.Extension
             return Encoding.UTF8.GetString(bytes);
         }
 
-        public static double Eval(this string expression, string filter = null)
-        {
-            return Convert.ToDouble(new DataTable().Compute(expression, filter));
-        }
-
         /// <summary>
         /// Convert a hex-formatted string to byte array.
         /// <para>Convertir une représentation hexadécimal en tableau de bytes.</para>
@@ -114,14 +122,25 @@ namespace NetworkLibrary.Extension
             if (cleanedRequest.Length % 2 == 1)
                 throw new Exception("[StringUtils] - HexStringToByteArray - The binary key cannot have an odd number of digits");
 
+            byte optMode = 0;
+            if (IsLowerCaseHexOnly(cleanedRequest))
+                optMode = 2;
+            else if (IsUpperCaseHexOnly(cleanedRequest))
+                optMode = 1;
+
             byte[] arr = new byte[cleanedRequest.Length >> 1];
 
             for (int i = 0; i < cleanedRequest.Length >> 1; ++i)
             {
-                arr[i] = (byte)((cleanedRequest[i << 1].GetHexVal() << 4) + cleanedRequest[(i << 1) + 1].GetHexVal());
+                arr[i] = (byte)((cleanedRequest[i << 1].GetHexVal(optMode) << 4) + cleanedRequest[(i << 1) + 1].GetHexVal(optMode));
             }
 
             return arr;
+        }
+
+        public static double Eval(this string expression, string filter = null)
+        {
+            return Convert.ToDouble(new DataTable().Compute(expression, filter));
         }
 
         /// <summary>
@@ -143,6 +162,23 @@ namespace NetworkLibrary.Extension
             }
 
             return byteArray;
+        }
+
+        /// <summary>
+        /// Converts a Wireshark string dump into a byte array.
+        /// </summary>
+        /// <param name="wiresharkDump">The Wireshark dump as a string</param>
+        /// <returns>Byte array constructed from the dump</returns>
+        public static byte[] WiresharkDumpToByteArray(string wiresharkDump)
+        {
+            List<byte> byteList = new List<byte>();
+
+            foreach (Match match in new Regex(@"\b[0-9a-fA-F]{2}\b").Matches(wiresharkDump))
+            {
+                byteList.Add(Convert.ToByte(match.Value, 16));
+            }
+
+            return byteList.ToArray();
         }
 
         /// <summary>
@@ -258,7 +294,7 @@ namespace NetworkLibrary.Extension
             {
                 byte[] bytes = Encoding.UTF8.GetBytes(jsonText);
 
-                if (Windows.Win32API.IsWindows)
+                if (Microsoft.Win32API.IsWindows)
                 {
                     fixed (byte* ptr = bytes) // pin bytes while we are working on them
                         using (ParsedJsonN doc = SimdJsonN.ParseJson(ptr, bytes.Length))
@@ -308,7 +344,7 @@ namespace NetworkLibrary.Extension
                 }
             }
 #else
-            if (Windows.Win32API.IsWindows && IsProcessorFeaturePresent(PF_AVX2_INSTRUCTIONS_AVAILABLE))
+            if (Win32API.IsWindows && IsProcessorFeaturePresent(PF_AVX2_INSTRUCTIONS_AVAILABLE))
             {
                 byte[] bytes = Encoding.UTF8.GetBytes(jsonText);
                 fixed (byte* ptr = bytes) // pin bytes while we are working on them
@@ -338,7 +374,7 @@ namespace NetworkLibrary.Extension
             {
                 try
                 {
-                    using (var doc = JsonDocument.Parse(jsonText))
+                    using (JsonDocument doc = JsonDocument.Parse(jsonText))
                         FindPropertyValuesNested(doc.RootElement, result, property);
                 }
                 catch 
@@ -373,6 +409,26 @@ namespace NetworkLibrary.Extension
                     FindPropertyValuesNested(nestedArrayItem, output, property);
                 }
             }
+        }
+
+        private static bool IsLowerCaseHexOnly(string str)
+        {
+            foreach (char c in str)
+            {
+                if (char.IsDigit(c)) continue;
+                if (!char.IsLower(c)) return false;
+            }
+            return true;
+        }
+
+        private static bool IsUpperCaseHexOnly(string str)
+        {
+            foreach (char c in str)
+            {
+                if (char.IsDigit(c)) continue;
+                if (!char.IsUpper(c)) return false;
+            }
+            return true;
         }
     }
 }

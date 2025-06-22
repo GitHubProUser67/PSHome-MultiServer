@@ -1,4 +1,5 @@
 using EndianTools;
+using HomeTools.Crypto;
 using NetworkLibrary.Extension;
 using System;
 using System.Collections;
@@ -190,7 +191,7 @@ namespace HomeTools.BARFramework
                 binaryWriter.Write(tocentry.IV);
             }
             binaryWriter.Close();
-            return Crypto.LIBSECURE.InitiateAESBuffer(memoryStream.ToArray(), key.IsBase64().Item2, IV, "CTR") ?? Array.Empty<byte>();
+            return ToolsImplementation.ProcessCrypt_DecryptAsync(memoryStream.ToArray(), key.IsBase64().Item2, IV, 2).Result ?? Array.Empty<byte>();
         }
 
         public uint Version1Size

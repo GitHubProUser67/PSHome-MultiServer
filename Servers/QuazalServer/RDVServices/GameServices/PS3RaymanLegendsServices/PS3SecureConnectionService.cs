@@ -4,9 +4,8 @@ using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.DDL;
 using QuazalServer.QNetZ.Interfaces;
 using QuazalServer.QNetZ.Connection;
-using System.Text;
-using QuazalServer.RDVServices.RMC;
 using NetworkLibrary.Extension;
+using XI5;
 
 namespace QuazalServer.RDVServices.GameServices.PS3RaymanLegendsServices
 {
@@ -16,6 +15,8 @@ namespace QuazalServer.RDVServices.GameServices.PS3RaymanLegendsServices
 	[RMCService((ushort)RMCProtocolId.SecureConnectionService)]
     public class PS3SecureConnectionService : RMCServiceBase
     {
+        private static readonly byte[] TicketVersion = new byte[] { 0x21, 0x01, 0x00, 0x00 };
+
         [RMCMethod(1)]
         public RMCResult? Register(List<string> vecMyURLs)
         {
@@ -56,25 +57,9 @@ namespace QuazalServer.RDVServices.GameServices.PS3RaymanLegendsServices
         [RMCMethod(4)]
         public RMCResult RegisterEx(ICollection<StationURL> vecMyURLs, AnyData<SonyNPTicket> hCustomData)
         {
-            if (hCustomData.data != null && hCustomData.data.ticket != null && hCustomData.data.ticket.data != null && Context != null && Context.Client.PlayerInfo != null)
+            if (hCustomData.data != null && hCustomData.data.ticket != null && hCustomData.data.ticket.data != null && hCustomData.data.ticket.length > 188 && Context != null && Context.Client.PlayerInfo != null)
             {
-                // Extract the desired portion of the binary data
-                byte[] extractedData = new byte[0x63 - 0x54 + 1];
-
-                // Copy it
-                //Array.Copy(hCustomData.data.ticket.data, 0x50, extractedData, 0, extractedData.Length);
-
-                // Convert 0x00 bytes to 0x48 so FileSystem can support it
-                for (int i = 0; i < extractedData.Length; i++)
-                {
-                    if (extractedData[i] == 0x00)
-                        extractedData[i] = 0x48;
-                }
-
-                if (ByteUtils.FindBytePattern(hCustomData.data.ticket.data, new byte[] { 0x52, 0x50, 0x43, 0x4E }, 184) != -1)
-                    LoggerAccessor.LogInfo($"[PS3SecureConnectionService] : User {Encoding.ASCII.GetString(extractedData).Replace("H", string.Empty)} logged in and is on RPCN");
-                else
-                    LoggerAccessor.LogInfo($"[PS3SecureConnectionService] : User {Encoding.ASCII.GetString(extractedData).Replace("H", string.Empty)} logged in and is on PSN");
+                const string RPCNSigner = "RPCN";
 
                 // change address
                 StationURL rdvConnectionUrl = new(vecMyURLs.Last().ToString())
@@ -83,17 +68,52 @@ namespace QuazalServer.RDVServices.GameServices.PS3RaymanLegendsServices
                 };
                 rdvConnectionUrl["type"] = 3;
 
-                RegisterResult result = new()
+                // get ticket
+                XI5Ticket ticket = XI5Ticket.ReadFromBytes(ByteUtils.CombineByteArray(TicketVersion, hCustomData.data.ticket.data));
+
+                // setup username
+                string username = ticket.Username;
+
+                // invalid ticket
+                if (!ticket.Valid)
+                {
+                    // log to console
+                    LoggerAccessor.LogWarn($"[PS3SecureConnectionService] - User {username} tried to alter their ticket data");
+
+                    return Result(new RegisterResult()
+                    {
+                        pidConnectionID = Context.Client.PlayerInfo.RVCID,
+                        retval = (int)ErrorCode.Core_AccessDenied,
+                        urlPublic = rdvConnectionUrl
+                    });
+                }
+
+                // RPCN
+                if (ticket.SignatureIdentifier == RPCNSigner)
+                    LoggerAccessor.LogInfo($"[PS3SecureConnectionService] - User {username} connected at: {DateTime.Now} and is on RPCN");
+                else if (username.EndsWith($"@{RPCNSigner}"))
+                {
+                    LoggerAccessor.LogError($"[PS3SecureConnectionService] - User {username} was caught using a RPCN suffix while not on it!");
+
+                    return Result(new RegisterResult()
+                    {
+                        pidConnectionID = Context.Client.PlayerInfo.RVCID,
+                        retval = (int)ErrorCode.Core_AccessDenied,
+                        urlPublic = rdvConnectionUrl
+                    });
+                }
+                else
+                    LoggerAccessor.LogInfo($"[PS3SecureConnectionService] - User {username} connected at: {DateTime.Now} and is on PSN");
+
+                return Result(new RegisterResult()
                 {
                     pidConnectionID = Context.Client.PlayerInfo.RVCID,
                     retval = (int)ErrorCode.Core_NoError,
                     urlPublic = rdvConnectionUrl
-                };
-
-                return Result(result);
+                });
             }
             else
-                LoggerAccessor.LogError($"[RMC Secure] Error: Unknown Custom Data class {hCustomData.className}");
+                LoggerAccessor.LogError($"[RMC Secure] Error: Invalid XI5 Request received or not connected");
 
             return Error((int)ErrorCode.RendezVous_ClassNotFound);
         }

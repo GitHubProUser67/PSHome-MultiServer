@@ -119,10 +119,10 @@
         private string _PfxCertFilename;
         private string _PfxPassword;
 
-        private List<Task> TcpClientTasks = new();
+        private List<Task> TcpClientTasks = new List<Task>();
 
         private readonly int AwaiterTimeoutInMS = 500;
-        private int MaxConcurrentListeners = 10;
+        private int MaxConcurrentListeners;
 
         private X509Certificate2 _SslCertificate = null;
         private X509Certificate2Collection _SslCertificateCollection = null;
@@ -187,7 +187,7 @@
         /// <param name="listenerIp">The listener IP address or hostname.</param>
         /// <param name="port">The TCP port on which to listen.</param> 
         /// <param name="certificate">SSL certificate.</param>
-        public CavemanTcpServer(string listenerIp, int port, X509Certificate2 certificate = null)
+        public CavemanTcpServer(string listenerIp, int port, int MaxConcurrentListeners = 10, X509Certificate2 certificate = null)
         {
             if (String.IsNullOrEmpty(listenerIp)) throw new ArgumentNullException(nameof(listenerIp));
             if (port < 0) throw new ArgumentException("Port must be zero or greater.");
@@ -211,6 +211,8 @@
 
                 _ListenerIp = listenerIp;
             }
+
+            this.MaxConcurrentListeners = MaxConcurrentListeners;
 
             _Port = port;
             _IsListening = false;
@@ -1322,7 +1324,12 @@
 
                     #region Check-for-Maximum-Connections
 
-                    if (!_IsListening && (_Clients.Count >= _Settings.MaxConnections))
+                    int currentClientCount;
+
+                    lock (_ClientsLock)
+                        currentClientCount = _Clients.Count;
+
+                    if (!_IsListening && (currentClientCount >= _Settings.MaxConnections))
                     {
                         Task.Delay(100, _Token).Wait();
                         continue;
@@ -1337,7 +1344,11 @@
 
                     while (TcpClientTasks.Count < MaxConcurrentListeners) //Maximum number of concurrent listeners
                     {
-                        TcpClientTasks.Add(_Listener.AcceptTcpClientAsync(_Token).AsTask().ContinueWith(t => 
+#if NET6_0_OR_GREATER
+                        TcpClientTasks.Add(_Listener.AcceptTcpClientAsync(_Token).AsTask().ContinueWith(t =>
+#else
+                        TcpClientTasks.Add(_Listener.AcceptTcpClientAsync().ContinueWith(t => 
+#endif
                         {
                             ClientMetadata client = null;
 
@@ -1382,7 +1393,12 @@
 
                                 #region Check-for-Maximum-Connections
 
-                                if (_Clients.Count >= _Settings.MaxConnections)
+                                bool hasReachedMaxClients;
+
+                                lock (_ClientsLock)
+                                    hasReachedMaxClients = _Clients.Count >= _Settings.MaxConnections;
+
+                                if (hasReachedMaxClients)
                                 {
                                     Logger?.Invoke($"{_Header}maximum connections {_Settings.MaxConnections} met (currently {_Clients.Count} connections), pausing");
                                     _IsListening = false;
@@ -1448,16 +1464,11 @@
                 if (_Ssl)
                 {
                     if (_Settings.AcceptInvalidCertificates)
-                    {
                         client.SslStream = new SslStream(client.NetworkStream, false, new RemoteCertificateValidationCallback(AcceptCertificate));
-                    }
                     else
-                    {
                         client.SslStream = new SslStream(client.NetworkStream, false);
-                    }
 
-                    bool success = await StartTls(client).ConfigureAwait(false);
-                    if (!success)
+                    if (!await StartTls(client).ConfigureAwait(false))
                     {
                         RemoveAndDisposeClient(client.Guid);
                         return;

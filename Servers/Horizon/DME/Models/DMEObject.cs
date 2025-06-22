@@ -1,5 +1,4 @@
 using DotNetty.Transport.Channels;
-using Horizon.LIBRARY.Common;
 using Horizon.RT.Common;
 using Horizon.RT.Models;
 using Horizon.LIBRARY.Pipeline.Udp;
@@ -8,6 +7,7 @@ using System.Net;
 using CustomLogger;
 using Horizon.RT.Cryptography;
 using NetworkLibrary.Extension;
+using Horizon.MUM.Models;
 
 namespace Horizon.DME.Models
 {
@@ -21,6 +21,8 @@ namespace Horizon.DME.Models
         /// 
         /// </summary>
         public UdpServer? Udp { get; protected set; } = null;
+
+        public ClientObject mumClient { get; protected set; }
 
         /// <summary>
         /// 
@@ -135,7 +137,7 @@ namespace Horizon.DME.Models
         public virtual bool IsConnectingGracePeriod => !TimeAuthenticated.HasValue && (DateTimeUtils.GetHighPrecisionUtcTime() - TimeCreated).TotalSeconds < DmeClass.GetAppSettingsOrDefault(ApplicationId).ClientTimeoutSeconds;
         public virtual bool Timedout => !IsConnectingGracePeriod && ((DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds > DmeClass.GetAppSettingsOrDefault(ApplicationId).ClientTimeoutSeconds);
         public virtual bool LongTimedout => (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds > DmeClass.GetAppSettingsOrDefault(ApplicationId).ClientLongTimeoutSeconds;
-        public virtual bool IsConnected => !Disconnected && Tcp != null && Tcp.Active && !LongTimedout;
+        public virtual bool IsConnected => !Disconnected && Tcp != null && Tcp.Active && mumClient.IsInGame && !LongTimedout;
         public virtual bool IsAuthenticated => TimeAuthenticated.HasValue;
         public virtual bool Destroy => Disconnected || (!IsConnected && !IsConnectingGracePeriod);
         public virtual bool IsDestroyed { get; protected set; } = false;
@@ -147,7 +149,7 @@ namespace Horizon.DME.Models
         private DateTime _lastServerEchoValue = DateTime.UnixEpoch;
         private DateTime? _lastForceDisconnect = null;
 
-        public DMEObject(string sessionKey, World dmeWorld, int dmeId)
+        public DMEObject(string sessionKey, World dmeWorld, int dmeId, ClientObject mumClient)
         {
             SessionKey = sessionKey;
 
@@ -159,11 +161,13 @@ namespace Horizon.DME.Models
             byte[] tokenBuf = new byte[12];
             RNG.NextBytes(tokenBuf);
             Token = Convert.ToBase64String(tokenBuf);
-			
+
+            this.mumClient = mumClient;
+
             UtcLastMessageReceived = UtcLastServerEchoSent = DateTimeUtils.GetHighPrecisionUtcTime();
         }
 
-        public DMEObject(string sessionKey)
+        public DMEObject(string sessionKey, ClientObject mumClient)
         {
             SessionKey = sessionKey;
 
@@ -173,6 +177,8 @@ namespace Horizon.DME.Models
             byte[] tokenBuf = new byte[12];
             RNG.NextBytes(tokenBuf);
             Token = Convert.ToBase64String(tokenBuf);
+
+            this.mumClient = mumClient;
 
             UtcLastMessageReceived = UtcLastServerEchoSent = DateTimeUtils.GetHighPrecisionUtcTime();
         }

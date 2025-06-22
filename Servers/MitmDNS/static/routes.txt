@@ -89,6 +89,7 @@ nDreams.blueprint.s3.amazonaws.com,Redirect,IP
 
 ;Digital Leisure
 root.pshomecasino.com,Redirect,IP
+sub3.pshomecasino.com,Redirect,IP
 
 ;PremiumAgency
 download.scej-online.jp,Redirect,IP
@@ -360,6 +361,7 @@ api.singstar.online.scee.com,Redirect,IP
 
 ;Eden
 orb.testdriveunlimited.com,Redirect,IP
+ps3-proxy*.testdriveunlimited2.com,Redirect,IP
 
 ;Quazal
 tdulive.quazal.net,Redirect,IP

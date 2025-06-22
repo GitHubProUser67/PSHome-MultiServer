@@ -262,7 +262,7 @@ namespace WebAPIService.THQ
                                                     {
                                                         int points = (int)double.Parse(data.GetParameterValue("points"), CultureInfo.InvariantCulture);
                                                         int setnum = (int)double.Parse(data.GetParameterValue("setnum"), CultureInfo.InvariantCulture);
-                                                        int[] cards = data.GetParameterValue("cards").Split("-").Select(card => (int)double.Parse(card, CultureInfo.InvariantCulture)).ToArray();
+                                                        int[] cards = data.GetParameterValue("cards").Split('-').Select(cardx => (int)double.Parse(cardx, CultureInfo.InvariantCulture)).ToArray();
 
                                                         string elementName;
                                                         XElement xml;
@@ -326,31 +326,31 @@ namespace WebAPIService.THQ
                                                         _ = Task.Run(() => {
                                                             string otherProfileDirectoryPath = $"{apiPath}/HOME_THQ/{otherid}/";
                                                             string otherProfilePath = $"{otherProfileDirectoryPath}data.xml";
-                                                            string elementName;
-                                                            XElement xml;
+                                                            string elementName1;
+                                                            XElement xml1;
 
                                                             Directory.CreateDirectory(otherProfileDirectoryPath);
 
                                                             if (File.Exists(otherProfilePath))
-                                                                xml = XElement.Parse($"{rootXmlElement}{otherProfilePath}{rootXmlElementTerm}");
+                                                                xml1 = XElement.Parse($"{rootXmlElement}{otherProfilePath}{rootXmlElementTerm}");
                                                             else
-                                                                xml = XElement.Parse($"{rootXmlElement}{UFCData}{rootXmlElementTerm}");
+                                                                xml1 = XElement.Parse($"{rootXmlElement}{UFCData}{rootXmlElementTerm}");
 
-                                                            XElement parserElement;
+                                                            XElement parserElement1;
 
                                                             if (cardnum < 10)
-                                                                elementName = card00 + cardnum;
+                                                                elementName1 = card00 + cardnum;
                                                             else if (cardnum < 100)
-                                                                elementName = card0 + cardnum;
+                                                                elementName1 = card0 + cardnum;
                                                             else
-                                                                elementName = card + cardnum;
+                                                                elementName1 = card + cardnum;
 
-                                                            parserElement = xml.Element(elementName);
+                                                            parserElement1 = xml1.Element(elementName1);
 
-                                                            if (parserElement != null && int.TryParse(parserElement.Value, out int numOfCardObtained))
-                                                                parserElement.Value = (numOfCardObtained + (subfunc == "gift2cards" ? 2 : 1)).ToString();
+                                                            if (parserElement1 != null && int.TryParse(parserElement1.Value, out int numOfCardObtained1))
+                                                                parserElement1.Value = (numOfCardObtained1 + (subfunc == "gift2cards" ? 2 : 1)).ToString();
 
-                                                            File.WriteAllText(otherProfilePath, xml.ToString().Replace(rootXmlElement, string.Empty).Replace(rootXmlElementTerm, string.Empty)
+                                                            File.WriteAllText(otherProfilePath, xml1.ToString().Replace(rootXmlElement, string.Empty).Replace(rootXmlElementTerm, string.Empty)
                                                             .Replace(" ", string.Empty).Replace(Environment.NewLine, string.Empty));
                                                         });
 

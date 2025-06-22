@@ -15,14 +15,14 @@ namespace HomeTools.CDS
                 switch (cdnMode)
                 {
                     case 2:
-                        return LIBSECURE.InitiateBlowfishBuffer(buffer, ToolsImplementation.HDKBlowfishKey,
-                            BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(ToolsImplementation.Sha1toNonce(digest)) : ToolsImplementation.Sha1toNonce(digest)), "CTR"); // Always big endian.
+                        return ToolsImplementation.ProcessCrypt_DecryptAsync(buffer, ToolsImplementation.HDKBlowfishKey,
+                            BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(ToolsImplementation.Sha1toNonce(digest)) : ToolsImplementation.Sha1toNonce(digest)), 1).Result; // Always big endian.
                     case 1:
-                        return LIBSECURE.InitiateBlowfishBuffer(buffer, ToolsImplementation.BetaBlowfishKey,
-                            BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(ToolsImplementation.Sha1toNonce(digest)) : ToolsImplementation.Sha1toNonce(digest)), "CTR"); // Always big endian.
+                        return ToolsImplementation.ProcessCrypt_DecryptAsync(buffer, ToolsImplementation.BetaBlowfishKey,
+                            BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(ToolsImplementation.Sha1toNonce(digest)) : ToolsImplementation.Sha1toNonce(digest)), 1).Result; // Always big endian.
                     default:
-                        return LIBSECURE.InitiateBlowfishBuffer(buffer, ToolsImplementation.BlowfishKey,
-                            BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(ToolsImplementation.Sha1toNonce(digest)) : ToolsImplementation.Sha1toNonce(digest)), "CTR"); // Always big endian.
+                        return ToolsImplementation.ProcessCrypt_DecryptAsync(buffer, ToolsImplementation.BlowfishKey,
+                            BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(ToolsImplementation.Sha1toNonce(digest)) : ToolsImplementation.Sha1toNonce(digest)), 1).Result; // Always big endian.
                 }
             }
 
@@ -33,7 +33,7 @@ namespace HomeTools.CDS
         {
             if (sha1String.Length % 2 != 0)
             {
-                LoggerAccessor.LogError("Input string length must be even.");
+                LoggerAccessor.LogError("[CDSProcess] - ConvertSha1StringToByteArray: Input string length must be even.");
                 return null;
             }
 
@@ -41,8 +41,7 @@ namespace HomeTools.CDS
 
             for (int i = 0; i < sha1String.Length; i += 2)
             {
-                string hexByte = sha1String.Substring(i, 2);
-                byteArray[i / 2] = Convert.ToByte(hexByte, 16);
+                byteArray[i / 2] = Convert.ToByte(sha1String.Substring(i, 2), 16);
             }
 
             return byteArray;

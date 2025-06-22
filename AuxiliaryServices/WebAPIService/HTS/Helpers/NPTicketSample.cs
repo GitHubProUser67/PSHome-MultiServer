@@ -5,6 +5,7 @@ using System.IO;
 using System;
 using NetworkLibrary.Extension;
 using NetHasher;
+using XI5;
 
 namespace WebAPIService.HTS.Helpers
 {
@@ -50,78 +51,48 @@ namespace WebAPIService.HTS.Helpers
 
             if (ticketData != null)
             {
+                const string RPCNSigner = "RPCN";
+
                 #region Region
                 // Extract part of the byte array from the specific index
-                byte[] ticketRegion = new byte[] { 0x00, 0x00, 0x00, 0x00 };
+                byte[] ticketRegion = new byte[4];
                 Array.Copy(ticketData, 0x78, ticketRegion, 0, 4);
                 #endregion
 
-                #region Domain
-                // Extract part of the byte array from the specific index
-                byte[] ticketDomain = new byte[] { 0x00, 0x00, 0x00, 0x00 };
-                Array.Copy(ticketData, 0x80, ticketDomain, 0, 4);
-                #endregion
+                // get ticket
+                XI5Ticket ticket = XI5Ticket.ReadFromBytes(ticketData);
 
-                #region ServiceId
-                byte serviceIdLen = (byte)ticketData.GetValue(0x87);
-                // Extract part of the byte array from the specific index
-                byte[] servId = new byte[serviceIdLen];
-                Array.Copy(ticketData, 0x88, servId, 0, serviceIdLen);
-                #endregion
+                // setup username
+                string username = ticket.Username;
 
-                // Extract the desired portion of the binary data
-                byte[] userOnlineId = new byte[0x63 - 0x54 + 1];
-
-                // Copy it
-                Array.Copy(ticketData, 0x54, userOnlineId, 0, userOnlineId.Length);
-
-                // Convert 0x00 bytes to 0x20 so we pad as space.
-                for (int i = 0; i < userOnlineId.Length; i++)
+                // invalid ticket
+                if (!ticket.Valid)
                 {
-                    if (userOnlineId[i] == 0x00)
-                        userOnlineId[i] = 0x20;
+                    // log to console
+                    LoggerAccessor.LogWarn($"[HTS] - User {username} tried to alter their ticket data");
+
+                    return null;
                 }
 
-                if (ByteUtils.FindBytePattern(ticketData, new byte[] { 0x52, 0x50, 0x43, 0x4E }, 184) != -1)
+                // RPCN
+                if (ticket.SignatureIdentifier == RPCNSigner)
+                    LoggerAccessor.LogInfo($"[HTS] - User {username} connected at: {DateTime.Now} and is on RPCN");
+                else if (username.EndsWith($"@{RPCNSigner}"))
                 {
-                    LoggerAccessor.LogInfo($"[HTS] : User {Encoding.ASCII.GetString(userOnlineId).Replace("H", string.Empty)} logged in and is on RPCN");
+                    LoggerAccessor.LogError($"[HTS] - User {username} was caught using a RPCN suffix while not on it!");
 
-                    // Convert the modified data to a string
-                    resultString = Encoding.ASCII.GetString(userOnlineId) + "RPCN";
-
-                    // Calculate the MD5 hash of the result
-                    string hash = DotNetHasher.ComputeMD5String(Encoding.ASCII.GetBytes(resultString + "HtTeStSamPLe@$!"));
-
-                    // Trim the hash to a specific length
-                    hash = hash.Substring(0, 10);
-
-                    // Append the trimmed hash to the result
-                    resultString += hash;
+                    return null;
                 }
                 else
-                {
-                    LoggerAccessor.LogInfo($"[HTS] : {Encoding.ASCII.GetString(userOnlineId).Replace("H", string.Empty)} logged in and is on PSN");
-
-                    // Convert the modified data to a string
-                    resultString = Encoding.ASCII.GetString(userOnlineId);
-
-                    // Calculate the MD5 hash of the result
-                    string hash = DotNetHasher.ComputeMD5String(Encoding.ASCII.GetBytes(resultString + "HtTeStSamPLe@$!"));
-
-                    // Trim the hash to a specific length
-                    hash = hash.Substring(0, 14);
-
-                    // Append the trimmed hash to the result
-                    resultString += hash;
-                }
+                    LoggerAccessor.LogInfo($"[HTS] - User {username} connected at: {DateTime.Now} and is on PSN");
 
                 return $@"<xml>
-                        <npID>{Encoding.UTF8.GetString(userOnlineId)}</npID>
+                        <npID>{username}</npID>
                         <Environment></Environment>
                         <issuerID></issuerID>
                         <Issued></Issued>
                         <Expires></Expires>
-                        <ServiceID>{Encoding.UTF8.GetString(servId)}</ServiceID>
+                        <ServiceID>{ticket.ServiceId}</ServiceID>
                         <Region>{Encoding.UTF8.GetString(ticketRegion)}</Region>
                         <Language></Language>
                         <entitlements></entitlements>

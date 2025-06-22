@@ -10,7 +10,9 @@ using Horizon.LIBRARY.Database.Entities;
 using Horizon.LIBRARY.Database.Models;
 using HorizonService.LIBRARY.Database.Simulated;
 using System.Text;
+#if !NETFRAMEWORK
 using System.Web;
+#endif
 using System.Net;
 using System.IO;
 using System.Collections.Generic;
@@ -330,7 +332,11 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
+#if NETFRAMEWORK
+                    name = Uri.EscapeDataString(name);
+#else
                     name = HttpUtility.UrlEncode(name);
+#endif
                     string route = $"Account/searchAccountByName?AccountName={name}&AppId={appId}&ForceRpcnCheck={forceRpcnCheck}";
                     result = await GetDbAsync<AccountDTO>(route);
                 }
@@ -803,7 +809,11 @@ namespace Horizon.LIBRARY.Database
                     result = false;
                 else
                 {
+#if NETFRAMEWORK
+                    accountName = Uri.EscapeDataString(accountName);
+#else
                     accountName = HttpUtility.UrlEncode(accountName);
+#endif
                     string route = $"Account/getAccountNameMacIsBanned?AccountName={accountName}&AppId={appId}";
                     result = await GetDbAsync<bool>(route);
                 }
@@ -834,7 +844,11 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
+#if NETFRAMEWORK
+                    accountName = Uri.EscapeDataString(accountName);
+#else
                     accountName = HttpUtility.UrlEncode(accountName);
+#endif
                     string route = $"Account/checkAccountIsBanned?AccountName={accountName}&AppId={appId}";
                     result = await GetDbAsync<bool>(route);
                 }
@@ -910,7 +924,7 @@ namespace Horizon.LIBRARY.Database
             return result;
         }
 
-        #endregion
+#endregion
 
         #region Buddy / Ignored
 
@@ -2618,7 +2632,7 @@ namespace Horizon.LIBRARY.Database
 
                     invite.ResponseMessage = message;
                     invite.ResponseStatus = responseStatus;
-                    invite.ResponseTime = (int)DateTimeUtils.GetUnixTime();
+                    invite.ResponseTime = (int)DateTimeUtils.GetUnixTimeU32();
 
                     // handle accept
                     if (responseStatus == 1)
@@ -2637,7 +2651,7 @@ namespace Horizon.LIBRARY.Database
                         InvitationId = inviteId,
                         Response = responseStatus,
                         ResponseMessage = message,
-                        ResponseTime = (int)DateTimeUtils.GetUnixTime()
+                        ResponseTime = (int)DateTimeUtils.GetUnixTimeU32()
                     })).IsSuccessStatusCode;
                 }
             }

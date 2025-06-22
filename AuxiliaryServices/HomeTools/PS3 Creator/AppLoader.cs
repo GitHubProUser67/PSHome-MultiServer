@@ -1,4 +1,5 @@
 ﻿using CustomLogger;
+using NetworkLibrary.Extension;
 using System;
 
 namespace HomeTools.PS3_Creator
@@ -25,9 +26,9 @@ namespace HomeTools.PS3_Creator
             setDecryptor(cryptoFlag);
             setHash(hashFlag);
 #if DEBUG
-            LoggerAccessor.LogInfo("[PS3 Creator] - AppLoader - ERK:  " + ConversionUtils.getHexString(calculatedKey));
-            LoggerAccessor.LogInfo("[PS3 Creator] - AppLoader - IV:   " + ConversionUtils.getHexString(calculatedIV));
-            LoggerAccessor.LogInfo("[PS3 Creator] - AppLoader - HASH: " + ConversionUtils.getHexString(calculatedHash));
+            LoggerAccessor.LogInfo("[PS3 Creator] - AppLoader - ERK:  " + calculatedKey.ToHexString());
+            LoggerAccessor.LogInfo("[PS3 Creator] - AppLoader - IV:   " + calculatedIV.ToHexString());
+            LoggerAccessor.LogInfo("[PS3 Creator] - AppLoader - HASH: " + calculatedHash.ToHexString());
 #endif
             dec.doInit(calculatedKey, calculatedIV);
             hash.doInit(calculatedHash);

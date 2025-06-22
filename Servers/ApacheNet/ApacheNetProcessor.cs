@@ -44,20 +44,23 @@ using WatsonWebserver;
 using NetworkLibrary.Extension;
 using DNS.Protocol;
 using ApacheNet.RouteHandlers;
+using DNSLibrary;
+using XI5;
 
 namespace ApacheNet
 {
     public partial class ApacheNetProcessor
     {
         public const string allowedMethods = "OPTIONS, HEAD, GET, PUT, POST, DELETE, PATCH, PROPFIND";
-        private static string serverRevision = Assembly.GetExecutingAssembly().GetName().Name + " " + Assembly.GetExecutingAssembly().GetName().Version;
-
         public static List<string> allowedOrigins = new List<string>() { };
 
         public static AdGuardFilterChecker adChecker = new AdGuardFilterChecker();
         public static DanPollockChecker danChecker = new DanPollockChecker();
 
         public readonly static List<Route> Routes = new();
+
+        private static string serverRevision = Assembly.GetExecutingAssembly().GetName().Name + " " + Assembly.GetExecutingAssembly().GetName().Version;
+        private static readonly UdpClientService udpClientService = new UdpClientService();
 
         private WebserverBase? _Server;
         private readonly ushort port;
@@ -110,7 +113,7 @@ namespace ApacheNet
 
         #endregion
 
-        public ApacheNetProcessor(string certpath, string certpass, string ip, ushort port, bool secure)
+        public ApacheNetProcessor(string certpath, string certpass, string ip, ushort port, bool secure, int MaxConcurrentListeners)
         {
             bool useHttpSys = ApacheNetServerConfiguration.PreferNativeHttpListenerEngine;
             this.port = port;
@@ -120,7 +123,6 @@ namespace ApacheNet
                 Port = port,
             };
             settings.IO.StreamBufferSize = ApacheNetServerConfiguration.BufferSize;
-            settings.IO.MaxRequests = 50000;
             settings.IO.EnableKeepAlive = ApacheNetServerConfiguration.EnableKeepAlive;
             if (secure)
             {
@@ -133,7 +135,7 @@ namespace ApacheNet
             {
                 if (useHttpSys)
                 {
-                    _Server = new NativeWebserver(settings, DefaultRoute);
+                    _Server = new NativeWebserver(settings, DefaultRoute, MaxConcurrentListeners);
 #if !DEBUG
                     ((NativeWebserver)_Server).LogResponseSentMsg = false;
 #endif
@@ -141,7 +143,7 @@ namespace ApacheNet
                 }
                 else
                 {
-                    _Server = new Webserver(settings, DefaultRoute);
+                    _Server = new Webserver(settings, DefaultRoute, MaxConcurrentListeners);
 #if !DEBUG
                     ((Webserver)_Server).LogResponseSentMsg = false;
 #endif
@@ -149,7 +151,7 @@ namespace ApacheNet
                 }
             }
             else
-                _Server = new WebserverLite(settings, DefaultRoute);
+                _Server = new WebserverLite(settings, DefaultRoute, MaxConcurrentListeners);
 
             StartServer();
         }
@@ -181,7 +183,7 @@ namespace ApacheNet
             string IpToBan = ctx.Request.Source.IpAddress;
             if (!"::1".Equals(IpToBan) && !"127.0.0.1".Equals(IpToBan) && !"localhost".Equals(IpToBan, StringComparison.InvariantCultureIgnoreCase))
             {
-                if (!string.IsNullOrEmpty(IpToBan) && ApacheNetServerConfiguration.BannedIPs != null && ApacheNetServerConfiguration.BannedIPs.Contains(IpToBan))
+                if (!string.IsNullOrEmpty(IpToBan) && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs != null && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs.Contains(IpToBan))
                 {
                     LoggerAccessor.LogError($"[SECURITY] - Client - {ctx.Request.Source.IpAddress}:{ctx.Request.Source.Port} Requested the HTTPS server while being banned!");
                     ctx.Response.StatusCode = 403;
@@ -211,9 +213,10 @@ namespace ApacheNet
                 _Server.Routes.AuthenticateRequest = AuthorizeConnection;
                 _Server.Events.ExceptionEncountered += ExceptionEncountered;
                 _Server.Events.Logger = LoggerAccessor.LogInfo;
+#if DEBUG
                 _Server.Settings.Debug.Responses = true;
                 _Server.Settings.Debug.Routing = true;
-
+#endif
                 PostAuthParameters.Build(_Server);
 
                 _Server.Start();
@@ -471,8 +474,17 @@ namespace ApacheNet
                             try
                             {
                                 object? objReturn = plugin.ProcessPluginMessage(ctx);
-                                if (objReturn != null && objReturn is bool v)
-                                    sent = v;
+                                if (objReturn != null)
+                                {
+                                    if (objReturn is bool v)
+                                        sent = v;
+                                    else if (objReturn is Task<object?> t)
+                                    {
+                                        object? taskResult = await t.ConfigureAwait(false);
+                                        if (taskResult != null && taskResult is bool v0)
+                                            sent = v0;
+                                    }
+                                }
                                 if (sent)
                                     break;
                             }
@@ -543,7 +555,7 @@ namespace ApacheNet
                                             HTTPProcessor.GetMimeType(Path.GetExtension(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}"), ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor._mimeTypes), noCompressCacheControl);
                                     else
                                     {
-                                        FileStream stream = await FileSystemUtils.TryOpen(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}");
+                                        FileStream stream = FileSystemUtils.TryOpen(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}");
 
                                         if (stream == null)
                                         {
@@ -647,7 +659,7 @@ namespace ApacheNet
 
                                 LoggerAccessor.LogInfo($"[{loggerprefix}] - {clientip}:{clientport} Identified a EA Demangler method : {absolutepath}");
 
-                                (string?, string?)? res = DemanglerClass.ProcessDemanglerRequest(request.Query.Elements.ToDictionary(), absolutepath, clientip, request.DataAsBytes);
+                                (string?, string?)? res = DemanglerClass.ProcessDemanglerRequest(request.Query.Elements.ToDictionary(), ServerIP, absolutepath, request.DataAsBytes);
                                 bool hasResult = res != null;
                                 if (!hasResult)
                                     statusCode = HttpStatusCode.InternalServerError;
@@ -674,23 +686,30 @@ namespace ApacheNet
                             {
                                 LoggerAccessor.LogInfo($"[HTTPS] - {clientip}:{clientport} Requested a VEEMEE method : {absolutepath}");
 
-                                (byte[]?, string?) res = new VEEMEEClass(request.Method.ToString(), absolutepath).ProcessRequest(request.ContentLength > 0 ? request.DataAsBytes : null, request.ContentType, apiRootPath);
-                                if (res.Item1 == null || res.Item1.Length == 0)
-                                    statusCode = HttpStatusCode.InternalServerError;
+                                if (((absolutepath.EndsWith(".php") && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder)) || absolutepath.EndsWith(".xml")) && (File.Exists(filePath) || File.Exists(apiRootPathWithURIPath)))
+                                {
+                                    // Let main server handler handle it.
+                                }
                                 else
                                 {
-                                    response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                    statusCode = HttpStatusCode.OK;
+                                    (byte[]?, string?) res = new VEEMEEClass(request.Method.ToString(), absolutepath).ProcessRequest(request.ContentLength > 0 ? request.DataAsBytes : null, request.ContentType, apiRootPath);
+                                    if (res.Item1 == null || res.Item1.Length == 0)
+                                        statusCode = HttpStatusCode.InternalServerError;
+                                    else
+                                    {
+                                        response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                                        statusCode = HttpStatusCode.OK;
+                                    }
+                                    response.StatusCode = (int)statusCode;
+                                    if (!string.IsNullOrEmpty(res.Item2))
+                                        response.ContentType = res.Item2;
+                                    else
+                                        response.ContentType = "text/plain";
+                                    if (response.ChunkedTransfer)
+                                        sent = await response.SendChunk(res.Item1, true);
+                                    else
+                                        sent = await response.Send(res.Item1);
                                 }
-                                response.StatusCode = (int)statusCode;
-                                if (!string.IsNullOrEmpty(res.Item2))
-                                    response.ContentType = res.Item2;
-                                else
-                                    response.ContentType = "text/plain";
-                                if (response.ChunkedTransfer)
-                                    sent = await response.SendChunk(res.Item1, true);
-                                else
-                                    sent = await response.Send(res.Item1);
                             }
                             #endregion
 
@@ -702,24 +721,32 @@ namespace ApacheNet
                             || absolutepath.Contains("/gateway/")))
                             {
                                 LoggerAccessor.LogInfo($"[{loggerprefix}] - {clientip}:{clientport} Requested a NDREAMS method : {absolutepath}");
-                                string? res = new NDREAMSClass(CurrentDate, request.Method.ToString(), apiRootPathWithURIPath, $"{(secure ? "https" : "http")}://nDreams-multiserver-cdn/", $"{(secure ? "https" : "http")}://{Host}{request.Url.RawWithQuery}", absolutepath,
-                                    apiRootPath, Host).ProcessRequest(request.Query.Elements.ToDictionary(), request.DataAsBytes, request.ContentType);
-                                if (string.IsNullOrEmpty(res))
+
+                                if (absolutepath.EndsWith(".php") && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder) && (File.Exists(filePath) || File.Exists(apiRootPathWithURIPath)))
                                 {
-                                    response.ContentType = "text/plain";
-                                    statusCode = HttpStatusCode.InternalServerError;
+                                    // Let main server handler handle it.
                                 }
                                 else
                                 {
-                                    response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                    response.ContentType = "text/xml";
-                                    statusCode = HttpStatusCode.OK;
+                                    string? res = new NDREAMSClass(CurrentDate, request.Method.ToString(), apiRootPathWithURIPath, $"{(secure ? "https" : "http")}://nDreams-multiserver-cdn/", $"{(secure ? "https" : "http")}://{Host}{request.Url.RawWithQuery}", absolutepath,
+                                         apiRootPath, Host).ProcessRequest(request.Query.Elements.ToDictionary(), request.DataAsBytes, request.ContentType);
+                                    if (string.IsNullOrEmpty(res))
+                                    {
+                                        response.ContentType = "text/plain";
+                                        statusCode = HttpStatusCode.InternalServerError;
+                                    }
+                                    else
+                                    {
+                                        response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                                        response.ContentType = "text/xml";
+                                        statusCode = HttpStatusCode.OK;
+                                    }
+                                    response.StatusCode = (int)statusCode;
+                                    if (response.ChunkedTransfer)
+                                        sent = await response.SendChunk(!string.IsNullOrEmpty(res) ? Encoding.UTF8.GetBytes(res) : null, true);
+                                    else
+                                        sent = await response.Send(res);
                                 }
-                                response.StatusCode = (int)statusCode;
-                                if (response.ChunkedTransfer)
-                                    sent = await response.SendChunk(!string.IsNullOrEmpty(res) ? Encoding.UTF8.GetBytes(res) : null, true);
-                                else
-                                    sent = await response.Send(res);
                             }
                             #endregion
 
@@ -728,23 +755,30 @@ namespace ApacheNet
                             {
                                 LoggerAccessor.LogInfo($"[{loggerprefix}] - {clientip}:{clientport} Requested a HELLFIRE method : {absolutepath}");
 
-                                string res = new HELLFIREClass(request.Method.ToString(), HTTPProcessor.ProcessQueryString(absolutepath), apiRootPath).ProcessRequest(request.DataAsBytes, request.ContentType, secure);
-                                if (string.IsNullOrEmpty(res))
+                                if (absolutepath.EndsWith(".php") && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder) && (File.Exists(filePath) || File.Exists(apiRootPathWithURIPath)))
                                 {
-                                    response.ContentType = "text/plain";
-                                    statusCode = HttpStatusCode.InternalServerError;
+                                    // Let main server handler handle it.
                                 }
                                 else
                                 {
-                                    response.ContentType = "application/xml;charset=UTF-8";
-                                    response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                    statusCode = HttpStatusCode.OK;
+                                    string res = new HELLFIREClass(request.Method.ToString(), HTTPProcessor.ProcessQueryString(absolutepath), apiRootPath).ProcessRequest(request.DataAsBytes, request.ContentType, secure);
+                                    if (string.IsNullOrEmpty(res))
+                                    {
+                                        response.ContentType = "text/plain";
+                                        statusCode = HttpStatusCode.InternalServerError;
+                                    }
+                                    else
+                                    {
+                                        response.ContentType = "application/xml;charset=UTF-8";
+                                        response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                                        statusCode = HttpStatusCode.OK;
+                                    }
+                                    response.StatusCode = (int)statusCode;
+                                    if (response.ChunkedTransfer)
+                                        sent = await response.SendChunk(!string.IsNullOrEmpty(res) ? Encoding.UTF8.GetBytes(res) : null, true);
+                                    else
+                                        sent = await response.Send(res);
                                 }
-                                response.StatusCode = (int)statusCode;
-                                if (response.ChunkedTransfer)
-                                    sent = await response.SendChunk(!string.IsNullOrEmpty(res) ? Encoding.UTF8.GetBytes(res) : null, true);
-                                else
-                                    sent = await response.Send(res);
                             }
                             #endregion
 
@@ -895,33 +929,40 @@ namespace ApacheNet
                             {
                                 LoggerAccessor.LogInfo($"[{loggerprefix}] - {clientip}:{clientport} Identified a JUGGERNAUT method : {absolutepath}");
 
-                                string? res = null;
-                                JUGGERNAUTClass juggernaut = new(request.Method.ToString(), absolutepath);
-                                if (request.ContentLength > 0)
-                                    res = juggernaut.ProcessRequest(HTTPProcessor.GetQueryParameters(fullurl), apiRootPath, request.DataAsBytes, request.ContentType);
-                                else
-                                    res = juggernaut.ProcessRequest(HTTPProcessor.GetQueryParameters(fullurl), apiRootPath);
-
-                                if (res == null)
-                                    statusCode = HttpStatusCode.InternalServerError;
-                                else if (res == string.Empty)
+                                if (absolutepath.EndsWith(".php") && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder) && (File.Exists(filePath) || File.Exists(apiRootPathWithURIPath)))
                                 {
-                                    response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                    response.ContentType = "text/plain";
-                                    statusCode = HttpStatusCode.OK;
+                                    // Let main server handler handle it.
                                 }
                                 else
                                 {
-                                    response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                    response.ContentType = "text/xml";
-                                    statusCode = HttpStatusCode.OK;
-                                }
+                                    string? res = null;
+                                    JUGGERNAUTClass juggernaut = new(request.Method.ToString(), absolutepath);
+                                    if (request.ContentLength > 0)
+                                        res = juggernaut.ProcessRequest(HTTPProcessor.GetQueryParameters(fullurl), apiRootPath, request.DataAsBytes, request.ContentType);
+                                    else
+                                        res = juggernaut.ProcessRequest(HTTPProcessor.GetQueryParameters(fullurl), apiRootPath);
 
-                                response.StatusCode = (int)statusCode;
-                                if (response.ChunkedTransfer)
-                                    sent = await response.SendChunk(res != null ? Encoding.UTF8.GetBytes(res) : null, true);
-                                else
-                                    sent = await response.Send(res);
+                                    if (res == null)
+                                        statusCode = HttpStatusCode.InternalServerError;
+                                    else if (res == string.Empty)
+                                    {
+                                        response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                                        response.ContentType = "text/plain";
+                                        statusCode = HttpStatusCode.OK;
+                                    }
+                                    else
+                                    {
+                                        response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                                        response.ContentType = "text/xml";
+                                        statusCode = HttpStatusCode.OK;
+                                    }
+
+                                    response.StatusCode = (int)statusCode;
+                                    if (response.ChunkedTransfer)
+                                        sent = await response.SendChunk(res != null ? Encoding.UTF8.GetBytes(res) : null, true);
+                                    else
+                                        sent = await response.Send(res);
+                                }
                             }
                             #endregion
 
@@ -930,22 +971,29 @@ namespace ApacheNet
                             {
                                 LoggerAccessor.LogInfo($"[{loggerprefix}] - {clientip}:{clientport} Identified a DIGITAL LEISURE Casino method : {absolutepath}");
 
-                                string? res = new DLCasinoClass(request.Method.ToString(), absolutepath, apiRootPath).ProcessRequest(request.Query.Elements.ToDictionary(), request.DataAsBytes, request.ContentType);
-
-                                if (res == null)
-                                    statusCode = HttpStatusCode.InternalServerError;
+                                if (absolutepath.EndsWith(".php") && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder) && (File.Exists(filePath) || File.Exists(apiRootPathWithURIPath)))
+                                {
+                                    // Let main server handler handle it.
+                                }
                                 else
                                 {
-                                    response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                    response.ContentType = "text/xml";
-                                    statusCode = HttpStatusCode.OK;
-                                }
+                                    string? res = new DLCasinoClass(request.Method.ToString(), absolutepath, apiRootPath).ProcessRequest(request.Query.Elements.ToDictionary(), request.DataAsBytes, request.ContentType);
 
-                                response.StatusCode = (int)statusCode;
-                                if (response.ChunkedTransfer)
-                                    sent = await response.SendChunk(res != null ? Encoding.UTF8.GetBytes(res) : null, true);
-                                else
-                                    sent = await response.Send(res);
+                                    if (res == null)
+                                        statusCode = HttpStatusCode.InternalServerError;
+                                    else
+                                    {
+                                        response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                                        response.ContentType = "text/xml";
+                                        statusCode = HttpStatusCode.OK;
+                                    }
+
+                                    response.StatusCode = (int)statusCode;
+                                    if (response.ChunkedTransfer)
+                                        sent = await response.SendChunk(res != null ? Encoding.UTF8.GetBytes(res) : null, true);
+                                    else
+                                        sent = await response.Send(res);
+                                }
                             }
                             #endregion
 
@@ -1013,7 +1061,7 @@ namespace ApacheNet
                             #endregion
 
                             #region UBISOFT API
-                            else if (Host.Contains("api-ubiservices.ubi.com") && request.RetrieveHeaderValue("User-Agent").Contains("UbiServices_SDK_HTTP_Client"))
+                            else if (Host.Contains("api-ubiservices.ubi.com") && request.Useragent.Contains("UbiServices_SDK_HTTP_Client"))
                             {
                                 LoggerAccessor.LogInfo($"[{loggerprefix}] - {clientip}:{clientport} Requested a UBISOFT method : {absolutepath}");
 
@@ -1029,25 +1077,46 @@ namespace ApacheNet
 
                                         if (base64Data.Item1)
                                         {
-                                            byte[] PSNTicket = base64Data.Item2;
+                                            const string RPCNSigner = "RPCN";
 
-                                            // Extract the desired portion of the binary data
-                                            byte[] extractedData = new byte[0x63 - 0x54 + 1];
+                                            // get ticket
+                                            XI5Ticket ticket = XI5Ticket.ReadFromBytes(base64Data.Item2);
 
-                                            // Copy it
-                                            Array.Copy(PSNTicket, 0x54, extractedData, 0, extractedData.Length);
+                                            // setup username
+                                            string username = ticket.Username;
 
-                                            // Convert 0x00 bytes to 0x48 so FileSystem can support it
-                                            for (int i = 0; i < extractedData.Length; i++)
+                                            // invalid ticket
+                                            if (!ticket.Valid)
                                             {
-                                                if (extractedData[i] == 0x00)
-                                                    extractedData[i] = 0x48;
+                                                // log to console
+                                                LoggerAccessor.LogWarn($"[HERMES] - User {username} tried to alter their ticket data");
+
+                                                response.ChunkedTransfer = false;
+                                                statusCode = HttpStatusCode.Forbidden;
+                                                response.StatusCode = (int)statusCode;
+                                                response.ContentType = "text/plain";
+                                                sent = await response.Send();
+
+                                                goto force_abort;
                                             }
 
-                                            if (ByteUtils.FindBytePattern(PSNTicket, new byte[] { 0x52, 0x50, 0x43, 0x4E }, 184) != -1)
-                                                LoggerAccessor.LogInfo($"[HERMES] : User {Encoding.ASCII.GetString(extractedData).Replace("H", string.Empty)} logged in and is on RPCN");
+                                            // RPCN
+                                            if (ticket.SignatureIdentifier == RPCNSigner)
+                                                LoggerAccessor.LogInfo($"[HERMES] - User {username} connected at: {DateTime.Now} and is on RPCN");
+                                            else if (username.EndsWith($"@{RPCNSigner}"))
+                                            {
+                                                LoggerAccessor.LogError($"[HERMES] - User {username} was caught using a RPCN suffix while not on it!");
+
+                                                response.ChunkedTransfer = false;
+                                                statusCode = HttpStatusCode.Forbidden;
+                                                response.StatusCode = (int)statusCode;
+                                                response.ContentType = "text/plain";
+                                                sent = await response.Send();
+
+                                                goto force_abort;
+                                            }
                                             else
-                                                LoggerAccessor.LogInfo($"[HERMES] : {Encoding.ASCII.GetString(extractedData).Replace("H", string.Empty)} logged in and is on PSN");
+                                                LoggerAccessor.LogInfo($"[HERMES] - User {username} connected at: {DateTime.Now} and is on PSN");
                                         }
                                     }
                                     else if (Authorization.StartsWith("Ubi_v1 t="))
@@ -1252,15 +1321,22 @@ namespace ApacheNet
                             #region PSH Central
                             else if (Host == "apps.pshomecentral.net" && absolutepath == "/PrivateRTE/checkAuth.php")
                             {
-                                LoggerAccessor.LogError($"[{loggerprefix}] - {clientip}:{clientport} Requested a PS Home Central method : {absolutepath}");
+                                LoggerAccessor.LogWarn($"[{loggerprefix}] - {clientip}:{clientport} Requested a PS Home Central method : {absolutepath}");
 
-                                statusCode = HttpStatusCode.OK;
-                                response.StatusCode = (int)statusCode;
-                                response.ContentType = "text/plain";
-                                if (response.ChunkedTransfer)
-                                    sent = await response.SendChunk(Encoding.UTF8.GetBytes("false"), true);
+                                if (absolutepath.EndsWith(".php") && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder) && (File.Exists(filePath) || File.Exists(apiRootPathWithURIPath)))
+                                {
+                                    // Let main server handler handle it.
+                                }
                                 else
-                                    sent = await response.Send("false");
+                                {
+                                    statusCode = HttpStatusCode.OK;
+                                    response.StatusCode = (int)statusCode;
+                                    response.ContentType = "text/plain";
+                                    if (response.ChunkedTransfer)
+                                        sent = await response.SendChunk(Encoding.UTF8.GetBytes("false"), true);
+                                    else
+                                        sent = await response.Send("false");
+                                }
                             }
                             #endregion
 
@@ -1396,7 +1472,7 @@ namespace ApacheNet
 
                                                     try
                                                     {
-                                                        byte[] DnsReq = dnsRequestBase64Url.IsBase64().Item2;
+                                                        byte[]? DnsReq = dnsRequestBase64Url.IsBase64().Item2;
                                                         Request Req = Request.FromArray(DnsReq);
 
                                                         if (Req.OperationCode == OperationCode.Query)
@@ -1419,23 +1495,20 @@ namespace ApacheNet
 
                                                                 string? url = null;
 
-                                                                if (fullname.EndsWith("in-addr.arpa") && IPAddress.TryParse(fullname[..^13], out IPAddress? arparuleaddr)) // IPV4 Only.
+                                                                if (fullname.Length > 13 && fullname.EndsWith("in-addr.arpa") && IPAddress.TryParse(fullname[..^13], out IPAddress? arparuleaddr)) // IPV4 Only.
                                                                 {
-                                                                    if (arparuleaddr != null)
+                                                                    if (arparuleaddr != null && arparuleaddr.AddressFamily == AddressFamily.InterNetwork)
                                                                     {
-                                                                        if (arparuleaddr.AddressFamily == AddressFamily.InterNetwork)
-                                                                        {
-                                                                            // Split the IP address into octets
-                                                                            string[] octets = arparuleaddr.ToString().Split('.');
+                                                                        // Split the IP address into octets
+                                                                        string[] octets = arparuleaddr.ToString().Split('.');
 
-                                                                            // Reverse the order of octets
-                                                                            Array.Reverse(octets);
+                                                                        // Reverse the order of octets
+                                                                        Array.Reverse(octets);
 
-                                                                            // Join the octets back together
-                                                                            url = string.Join(".", octets);
+                                                                        // Join the octets back together
+                                                                        url = string.Join(".", octets);
 
-                                                                            treated = true;
-                                                                        }
+                                                                        treated = true;
                                                                     }
                                                                 }
                                                                 else
@@ -1481,9 +1554,25 @@ namespace ApacheNet
                                                                 }
 
                                                                 if (!treated && ApacheNetServerConfiguration.DNSAllowUnsafeRequests)
-                                                                    url = InternetProtocolUtils.GetFirstActiveIPAddress(fullname, ServerIP);
+                                                                {
+                                                                    var udpClient = udpClientService.Dequeue();
+                                                                    try
+                                                                    {
+                                                                        await udpClient.Client.SendAsync(DnsReq, SocketFlags.None);
 
-                                                                if (!string.IsNullOrEmpty(url) && url != "NXDOMAIN")
+                                                                        var res = await udpClient.ReceiveAsync();
+                                                                        DnsReq = res.Buffer;
+                                                                    }
+                                                                    catch
+                                                                    {
+                                                                        DnsReq = null;
+                                                                    }
+                                                                    finally
+                                                                    {
+                                                                        udpClientService.ReturnToQueue(udpClient);
+                                                                    }
+                                                                }
+                                                                else if (!string.IsNullOrEmpty(url) && url != "NXDOMAIN")
                                                                 {
                                                                     List<IPAddress> Ips = new();
 
@@ -1715,7 +1804,7 @@ namespace ApacheNet
                                                         else if (encoding.Contains("deflate"))
                                                         {
                                                             ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                                            movedPayloadBytes = HTTPProcessor.Inflate(movedPayloadBytes);
+                                                            movedPayloadBytes = HTTPProcessor.Deflate(movedPayloadBytes);
                                                         }
                                                     }
                                                     if (response.ChunkedTransfer)
@@ -1751,7 +1840,7 @@ namespace ApacheNet
                                                         else if (encoding.Contains("deflate"))
                                                         {
                                                             ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                                            reportOutputBytes = HTTPProcessor.Inflate(reportOutputBytes);
+                                                            reportOutputBytes = HTTPProcessor.Deflate(reportOutputBytes);
                                                         }
                                                     }
                                                     if (response.ChunkedTransfer)
@@ -1894,9 +1983,14 @@ namespace ApacheNet
                                                 response.StatusCode = (int)statusCode;
                                                 sent = await response.Send();
                                             }
-                                            else if (absolutepath.EndsWith(".php", StringComparison.InvariantCultureIgnoreCase) && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder) && File.Exists(filePath))
+                                            else if (absolutepath.EndsWith(".php", StringComparison.InvariantCultureIgnoreCase) && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder) && (File.Exists(filePath) || File.Exists(apiRootPathWithURIPath)))
                                             {
-                                                var CollectPHP = PHP.ProcessPHPPage(filePath, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, secure);
+                                                (byte[]?, string[][]) CollectPHP;
+                                                bool isOnWWWRoot = File.Exists(filePath);
+                                                if (isOnWWWRoot)
+                                                    CollectPHP = PHP.ProcessPHPPage(filePath, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, secure);
+                                                else
+                                                    CollectPHP = PHP.ProcessPHPPage(apiRootPathWithURIPath, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, secure);
                                                 statusCode = HttpStatusCode.OK;
                                                 if (CollectPHP.Item2 != null)
                                                 {
@@ -2026,7 +2120,7 @@ namespace ApacheNet
                                                             else if (encoding.Contains("deflate"))
                                                             {
                                                                 ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                                                rawDataPayload = HTTPProcessor.Inflate(rawDataPayload);
+                                                                rawDataPayload = HTTPProcessor.Deflate(rawDataPayload);
                                                             }
                                                         }
                                                         if (response.ChunkedTransfer)
@@ -2094,7 +2188,7 @@ namespace ApacheNet
 
                                                 try
                                                 {
-                                                    byte[] DnsReq = request.DataAsBytes;
+                                                    byte[]? DnsReq = request.DataAsBytes;
                                                     Request Req = Request.FromArray(DnsReq);
 
                                                     if (Req.OperationCode == OperationCode.Query)
@@ -2117,23 +2211,20 @@ namespace ApacheNet
 
                                                             string? url = null;
 
-                                                            if (fullname.EndsWith("in-addr.arpa") && IPAddress.TryParse(fullname[..^13], out IPAddress? arparuleaddr)) // IPV4 Only.
+                                                            if (fullname.Length > 13 && fullname.EndsWith("in-addr.arpa") && IPAddress.TryParse(fullname[..^13], out IPAddress? arparuleaddr)) // IPV4 Only.
                                                             {
-                                                                if (arparuleaddr != null)
+                                                                if (arparuleaddr != null && arparuleaddr.AddressFamily == AddressFamily.InterNetwork)
                                                                 {
-                                                                    if (arparuleaddr.AddressFamily == AddressFamily.InterNetwork)
-                                                                    {
-                                                                        // Split the IP address into octets
-                                                                        string[] octets = arparuleaddr.ToString().Split('.');
+                                                                    // Split the IP address into octets
+                                                                    string[] octets = arparuleaddr.ToString().Split('.');
 
-                                                                        // Reverse the order of octets
-                                                                        Array.Reverse(octets);
+                                                                    // Reverse the order of octets
+                                                                    Array.Reverse(octets);
 
-                                                                        // Join the octets back together
-                                                                        url = string.Join(".", octets);
+                                                                    // Join the octets back together
+                                                                    url = string.Join(".", octets);
 
-                                                                        treated = true;
-                                                                    }
+                                                                    treated = true;
                                                                 }
                                                             }
                                                             else
@@ -2179,9 +2270,25 @@ namespace ApacheNet
                                                             }
 
                                                             if (!treated && ApacheNetServerConfiguration.DNSAllowUnsafeRequests)
-                                                                url = InternetProtocolUtils.GetFirstActiveIPAddress(fullname, ServerIP);
+                                                            {
+                                                                var udpClient = udpClientService.Dequeue();
+                                                                try
+                                                                {
+                                                                    await udpClient.Client.SendAsync(DnsReq, SocketFlags.None);
 
-                                                            if (!string.IsNullOrEmpty(url) && url != "NXDOMAIN")
+                                                                    var res = await udpClient.ReceiveAsync();
+                                                                    DnsReq = res.Buffer;
+                                                                }
+                                                                catch
+                                                                {
+                                                                    DnsReq = null;
+                                                                }
+                                                                finally
+                                                                {
+                                                                    udpClientService.ReturnToQueue(udpClient);
+                                                                }
+                                                            }
+                                                            else if (!string.IsNullOrEmpty(url) && url != "NXDOMAIN")
                                                             {
                                                                 List<IPAddress> Ips = new();
 
@@ -2289,7 +2396,7 @@ namespace ApacheNet
                                                         else if (encoding.Contains("deflate"))
                                                         {
                                                             ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                                            movedPayloadBytes = HTTPProcessor.Inflate(movedPayloadBytes);
+                                                            movedPayloadBytes = HTTPProcessor.Deflate(movedPayloadBytes);
                                                         }
                                                     }
                                                     if (response.ChunkedTransfer)
@@ -2325,7 +2432,7 @@ namespace ApacheNet
                                                         else if (encoding.Contains("deflate"))
                                                         {
                                                             ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                                            reportOutputBytes = HTTPProcessor.Inflate(reportOutputBytes);
+                                                            reportOutputBytes = HTTPProcessor.Deflate(reportOutputBytes);
                                                         }
                                                     }
                                                     if (response.ChunkedTransfer)
@@ -2468,9 +2575,14 @@ namespace ApacheNet
                                                 response.StatusCode = (int)statusCode;
                                                 sent = await response.Send();
                                             }
-                                            else if (absolutepath.EndsWith(".php", StringComparison.InvariantCultureIgnoreCase) && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder) && File.Exists(filePath))
+                                            else if (absolutepath.EndsWith(".php", StringComparison.InvariantCultureIgnoreCase) && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder) && (File.Exists(filePath) || File.Exists(apiRootPathWithURIPath)))
                                             {
-                                                (byte[]?, string[][]) CollectPHP = PHP.ProcessPHPPage(filePath, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, secure);
+                                                (byte[]?, string[][]) CollectPHP;
+                                                bool isOnWWWRoot = File.Exists(filePath);
+                                                if (isOnWWWRoot)
+                                                    CollectPHP = PHP.ProcessPHPPage(filePath, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, secure);
+                                                else
+                                                    CollectPHP = PHP.ProcessPHPPage(apiRootPathWithURIPath, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, secure);
                                                 statusCode = HttpStatusCode.OK;
                                                 if (CollectPHP.Item2 != null)
                                                 {
@@ -2733,6 +2845,8 @@ namespace ApacheNet
                 response.ContentType = "text/plain";
                 sent = await response.Send();
             }
+
+force_abort:
 
             if (response.StatusCode < 400)
                 LoggerAccessor.LogInfo($"[{loggerprefix}] - {clientip}:{clientport} -> {response.StatusCode}");

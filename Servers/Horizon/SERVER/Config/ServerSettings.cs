@@ -396,13 +396,6 @@ namespace Horizon.SERVER.Config
         public bool AllowGuests { get; set; } = true;
         #endregion
 
-        #region MAS
-        /// <summary>
-        /// Forces RPCN based clients to be issued by the official RPCN server.
-        /// </summary>
-        public bool ForceOfficialRPCNSignature { get; set; } = false;
-        #endregion
-
         /// <summary>
         /// Tries to patch HTTPS ticketlogin check inside Medius client SDK.
         /// </summary>

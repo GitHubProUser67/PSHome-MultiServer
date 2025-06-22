@@ -532,6 +532,42 @@ namespace WebAPIService.HELLFIRE.Helpers
             {
                 LoggerAccessor.LogInfo($"[HELLFIRE] - User - Detected existing player data, sending!");
                 xmlProfile = File.ReadAllText(profilePath);
+
+                var doc = new XmlDocument();
+
+                doc.LoadXml("<root>" + xmlProfile + "</root>"); // Wrap the XML string in a root element
+                if (doc != null)
+                {
+                    XmlNode DailyAvailable = doc.SelectSingleNode("//DailyAvailable");
+
+                    int currentUnixTime = (int)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+                    int lastUsedTime = 0;
+
+                    XmlNode lastUsedNode = DailyAvailable.SelectSingleNode("LastUsedUnixTime");
+                    if (lastUsedNode != null)
+                        int.TryParse(lastUsedNode.InnerText, out lastUsedTime);
+
+                    int elapsedTime = currentUnixTime - lastUsedTime;
+
+                    if (elapsedTime < 0)
+                        elapsedTime = 0; // in case system clock changes backward
+
+                    XmlNode timeElapsedNode = DailyAvailable.SelectSingleNode("TimeElapsed");
+                    if (timeElapsedNode != null)
+                        timeElapsedNode.InnerText = elapsedTime.ToString();
+                    else
+                    {
+                        XmlElement timeElapsedElem = doc.CreateElement("TimeElapsed");
+                        timeElapsedElem.InnerText = elapsedTime.ToString();
+                        DailyAvailable.AppendChild(timeElapsedElem);
+                    }
+
+                    // Get the updated XML string
+                    xmlProfile = doc.DocumentElement.InnerXml.Replace("<root>", string.Empty).Replace("</root>", string.Empty);
+
+                    // Save the updated profile back to the file
+                    File.WriteAllText(profilePath, xmlProfile);
+                }
             }
             else
             {
@@ -614,6 +650,7 @@ namespace WebAPIService.HELLFIRE.Helpers
             string xmlProfile = string.Empty;
             string updatedXMLProfile = string.Empty;
 
+            string cooldownPath = $"{WorkPath}/NovusPrime/User_Data/{UserID}_cooldown.txt";
             string profilePath = $"{WorkPath}/NovusPrime/User_Data/{UserID}.xml";
             string lbPath = $"{WorkPath}/NovusPrime/User_Data/Leaderboards.xml";
 
@@ -759,34 +796,41 @@ namespace WebAPIService.HELLFIRE.Helpers
 
                             case "UseDaily":
                                 {
-                                    var timeToAdd = DateTime.Now.AddHours(24);
+                                    const int ElapsedTime = 0;
+                                    int currentUnixTime = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
 
                                     XmlNode DailyAvailable = doc.SelectSingleNode("//DailyAvailable");
+                                    XmlNode lastUsedNode = DailyAvailable.SelectSingleNode("LastUsedUnixTime");
                                     if (DailyAvailable.SelectSingleNode("TimeElapsed") != null)
                                     {
                                         XmlNode timeElapsedExisting = DailyAvailable.SelectSingleNode("TimeElapsed");
-                                        timeElapsedExisting.InnerText = timeToAdd.ToString("HHmmss");
+                                        timeElapsedExisting.InnerText = ElapsedTime.ToString();
                                         DailyAvailable.AppendChild(timeElapsedExisting);
-                                    } else
+                                    }
+                                    else
                                     {
                                         XmlElement timeElapsed = doc.CreateElement("TimeElapsed");
-                                        timeElapsed.InnerText = timeToAdd.ToString("HHmmss");
+                                        timeElapsed.InnerText = ElapsedTime.ToString();
                                         DailyAvailable.AppendChild(timeElapsed);
                                     }
-
+                                    if (lastUsedNode != null)
+                                        lastUsedNode.InnerText = currentUnixTime.ToString();
+                                    else
+                                    {
+                                        XmlElement lastUsedElem = doc.CreateElement("LastUsedUnixTime");
+                                        lastUsedElem.InnerText = currentUnixTime.ToString();
+                                        DailyAvailable.AppendChild(lastUsedElem);
+                                    }
                                 }
                                 break;
 
                             case "RequestShipSlots":
                                 {
-                                    var ShipConfig = doc.SelectSingleNode("//ShipConfig");
-                                    return $"<Response>{ShipConfig}</Response>";
+                                    return $"<Response>{doc.SelectSingleNode("//ShipConfig")}</Response>";
                                 }
                             case "ConfigureShip":
                                 {
                                     XmlNode shipConfig = doc.SelectSingleNode("//ShipConfig");
-
-                                    //data.GetParameterValue("Slot") 1
                                     shipConfig.SelectSingleNode("Chassis").InnerText = data.GetParameterValue("Chassis");
                                     shipConfig.SelectSingleNode("Front1").InnerText = data.GetParameterValue("Front1");
                                     shipConfig.SelectSingleNode("Front2").InnerText = data.GetParameterValue("Front2");

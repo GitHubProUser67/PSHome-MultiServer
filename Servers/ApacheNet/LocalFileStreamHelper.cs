@@ -36,7 +36,7 @@ namespace ApacheNet
                 ctx.Response.ChunkedTransfer = false;
                 ctx.Response.ContentType = "text/plain";
                 ctx.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                return await ctx.Response.Send();
+                return await ctx.Response.Send().ConfigureAwait(false);
             }
 
             bool compressionSettingEnabled = ApacheNetServerConfiguration.EnableHTTPCompression;
@@ -72,7 +72,7 @@ namespace ApacheNet
                         else if (encoding.Contains("deflate"))
                         {
                             ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                            st = HTTPProcessor.InflateStream(st);
+                            st = HTTPProcessor.DeflateStream(st);
                         }
                     }
                 }
@@ -143,7 +143,7 @@ namespace ApacheNet
                     else if (encoding.Contains("deflate"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                        st = HTTPProcessor.InflateStream(htmlMs);
+                        st = HTTPProcessor.DeflateStream(htmlMs);
                     }
                     else
                         st = htmlMs;
@@ -160,28 +160,28 @@ namespace ApacheNet
                     if (encoding.Contains("zstd"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "zstd");
-                        st = HTTPProcessor.ZstdCompressStream(await FileSystemUtils.TryOpen(filePath));
+                        st = HTTPProcessor.ZstdCompressStream(FileSystemUtils.TryOpen(filePath));
                     }
                     else if (encoding.Contains("br"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "br");
-                        st = HTTPProcessor.BrotliCompressStream(await FileSystemUtils.TryOpen(filePath));
+                        st = HTTPProcessor.BrotliCompressStream(FileSystemUtils.TryOpen(filePath));
                     }
                     else if (encoding.Contains("gzip"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "gzip");
-                        st = HTTPProcessor.GzipCompressStream(await FileSystemUtils.TryOpen(filePath));
+                        st = HTTPProcessor.GzipCompressStream(FileSystemUtils.TryOpen(filePath));
                     }
                     else if (encoding.Contains("deflate"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                        st = HTTPProcessor.InflateStream(await FileSystemUtils.TryOpen(filePath));
+                        st = HTTPProcessor.DeflateStream(FileSystemUtils.TryOpen(filePath));
                     }
                     else
-                        st = await FileSystemUtils.TryOpen(filePath);
+                        st = FileSystemUtils.TryOpen(filePath);
                 }
                 else
-                    st = await FileSystemUtils.TryOpen(filePath);
+                    st = FileSystemUtils.TryOpen(filePath);
             }
 
             if (st == null)
@@ -190,7 +190,7 @@ namespace ApacheNet
                 ctx.Response.Headers.Clear();
                 ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 ctx.Response.ContentType = "text/plain";
-                return await ctx.Response.Send();
+                return await ctx.Response.Send().ConfigureAwait(false);
             }
 
             using (st)
@@ -203,7 +203,7 @@ namespace ApacheNet
                     long bytesLeft = st.Length;
 
                     if (bytesLeft == 0)
-                        sent = await ctx.Response.SendChunk(Array.Empty<byte>(), true);
+                        sent = await ctx.Response.SendChunk(Array.Empty<byte>(), true).ConfigureAwait(false);
                     else
                     {
                         const int buffersize = 16 * 1024;
@@ -215,19 +215,19 @@ namespace ApacheNet
                         {
                             isNotlastChunk = bytesLeft > buffersize;
                             buffer = new byte[isNotlastChunk ? buffersize : bytesLeft];
-                            int n = st.Read(buffer, 0, buffer.Length);
+                            int n = await st.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
 
                             if (isNotlastChunk)
-                                await ctx.Response.SendChunk(buffer, false);
+                                await ctx.Response.SendChunk(buffer, false).ConfigureAwait(false);
                             else
-                                sent = await ctx.Response.SendChunk(buffer, true);
+                                sent = await ctx.Response.SendChunk(buffer, true).ConfigureAwait(false);
 
                             bytesLeft -= n;
                         }
                     }
                 }
                 else
-                    sent = await ctx.Response.Send(st.Length, st);
+                    sent = await ctx.Response.Send(st.Length, st).ConfigureAwait(false);
             }
 
             return sent;
@@ -243,13 +243,13 @@ namespace ApacheNet
             {
                 ctx.Response.ChunkedTransfer = false;
                 ctx.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed;
-                return await ctx.Response.Send();
+                return await ctx.Response.Send().ConfigureAwait(false);
             }
             else
             {
                 try
                 {
-                    FileStream fs = FileSystemUtils.TryOpen(filePath).Result;
+                    FileStream fs = FileSystemUtils.TryOpen(filePath);
 
                     if (fs != null)
                     {
@@ -335,7 +335,7 @@ namespace ApacheNet
                                             else if (acceptencoding.Contains("deflate"))
                                             {
                                                 ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                                payloadBytes = HTTPProcessor.Inflate(Encoding.UTF8.GetBytes(payload));
+                                                payloadBytes = HTTPProcessor.Deflate(Encoding.UTF8.GetBytes(payload));
                                             }
                                             else
                                                 payloadBytes = Encoding.UTF8.GetBytes(payload);
@@ -344,9 +344,9 @@ namespace ApacheNet
                                             payloadBytes = Encoding.UTF8.GetBytes(payload);
 
                                         if (ctx.Response.ChunkedTransfer)
-                                            return await ctx.Response.SendChunk(payloadBytes, true);
+                                            return await ctx.Response.SendChunk(payloadBytes, true).ConfigureAwait(false);
                                         else
-                                            return await ctx.Response.Send(payloadBytes);
+                                            return await ctx.Response.Send(payloadBytes).ConfigureAwait(false);
                                     }
                                     else if ((startByte >= endByte) || startByte < 0 || endByte <= 0) // Curl test showed this behaviour.
                                     {
@@ -365,7 +365,7 @@ namespace ApacheNet
                                             long bytesLeft = new FileInfo(filePath).Length;
 
                                             if (bytesLeft == 0)
-                                                return await ctx.Response.SendChunk(Array.Empty<byte>(), true);
+                                                return await ctx.Response.SendChunk(Array.Empty<byte>(), true).ConfigureAwait(false);
 
                                             const int buffersize = 16 * 1024;
 
@@ -376,12 +376,12 @@ namespace ApacheNet
                                             {
                                                 isNotlastChunk = bytesLeft > buffersize;
                                                 buffer = new byte[isNotlastChunk ? buffersize : bytesLeft];
-                                                int n = fs.Read(buffer, 0, buffer.Length);
+                                                int n = await fs.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
 
                                                 if (isNotlastChunk)
-                                                    await ctx.Response.SendChunk(buffer, false);
+                                                    await ctx.Response.SendChunk(buffer, false).ConfigureAwait(false);
                                                 else
-                                                    return await ctx.Response.SendChunk(buffer, true);
+                                                    return await ctx.Response.SendChunk(buffer, true).ConfigureAwait(false);
 
                                                 bytesLeft -= n;
                                             }
@@ -400,7 +400,7 @@ namespace ApacheNet
                                         ms.Write(contentRangeBytes, 0, contentRangeBytes.Length);
                                         ms.Write(Separator, 0, Separator.Length);
                                         ms.Write(Separator, 0, Separator.Length);
-                                        while (totalBytesCopied < TotalBytes && (bytesRead = fs.Read(buffer, 0, rangebuffersize)) > 0)
+                                        while (totalBytesCopied < TotalBytes && (bytesRead = await fs.ReadAsync(buffer, 0, rangebuffersize).ConfigureAwait(false)) > 0)
                                         {
                                             int bytesToWrite = (int)Math.Min(TotalBytes - totalBytesCopied, bytesRead);
                                             ms.Write(buffer, 0, bytesToWrite);
@@ -427,7 +427,7 @@ namespace ApacheNet
                                     long bytesLeft = ms.Length;
 
                                     if (bytesLeft == 0)
-                                        return await ctx.Response.SendChunk(Array.Empty<byte>(), true);
+                                        return await ctx.Response.SendChunk(Array.Empty<byte>(), true).ConfigureAwait(false);
 
                                     const int buffersize = 16 * 1024;
 
@@ -438,18 +438,18 @@ namespace ApacheNet
                                     {
                                         isNotlastChunk = bytesLeft > buffersize;
                                         buffer = new byte[isNotlastChunk ? buffersize : bytesLeft];
-                                        int n = ms.Read(buffer, 0, buffer.Length);
+                                        int n = await ms.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
 
                                         if (isNotlastChunk)
-                                            await ctx.Response.SendChunk(buffer, false);
+                                            await ctx.Response.SendChunk(buffer, false).ConfigureAwait(false);
                                         else
-                                            return await ctx.Response.SendChunk(buffer, true);
+                                            return await ctx.Response.SendChunk(buffer, true).ConfigureAwait(false);
 
                                         bytesLeft -= n;
                                     }
                                 }
                                 else
-                                    return await ctx.Response.Send(ms.Length, ms);
+                                    return await ctx.Response.Send(ms.Length, ms).ConfigureAwait(false);
                             }
                             else
                             {
@@ -506,7 +506,7 @@ namespace ApacheNet
                                     else if (acceptencoding.Contains("deflate"))
                                     {
                                         ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                        payloadBytes = HTTPProcessor.Inflate(Encoding.UTF8.GetBytes(payload));
+                                        payloadBytes = HTTPProcessor.Deflate(Encoding.UTF8.GetBytes(payload));
                                     }
                                     else
                                         payloadBytes = Encoding.UTF8.GetBytes(payload);
@@ -515,9 +515,9 @@ namespace ApacheNet
                                     payloadBytes = Encoding.UTF8.GetBytes(payload);
 
                                 if (ctx.Response.ChunkedTransfer)
-                                    return await ctx.Response.SendChunk(payloadBytes, true);
+                                    return await ctx.Response.SendChunk(payloadBytes, true).ConfigureAwait(false);
                                 else
-                                    return await ctx.Response.Send(payloadBytes);
+                                    return await ctx.Response.Send(payloadBytes).ConfigureAwait(false);
                             }
                             else if ((startByte >= endByte) || startByte < 0 || endByte <= 0) // Curl test showed this behaviour.
                             {
@@ -534,7 +534,7 @@ namespace ApacheNet
                                     long bytesLeft = new FileInfo(filePath).Length;
 
                                     if (bytesLeft == 0)
-                                        return await ctx.Response.SendChunk(Array.Empty<byte>(), true);
+                                        return await ctx.Response.SendChunk(Array.Empty<byte>(), true).ConfigureAwait(false);
 
                                     const int buffersize = 16 * 1024;
 
@@ -545,18 +545,18 @@ namespace ApacheNet
                                     {
                                         isNotlastChunk = bytesLeft > buffersize;
                                         buffer = new byte[isNotlastChunk ? buffersize : bytesLeft];
-                                        int n = fs.Read(buffer, 0, buffer.Length);
+                                        int n = await fs.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
 
                                         if (isNotlastChunk)
-                                            await ctx.Response.SendChunk(buffer, false);
+                                            await ctx.Response.SendChunk(buffer, false).ConfigureAwait(false);
                                         else
-                                            return await ctx.Response.SendChunk(buffer, true);
+                                            return await ctx.Response.SendChunk(buffer, true).ConfigureAwait(false);
 
                                         bytesLeft -= n;
                                     }
                                 }
                                 else
-                                    return await ctx.Response.Send(new FileInfo(filePath).Length, fs);
+                                    return await ctx.Response.Send(new FileInfo(filePath).Length, fs).ConfigureAwait(false);
                             }
                             else
                             {
@@ -573,7 +573,7 @@ namespace ApacheNet
                                 if (ctx.Response.ChunkedTransfer)
                                 {
                                     if (TotalBytes == 0)
-                                        return await ctx.Response.SendChunk(Array.Empty<byte>(), true);
+                                        return await ctx.Response.SendChunk(Array.Empty<byte>(), true).ConfigureAwait(false);
 
                                     const int buffersize = 16 * 1024;
 
@@ -584,18 +584,18 @@ namespace ApacheNet
                                     {
                                         isNotlastChunk = TotalBytes > buffersize;
                                         buffer = new byte[isNotlastChunk ? buffersize : TotalBytes];
-                                        int n = fs.Read(buffer, 0, buffer.Length);
+                                        int n = await fs.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
 
                                         if (isNotlastChunk)
-                                            await ctx.Response.SendChunk(buffer, false);
+                                            await ctx.Response.SendChunk(buffer, false).ConfigureAwait(false);
                                         else
-                                            return await ctx.Response.SendChunk(buffer, true);
+                                            return await ctx.Response.SendChunk(buffer, true).ConfigureAwait(false);
 
                                         TotalBytes -= n;
                                     }
                                 }
                                 else
-                                    return await ctx.Response.Send(TotalBytes, fs);
+                                    return await ctx.Response.Send(TotalBytes, fs).ConfigureAwait(false);
                             }
                         }
                     }
@@ -607,7 +607,7 @@ namespace ApacheNet
                 ctx.Response.ChunkedTransfer = false;
                 ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 ctx.Response.ContentType = "text/plain";
-                return await ctx.Response.Send();
+                return await ctx.Response.Send().ConfigureAwait(false);
             }
         }
     }

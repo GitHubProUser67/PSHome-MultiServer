@@ -6,13 +6,12 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using WebAPIService.LOOT;
 
 namespace WebAPIService.RCHOME
 {
     public class RCHOMEClass
     {
-        private static Dictionary<string, FiringRangeLeaderboards> _leaderboards = new Dictionary<string, FiringRangeLeaderboards>();
+        private static Dictionary<string, FiringRangeScoreBoardData> _leaderboards = new Dictionary<string, FiringRangeScoreBoardData>();
 
         private string absolutepath;
         private string workpath;
@@ -53,7 +52,7 @@ namespace WebAPIService.RCHOME
                                             lock (_leaderboards)
                                             {
                                                 if (!_leaderboards.ContainsKey(gameName))
-                                                    _leaderboards.Add(gameName, new FiringRangeLeaderboards());
+                                                    _leaderboards.Add(gameName, new FiringRangeScoreBoardData());
                                                 return _leaderboards[gameName].UpdateScoreboardXml(workpath, gameName);
                                             }
                                         }

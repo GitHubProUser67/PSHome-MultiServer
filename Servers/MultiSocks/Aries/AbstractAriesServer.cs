@@ -147,13 +147,13 @@ namespace MultiSocks.Aries
             {
                 string body = Encoding.ASCII.GetString(data);
 #if DEBUG
-                LoggerAccessor.LogInfo($"{client.ADDR} Requested Type {name} : {{{data.ToHexString().Replace("\n", string.Empty)}}}");
+                LoggerAccessor.LogInfo($"[AbstractDirtySockServer] - {client.ADDR} Requested Type {name} : {{{data.ToHexString().Replace("\n", string.Empty)}}}");
 #else
-                LoggerAccessor.LogInfo($"{client.ADDR} Requested Type {name}");
+                LoggerAccessor.LogInfo($"[AbstractDirtySockServer] - {client.ADDR} Requested Type {name}");
 #endif
                 if (!NameToClass.TryGetValue(name, out Type? c))
                 {
-                    LoggerAccessor.LogError($"{client.ADDR} Requested an unexpected message Type {name} : {body.Replace("\n", string.Empty)}");
+                    LoggerAccessor.LogError($"[AbstractDirtySockServer] - {client.ADDR} Requested an unexpected message Type {name} : {body.Replace("\n", string.Empty)}");
                     return;
                 }
 

@@ -25,16 +25,12 @@ namespace MultiSocks.Aries.Messages
 
                     if (prevGame.RemovePlayerByUsername(user.Username))
                         mc.Games.RemoveGame(prevGame);
-                }
-                else
-                {
-                    // TODO, send DirtySocks Game already started error.
+
+                    return;
                 }
             }
-            else
-            {
-                // TODO, send DirtySocks Game not exist error.
-            }
+
+            client.SendMessage(this);
         }
     }
 }

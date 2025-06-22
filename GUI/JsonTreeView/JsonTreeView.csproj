@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <Product>Json Editor by ZTn</Product>
+    <Description>Simple Json TreeView control based on Newtonsoft.Json library</Description>
+    <Copyright>ZeToken.net 2013-2020 (MIT License)</Copyright>
+    <Authors>Sylvain Vernois</Authors>
+    <Version>1.2.0</Version>
+    <Company>ZeToken.net</Company>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>ZTn.Json.JsonTreeView</RootNamespace>
+    <AssemblyName>ZTn.Json.JsonTreeView</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Resources\Lang.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Lang.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\Lang.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Lang.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+</Project>

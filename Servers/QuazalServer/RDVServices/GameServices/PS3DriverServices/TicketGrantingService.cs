@@ -6,6 +6,8 @@ using QuazalServer.QNetZ.Connection;
 using System.Net;
 using CustomLogger;
 using QuazalServer.QNetZ.DDL;
+using RDVServices;
+using AlcatrazService.DTO;
 
 namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
 {
@@ -111,6 +113,8 @@ namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
                     plInfo.PID = NetworkPlayers.GenerateUniqueUint(userName + "a1nPut!");
                     plInfo.AccountId = userName;
                     plInfo.Name = userName;
+
+                    DBHelper.RegisterUplayUser(Context.Handler.Factory.Item1, new UserRegisterModel() { Username = userName, PlayerNickName = userName, Password = "tmp" });
 
                     return Result(new Login(plInfo.PID)
                     {

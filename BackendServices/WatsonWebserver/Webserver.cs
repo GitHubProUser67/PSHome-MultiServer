@@ -74,10 +74,10 @@
         private bool _KeepAliveResponseData = true;
         private int _RequestCount = 0;
 
-        private List<Task> HttpClientTasks = new();
+        private List<Task> HttpClientTasks = new List<Task>();
 
         private readonly int AwaiterTimeoutInMS = 500;
-        private int MaxConcurrentListeners = 10;
+        private int MaxConcurrentListeners;
 
         private CancellationTokenSource _TokenSource = new CancellationTokenSource();
         private CancellationToken _Token;
@@ -93,9 +93,11 @@
         /// </summary>
         /// <param name="settings">Webserver settings.</param>
         /// <param name="defaultRoute">Method used when a request is received and no matching routes are found.  Commonly used as the 404 handler when routes are used.</param>
-        public Webserver(WebserverSettings settings, Func<HttpContextBase, Task> defaultRoute) : base(settings, defaultRoute)
+        public Webserver(WebserverSettings settings, Func<HttpContextBase, Task> defaultRoute, int MaxConcurrentListeners = 10) : base(settings, defaultRoute)
         {
             if (settings == null) settings = new WebserverSettings();
+
+            this.MaxConcurrentListeners = MaxConcurrentListeners;
 
             Settings = settings;
             Settings.Headers.DefaultHeaders[WebserverConstants.HeaderHost] = settings.Hostname + ":" + settings.Port;
@@ -745,29 +747,7 @@
                                             if (ctx.Response.ContentLength > 0) Statistics.IncrementSentPayloadBytes(Convert.ToInt64(ctx.Response.ContentLength));
                                             Routes.PostRouting?.Invoke(ctx).ConfigureAwait(false);
 
-                                            if (!listenerCtx.Response.KeepAlive)
-                                            {
-                                                try
-                                                {
-                                                    ctx.Request.Data?.Close();
-                                                }
-                                                catch
-                                                {
-                                                }
-                                            }
-
-                                            // Manually dispose the response if previous methods failed to avoids memory leaks.
-                                            if (!ctx.Response.ResponseSent)
-                                            {
-                                                try
-                                                {
-                                                    ((HttpResponse)ctx.Response)._OutputStream.Close();
-                                                }
-                                                catch
-                                                {
-                                                }
-                                                ((HttpResponse)ctx.Response)._Response.Close();
-                                            }
+                                            ((HttpResponse)ctx.Response).Close();
                                         }
                                     }
 

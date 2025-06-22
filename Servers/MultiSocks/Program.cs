@@ -11,7 +11,7 @@ using NetworkLibrary.Extension;
 
 public static class MultiSocksServerConfiguration
 {
-    public static string ServerBindAddress { get; set; } = InternetProtocolUtils.TryGetServerIP(out string extractedIp).Result ? extractedIp : "0.0.0.0";
+    public static string ServerBindAddress { get; set; } = InternetProtocolUtils.TryGetServerIP(out string extractedIp).Result ? extractedIp : extractedIp;
     public static bool RPCS3Workarounds { get; set; } = true;
     public static bool EnableBlazeEncryption { get; set; } = false;
     public static string DirtySocksDatabasePath { get; set; } = $"{Directory.GetCurrentDirectory()}/static/dirtysocks.db.json";
@@ -27,7 +27,7 @@ public static class MultiSocksServerConfiguration
         // Make sure the file exists
         if (!File.Exists(configPath))
         {
-            LoggerAccessor.LogWarn("Could not find the MultiSocks.json file, writing and using server's default.");
+            LoggerAccessor.LogWarn($"Could not find the configuration file:{configPath}, writing and using server's default.");
 
             Directory.CreateDirectory(Path.GetDirectoryName(configPath) ?? Directory.GetCurrentDirectory() + "/static");
 
@@ -54,7 +54,7 @@ public static class MultiSocksServerConfiguration
         }
         catch (Exception ex)
         {
-            LoggerAccessor.LogWarn($"MultiSocks.json file is malformed (exception: {ex}), using server's default.");
+            LoggerAccessor.LogWarn($"{configPath} file is malformed (exception: {ex}), using server's default.");
         }
     }
 
@@ -109,7 +109,7 @@ class Program
 
     static void Main()
     {
-        if (!NetworkLibrary.Extension.Windows.Win32API.IsWindows)
+        if (!NetworkLibrary.Extension.Microsoft.Win32API.IsWindows)
             GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
         else
             TechnitiumLibrary.Net.Firewall.FirewallHelper.CheckFirewallEntries(Assembly.GetEntryAssembly()?.Location);

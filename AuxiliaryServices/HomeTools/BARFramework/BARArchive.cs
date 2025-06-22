@@ -13,8 +13,9 @@ using CompressionLibrary.Edge;
 using NetworkLibrary.Extension;
 using HomeTools.AFS;
 using NetworkLibrary.HTTP;
+#if NET6_0_OR_GREATER
 using NetworkLibrary.Upscalers;
-
+#endif
 namespace HomeTools.BARFramework
 {
     public class BARArchive
@@ -47,9 +48,9 @@ namespace HomeTools.BARFramework
         private string version2key = string.Empty;
 
         private string convertersfolder = null;
-
+#if NET6_0_OR_GREATER
         private string m_imparams = ImageOptimizer.defaultOptimizerParams;
-
+#endif
         public BARArchive()
         {
             m_toc = new TOC(this);
@@ -75,7 +76,9 @@ namespace HomeTools.BARFramework
                 this.version2key = version2key;
                 m_header.Version = 512;
             }
+#if NET6_0_OR_GREATER
             this.optimizeassets = optimizeassets;
+#endif
         }
 
         public bool Dirty
@@ -101,7 +104,7 @@ namespace HomeTools.BARFramework
                 m_allowWhitespaceInFilenames = value;
             }
         }
-
+#if NET6_0_OR_GREATER
         public string ImageMagickParams
         {
             get
@@ -116,7 +119,7 @@ namespace HomeTools.BARFramework
                     m_imparams = value;
             }
         }
-
+#endif
         public string FileName
         {
             get
@@ -628,12 +631,12 @@ namespace HomeTools.BARFramework
                 if (m_endian == EndianType.BigEndian) // This data is always little endian.
                 {
                     writer.Write(EndianUtils.EndianSwap(IV));
-                    writer.Write(EndianUtils.EndianSwap(LIBSECURE.InitiateAESBuffer(CipheredHeaderData, version2key.IsBase64().Item2, IV, "CTR") ?? Array.Empty<byte>()));
+                    writer.Write(EndianUtils.EndianSwap(ToolsImplementation.ProcessCrypt_DecryptAsync(CipheredHeaderData, version2key.IsBase64().Item2, IV, 2).Result ?? Array.Empty<byte>()));
                 }
                 else
                 {
                     writer.Write(IV);
-                    writer.Write(LIBSECURE.InitiateAESBuffer(CipheredHeaderData, version2key.IsBase64().Item2, IV, "CTR") ?? Array.Empty<byte>());
+                    writer.Write(ToolsImplementation.ProcessCrypt_DecryptAsync(CipheredHeaderData, version2key.IsBase64().Item2, IV, 2).Result ?? Array.Empty<byte>());
                 }
             }
             else
@@ -702,7 +705,7 @@ namespace HomeTools.BARFramework
                     tocEntry.Index = count;
                     byte[] IV = new byte[8];
                     Buffer.BlockCopy(tocEntry.IV, 0, IV, 0, tocEntry.IV.Length);
-                    tocEntry.RawData = await ToolsImplementation.ProcessXTEAProxyAsync(array2, m_header.Key, IV).ConfigureAwait(false);
+                    tocEntry.RawData = await ToolsImplementation.ProcessCrypt_DecryptAsync(array2, m_header.Key, IV, 0).ConfigureAwait(false);
                 }
                 else
                 {
@@ -860,6 +863,7 @@ namespace HomeTools.BARFramework
             {
             }
             string ContentType = HTTPProcessor.GetMimeType(extension);
+#if NET6_0_OR_GREATER
             if (optimizeassets && (ContentType.StartsWith("image/") || (!string.IsNullOrEmpty(extension) && extension.Equals(".dds", StringComparison.InvariantCultureIgnoreCase))))
             {
                 using (Stream stream = ImageOptimizer.OptimizeImage(convertersfolder, filePath, extension, m_imparams))
@@ -888,6 +892,19 @@ namespace HomeTools.BARFramework
                     }
                 }
             }
+#else
+            using (FileStream fileStream = File.OpenRead(filePath))
+            {
+                try
+                {
+                    AddFile(filePath, fileStream, options);
+                }
+                catch
+                {
+
+                }
+            }
+#endif
         }
 
         public bool ContainsFile(string filePath)
@@ -915,9 +932,11 @@ namespace HomeTools.BARFramework
             {
             }
             string ContentType = HTTPProcessor.GetMimeType(extension);
+#if NET6_0_OR_GREATER
             if (optimizeassets && (ContentType.StartsWith("image/") || (!string.IsNullOrEmpty(extension) && extension.Equals(".dds", StringComparison.InvariantCultureIgnoreCase))))
                 inStream = ImageOptimizer.OptimizeImage(convertersfolder, filePath, extension, m_imparams);
             else
+#endif
                 inStream = File.OpenRead(filePath);
             bool compress = ShouldCompress(filePath, options);
             CompressAndAddFile(compress, inStream, tocEntry);
@@ -997,7 +1016,7 @@ namespace HomeTools.BARFramework
             {
                 byte[] IV = new byte[16];
                 Buffer.BlockCopy(m_header.IV, 0, IV, 0, m_header.IV.Length);
-                ToolsImplementation.IncrementIVBytes(IV, 1); // IV so we increment.
+                ToolsImplementation.IncrementIVBytes(IV, 1); // Increment IV by one (supposed to be the continuation of the header cypher context).
                 array = m_toc.GetBytesVersion2(version2key, IV, m_endian);
             }
             else
@@ -1055,13 +1074,13 @@ namespace HomeTools.BARFramework
                     switch (cdnMode)
                     {
                         case 2:
-                            FileBytes = LIBSECURE.InitiateBlowfishBuffer(FileBytes, ToolsImplementation.HDKBlowfishKey, SignatureIV, "CTR");
+                            FileBytes = ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.HDKBlowfishKey, SignatureIV, 1).Result;
                             break;
                         case 1:
-                            FileBytes = LIBSECURE.InitiateBlowfishBuffer(FileBytes, ToolsImplementation.BetaBlowfishKey, SignatureIV, "CTR");
+                            FileBytes = ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.BetaBlowfishKey, SignatureIV, 1).Result;
                             break;
                         default:
-                            FileBytes = LIBSECURE.InitiateBlowfishBuffer(FileBytes, ToolsImplementation.BlowfishKey, SignatureIV, "CTR");
+                            FileBytes = ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.BlowfishKey, SignatureIV, 1).Result;
                             break;
                     }
                     if (FileBytes != null)
@@ -1074,13 +1093,13 @@ namespace HomeTools.BARFramework
                         switch (cdnMode)
                         {
                             case 2:
-                                SignatureHeader = LIBSECURE.InitiateBlowfishBuffer(SignatureHeader, ToolsImplementation.HDKSignatureKey, OriginalSigntureIV, "CTR");
+                                SignatureHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(SignatureHeader, ToolsImplementation.HDKSignatureKey, OriginalSigntureIV, 1).Result;
                                 break;
                             case 1:
-                                SignatureHeader = LIBSECURE.InitiateBlowfishBuffer(SignatureHeader, ToolsImplementation.BetaSignatureKey, OriginalSigntureIV, "CTR");
+                                SignatureHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(SignatureHeader, ToolsImplementation.BetaSignatureKey, OriginalSigntureIV, 1).Result;
                                 break;
                             default:
-                                SignatureHeader = LIBSECURE.InitiateBlowfishBuffer(SignatureHeader, ToolsImplementation.SignatureKey, OriginalSigntureIV, "CTR");
+                                SignatureHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(SignatureHeader, ToolsImplementation.SignatureKey, OriginalSigntureIV, 1).Result;
                                 break;
                         }
                         if (SignatureHeader != null)

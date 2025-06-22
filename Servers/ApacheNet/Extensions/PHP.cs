@@ -47,7 +47,7 @@ namespace ApacheNet.Extensions
                 proc.StartInfo.EnvironmentVariables.Add("CONTENT_LENGTH", postData.Length.ToString());
 
             // Set environment variables for PHP
-            if (NetworkLibrary.Extension.Windows.Win32API.IsWindows)
+            if (NetworkLibrary.Extension.Microsoft.Win32API.IsWindows)
             {
                 proc.StartInfo.EnvironmentVariables["SYSTEMROOT"] = Environment.GetEnvironmentVariable("SYSTEMROOT");
                 proc.StartInfo.EnvironmentVariables["WINDIR"] = Environment.GetEnvironmentVariable("WINDIR");

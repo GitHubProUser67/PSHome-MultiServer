@@ -5,13 +5,14 @@ using WebAPIService.THQ;
 using WebAPIService.RCHOME;
 using WatsonWebserver.Core;
 using WebAPIService.HOMELEADERBOARDS;
+using WebAPIService.CODEGLUE;
 using System;
 using CustomLogger;
 using System.Threading.Tasks;
 using System.Globalization;
 using NetworkLibrary.Extension;
-using NetworkLibrary.GeoLocalization;
 using System.Text.Json;
+using WebAPIService.COGS;
 
 namespace ApacheNet.RouteHandlers
 {
@@ -111,7 +112,7 @@ namespace ApacheNet.RouteHandlers
                 },
                 new() {
                     Name = "Ubisoft MasterAdServerInitXml",
-                    UrlRegex = "/MasterAdServerWS/MasterAdServerWS.asmx/InitXml",
+                    UrlRegex = "^/MasterAdServerWS/MasterAdServerWS.asmx/InitXml",
                     Method = "POST",
                     Host = "master10.doublefusion.com",
                     Callable = (HttpContextBase ctx) => {
@@ -121,7 +122,7 @@ namespace ApacheNet.RouteHandlers
                 },
                 new() {
                     Name = "Ubisoft GetOnlineConfig (including PSN)",
-                    UrlRegex = "/OnlineConfigService.svc/GetOnlineConfig",
+                    UrlRegex = "^/OnlineConfigService.svc/GetOnlineConfig",
                     Method = "GET",
                     Host = "onlineconfigservice.ubi.com",
                     Callable = (HttpContextBase ctx) => {
@@ -136,7 +137,7 @@ namespace ApacheNet.RouteHandlers
                 },
                 new() {
                     Name = "Ubisoft MatchMakingConfig.aspx",
-                    UrlRegex = "/MatchMakingConfig.aspx",
+                    UrlRegex = "^/MatchMakingConfig.aspx",
                     Method = "GET",
                     Host = "gconnect.ubi.com",
                     Callable = (HttpContextBase ctx) => {
@@ -207,7 +208,7 @@ namespace ApacheNet.RouteHandlers
                 },
                 new() {
                     Name = "UFC Undisputed PS Home",
-                    UrlRegex = "/index.php",
+                    UrlRegex = "^/index.php",
                     Method = "POST",
                     Host = "sonyhome.thqsandbox.com",
                     Callable = (HttpContextBase ctx) => {
@@ -229,7 +230,7 @@ namespace ApacheNet.RouteHandlers
                 },
                 new() {
                     Name = "Home Firing Range leaderboard system",
-                    UrlRegex = "/rchome/leaderboard.py/",
+                    UrlRegex = "^/rchome/leaderboard.py/",
                     Method = "POST",
                     Host = null,
                     Callable = (HttpContextBase ctx) => {
@@ -250,8 +251,98 @@ namespace ApacheNet.RouteHandlers
                      }
                 },
                 new() {
+                    Name = "COGS writeDB scoreboard",
+                    UrlRegex = "^/Cogs/Development/Single/writeDB.php$",
+                    Method = "POST",
+                    Host = "ec2-174-129-44-204.compute-1.amazonaws.com",
+                    Callable = (HttpContextBase ctx) => {
+                        if (ApacheNetServerConfiguration.EnableBuiltInPlugins)
+                        {
+                            string? COGSResult = new COGSClass(ctx.Request.Method.ToString(), ApacheNetServerConfiguration.APIStaticFolder).ProcessRequest(ctx.Request.DataAsBytes, ctx.Request.ContentType);
+                            if (!string.IsNullOrEmpty(COGSResult))
+                            {
+                                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                                ctx.Response.ContentType = "text/xml";
+                                return ctx.Response.Send(COGSResult).Result;
+                            }
+
+                            ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                            return ctx.Response.Send().Result;
+                        }
+                        return false;
+                     }
+                },
+                 new() {
+                    Name = "COGS readDB scoreboard",
+                    UrlRegex = "^/Cogs/Development/Single/readDB.php$",
+                    Method = "GET",
+                    Host = "ec2-174-129-44-204.compute-1.amazonaws.com",
+                    Callable = (HttpContextBase ctx) => {
+                        if (ApacheNetServerConfiguration.EnableBuiltInPlugins)
+                        {
+                            string? COGSResult = new COGSClass(ctx.Request.Method.ToString(), ApacheNetServerConfiguration.APIStaticFolder).ProcessRequest(ctx.Request.DataAsBytes, ctx.Request.ContentType);
+                            if (!string.IsNullOrEmpty(COGSResult))
+                            {
+                                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                                ctx.Response.ContentType = "text/xml";
+                                return ctx.Response.Send(COGSResult).Result;
+                            }
+
+                            ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                            return ctx.Response.Send().Result;
+                        }
+                        return false;
+                     }
+                },
+                new() {
+                    Name = "Codeglue Wipeout 2D scorepost",
+                    UrlRegex = "^/wipeout/scorepost.php$",
+                    Method = "POST",
+                    Host = "sonyhome.codeglue.com",
+                    Callable = (HttpContextBase ctx) => {
+                        if (ApacheNetServerConfiguration.EnableBuiltInPlugins)
+                        {
+                            string? Wipoeut2DResult = new WipeoutShooterClass(ctx.Request.Method.ToString(), ApacheNetServerConfiguration.APIStaticFolder)
+                            .ProcessRequest(HTTPProcessor.GetQueryParameters(HTTPProcessor.DecodeUrl(ctx.Request.Url.RawWithQuery)), ctx.Request.DataAsBytes, ctx.Request.ContentType);
+                            if (!string.IsNullOrEmpty(Wipoeut2DResult))
+                            {
+                                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                                ctx.Response.ContentType = "text/xml";
+                                return ctx.Response.Send(Wipoeut2DResult).Result;
+                            }
+
+                            ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                            return ctx.Response.Send().Result;
+                        }
+                        return false;
+                     }
+                },
+                 new() {
+                    Name = "Codeglue Wipeout 2D scorelist",
+                    UrlRegex = "^/wipeout/scorelist.php$",
+                    Method = "GET",
+                    Host = "sonyhome.codeglue.com",
+                    Callable = (HttpContextBase ctx) => {
+                        if (ApacheNetServerConfiguration.EnableBuiltInPlugins)
+                        {
+                            string? Wipoeut2DResult = new WipeoutShooterClass(ctx.Request.Method.ToString(), ApacheNetServerConfiguration.APIStaticFolder)
+                            .ProcessRequest(HTTPProcessor.GetQueryParameters(HTTPProcessor.DecodeUrl(ctx.Request.Url.RawWithQuery)), ctx.Request.DataAsBytes, ctx.Request.ContentType);
+                            if (!string.IsNullOrEmpty(Wipoeut2DResult))
+                            {
+                                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                                ctx.Response.ContentType = "text/xml";
+                                return ctx.Response.Send(Wipoeut2DResult).Result;
+                            }
+
+                            ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                            return ctx.Response.Send().Result;
+                        }
+                        return false;
+                     }
+                },
+                new() {
                     Name = "Home Athletic games leaderboard system",
-                    UrlRegex = "/entryBare.php",
+                    UrlRegex = "^/entryBare.php",
                     Method = "POST",
                     Host = "homeleaderboards.software.eu.playstation.com",
                     Callable = (HttpContextBase ctx) => {
@@ -273,7 +364,7 @@ namespace ApacheNet.RouteHandlers
                 },
                 new() {
                     Name = "aurora_stats",
-                    UrlRegex = "/scenes/aurora_stats.xml",
+                    UrlRegex = "^/scenes/aurora_stats.xml",
                     Method = "GET",
                     Host = "ndreams.stats.s3.amazonaws.com",
                     Callable = (HttpContextBase ctx) => {
@@ -295,7 +386,7 @@ namespace ApacheNet.RouteHandlers
                 },
                 new() {
                     Name = "aurora_mystery",
-                    UrlRegex = "/scenes/mystery.xml",
+                    UrlRegex = "^/scenes/mystery.xml",
                     Method = "GET",
                     Host = "ndreams.stats.s3.amazonaws.com",
                     Callable = (HttpContextBase ctx) => {
@@ -313,7 +404,7 @@ namespace ApacheNet.RouteHandlers
                 },
                 new() {
                     Name = "aurora_stats_config",
-                    UrlRegex = "/aurora/aurora_stats_config.xml",
+                    UrlRegex = "^/aurora/aurora_stats_config.xml",
                     Method = "GET",
                     Host = "ndreams.stats.s3.amazonaws.com",
                     Callable = (HttpContextBase ctx) => {
@@ -330,7 +421,7 @@ namespace ApacheNet.RouteHandlers
                 },
                 new() {
                     Name = "xi2_stats_config",
-                    UrlRegex = "/xi2/xi2_stats_config.xml",
+                    UrlRegex = "^/xi2/xi2_stats_config.xml",
                     Method = "GET",
                     Host = "ndreams.stats.s3.amazonaws.com",
                     Callable = (HttpContextBase ctx) => {
@@ -348,7 +439,7 @@ namespace ApacheNet.RouteHandlers
                 },
                 new() {
                     Name = "ansda_stats",
-                    UrlRegex = "/ndreams.stats/scenes/ansda_stats.xml",
+                    UrlRegex = "^/ndreams.stats/scenes/ansda_stats.xml",
                     Method = "GET",
                     Host = "s3.amazonaws.com",
                     Callable = (HttpContextBase ctx) => {

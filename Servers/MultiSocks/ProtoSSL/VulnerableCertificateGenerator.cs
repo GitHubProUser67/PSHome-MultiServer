@@ -259,19 +259,40 @@ public class VulnerableCertificateGenerator
     private static string WriteObjectToPEM(object obj)
     {
         StringBuilder CertPem = new StringBuilder();
-        PemWriter CSRPemWriter = new PemWriter(new StringWriter(CertPem));
-        CSRPemWriter.WriteObject(obj);
-        CSRPemWriter.Writer.Flush();
+        using (PemWriter CSRPemWriter = new PemWriter(new StringWriter(CertPem)))
+        {
+            CSRPemWriter.WriteObject(obj);
+            CSRPemWriter.Writer.Flush();
+        }
         return CertPem.ToString();
     }
 
-    private static X509Certificate2 WritePEMPairToX509Certificate2(string CertPem, string PrivKeyPEM)
+    private static X509Certificate2 WritePEMPairToX509Certificate2(string certPem, string privKeyPem)
     {
         X509Certificate2Collection coll = new X509Certificate2Collection();
-        coll.ImportFromPem(CertPem);
-        RSA key = RSA.Create();
-        key.ImportFromPem(PrivKeyPEM);
+        coll.ImportFromPem(certPem);
 
-        return coll[0].CopyWithPrivateKey(key);
+        if (coll.Count == 0)
+            throw new InvalidOperationException("[ProtoSSL] - No certificates found in the provided PEM.");
+
+        // Detect private key type by PEM header
+        if (privKeyPem.Contains("BEGIN RSA PRIVATE KEY"))
+        {
+            using (RSA rsa = RSA.Create())
+            {
+                rsa.ImportFromPem(privKeyPem);
+                return coll[0].CopyWithPrivateKey(rsa);
+            }
+        }
+        else if (privKeyPem.Contains("BEGIN EC PRIVATE KEY") || privKeyPem.Contains("BEGIN PRIVATE KEY"))
+        {
+            using (ECDsa ecdsa = ECDsa.Create())
+            {
+                ecdsa.ImportFromPem(privKeyPem);
+                return coll[0].CopyWithPrivateKey(ecdsa);
+            }
+        }
+        else
+            throw new NotSupportedException("[ProtoSSL] - Unsupported private key type in PEM.");
     }
 }

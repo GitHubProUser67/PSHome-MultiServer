@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+
+		<!--
+		Wait, what? This is not (only) a .NET Standard library. True, true - however, there exist other libraries
+		that reference prometheus-net types living in Prometheus.NetStandard. To avoid breaking those libraries, we
+		preserve here the old name of the assembly even though it is no longer a .NET Standard assembly.
+		-->
+		<AssemblyName>Prometheus.NetStandard</AssemblyName>
+		<RootNamespace>Prometheus</RootNamespace>
+
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+		<NoWarn>1591</NoWarn>
+
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+		<!-- "latest" works on local PC but not in build pipeline; Visual Studio version difference? Whatever, preview it is. -->
+		<LangVersion>preview</LangVersion>
+		<WarningLevel>9999</WarningLevel>
+		
+		<IsPublishable>false</IsPublishable>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
+		<PackageReference Include="System.ValueTuple" Version="4.5.0" />
+		<Reference Include="System.Net.Http" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
+		<PackageReference Include="Microsoft.Extensions.ObjectPool" Version="6.0.36" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\SpaceWizards.HttpListener\SpaceWizards.HttpListener.csproj" />
+	</ItemGroup>
+
+</Project>

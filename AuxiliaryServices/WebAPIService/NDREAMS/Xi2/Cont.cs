@@ -121,7 +121,13 @@ namespace WebAPIService.NDREAMS.Xi2
 
                     func = data.GetParameterValue("func");
                     key = data.GetParameterValue("key");
-                    name = data.GetParameterValue("name");
+                    try
+                    {
+                        name = data.GetParameterValue("name");
+                    }
+                    catch
+                    {
+                    }
 
                     if (!string.IsNullOrEmpty(func))
                     {
@@ -130,6 +136,44 @@ namespace WebAPIService.NDREAMS.Xi2
 
                         switch (func)
                         {
+                            case "xoff":
+                                territory = data.GetParameterValue("territory");
+                                day = data.GetParameterValue("day");
+
+                                ExpectedHash = Aurora.Teaser.Xoff_VerifyKey(territory, day);
+
+                                if (key == ExpectedHash)
+                                {
+                                    byte MockedDay = 0;
+
+                                    // Get the current day of the week
+                                    switch (DateTime.Today.DayOfWeek)
+                                    {
+                                        case DayOfWeek.Monday:
+                                            MockedDay = 5;
+                                            break;
+                                        case DayOfWeek.Tuesday:
+                                            MockedDay = 4;
+                                            break;
+                                        case DayOfWeek.Wednesday:
+                                            MockedDay = 3;
+                                            break;
+                                        case DayOfWeek.Thursday:
+                                            MockedDay = 2;
+                                            break;
+                                        case DayOfWeek.Friday:
+                                            MockedDay = 1;
+                                            break;
+                                    }
+
+                                    return $"<xml><success>true</success><result><day>{MockedDay}</day><hash>{Aurora.Teaser.Xoff_GetSignature(int.Parse(day), MockedDay)}</hash></result></xml>";
+                                }
+                                else
+                                {
+                                    string errMsg = $"[Xi2] - Xoff: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                                    CustomLogger.LoggerAccessor.LogWarn(errMsg);
+                                    return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessCont</function></xml>";
+                                }
                             case "init":
                                 ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(ContSignature, name, func, CurrentDate);
 

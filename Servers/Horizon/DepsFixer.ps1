@@ -20,12 +20,13 @@ $propertiesToRemove = @(
     "CompressionLibrary/1.0.0",
     "CustomLogger/1.0.0",
     "NetworkLibrary/1.0.0",
-	"SoftFloatLibrary/1.0.0",
+	"PS2FloatLibrary/1.0.0",
     "EndianTools/1.0.0",
     "HorizonService/1.0.0",
 	"TechnitiumLibrary.Net/5.0.0",
 	"TechnitiumLibrary.Net.Firewall/5.0.0",
 	"SpaceWizards.HttpListener/0.2.0",
+	"Prometheus/1.0.0",
 	"WatsonWebserver/6.2.0"
 )
 

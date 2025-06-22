@@ -78,41 +78,6 @@ namespace NetworkLibrary.Extension
         }
 
         /// <summary>
-        /// Convert UTF-8 byte array to array of uint, each containing 4 chars to be manipulated
-        /// </summary>
-        /// <param name="s"></param>
-        /// <param name="LittleEndian">If true, use little-endian encoding; if false, use big-endian encoding</param>
-        /// <returns>Array of uint representing the byte data</returns>
-        public static uint[] ToUint32(this byte[] s, bool LittleEndian = true)
-        {
-            // Note chars must be within ISO-8859-1 (with Unicode code-point < 256) to fit 4/uint
-            uint[] l = new uint[(int)Math.Ceiling((decimal)s.Length / 4)];
-
-            // Create an array of uint, each holding the data of 4 characters
-            // If the last block is less than 4 characters in length, fill with ascii null values
-            for (int i = 0; i < l.Length; i++)
-            {
-                byte b0 = (i * 4) < s.Length ? s[i * 4] : (byte)0;
-                byte b1 = (i * 4 + 1) < s.Length ? s[i * 4 + 1] : (byte)0;
-                byte b2 = (i * 4 + 2) < s.Length ? s[i * 4 + 2] : (byte)0;
-                byte b3 = (i * 4 + 3) < s.Length ? s[i * 4 + 3] : (byte)0;
-
-                if (LittleEndian)
-                {
-                    // Little-endian: Least significant byte first
-                    l[i] = (uint)(b0 | (b1 << 8) | (b2 << 16) | (b3 << 24));
-                }
-                else
-                {
-                    // Big-endian: Most significant byte first
-                    l[i] = (uint)(b3 | (b2 << 8) | (b1 << 16) | (b0 << 24));
-                }
-            }
-
-            return l;
-        }
-
-        /// <summary>
         /// Check if 2 byte arrays are strictly identical.
         /// <para>Savoir si 2 tableaux de bytes sont strictement identiques.</para>
         /// <param name="b1">The left array.</param>
@@ -131,7 +96,7 @@ namespace NetworkLibrary.Extension
 
             int lenb1 = b1.Length;
 
-            if (Windows.Win32API.IsWindows)
+            if (Microsoft.Win32API.IsWindows)
                 // Validate buffers are the same length.
                 // This also ensures that the count does not exceed the length of either buffer.  
                 return lenb1 == b2.Length && memcmp(b1, b2, lenb1) == 0;
@@ -166,6 +131,16 @@ namespace NetworkLibrary.Extension
             byte[] data = new byte[i + 1];
             Array.Copy(arr, data, i + 1);
             return data;
+        }
+
+        public static byte[] ShadowCopy(this byte[] arr)
+        {
+            if (arr == null)
+                return null;
+
+            byte[] copy = new byte[arr.Length];
+            Buffer.BlockCopy(arr, 0, copy, 0, arr.Length);
+            return copy;
         }
 
         public static byte[] GenerateRandomBytes(ushort size)

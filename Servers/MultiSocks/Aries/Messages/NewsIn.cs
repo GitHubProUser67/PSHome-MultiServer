@@ -69,7 +69,10 @@ namespace MultiSocks.Aries.Messages
             else if (NAME.Contains("webconfig."))
                 client.SendMessage(new WebConfigNewsOut() { BILLBOARD_URL = "http://gos.ea.com/easo/", BILLBOARD_TEXT = "Test" });
             else
-                CustomLogger.LoggerAccessor.LogWarn($"[DirtySocks] - News - Client Requested an unknown config type: {NAME}, not responding");
+            {
+                CustomLogger.LoggerAccessor.LogWarn($"[DirtySocks] - News - Client Requested an unknown config type: {NAME}, bouncing...");
+                client.SendMessage(this);
+            }
         }
     }
 }

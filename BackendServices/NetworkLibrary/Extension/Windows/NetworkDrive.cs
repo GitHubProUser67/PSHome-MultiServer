@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.IO;
 
-namespace NetworkLibrary.Extension.Windows
+namespace NetworkLibrary.Extension.Microsoft
 {
     public class NetworkDrive : IDisposable
     {

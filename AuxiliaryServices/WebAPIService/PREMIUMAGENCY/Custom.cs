@@ -5,8 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+#if !NETFRAMEWORK
 using System.Web;
-
+#endif
 namespace WebAPIService.PREMIUMAGENCY
 {
     public class Custom
@@ -17,7 +18,11 @@ namespace WebAPIService.PREMIUMAGENCY
 
             if (method == "GET")
             {
+#if NETFRAMEWORK
+                nid = HTTPProcessor.GetQueryParameters(fulluripath)["key"];
+#else
                 nid = HttpUtility.ParseQueryString(fulluripath).Get("key");
+#endif
             }
             else
             {
@@ -618,7 +623,11 @@ namespace WebAPIService.PREMIUMAGENCY
 
             if (method == "GET")
             {
+#if NETFRAMEWORK
+                nid = HTTPProcessor.GetQueryParameters(fulluripath)["nid"];
+#else
                 nid = HttpUtility.ParseQueryString(fulluripath).Get("nid");
+#endif
             }
             else
             {

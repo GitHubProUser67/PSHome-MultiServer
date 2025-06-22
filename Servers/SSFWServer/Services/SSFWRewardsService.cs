@@ -1,4 +1,5 @@
 using CustomLogger;
+using NetworkLibrary.Extension;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SSFWServer.Helpers.FileHelper;
@@ -76,14 +77,8 @@ namespace SSFWServer.Services
                         foreach (var reward in rewardsObject)
                         {
                             string rewardKey = reward.Key;
-                            JToken? rewardValue = reward.Value;
-                            if (string.IsNullOrEmpty(rewardKey) || rewardValue == null)
+                            if (string.IsNullOrEmpty(rewardKey) || reward.Value == null)
                                 continue;
-                            if (rewardValue.Type != JTokenType.Integer)
-                            {
-                                LoggerAccessor.LogInfo($"[SSFWRewardsService] - Reward:{rewardValue} earned, adding to mini file:{filePath}.");
-                                rewardValue = 1;
-                            }
 
                             // Check if the reward exists in the JSON array
                             JToken? existingReward = jsonArray.FirstOrDefault(r => r[rewardKey] != null);
@@ -97,13 +92,13 @@ namespace SSFWServer.Services
                             {
                                 if (existingReward != null)
                                     // Update the value of the reward
-                                    existingReward[rewardKey] = rewardValue;
+                                    existingReward[rewardKey] = DateTime.UtcNow.ToUnixTime();
                                 else
                                 {
                                     // Add the new reward to the JSON array
                                     jsonArray.Add(new JObject
                                     {
-                                        { rewardKey, rewardValue }
+                                        { rewardKey, DateTime.UtcNow.ToUnixTime() }
                                     });
                                 }
                             }

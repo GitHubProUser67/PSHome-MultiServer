@@ -35,7 +35,7 @@ namespace WebAPIService.NDREAMS.Aurora
 
                 if (key == ExpectedHash)
                 {
-                    int MockedDay = 0;
+                    byte MockedDay = 0;
 
                     // Get the current day of the week
                     switch (DateTime.Today.DayOfWeek)

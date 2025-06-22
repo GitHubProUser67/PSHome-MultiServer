@@ -11,7 +11,7 @@ namespace Horizon.RT.Models
     {
         public override RT_MSG_TYPE Id => RT_MSG_TYPE.RT_MSG_SERVER_ECHO;
 
-        public uint UnixTimestamp = DateTimeUtils.GetUnixTime();
+        public uint UnixTimestamp = DateTimeUtils.GetUnixTimeU32();
         public uint UNK_04 = 0x00000000;
 
         public override void Deserialize(MessageReader reader)

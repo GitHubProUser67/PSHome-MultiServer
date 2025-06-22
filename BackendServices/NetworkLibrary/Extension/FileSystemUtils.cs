@@ -128,6 +128,19 @@ namespace NetworkLibrary.Extension
             return null;
         }
 
+        public static FileStream TryOpen(string filePath)
+        {
+            try
+            {
+                return File.OpenRead(filePath);
+            }
+            catch
+            {
+            }
+
+            return null;
+        }
+
         public static async Task<bool> TryDelete(string filePath)
         {
             try

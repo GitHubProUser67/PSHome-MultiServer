@@ -10,6 +10,8 @@ using HomeTools.Crypto;
 using HomeTools.PS3_Creator;
 using EndianTools;
 using CustomLogger;
+using System.Collections.Generic;
+using System.Text;
 
 namespace HomeTools.UnBAR
 {
@@ -31,7 +33,7 @@ namespace HomeTools.UnBAR
         {
             try
             {
-                int ExitCode = new EDAT().encryptFile(filePath, sdatfilePath, new byte[16], null, new byte[48], ConversionUtils.getByteArray("0C"), ConversionUtils.getByteArray("00"), ConversionUtils.getByteArray("03"));
+                int ExitCode = new EDAT().encryptFile(filePath, sdatfilePath, new byte[16], null, new byte[48], "0C".HexStringToByteArray(), "00".HexStringToByteArray(), "03".HexStringToByteArray());
 
                 if (ExitCode != 0)
                     LoggerAccessor.LogError($"[RunUnBAR] - RunEncrypt failed with status code : {ExitCode}");
@@ -54,7 +56,7 @@ namespace HomeTools.UnBAR
                     LoggerAccessor.LogError($"[RunUnBAR] - RunDecrypt failed with status code : {ExitCode}");
                 else if (ExitCode == sbyte.MinValue)
                 {
-                    string makeNpExePath = converterPath + "/make_npdata/" + (!NetworkLibrary.Extension.Windows.Win32API.IsWindows ? "make_npdata_win32.exe" : "make_npdata");
+                    string makeNpExePath = converterPath + "/make_npdata/" + (!NetworkLibrary.Extension.Microsoft.Win32API.IsWindows ? "make_npdata_win32.exe" : "make_npdata");
 
                     if (File.Exists(makeNpExePath))
                     {
@@ -147,8 +149,8 @@ namespace HomeTools.UnBAR
 
                                 Buffer.BlockCopy(RawBarData, 24, SharcHeader, 0, SharcHeader.Length);
 
-                                SharcHeader = LIBSECURE.InitiateAESBuffer(SharcHeader,
-                                 options.IsBase64().Item2, HeaderIV, "CTR");
+                                SharcHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(SharcHeader,
+                                 options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2).Result;
 
                                 if (SharcHeader == null)
                                     return Task.CompletedTask; // Sharc Header failed to decrypt.
@@ -158,8 +160,8 @@ namespace HomeTools.UnBAR
 
                                     Buffer.BlockCopy(RawBarData, 24, SharcHeader, 0, SharcHeader.Length);
 
-                                    SharcHeader = LIBSECURE.InitiateAESBuffer(SharcHeader,
-                                     options.IsBase64().Item2, HeaderIV, "CTR");
+                                    SharcHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(SharcHeader,
+                                     options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2).Result;
 
                                     if (SharcHeader == null)
                                         return Task.CompletedTask; // Sharc Header failed to decrypt.
@@ -169,8 +171,8 @@ namespace HomeTools.UnBAR
 
                                         Buffer.BlockCopy(RawBarData, 24, SharcHeader, 0, SharcHeader.Length);
 
-                                        SharcHeader = LIBSECURE.InitiateAESBuffer(SharcHeader,
-                                         options.IsBase64().Item2, HeaderIV, "CTR");
+                                        SharcHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(SharcHeader,
+                                         options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2).Result;
 
                                         if (SharcHeader == null)
                                             return Task.CompletedTask; // Sharc Header failed to decrypt.
@@ -199,9 +201,9 @@ namespace HomeTools.UnBAR
 
                                     Buffer.BlockCopy(HeaderIV, 0, OriginalIV, 0, OriginalIV.Length);
 
-                                    ToolsImplementation.IncrementIVBytes(HeaderIV, 1); // IV so we increment.
+                                    ToolsImplementation.IncrementIVBytes(HeaderIV, 1); // Increment IV by one (supposed to be the continuation of the header cypher context).
 
-                                    SharcTOC = LIBSECURE.InitiateAESBuffer(SharcTOC, options.IsBase64().Item2, HeaderIV, "CTR");
+                                    SharcTOC = ToolsImplementation.ProcessCrypt_DecryptAsync(SharcTOC, options.IsBase64().Item2, HeaderIV, 2).Result;
 
                                     if (SharcTOC != null)
                                     {
@@ -364,13 +366,13 @@ namespace HomeTools.UnBAR
                     switch (cdnMode)
                     {
                         case 2:
-                            DecryptedSignatureHeader = LIBSECURE.InitiateBlowfishBuffer(EncryptedSignatureHeader, ToolsImplementation.HDKSignatureKey, SignatureIV, "CTR");
+                            DecryptedSignatureHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(EncryptedSignatureHeader, ToolsImplementation.HDKSignatureKey, SignatureIV, 1).Result;
                             break;
                         case 1:
-                            DecryptedSignatureHeader = LIBSECURE.InitiateBlowfishBuffer(EncryptedSignatureHeader, ToolsImplementation.BetaSignatureKey, SignatureIV, "CTR");
+                            DecryptedSignatureHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(EncryptedSignatureHeader, ToolsImplementation.BetaSignatureKey, SignatureIV, 1).Result;
                             break;
                         default:
-                            DecryptedSignatureHeader = LIBSECURE.InitiateBlowfishBuffer(EncryptedSignatureHeader, ToolsImplementation.SignatureKey, SignatureIV, "CTR");
+                            DecryptedSignatureHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(EncryptedSignatureHeader, ToolsImplementation.SignatureKey, SignatureIV, 1).Result;
                             break;
                     }
 
@@ -415,18 +417,16 @@ namespace HomeTools.UnBAR
                             }
                             else
                             {
-                                ToolsImplementation.IncrementIVBytes(SignatureIV, 3);
-
                                 switch (cdnMode)
                                 {
                                     case 2:
-                                        FileBytes = LIBSECURE.InitiateBlowfishBuffer(FileBytes, ToolsImplementation.HDKBlowfishKey, SignatureIV, "CTR");
+                                        FileBytes = ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.HDKBlowfishKey, SignatureIV, 1).Result;
                                         break;
                                     case 1:
-                                        FileBytes = LIBSECURE.InitiateBlowfishBuffer(FileBytes, ToolsImplementation.BetaBlowfishKey, SignatureIV, "CTR");
+                                        FileBytes = ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.BetaBlowfishKey, SignatureIV, 1).Result;
                                         break;
                                     default:
-                                        FileBytes = LIBSECURE.InitiateBlowfishBuffer(FileBytes, ToolsImplementation.BlowfishKey, SignatureIV, "CTR");
+                                        FileBytes = ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.BlowfishKey, SignatureIV, 1).Result;
                                         break;
                                 }
 
@@ -557,7 +557,7 @@ namespace HomeTools.UnBAR
                 LoggerAccessor.LogInfo($"IV - {tableOfContent.IV.ToHexString()}");
 #endif
 
-                byte[] FileBytes = await ToolsImplementation.ProcessXTEAProxyAsync(data, Key, tableOfContent.IV).ConfigureAwait(false);
+                byte[] FileBytes = await ToolsImplementation.ProcessCrypt_DecryptAsync(data, Key, tableOfContent.IV.ShadowCopy(), 0).ConfigureAwait(false);
 
                 try
                 {
@@ -662,24 +662,12 @@ namespace HomeTools.UnBAR
         /// <returns>A int (-1 if not found).</returns>
         private static int FindDataPositionInBinary(byte[] data1, byte[] data2)
         {
-            if (data1 == null || data2 == null || data1.Length < data2.Length)
+            if (data1 == null || data2 == null)
                 return -1;
 
-            for (int i = 0; i < data1.Length - data2.Length + 1; i++)
-            {
-                bool found = true;
-                for (int j = 0; j < data2.Length; j++)
-                {
-                    if (data1[i + j] != data2[j])
-                    {
-                        found = false;
-                        break;
-                    }
-                }
-
-                if (found)
-                    return i;
-            }
+            IEnumerator<int> matches = new BoyerMoore(data2).BCLMatch(data1, 0).GetEnumerator();
+            if (matches.MoveNext())
+                return matches.Current;
 
             return -1; // Data2 not found in Data1
         }

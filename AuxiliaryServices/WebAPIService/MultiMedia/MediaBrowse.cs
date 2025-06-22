@@ -3,7 +3,9 @@ using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Text;
+#if !NETFRAMEWORK
 using System.Web;
+#endif
 
 namespace WebAPIService.MultiMedia
 {
@@ -24,7 +26,11 @@ namespace WebAPIService.MultiMedia
         public bool IsSupported()
         {
             if (Directory.Exists(string.Format(@"{0}/{1}", workpath,
+#if NETFRAMEWORK
+                Uri.UnescapeDataString(GetQueryParameter(HTTPProcessor.ExtractQueryString(fullurl), "item")))
+#else
                 HttpUtility.UrlDecode(GetQueryParameter(HTTPProcessor.ExtractQueryString(fullurl), "item")))
+#endif
                 .Replace(@"\\", @"\").Replace("//", "/")))
                 return true;
 
@@ -40,8 +46,11 @@ namespace WebAPIService.MultiMedia
                 {
                     long offset = long.Parse(GetQueryParameter(urlArgs, "offset"));
                     long count = long.Parse(GetQueryParameter(urlArgs, "count"));
+#if NETFRAMEWORK
+                    string instance = Uri.UnescapeDataString(GetQueryParameter(urlArgs, "item"));
+#else
                     string instance = HttpUtility.UrlDecode(GetQueryParameter(urlArgs, "item"));
-
+#endif
                     string path = string.Format(@"{0}/{1}", workpath, instance).Replace(@"\\", @"\").Replace("//", "/");
                     if (Directory.Exists(path))
                     {

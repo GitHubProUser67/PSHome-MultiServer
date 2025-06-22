@@ -1,19 +1,39 @@
-#See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
+# Consultez https://aka.ms/customizecontainer pour savoir comment personnaliser votre conteneur de débogage et comment Visual Studio utilise ce Dockerfile pour générer vos images afin d’accélérer le débogage.
 
+# Cet index est utilisé lors de l’exécution à partir de VS en mode rapide (par défaut pour la configuration de débogage)
 FROM mcr.microsoft.com/dotnet/runtime:6.0 AS base
+USER app
 WORKDIR /app
 
+
+# Cette phase est utilisée pour générer le projet de service
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
+ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["SpecializedServers/Horizon/Horizon.csproj", "Horizon/"]
-RUN dotnet restore "SpecializedServers/Horizon/Horizon.csproj"
+COPY ["Servers/Horizon/Horizon.csproj", "Servers/Horizon/"]
+COPY ["AuxiliaryServices/HorizonService/HorizonService.csproj", "AuxiliaryServices/HorizonService/"]
+COPY ["BackendServices/NetworkLibrary/NetworkLibrary.csproj", "BackendServices/NetworkLibrary/"]
+COPY ["BackendServices/CastleLibrary/CastleLibrary.csproj", "BackendServices/CastleLibrary/"]
+COPY ["BackendServices/CustomLogger/CustomLogger.csproj", "BackendServices/CustomLogger/"]
+COPY ["BackendServices/EndianTools/EndianTools.csproj", "BackendServices/EndianTools/"]
+COPY ["BackendServices/CompressionLibrary/CompressionLibrary.csproj", "BackendServices/CompressionLibrary/"]
+COPY ["AuxiliaryServices/WebAPIService/WebAPIService.csproj", "AuxiliaryServices/WebAPIService/"]
+COPY ["BackendServices/Prometheus/Prometheus.csproj", "BackendServices/Prometheus/"]
+COPY ["BackendServices/SpaceWizards.HttpListener/SpaceWizards.HttpListener.csproj", "BackendServices/SpaceWizards.HttpListener/"]
+COPY ["BackendServices/PS2FloatLibrary/PS2FloatLibrary.csproj", "BackendServices/PS2FloatLibrary/"]
+COPY ["BackendServices/TechnitiumLibrary.Net.Firewall/TechnitiumLibrary.Net.Firewall.csproj", "BackendServices/TechnitiumLibrary.Net.Firewall/"]
+COPY ["BackendServices/WatsonWebserver/WatsonWebserver.csproj", "BackendServices/WatsonWebserver/"]
+RUN dotnet restore "./Servers/Horizon/Horizon.csproj"
 COPY . .
-WORKDIR "/src/Horizon"
-RUN dotnet build "Horizon.csproj" -c Release -o /app/build
+WORKDIR "/src/Servers/Horizon"
+RUN dotnet build "./Horizon.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
+# Cette étape permet de publier le projet de service à copier dans la phase finale
 FROM build AS publish
-RUN dotnet publish "Horizon.csproj" -c Release -o /app/publish /p:UseAppHost=false
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "./Horizon.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
+# Cette phase est utilisée en production ou lors de l’exécution à partir de VS en mode normal (par défaut quand la configuration de débogage n’est pas utilisée)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .

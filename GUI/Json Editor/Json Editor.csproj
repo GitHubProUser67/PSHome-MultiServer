@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <Product>Json Editor by ZTn</Product>
+    <Description>Simple Json Editor based on Newtonsoft.Json library</Description>
+    <Copyright>ZeToken.net 2013-2020 (MIT License)</Copyright>
+    <Authors>Sylvain Vernois</Authors>
+    <Version>1.6.0</Version>
+    <Company>ZeToken.net</Company>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>ZTn.Json.Editor</RootNamespace>
+    <AssemblyName>ZTn.Json.Editor</AssemblyName>
+    <OutputType>WinExe</OutputType>
+    <StartupObject>ZTn.Json.Editor.Program</StartupObject>
+	<GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+	<ApplicationIcon>json-editor.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="json-editor.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Costura.Fody" Version="6.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <!--<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>-->
+    </PackageReference>
+    <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\JsonTreeView\JsonTreeView.csproj" />
+  </ItemGroup>
+</Project>

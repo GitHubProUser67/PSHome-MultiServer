@@ -2,6 +2,7 @@
 using System.Text;
 using System.IO;
 using System.Reflection;
+using NetworkLibrary.Extension;
 
 namespace HomeTools.PS3_Creator
 {
@@ -39,10 +40,10 @@ namespace HomeTools.PS3_Creator
             dat.Close();
             String input = inFile + ".dat";
             DirectoryInfo di = Directory.CreateDirectory(path + "/edats");
-            byte[] flags = ConversionUtils.getByteArray("0C");
-            byte[] type = ConversionUtils.getByteArray("00");
-            byte[] version = ConversionUtils.getByteArray("02");
-            byte[] devKLic = ConversionUtils.getByteArray("72F990788F9CFF745725F08E4C128387");
+            byte[] flags = "0C".HexStringToByteArray();
+            byte[] type = "00".HexStringToByteArray();
+            byte[] version = "02".HexStringToByteArray();
+            byte[] devKLic = "72F990788F9CFF745725F08E4C128387".HexStringToByteArray();
             byte[] keyFromRif = null;
             EDAT instance = new EDAT();
             instance.encryptFile(input, outFile, devKLic, keyFromRif, contentID, flags, type, version);

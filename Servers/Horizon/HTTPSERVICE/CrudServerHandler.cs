@@ -10,12 +10,14 @@ using WatsonWebserver;
 using WatsonWebserver.Core;
 using Horizon.MUM.Models;
 using Newtonsoft.Json;
-using Horizon.DME.Models;
+using Prometheus;
 
 namespace Horizon.HTTPSERVICE
 {
     public class CrudServerHandler
     {
+        private static Counter clientsRequests = Metrics.CreateCounter("medius_crud_requests_total", "Total number of Medius CRUD API requests.");
+
         private Webserver? _Server;
         private string ip;
         private int port;
@@ -43,6 +45,22 @@ namespace Horizon.HTTPSERVICE
             StartServer();
         }
 
+        private static async Task AuthorizeConnection(HttpContextBase ctx)
+        {
+            clientsRequests.Inc();
+
+            string IpToBan = ctx.Request.Source.IpAddress;
+            if (!"::1".Equals(IpToBan) && !"127.0.0.1".Equals(IpToBan) && !"localhost".Equals(IpToBan, StringComparison.InvariantCultureIgnoreCase))
+            {
+                if (!string.IsNullOrEmpty(IpToBan) && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs != null && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs.Contains(IpToBan))
+                {
+                    LoggerAccessor.LogError($"[SECURITY] - Client - {ctx.Request.Source.IpAddress}:{ctx.Request.Source.Port} Requested the Medius CRUD API server while being banned!");
+                    ctx.Response.StatusCode = 403;
+                    await ctx.Response.Send();
+                }
+            }
+        }
+
         public void StopServer()
         {
             _Server?.Stop();
@@ -55,16 +73,20 @@ namespace Horizon.HTTPSERVICE
         {
             if (_Server != null && !_Server.IsListening)
             {
-                _Server.Events.Logger = LoggerAccessor.LogInfo;
+                _Server.Routes.AuthenticateRequest = AuthorizeConnection;
                 _Server.Events.ExceptionEncountered += ExceptionEncountered;
+                _Server.Events.Logger = LoggerAccessor.LogInfo;
+#if DEBUG
                 _Server.Settings.Debug.Responses = true;
                 _Server.Settings.Debug.Routing = true;
-
+#endif
                 _Server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/GetRooms/", async (HttpContextBase ctx) =>
                 {
                     string userAgent = ctx.Request.Useragent;
+                    string clientip = ctx.Request.Source.IpAddress;
 
-                    if (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase)) // Get Away TikTok.
+                    if ((IPAddress.TryParse(clientip, out IPAddress? clientipAddr) && await HorizonServerConfiguration.Database.GetIsIpBanned(clientipAddr))
+                    || (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase))) // Get Away TikTok and cheaters.
                     {
                         ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                         ctx.Response.ContentType = "text/plain";
@@ -98,7 +120,7 @@ namespace Horizon.HTTPSERVICE
                             else if (encoding.Contains("deflate"))
                             {
                                 ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                await ctx.Response.Send(HTTPProcessor.Inflate(Encoding.UTF8.GetBytes(managerPayload)));
+                                await ctx.Response.Send(HTTPProcessor.Deflate(Encoding.UTF8.GetBytes(managerPayload)));
                             }
                             else
                                 await ctx.Response.Send(managerPayload);
@@ -111,8 +133,10 @@ namespace Horizon.HTTPSERVICE
                 _Server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/GetCIDsList/", async (HttpContextBase ctx) =>
                 {
                     string userAgent = ctx.Request.Useragent;
+                    string clientip = ctx.Request.Source.IpAddress;
 
-                    if (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase)) // Get Away TikTok.
+                    if ((IPAddress.TryParse(clientip, out IPAddress? clientipAddr) && await HorizonServerConfiguration.Database.GetIsIpBanned(clientipAddr))
+                    || (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase))) // Get Away TikTok and cheaters.
                     {
                         ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                         ctx.Response.ContentType = "text/plain";
@@ -120,7 +144,6 @@ namespace Horizon.HTTPSERVICE
                     }
                     else
                     {
-                        string clientip = ctx.Request.Source.IpAddress;
                         bool localhost = false;
 
                         if ("::1".Equals(clientip) || "127.0.0.1".Equals(clientip) || "localhost".Equals(clientip, StringComparison.InvariantCultureIgnoreCase))
@@ -150,7 +173,7 @@ namespace Horizon.HTTPSERVICE
                             else if (encoding.Contains("deflate"))
                             {
                                 ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                await ctx.Response.Send(HTTPProcessor.Inflate(Encoding.UTF8.GetBytes(CIDManager.ToJson(!localhost))));
+                                await ctx.Response.Send(HTTPProcessor.Deflate(Encoding.UTF8.GetBytes(CIDManager.ToJson(!localhost))));
                             }
                             else
                                 await ctx.Response.Send(CIDManager.ToJson(!localhost));
@@ -164,8 +187,10 @@ namespace Horizon.HTTPSERVICE
                 {
                     string? Command = ctx.Request.Url.Parameters["command"];
                     string userAgent = ctx.Request.Useragent;
+                    string clientip = ctx.Request.Source.IpAddress;
 
-                    if (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase)) // Get Away TikTok.
+                    if ((IPAddress.TryParse(clientip, out IPAddress? clientipAddr) && await HorizonServerConfiguration.Database.GetIsIpBanned(clientipAddr))
+                    || (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase))) // Get Away TikTok and cheaters.
                     {
                         ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                         ctx.Response.ContentType = "text/plain";
@@ -173,8 +198,6 @@ namespace Horizon.HTTPSERVICE
                     }
                     else
                     {
-                        string clientip = ctx.Request.Source.IpAddress;
-
                         if (!string.IsNullOrEmpty(clientip) && ("::1".Equals(clientip) || "127.0.0.1".Equals(clientip)
                         || "localhost".Equals(clientip, StringComparison.InvariantCultureIgnoreCase) || MediusClass.Settings.PlaystationHomeUsersServersAccessList.Any(entry => entry.Key.Contains($":{clientip}") && "ADMIN".Equals(entry.Value))))
                         {
@@ -238,7 +261,7 @@ namespace Horizon.HTTPSERVICE
                                     else if (encoding.Contains("deflate"))
                                     {
                                         ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                        await ctx.Response.Send(HTTPProcessor.Inflate(Encoding.UTF8.GetBytes(result)));
+                                        await ctx.Response.Send(HTTPProcessor.Deflate(Encoding.UTF8.GetBytes(result)));
                                     }
                                     else
                                         await ctx.Response.Send(result);
@@ -280,7 +303,7 @@ namespace Horizon.HTTPSERVICE
                                 else if (encoding.Contains("deflate"))
                                 {
                                     ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                    await ctx.Response.Send(HTTPProcessor.Inflate(videoData));
+                                    await ctx.Response.Send(HTTPProcessor.Deflate(videoData));
                                 }
                                 else
                                     await ctx.Response.Send(videoData);
@@ -325,7 +348,7 @@ namespace Horizon.HTTPSERVICE
                                 else if (encoding.Contains("deflate"))
                                 {
                                     ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                    await ctx.Response.Send(HTTPProcessor.Inflate(Encoding.UTF8.GetBytes(htmlPayload)));
+                                    await ctx.Response.Send(HTTPProcessor.Deflate(Encoding.UTF8.GetBytes(htmlPayload)));
                                 }
                                 else
                                     await ctx.Response.Send(htmlPayload);
@@ -341,8 +364,10 @@ namespace Horizon.HTTPSERVICE
                     string? region_code = ctx.Request.Url.Parameters["region_code"];
                     string? message = HTTPProcessor.DecodeUrl(ctx.Request.Url.Parameters["message"]);
                     string userAgent = ctx.Request.Useragent;
+                    string clientip = ctx.Request.Source.IpAddress;
 
-                    if (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase)) // Get Away TikTok.
+                    if ((IPAddress.TryParse(clientip, out IPAddress? clientipAddr) && await HorizonServerConfiguration.Database.GetIsIpBanned(clientipAddr))
+                    || (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase))) // Get Away TikTok and cheaters.
                     {
                         ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                         ctx.Response.ContentType = "text/plain";
@@ -351,7 +376,6 @@ namespace Horizon.HTTPSERVICE
                     else
                     {
                         bool Admin = false;
-                        string clientip = ctx.Request.Source.IpAddress;
 
                         if (!string.IsNullOrEmpty(clientip) && ("::1".Equals(clientip) || "127.0.0.1".Equals(clientip)
                         || "localhost".Equals(clientip, StringComparison.InvariantCultureIgnoreCase) || MediusClass.Settings.PlaystationHomeUsersServersAccessList.Any(entry => entry.Key.Contains($":{clientip}") && "ADMIN".Equals(entry.Value))))
@@ -408,8 +432,10 @@ namespace Horizon.HTTPSERVICE
                     string? region_code = ctx.Request.Url.Parameters["region_code"];
                     string? user_name = HTTPProcessor.DecodeUrl(ctx.Request.Url.Parameters["user_name"]);
                     string userAgent = ctx.Request.Useragent;
+                    string clientip = ctx.Request.Source.IpAddress;
 
-                    if (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase)) // Get Away TikTok.
+                    if ((IPAddress.TryParse(clientip, out IPAddress? clientipAddr) && await HorizonServerConfiguration.Database.GetIsIpBanned(clientipAddr))
+                    || (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase))) // Get Away TikTok and cheaters.
                     {
                         ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                         ctx.Response.ContentType = "text/plain";
@@ -420,7 +446,6 @@ namespace Horizon.HTTPSERVICE
                         bool Retail = true;
                         bool Admin = false;
                         bool IsLcCompatible = false;
-                        string clientip = ctx.Request.Source.IpAddress;
 
                         if (!string.IsNullOrEmpty(clientip) && ("::1".Equals(clientip) || "127.0.0.1".Equals(clientip)
                         || "localhost".Equals(clientip, StringComparison.InvariantCultureIgnoreCase) || MediusClass.Settings.PlaystationHomeUsersServersAccessList.Any(entry => entry.Key.Contains($":{clientip}") && "ADMIN".Equals(entry.Value))))
@@ -465,8 +490,10 @@ namespace Horizon.HTTPSERVICE
                 {
                     string? Command = ctx.Request.Url.Parameters["command"];
                     string userAgent = ctx.Request.Useragent;
+                    string clientip = ctx.Request.Source.IpAddress;
 
-                    if (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase)) // Get Away TikTok.
+                    if ((IPAddress.TryParse(clientip, out IPAddress? clientipAddr) && await HorizonServerConfiguration.Database.GetIsIpBanned(clientipAddr))
+                    || (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase))) // Get Away TikTok and cheaters.
                     {
                         ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                         ctx.Response.ContentType = "text/plain";
@@ -487,7 +514,6 @@ namespace Horizon.HTTPSERVICE
                         bool Retail = true;
                         bool Admin = false;
                         string? AccessToken = null;
-                        string clientip = ctx.Request.Source.IpAddress;
 
                         if (!string.IsNullOrEmpty(clientip) && ("::1".Equals(clientip) || "127.0.0.1".Equals(clientip)
                         || "localhost".Equals(clientip, StringComparison.InvariantCultureIgnoreCase) || MediusClass.Settings.PlaystationHomeUsersServersAccessList.Any(entry => entry.Key.Contains($":{clientip}") && "ADMIN".Equals(entry.Value))))
@@ -570,8 +596,10 @@ namespace Horizon.HTTPSERVICE
                 {
                     string? Command = ctx.Request.Url.Parameters["command"];
                     string userAgent = ctx.Request.Useragent;
+                    string clientip = ctx.Request.Source.IpAddress;
 
-                    if (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase)) // Get Away TikTok.
+                    if ((IPAddress.TryParse(clientip, out IPAddress? clientipAddr) && await HorizonServerConfiguration.Database.GetIsIpBanned(clientipAddr))
+                    || (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase))) // Get Away TikTok and cheaters.
                     {
                         ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                         ctx.Response.ContentType = "text/plain";
@@ -660,8 +688,10 @@ namespace Horizon.HTTPSERVICE
                 {
                     string? Command = ctx.Request.Url.Parameters["command"];
                     string userAgent = ctx.Request.Useragent;
+                    string clientip = ctx.Request.Source.IpAddress;
 
-                    if (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase)) // Get Away TikTok.
+                    if ((IPAddress.TryParse(clientip, out IPAddress? clientipAddr) && await HorizonServerConfiguration.Database.GetIsIpBanned(clientipAddr))
+                    || (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase))) // Get Away TikTok and cheaters.
                     {
                         ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                         ctx.Response.ContentType = "text/plain";
@@ -682,7 +712,6 @@ namespace Horizon.HTTPSERVICE
                         bool Retail = true;
                         bool Admin = false;
                         string? AccessToken = null;
-                        string clientip = ctx.Request.Source.IpAddress;
 
                         if (!string.IsNullOrEmpty(clientip) && ("::1".Equals(clientip) || "127.0.0.1".Equals(clientip)
                         || "localhost".Equals(clientip, StringComparison.InvariantCultureIgnoreCase) || MediusClass.Settings.PlaystationHomeUsersServersAccessList.Any(entry => entry.Key.Contains($":{clientip}") && "ADMIN".Equals(entry.Value))))
@@ -738,8 +767,10 @@ namespace Horizon.HTTPSERVICE
                 _Server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/favicon.ico", async (HttpContextBase ctx) =>
                 {
                     string userAgent = ctx.Request.Useragent;
+                    string clientip = ctx.Request.Source.IpAddress;
 
-                    if (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase)) // Get Away TikTok.
+                    if ((IPAddress.TryParse(clientip, out IPAddress? clientipAddr) && await HorizonServerConfiguration.Database.GetIsIpBanned(clientipAddr))
+                    || (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase))) // Get Away TikTok and cheaters.
                     {
                         ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                         ctx.Response.ContentType = "text/plain";
@@ -773,7 +804,7 @@ namespace Horizon.HTTPSERVICE
                                 else if (encoding.Contains("deflate"))
                                 {
                                     ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                    await ctx.Response.Send(HTTPProcessor.Inflate(File.ReadAllBytes(Directory.GetCurrentDirectory() + "/static/wwwroot/favicon.ico")));
+                                    await ctx.Response.Send(HTTPProcessor.Deflate(File.ReadAllBytes(Directory.GetCurrentDirectory() + "/static/wwwroot/favicon.ico")));
                                 }
                                 else
                                     await ctx.Response.Send(File.ReadAllBytes(Directory.GetCurrentDirectory() + "/static/wwwroot/favicon.ico"));

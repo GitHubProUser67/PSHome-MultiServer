@@ -21,7 +21,7 @@ public static class MultiSpyServerConfiguration
     public static bool EnableMaster { get; set; } = true;
     public static bool EnableList { get; set; } = true;
     public static string DatabasePath { get; set; } = $"{Directory.GetCurrentDirectory()}/static/multispy.sqlite";
-    public static string ChatServerPath { get; set; } = $"{Directory.GetCurrentDirectory()}/Python_Scripts/gschatserver.py.EdgeZlib";
+    public static string ChatServerPath { get; set; } = $"{Directory.GetCurrentDirectory()}/Python_Scripts/gschatserver.py";
 
     public static Dictionary<string, string> GamesKey = new() {
 		{ "1001MinigolfChalle", string.Empty },
@@ -4727,13 +4727,14 @@ public static class MultiSpyServerConfiguration
         // Make sure the file exists
         if (!File.Exists(configPath))
         {
-            LoggerAccessor.LogWarn("Could not find the multispy.json file, writing and using server's default.");
+            LoggerAccessor.LogWarn($"Could not find the configuration file:{configPath}, writing and using server's default.");
 
             Directory.CreateDirectory(Path.GetDirectoryName(configPath) ?? Directory.GetCurrentDirectory() + "/static");
 
             // Write the JsonObject to a file
             var configObject = new
             {
+                config_version = (ushort)1,
                 enable_login = EnableLogin,
                 enable_peer_chat = EnablePeerChat,
                 enable_natneg = EnableNatNeg,
@@ -4761,6 +4762,7 @@ public static class MultiSpyServerConfiguration
 			{
                 JsonElement config = doc.RootElement;
 
+                ushort config_version = GetValueOrDefault(config, "config_version", (ushort)0);
                 EnableLogin = GetValueOrDefault(config, "enable_login", EnableLogin);
                 EnablePeerChat = GetValueOrDefault(config, "enable_peer_chat", EnablePeerChat);
                 EnableNatNeg = GetValueOrDefault(config, "enable_natneg", EnableNatNeg);
@@ -4770,11 +4772,37 @@ public static class MultiSpyServerConfiguration
                 DatabasePath = GetValueOrDefault(config, "database_path", DatabasePath);
                 ChatServerPath = GetValueOrDefault(config, "chat_server_path", ChatServerPath);
                 GamesKey = GetValueOrDefault(config, "games_key", GamesKey);
+                if (config_version < 1 && ChatServerPath.EndsWith(".EdgeZlib"))
+                {
+                    LoggerAccessor.LogWarn("An old entry was found in the configuration file, overriding it.");
+
+					ChatServerPath = ChatServerPath.Replace(".EdgeZlib", string.Empty);
+
+                    var configObject = new
+                    {
+                        config_version = (ushort)1,
+                        enable_login = EnableLogin,
+                        enable_peer_chat = EnablePeerChat,
+                        enable_natneg = EnableNatNeg,
+                        enable_cdkey = EnableCdKey,
+                        enable_master = EnableMaster,
+                        enable_list = EnableList,
+                        database_path = DatabasePath,
+                        chat_server_path = ChatServerPath,
+                        games_key = GamesKey,
+                        games_key_serialized = SerializeGamesKey()
+                    };
+
+                    File.WriteAllText(configPath, JsonSerializer.Serialize(configObject, new JsonSerializerOptions
+                    {
+                        WriteIndented = true
+                    }));
+                }
             }
         }
         catch (Exception ex)
         {
-            LoggerAccessor.LogWarn($"multispy.json file is malformed (exception: {ex}), using server's default.");
+            LoggerAccessor.LogWarn($"{configPath} file is malformed (exception: {ex}), using server's default.");
         }
     }
 
@@ -4880,6 +4908,9 @@ class Program
     {
         LoginDatabase._instance?.Dispose();
 
+		// Kill python process.
+		serverChat?.Dispose();
+
         switch (sig)
         {
             case LoginDatabase.CtrlType.CTRL_C_EVENT:
@@ -4893,7 +4924,7 @@ class Program
 
     static void Main()
     {
-        if (!NetworkLibrary.Extension.Windows.Win32API.IsWindows)
+        if (!NetworkLibrary.Extension.Microsoft.Win32API.IsWindows)
             GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
         else
             TechnitiumLibrary.Net.Firewall.FirewallHelper.CheckFirewallEntries(Assembly.GetEntryAssembly()?.Location);

@@ -1,3 +1,4 @@
+using MultiSocks.Aries.Messages.ErrorCodes;
 using MultiSocks.Aries.Model;
 
 namespace MultiSocks.Aries.Messages
@@ -26,9 +27,7 @@ namespace MultiSocks.Aries.Messages
                 user.CurrentGame.BroadcastPlusSes();
             }
             else
-            {
-                // TODO SEND DIRTYSOCKS ERROR!
-            }
+                user.Connection?.SendMessage(new GstaImst());
         }
     }
 }

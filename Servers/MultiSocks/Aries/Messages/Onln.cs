@@ -48,7 +48,7 @@ namespace MultiSocks.Aries.Messages
             Model.AriesUser? user = !string.IsNullOrEmpty(PERS) ? mc.Users.GetUserByPersonaName(PERS) : client.User;
             if (user == null) return;
 
-            if (!string.IsNullOrEmpty(context.Project) && context.Project.Contains("BURNOUT5"))
+            if (!string.IsNullOrEmpty(context.Project) && (context.Project.Contains("BURNOUT5") || context.Project.Contains("NASCAR09")))
                 client.SendMessage(user.SendOnlnOut(user, client.VERS));
             else
             {

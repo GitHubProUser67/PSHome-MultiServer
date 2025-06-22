@@ -33,11 +33,11 @@ namespace MitmDNS
             if (!string.IsNullOrEmpty(MitmDNSServerConfiguration.DNSOnlineConfig))
             {
                 LoggerAccessor.LogInfo("[DNS] - Downloading Configuration File...");
-                if (NetworkLibrary.Extension.Windows.Win32API.IsWindows) ServicePointManager.ServerCertificateValidationCallback = MyRemoteCertificateValidationCallback;
+                if (NetworkLibrary.Extension.Microsoft.Win32API.IsWindows) ServicePointManager.ServerCertificateValidationCallback = MyRemoteCertificateValidationCallback;
                 try
                 {
 #if NET7_0_OR_GREATER
-                    HttpResponseMessage response = new HttpClient().GetAsync(HTTPSServerConfiguration.DNSOnlineConfig).Result;
+                    HttpResponseMessage response = new HttpClient().GetAsync(MitmDNSServerConfiguration.DNSOnlineConfig).Result;
                     response.EnsureSuccessStatusCode();
                     ParseRules(response.Content.ReadAsStringAsync().Result, false);
 #else

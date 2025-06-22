@@ -3,8 +3,9 @@ using CustomLogger;
 using NetworkLibrary.HTTP;
 using HttpMultipartParser;
 using System.Text;
+#if !NETFRAMEWORK
 using System.Web;
-
+#endif
 namespace WebAPIService.PREMIUMAGENCY
 {
     public class Event
@@ -15,18 +16,24 @@ namespace WebAPIService.PREMIUMAGENCY
 
             if (method == "GET")
             {
+#if NETFRAMEWORK
+                nid = HTTPProcessor.GetQueryParameters(fulluripath)["nid"];
+#else
                 nid = HttpUtility.ParseQueryString(fulluripath).Get("nid");
+#endif
             }
             else
             {
                 string boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
-                using MemoryStream ms = new MemoryStream(PostData);
-                var data = MultipartFormDataParser.Parse(ms, boundary);
+                using (MemoryStream ms = new MemoryStream(PostData))
+                {
+                    var data = MultipartFormDataParser.Parse(ms, boundary);
 
-                nid = data.GetParameterValue("nid");
+                    nid = data.GetParameterValue("nid");
 
-                ms.Flush();
+                    ms.Flush();
+                }
             }
 
             if (nid == null || eventId == null)
@@ -75,7 +82,11 @@ namespace WebAPIService.PREMIUMAGENCY
             string nid = string.Empty;
 
             if (method == "GET")
+#if NETFRAMEWORK
+                nid = HTTPProcessor.GetQueryParameters(fulluripath)["nid"];
+#else
                 nid = HttpUtility.ParseQueryString(fulluripath).Get("nid");
+#endif
             else
             {
                 string boundary = HTTPProcessor.ExtractBoundary(ContentType);
@@ -590,7 +601,11 @@ namespace WebAPIService.PREMIUMAGENCY
             string nid = string.Empty;
 
             if (method == "GET")
+#if NETFRAMEWORK
+                nid = HTTPProcessor.GetQueryParameters(fulluripath)["nid"];
+#else
                 nid = HttpUtility.ParseQueryString(fulluripath).Get("nid");
+#endif
             else
             {
                 string boundary = HTTPProcessor.ExtractBoundary(ContentType);
@@ -1033,7 +1048,11 @@ namespace WebAPIService.PREMIUMAGENCY
 
             if (method == "GET")
             {
+#if NETFRAMEWORK
+                nid = HTTPProcessor.GetQueryParameters(fulluripath)["nid"];
+#else
                 nid = HttpUtility.ParseQueryString(fulluripath).Get("nid");
+#endif
             }
             else
             {

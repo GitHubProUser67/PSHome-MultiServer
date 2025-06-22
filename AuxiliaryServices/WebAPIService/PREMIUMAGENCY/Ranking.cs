@@ -3,8 +3,9 @@ using NetworkLibrary.HTTP;
 using CustomLogger;
 using HttpMultipartParser;
 using System.Text;
+#if !NETFRAMEWORK
 using System.Web;
-
+#endif
 namespace WebAPIService.PREMIUMAGENCY
 {
     public class Ranking
@@ -14,7 +15,11 @@ namespace WebAPIService.PREMIUMAGENCY
             string nid = string.Empty;
 
             if (method == "GET")
+#if NETFRAMEWORK
+                nid = HTTPProcessor.GetQueryParameters(fulluripath)["nid"];
+#else
                 nid = HttpUtility.ParseQueryString(fulluripath).Get("nid");
+#endif
             else
             {
                 string boundary = HTTPProcessor.ExtractBoundary(ContentType);
@@ -168,7 +173,11 @@ namespace WebAPIService.PREMIUMAGENCY
             string nid = string.Empty;
 
             if (method == "GET")
+#if NETFRAMEWORK
+                nid = HTTPProcessor.GetQueryParameters(fulluripath)["nid"];
+#else
                 nid = HttpUtility.ParseQueryString(fulluripath).Get("nid");
+#endif
             else
             {
                 string boundary = HTTPProcessor.ExtractBoundary(ContentType);
@@ -306,7 +315,11 @@ namespace WebAPIService.PREMIUMAGENCY
             string nid = string.Empty;
 
             if (method == "GET")
+#if NETFRAMEWORK
+                nid = HTTPProcessor.GetQueryParameters(fulluripath)["nid"];
+#else
                 nid = HttpUtility.ParseQueryString(fulluripath).Get("nid");
+#endif
             else
             {
                 string boundary = HTTPProcessor.ExtractBoundary(ContentType);

@@ -28,7 +28,7 @@ public static class QuazalServerConfiguration
                         Tuple.Create(61106, "w6kAtr3T", "PCDriverServices"), // DFSPCENLOBBY
                         Tuple.Create(61111, "QusaPha9", "PS3DriverServices"), // DFSPS3
                         Tuple.Create(62111, "QusaPha9", "PS3DriverServices"), // DFSPS3NTSCLOBBY
-                        Tuple.Create(60106, "5PTymlWI", "PS3UbisoftServices"), // IAAPS3
+                        Tuple.Create(60108, "5PTymlWI", "PS3UbisoftServices"), // IAAPS3
                         Tuple.Create(60116, "OLjNg84Gh", "PS3UbisoftServices"), // HAWX2PS3
                         Tuple.Create(61121, "q1UFc45UwoyI", "PS3GFRSServices"), // GRFSPS3
                         Tuple.Create(61122, "os1oBiCa2bPv", "PS3GFRSServices"), // GRFSMPBPS3
@@ -54,7 +54,7 @@ public static class QuazalServerConfiguration
                         Tuple.Create(60001, "ridfebb9", "RockBand3Services"), // RB3
                         Tuple.Create(21032, "8dtRv2oj", "PCGROnlineServices"), // GRO
                         Tuple.Create(30161, "uG9Kv3p", "PS3TurokServices"), // TUROKPS3
-                        Tuple.Create(30561, "os4R9pEiy", "PS3GhostbustersServices"), // GHOSTBUSTERSPS3
+                        Tuple.Create(30561, "os4R9pEiy", "PS3SparkServices"), // GHOSTBUSTERSPS3
                         Tuple.Create(31041, "7aK4858Q", "PS3SparkServices"), // OFP2PS3
                         Tuple.Create(25001, "asdd3$#a", "PS3UbisoftServices"), // PFBPS3
                         Tuple.Create(30640, "oTyiaY4Ks", "PS3MXVSATVServices"), // MXVATVUPS3
@@ -71,7 +71,7 @@ public static class QuazalServerConfiguration
                         Tuple.Create(61105, 61106, "w6kAtr3T", "PCDriverServices"), // DFSPCENLOBBY
                         Tuple.Create(61110, 61111, "QusaPha9", "PS3DriverServices"), // DFSPS3
                         Tuple.Create(62110, 62111, "QusaPha9", "PS3DriverServices"), // DFSPS3NTSCLOBBY
-                        Tuple.Create(60107, 60106, "5PTymlWI", "PS3UbisoftServices"), // IAAPS3
+                        Tuple.Create(60107, 60108, "5PTymlWI", "PS3UbisoftServices"), // IAAPS3
                         Tuple.Create(60115, 60116, "OLjNg84Gh", "PS3UbisoftServices"), // HAWX2PS3
                         Tuple.Create(61120, 61121, "q1UFc45UwoyI", "PS3GFRSServices"), // GRFSPS3
                         Tuple.Create(61119, 61122, "os1oBiCa2bPv", "PS3GFRSServices"), // GRFSMPBPS3
@@ -111,7 +111,7 @@ public static class QuazalServerConfiguration
         // Make sure the file exists
         if (!File.Exists(configPath))
         {
-            LoggerAccessor.LogWarn("Could not find the quazal.json file, writing and using server's default.");
+            LoggerAccessor.LogWarn($"Could not find the configuration file:{configPath}, writing and using server's default.");
 
             Directory.CreateDirectory(Path.GetDirectoryName(configPath) ?? Directory.GetCurrentDirectory() + "/static");
 
@@ -151,7 +151,7 @@ public static class QuazalServerConfiguration
             dynamic config = JObject.Parse(File.ReadAllText(configPath));
 
             ushort config_version = GetValueOrDefault(config, "config_version", (ushort)0);
-            if (config_version == 2)
+            if (config_version >= 2)
             {
                 ServerBindAddress = GetValueOrDefault(config, "server_bind_address", ServerBindAddress);
                 ServerPublicBindAddress = GetValueOrDefault(config, "server_public_bind_address", ServerPublicBindAddress);
@@ -182,11 +182,11 @@ public static class QuazalServerConfiguration
                 }
             }
             else
-                LoggerAccessor.LogWarn($"quazal.json file is outdated, using server's default.");
+                LoggerAccessor.LogWarn($"{configPath} file is outdated, using server's default.");
         }
         catch (Exception ex)
         {
-            LoggerAccessor.LogWarn($"quazal.json file is malformed (exception: {ex}), using server's default.");
+            LoggerAccessor.LogWarn($"{configPath} file is malformed (exception: {ex}), using server's default.");
         }
     }
 
@@ -220,7 +220,7 @@ public static class QuazalServerConfiguration
 class Program
 {
     public static string configDir = Directory.GetCurrentDirectory() + "/static/";
-    private static string configPath = configDir + "quazal.json";
+    private static string configPath = configDir + "QuazalServer.json";
     private static string configNetworkLibraryPath = configDir + "NetworkLibrary.json";
     private static SnmpTrapSender? trapSender = null;
     private static BackendServicesServer? BackendServer;
@@ -246,7 +246,7 @@ class Program
 
     static void Main()
     {
-        if (!NetworkLibrary.Extension.Windows.Win32API.IsWindows)
+        if (!NetworkLibrary.Extension.Microsoft.Win32API.IsWindows)
             GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
         else
             TechnitiumLibrary.Net.Firewall.FirewallHelper.CheckFirewallEntries(Assembly.GetEntryAssembly()?.Location);
@@ -308,6 +308,17 @@ class Program
                         trapSender!.SendInfo(msg);
                 });
 #endif
+            }
+        }
+
+        // Previous versions had an erronious config label, we hotfix that.
+        string oldConfigPath = Path.GetDirectoryName(configPath) + $"/quazal.json";
+        if (File.Exists(oldConfigPath))
+        {
+            if (!File.Exists(configPath))
+            {
+                LoggerAccessor.LogWarn("[Main] - Detected older incorrect Quazal configuration file path, performing file renaming...");
+                File.Move(oldConfigPath, configPath);
             }
         }
 

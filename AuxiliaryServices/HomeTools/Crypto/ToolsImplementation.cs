@@ -11,11 +11,15 @@ using EndianTools;
 using NetHasher;
 using NetworkLibrary.SSL;
 using System.Text;
+using System.Threading;
 
 namespace HomeTools.Crypto
 {
     public static class ToolsImplementation
     {
+        // Process Environment.ProcessorCount process at a time, removing the limit is not tolerable as CPU usage goes way too high.
+        public static readonly SemaphoreSlim libsecureSema = new SemaphoreSlim(Environment.ProcessorCount);
+
         public static readonly string base64DefaultSharcKey = "L1ztpjqaZywDTBLh5CX6gRYWrhzmbeuVt+a/IUBHAtw=";
 
         public static readonly string base64CDNKey1 = "8243a3b10f1f1660a7fc934aac263c9c5161092dc25=";
@@ -135,7 +139,7 @@ namespace HomeTools.Crypto
 
         public static void IncrementIVBytes(byte[] byteArray, int increment)
         {
-            for (int i = byteArray.Length - 1; i >= 0; i--)
+            for (int i = byteArray.Length - 1; i > -1; i--)
             {
                 int newValue = byteArray[i] + (byte)increment;
                 byteArray[i] = (byte)newValue;
@@ -145,35 +149,63 @@ namespace HomeTools.Crypto
             }
         }
 
-        public static async Task<byte[]> ProcessXTEAProxyAsync(byte[] inData, byte[] KeyBytes, byte[] IV)
+        public static async Task<byte[]> ProcessCrypt_DecryptAsync(byte[] inData, byte[] KeyBytes, byte[] IV, byte mode)
         {
-            const byte xteaBlockSize = 8;
+            byte BlockSize;
             int chunkIndex = 0;
             int inputLength = inData.Length;
-            List<KeyValuePair<(int, int), Task<byte[]>>> xteaTasks = new List<KeyValuePair<(int, int), Task<byte[]>>>();
+            List<KeyValuePair<(int, int), Task<byte[]>>> libsecureTasks = new List<KeyValuePair<(int, int), Task<byte[]>>>();
+
+            switch (mode)
+            {
+                case 0: // Xtea
+                case 1: // Blowfish
+                    BlockSize = 8;
+                    break;
+                case 2: // AES
+                    BlockSize = 16;
+                    break;
+                default:
+                    CustomLogger.LoggerAccessor.LogError($"[ToolsImplementation] - ProcessCrypt_DecryptAsync: unknown crypto mode selected:{mode}.");
+                    return Array.Empty<byte>();
+            }
 
             using (MemoryStream memoryStream = new MemoryStream(inData))
             {
                 while (memoryStream.Position < memoryStream.Length)
                 {
-                    byte[] block = new byte[xteaBlockSize];
+                    Task<byte[]> libsecureTask;
+                    byte[] block = new byte[BlockSize];
                     byte[] blockIV = (byte[])IV.Clone();
-                    int blockSize = Math.Min(xteaBlockSize, inputLength - chunkIndex);
-                    if (blockSize < xteaBlockSize)
+                    int currentBlockSize = Math.Min(BlockSize, inputLength - chunkIndex);
+                    if (currentBlockSize < BlockSize)
                     {
-                        int difference = xteaBlockSize - blockSize;
+                        int difference = BlockSize - currentBlockSize;
                         Buffer.BlockCopy(new byte[difference], 0, block, block.Length - difference, difference);
                     }
-                    memoryStream.Read(block, 0, blockSize);
-                    xteaTasks.Add(new KeyValuePair<(int, int), Task<byte[]>>((chunkIndex, blockSize), LIBSECURE.InitiateXTEABufferAsync(block, KeyBytes, blockIV, "CTR")));
+                    memoryStream.Read(block, 0, currentBlockSize);
+                    await libsecureSema.WaitAsync().ConfigureAwait(false);
+                    switch (mode)
+                    {
+                        case 0: // Xtea
+                            libsecureTask = LIBSECURE.InitiateXTEABufferAsync(block, KeyBytes, blockIV, "CTR");
+                            break;
+                        case 1: // Blowfish
+                            libsecureTask = LIBSECURE.InitiateBlowfishBufferAsync(block, KeyBytes, blockIV, "CTR");
+                            break;
+                        default: // AES
+                            libsecureTask = LIBSECURE.InitiateAESBufferAsync(block, KeyBytes, blockIV, "CTR");
+                            break;
+                    }
+                    libsecureTasks.Add(new KeyValuePair<(int, int), Task<byte[]>>((chunkIndex, currentBlockSize), libsecureTask));
                     IncrementIVBytes(IV, 1);
-                    chunkIndex += blockSize;
+                    chunkIndex += currentBlockSize;
                 }
             }
 
             using (MemoryStream memoryStream = new MemoryStream(inData.Length))
             {
-                foreach (var result in xteaTasks.OrderBy(kv => kv.Key.Item1))
+                foreach (var result in libsecureTasks.OrderBy(kv => kv.Key.Item1))
                 {
                     try
                     {
@@ -188,7 +220,7 @@ namespace HomeTools.Crypto
                     }
                     catch (Exception ex)
                     {
-                        throw new InvalidOperationException($"[ToolsImplementation] - ProcessXTEAProxyAsync: Error during decryption at chunk {result.Key}", ex);
+                        throw new InvalidOperationException($"[ToolsImplementation] - ProcessCrypt_DecryptAsync: Error during decryption at chunk {result.Key}", ex);
                     }
                 }
 
@@ -201,7 +233,7 @@ namespace HomeTools.Crypto
             if (digest == null || digest.Length < 8)
                 return 0UL;
 
-            return BitConverter.ToUInt64(!BitConverter.IsLittleEndian ? EndianTools.EndianUtils.ReverseArray(digest) : digest, 0);
+            return BitConverter.ToUInt64(!BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(digest) : digest, 0);
         }
 
         public static byte[] ApplyBigEndianPaddingPrefix(byte[] filebytes) // Before you say anything, this is an actual Home Feature...
@@ -2410,7 +2442,7 @@ namespace HomeTools.Crypto
 
             Buffer.BlockCopy(encryptedHDKCertData, HDKCertSize - 20, certificateSha1, 0, certificateSha1.Length);
 
-            byte[] decrytedCert = LIBSECURE.InitiateBlowfishBuffer(encryptedHDKCertData.SubArray(20), HDKBlowfishKey, BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(Sha1toNonce(certificateSha1)) : Sha1toNonce(certificateSha1)), "CTR");
+            byte[] decrytedCert = ProcessCrypt_DecryptAsync(encryptedHDKCertData.SubArray(20), HDKBlowfishKey, BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(Sha1toNonce(certificateSha1)) : Sha1toNonce(certificateSha1)), 1).Result;
 
             if (!DotNetHasher.ComputeSHA1(decrytedCert).EqualsTo(certificateSha1))
                 throw new Exception("[ToolsImplementation] - An error happened while initialising the HDK Client Certificate, should never happen!!!");
@@ -2468,7 +2500,7 @@ namespace HomeTools.Crypto
 
             Buffer.BlockCopy(encryptedHDKCertData, encryptedHDKCertData.Length - 20, certificateSha1, 0, certificateSha1.Length);
 
-            decrytedCert = LIBSECURE.InitiateBlowfishBuffer(encryptedHDKCertData.SubArray(20), BlowfishKey, BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(Sha1toNonce(certificateSha1)) : Sha1toNonce(certificateSha1)), "CTR");
+            decrytedCert = ProcessCrypt_DecryptAsync(encryptedHDKCertData.SubArray(20), BlowfishKey, BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(Sha1toNonce(certificateSha1)) : Sha1toNonce(certificateSha1)), 1).Result;
 
             if (!DotNetHasher.ComputeSHA1(decrytedCert).EqualsTo(certificateSha1))
                 throw new Exception("[ToolsImplementation] - An error happened while initialising the Retail Client Certificate, should never happen!!!");
@@ -2522,7 +2554,7 @@ namespace HomeTools.Crypto
 
             Buffer.BlockCopy(encryptedHDKCertData, encryptedHDKCertData.Length - 20, certificateSha1, 0, certificateSha1.Length);
 
-            decrytedCert = LIBSECURE.InitiateBlowfishBuffer(encryptedHDKCertData.SubArray(20), BetaBlowfishKey, BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(Sha1toNonce(certificateSha1)) : Sha1toNonce(certificateSha1)), "CTR");
+            decrytedCert = ProcessCrypt_DecryptAsync(encryptedHDKCertData.SubArray(20), BetaBlowfishKey, BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(Sha1toNonce(certificateSha1)) : Sha1toNonce(certificateSha1)), 1).Result;
 
             if (!DotNetHasher.ComputeSHA1(decrytedCert).EqualsTo(certificateSha1))
                 throw new Exception("[ToolsImplementation] - An error happened while initialising the Closed Beta Client Certificate, should never happen!!!");

@@ -1,4 +1,6 @@
-namespace BitConverterExtension
+using System;
+
+namespace EndianTools.BitConverterExtension
 {
     /// <summary>
     /// Implementation of EndianBitConverter which converts to/from little-endian
@@ -26,6 +28,26 @@ namespace BitConverterExtension
         public sealed override Endianness Endianness
         {
             get { return Endianness.LittleEndian; }
+        }
+
+        /// <summary>
+        /// Returns a decimal value converted from sixteen bytes 
+        /// at a specified position in a byte array.
+        /// </summary>
+        /// <param name="value">An array of bytes.</param>
+        /// <param name="startIndex">The starting position within value.</param>
+        /// <returns>A decimal  formed by sixteen bytes beginning at startIndex.</returns>
+        public override decimal ToDecimal(byte[] value, int startIndex)
+        {
+            // HACK: This always assumes four parts, each in their own endianness,
+            // starting with the first part at the start of the byte array.
+            // On the other hand, there's no real format specified...
+            int[] parts = new int[4];
+            for (int i = 0; i < 4; i++)
+            {
+                parts[i] = EndianAwareConverter.ToInt32(value, Endianness.LittleEndian, (uint)(startIndex + i * 4));
+            }
+            return new decimal(parts);
         }
 
         /// <summary>

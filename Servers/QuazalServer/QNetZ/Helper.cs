@@ -6,6 +6,7 @@ using EndianTools;
 using NetworkLibrary.Extension;
 using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 using ICSharpCode.SharpZipLib.Zip.Compression;
+using FixedZlib;
 
 namespace QuazalServer.QNetZ
 {
@@ -166,8 +167,7 @@ namespace QuazalServer.QNetZ
 
 		public static void WriteFloat(Stream s, float v)
 		{
-			byte[] b = BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseFloat(v) : v);
-			s.Write(b, 0, 4);
+			s.Write(BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseFloat(v) : v), 0, 4);
 		}
 
 		public static void WriteFloatLE(Stream s, float v)
@@ -258,13 +258,20 @@ namespace QuazalServer.QNetZ
 
         public static byte[] Compress(byte[] InData)
         {
-			using (MemoryStream memoryStream = new())
+			byte[]? output = null;
+            if (NativeZlib.CanRun)
+                output = NativeZlib.Deflate(InData);
+			if (output == null)
 			{
-				DeflaterOutputStream deflaterOutputStream = new(memoryStream, new Deflater(9));
-                deflaterOutputStream.Write(InData, 0, InData.Length);
-				deflaterOutputStream.Dispose();
-				return memoryStream.ToArray(); // Send OG data if compressed size higher?
-			}
+                using (MemoryStream memoryStream = new())
+                {
+                    DeflaterOutputStream deflaterOutputStream = new(memoryStream, new Deflater(9));
+                    deflaterOutputStream.Write(InData, 0, InData.Length);
+                    deflaterOutputStream.Dispose();
+                    output = memoryStream.ToArray();
+                }
+            }
+			return output; // Send OG data if compressed size higher?
         }
 
         public static byte[] Encrypt(string key, byte[] data)

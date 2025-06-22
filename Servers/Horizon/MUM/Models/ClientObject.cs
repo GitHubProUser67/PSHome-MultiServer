@@ -1,5 +1,4 @@
 using CustomLogger;
-using Horizon.LIBRARY.Common;
 using Horizon.LIBRARY.Database.Models;
 using Horizon.SERVER;
 using Horizon.SERVER.PluginArgs;
@@ -10,6 +9,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using Horizon.SERVER.Extension.PlayStationHome;
 using NetworkLibrary.Extension;
+using WebAPIService.VEEMEE;
 
 namespace Horizon.MUM.Models
 {
@@ -17,11 +17,11 @@ namespace Horizon.MUM.Models
     {
         protected static Random RNG = new();
 
+        protected ConcurrentDictionary<string, Task> Tasks = new();
+
         public IPAddress IP { get; protected set; } = IPAddress.Any;
 
         public IPAddress MuisIP { get; set; } = IPAddress.Any;
-
-        public ConcurrentDictionary<string, Task> Tasks = new();
 
         public int MaxWorlds { get; protected set; } = 0;
         public int MaxPlayersPerWorld { get; protected set; } = 0;
@@ -46,7 +46,7 @@ namespace Horizon.MUM.Models
         /// <summary>
         /// 
         /// </summary>
-        public uint HomePointer = 0;
+        public uint Hub_LocalPerson_ms_pInstance = 0;
 
         /// <summary>
         /// 
@@ -247,6 +247,11 @@ namespace Horizon.MUM.Models
         /// <summary>
         /// 
         /// </summary>
+        public DateTime? UtcLastPlayerReportReceived { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
         public DateTime UtcLastMessageReceived { get; protected set; } = DateTimeUtils.GetHighPrecisionUtcTime();
 
         /// <summary>
@@ -315,12 +320,13 @@ namespace Horizon.MUM.Models
         public int LongTimeoutSeconds { get; set; }
 
         public virtual bool IsLoggedIn => !_logoutTime.HasValue && _loginTime.HasValue && IsConnected;
-        public virtual bool IsInGame => CurrentGame != null && CurrentChannel != null && CurrentChannel.Type == ChannelType.Game;
+        public virtual bool IsInGame => (CurrentParty != null || CurrentGame != null) && CurrentChannel != null && CurrentChannel.Type == ChannelType.Game;
         public virtual bool IsActiveServer => _hasServerSession;
         public virtual bool Timedout => (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds > TimeoutSeconds;
         public virtual bool LongTimedout => (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds > LongTimeoutSeconds;
-        public virtual bool IsConnected => KeepAlive || (_hasSocket && !LongTimedout);
+        public virtual bool IsConnected => KeepAlive || (_hasSocket && !PlayerReportTimedout && !LongTimedout);
         public bool KeepAlive => _keepAliveTime.HasValue && (DateTimeUtils.GetHighPrecisionUtcTime() - _keepAliveTime).Value.TotalSeconds < MediusClass.GetAppSettingsOrDefault(ApplicationId).KeepAliveGracePeriodSeconds;
+        public bool PlayerReportTimedout => UtcLastPlayerReportReceived.HasValue && (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastPlayerReportReceived).Value.TotalSeconds > MediusClass.GetAppSettingsOrDefault(ApplicationId).PlayerReportTimeoutSeconds;
 
         /// <summary>
         /// 
@@ -580,6 +586,9 @@ namespace Horizon.MUM.Models
             // Leave game
             await LeaveCurrentGame();
 
+            // Leave party
+            await LeaveCurrentParty();
+
             // Leave channel
             await LeaveCurrentChannel();
 
@@ -587,7 +596,7 @@ namespace Horizon.MUM.Models
             await DisposeTasks();
 
             // Release home pointer
-            HomePointer = 0;
+            Hub_LocalPerson_ms_pInstance = 0;
 
             // Logout
             _logoutTime = DateTimeUtils.GetHighPrecisionUtcTime();
@@ -618,6 +627,8 @@ namespace Horizon.MUM.Models
             LongTimeoutSeconds = MediusClass.GetAppSettingsOrDefault(ApplicationId).ClientLongTimeoutSeconds;
 
             // WE ARE ANONYMOUS SO DON'T POST TO DATABASE!!!!
+
+            MumManager.playersJoined.Inc();
         }
 
         public async Task Login(AccountDTO account)
@@ -648,6 +659,8 @@ namespace Horizon.MUM.Models
 
                 // Update database status
                 PostStatus();
+
+                MumManager.playersJoined.Inc();
             }
             else
                 LoggerAccessor.LogError($"{this} attempting to log into {account} but is already logged in!");
@@ -687,6 +700,8 @@ namespace Horizon.MUM.Models
             PartyId = partyIndex;
             CurrentParty.AddPlayer(this);
 
+            UtcLastPlayerReportReceived = DateTimeUtils.GetHighPrecisionUtcTime();
+
             // Tell database
             PostStatus();
         }
@@ -704,6 +719,7 @@ namespace Horizon.MUM.Models
 
         private async Task LeaveCurrentParty()
         {
+            UtcLastPlayerReportReceived = null;
             if (CurrentParty != null)
             {
                 await CurrentParty.RemovePlayer(this, CurrentParty.ApplicationId, CurrentParty.MediusWorldId.ToString());
@@ -720,10 +736,12 @@ namespace Horizon.MUM.Models
         {
             // Leave current game
             await LeaveCurrentGame();
-
+			
             CurrentGame = game;
             DmeId = dmeClientIndex;
             CurrentGame.AddPlayer(this);
+
+            UtcLastPlayerReportReceived = DateTimeUtils.GetHighPrecisionUtcTime();
 
             // Tell database
             PostStatus();
@@ -733,9 +751,11 @@ namespace Horizon.MUM.Models
         {
             // Leave current game
             await LeaveCurrentGame();
-
+			
             CurrentGame = game;
             CurrentGame.AddPlayer(this);
+
+            UtcLastPlayerReportReceived = DateTimeUtils.GetHighPrecisionUtcTime();
 
             // Tell database
             PostStatus();
@@ -757,6 +777,7 @@ namespace Horizon.MUM.Models
 
         private async Task LeaveCurrentGame()
         {
+            UtcLastPlayerReportReceived = null;
             if (CurrentGame != null)
             {
                 await CurrentGame.RemovePlayer(this, CurrentGame.ApplicationId, CurrentGame.MediusWorldId.ToString());
@@ -833,48 +854,7 @@ namespace Horizon.MUM.Models
 
             return Task.CompletedTask;
         }
-        /*
-        public GameListFilter SetLobbyWorldFilter(MediusSetLobbyWorldFilterRequest1 request)
-        {
-            GameListFilter result;
 
-            GameListFilters.Add(result = new GameListFilter()
-            {
-                FieldID = _gameListFilterIdCounter++,
-                Mask = request.Mask,
-                BaselineValue = request.BaselineValue,
-                ComparisonOperator = request.ComparisonOperator,
-                FilterField = request.FilterField
-            });
-
-            /*
-            if (request.FilterField == MediusGameListFilterField.MEDIUS_FILTER_LOBBY_WORLDID)
-            {
-                GameListFilters.Add(result = new GameListFilter()
-                {
-                    FieldID = _gameListFilterIdCounter++,
-                    Mask = request.Mask,
-                    BaselineValue = (int)WorldId,
-                    ComparisonOperator = MediusComparisonOperator.EQUAL_TO,
-                    FilterField = request.FilterField
-                });
-            }
-            else
-            {
-                GameListFilters.Add(result = new GameListFilter()
-                {
-                    FieldID = _gameListFilterIdCounter++,
-                    Mask = request.Mask,
-                    BaselineValue = request.BaselineValue,
-                    ComparisonOperator = request.ComparisonOperator,
-                    FilterField = request.FilterField
-                });
-            }
-
-            return result;
-        }
-        
-            */
         public GameListFilter SetGameListFilter(MediusSetGameListFilterRequest request)
         {
             GameListFilter result;
@@ -887,31 +867,6 @@ namespace Horizon.MUM.Models
                 ComparisonOperator = request.ComparisonOperator,
                 FilterField = request.FilterField
             });
-
-            /*
-            if (request.FilterField == MediusGameListFilterField.MEDIUS_FILTER_LOBBY_WORLDID)
-            {
-                GameListFilters.Add(result = new GameListFilter()
-                {
-                    FieldID = _gameListFilterIdCounter++,
-                    Mask = request.Mask,
-                    BaselineValue = (int)WorldId,
-                    ComparisonOperator = MediusComparisonOperator.EQUAL_TO,
-                    FilterField = request.FilterField
-                });
-            }
-            else
-            {
-                GameListFilters.Add(result = new GameListFilter()
-                {
-                    FieldID = _gameListFilterIdCounter++,
-                    Mask = request.Mask,
-                    BaselineValue = request.BaselineValue,
-                    ComparisonOperator = request.ComparisonOperator,
-                    FilterField = request.FilterField
-                });
-            }
-            */
 
             return result;
         }
@@ -1024,7 +979,7 @@ namespace Horizon.MUM.Models
         #region SetHomePointer
         public void SetPointer(uint Pointer)
         {
-            HomePointer = Pointer;
+            Hub_LocalPerson_ms_pInstance = Pointer;
         }
 
         public void SetWorldCorePointer(uint Pointer)
@@ -1032,6 +987,16 @@ namespace Horizon.MUM.Models
             WorldCorePointer = Pointer;
         }
         #endregion
+
+        public bool TryAddTask(string taskIdent, Action actionToAddToAdd)
+        {
+            return Tasks.TryAdd(taskIdent, Task.Factory.StartNew(actionToAddToAdd, TaskCreationOptions.LongRunning));
+        }
+
+        public bool ContainsTaskWithIdent(string taskIdent)
+        {
+            return Tasks.ContainsKey(taskIdent);
+        }
 
         public Task DisposeTasks()
         {

@@ -29,16 +29,18 @@ namespace MultiSocks.Aries.Messages
             user.SelectPersona(GetInputCacheValue("PERS"));
             if (user.SelectedPersona == -1) return; //failed?
 
-            if (!string.IsNullOrEmpty(context.Project) && (context.Project.Contains("BURNOUT5") || context.Project.Contains("DPR-09")))
+            if (!string.IsNullOrEmpty(context.Project) && (context.Project.Contains("BURNOUT5") || context.Project.Contains("DPR-09") || (context.Project.Contains("NASCAR09") && context.SKU == "PS3")))
             {
+                string dateNow = DateTime.Now.ToString("yyyy.M.d-HH:mm:ss");
+
                 if (client.SKU == "PS3")
                     client.SendMessage(new Pers()
                     {
                         A = user.ADDR,
                         NAME = user.Username,
                         PERS = user.PersonaName,
-                        LAST = "2018.1.1-00:00:00",
-                        PLAST = "2018.1.1-00:00:00",
+                        LAST = dateNow,
+                        PLAST = dateNow,
                         SINCE = "2008.1.1-00:00:00",
                         PSINCE = "2008.1.1-00:00:00",
                         LKEY = "000000000000000000000000000",
@@ -54,8 +56,8 @@ namespace MultiSocks.Aries.Messages
                         A = user.ADDR,
                         NAME = user.Username,
                         PERS = user.PersonaName,
-                        LAST = "2018.1.1-00:00:00",
-                        PLAST = "2018.1.1-00:00:00",
+                        LAST = dateNow,
+                        PLAST = dateNow,
                         SINCE = "2008.1.1-00:00:00",
                         PSINCE = "2008.1.1-00:00:00",
                         LKEY = "000000000000000000000000000",

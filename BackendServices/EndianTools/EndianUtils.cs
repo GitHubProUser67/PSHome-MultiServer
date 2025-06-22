@@ -12,7 +12,7 @@ namespace EndianTools
     {
         /// <summary>
         /// Reverse the endianess of a given byte array by 4 bytes chunck.
-        /// <para>change l'endianess d'un tableau de bytes par blocs de 4.</para>
+        /// <para>change l'endianess d'un tableau de bytes par blocs 4.</para>
         /// </summary>
         /// <param name="dataIn">The byte array to endian-swap.</param>
         /// <returns>A byte array.</returns>
@@ -22,20 +22,17 @@ namespace EndianTools
                 return null;
             else if (dataIn.Length == 0)
                 return Array.Empty<byte>();
-            else if (dataIn.Length < 2)
-                return new byte[] { dataIn[0] };
 
             const byte chunkSize = 4;
 
 #if NETCOREAPP || NETSTANDARD1_0_OR_GREATER || NET40_OR_GREATER
             int inputLength = dataIn.Length;
-            int chunkCount = (inputLength + chunkSize - 1) / chunkSize; // Ceiling division
 
             byte[] reversedArray = new byte[inputLength];
             Array.Copy(dataIn, reversedArray, inputLength);
 
             // Process Environment.ProcessorCount patherns at a time, removing the limit is not tolerable as CPU usage can go high with large arrays.
-            Parallel.For(0, chunkCount, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, chunkIndex =>
+            Parallel.For(0, (inputLength + chunkSize - 1) / chunkSize /*Ceiling division*/, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, chunkIndex =>
             {
                 int start = chunkIndex * chunkSize;
                 Array.Reverse(reversedArray, start, Math.Min(chunkSize, inputLength - start));
@@ -57,6 +54,30 @@ namespace EndianTools
             }
             return reversedArray;
 #endif
+        }
+
+        public static byte[] EndianSwap2(byte[] dataIn)
+        {
+            if (dataIn == null)
+                return null;
+            else if (dataIn.Length == 0)
+                return Array.Empty<byte>();
+            else if (dataIn.Length % 4 != 0)
+                throw new ArgumentException("[EndianUtils] - EndianSwap2: Array length must be a multiple of 4.");
+
+            int inputLength = dataIn.Length;
+
+            byte[] reversedArray = new byte[inputLength];
+            Array.Copy(dataIn, reversedArray, inputLength);
+
+            for (int i = 0; i < inputLength; i += 4)
+            {
+                // Swap bytes in positions [i] <-> [i+2], and [i+1] <-> [i+3]
+                (reversedArray[i], reversedArray[i + 2]) = (reversedArray[i + 2], reversedArray[i]);
+                (reversedArray[i + 1], reversedArray[i + 3]) = (reversedArray[i + 3], reversedArray[i + 1]);
+            }
+
+            return reversedArray;
         }
 
         /// <summary>

@@ -13,6 +13,7 @@ using NetworkLibrary.Extension;
 using NetworkLibrary.SNMP;
 using NetworkLibrary;
 using Microsoft.Extensions.Logging;
+using Prometheus;
 
 public static class HorizonServerConfiguration
 {
@@ -26,6 +27,9 @@ public static class HorizonServerConfiguration
     public static bool EnableMuis { get; set; } = true;
     public static bool EnableBWPS { get; set; } = true;
     public static bool EnableNAT { get; set; } = false;
+    public static bool EnableMetrics { get; set; } = true;
+    public static ushort MetricsPort { get; set; } = 1234;
+    public static string MetricsUrl { get; set; } = "metrics/";
     public static string? PlayerAPIStaticPath { get; set; } = $"{Directory.GetCurrentDirectory()}/static/wwwroot";
     public static string? EBOOTDEFSConfig { get; set; } = $"{Directory.GetCurrentDirectory()}/static/ebootdefs.json";
     public static string? DMEConfig { get; set; } = $"{Directory.GetCurrentDirectory()}/static/dme.json";
@@ -52,12 +56,13 @@ public static class HorizonServerConfiguration
         // Make sure the file exists
         if (!File.Exists(configPath))
         {
-            LoggerAccessor.LogWarn("Could not find the horizon.json file, writing and using server's default.");
+            LoggerAccessor.LogWarn($"Could not find the configuration file:{configPath}, writing and using server's default.");
 
             Directory.CreateDirectory(Path.GetDirectoryName(configPath) ?? Directory.GetCurrentDirectory() + "/static");
 
             // Write the JObject to a file
             File.WriteAllText(configPath, new JObject(
+                new JProperty("config_version", (ushort)3),
                 new JProperty("medius", new JObject(
                     new JProperty("enabled", EnableMedius),
                     new JProperty("config", MEDIUSConfig)
@@ -87,7 +92,12 @@ public static class HorizonServerConfiguration
                 new JProperty("medius_api_key", MediusAPIKey),
                 new JProperty("ssfw_url", SSFWUrl),
                 new JProperty("plugins_folder", PluginsFolder),
-                new JProperty("database", DatabaseConfig)
+                new JProperty("database", DatabaseConfig),
+                new JProperty("prometheus", new JObject(
+                    new JProperty("enabled", EnableMetrics),
+                    new JProperty("url", MetricsUrl),
+                    new JProperty("port", MetricsPort)
+                ))
             ).ToString());
 
             return;
@@ -98,34 +108,47 @@ public static class HorizonServerConfiguration
             // Parse the JSON configuration
             dynamic config = JObject.Parse(File.ReadAllText(configPath));
 
-            EnableMedius = GetValueOrDefault(config.medius, "enabled", EnableMedius);
-            EnableDME = GetValueOrDefault(config.dme, "enabled", EnableDME);
-            EnableMuis = GetValueOrDefault(config.muis, "enabled", EnableMuis);
-            EnableNAT = GetValueOrDefault(config.nat, "enabled", EnableNAT);
-            EnableBWPS = GetValueOrDefault(config.bwps, "enabled", EnableBWPS);
-            HTTPSCertificateFile = GetValueOrDefault(config, "certificate_file", HTTPSCertificateFile);
-            HTTPSCertificatePassword = GetValueOrDefault(config, "certificate_password", HTTPSCertificatePassword);
-            HTTPSCertificateHashingAlgorithm = new HashAlgorithmName(GetValueOrDefault(config, "certificate_hashing_algorithm", HTTPSCertificateHashingAlgorithm.Name));
-            PlayerAPIStaticPath = GetValueOrDefault(config, "player_api_static_path", PlayerAPIStaticPath);
-            HTTPSDNSList = GetValueOrDefault(config, "https_dns_list", HTTPSDNSList);
-            DMEConfig = GetValueOrDefault(config.dme, "config", DMEConfig);
-            MEDIUSConfig = GetValueOrDefault(config.medius, "config", MEDIUSConfig);
-            MUISConfig = GetValueOrDefault(config.muis, "config", MUISConfig);
-            NATConfig = GetValueOrDefault(config.nat, "config", NATConfig);
-            BWPSConfig = GetValueOrDefault(config.bwps, "config", BWPSConfig);
-            EBOOTDEFSConfig = GetValueOrDefault(config, "eboot_defs_config", EBOOTDEFSConfig);
-            string APIKey = GetValueOrDefault(config, "medius_api_key", MediusAPIKey);
-            if (APIKey.IsBase64().Item1)
-                MediusAPIKey = APIKey;
-            string ssfwADR = GetValueOrDefault(config, "ssfw_url", SSFWUrl);
-            if (!string.IsNullOrEmpty(ssfwADR) && ssfwADR.StartsWith("http", StringComparison.InvariantCultureIgnoreCase))
-                SSFWUrl = ssfwADR;
-            PluginsFolder = GetValueOrDefault(config, "plugins_folder", PluginsFolder);
-            DatabaseConfig = GetValueOrDefault(config, "database", DatabaseConfig);
+            ushort config_version = GetValueOrDefault(config, "config_version", (ushort)0);
+            if (config_version > 1)
+            {
+                if (config_version > 2)
+                {
+                    EnableMetrics = GetValueOrDefault(config.prometheus, "enabled", EnableMetrics);
+                    MetricsUrl = GetValueOrDefault(config.prometheus, "url", MetricsUrl);
+                    MetricsPort = GetValueOrDefault(config.prometheus, "port", MetricsPort);
+                }
+
+                EnableMedius = GetValueOrDefault(config.medius, "enabled", EnableMedius);
+                EnableDME = GetValueOrDefault(config.dme, "enabled", EnableDME);
+                EnableMuis = GetValueOrDefault(config.muis, "enabled", EnableMuis);
+                EnableNAT = GetValueOrDefault(config.nat, "enabled", EnableNAT);
+                EnableBWPS = GetValueOrDefault(config.bwps, "enabled", EnableBWPS);
+                HTTPSCertificateFile = GetValueOrDefault(config, "certificate_file", HTTPSCertificateFile);
+                HTTPSCertificatePassword = GetValueOrDefault(config, "certificate_password", HTTPSCertificatePassword);
+                HTTPSCertificateHashingAlgorithm = new HashAlgorithmName(GetValueOrDefault(config, "certificate_hashing_algorithm", HTTPSCertificateHashingAlgorithm.Name));
+                PlayerAPIStaticPath = GetValueOrDefault(config, "player_api_static_path", PlayerAPIStaticPath);
+                HTTPSDNSList = GetValueOrDefault(config, "https_dns_list", HTTPSDNSList);
+                DMEConfig = GetValueOrDefault(config.dme, "config", DMEConfig);
+                MEDIUSConfig = GetValueOrDefault(config.medius, "config", MEDIUSConfig);
+                MUISConfig = GetValueOrDefault(config.muis, "config", MUISConfig);
+                NATConfig = GetValueOrDefault(config.nat, "config", NATConfig);
+                BWPSConfig = GetValueOrDefault(config.bwps, "config", BWPSConfig);
+                EBOOTDEFSConfig = GetValueOrDefault(config, "eboot_defs_config", EBOOTDEFSConfig);
+                string APIKey = GetValueOrDefault(config, "medius_api_key", MediusAPIKey);
+                if (APIKey.IsBase64().Item1)
+                    MediusAPIKey = APIKey;
+                string ssfwADR = GetValueOrDefault(config, "ssfw_url", SSFWUrl);
+                if (!string.IsNullOrEmpty(ssfwADR) && ssfwADR.StartsWith("http", StringComparison.InvariantCultureIgnoreCase))
+                    SSFWUrl = ssfwADR;
+                PluginsFolder = GetValueOrDefault(config, "plugins_folder", PluginsFolder);
+                DatabaseConfig = GetValueOrDefault(config, "database", DatabaseConfig);
+            }
+            else
+                LoggerAccessor.LogWarn($"{configPath} file is outdated, using server's default.");
         }
         catch (Exception ex)
         {
-            LoggerAccessor.LogWarn($"horizon.json file is malformed (exception: {ex}), using server's default.");
+            LoggerAccessor.LogWarn($"{configPath} file is malformed (exception: {ex}), using server's default.");
         }
     }
 
@@ -164,9 +187,18 @@ class Program
     private static SnmpTrapSender? trapSender = null;
     private static ConcurrentBag<CrudServerHandler>? HTTPBag;
     private static MumServerHandler? MUMServer;
+    private static MetricServer? metricsServer;
 
     private static Task HorizonStarter()
     {
+        metricsServer?.Dispose();
+
+        if (HorizonServerConfiguration.EnableMetrics)
+        {
+            metricsServer = new MetricServer(HorizonServerConfiguration.MetricsPort, HorizonServerConfiguration.MetricsUrl);
+            metricsServer.Start();
+        }
+
         if (HorizonServerConfiguration.EnableMedius)
         {
             try
@@ -185,19 +217,19 @@ class Program
             }
         }
 
-        if (HorizonServerConfiguration.EnableMedius && !Horizon.SERVER.MediusClass.started)
+        if (HorizonServerConfiguration.EnableMedius)
             Horizon.SERVER.MediusClass.StartServer();
 
-        if (HorizonServerConfiguration.EnableNAT && !Horizon.NAT.NATClass.started)
+        if (HorizonServerConfiguration.EnableNAT)
             Horizon.NAT.NATClass.StartServer();
 
-        if (HorizonServerConfiguration.EnableBWPS && !Horizon.BWPS.BWPSClass.started)
+        if (HorizonServerConfiguration.EnableBWPS)
             Horizon.BWPS.BWPSClass.StartServer();
 
-        if (HorizonServerConfiguration.EnableMuis && !Horizon.MUIS.MuisClass.started)
+        if (HorizonServerConfiguration.EnableMuis)
             Horizon.MUIS.MuisClass.StartServer();
 
-        if (HorizonServerConfiguration.EnableDME && !Horizon.DME.DmeClass.started)
+        if (HorizonServerConfiguration.EnableDME)
             Horizon.DME.DmeClass.StartServer();
 
         return Task.CompletedTask;
@@ -205,19 +237,19 @@ class Program
 
     private static void StartOrUpdateServer()
     {
-        if (Horizon.DME.DmeClass.started && !HorizonServerConfiguration.EnableDME)
+        if (Horizon.DME.DmeClass.started)
             Horizon.DME.DmeClass.StopServer();
 
-        if (Horizon.MUIS.MuisClass.started && !HorizonServerConfiguration.EnableMuis)
+        if (Horizon.MUIS.MuisClass.started)
             Horizon.MUIS.MuisClass.StopServer();
 
-        if (Horizon.BWPS.BWPSClass.started && !HorizonServerConfiguration.EnableBWPS)
+        if (Horizon.BWPS.BWPSClass.started)
             Horizon.BWPS.BWPSClass.StopServer();
 
-        if (Horizon.NAT.NATClass.started && !HorizonServerConfiguration.EnableNAT)
+        if (Horizon.NAT.NATClass.started)
             Horizon.NAT.NATClass.StopServer();
 
-        if (Horizon.SERVER.MediusClass.started && !HorizonServerConfiguration.EnableMedius)
+        if (Horizon.SERVER.MediusClass.started)
             Horizon.SERVER.MediusClass.StopServer();
 
         MUMServer?.StopServer();
@@ -243,7 +275,7 @@ class Program
 
     static void Main()
     {
-        if (!NetworkLibrary.Extension.Windows.Win32API.IsWindows)
+        if (!NetworkLibrary.Extension.Microsoft.Win32API.IsWindows)
             GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
         else
             TechnitiumLibrary.Net.Firewall.FirewallHelper.CheckFirewallEntries(Assembly.GetEntryAssembly()?.Location);

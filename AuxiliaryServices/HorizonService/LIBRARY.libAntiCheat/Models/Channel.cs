@@ -178,7 +178,7 @@ namespace Horizon.LIBRARY.libAntiCheat.Models
                         OriginatorAccountName = source.AccountName,
                         Message = message,
                         MessageType = MediusChatMessageType.Broadcast,
-                        TimeStamp = DateTimeUtils.GetUnixTime()
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
                     });
                 }
                 else
@@ -189,7 +189,7 @@ namespace Horizon.LIBRARY.libAntiCheat.Models
                         OriginatorAccountName = source.AccountName,
                         Message = message,
                         MessageType = MediusChatMessageType.Broadcast,
-                        TimeStamp = DateTimeUtils.GetUnixTime()
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
                     });
                 }
             }
@@ -209,7 +209,7 @@ namespace Horizon.LIBRARY.libAntiCheat.Models
                         OriginatorAccountName = source.AccountName,
                         Message = message,
                         MessageType = MediusChatMessageType.Whisper,
-                        TimeStamp = DateTimeUtils.GetUnixTime()
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
                     });
                 }
                 else
@@ -220,7 +220,7 @@ namespace Horizon.LIBRARY.libAntiCheat.Models
                         OriginatorAccountName = source.AccountName,
                         Message = message,
                         MessageType = MediusChatMessageType.Whisper,
-                        TimeStamp = DateTimeUtils.GetUnixTime()
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
                     });
                 }
             }
@@ -240,7 +240,7 @@ namespace Horizon.LIBRARY.libAntiCheat.Models
                         OriginatorAccountName = source.AccountName,
                         Message = message,
                         MessageType = MediusChatMessageType.Clan,
-                        TimeStamp = DateTimeUtils.GetUnixTime()
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
                     });
                 }
                 else
@@ -251,7 +251,7 @@ namespace Horizon.LIBRARY.libAntiCheat.Models
                         OriginatorAccountName = source.AccountName,
                         Message = message,
                         MessageType = MediusChatMessageType.Clan,
-                        TimeStamp = DateTimeUtils.GetUnixTime()
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
                     });
                 }
             }
@@ -270,7 +270,7 @@ namespace Horizon.LIBRARY.libAntiCheat.Models
                     OriginatorAccountName = "SYSTEM",
                     Message = message,
                     MessageType = MediusChatMessageType.Broadcast,
-                    TimeStamp = DateTimeUtils.GetUnixTime()
+                    TimeStamp = DateTimeUtils.GetUnixTimeU32()
                 });
             }
             else
@@ -281,7 +281,7 @@ namespace Horizon.LIBRARY.libAntiCheat.Models
                     OriginatorAccountName = "SYSTEM",
                     Message = message,
                     MessageType = MediusChatMessageType.Broadcast,
-                    TimeStamp = DateTimeUtils.GetUnixTime()
+                    TimeStamp = DateTimeUtils.GetUnixTimeU32()
                 });
             }
 
@@ -300,7 +300,7 @@ namespace Horizon.LIBRARY.libAntiCheat.Models
                         OriginatorAccountName = "SYSTEM",
                         Message = message,
                         MessageType = MediusChatMessageType.Broadcast,
-                        TimeStamp = DateTimeUtils.GetUnixTime()
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
                     });
                 }
                 else
@@ -311,7 +311,7 @@ namespace Horizon.LIBRARY.libAntiCheat.Models
                         OriginatorAccountName = "SYSTEM",
                         Message = message,
                         MessageType = MediusChatMessageType.Broadcast,
-                        TimeStamp = DateTimeUtils.GetUnixTime()
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
                     });
                 }
             }

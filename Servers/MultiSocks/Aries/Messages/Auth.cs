@@ -22,22 +22,12 @@ namespace MultiSocks.Aries.Messages
             client.VERS = VERS;
             client.SKU = SKU;
 
-            switch (VERS)
+            if (SKU == "PS3")
             {
-                case "BURNOUT5/ISLAND":
-                case "BURNOUT5/TROPHIES":
-                case "BURNOUT5/31":
-                case "BURNOUT5/PSN_DAVIS":
-                case "BOTTEST":
-                    if (SKU == "PS3")
-                    {
-                        string[]? maddrparams = MADDR?.Split('$');
+                string[]? maddrparams = MADDR?.Split('$');
 
-                        if (maddrparams != null)
-                            NAME = maddrparams.FirstOrDefault();
-                    }
-                    break;
-
+                if (maddrparams != null)
+                    NAME = maddrparams.FirstOrDefault();
             }
 
             if (!string.IsNullOrEmpty(NAME))

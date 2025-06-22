@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-#if NETCOREAPP || NETSTANDARD1_0_OR_GREATER || NET40_OR_GREATER
-using System.Threading.Tasks;
-#endif
 #if NETCOREAPP3_0_OR_GREATER
 using System.Numerics;
 #endif
@@ -77,20 +74,6 @@ namespace PS2FloatLibrary
         {
             const short msbTableSize = 256;
             sbyte[] msb = new sbyte[msbTableSize];
-#if NETCOREAPP || NETSTANDARD1_0_OR_GREATER || NET40_OR_GREATER
-            Parallel.For(0, msbTableSize, i =>
-            {
-                if (i < 1) msb[i] = -1;
-                else if (i < 2) msb[i] = 0;
-                else if (i < 4) msb[i] = 1;
-                else if (i < 8) msb[i] = 2;
-                else if (i < 16) msb[i] = 3;
-                else if (i < 32) msb[i] = 4;
-                else if (i < 64) msb[i] = 5;
-                else if (i < 128) msb[i] = 6;
-                else msb[i] = 7;
-            });
-#else
             for (int i = 0; i < msbTableSize; i++)
             {
                 if (i < 1) msb[i] = -1;
@@ -103,7 +86,6 @@ namespace PS2FloatLibrary
                 else if (i < 128) msb[i] = 6;
                 else msb[i] = 7;
             }
-#endif
             return msb;
         }
 
@@ -111,15 +93,6 @@ namespace PS2FloatLibrary
         {
             const byte normalizationTableSize = 32;
             byte[] normalizationTable = new byte[normalizationTableSize];
-#if NETCOREAPP || NETSTANDARD1_0_OR_GREATER || NET40_OR_GREATER
-            Parallel.For(0, normalizationTableSize, i =>
-            {
-                if (i < 9) normalizationTable[i] = 0;
-                else if (i < 17) normalizationTable[i] = 8;
-                else if (i < 25) normalizationTable[i] = 16;
-                else normalizationTable[i] = 24;
-            });
-#else
             for (int i = 0; i < normalizationTableSize; i++)
             {
                 if (i < 9) normalizationTable[i] = 0;
@@ -127,7 +100,6 @@ namespace PS2FloatLibrary
                 else if (i < 25) normalizationTable[i] = 16;
                 else normalizationTable[i] = 24;
             }
-#endif
             return normalizationTable;
         }
     }

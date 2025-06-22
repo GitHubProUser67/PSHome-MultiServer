@@ -6,9 +6,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+#if NET6_0_OR_GREATER
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-
+#endif
 namespace WebAPIService.VEEMEE.wardrobe_wars
 {
     internal class Podium
@@ -100,7 +101,7 @@ namespace WebAPIService.VEEMEE.wardrobe_wars
                 }
                 else
                 {
-                    IDFromString = Convert.ToInt32(previousid.Split(".").First());
+                    IDFromString = Convert.ToInt32(previousid.Split('.').First());
                 }
 
                 string serverScoreFilePath = serverFilePath + $"/Scores/{IDFromString}";
@@ -124,17 +125,17 @@ namespace WebAPIService.VEEMEE.wardrobe_wars
                             voteScore = File.ReadAllText(serverFilePath + $"/{userScoreProfiles.Contains(psnid)}.txt");
                         }
 
-                        return $"{DateTime.UtcNow.ToString("yyyy-MM-dd")}/{psnNameFromFileName},{psnNameFromFileName.Split("_").First()},{voteScore},{indexId},0";
+                        return $"{DateTime.UtcNow.ToString("yyyy-MM-dd")}/{psnNameFromFileName},{psnNameFromFileName.Split('_').First()},{voteScore},{indexId},0";
                     }
                     else
                     {
                         LoggerAccessor.LogError($"[VEEMEE] - Podium: No date directory found for today in path {serverFilePath} !");
-                        return $"0,{psnNameFromFileName.Split("_").First()},0,{id},0";
+                        return $"0,{psnNameFromFileName.Split('_').First()},0,{id},0";
                     }
                 } catch (Exception e)
                 {
                     LoggerAccessor.LogWarn($"[VEEMEE] - Podium: Failed to find a image at index {id}");
-                    return $"0,{psnNameFromFileName.Split("_").First()},0,{id},0";
+                    return $"0,{psnNameFromFileName.Split('_').First()},0,{id},0";
                 }
             }
 
@@ -441,7 +442,7 @@ namespace WebAPIService.VEEMEE.wardrobe_wars
 
             return null;
         }
-
+#if NET6_0_OR_GREATER
         /// <summary>
         /// Special function to call images from the user submissions for //WardrobeWars/Images/ VEEMEE endpoint
         /// </summary>
@@ -481,5 +482,6 @@ namespace WebAPIService.VEEMEE.wardrobe_wars
                 }
             }
         }
+#endif
     }
 }

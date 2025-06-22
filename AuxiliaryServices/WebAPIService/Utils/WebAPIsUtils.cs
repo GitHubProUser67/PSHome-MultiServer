@@ -34,7 +34,7 @@ namespace WebAPIService.Utils
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[File Uncompress] - An error occurred: {ex}");
+                LoggerAccessor.LogError($"[WebAPIsUtils] - UncompressFile - An error occurred: {ex}");
             }
         }
 

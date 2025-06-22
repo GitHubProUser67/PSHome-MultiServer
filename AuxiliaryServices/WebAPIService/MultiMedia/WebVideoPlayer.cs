@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Specialized;
+#if !NETFRAMEWORK
 using System.Web;
-
+#endif
 namespace WebAPIService.MultiMedia
 {
     /// <summary>
@@ -16,7 +17,11 @@ namespace WebAPIService.MultiMedia
         public WebVideoPlayer(NameValueCollection Parameters, string VideoUrl)
         {
             foreach (string Par in Parameters.AllKeys)
+#if NETFRAMEWORK
+            { if (!string.IsNullOrEmpty(Par) && Par != "type") VideoUrl += Par + "=" + Uri.EscapeDataString(Parameters[Par]) + "&"; }
+#else
             { if (!string.IsNullOrEmpty(Par) && Par != "type") VideoUrl += Par + "=" + HttpUtility.UrlEncode(Parameters[Par]) + "&"; }
+#endif
 
             if (VideoUrl.EndsWith("&"))
                 VideoUrl = VideoUrl.Substring(0, VideoUrl.Length - 1);

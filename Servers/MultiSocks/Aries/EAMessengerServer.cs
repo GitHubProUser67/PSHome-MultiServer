@@ -47,7 +47,6 @@ namespace MultiSocks.Aries
             if (user != null)
             {
                 Users.RemoveUser(user);
-
             }
         }
 

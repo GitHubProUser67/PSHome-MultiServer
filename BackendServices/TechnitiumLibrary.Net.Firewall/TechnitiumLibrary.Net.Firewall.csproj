@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-	<IsTrimmable>true</IsTrimmable>
 	<IsPublishable>false</IsPublishable>
+	<IsTrimmable Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net6.0'))">true</IsTrimmable>
 	<Version>5.0</Version>
   </PropertyGroup>
 

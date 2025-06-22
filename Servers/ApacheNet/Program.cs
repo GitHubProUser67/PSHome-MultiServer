@@ -126,7 +126,6 @@ public static class ApacheNetServerConfiguration
         };
     public static List<ushort>? Ports { get; set; } = new() { 80, 443, 3074, 3658, 9090, 10010, 26004, 33000 };
     public static List<string>? RedirectRules { get; set; }
-    public static List<string>? BannedIPs { get; set; }
     public static List<string>? AllowedManagementIPs { get; set; }
 
     public static Dictionary<string, HTTPPlugin> plugins = PluginLoader.LoadPluginsFromFolder(PluginsFolder);
@@ -142,12 +141,13 @@ public static class ApacheNetServerConfiguration
         // Make sure the file exists
         if (!File.Exists(configPath))
         {
-            LoggerAccessor.LogWarn("Could not find the ApacheNet.json file, writing and using server's default.");
+            LoggerAccessor.LogWarn($"Could not find the configuration file:{configPath}, writing and using server's default.");
 
             Directory.CreateDirectory(Path.GetDirectoryName(configPath) ?? Directory.GetCurrentDirectory() + "/static");
 
             // Write the JObject to a file
             File.WriteAllText(configPath, new JObject(
+                new JProperty("config_version", (ushort)2),
                 new JProperty("doh_enabled", DNSOverEthernetEnabled),
                 new JProperty("online_routes_config", DNSOnlineConfig),
                 new JProperty("routes_config", DNSConfig),
@@ -191,7 +191,6 @@ public static class ApacheNetServerConfiguration
                 new JProperty("enable_image_upscale", EnableImageUpscale),
                 new JProperty("Ports", new JArray(Ports ?? new List<ushort> { })),
                 new JProperty("RedirectRules", new JArray(RedirectRules ?? new List<string> { })),
-                new JProperty("BannedIPs", new JArray(BannedIPs ?? new List<string> { })),
                 new JProperty("AllowedManagementIPs", new JArray(AllowedManagementIPs ?? new List<string> { })),
                 new JProperty("plugins_custom_parameters", string.Empty)
             ).ToString());
@@ -204,97 +203,91 @@ public static class ApacheNetServerConfiguration
             // Parse the JSON configuration
             dynamic config = JObject.Parse(File.ReadAllText(configPath));
 
-            DNSOverEthernetEnabled = GetValueOrDefault(config, "doh_enabled", DNSOverEthernetEnabled);
-            DNSOnlineConfig = GetValueOrDefault(config, "online_routes_config", DNSOnlineConfig);
-            DNSConfig = GetValueOrDefault(config, "routes_config", DNSConfig);
-            DNSAllowUnsafeRequests = GetValueOrDefault(config, "allow_unsafe_requests", DNSAllowUnsafeRequests);
-            EnableAdguardFiltering = GetValueOrDefault(config, "enable_adguard_filtering", EnableAdguardFiltering);
-            EnableDanPollockHosts = GetValueOrDefault(config, "enable_dan_pollock_hosts", EnableDanPollockHosts);
-            EnableBuiltInPlugins = GetValueOrDefault(config, "enable_builtin_plugins", EnableBuiltInPlugins);
-            EnableKeepAlive = GetValueOrDefault(config, "enable_keep_alive", EnableKeepAlive);
-            APIStaticFolder = GetValueOrDefault(config, "api_static_folder", APIStaticFolder);
-            ASPNETRedirectUrl = GetValueOrDefault(config, "aspnet_redirect_url", ASPNETRedirectUrl);
-            PHPRedirectUrl = GetValueOrDefault(config.php, "redirect_url", PHPRedirectUrl);
-            PHPVersion = GetValueOrDefault(config.php, "version", PHPVersion);
-            PHPStaticFolder = GetValueOrDefault(config.php, "static_folder", PHPStaticFolder);
-            PHPDebugErrors = GetValueOrDefault(config.php, "debug_errors", PHPDebugErrors);
-            HTTPStaticFolder = GetValueOrDefault(config, "https_static_folder", HTTPStaticFolder);
-            HTTPSPutFolder = GetValueOrDefault(config, "https_put_folder", HTTPSPutFolder);
-            BufferSize = GetValueOrDefault(config, "buffer_size", BufferSize);
-            HttpVersion = GetValueOrDefault(config, "http_version", HttpVersion);
-            ConvertersFolder = GetValueOrDefault(config, "converters_folder", ConvertersFolder);
-            HTTPSCertificateFile = GetValueOrDefault(config, "certificate_file", HTTPSCertificateFile);
-            HTTPSCertificatePassword = GetValueOrDefault(config, "certificate_password", HTTPSCertificatePassword);
-            HTTPSCertificateHashingAlgorithm = new HashAlgorithmName(GetValueOrDefault(config, "certificate_hashing_algorithm", HTTPSCertificateHashingAlgorithm.Name));
-            PluginsFolder = GetValueOrDefault(config, "plugins_folder", PluginsFolder);
-            NestedDirectoryReporting = GetValueOrDefault(config, "nested_directory_reporting", NestedDirectoryReporting);
-            DefaultPluginsPort = GetValueOrDefault(config, "default_plugins_port", DefaultPluginsPort);
-            NotFoundSuggestions = GetValueOrDefault(config, "404_not_found_suggestions", NotFoundSuggestions);
-            NotFoundWebArchive = GetValueOrDefault(config, "404_not_found_web_archive", NotFoundWebArchive);
-            NotFoundWebArchiveDateLimit = GetValueOrDefault(config, "404_not_found_web_archive_date_limit", NotFoundWebArchiveDateLimit);
-            PreferNativeHttpListenerEngine = GetValueOrDefault(config, "prefer_native_httplistener_engine", PreferNativeHttpListenerEngine);
-            UseLiteEngine = GetValueOrDefault(config, "use_lite_engine", UseLiteEngine);
-            RangeHandling = GetValueOrDefault(config, "enable_range_handling", RangeHandling);
-            ChunkedTransfers = GetValueOrDefault(config, "enable_chunked_transfers", ChunkedTransfers);
-            DomainFolder = GetValueOrDefault(config, "enable_domain_folder", DomainFolder);
-            EnableHTTPCompression = GetValueOrDefault(config, "enable_http_compression", EnableHTTPCompression);
-            EnablePUTMethod = GetValueOrDefault(config, "enable_put_method", EnablePUTMethod);
-            EnableImageUpscale = GetValueOrDefault(config, "enable_image_upscale", EnableImageUpscale);
-            MimeTypes = GetValueOrDefault(config, "mime_types", MimeTypes);
-            DateTimeOffset = GetValueOrDefault(config, "datetime_offset", DateTimeOffset);
-            HTTPSDNSList = GetValueOrDefault(config, "https_dns_list", HTTPSDNSList);
-            // Deserialize Ports if it exists
-            try
+            ushort config_version = GetValueOrDefault(config, "config_version", (ushort)0);
+            if (config_version >= 2)
             {
-                JArray PortsArray = config.Ports;
+                DNSOverEthernetEnabled = GetValueOrDefault(config, "doh_enabled", DNSOverEthernetEnabled);
+                DNSOnlineConfig = GetValueOrDefault(config, "online_routes_config", DNSOnlineConfig);
+                DNSConfig = GetValueOrDefault(config, "routes_config", DNSConfig);
+                DNSAllowUnsafeRequests = GetValueOrDefault(config, "allow_unsafe_requests", DNSAllowUnsafeRequests);
+                EnableAdguardFiltering = GetValueOrDefault(config, "enable_adguard_filtering", EnableAdguardFiltering);
+                EnableDanPollockHosts = GetValueOrDefault(config, "enable_dan_pollock_hosts", EnableDanPollockHosts);
+                EnableBuiltInPlugins = GetValueOrDefault(config, "enable_builtin_plugins", EnableBuiltInPlugins);
+                EnableKeepAlive = GetValueOrDefault(config, "enable_keep_alive", EnableKeepAlive);
+                APIStaticFolder = GetValueOrDefault(config, "api_static_folder", APIStaticFolder);
+                ASPNETRedirectUrl = GetValueOrDefault(config, "aspnet_redirect_url", ASPNETRedirectUrl);
+                PHPRedirectUrl = GetValueOrDefault(config.php, "redirect_url", PHPRedirectUrl);
+                PHPVersion = GetValueOrDefault(config.php, "version", PHPVersion);
+                PHPStaticFolder = GetValueOrDefault(config.php, "static_folder", PHPStaticFolder);
+                PHPDebugErrors = GetValueOrDefault(config.php, "debug_errors", PHPDebugErrors);
+                HTTPStaticFolder = GetValueOrDefault(config, "https_static_folder", HTTPStaticFolder);
+                HTTPSPutFolder = GetValueOrDefault(config, "https_put_folder", HTTPSPutFolder);
+                BufferSize = GetValueOrDefault(config, "buffer_size", BufferSize);
+                HttpVersion = GetValueOrDefault(config, "http_version", HttpVersion);
+                ConvertersFolder = GetValueOrDefault(config, "converters_folder", ConvertersFolder);
+                HTTPSCertificateFile = GetValueOrDefault(config, "certificate_file", HTTPSCertificateFile);
+                HTTPSCertificatePassword = GetValueOrDefault(config, "certificate_password", HTTPSCertificatePassword);
+                HTTPSCertificateHashingAlgorithm = new HashAlgorithmName(GetValueOrDefault(config, "certificate_hashing_algorithm", HTTPSCertificateHashingAlgorithm.Name));
+                PluginsFolder = GetValueOrDefault(config, "plugins_folder", PluginsFolder);
+                NestedDirectoryReporting = GetValueOrDefault(config, "nested_directory_reporting", NestedDirectoryReporting);
+                DefaultPluginsPort = GetValueOrDefault(config, "default_plugins_port", DefaultPluginsPort);
+                NotFoundSuggestions = GetValueOrDefault(config, "404_not_found_suggestions", NotFoundSuggestions);
+                NotFoundWebArchive = GetValueOrDefault(config, "404_not_found_web_archive", NotFoundWebArchive);
+                NotFoundWebArchiveDateLimit = GetValueOrDefault(config, "404_not_found_web_archive_date_limit", NotFoundWebArchiveDateLimit);
+                PreferNativeHttpListenerEngine = GetValueOrDefault(config, "prefer_native_httplistener_engine", PreferNativeHttpListenerEngine);
+                UseLiteEngine = GetValueOrDefault(config, "use_lite_engine", UseLiteEngine);
+                RangeHandling = GetValueOrDefault(config, "enable_range_handling", RangeHandling);
+                ChunkedTransfers = GetValueOrDefault(config, "enable_chunked_transfers", ChunkedTransfers);
+                DomainFolder = GetValueOrDefault(config, "enable_domain_folder", DomainFolder);
+                EnableHTTPCompression = GetValueOrDefault(config, "enable_http_compression", EnableHTTPCompression);
+                EnablePUTMethod = GetValueOrDefault(config, "enable_put_method", EnablePUTMethod);
+                EnableImageUpscale = GetValueOrDefault(config, "enable_image_upscale", EnableImageUpscale);
+                MimeTypes = GetValueOrDefault(config, "mime_types", MimeTypes);
+                DateTimeOffset = GetValueOrDefault(config, "datetime_offset", DateTimeOffset);
+                HTTPSDNSList = GetValueOrDefault(config, "https_dns_list", HTTPSDNSList);
                 // Deserialize Ports if it exists
-                if (PortsArray != null)
-                    Ports = PortsArray.ToObject<List<ushort>>();
-            }
-            catch
-            {
+                try
+                {
+                    JArray PortsArray = config.Ports;
+                    // Deserialize Ports if it exists
+                    if (PortsArray != null)
+                        Ports = PortsArray.ToObject<List<ushort>>();
+                }
+                catch
+                {
 
-            }
-            // Deserialize RedirectRules if it exists
-            try
-            {
-                JArray redirectRulesArray = config.RedirectRules;
+                }
                 // Deserialize RedirectRules if it exists
-                if (redirectRulesArray != null)
-                    RedirectRules = redirectRulesArray.ToObject<List<string>>();
-            }
-            catch
-            {
+                try
+                {
+                    JArray redirectRulesArray = config.RedirectRules;
+                    // Deserialize RedirectRules if it exists
+                    if (redirectRulesArray != null)
+                        RedirectRules = redirectRulesArray.ToObject<List<string>>();
+                }
+                catch
+                {
 
-            }
-            // Deserialize BannedIPs if it exists
-            try
-            {
-                JArray bannedIPsArray = config.BannedIPs;
-                // Deserialize BannedIPs if it exists
-                if (bannedIPsArray != null)
-                    BannedIPs = bannedIPsArray.ToObject<List<string>>();
-            }
-            catch
-            {
-
-            }
-            // Deserialize AllowedManagementIPs if it exists
-            try
-            {
-                JArray AllowedManagementIPsArray = config.AllowedManagementIPs;
+                }
                 // Deserialize AllowedManagementIPs if it exists
-                if (AllowedManagementIPsArray != null)
-                    AllowedManagementIPs = AllowedManagementIPsArray.ToObject<List<string>>();
-            }
-            catch
-            {
+                try
+                {
+                    JArray AllowedManagementIPsArray = config.AllowedManagementIPs;
+                    // Deserialize AllowedManagementIPs if it exists
+                    if (AllowedManagementIPsArray != null)
+                        AllowedManagementIPs = AllowedManagementIPsArray.ToObject<List<string>>();
+                }
+                catch
+                {
 
+                }
             }
+            else
+                LoggerAccessor.LogWarn($"{configPath} file is outdated, using server's default.");
         }
         catch (Exception ex)
         {
-            LoggerAccessor.LogWarn($"ApacheNet.json file is malformed (exception: {ex}), using server's default.");
+            LoggerAccessor.LogWarn($"{configPath} file is malformed (exception: {ex}), using server's default.");
         }
     }
 
@@ -341,6 +334,8 @@ public static class ApacheNetServerConfiguration
 
 class Program
 {
+    private static int workerThreads, completionPortThreads;
+
     private static string configDir = Directory.GetCurrentDirectory() + "/static/";
     public static string configPath = configDir + "ApacheNet.json";
     private static string configNetworkLibraryPath = configDir + "NetworkLibrary.json";
@@ -453,12 +448,16 @@ class Program
 
         if (ApacheNetServerConfiguration.Ports != null && ApacheNetServerConfiguration.Ports.Count > 0)
         {
+            const ushort optimalProcessorCount = 4;
+
             HTTPSBag = new();
 
-            Parallel.ForEach(ApacheNetServerConfiguration.Ports, port =>
+            _ = Parallel.ForEachAsync(ApacheNetServerConfiguration.Ports, (port, cancellationToken) =>
             {
                 if (TCPUtils.IsTCPPortAvailable(port))
-                    HTTPSBag.Add(new ApacheNetProcessor(ApacheNetServerConfiguration.HTTPSCertificateFile, ApacheNetServerConfiguration.HTTPSCertificatePassword, "*", port, port.ToString().EndsWith("443")));
+                    HTTPSBag.Add(new ApacheNetProcessor(ApacheNetServerConfiguration.HTTPSCertificateFile, ApacheNetServerConfiguration.HTTPSCertificatePassword, "*", port, port.ToString().EndsWith("443"), Environment.ProcessorCount * optimalProcessorCount));
+
+                return ValueTask.CompletedTask;
             });
         }
         else
@@ -493,10 +492,12 @@ class Program
 
     static void Main()
     {
+        ThreadPool.GetMaxThreads(out workerThreads, out completionPortThreads);
+
         dnswatcher.NotifyFilter = NotifyFilters.LastWrite;
         dnswatcher.Changed += OnDNSChanged;
 
-        if (!NetworkLibrary.Extension.Windows.Win32API.IsWindows)
+        if (!NetworkLibrary.Extension.Microsoft.Win32API.IsWindows)
             GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
         else
             TechnitiumLibrary.Net.Firewall.FirewallHelper.CheckFirewallEntries(Assembly.GetEntryAssembly()?.Location);
@@ -566,11 +567,11 @@ class Program
         ApacheNetServerConfiguration.RefreshVariables(configPath);
 
         if (ApacheNetServerConfiguration.PreferNativeHttpListenerEngine
-            && NetworkLibrary.Extension.Windows.Win32API.IsWindows
-            && !NetworkLibrary.Extension.Windows.Win32API.IsAdministrator())
+            && NetworkLibrary.Extension.Microsoft.Win32API.IsWindows
+            && !NetworkLibrary.Extension.Microsoft.Win32API.IsAdministrator())
         {
             LoggerAccessor.LogWarn("[Program] - Trying to restart as admin...");
-            if (NetworkLibrary.Extension.Windows.Win32API.StartAsAdmin(Process.GetCurrentProcess().MainModule?.FileName))
+            if (NetworkLibrary.Extension.Microsoft.Win32API.StartAsAdmin(Process.GetCurrentProcess().MainModule?.FileName))
                 Environment.Exit(0);
         }
 

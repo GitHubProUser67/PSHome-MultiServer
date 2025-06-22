@@ -13,7 +13,7 @@ namespace Horizon.RT.Models
         public override RT_MSG_TYPE Id => RT_MSG_TYPE.RT_MSG_SERVER_STARTUP_INFO_NOTIFY;
 
         public byte GameHostType { get; set; } = (byte)MGCL_GAME_HOST_TYPE.MGCLGameHostClientServerAuxUDP;
-        public uint Timebase { get; set; } = DateTimeUtils.GetUnixTime();
+        public uint Timebase { get; set; } = DateTimeUtils.GetUnixTimeU32();
         public List<uint> FieldsSetA  = new List<uint>();
         public ushort FieldsSetAExtraInfo;
         public List<(ushort, ushort, ushort)> FieldsSetB = new List<(ushort, ushort, ushort)>();
@@ -127,14 +127,14 @@ namespace Horizon.RT.Models
             return base.ToString() + " " +
                 $"GameHostType: {(MGCL_GAME_HOST_TYPE)GameHostType}, " +
                 $"Timebase: {Timebase}, " +
-                $"StartupInfo: {BitConverter.ToString(StartupInfo)}, " +
+                $"StartupInfo: {(StartupInfo != null ? BitConverter.ToString(StartupInfo) : string.Empty)}, " +
                 $"FieldsSetA: [{setA}], " +
                 $"FieldsSetAExtraInfo: {FieldsSetAExtraInfo}, " +
                 $"FieldsSetB: [{setB}], " +
                 $"FieldsSetBExtraInfo: {FieldsSetBExtraInfo}, " +
                 $"FieldsSetC: [{setC}]" +
                 $"FieldsSetCExtraInfo: {FieldsSetCExtraInfo}, " +
-                $"FieldsSetCData: {BitConverter.ToString(FieldsSetCData)}, ";
+                $"FieldsSetCData: {(FieldsSetCData != null ? BitConverter.ToString(FieldsSetCData) : string.Empty)}, ";
         }
     }
 }

@@ -7,7 +7,6 @@ using Horizon.RT.Common;
 using Horizon.RT.Cryptography;
 using Horizon.RT.Models;
 using Horizon.LIBRARY.Pipeline.Tcp;
-using Horizon.LIBRARY.Common;
 using Horizon.DME.Models;
 using System.Collections.Concurrent;
 using System.Net;
@@ -426,7 +425,7 @@ namespace Horizon.DME
                         {
                             LoggerAccessor.LogInfo($"[DME] - TcpServer - DMEClient Connected {clientChannel.RemoteAddress} with new ClientObject!");
 
-                            data.DMEObject = new DMEObject(clientConnectTcpAuxUdp.SessionKey);
+                            data.DMEObject = new DMEObject(clientConnectTcpAuxUdp.SessionKey, mumClient);
                         }
 
                         data.DMEObject.ApplicationId = clientConnectTcpAuxUdp.AppId;
@@ -455,7 +454,7 @@ namespace Horizon.DME
                                 {
                                     PlayerId = (ushort)data.DMEObject.DmeId,
                                     ScertId = data.DMEObject.ScertId,
-                                    PlayerCount = (ushort?)data.DMEObject.DmeWorld?.Clients.Count() ?? 0x0001,
+                                    PlayerCount = (ushort?)data.DMEObject.DmeWorld?.Clients.Length ?? 0x0001,
                                     IP = (clientChannel.RemoteAddress as IPEndPoint)?.Address
                                 }, clientChannel);
                             }
@@ -473,7 +472,7 @@ namespace Horizon.DME
                             {
                                 PlayerId = (ushort)data.DMEObject.DmeId,
                                 ScertId = data.DMEObject.ScertId,
-                                PlayerCount = (ushort?)data.DMEObject.DmeWorld?.Clients.Count() ?? 0x0001,
+                                PlayerCount = (ushort?)data.DMEObject.DmeWorld?.Clients.Length ?? 0x0001,
                                 IP = (clientChannel.RemoteAddress as IPEndPoint)?.Address
                             }, clientChannel);
 
@@ -566,7 +565,7 @@ namespace Horizon.DME
                         {
                             LoggerAccessor.LogInfo($"[DME] - TcpServer - DMEClient Connected {clientChannel.RemoteAddress} with new ClientObject!");
 
-                            data.DMEObject = new DMEObject(clientConnectTcp.SessionKey);
+                            data.DMEObject = new DMEObject(clientConnectTcp.SessionKey, mumClient);
                         }
 
                         data.DMEObject.ApplicationId = clientConnectTcp.AppId;
@@ -592,7 +591,7 @@ namespace Horizon.DME
                                 {
                                     PlayerId = (ushort)data.DMEObject.DmeId,
                                     ScertId = data.DMEObject.ScertId,
-                                    PlayerCount = (ushort?)data.DMEObject.DmeWorld?.Clients.Count() ?? 0x0001,
+                                    PlayerCount = (ushort?)data.DMEObject.DmeWorld?.Clients.Length ?? 0x0001,
                                     IP = (clientChannel.RemoteAddress as IPEndPoint)?.Address
                                 }, clientChannel);
                             }
@@ -610,7 +609,7 @@ namespace Horizon.DME
                             {
                                 PlayerId = (ushort)data.DMEObject.DmeId,
                                 ScertId = data.DMEObject.ScertId,
-                                PlayerCount = (ushort?)data.DMEObject.DmeWorld?.Clients.Count() ?? 0x0001,
+                                PlayerCount = (ushort?)data.DMEObject.DmeWorld?.Clients.Length ?? 0x0001,
                                 IP = (clientChannel.RemoteAddress as IPEndPoint)?.Address
                             }, clientChannel);
 
@@ -625,9 +624,9 @@ namespace Horizon.DME
                             Queue(new RT_MSG_SERVER_CRYPTKEY_GAME() { GameKey = scertClient.CipherService.GetPublicKey(CipherContext.RC_CLIENT_SESSION) }, clientChannel);
                         Queue(new RT_MSG_SERVER_CONNECT_ACCEPT_TCP()
                         {
-                            PlayerId = (ushort)data.DMEObject!.DmeId,
+                            PlayerId = (ushort)data.DMEObject.DmeId,
                             ScertId = data.DMEObject.ScertId,
-                            PlayerCount = (ushort?)data.DMEObject.DmeWorld?.Clients.Count() ?? 0x0001,
+                            PlayerCount = (ushort?)data.DMEObject.DmeWorld?.Clients.Length ?? 0x0001,
                             IP = (clientChannel.RemoteAddress as IPEndPoint)?.Address
                         }, clientChannel);
                         break;
@@ -642,7 +641,7 @@ namespace Horizon.DME
                             Queue(new RT_MSG_SERVER_STARTUP_INFO_NOTIFY()
                             {
                                 GameHostType = (byte)MGCL_GAME_HOST_TYPE.MGCLGameHostClientServerAuxUDP,
-                                Timebase = (uint?)data.DMEObject.DmeWorld?.WorldTimer.ElapsedMilliseconds ?? DateTimeUtils.GetUnixTime()
+                                Timebase = (uint?)data.DMEObject.DmeWorld?.WorldTimer.ElapsedMilliseconds ?? DateTimeUtils.GetUnixTimeU32()
                             }, clientChannel);
                             Queue(new RT_MSG_SERVER_INFO_AUX_UDP()
                             {
@@ -656,23 +655,23 @@ namespace Horizon.DME
                     {
                         data.DMEObject?.OnConnectionCompleted();
 
-                        Queue(new RT_MSG_SERVER_CONNECT_COMPLETE()
-                        {
-                            ClientCountAtConnect = (ushort?)data.DMEObject?.DmeWorld?.Clients.Count() ?? 0x0001
-                        }, clientChannel);
-
-                        if (scertClient.MediusVersion > 108)
-                        {
-                            Queue(new RT_MSG_SERVER_APP()
+                        _ = data.DMEObject?.DmeWorld?.EnqueuePlayerSyncTask(Task.Run(() => {
+                            Queue(new RT_MSG_SERVER_CONNECT_COMPLETE()
                             {
-                                Message = new TypeServerVersion()
-                                {
-                                    Version = "2.10.0009"
-                                }
+                                ClientCountAtConnect = (ushort?)data.DMEObject?.DmeWorld?.Clients.Length ?? 0x0001,
                             }, clientChannel);
-                        }
 
-                        data.DMEObject?.DmeWorld?.OnPlayerJoined(data.DMEObject);
+                            if (scertClient.MediusVersion > 108)
+                            {
+                                Queue(new RT_MSG_SERVER_APP()
+                                {
+                                    Message = new TypeServerVersion()
+                                    {
+                                        Version = "2.10.0009"
+                                    }
+                                }, clientChannel);
+                            }
+                        }).ContinueWith(x => data.DMEObject?.DmeWorld?.OnPlayerJoined(data.DMEObject)));
                         break;
                     }
                 case RT_MSG_SERVER_ECHO serverEchoReply:
@@ -897,7 +896,7 @@ namespace Horizon.DME
                         data.DMEObject?.EnqueueTcp(new RT_MSG_SERVER_APP() { 
                             Message = new TypePing()
                             {
-                                TimeOfSend = DateTimeUtils.GetUnixTime(),
+                                TimeOfSend = DateTimeUtils.GetUnixTimeU32(),
                                 PingInstance = ping.PingInstance,
                                 RequestEcho = ping.RequestEcho
                             }

@@ -1,5 +1,4 @@
 using CustomLogger;
-using MultiSpyService.Data;
 using MultiSpyService.Utils;
 using System.Net;
 using System.Net.Sockets;
@@ -8,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace MultiSpy.Servers
 {
-	internal class CDKeyServer
+    internal class CDKeyServer
 	{
 		public Thread Thread;
 

@@ -55,8 +55,8 @@ namespace MultiSocks.Aries.Model
                 _IdCounter[idToRemove] = false;
         }
 
-        public virtual AriesGame? AddGame(int maxSize, int minSize, string custFlags, string @params,
-                string name, bool priv, string seed, string sysFlags, string? pass, int roomId)
+        public virtual AriesGame? AddGame(int maxSize, int minSize, string? custFlags, string @params,
+                string name, bool priv, string? seed, string sysFlags, string? pass, int roomId)
         {
             if (!GamesSessions.Values.Any(game =>
                     game.Name == name))
@@ -78,7 +78,7 @@ namespace MultiSocks.Aries.Model
             return null;
         }
 
-        public virtual void RemoveGame(AriesGame? game)
+        public virtual bool RemoveGame(AriesGame? game)
         {
             if (game != null && GamesSessions.ContainsKey(game.ID))
             {
@@ -98,7 +98,11 @@ namespace MultiSocks.Aries.Model
                 UnregisterId(game.ID);
 
                 game = null;
+
+                return true;
             }
+
+            return false;
         }
 
         public virtual bool TryChangeGameId(AriesGame game, int newID)

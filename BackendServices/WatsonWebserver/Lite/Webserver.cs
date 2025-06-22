@@ -64,7 +64,7 @@
         /// </summary>
         /// <param name="settings">Webserver settings.</param>
         /// <param name="defaultRoute">Default route.</param>
-        public WebserverLite(WebserverSettings settings, Func<HttpContextBase, Task> defaultRoute) : base(settings, defaultRoute)
+        public WebserverLite(WebserverSettings settings, Func<HttpContextBase, Task> defaultRoute, int MaxConcurrentListeners = 10) : base(settings, defaultRoute)
         {
             if (settings == null) settings = new WebserverSettings(); 
 
@@ -74,7 +74,7 @@
 
             _Header = "[Webserver " + Settings.Prefix + "] ";
 
-            InitializeServer(settings.Hostname, settings.Port);
+            InitializeServer(settings.Hostname, settings.Port, MaxConcurrentListeners);
         }
 
         #endregion
@@ -157,11 +157,11 @@
 
         #region Private-Methods
 
-        private void InitializeServer(string hostname, int port)
+        private void InitializeServer(string hostname, int port, int MaxConcurrentListeners)
         {
             if (!Settings.Ssl.Enable)
             {
-                _TcpServer = new CavemanTcpServer(hostname, port);
+                _TcpServer = new CavemanTcpServer(hostname, port, MaxConcurrentListeners);
 
                 _Header = "[WatsonWebserver.Lite http://" + hostname + ":" + port + "] ";
             }
@@ -170,6 +170,7 @@
                 _TcpServer = new CavemanTcpServer(
                     hostname,
                     port,
+                    MaxConcurrentListeners,
                     Settings.Ssl.SslCertificate);
 
                 _Header = "[WatsonWebserver.Lite " + Settings.Prefix + "] ";
@@ -235,7 +236,7 @@
 
                         //                           123456789012345 6 7 8
                         // minimum request 16 bytes: GET / HTTP/1.1\r\n\r\n
-                        int preReadLen = 18;
+                        const int preReadLen = 18;
                         ReadResult preReadResult = await _TcpServer.ReadWithTimeoutAsync(
                             Settings.IO.ReadTimeoutMs,
                             args.Client.Guid,
@@ -247,7 +248,7 @@
                             || preReadResult.BytesRead != preReadLen
                             || preReadResult.Data == null
                             || preReadResult.Data.Length != preReadLen)
-                            return;
+                            continue;
                         else
                         {
                             string httpHeader = Encoding.ASCII.GetString(preReadResult.Data);
@@ -270,7 +271,7 @@
                                         {
                                             Events.HandleConnectionDenied(this, new ConnectionEventArgs(ip, port));
                                             Events.Logger?.Invoke(_Header + "failed to read headers from " + ip + ":" + port + " within " + Settings.IO.MaxIncomingHeadersSize + " bytes, closing connection");
-                                            return;
+                                            continue;
                                         }
 
                                         ReadResult addlReadResult = await _TcpServer.ReadWithTimeoutAsync(
@@ -282,7 +283,7 @@
                                         if (addlReadResult.Status == ReadResultStatus.Success)
                                             sb.Append(Encoding.ASCII.GetString(addlReadResult.Data));
                                         else
-                                            return;
+                                            continue;
                                     }
                                 }
                             }

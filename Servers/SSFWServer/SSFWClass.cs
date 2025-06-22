@@ -13,6 +13,7 @@ using NetworkLibrary.Extension;
 using NetworkLibrary.HTTP;
 using System.Collections.Concurrent;
 using SSFWServer.Helpers.FileHelper;
+using NetworkLibrary.SSL;
 
 namespace SSFWServer
 {
@@ -25,7 +26,6 @@ namespace SSFWServer
         {
             ".html", ".htm", ".cgi", ".css", ".js", ".svg", ".gif", ".ico", ".woff", ".woff2", ".ttf", ".eot"
         };
-
 
         private static string? legacykey;
         private static SSFWServer? _Server;
@@ -113,7 +113,7 @@ namespace SSFWServer
         public void StartSSFW()
         {
             // Create and prepare a new SSL server context and start the server
-            _Server = new SSFWServer(new SslContext(SslProtocols.Tls12, new X509Certificate2(certpath, certpass), MyRemoteCertificateValidationCallback), IPAddress.Any, 10443);
+            _Server = new SSFWServer(new SslContext(SslProtocols.Tls12, new X509Certificate2(certpath, certpass), MyRemoteCertificateValidationCallback) { ClientCertificateRequired = true }, IPAddress.Any, 10443);
             // Create and start the server
             _HttpServer = new HttpSSFWServer(IPAddress.Any, 8080);
 
@@ -131,6 +131,14 @@ namespace SSFWServer
             _HttpServer?.Stop();
         }
 
+        public static bool IsHostBanned(string host)
+        {
+            if (!string.IsNullOrEmpty(host) && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs != null && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs.Contains(host))
+                return true;
+
+            return false;
+        }
+
         private static HttpResponse SSFWRequestProcess(HttpRequest request, HttpResponse Response)
         {
             try
@@ -140,6 +148,16 @@ namespace SSFWServer
                 if (!string.IsNullOrEmpty(absolutepath))
                 {
                     (string HeaderIndex, string HeaderItem)[] Headers = CollectHeaders(request);
+
+                    string host = GetHeaderValue(Headers, "host", false);
+
+                    if (IsHostBanned(host)) // Host ban is not perfect, but netcoreserver only has that to offer...
+                    {
+                        Response.Clear();
+                        Response.SetBegin(403);
+                        Response.SetBody();
+                        return Response;
+                    }
 
                     string? encoding = null;
                     string UserAgent = GetHeaderValue(Headers, "User-Agent", false);
@@ -158,15 +176,15 @@ namespace SSFWServer
                     string filePath = Path.Combine(SSFWServerConfiguration.SSFWStaticFolder, absolutepath[1..]);
 
 #if DEBUG
-                    LoggerAccessor.LogInfo($"[SSFW] - Home Client Requested the SSFW Server with URL : {request.Method} {absolutepath} (Details: \n{{ \"NetCoreServer\":" + System.Text.Json.JsonSerializer.Serialize(request, new JsonSerializerOptions { WriteIndented = true })
-                        + (Headers.Length > 0 ? $", \"Headers\":{System.Text.Json.JsonSerializer.Serialize(Headers.ToDictionary(header => header.HeaderIndex, header => header.HeaderItem), new JsonSerializerOptions { WriteIndented = true })} }} )" : "} )"));
+                    LoggerAccessor.LogInfo($"[SSFW] - Home Client Requested the SSFW Server with URL : {request.Method} {absolutepath} (Details: \n{{ \"NetCoreServer\":" + JsonSerializer.Serialize(request, new JsonSerializerOptions { WriteIndented = true })
+                        + (Headers.Length > 0 ? $", \"Headers\":{JsonSerializer.Serialize(Headers.ToDictionary(header => header.HeaderIndex, header => header.HeaderItem), new JsonSerializerOptions { WriteIndented = true })} }} )" : "} )"));
 #else
-                    LoggerAccessor.LogInfo($"[SSFW] - Home Client Requested the SSFW Server with URL : {request.Method} {absolutepath}");
+                        LoggerAccessor.LogInfo($"[SSFW] - Home Client Requested the SSFW Server with URL : {request.Method} {absolutepath}");
 #endif
 
-                    if (!string.IsNullOrEmpty(UserAgent) && UserAgent.Contains("PSHome")) // Host ban is not perfect, but netcoreserver only has that to offer...
+                    if (!string.IsNullOrEmpty(UserAgent) && UserAgent.Contains("PSHome"))
                     {
-                        string? env = ExtractBeforeFirstDot(GetHeaderValue(Headers, "Host", false));
+                        string? env = ExtractBeforeFirstDot(host);
                         string sessionid = GetHeaderValue(Headers, "X-Home-Session-Id");
 
                         if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
@@ -477,8 +495,10 @@ namespace SSFWServer
                                         rewardSvc.HandleRewardServiceTrunksEmergencyPOST(postbuffer, directoryPath, absolutepath);
                                         Response.MakeOkResponse();
                                     }
-                                    else if (absolutepath.Contains($"/RewardsService/pmcards/")
-                                        || absolutepath.Contains($"/RewardsService/p4t-cprod/")
+                                    else if (
+                                        (absolutepath.Contains($"/RewardsService/pm_{env}_inv/")
+                                        || absolutepath.Contains($"/RewardsService/pmcards/")
+                                        || absolutepath.Contains($"/RewardsService/p4t-{env}/"))
                                         && IsSSFWRegistered(sessionid))
                                         Response.MakeGetResponse(rewardSvc.HandleRewardServiceInvPOST(postbuffer, directoryPath, filePath, absolutepath), "application/json");
                                     #endregion
@@ -951,7 +971,7 @@ namespace SSFWServer
                                                 {
                                                     entriesToAdd.TryAdd(iteruuid, InventoryEntryType);
                                                 }
-													
+
                                                 try
                                                 {
                                                     new SSFWRewardsService(legacykey).AddMiniEntries(entriesToAdd, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
@@ -1050,7 +1070,7 @@ namespace SSFWServer
                                                 {
                                                     entriesToRemove.TryAdd(iteruuid, InventoryEntryType);
                                                 }
-												
+
                                                 try
                                                 {
                                                     new SSFWRewardsService(legacykey).RemoveMiniEntries(entriesToRemove, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
@@ -1098,7 +1118,7 @@ namespace SSFWServer
                 }
                 else
                 {
-                    LoggerAccessor.LogError($"[SSFW] - Client Requested the SSFW Server with invalid url!");
+                    LoggerAccessor.LogError($"[SSFW] - Home Client Requested the SSFW Server with an invalid url!");
                     Response.Clear();
                     Response.SetBegin(400);
                     Response.SetBody();
@@ -1107,7 +1127,7 @@ namespace SSFWServer
             catch (Exception e)
             {
                 Response.MakeErrorResponse();
-                LoggerAccessor.LogError($"[SSFW] - Request thrown an error : {e}");
+                LoggerAccessor.LogError($"[SSFW] - SSFW Request thrown an error : {e}");
             }
 
             return Response;
@@ -1115,7 +1135,75 @@ namespace SSFWServer
 
         private bool MyRemoteCertificateValidationCallback(object? sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors)
         {
-            return true; //This isn't a good thing to do, but to keep the code simple i prefer doing this, it will be used only on mono
+            // If certificate is null, reject
+            if (certificate == null)
+            {
+                LoggerAccessor.LogError("[SSFWClass] - MyRemoteCertificateValidationCallback: Certificate is null.");
+                return false;
+            }
+
+            // Cast to X509Certificate2 for date and signature checks
+            if (certificate is not X509Certificate2 cert2)
+            {
+                LoggerAccessor.LogError("[SSFWClass] - MyRemoteCertificateValidationCallback: Certificate is not an X509Certificate2.");
+                return false;
+            }
+
+            DateTime now = DateTime.UtcNow;
+
+            // Check certificate validity dates (skip NotAfter date as Home certs are old)
+            if (now < cert2.NotBefore)
+            {
+                LoggerAccessor.LogError($"[SSFWClass] - MyRemoteCertificateValidationCallback: Certificate is not valid at current date/time: {now}");
+                return false;
+            }
+
+            // If no SSL chain reported
+            if (chain == null)
+            {
+                LoggerAccessor.LogError("[SSFWClass] - MyRemoteCertificateValidationCallback: Certificate chain is null.");
+                return false;
+            }
+
+            const string homeClientCertsPath = "home_certificates";
+
+            // Check the certificate against known ones
+            if (Directory.Exists(homeClientCertsPath))
+            {
+                const string pemExtension = ".pem";
+
+                foreach (var pemFilePath in Directory.GetFiles(homeClientCertsPath, $"*{pemExtension}"))
+                {
+                    string pemContent = File.ReadAllText(pemFilePath);
+
+                    // Skip private keys
+                    if (pemContent.Contains(CertificateHelper.keyBegin))
+                        continue;
+
+                    string certFileName = Path.GetFileNameWithoutExtension(pemFilePath);
+                    string privPemKeyFilePath = Path.Combine(homeClientCertsPath, certFileName + $"_privkey{pemExtension}");
+
+                    if (!File.Exists(privPemKeyFilePath))
+                    {
+                        LoggerAccessor.LogWarn($"[SSFWClass] - MyRemoteCertificateValidationCallback: Private key file not found for cert: {certFileName}");
+                        continue;
+                    }
+
+                    if (CertificateHelper.CertificatesMatch(CertificateHelper.LoadCombinedCertificateAndKeyFromString(pemContent, File.ReadAllText(privPemKeyFilePath)), cert2))
+                    {
+                        LoggerAccessor.LogInfo($"[SSFWClass] - MyRemoteCertificateValidationCallback: Certificate matched known cert: {pemFilePath}");
+
+                        // All checks passed: cert is valid and verified, chain is good, dates valid, signatures valid
+                        return true;
+                    }
+                }
+
+                LoggerAccessor.LogError("[SSFWClass] - MyRemoteCertificateValidationCallback: No matching certificate found in home_certificates.");
+                return false;
+            }
+
+            // All checks passed: cert is valid, chain is good, dates valid, signatures valid
+            return true;
         }
 
         private class SSFWSession : HttpsSession

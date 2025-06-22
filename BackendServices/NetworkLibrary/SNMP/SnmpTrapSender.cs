@@ -24,7 +24,7 @@ namespace NetworkLibrary.SNMP
         private readonly object snmpAuthProvider;
         private readonly IPEndPoint snmpEndPoint;
         private readonly BlockingCollection<(string Severity, string Message)> trapQueue = new BlockingCollection<(string Severity, string Message)>();
-        private readonly CancellationTokenSource cts = new();
+        private readonly CancellationTokenSource cts = new CancellationTokenSource();
         private readonly Task processingTask;
 
         public SnmpTrapSender(string hashAlgorithm, string trapHost, string username, string authPwd, string privPwd, string enterpriseOid, int port = 162)
@@ -48,10 +48,22 @@ namespace NetworkLibrary.SNMP
             try
             {
                 report = Messenger.GetNextDiscovery(SnmpType.InformRequestPdu).GetResponse(timeoutValue, snmpEndPoint);
-                Messenger.SendInform(0, VersionCode.V3, snmpEndPoint, new OctetString(snmpUsername), OctetString.Empty,
-                    new ObjectIdentifier(snmpEnterpriseOid), 0, new List<Variable>(), 2000,
-                    (snmpAuthProvider is AESPrivacyProvider provider) ? provider : (BouncyCastleAESPrivacyProvider)snmpAuthProvider,
-                    report);
+
+                AESPrivacyProvider provider = snmpAuthProvider as AESPrivacyProvider;
+                if (provider != null)
+                {
+                    Messenger.SendInform(0, VersionCode.V3, snmpEndPoint, new OctetString(snmpUsername), OctetString.Empty,
+                        new ObjectIdentifier(snmpEnterpriseOid), 0, new List<Variable>(), 2000,
+                        provider,
+                        report);
+                }
+                else
+                {
+                    Messenger.SendInform(0, VersionCode.V3, snmpEndPoint, new OctetString(snmpUsername), OctetString.Empty,
+                        new ObjectIdentifier(snmpEnterpriseOid), 0, new List<Variable>(), 2000,
+                        (BouncyCastleAESPrivacyProvider)snmpAuthProvider,
+                        report);
+                }
             }
             catch
             {
@@ -100,7 +112,10 @@ namespace NetworkLibrary.SNMP
             TimeSpan offset = TimeZoneInfo.Local.GetUtcOffset(now);
             uint sysUpTime = (uint)Environment.TickCount / 10;
 
-            new TrapV2Message(
+            AESPrivacyProvider provider = snmpAuthProvider as AESPrivacyProvider;
+            if (provider != null)
+            {
+                new TrapV2Message(
                 VersionCode.V3,
                 Messenger.NextMessageId,
                 Messenger.NextRequestId,
@@ -128,11 +143,48 @@ namespace NetworkLibrary.SNMP
                         (byte)Math.Abs(offset.Minutes)
                     }))
                 },
-                (snmpAuthProvider is AESPrivacyProvider provider) ? provider : (BouncyCastleAESPrivacyProvider)snmpAuthProvider,
+                provider,
                 report.Header.MaxSize,
                 report.Parameters.EngineId,
                 report.Parameters.EngineBoots.ToInt32(),
                 report.Parameters.EngineTime.ToInt32()).Send(snmpEndPoint);
+            }
+            else
+            {
+                new TrapV2Message(
+                VersionCode.V3,
+                Messenger.NextMessageId,
+                Messenger.NextRequestId,
+                new OctetString(snmpUsername),
+                new ObjectIdentifier(snmpEnterpriseOid),
+                sysUpTime,
+                new List<Variable>
+                {
+                    new Variable(new ObjectIdentifier($"{snmpEnterpriseOid}.1"), new OctetString(severity)),
+                    new Variable(new ObjectIdentifier($"{snmpEnterpriseOid}.2"), new OctetString(message)),
+                    new Variable(new ObjectIdentifier($"{snmpEnterpriseOid}.3"), new TimeTicks(sysUpTime)),
+                    new Variable(new ObjectIdentifier($"{snmpEnterpriseOid}.4"), new OctetString(DateTime.UtcNow.ToString("o"))),
+                    new Variable(new ObjectIdentifier($"{snmpEnterpriseOid}.5"), new OctetString(new byte[]
+                    {
+                        (byte)(now.Year >> 8),
+                        (byte)(now.Year & byte.MaxValue),
+                        (byte)now.Month,
+                        (byte)now.Day,
+                        (byte)now.Hour,
+                        (byte)now.Minute,
+                        (byte)now.Second,
+                        (byte)(now.Millisecond / 100),
+                        (byte)(offset.Ticks < 0 ? '-' : '+'),
+                        (byte)Math.Abs(offset.Hours),
+                        (byte)Math.Abs(offset.Minutes)
+                    }))
+                },
+                (BouncyCastleAESPrivacyProvider)snmpAuthProvider,
+                report.Header.MaxSize,
+                report.Parameters.EngineId,
+                report.Parameters.EngineBoots.ToInt32(),
+                report.Parameters.EngineTime.ToInt32()).Send(snmpEndPoint);
+            }
         }
 
         public void Dispose()
@@ -169,24 +221,22 @@ namespace NetworkLibrary.SNMP
 
             const string cryptoLibrary = "CastleLibrary";
 
-            string className = "BouncyCastle" + providerNameUpper + "AuthenticationProvider";
-
             // Load external assembly (if not already loaded)
-            var assembly = AppDomain.CurrentDomain.GetAssemblies()
+            Assembly assembly = AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(a => a.GetName().Name == cryptoLibrary);
 
             if (assembly == null)
                 // Load from file or other source if necessary
                 assembly = Assembly.Load(cryptoLibrary);
 
-            var providerType = assembly.GetTypes()
-                .FirstOrDefault(t => t.Name.Equals(className)
+            Type providerType = assembly.GetTypes()
+                .FirstOrDefault(t => t.Name.Equals("BouncyCastle" + providerNameUpper + "AuthenticationProvider")
                     && typeof(IAuthenticationProvider).IsAssignableFrom(t));
 
             if (providerType == null)
                 throw new InvalidOperationException($"[SnmpTrapSender] - Bouncy Castle Authentication provider '{providerName}' not found in {cryptoLibrary}.");
 
-            return (IAuthenticationProvider)Activator.CreateInstance(providerType, phrase)!;
+            return (IAuthenticationProvider)Activator.CreateInstance(providerType, phrase);
         }
     }
 }

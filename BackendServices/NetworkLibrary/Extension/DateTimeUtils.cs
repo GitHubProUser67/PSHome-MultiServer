@@ -20,14 +20,27 @@ namespace NetworkLibrary.Extension
             return _swTicker.ElapsedMilliseconds;
         }
 
-        public static uint GetUnixTime()
+        public static uint GetUnixTimeU32()
+        {
+            return GetHighPrecisionUtcTime().ToUnixTimeU32();
+        }
+
+        public static long GetUnixTime()
         {
             return GetHighPrecisionUtcTime().ToUnixTime();
         }
 
-        public static uint ToUnixTime(this DateTime time)
+        // Prone to the year 2106 problem: https://en.wikipedia.org/wiki/Year_2038_problem#Year_2106_problem
+        public static uint ToUnixTimeU32(this DateTime time)
         {
             return (uint)time.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
+        }
+
+        public static long ToUnixTime(this DateTime time)
+        {
+            return (time.Kind == DateTimeKind.Utc
+                 ? new DateTimeOffset(time)
+                 : new DateTimeOffset(time.ToUniversalTime())).ToUnixTimeSeconds();
         }
 
         public static DateTime ToUtcDateTime(this uint unixTime)

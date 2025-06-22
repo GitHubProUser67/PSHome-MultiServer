@@ -2,8 +2,9 @@ using System.IO;
 using NetworkLibrary.HTTP;
 using CustomLogger;
 using HttpMultipartParser;
+#if !NETFRAMEWORK
 using System.Web;
-
+#endif
 namespace WebAPIService.PREMIUMAGENCY
 {
     public class Resource
@@ -17,8 +18,13 @@ namespace WebAPIService.PREMIUMAGENCY
 
             if (method == "GET")
             {
+#if NETFRAMEWORK
+                resKey = HTTPProcessor.GetQueryParameters(fulluripath)["key"];
+                resSeqNum = HTTPProcessor.GetQueryParameters(fulluripath)["seq"];
+#else
                 resKey = HttpUtility.ParseQueryString(fulluripath).Get("key");
                 resSeqNum = HttpUtility.ParseQueryString(fulluripath).Get("seq");
+#endif
             }
             else
             {
@@ -1981,7 +1987,7 @@ namespace WebAPIService.PREMIUMAGENCY
                     break;
                 #endregion
 				
-				#region Japan Christmas 2010
+                #region Japan Christmas 2010
                 case "adventureReward":
                     {
                         Directory.CreateDirectory(JapanChristmas2010);
@@ -2066,7 +2072,7 @@ namespace WebAPIService.PREMIUMAGENCY
                         {
                             LoggerAccessor.LogError($"[PREMIUMAGENCY] - Failed to find resource {resKey} with expected path {filePath}! Using a supported fallback!");
 
-                            string fallbackXML = @$"<xml>
+                            string fallbackXML = $@"<xml>
 <result type=""int"">1</result>
 <description type=""text"">RESOURCE_DATA</description>
 <error_no type=""int"">0</error_no>

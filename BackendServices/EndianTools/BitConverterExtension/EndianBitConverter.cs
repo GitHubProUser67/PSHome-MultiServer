@@ -1,8 +1,7 @@
-using EndianTools;
 using System;
 using System.Runtime.InteropServices;
 
-namespace BitConverterExtension
+namespace EndianTools.BitConverterExtension
 {
     public abstract class EndianBitConverter
     {
@@ -121,96 +120,6 @@ namespace BitConverterExtension
         }
 
         /// <summary>
-        /// Returns a double-precision floating point number converted from eight bytes 
-        /// at a specified position in a byte array.
-        /// </summary>
-        /// <param name="value">An array of bytes.</param>
-        /// <param name="startIndex">The starting position within value.</param>
-        /// <returns>A double precision floating point number formed by eight bytes beginning at startIndex.</returns>
-        public double ToDouble(byte[] value, int startIndex)
-        {
-            return Int64BitsToDouble(ToInt64(value, startIndex));
-        }
-
-        /// <summary>
-        /// Returns a single-precision floating point number converted from four bytes 
-        /// at a specified position in a byte array.
-        /// </summary>
-        /// <param name="value">An array of bytes.</param>
-        /// <param name="startIndex">The starting position within value.</param>
-        /// <returns>A single precision floating point number formed by four bytes beginning at startIndex.</returns>
-        public float ToSingle(byte[] value, int startIndex)
-        {
-            return Int32BitsToSingle(ToInt32(value, startIndex));
-        }
-
-        /// <summary>
-        /// Returns a 16-bit signed integer converted from two bytes at a specified position in a byte array.
-        /// </summary>
-        /// <param name="value">An array of bytes.</param>
-        /// <param name="startIndex">The starting position within value.</param>
-        /// <returns>A 16-bit signed integer formed by two bytes beginning at startIndex.</returns>
-        public short ToInt16(byte[] value, int startIndex)
-        {
-            return unchecked((short)(CheckedFromBytes(value, startIndex, 2)));
-        }
-
-        /// <summary>
-        /// Returns a 32-bit signed integer converted from four bytes at a specified position in a byte array.
-        /// </summary>
-        /// <param name="value">An array of bytes.</param>
-        /// <param name="startIndex">The starting position within value.</param>
-        /// <returns>A 16-bit signed integer formed by four bytes beginning at startIndex.</returns>
-        public int ToInt32(byte[] value, int startIndex)
-        {
-            return unchecked((int)(CheckedFromBytes(value, startIndex, 4)));
-        }
-
-        /// <summary>
-        /// Returns a 64-bit signed integer converted from eight bytes at a specified position in a byte array.
-        /// </summary>
-        /// <param name="value">An array of bytes.</param>
-        /// <param name="startIndex">The starting position within value.</param>
-        /// <returns>A 64-bit signed integer formed by eight bytes beginning at startIndex.</returns>
-        public long ToInt64(byte[] value, int startIndex)
-        {
-            return CheckedFromBytes(value, startIndex, 8);
-        }
-
-        /// <summary>
-        /// Returns a 16-bit unsigned integer converted from two bytes at a specified position in a byte array.
-        /// </summary>
-        /// <param name="value">An array of bytes.</param>
-        /// <param name="startIndex">The starting position within value.</param>
-        /// <returns>A 16-bit unsigned integer formed by two bytes beginning at startIndex.</returns>
-        public ushort ToUInt16(byte[] value, int startIndex)
-        {
-            return unchecked((ushort)(CheckedFromBytes(value, startIndex, 2)));
-        }
-
-        /// <summary>
-        /// Returns a 32-bit unsigned integer converted from four bytes at a specified position in a byte array.
-        /// </summary>
-        /// <param name="value">An array of bytes.</param>
-        /// <param name="startIndex">The starting position within value.</param>
-        /// <returns>A 16-bit unsigned integer formed by four bytes beginning at startIndex.</returns>
-        public uint ToUInt32(byte[] value, int startIndex)
-        {
-            return unchecked((uint)(CheckedFromBytes(value, startIndex, 4)));
-        }
-
-        /// <summary>
-        /// Returns a 64-bit unsigned integer converted from eight bytes at a specified position in a byte array.
-        /// </summary>
-        /// <param name="value">An array of bytes.</param>
-        /// <param name="startIndex">The starting position within value.</param>
-        /// <returns>A 64-bit unsigned integer formed by eight bytes beginning at startIndex.</returns>
-        public ulong ToUInt64(byte[] value, int startIndex)
-        {
-            return unchecked((ulong)(CheckedFromBytes(value, startIndex, 8)));
-        }
-
-        /// <summary>
         /// Checks the given argument for validity.
         /// </summary>
         /// <param name="value">The byte array passed in</param>
@@ -313,18 +222,7 @@ namespace BitConverterExtension
         /// <param name="value">An array of bytes.</param>
         /// <param name="startIndex">The starting position within value.</param>
         /// <returns>A decimal  formed by sixteen bytes beginning at startIndex.</returns>
-        public decimal ToDecimal(byte[] value, int startIndex)
-        {
-            // HACK: This always assumes four parts, each in their own endianness,
-            // starting with the first part at the start of the byte array.
-            // On the other hand, there's no real format specified...
-            int[] parts = new int[4];
-            for (int i = 0; i < 4; i++)
-            {
-                parts[i] = ToInt32(value, startIndex + i * 4);
-            }
-            return new Decimal(parts);
-        }
+        public abstract decimal ToDecimal(byte[] value, int startIndex);
 
         /// <summary>
         /// Returns the specified decimal value as an array of bytes.
@@ -640,7 +538,7 @@ namespace BitConverterExtension
         /// Union used solely for the equivalent of DoubleToInt64Bits and vice versa.
         /// </summary>
         [StructLayout(LayoutKind.Explicit)]
-        struct Int32SingleUnion
+        private struct Int32SingleUnion
         {
             /// <summary>
             /// Int32 version of the value.
@@ -659,7 +557,7 @@ namespace BitConverterExtension
             /// <param name="i">The integer value of the new instance.</param>
             internal Int32SingleUnion(int i)
             {
-                this.f = 0; // Just to keep the compiler happy
+                f = 0; // Just to keep the compiler happy
                 this.i = i;
             }
 
@@ -669,7 +567,7 @@ namespace BitConverterExtension
             /// <param name="f">The floating point value of the new instance.</param>
             internal Int32SingleUnion(float f)
             {
-                this.i = 0; // Just to keep the compiler happy
+                i = 0; // Just to keep the compiler happy
                 this.f = f;
             }
 

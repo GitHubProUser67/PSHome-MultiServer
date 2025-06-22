@@ -20,21 +20,12 @@ namespace MultiSocks.Aries.Messages
             string? SHARE = GetInputCacheValue("SHARE");
             string? MAIL = GetInputCacheValue("MAIL");
 
-            switch (VERS)
+            if (SKU == "PS3")
             {
-                case "BURNOUT5/ISLAND":
-                case "BURNOUT5/TROPHIES":
-                case "BURNOUT5/31":
-                case "BURNOUT5/PSN_DAVIS":
-                case "BOTTEST":
-                    if (SKU == "PS3")
-                    {
-                        string[]? maddrparams = MADDR?.Split('$');
+                string[]? maddrparams = MADDR?.Split('$');
 
-                        if (maddrparams != null)
-                            NAME = maddrparams.FirstOrDefault();
-                    }
-                    break;
+                if (maddrparams != null)
+                    NAME = maddrparams.FirstOrDefault();
             }
 
             string? DecryptedPass = new PasswordUtils().ssc2Decode(PASS, client.SKEY);
@@ -72,9 +63,7 @@ namespace MultiSocks.Aries.Messages
                 }
             }
             else
-            {
-                // TODO send dirtysocks error!
-            }
+                client.SendMessage(new AcctImst());
         }
 
         public static string SuggestNames(int alts, string name)

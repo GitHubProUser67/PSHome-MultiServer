@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace SSFWServer.Services
 {
-    public class SSFWLayoutService
+    public partial class SSFWLayoutService
     {
         private string? key;
 

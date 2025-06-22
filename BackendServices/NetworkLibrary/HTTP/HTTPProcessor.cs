@@ -1,6 +1,9 @@
 using ComponentAce.Compression.Libs.zlib;
 using ZstdSharp;
 using ZstdSharp.Unsafe;
+using NetworkLibrary.Extension;
+using Ionic.Exploration;
+using FixedZlib;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -12,8 +15,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 using System.Text.Json;
-using NetworkLibrary.Extension;
-using Ionic.Exploration;
+using System.Runtime.InteropServices;
 #if NET7_0_OR_GREATER
 using System.Net.Http;
 #else
@@ -959,7 +961,7 @@ namespace NetworkLibrary.HTTP
         {
             if (!string.IsNullOrEmpty(fullurl))
             {
-                Dictionary<string, string> parameterDictionary = new();
+                Dictionary<string, string> parameterDictionary = new Dictionary<string, string>();
 
                 int questionMarkIndex = fullurl.IndexOf("?");
                 if (questionMarkIndex != -1) // If '?' is found
@@ -1072,11 +1074,12 @@ namespace NetworkLibrary.HTTP
             }
         }
 
-        public static byte[] Inflate(byte[] input)
+        public static byte[] Deflate(byte[] input)
         {
             if (input == null)
                 return null;
-
+            if (NativeZlib.CanRun)
+                return NativeZlib.DeflateRaw(input, 1);
             using (MemoryStream output = new MemoryStream())
             {
                 ZOutputStream zlibStream = new ZOutputStream(output, 1, true);
@@ -1170,7 +1173,7 @@ namespace NetworkLibrary.HTTP
             return outMemoryStream;
         }
 
-        public static Stream InflateStream(Stream input)
+        public static Stream DeflateStream(Stream input)
         {
             if (input == null)
                 return null;

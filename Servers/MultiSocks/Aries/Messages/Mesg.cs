@@ -21,6 +21,9 @@ namespace MultiSocks.Aries.Messages
                 T = TEXT,
             };
 
+            if (!string.IsNullOrEmpty(context.Project) && (context.Project.Contains("NASCAR09") && context.SKU == "PS3"))
+                user?.Connection?.SendMessage(this);
+
             //where is this message going
             Model.AriesRoom? room = user?.CurrentRoom;
 
@@ -31,7 +34,10 @@ namespace MultiSocks.Aries.Messages
                 mc.SendToPersona(PRIV, mesg);
             }
             else
+            {
+                mesg.F = ATTR;
                 room?.Users?.Broadcast(mesg);
+            }
         }
     }
 }

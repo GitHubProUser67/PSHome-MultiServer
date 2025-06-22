@@ -44,6 +44,7 @@ namespace MultiSocks.Aries
                 { "usld", typeof(Usld) }, // User Settings Load -- load a user's (persona's) common game specific settings.
                 { "onln", typeof(Onln) }, //search for a user's info
                 { "opup", typeof(Opup) }, //?
+                { "ottr", typeof(Ottr) }, //?
                 { "rent", typeof(Rent) }, // Refresh Entitlements
                 { "rrlc", typeof(Rrlc) }, // (CUSTOM Burnout Paradise) Road Rules Local
                 { "rrup", typeof(Rrup) }, // (CUSTOM Burnout Paradise) Road Rules Upload
@@ -69,6 +70,7 @@ namespace MultiSocks.Aries
                 { "rept", typeof(Rept) }, // Submit a Report about a user
                 { "rcat", typeof(Rcat) }, // Fetch room category information
                 { "priv", typeof(Priv) }, // Set Private Message mode.
+                { "qdef", typeof(Qdef) }, // Quick Message Defaults -- load a user's default quickmessages.
                 { "flag", typeof(Flag) }, // Set attribute flags.
                 { "ucre", typeof(Ucre) }, // Create a new user set. A user set maps a set of online users into a group.
                 { "uatr", typeof(Uatr) }, // Update user attributes and hardware flags
@@ -93,14 +95,16 @@ namespace MultiSocks.Aries
 
             lock (Rooms)
             {
-                if (RoomToAdd != null)
+                if (RoomToAdd != null && RoomToAdd.Count > 0)
                 {
                     foreach (var pair in RoomToAdd)
                     {
                         CustomLogger.LoggerAccessor.LogInfo($"[MatchmakerServer] - Adding Room: {pair.Item1}, {(pair.Item2 ? ("With Global Availability: " + pair.Item2 + " ") : string.Empty)}on Port: {port}");
-                        Rooms.AddRoom(new Model.AriesRoom() { Name = pair.Item1, IsGlobal = pair.Item2 });
+                        Rooms.AddRoom(new AriesRoom() { Name = pair.Item1, IsGlobal = pair.Item2 });
                     }
                 }
+                else
+                    Rooms.AddRoom(new AriesRoom() { Name = "room", IsGlobal = true });
             }
         }
 
@@ -135,15 +139,12 @@ namespace MultiSocks.Aries
                 Users.RemoveUser(user);
 
                 AriesGame? game = user.CurrentGame;
-                Model.AriesRoom? room = user.CurrentRoom;
+                AriesRoom? room = user.CurrentRoom;
                 if (game != null && game.RemoveUserAndCheckGameValidity(user))
                     Games.RemoveGame(game);
 
-                if (room != null)
-                {
-                    room.Users?.RemoveUser(user);
-                    user.CurrentRoom = null;
-                }
+                if (room != null && room.Users.RemoveUserAndCheckRoomValidity(user))
+                   Rooms.RemoveRoom(room);
             }
         }
 
@@ -201,7 +202,7 @@ namespace MultiSocks.Aries
 
             Dictionary<string, string?> OutputCache;
 
-            if (client.VERS.Contains("BURNOUT5"))
+            if (client.VERS.Contains("BURNOUT5") || client.VERS.Contains("DPR-09") || (client.VERS.Contains("NASCAR09") && client.SKU == "PS3"))
             {
                 OutputCache = new() {
                 { "LAST", DateTime.Now.ToString("yyyy.M.d-HH:mm:ss") },

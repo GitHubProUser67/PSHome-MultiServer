@@ -2,12 +2,13 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <IsTrimmable>true</IsTrimmable>
 	<IsPublishable>false</IsPublishable>
+	<IsTrimmable Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net6.0'))">true</IsTrimmable>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\BackendServices\EndianTools\EndianTools.csproj" />
+    <ProjectReference Include="..\..\BackendServices\NetworkLibrary\NetworkLibrary.csproj" />
   </ItemGroup>
 
 </Project>

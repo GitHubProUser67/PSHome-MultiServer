@@ -1,5 +1,8 @@
 @echo off
-@echo MultiServer publisher script 03/04/2025
+@echo MultiServer publisher script 09/06/2025
+@echo.
+
+@echo Make sure to download and install the latest Powershell revision here: https://github.com/PowerShell/PowerShell
 @echo.
 
 @echo Cleaning up directories:
@@ -40,6 +43,7 @@ for %%r in (%RIDs%) do (
 	xcopy /E /Y /I "Servers/MultiSpy/bin/Debug/net6.0/%%r/publish" "~PublishOutput/%%r/Debug"
 	xcopy /E /Y /I "Servers/ApacheNet/bin/Debug/net6.0/%%r/publish" "~PublishOutput/%%r/Debug"
 	xcopy /E /Y /I "Servers/MitmDNS/bin/Debug/net6.0/%%r/publish" "~PublishOutput/%%r/Debug"
+	xcopy /E /Y /I "Servers/EdenServer/bin/Debug/net6.0/%%r/publish" "~PublishOutput/%%r/Debug"
 	xcopy /E /Y /I "Servers/Horizon/bin/Release/net6.0/%%r/publish" "~PublishOutput/%%r/Release"
 	xcopy /E /Y /I "Servers/MultiSocks/bin/Release/net6.0/%%r/publish" "~PublishOutput/%%r/Release"
 	xcopy /E /Y /I "Servers/QuazalServer/bin/Release/net6.0/%%r/publish" "~PublishOutput/%%r/Release"
@@ -48,6 +52,7 @@ for %%r in (%RIDs%) do (
 	xcopy /E /Y /I "Servers/MultiSpy/bin/Release/net6.0/%%r/publish" "~PublishOutput/%%r/Release"
 	xcopy /E /Y /I "Servers/ApacheNet/bin/Release/net6.0/%%r/publish" "~PublishOutput/%%r/Release"
 	xcopy /E /Y /I "Servers/MitmDNS/bin/Release/net6.0/%%r/publish" "~PublishOutput/%%r/Release"
+	xcopy /E /Y /I "Servers/EdenServer/bin/Release/net6.0/%%r/publish" "~PublishOutput/%%r/Release"
 	if exist "Plugins/HTTP/HomeWebTools/bin/Debug/net6.0/static" (
 		xcopy /E /Y /I "Plugins/HTTP/HomeWebTools/bin/Debug/net6.0/static" "~PublishOutput/%%r/Debug/static"
 	)
@@ -73,12 +78,16 @@ for %%r in (%RIDs%) do (
 		xcopy /E /Y /I "Plugins/HTTP/PdfToJpeg/bin/Release/net6.0/runtimes" "~PublishOutput/%%r/Release/runtimes"
 	)
 	if "%%r"=="win-x64" (
-		xcopy /E /Y /I "RemoteControl/bin/Debug/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Debug"
-		xcopy /E /Y /I "PRemoteControl/bin/Release/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Release"
+		xcopy /E /Y /I "GUI/RemoteControl/bin/Debug/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Debug"
+		xcopy /E /Y /I "GUI/RemoteControl/bin/Release/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Release"
+		xcopy /E /Y /I "GUI/Json Editor/bin/Debug/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Debug"
+		xcopy /E /Y /I "GUI/Json Editor/bin/Release/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Release"
 	)
 	if "%%r"=="win-x86" (
-		xcopy /E /Y /I "RemoteControl/bin/Debug/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Debug"
-		xcopy /E /Y /I "RemoteControl/bin/Release/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Release"
+		xcopy /E /Y /I "GUI/RemoteControl/bin/Debug/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Debug"
+		xcopy /E /Y /I "GUI/RemoteControl/bin/Release/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Release"
+		xcopy /E /Y /I "GUI/Json Editor/bin/Debug/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Debug"
+		xcopy /E /Y /I "GUI/Json Editor/bin/Release/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Release"
 	)
 )
 

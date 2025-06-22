@@ -10,6 +10,7 @@ using Horizon.SERVER;
 using Horizon.SERVER.Medius;
 using Horizon.MUM.Models;
 using NetworkLibrary.Extension;
+using Prometheus;
 
 namespace Horizon.MUM
 {
@@ -31,6 +32,10 @@ namespace Horizon.MUM
             public Dictionary<int, Clan> ClanIdToClan = new();
             public Dictionary<string, Clan> ClanNameToClan = new();
         }
+
+        public static Counter playersJoined = Metrics.CreateCounter("medius_players_joined_total", "Total number of players having joined Medius.");
+        public static Counter channelsCreated = Metrics.CreateCounter("medius_channels_created_total", "Total number of created channels in Medius.");
+        private static Counter gamesCreated = Metrics.CreateCounter("medius_games_created_total", "Total number of created games in Medius.");
 
         private const int gameJoinDelay = 2500;
 
@@ -390,6 +395,8 @@ namespace Horizon.MUM
 
             quickLookup.GameIdToGame.Add(game.MediusWorldId, game);
             await HorizonServerConfiguration.Database.CreateGame(game.ToGameDTO());
+
+            gamesCreated.Inc();
         }
 
         public int GetGameCountAppId(int appId)
@@ -547,7 +554,7 @@ namespace Horizon.MUM
 
             // Try to get next free dme server
             // If none exist, return error to clist
-            ClientObject? dme = MediusClass.ProxyServer.GetFreeDme(client.ApplicationId);
+            ClientObject? dme = MediusClass.ProxyServer.GetFreeDme(client.ApplicationId, client.LocationId);
 
             if (dme == null)
             {
@@ -630,7 +637,7 @@ namespace Horizon.MUM
 
             // Try to get next free dme server
             // If none exist, return error to clist
-            ClientObject? dme = MediusClass.ProxyServer.GetFreeDme(client.ApplicationId);
+            ClientObject? dme = MediusClass.ProxyServer.GetFreeDme(client.ApplicationId, client.LocationId);
 
             if (dme == null)
             {
@@ -755,7 +762,7 @@ namespace Horizon.MUM
             {
                 // Try to get next free dme server
                 // If none exist, return error to clist
-                var dme = MediusClass.ProxyServer.GetFreeDme(client.ApplicationId);
+                var dme = MediusClass.ProxyServer.GetFreeDme(client.ApplicationId, client.LocationId);
                 if (dme == null)
                 {
                     client.Queue(new MediusMatchCreateGameResponse()
@@ -1635,7 +1642,7 @@ namespace Horizon.MUM
 
             // Try to get next free dme server
             // If none exist, return error to clist
-            var dme = MediusClass.ProxyServer.GetFreeDme(client.ApplicationId);
+            var dme = MediusClass.ProxyServer.GetFreeDme(client.ApplicationId, client.LocationId);
             MPS mps = MediusClass.GetMPS();
             if (mps == null)
             {
@@ -1730,7 +1737,7 @@ namespace Horizon.MUM
                             FileName = files[i],
                             FileID = i,
                             FileSize = (int)fi.Length,
-                            CreationTimeStamp = (int)fi.CreationTime.ToUnixTime(),
+                            CreationTimeStamp = (int)fi.CreationTime.ToUnixTimeU32(),
                         });
                     }
                     catch (Exception e)
@@ -1789,7 +1796,7 @@ namespace Horizon.MUM
                                 FileName = fileName.ToString(),
                                 FileID = i,
                                 FileSize = (int)fi.Length,
-                                CreationTimeStamp = (int)fi.CreationTime.ToUnixTime(),
+                                CreationTimeStamp = (int)fi.CreationTime.ToUnixTimeU32(),
                             });
                         }
                         catch (Exception e)

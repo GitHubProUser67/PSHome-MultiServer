@@ -1,10 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	<TargetFramework>net6.0</TargetFramework>
-	<IsTrimmable>true</IsTrimmable>
+    <TargetFramework>net6.0</TargetFramework>
 	<IsPublishable>false</IsPublishable>
+	<IsTrimmable Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net6.0'))">true</IsTrimmable>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
+  </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\..\BackendServices\NetworkLibrary\NetworkLibrary.csproj" />

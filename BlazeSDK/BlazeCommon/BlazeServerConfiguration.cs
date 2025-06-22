@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using Tdf;
 
@@ -10,6 +11,11 @@ namespace BlazeCommon
     public class BlazeServerConfiguration
     {
         public string Name { get; }
+        public string MitmTargetIp { get; set; }
+        public string MitmTargetHostname { get; set; }
+        public ushort MitmTargetPort { get; set; }
+        public bool MitmWriteToFile { get; set; }
+        public SslProtocols MitmProtocols { get; set; }
         public IPEndPoint LocalEP { get; }
         public X509Certificate2? Certificate { get; set; }
         public bool ForceSsl { get; set; }

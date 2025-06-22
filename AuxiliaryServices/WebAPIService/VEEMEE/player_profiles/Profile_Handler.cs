@@ -155,7 +155,13 @@ namespace WebAPIService.VEEMEE.player_profiles
                                 }
 
                                 // Add missing values to the list in order
+#if NETCOREAPP2_0_OR_GREATER || NET472 || NET48 || NET481
                                 HashSet<string> existingValues = existingList.Elements("value").Select(v => v.Value).ToHashSet();
+#else
+                                HashSet<string> existingValues = new HashSet<string>(
+                                    existingList.Elements("value").Select(v => v.Value)
+                                );
+#endif
                                 foreach (var value in listValues)
                                 {
                                     if (!existingValues.Contains(value))

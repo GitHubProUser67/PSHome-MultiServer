@@ -6,7 +6,76 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 	<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-	<DockerfileRunArguments>-p 11000-11000 -p 11050-11050 -p 11051-11051 -p 11100-11100 -p 11101-11101 -p 11140-11140 -p 18700-18700 -p 21850-21850 -p 21851-21851 -p 21870-21870 -p 21871-21871 -p 65535:65535</DockerfileRunArguments>
+	<DockerfileRunArguments>
+		-p 10600:10600
+		-p 10601:10601
+		-p 10899:10899
+		-p 11000:11000
+		-p 11050:11050
+		-p 11051:11051
+		-p 11100:11100
+		-p 11101:11101
+		-p 11140:11140
+		-p 11200:11200
+		-p 11201:11201
+		-p 11300:11300
+		-p 11301:11301
+		-p 11500:11500
+		-p 11501:11501
+		-p 11600:11600
+		-p 11601:11601
+		-p 11700:11700
+		-p 11701:11701
+		-p 13505:13505
+		-p 18141:18141
+		-p 18142:18142
+		-p 18700:18700
+		-p 18701:18701
+		-p 20651:20651
+		-p 20652:20652
+		-p 21301:21301
+		-p 21302:21302
+		-p 21500:21500
+		-p 21501:21501
+		-p 21800:21800
+		-p 21801:21801
+		-p 21841:21841
+		-p 21842:21842
+		-p 21850:21850
+		-p 21851:21851
+		-p 21870:21870
+		-p 21871:21871
+		-p 30000:30000
+		-p 30001:30001
+		-p 30400:30400
+		-p 30401:30401
+		-p 30670:30670
+		-p 30671:30671
+		-p 30672:30672
+		-p 30700:30700
+		-p 30701:30701
+		-p 30900:30900
+		-p 30901:30901
+		-p 31700:31700
+		-p 31701:31701
+		-p 31800:31800
+		-p 31801:31801
+		-p 32950:32950
+		-p 32951:32951
+		
+		-p 42100:42100
+		-p 42127:42127
+		-p 33153:33153
+		-p 33152:33152
+		-p 33162:33162
+		-p 33172:33172
+		-p 33182:33182
+		-p 33192:33192
+		-p 33202:33202
+		-p 33302:33302
+
+		-p 65535:65535
+	</DockerfileRunArguments>
 	<ApplicationIcon>MultiSocks.ico</ApplicationIcon>
 	<ServerGarbageCollection>true</ServerGarbageCollection>
 	<DockerfileContext>..\..</DockerfileContext>
@@ -32,15 +101,14 @@
   </ItemGroup>
   
   <ItemGroup>
+    <ProjectReference Include="..\..\AuxiliaryServices\WebAPIService\WebAPIService.csproj" />
     <ProjectReference Include="..\..\BlazeSDK\Blaze2SDK\Blaze2SDK.csproj" />
     <ProjectReference Include="..\..\BlazeSDK\Blaze3SDK\Blaze3SDK.csproj" />
-    <ProjectReference Include="..\..\BackendServices\NetworkLibrary\NetworkLibrary.csproj" />
 	<ProjectReference Include="..\..\BackendServices\TechnitiumLibrary.Net.Firewall\TechnitiumLibrary.Net.Firewall.csproj" />
   </ItemGroup>
   
   <Target Name="ModifyDepsFile" AfterTargets="AfterBuild">
-    <!-- Path to the JSON file you want to modify -->
-    <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath $(OutDir)$(ProjectName).deps.json -targetFramework $(TargetFramework)" />
+    <Exec Command="cmd /c (where pwsh &gt;nul 2&gt;&amp;1 &amp;&amp; pwsh -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath &quot;$(OutDir)$(ProjectName).deps.json&quot; -targetFramework &quot;$(TargetFramework)&quot;) || (powershell -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath &quot;$(OutDir)$(ProjectName).deps.json&quot; -targetFramework &quot;$(TargetFramework)&quot;)" />
   </Target>
 
 </Project>

@@ -721,7 +721,7 @@ namespace Horizon.SERVER.Medius
                         }
 
                         if (serverCreateGameOnSelfRequest.AddressList.AddressList[0].AddressType == NetAddressType.NetAddressTypeBinaryExternal)
-                            data.ClientObject?.SetIp(ConvertFromIntegerToIpAddress(serverCreateGameOnSelfRequest.AddressList.AddressList[0].BinaryAddress));
+                            data.ClientObject?.SetIp(InternetProtocolUtils.GetIPAddressFromUInt(serverCreateGameOnSelfRequest.AddressList.AddressList[0].BinaryAddress).ToString());
                         else if (serverCreateGameOnSelfRequest.AddressList.AddressList[0].AddressType == NetAddressType.NetAddressTypeBinaryExternalVport
                             || serverCreateGameOnSelfRequest.AddressList.AddressList[0].AddressType == NetAddressType.NetAddressTypeBinaryInternalVport)
                         {
@@ -765,7 +765,7 @@ namespace Horizon.SERVER.Medius
                         }
 
                         if (serverCreateGameOnSelfRequest0.AddressList.AddressList[0].AddressType == NetAddressType.NetAddressTypeBinaryExternal)
-                            data.ClientObject?.SetIp(ConvertFromIntegerToIpAddress(serverCreateGameOnSelfRequest0.AddressList.AddressList[0].BinaryAddress));
+                            data.ClientObject?.SetIp(InternetProtocolUtils.GetIPAddressFromUInt(serverCreateGameOnSelfRequest0.AddressList.AddressList[0].BinaryAddress).ToString());
                         else if (serverCreateGameOnSelfRequest0.AddressList.AddressList[0].AddressType == NetAddressType.NetAddressTypeBinaryExternalVport
                             || serverCreateGameOnSelfRequest0.AddressList.AddressList[0].AddressType == NetAddressType.NetAddressTypeBinaryInternalVport)
                         {
@@ -809,7 +809,7 @@ namespace Horizon.SERVER.Medius
                         }
 
                         if (serverCreateGameOnMeRequest.AddressList.AddressList[0].AddressType == NetAddressType.NetAddressTypeBinaryExternal)
-                            data.ClientObject?.SetIp(ConvertFromIntegerToIpAddress(serverCreateGameOnMeRequest.AddressList.AddressList[0].BinaryAddress));
+                            data.ClientObject?.SetIp(InternetProtocolUtils.GetIPAddressFromUInt(serverCreateGameOnMeRequest.AddressList.AddressList[0].BinaryAddress).ToString());
                         else if (serverCreateGameOnMeRequest.AddressList.AddressList[0].AddressType == NetAddressType.NetAddressTypeBinaryExternalVport
                             || serverCreateGameOnMeRequest.AddressList.AddressList[0].AddressType == NetAddressType.NetAddressTypeBinaryInternalVport)
                         {
@@ -1087,8 +1087,29 @@ namespace Horizon.SERVER.Medius
             }
         }
 
-        public ClientObject? GetFreeDme(int appId)
+        public ClientObject? GetFreeDme(int appId, int preferredLocation)
         {
+            try
+            {
+                /* Why this exists? Some games register their own DME servers, not a problem.
+                 * But in some rare cases (Ratchet UYA Beta Trial/Press) the server is SO OLD that is requires it's own packet format.
+                   This option allows us to return only our "modern" server, to save on reverse-engineering efforts ;). */
+                if (appId == 10680 || appId == 10681)
+                    return _scertHandler?.Group?
+                        .Select(x => _channelDatas[x.Id.AsLongText()]?.ClientObject)
+                        .Where(x => x is not null && x.LocationId == preferredLocation && (x.ApplicationId == appId || x.ApplicationId == 0) && x.IsActiveServer && x.IP.Equals(DmeClass.SERVER_IP))
+                        .OrderBy(x => x!.TimeCreated) // If on same computer as the client.
+                        .FirstOrDefault();
+                else
+                    return _scertHandler?.Group?
+                        .Select(x => _channelDatas[x.Id.AsLongText()]?.ClientObject)
+                        .Where(x => x is not null && x.LocationId == preferredLocation && (x.ApplicationId == appId || x.ApplicationId == 0) && x.IsActiveServer)
+                        .MinBy(x => x!.CurrentWorlds);
+            }
+            catch
+            {
+            }
+
             try
             {
                 /* Why this exists? Some games register their own DME servers, not a problem.
@@ -1161,23 +1182,5 @@ namespace Horizon.SERVER.Medius
                 }
             }, channel);
         }
-
-        #region ConvertFromIntegerToIpAddress
-        /// <summary>
-        /// Convert from Binary Ip Address to UInt
-        /// </summary>
-        /// <param name="ipAddress">Binary formatted IP Address</param>
-        /// <returns></returns>
-        public static string ConvertFromIntegerToIpAddress(uint ipAddress)
-        {
-            byte[] bytes = BitConverter.GetBytes(ipAddress);
-            string ipAddressConverted = new IPAddress(bytes).ToString();
-
-            if (!BitConverter.IsLittleEndian)
-                Array.Reverse(bytes);
-
-            return ipAddressConverted;
-        }
-        #endregion
     }
 }

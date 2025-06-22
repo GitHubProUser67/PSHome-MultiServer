@@ -96,6 +96,11 @@ namespace Horizon.SERVER.Config
         public int ClientLongTimeoutSeconds { get; private set; } = 60 * 5;
 
         /// <summary>
+        /// Time since game joined and player report was emitted.
+        /// </summary>
+        public int PlayerReportTimeoutSeconds { get; private set; } = 30;
+
+        /// <summary>
         /// Time since game created and world report contacted the game world.
         /// </summary>
         public int GameTimeoutSeconds { get; private set; } = 30;

@@ -6,6 +6,7 @@ namespace BlazeCommon
         public ProtoFireConnection Connection { get => BlazeConnection.ProtoFireConnection; }
         public object State { get => BlazeConnection.State; set => BlazeConnection.State = value; }
         public int ErrorCode { get; }
+        public int AccountId { get; set; }
         public uint MsgNum { get; }
         public byte UserIndex { get; }
         public ulong Context { get; }

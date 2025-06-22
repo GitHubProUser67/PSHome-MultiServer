@@ -235,6 +235,22 @@ namespace WebAPIService.VEEMEE.nml
             xmlDoc.AppendChild(rootElement);
 
             // Parse POST data
+#if NETFRAMEWORK
+            var postDataCollection = HTTPProcessor.GetQueryParameters(postData);
+
+            // Create a new entry and append it to the root element
+            XmlElement newEntry = xmlDoc.CreateElement("variable");
+            rootElement.AppendChild(newEntry);
+
+            // Add params and values to the new entry
+            foreach (var entry in postDataCollection)
+            {
+                XmlElement paramElement = xmlDoc.CreateElement(entry.Key);
+                paramElement.SetAttribute("type", "string"); // You may change this based on the actual type
+                paramElement.InnerText = entry.Value;
+                newEntry.AppendChild(paramElement);
+            }
+#else
             NameValueCollection postDataCollection = System.Web.HttpUtility.ParseQueryString(postData);
 
             // Create a new entry and append it to the root element
@@ -249,7 +265,7 @@ namespace WebAPIService.VEEMEE.nml
                 paramElement.InnerText = postDataCollection.Get(i);
                 newEntry.AppendChild(paramElement);
             }
-
+#endif
             // Save the XML to file
             xmlDoc.Save(fileName);
             LoggerAccessor.LogInfo("New XML file created with the entry.");

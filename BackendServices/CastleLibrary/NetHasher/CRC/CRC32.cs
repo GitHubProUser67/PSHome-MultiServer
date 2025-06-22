@@ -1,8 +1,4 @@
 ﻿using System;
-#if NETCOREAPP || NETSTANDARD1_0_OR_GREATER || NET40_OR_GREATER
-using System.Threading.Tasks;
-
-#endif
 #if NETCOREAPP3_0_OR_GREATER
 using System.Runtime.Intrinsics.X86;
 using System.Runtime.Intrinsics.Arm;
@@ -95,22 +91,6 @@ namespace NetHasher.CRC
         {
             uint[] m_crc_tab = new uint[crcArraySize];
 
-#if NETCOREAPP || NETSTANDARD1_0_OR_GREATER || NET40_OR_GREATER
-            Parallel.For(0, crcArraySize, i =>
-            {
-                uint crc = (uint)i;
-
-                for (int j = 0; j < 8; j++)
-                {
-                    if ((crc & 1) == 1)
-                        crc = crc >> 1 ^ a_poly32;
-                    else
-                        crc = crc >> 1;
-                }
-
-                m_crc_tab[i] = crc;
-            });
-#else
             for (uint i = 0; i < crcArraySize; ++i)
             {
                 uint crc = i;
@@ -120,12 +100,11 @@ namespace NetHasher.CRC
                     if ((crc & 1) == 1)
                         crc = (crc >> 1) ^ a_poly32;
                     else
-                        crc = crc >> 1;
+                        crc >>= 1;
                 }
 
                 m_crc_tab[i] = crc;
             }
-#endif
 
             return m_crc_tab;
         }

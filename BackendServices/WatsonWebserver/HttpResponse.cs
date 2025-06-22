@@ -104,11 +104,12 @@
 
         #region Private-Members
 
-        internal HttpListenerResponse _Response = null;
-        internal Stream _OutputStream = null;
+        private HttpListenerResponse _Response = null;
+        private Stream _OutputStream = null;
 
         private HttpRequestBase _Request = null;
         private HttpListenerContext _Context = null;
+        private bool _Closed = false;
         private bool _HeadersSet = false;
         private bool _KeepAliveData = true;
 
@@ -160,7 +161,23 @@
         #endregion
 
         #region Public-Methods
-         
+
+        public void Close()
+        {
+            if (_Closed)
+                return;
+
+            try
+            {
+                _OutputStream.Close();
+            }
+            catch { }
+
+            if (_Response != null) _Response.Close();
+
+            _Closed = true;
+        }
+
         /// <inheritdoc />
         public override async Task<bool> Send(CancellationToken token = default)
         {
@@ -230,9 +247,7 @@
                     await _OutputStream.WriteAsync(endChunk, 0, endChunk.Length, token).ConfigureAwait(false);
                     await _OutputStream.FlushAsync(token).ConfigureAwait(false);
 
-                    _OutputStream.Close();
-
-                    if (_Response != null) _Response.Close();
+                    Close();
                     ResponseSent = true;
                 }
             }
@@ -267,9 +282,7 @@
                     await _OutputStream.WriteAsync(endChunk, 0, endChunk.Length, token).ConfigureAwait(false);
                     await _OutputStream.FlushAsync(token).ConfigureAwait(false);
 
-                    _OutputStream.Close();
-
-                    if (_Response != null) _Response.Close();
+                    Close();
                     ResponseSent = true;
                 }
 
@@ -559,9 +572,7 @@
                     }
                 }
 
-                _OutputStream.Close();
-
-                if (_Response != null) _Response.Close();
+                Close();
 
                 ResponseSent = true;
                 return true;

@@ -31,6 +31,7 @@ namespace MultiSocks.Aries
         private readonly AbstractAriesServer? RedirectorMarvelNemesis06_NTSC;
         private readonly AbstractAriesServer? RedirectorNASCAR08_PS3;
         private readonly AbstractAriesServer? RedirectorNASCAR09_PS3;
+        private readonly AbstractAriesServer? RedirectorNASCAR09_SECURE_PS3;
         private readonly AbstractAriesServer? RedirectorHASBROFAMILYGAMENIGHT_PS3;
         private readonly AbstractAriesServer? RedirectorMIRRORSEDGE_PS3;
 
@@ -49,6 +50,7 @@ namespace MultiSocks.Aries
         private readonly AbstractAriesServer? NFLStreet3_NTSCMatchmaker;
         private readonly AbstractAriesServer? FightNight_NTSCMatchmaker;
         private readonly AbstractAriesServer? FightNightR2_NTSCMatchmaker;
+        private readonly AbstractAriesServer? NASCAR09_PS3_Matchmaker;
         private readonly AbstractAriesServer? Fifa06_NTSC_Matchmaker;
         private readonly AbstractAriesServer? MaddenNFL06_NTSC_Matchmaker;
         private readonly AbstractAriesServer? NFSMWA124_PAL_Matchmaker;
@@ -241,7 +243,17 @@ namespace MultiSocks.Aries
 
             try
             {
-                RedirectorNASCAR09_PS3 = new RedirectorServer(30671, ListenIP, 30672, "NASCAR09", "PS3", true, "ps3nascar09.ea.com");
+                RedirectorNASCAR09_SECURE_PS3 = new RedirectorServer(30671, ListenIP, 30672, "NASCAR09", "PS3", true, "ps3nascar09.ea.com");
+                LoggerAccessor.LogInfo($"[Redirector] NASCAR09 PS3 Secure Started!");
+            }
+            catch (Exception ex)
+            {
+                LoggerAccessor.LogError($"[Redirector] NASCAR09 PS3 Secure Failed to start! Exception: {ex}");
+            }
+
+            try
+            {
+                RedirectorNASCAR09_PS3 = new RedirectorServer(30670, ListenIP, 30672, "NASCAR09", "PS3", false);
                 LoggerAccessor.LogInfo($"[Redirector] NASCAR09 PS3 Started!");
             }
             catch (Exception ex)
@@ -439,7 +451,6 @@ namespace MultiSocks.Aries
                 LoggerAccessor.LogError($"[NFL Street NTSC Matchmaker] Failed to start! Exception: {ex}");
             }
 
-
             #region Madden NFL 06
             try
             {
@@ -460,6 +471,19 @@ namespace MultiSocks.Aries
             {
                 LoggerAccessor.LogError($"[Fight Night 04 Matchmaker] Failed to start! Exception: {ex}");
             }
+
+            #region NASCAR09 PS3
+
+            try
+            {
+                NASCAR09_PS3_Matchmaker = new MatchmakerServer(30672, ListenIP, null, "NASCAR09", "PS3", false);
+            }
+            catch (Exception ex)
+            {
+                LoggerAccessor.LogError($"[NASCAR 09 Matchmaker] Failed to start! Exception: {ex}");
+            }
+
+            #endregion
 
             try
             {

@@ -6,7 +6,7 @@ using System.Net.Sockets;
 
 namespace MultiSpy.Servers
 {
-	internal class ServerNatNeg
+    internal class ServerNatNeg
 	{
 		public Thread Thread;
 

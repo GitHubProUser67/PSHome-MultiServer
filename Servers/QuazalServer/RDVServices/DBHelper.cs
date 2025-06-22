@@ -1,9 +1,11 @@
 ﻿using Alcatraz.Context;
 using Alcatraz.Context.Entities;
 using Alcatraz.DTO.Helpers;
+using AlcatrazService.DTO;
 using CustomLogger;
 using Microsoft.EntityFrameworkCore;
 using QuazalServer.QNetZ;
+using QuazalServer.RDVServices;
 
 namespace RDVServices
 {
@@ -17,11 +19,26 @@ namespace RDVServices
 
             switch (serviceClass)
 			{
+                case "PCGFRSServices":
                 case "PCDriverServices":
                 case "PCUbisoftServices":
 					connectionString = $"{Program.configDir}/Quazal/Database/Uplay.sqlite";
 
 					Directory.CreateDirectory(Path.GetDirectoryName(connectionString)!);
+
+                    retCtx = new MainDbContext(MainDbContext.OnContextBuilding(new DbContextOptionsBuilder<MainDbContext>(), 0, $"Data Source={connectionString}").Options);
+
+                    retCtx.Database.Migrate();
+
+                    initiateSharedUbiPlayers = true;
+                    break;
+                case "PS3RaymanLegendsServices":
+                case "PS3GFRSServices":
+                case "PS3DriverServices":
+                case "PS3UbisoftServices":
+                    connectionString = $"{Program.configDir}/Quazal/Database/Uplay_PS3.sqlite";
+
+                    Directory.CreateDirectory(Path.GetDirectoryName(connectionString)!);
 
                     retCtx = new MainDbContext(MainDbContext.OnContextBuilding(new DbContextOptionsBuilder<MainDbContext>(), 0, $"Data Source={connectionString}").Options);
 
@@ -40,7 +57,7 @@ namespace RDVServices
 
                     break;
                 default:
-					LoggerAccessor.LogError($"[DbHelper] - Unknwon: {serviceClass} Class passed to the database!");
+					LoggerAccessor.LogWarn($"[DbHelper] - Unknwon: {serviceClass} Class passed to the database!");
 					break;
 			}
 
@@ -111,6 +128,52 @@ namespace RDVServices
                     newUser.Password = SecurePasswordHasher.Hash($"{newUser.Id}-password1234");
                     context.SaveChanges();
                 }
+            }
+        }
+
+        public static bool RegisterUplayUser(string serviceClass, UserRegisterModel model)
+        {
+            using (MainDbContext? context = GetDbContext(serviceClass))
+            {
+                if (context == null)
+                    return false;
+
+                if (string.IsNullOrWhiteSpace(model.Username))
+                    return false;
+
+                if (string.IsNullOrWhiteSpace(model.PlayerNickName))
+                    return false;
+
+                if (string.IsNullOrWhiteSpace(model.Password))
+                    return false;
+
+                var newUser = new User()
+                {
+                    Username = model.Username,
+                    PlayerNickName = model.PlayerNickName,
+                    Password = "tmp",
+                };
+
+                if (context.Users.Any(x => x.Username == model.Username || x.PlayerNickName == model.PlayerNickName))
+                    return false;
+
+                try
+                {
+                    context.Users.Add(newUser);
+                    context.SaveChanges();
+                }
+                catch
+                {
+                    return false;
+                }
+
+                // update password as user Id is acquired
+                {
+                    newUser.Password = SecurePasswordHasher.Hash($"{newUser.Id}-{model.Password}");
+                    context.SaveChanges();
+                }
+
+                return true;
             }
         }
 

@@ -17,7 +17,6 @@ namespace MultiSocks.Aries.Messages
             string? SESS = GetInputCacheValue("SESS");
             string? SEED = GetInputCacheValue("SEED");
             string? PASS = GetInputCacheValue("PASS");
-            string? CUSTFLAGS = GetInputCacheValue("CUSTFLAGS");
             string? NAME = GetInputCacheValue("NAME");
             string? PARAMS = GetInputCacheValue("PARAMS");
             string? SYSFLAGS = GetInputCacheValue("SYSFLAGS");
@@ -30,56 +29,57 @@ namespace MultiSocks.Aries.Messages
                     mc.Games.RemoveGame(prevGame);
             }
 
-            int? parsedMinSize = int.TryParse(GetInputCacheValue("MINSIZE"), out int minSize) ? minSize : null;
-            int? parsedMaxSize = int.TryParse(GetInputCacheValue("MAXSIZE"), out int maxSize) ? maxSize : null;
-            int? parsedPriv = int.TryParse(GetInputCacheValue("PRIV"), out int priv) ? priv : null;
-            int? parsedRoomID = int.TryParse(GetInputCacheValue("ROOM"), out int room) ? room : null;
-            int? parsedIdent = int.TryParse(GetInputCacheValue("IDENT"), out int ident) ? ident : null;
-
-            if (!string.IsNullOrEmpty(SESS) && SESS.Equals("Invite") && parsedMinSize.HasValue && parsedMaxSize.HasValue
-                && parsedIdent.HasValue && parsedPriv.HasValue && !string.IsNullOrEmpty(SEED))
+            if (int.TryParse(GetInputCacheValue("MINSIZE"), out int minSize) && int.TryParse(GetInputCacheValue("MAXSIZE"), out int maxSize) 
+                && int.TryParse(GetInputCacheValue("PRIV"), out int priv) && int.TryParse(GetInputCacheValue("IDENT"), out int ident))
             {
-                AriesGame? game = mc.Games.GamesSessions.Values.Where(game => game.pass == PASS && /*game.MinSize == parsedMinSize.Value 
-                && game.MaxSize == parsedMaxSize.Value Commented out, Burnout has an offset for some WEIRD reasons...  */ game.ID == parsedIdent.Value && game.Priv == (parsedPriv.Value == 1) && game.Seed == SEED).FirstOrDefault();
-
-                if (game != null)
+                if ("Invite".Equals(SESS))
                 {
-                    game.AddUser(user);
+                    AriesGame? game = mc.Games.GamesSessions.Values.Where(game => game.pass == PASS && game.ID == ident && game.Priv == (priv == 1) && game.Seed == SEED).FirstOrDefault();
 
-                    user.CurrentGame = game;
+                    if (game != null)
+                    {
+                        if ((game.Users?.Count() + 1) > game.MaxSize)
+                            client.SendMessage(new GjoiFull());
+                        else
+                        {
+                            game.AddUser(user);
 
-                    client.SendMessage(game.GetGameDetails("gjoi"));
+                            user.CurrentGame = game;
 
-                    user.SendPlusWho(user, context.Project);
+                            client.SendMessage(game.GetGameDetails("gjoi"));
 
-                    game.BroadcastPopulation(mc);
+                            user.SendPlusWho(user, context.Project);
 
-                    return;
+                            game.BroadcastPopulation(mc);
+                        }
+
+                        return;
+                    }
                 }
-            }
-
-            // Check if any of the nullable variables are null before calling CreateGame
-            else if (parsedMinSize.HasValue && parsedMaxSize.HasValue && parsedRoomID.HasValue && parsedIdent.HasValue && !string.IsNullOrEmpty(CUSTFLAGS) &&
-                !string.IsNullOrEmpty(PARAMS) && !string.IsNullOrEmpty(NAME) && parsedPriv.HasValue &&
-                !string.IsNullOrEmpty(SEED) && !string.IsNullOrEmpty(SYSFLAGS))
-            {
-                AriesGame? game = mc.Games.GamesSessions.Values.Where(game => game.Name.Equals(NAME) && game.pass == PASS
-                && game.MinSize == parsedMinSize.Value && game.MaxSize == parsedMaxSize.Value && game.CustFlags == CUSTFLAGS
-                && game.SysFlags == SYSFLAGS && game.RoomID == parsedRoomID.Value && game.ID == parsedIdent.Value && game.Priv == (parsedPriv.Value == 1) && game.Seed == SEED).FirstOrDefault();
-
-                if (game != null)
+                else if (int.TryParse(GetInputCacheValue("ROOM"), out int room) && !string.IsNullOrEmpty(PARAMS) && !string.IsNullOrEmpty(NAME) && !string.IsNullOrEmpty(SYSFLAGS))
                 {
-                    game.AddUser(user);
+                    AriesGame? game = mc.Games.GamesSessions.Values.Where(game => game.Name == NAME && game.pass == PASS && game.CustFlags == GetInputCacheValue("CUSTFLAGS")
+                        && game.GetSysflags() == SYSFLAGS && game.Params == PARAMS && game.RoomID == room && game.ID == ident && game.Priv == (priv == 1) && game.Seed == SEED).FirstOrDefault();
 
-                    user.CurrentGame = game;
+                    if (game != null)
+                    {
+                        if ((game.Users?.Count() + 1) > game.MaxSize)
+                            client.SendMessage(new GjoiFull());
+                        else
+                        {
+                            game.AddUser(user);
 
-                    client.SendMessage(game.GetGameDetails(_Name));
+                            user.CurrentGame = game;
 
-                    user.SendPlusWho(user, context.Project);
+                            client.SendMessage(game.GetGameDetails(_Name));
 
-                    game.BroadcastPopulation(mc);
+                            user.SendPlusWho(user, context.Project);
 
-                    return;
+                            game.BroadcastPopulation(mc);
+                        }
+
+                        return;
+                    }
                 }
             }
 

@@ -7,7 +7,6 @@ namespace MultiSocks.Aries.Messages
     {
         public override string _Name { get => "sviw"; }
 
-
         public override void Process(AbstractAriesServer context, AriesClient client)
         {
             string? VIEW = GetInputCacheValue("VIEW");

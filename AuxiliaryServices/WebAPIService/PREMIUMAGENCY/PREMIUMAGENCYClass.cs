@@ -6,8 +6,9 @@ using System.IO;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
+#if !NETFRAMEWORK
 using System.Web;
-
+#endif
 namespace WebAPIService.PREMIUMAGENCY
 {
     public class PREMIUMAGENCYClass
@@ -34,7 +35,11 @@ namespace WebAPIService.PREMIUMAGENCY
 
             if (ContentType == null)
             {
+#if NETFRAMEWORK
+                evid = HTTPProcessor.GetQueryParameters(fulluripath)["evid"];
+#else
                 evid = HttpUtility.ParseQueryString(fulluripath).Get("evid");
+#endif
             }
             else
             {

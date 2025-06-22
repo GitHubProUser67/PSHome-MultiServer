@@ -1,12 +1,11 @@
 using CustomLogger;
-using MultiSpyService.Data;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
 namespace MultiSpy.Servers
 {
-	internal class LoginServer
+    internal class LoginServer
 	{
 		public Thread ThreadClientManager;
 		public Thread ThreadSearchManager;

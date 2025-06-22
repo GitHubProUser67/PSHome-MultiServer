@@ -151,6 +151,8 @@ namespace Horizon.MUM.Models
             MediusVersion = mediusVersion;
 
             this.ApplicationId = ApplicationId;
+
+            MumManager.channelsCreated.Inc();
         }
 
         public Channel(int Id, int ApplicationId, int mediusVersion)
@@ -162,6 +164,8 @@ namespace Horizon.MUM.Models
             MediusVersion = mediusVersion;
 
             this.ApplicationId = ApplicationId;
+
+            MumManager.channelsCreated.Inc();
         }
 
         public Channel(int Id, int ApplicationId, int mediusVersion, string Name, string Password, int MaxPlayers, ulong GenericField1, ulong GenericField2, ulong GenericField3, ulong GenericField4, MediusWorldGenericFieldLevelType GenericFieldLevel, ChannelType type)
@@ -182,7 +186,9 @@ namespace Horizon.MUM.Models
             this.GenericField3 = GenericField3;
             this.GenericField4 = GenericField4;
             this.GenericFieldLevel = GenericFieldLevel;
-            this.Type = type;
+            Type = type;
+
+            MumManager.channelsCreated.Inc();
         }
 
         public Channel(int mediusVersion, MediusCreateChannelRequest request)
@@ -204,6 +210,8 @@ namespace Horizon.MUM.Models
             GenericField3 = request.GenericField3;
             GenericField4 = request.GenericField4;
             GenericFieldLevel = request.GenericFieldLevel;
+
+            MumManager.channelsCreated.Inc();
         }
 
         public Channel(int mediusVersion, MediusCreateChannelRequest0 request)
@@ -226,6 +234,8 @@ namespace Horizon.MUM.Models
             GenericField2 = request.GenericField2;
             GenericField3 = request.GenericField3;
             GameHostType = request.GameHostType;
+
+            MumManager.channelsCreated.Inc();
         }
 
         public Channel(int mediusVersion, MediusCreateChannelRequest1 request)
@@ -241,6 +251,8 @@ namespace Horizon.MUM.Models
             MaxPlayers = request.MaxPlayers;
             Name = request.LobbyName;
             Password = request.LobbyPassword;
+
+            MumManager.channelsCreated.Inc();
         }
 
         public static Channel GetDefaultChannel(int ApplicationId, int mediusVersion)
@@ -456,7 +468,7 @@ namespace Horizon.MUM.Models
                         OriginatorAccountName = source.AccountName,
                         Message = message,
                         MessageType = MediusChatMessageType.Broadcast,
-                        TimeStamp = DateTimeUtils.GetUnixTime()
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
                     });
                 }
                 else
@@ -467,7 +479,7 @@ namespace Horizon.MUM.Models
                         OriginatorAccountName = source.AccountName,
                         Message = message,
                         MessageType = MediusChatMessageType.Broadcast,
-                        TimeStamp = DateTimeUtils.GetUnixTime()
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
                     });
                 }
             }
@@ -487,7 +499,7 @@ namespace Horizon.MUM.Models
                         OriginatorAccountName = source.AccountName,
                         Message = message,
                         MessageType = MediusChatMessageType.Whisper,
-                        TimeStamp = DateTimeUtils.GetUnixTime()
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
                     });
                 }
                 else
@@ -498,7 +510,7 @@ namespace Horizon.MUM.Models
                         OriginatorAccountName = source.AccountName,
                         Message = message,
                         MessageType = MediusChatMessageType.Whisper,
-                        TimeStamp = DateTimeUtils.GetUnixTime()
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
                     });
                 }
             }
@@ -518,7 +530,7 @@ namespace Horizon.MUM.Models
                         OriginatorAccountName = source.AccountName,
                         Message = message,
                         MessageType = MediusChatMessageType.Clan,
-                        TimeStamp = DateTimeUtils.GetUnixTime()
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
                     });
                 }
                 else
@@ -529,7 +541,7 @@ namespace Horizon.MUM.Models
                         OriginatorAccountName = source.AccountName,
                         Message = message,
                         MessageType = MediusChatMessageType.Clan,
-                        TimeStamp = DateTimeUtils.GetUnixTime()
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
                     });
                 }
             }
@@ -553,7 +565,7 @@ namespace Horizon.MUM.Models
                     OriginatorAccountName = "SYSTEM",
                     Message = message,
                     MessageType = MediusChatMessageType.Broadcast,
-                    TimeStamp = DateTimeUtils.GetUnixTime()
+                    TimeStamp = DateTimeUtils.GetUnixTimeU32()
                 });
             }
             else
@@ -564,7 +576,7 @@ namespace Horizon.MUM.Models
                     OriginatorAccountName = "SYSTEM",
                     Message = message,
                     MessageType = MediusChatMessageType.Broadcast,
-                    TimeStamp = DateTimeUtils.GetUnixTime()
+                    TimeStamp = DateTimeUtils.GetUnixTimeU32()
                 });
             }
 
@@ -588,7 +600,7 @@ namespace Horizon.MUM.Models
                         OriginatorAccountName = "SYSTEM",
                         Message = message,
                         MessageType = MediusChatMessageType.Broadcast,
-                        TimeStamp = DateTimeUtils.GetUnixTime()
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
                     });
                 }
                 else
@@ -599,7 +611,7 @@ namespace Horizon.MUM.Models
                         OriginatorAccountName = "SYSTEM",
                         Message = message,
                         MessageType = MediusChatMessageType.Broadcast,
-                        TimeStamp = DateTimeUtils.GetUnixTime()
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
                     });
                 }
             }

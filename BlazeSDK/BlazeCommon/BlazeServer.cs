@@ -188,9 +188,5 @@ namespace BlazeCommon
             await SendBlazePacket(connection, component, response).ConfigureAwait(false);
             blazeConnection.IsBusyLock.Exit();
         }
-
-
-
-
     }
 }

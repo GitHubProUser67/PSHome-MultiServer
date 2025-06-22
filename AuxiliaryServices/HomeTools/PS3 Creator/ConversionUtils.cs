@@ -10,8 +10,8 @@ namespace HomeTools.PS3_Creator
             BigInteger result = BigInteger.Zero;
             for (int i = initOffset; i < initOffset + 8; i++)
             {
-                result = result * (new BigInteger(256));
-                result = result + (new BigInteger(buffer[i] & 0xFF));
+                result *= new BigInteger(256);
+                result += (new BigInteger(buffer[i] & byte.MaxValue));
             }
             return result;
         }
@@ -21,7 +21,7 @@ namespace HomeTools.PS3_Creator
             long result = 0;
             for (int i = initOffset; i < initOffset + 4; i++)
             {
-                result = result * 256 + (buffer[i] & 0xFF);
+                result = result * 256 + (buffer[i] & byte.MaxValue);
             }
 
             return result;
@@ -32,17 +32,10 @@ namespace HomeTools.PS3_Creator
             int result = 0;
             for (int i = initOffset; i < initOffset + 2; i++)
             {
-                result = result * 256 + (buffer[i] & 0xFF);
+                result = result * 256 + (buffer[i] & byte.MaxValue);
             }
             return result;
         }
-
-        static byte[] HEX_CHAR_TABLE = {
-        (byte) '0', (byte) '1', (byte) '2', (byte) '3',
-        (byte) '4', (byte) '5', (byte) '6', (byte) '7',
-        (byte) '8', (byte) '9', (byte) 'a', (byte) 'b',
-        (byte) 'c', (byte) 'd', (byte) 'e', (byte) 'f'
-    };
 
         public static void arraycopy(byte[] src, int srcPos, byte[] dest, long destPos, int length)
         {
@@ -50,20 +43,6 @@ namespace HomeTools.PS3_Creator
             {
                 dest[destPos + i] = src[srcPos + i];
             }
-        }
-
-        public static String getHexString(byte[] raw)
-        {
-            byte[] hex = new byte[2 * raw.Length];
-            int index = 0;
-
-            foreach (byte b in raw)
-            {
-                uint v = (uint)b & 0xFF;
-                hex[index++] = HEX_CHAR_TABLE[v >> 4];
-                hex[index++] = HEX_CHAR_TABLE[v & 0xF];
-            }
-            return new String(bytesToChar(hex));
         }
 
         public static char[] bytesToChar(byte[] b)
@@ -78,7 +57,7 @@ namespace HomeTools.PS3_Creator
         {
 
             byte[] b2;
-            if(b[b.Length -1] == 0x00)
+            if(b[b.Length -1] == byte.MinValue)
                 b2 = new byte[b.Length - 1];
             else
                 b2 = new byte[b.Length];
@@ -95,18 +74,11 @@ namespace HomeTools.PS3_Creator
             return c;
         }
 
-        public static byte[] getByteArray(String hexString)
-        {
-            return decodeHex(hexString.ToCharArray());
-        }
-
         public static byte[] decodeHex(char[] data)
         {
             int len = data.Length;
             if ((len & 0x01) != 0)
-            {
                 throw new Exception("Odd number of characters.");
-            }
 
             byte[] o = new byte[len >> 1];
 
@@ -117,13 +89,13 @@ namespace HomeTools.PS3_Creator
                 j++;
                 f = f | toDigit(data[j], j);
                 j++;
-                o[i] = (byte)(f & 0xFF);
+                o[i] = (byte)(f & byte.MaxValue);
             }
 
             return o;
         }
 
-        static int GetIntegerValue(char c, int radix)
+        private static int GetIntegerValue(char c, int radix)
         {
             int val = -1;
             if (char.IsDigit(c))
@@ -142,9 +114,7 @@ namespace HomeTools.PS3_Creator
         {
             int digit = GetIntegerValue(ch, 16);
             if (digit == -1)
-            {
                 throw new Exception("Illegal hexadecimal character " + ch + " at index " + index);
-            }
             return digit;
         }
     }

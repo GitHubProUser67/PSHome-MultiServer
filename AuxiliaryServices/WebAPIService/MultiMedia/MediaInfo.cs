@@ -2,8 +2,9 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+#if !NETFRAMEWORK
 using System.Web;
-
+#endif
 namespace WebAPIService.MultiMedia
 {
     // From: https://www.codeproject.com/Articles/1079119/Video-Transcoding-and-Streaming-on-the-fly
@@ -25,7 +26,11 @@ namespace WebAPIService.MultiMedia
         public bool IsSupported()
         {
             string path = string.Format(@"{0}/{1}", workpath,
+#if NETFRAMEWORK
+                Uri.UnescapeDataString(MediaBrowse.GetQueryParameter(HTTPProcessor.ExtractQueryString(fullurl), "item")))
+#else
                 HttpUtility.UrlDecode(MediaBrowse.GetQueryParameter(HTTPProcessor.ExtractQueryString(fullurl), "item")))
+#endif
                 .Replace(@"\\", @"\").Replace("//", "/");
 
             if (File.Exists(path))
@@ -49,7 +54,11 @@ namespace WebAPIService.MultiMedia
 
                 string output = seekingTypeJson;
                 string path = string.Format(@"{0}/{1}", workpath,
+#if NETFRAMEWORK
+                    Uri.UnescapeDataString(MediaBrowse.GetQueryParameter(HTTPProcessor.ExtractQueryString(fullurl), "item")))
+#else
                     HttpUtility.UrlDecode(MediaBrowse.GetQueryParameter(HTTPProcessor.ExtractQueryString(fullurl), "item")))
+#endif
                     .Replace(@"\\", @"\").Replace("//", "/");
 
                 ProcessStartInfo pr = new ProcessStartInfo(convertersPath + "/ffprobe",

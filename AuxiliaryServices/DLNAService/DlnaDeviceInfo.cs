@@ -1,5 +1,9 @@
 using System;
+#if NET7_0_OR_GREATER 
+using System.Net.Http;
+#else
 using System.Net;
+#endif
 using System.Text.RegularExpressions;
 
 namespace DLNAService

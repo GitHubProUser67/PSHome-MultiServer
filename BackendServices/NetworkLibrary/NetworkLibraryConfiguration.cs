@@ -1,5 +1,6 @@
 ﻿using CustomLogger;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Security.Cryptography;
@@ -12,13 +13,16 @@ namespace NetworkLibrary
         public static bool EnableServerIpAutoNegotiation { get; set; } = true;
         public static bool UsePublicIp { get; set; } = true;
         public static bool EnableSNMPReports { get; set; } = false;
-        public static string FallbackServerIp { get; set; } = "0.0.0.0";
+        public static string FallbackServerIp { get; set; } = IPAddress.Any.ToString();
         public static string SNMPTrapHost { get; set; } = IPAddress.Loopback.ToString();
         public static string SNMPEnterpriseOid { get; set; } = "12345";
         public static HashAlgorithmName SNMPHashAlgorithm { get; set; } = HashAlgorithmName.MD5;
         public static string SNMPUserName { get; set; } = "usr-md5-aes";
         public static string SNMPAuthPassword { get; set; } = "authkey1";
         public static string SNMPPrivatePassword { get; set; } = "privkey1";
+
+        // To use only with known problematic providers since this is a static list! Each servers should have it's own live/dynamic ban list on top.
+        public static List<string> BannedIPs { get; set; }
 
         /// <summary>
         /// Tries to load the specified configuration file.
@@ -31,13 +35,14 @@ namespace NetworkLibrary
             // Make sure the file exists
             if (!File.Exists(configPath))
             {
-                LoggerAccessor.LogWarn("Could not find the NetworkLibrary.json file, writing and using server's default.");
+                LoggerAccessor.LogWarn($"Could not find the configuration file:{configPath}, writing and using server's default.");
 
                 Directory.CreateDirectory(Path.GetDirectoryName(configPath) ?? Directory.GetCurrentDirectory() + "/static");
 
                 // Write the JsonObject to a file
                 var configObject = new
                 {
+                    config_version = (ushort)2,
                     enable_server_ip_auto_negotiation = EnableServerIpAutoNegotiation,
                     use_public_ip = UsePublicIp,
                     fallback_server_ip = FallbackServerIp,
@@ -51,6 +56,7 @@ namespace NetworkLibrary
                         auth_password = SNMPAuthPassword,
                         private_password = SNMPPrivatePassword,
                     },
+                    BannedIPs
                 };
 
                 File.WriteAllText(configPath, JsonSerializer.Serialize(configObject, new JsonSerializerOptions
@@ -68,6 +74,25 @@ namespace NetworkLibrary
                 {
                     JsonElement config = doc.RootElement;
 
+                    ushort config_version = GetValueOrDefault(config, "config_version", (ushort)0);
+                    if (config_version >= 2)
+                    {
+                        // Deserialize BannedIPs if it exists
+                        if (config.TryGetProperty("BannedIPs", out JsonElement bannedIPsElement) && bannedIPsElement.ValueKind == JsonValueKind.Array)
+                        {
+                            BannedIPs = new List<string>();
+
+                            foreach (JsonElement ipElement in bannedIPsElement.EnumerateArray())
+                            {
+                                if (ipElement.ValueKind == JsonValueKind.String)
+                                {
+                                    string entry = ipElement.GetString();
+                                    if (!string.IsNullOrEmpty(entry))
+                                        BannedIPs.Add(entry);
+                                }
+                            }
+                        }
+                    }
                     EnableServerIpAutoNegotiation = GetValueOrDefault(config, "enable_server_ip_auto_negotiation", EnableServerIpAutoNegotiation);
                     UsePublicIp = GetValueOrDefault(config, "use_public_ip", UsePublicIp);
                     string tempVerificationIp = GetValueOrDefault(config, "fallback_server_ip", FallbackServerIp);
@@ -87,7 +112,7 @@ namespace NetworkLibrary
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogWarn($"NetworkLibrary.json file is malformed (exception: {ex}), using server's default.");
+                LoggerAccessor.LogWarn($"{configPath} file is malformed (exception: {ex}), using server's default.");
             }
         }
 

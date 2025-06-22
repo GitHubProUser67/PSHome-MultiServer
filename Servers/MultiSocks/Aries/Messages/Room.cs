@@ -1,3 +1,5 @@
+using MultiSocks.Aries.Model;
+
 namespace MultiSocks.Aries.Messages
 {
     public class Room : AbstractMessage
@@ -17,22 +19,23 @@ namespace MultiSocks.Aries.Messages
         {
             if (context is not MatchmakerServer mc) return;
 
-            Model.AriesUser? user = client.User;
+            AriesUser? user = client.User;
             if (user == null) return;
 
             string? NAME = GetInputCacheValue("NAME");
 
-            if (user.CurrentRoom != null)
-            {
-                user.CurrentRoom.Users?.RemoveUser(user);
-                user.CurrentRoom = null;
-            }
+            AriesRoom? existingRoom = user.CurrentRoom;
 
-            Model.AriesRoom? room = mc.Rooms.GetRoomByName(NAME);
+            if (existingRoom != null && existingRoom.Users.RemoveUserAndCheckRoomValidity(user))
+                mc.Rooms.RemoveRoom(existingRoom);
+
+            AriesRoom? room = mc.Rooms.GetRoomByName(NAME);
             if (room != null)
             {
-                if (room.Users != null && room.Users.AddUserWithRoomMesg(user))
-                    user.CurrentRoom = room;
+                if (room.Users != null && room.Users.AddUserWithRoomMesg(user, context.Project ?? string.Empty))
+                {
+
+                }
                 else
                 {
                     this.NAME = string.Empty;
@@ -41,11 +44,13 @@ namespace MultiSocks.Aries.Messages
             }
             else
             {
-                room = new Model.AriesRoom() { ID = new Random().Next(), Name = NAME };
+                room = new Model.AriesRoom() { ID = new Random().Next(), Name = NAME, IsGlobal = false };
                 mc.Rooms.AddRoom(room);
 
-                if (room.Users != null && room.Users.AddUserWithRoomMesg(user))
-                    user.CurrentRoom = room;
+                if (room.Users != null && room.Users.AddUserWithRoomMesg(user, context.Project ?? string.Empty))
+                {
+
+                }
                 else
                 {
                     this.NAME = string.Empty;

@@ -8,6 +8,8 @@ using NetworkLibrary.AdBlocker;
 using DNS.Protocol;
 using System.Linq;
 using NetworkLibrary.Extension;
+using DNSLibrary;
+using System.Threading.Tasks;
 
 namespace MitmDNS
 {
@@ -18,11 +20,13 @@ namespace MitmDNS
         public static AdGuardFilterChecker adChecker = new AdGuardFilterChecker();
         public static DanPollockChecker danChecker = new DanPollockChecker();
 
-        public static byte[] ProcRequest(byte[] data)
+        private static readonly UdpClientService udpClientService = new UdpClientService();
+
+        public static async Task<byte[]> ProcRequest(byte[] DnsReq)
         {
             bool treated = false;
 
-            Request Req = Request.FromArray(data);
+            Request Req = Request.FromArray(DnsReq);
 
             if (Req.OperationCode == OperationCode.Query)
             {
@@ -37,23 +41,20 @@ namespace MitmDNS
 
                 string url = null;
 
-                if (fullname.EndsWith("in-addr.arpa") && IPAddress.TryParse(fullname[..^13], out IPAddress arparuleaddr)) // IPV4 Only.
+                if (fullname.Length > 13 && fullname.EndsWith("in-addr.arpa") && IPAddress.TryParse(fullname[..^13], out IPAddress arparuleaddr)) // IPV4 Only.
                 {
-                    if (arparuleaddr != null)
+                    if (arparuleaddr != null && arparuleaddr.AddressFamily == AddressFamily.InterNetwork)
                     {
-                        if (arparuleaddr.AddressFamily == AddressFamily.InterNetwork)
-                        {
-                            // Split the IP address into octets
-                            string[] octets = arparuleaddr.ToString().Split('.');
+                        // Split the IP address into octets
+                        string[] octets = arparuleaddr.ToString().Split('.');
 
-                            // Reverse the order of octets
-                            Array.Reverse(octets);
+                        // Reverse the order of octets
+                        Array.Reverse(octets);
 
-                            // Join the octets back together
-                            url = string.Join(".", octets);
+                        // Join the octets back together
+                        url = string.Join(".", octets);
 
-                            treated = true;
-                        }
+                        treated = true;
                     }
                 }
                 else
@@ -99,9 +100,25 @@ namespace MitmDNS
                 }
 
                 if (!treated && MitmDNSServerConfiguration.DNSAllowUnsafeRequests)
-                    url = InternetProtocolUtils.GetFirstActiveIPAddress(fullname, ServerIp);
+                {
+                    var udpClient = udpClientService.Dequeue();
+                    try
+                    {
+                        await udpClient.Client.SendAsync(DnsReq, SocketFlags.None);
 
-                if (!string.IsNullOrEmpty(url) && url != "NXDOMAIN")
+                        var res = await udpClient.ReceiveAsync();
+                        return res.Buffer;
+                    }
+                    catch
+                    {
+                        return null;
+                    }
+                    finally
+                    {
+                        udpClientService.ReturnToQueue(udpClient);
+                    }
+                }
+                else if (!string.IsNullOrEmpty(url) && url != "NXDOMAIN")
                 {
                     List<IPAddress> Ips = new();
 
@@ -123,10 +140,10 @@ namespace MitmDNS
 
                     LoggerAccessor.LogInfo($"[DNSResolver] - Resolved: {fullname} to: {string.Join(", ", Ips)}");
 
-                    return Response.MakeType0DnsResponsePacket(data.Trim(), Ips);
+                    return Response.MakeType0DnsResponsePacket(DnsReq.Trim(), Ips);
                 }
                 else
-                    return Response.MakeType0DnsResponsePacket(data.Trim(), new List<IPAddress> { });
+                    return Response.MakeType0DnsResponsePacket(DnsReq.Trim(), new List<IPAddress> { });
             }
             else
                 LoggerAccessor.LogWarn($"[DNSResolver] - The requested OperationCode: {Req.OperationCode} is not yet supported, report to GITHUB!");

@@ -10,6 +10,7 @@ namespace BlazeCommon
     {
         public long ID { get; }
         public ProtoFireServer? Owner { get; }
+        public MitmProtoFireServer? OwnerMitm { get; }
         public Socket Socket { get; }
         public Stream? Stream { get; private set; }
         public bool Connected { get; private set; }
@@ -19,6 +20,15 @@ namespace BlazeCommon
         {
             ID = id;
             Owner = owner;
+            Socket = socket;
+            Stream = null;
+            Connected = true;
+        }
+
+        public ProtoFireConnection(long id, MitmProtoFireServer owner, Socket socket)
+        {
+            ID = id;
+            OwnerMitm = owner;
             Socket = socket;
             Stream = null;
             Connected = true;
@@ -51,6 +61,7 @@ namespace BlazeCommon
             try { Stream?.Close(); } catch { }
 
             Owner?.KillConnection(this); //remove from connection list
+            OwnerMitm?.KillConnection(this); //remove from connection list
         }
 
 

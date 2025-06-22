@@ -38,7 +38,7 @@ namespace SVO
 
         public static bool IsIPBanned(string ipAddress)
         {
-            if (SVOServerConfiguration.BannedIPs != null && SVOServerConfiguration.BannedIPs.Contains(ipAddress))
+            if (NetworkLibrary.NetworkLibraryConfiguration.BannedIPs != null && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs.Contains(ipAddress))
                 return true;
 
             return false;
@@ -346,17 +346,6 @@ namespace SVO
             {
                 LoggerAccessor.LogError("[SVO] - REQUEST ERROR: " + e.Message);
                 ctx.Response.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
-            }
-
-            if (!ctx.Response.KeepAlive)
-            {
-				try
-                {
-                    ctx.Request.InputStream.Close();
-                }
-                catch
-                {
-                }
             }
 
             try

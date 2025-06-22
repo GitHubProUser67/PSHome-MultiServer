@@ -1,229 +1,306 @@
-using Org.BouncyCastle.Asn1;
-using Org.BouncyCastle.Crypto.Parameters;
-using Org.BouncyCastle.Crypto.Signers;
-using Org.BouncyCastle.OpenSsl;
 using System;
-#if NET6_0_OR_GREATER
-using System.Diagnostics.CodeAnalysis;
-#endif
 using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
+using XI5.Reader;
+using XI5.Types;
+using XI5.Types.Parsers;
+using XI5.Verification;
+using CustomLogger;
+using Org.BouncyCastle.Asn1;
+using Org.BouncyCastle.Math;
+using Org.BouncyCastle.Crypto.Parameters;
 
 namespace XI5
 {
-    //https://www.psdevwiki.com/ps3/X-I-5-Ticket
-    //https://github.com/RipleyTom/rpcn/blob/master/src/server/client/ticket.rs
-    public class XI5Ticket
+    // https://www.psdevwiki.com/ps3/X-I-5-Ticket
+    // https://github.com/RipleyTom/rpcn/blob/master/src/server/client/ticket.rs
+    // https://github.com/LittleBigRefresh/NPTicket/tree/main
+
+    public partial class XI5Ticket
     {
-        const uint XI5_VER_2_0 = 553648128;
-        const uint XI5_VER_2_1 = 553713664;
-        const uint XI5_VER_3_0 = 822083584;
-        const uint XI5_VER_4_0 = 1090519040;
+        // constructor
+        public XI5Ticket() { }
 
-        private static ECDsaSigner ECDsaRPCN;
+        // fields
+        public TicketVersion Version { get; set; }
+        public string SerialId { get; set; }
+        public uint IssuerId { get; set; }
 
-        static XI5Ticket()
-        {
-            PemReader pr = new PemReader(new StringReader("-----BEGIN PUBLIC KEY-----\r\nME4wEAYHKoZIzj0CAQYFK4EEACADOgAEsHvA8K3bl2V+nziQOejSucl9wqMdMELn\r\n0Eebk9gcQrCr32xCGRox4x+TNC+PAzvVKcLFf9taCn0=\r\n-----END PUBLIC KEY-----"));
-            ECDsaRPCN = new ECDsaSigner();
-            ECDsaRPCN.Init(false, (ECPublicKeyParameters)pr.ReadObject());
-        }
+        public DateTimeOffset IssuedDate { get; set; }
+        public DateTimeOffset ExpiryDate { get; set; }
 
-        public string TicketVersion { get; private set; }
-        public string Serial { get; private set; }
-        public uint IssuerId { get; private set; }
-        public DateTime? Issued { get; private set; }
-        public DateTime? Expires { get; private set; }
-        public ulong UserId { get; private set; }
-        public string OnlineId { get; private set; }
-        public string Region { get; private set; }
-        public string Domain { get; private set; }
-        public string ServiceId { get; private set; }
-        public uint Status { get; private set; }
-        public string IssuerName { get; private set; }
+        public ulong UserId { get; set; }
+        public string Username { get; set; }
 
-        private byte[] _fullBodyData;
-        private byte[] _signature;
+        public string Country { get; set; }
+        public string Domain { get; set; }
+        
+        public string ServiceId { get; set; }
+        public string TitleId { get; set; }
 
-        public XI5Ticket(byte[] data)
-        {
-            using (MemoryStream ms = new MemoryStream(data))
-            {
-                uint version = ms.ReadUInt();
+        public uint Status { get; set; }
+        public ushort TicketLength { get; set; }
+        public TicketDataSection BodySection { get; set; }
 
-                if (version != XI5_VER_2_0 && version != XI5_VER_2_1 && version != XI5_VER_3_0 && version != XI5_VER_4_0)
-                    throw new NotSupportedException("Invalid ticket version: " + version); //invalid version
-
-                TicketVersion = version == XI5_VER_2_0 ? "XI5_VER_2_0" : version == XI5_VER_2_1 ? "XI5_VER_2_1" : version == XI5_VER_3_0 ? "XI5_VER_3_0" : version == XI5_VER_4_0 ? "XI5_VER_4_0" : "UNKNOWN";
-                if (version != XI5_VER_2_1)
-                {
-                    Directory.CreateDirectory("bad_xi5");
-                    File.WriteAllBytes("bad_xi5/" + DateTime.Now.Ticks + ".bin", data);
-                    throw new NotImplementedException("Reading " + TicketVersion + " ticket is not yet implemented.");
-                }
-
-                uint size = ms.ReadUInt();
-                if (size != ms.Length - 8) //invalid data
-                    throw new ArgumentException($"Specified ticket size: {size} | Actual ticket size : {ms.Length - 8}");
-
-                ParseTicketV2_1(ms);
-            }
-        }
-
-#if NET5_0_OR_GREATER
-        [MemberNotNull(nameof(Serial), nameof(OnlineId), nameof(Region), nameof(Domain), nameof(ServiceId), nameof(IssuerName), nameof(_signature), nameof(_fullBodyData))]
+        public string SignatureIdentifier { get; set; }
+        public byte[] SignatureData { get; set; }
+        public byte[] HashedMessage { get; set; } = Array.Empty<byte>();
+        public byte[] Message { get; set; } = Array.Empty<byte>();
+        public string HashName { get; set; } = string.Empty;
+        public string CurveName { get; set; } = string.Empty;
+        public BigInteger R { get; set; } = BigInteger.Zero;
+        public BigInteger S { get; set; } = BigInteger.Zero;
+        public bool Valid { get; protected set; }
+#if NET7_0_OR_GREATER
+        internal static readonly Regex ServiceIdRegex = GeneratedRegex();
+#else
+        internal static readonly Regex ServiceIdRegex = new Regex("(?<=-)[A-Z0-9]{9}(?=_)", RegexOptions.Compiled);
 #endif
-        private void ParseTicketV2_1(MemoryStream ms)
+        public static XI5Ticket ReadFromBytes(byte[] ticketData)
         {
-            _fullBodyData = ReadFullBody(ms);
-            byte[] footer = ReadFooter(ms);
-
-            using (MemoryStream bodyStream = new MemoryStream(_fullBodyData))
-            {
-                bodyStream.Seek(4, SeekOrigin.Begin); //skip existing dt and size
-
-                Serial = ReadBinaryAsString(bodyStream);
-                IssuerId = ReadUInt(bodyStream);
-                Issued = ReadTime(bodyStream);
-                Expires = ReadTime(bodyStream);
-                UserId = ReadULong(bodyStream);
-                OnlineId = ReadString(bodyStream);
-                Region = ReadBinaryAsString(bodyStream);
-                Domain = ReadString(bodyStream);
-                ServiceId = ReadBinaryAsString(bodyStream);
-                Status = ReadUInt(bodyStream);
-            }
-
-            using (MemoryStream footerStream = new MemoryStream(footer))
-            {
-                IssuerName = ReadBinaryAsString(footerStream);
-                _signature = ReadBinary(footerStream);
-            }
-
-            //TODO: check out this later
-            //optionally there is also cookie (Binary Data type)
-            //and 2 empty entries (Empty data type)
+            using (MemoryStream ms = new MemoryStream(ticketData))
+                return ReadFromStream(ms);
         }
 
-        public bool SignedByOfficialRPCN { 
-            get
+        private static XI5Ticket ReadFromStream(Stream ticketStream)
+        {
+            // ticket version (2 bytes), header (4 bytes), ticket length (2 bytes) = 8 bytes
+            const int headerLength = sizeof(byte) + sizeof(byte) + sizeof(uint) + sizeof(ushort);
+
+            byte[] ticketData;
+            if (ticketStream is MemoryStream ms && ms.TryGetBuffer(out ArraySegment<byte> buffer))
+                ticketData = buffer.Array.Take((int)ms.Length).ToArray();
+            else
             {
-                using (Asn1InputStream decoder = new Asn1InputStream(_signature))
+                using (MemoryStream tempMs = new MemoryStream())
                 {
-                    if (decoder.ReadObject() is DerSequence seq)
-                        return ECDsaRPCN.VerifySignature(NetHasher.DotNetHasher.ComputeSHA224(_fullBodyData), ((DerInteger)seq[0]).Value, ((DerInteger)seq[1]).Value);
+                    ticketStream.CopyTo(tempMs);
+                    ticketData = tempMs.ToArray();
                 }
 
-                return false;
+                // reset stream position
+                ticketStream.Position = 0;
             }
+
+            XI5Ticket ticket = new XI5Ticket();
+
+            using (TicketReader reader = new TicketReader(ticketStream))
+            {
+                ticket.Version = reader.ReadTicketVersion();
+                ticket.TicketLength = reader.ReadTicketHeader();
+
+                long bodyStart = reader.BaseStream.Position;
+
+                long actualLength = ticketStream.Length - headerLength;
+                if (ticket.TicketLength > actualLength)
+                {
+                    LoggerAccessor.LogError($"[XI5Ticket] - Expected ticket length to be at least {ticket.TicketLength} bytes, but was {actualLength} bytes.");
+                    return null;
+                }
+
+                ticket.BodySection = reader.ReadTicketSectionHeader();
+                if (ticket.BodySection.Type != TicketDataSectionType.Body)
+                {
+                    LoggerAccessor.LogError($"[XI5Ticket] - Expected first section to be {nameof(TicketDataSectionType.Body)}, but was {ticket.BodySection.Type} ({(int)ticket.BodySection.Type}).");
+                    return null;
+                }
+
+                // ticket 2.1
+                if (ticket.Version.Major == 2 && ticket.Version.Minor == 1)
+                    TicketParser21.ParseTicket(ticket, reader);
+
+                // ticket 3.0
+                else if (ticket.Version.Major == 3 && ticket.Version.Minor == 0)
+                    TicketParser30.ParseTicket(ticket, reader);
+
+                // unhandled ticket version
+                else
+                    throw new FormatException($"[XI5Ticket] - Unknown/unhandled ticket version {ticket.Version}.");
+
+                var footer = reader.ReadTicketSectionHeader();
+                if (footer.Type != TicketDataSectionType.Footer)
+                {
+                    LoggerAccessor.LogError($"[XI5Ticket] - Expected last section to be {nameof(TicketDataSectionType.Footer)}, but was {footer.Type} ({(int)footer.Type}).");
+                    return null;
+                }
+
+                ticket.SignatureIdentifier = reader.ReadTicketStringData(TicketDataType.Binary);
+                ticket.SignatureData = reader.ReadTicketBinaryData();
+
+                if (ticket.SignatureData.Length == 56)
+                {
+#if NET6_0_OR_GREATER
+                    ticket.Message = ticketData.AsSpan()[..ticketData.AsSpan().IndexOf(ticket.SignatureData)].ToArray();
+#else
+                    int index = IndexOfSequence(ticketData, ticket.SignatureData);
+                    if (index >= 0)
+                    {
+                        byte[] message = new byte[index];
+                        Array.Copy(ticketData, 0, message, 0, index);
+                        ticket.Message = message;
+                    }
+#endif
+                    ticket.HashedMessage = NetHasher.DotNetHasher.ComputeSHA1(ticket.Message);
+                    ticket.HashName = "SHA1";
+                    ticket.CurveName = "secp192r1";
+                }
+                else
+                {
+#if NET6_0_OR_GREATER
+                    ticket.Message = ticketData.AsSpan().Slice((int)bodyStart, ticket.BodySection.Length + 4).ToArray();
+#else
+                    ticket.Message = new byte[ticket.BodySection.Length + 4];
+                    Array.Copy(ticketData, (int)bodyStart, ticket.Message, 0, ticket.BodySection.Length + 4);
+#endif
+                    ticket.HashedMessage = NetHasher.DotNetHasher.ComputeSHA224(ticket.Message);
+                    ticket.HashName = "SHA224";
+                    ticket.CurveName = "secp224k1";
+                }
+            }
+
+            // verify ticket signature
+            ticket.Valid = new TicketVerifier(ticketData, ticket, SigningKeyResolver.GetSigningKey(ticket.SignatureIdentifier, ticket.TitleId)).IsTicketValid();
+
+            // ticket invalid
+            if (!ticket.Valid)
+            {
+                var curveCache = new Dictionary<string, ECDomainParameters>();
+                var validPoints = new List<Org.BouncyCastle.Math.EC.ECPoint>();
+
+                ECDomainParameters curve = curveCache.ContainsKey(ticket.CurveName) ? curveCache[ticket.CurveName] : EcdsaFinder.CurveFromName(ticket.CurveName);
+                if (!curveCache.ContainsKey(ticket.CurveName))
+                    curveCache.Add(ticket.CurveName, curve);
+
+                byte[] sigBackup = ticket.SignatureData;
+                Asn1Sequence sig = ParseSignature(ticket);
+
+                if (sig == null || sig.Count != 2)
+                {
+                    LoggerAccessor.LogWarn($"[XI5Ticket] - Ticket for {ticket.TitleId} has invalid signature!\nsig: {BytesToHex(ticket.SignatureData)}\norig sig: {BytesToHex(sigBackup)}");
+                    return ticket;
+                }
+
+                ticket.R = ((DerInteger)sig[0]).PositiveValue;
+                ticket.S = ((DerInteger)sig[1]).PositiveValue;
+
+                validPoints.AddRange(EcdsaFinder.RecoverPublicKey(curve, ticket));
+
+                LoggerAccessor.LogWarn($"[XI5Ticket] - Valid points: {validPoints.Count}");
+
+                var alreadyChecked = new List<Org.BouncyCastle.Math.EC.ECPoint>();
+                foreach (Org.BouncyCastle.Math.EC.ECPoint p in validPoints)
+                {
+                    if (alreadyChecked.Contains(p)) continue;
+                    Org.BouncyCastle.Math.EC.ECPoint normalized = p.Normalize();
+                    int count = validPoints.Count(x =>
+                        x.Normalize().AffineXCoord.Equals(normalized.AffineXCoord) &&
+                        x.Normalize().AffineYCoord.Equals(normalized.AffineYCoord));
+                    if (count <= 1 && validPoints.Count > 2) continue;
+
+                    LoggerAccessor.LogWarn("[XI5Ticket] - =====");
+                    LoggerAccessor.LogWarn($"[XI5Ticket] - {normalized.AffineXCoord}");
+                    LoggerAccessor.LogWarn($"[XI5Ticket] - {normalized.AffineYCoord}");
+                    LoggerAccessor.LogWarn($"[XI5Ticket] - n={count}");
+                    LoggerAccessor.LogWarn("[XI5Ticket] - =====");
+                    alreadyChecked.Add(p);
+                }
+
+                if (alreadyChecked.Count == 0)
+                    LoggerAccessor.LogWarn("[XI5Ticket] - all points are unique :(");
+            }
+
+            return ticket;
         }
 
-        private static byte[] ReadFullField(Stream stream, Datatype expected)
+        private static string BytesToHex(byte[] bytes)
         {
-            Datatype dt = (Datatype)stream.ReadUShort();
-            if (dt != expected)
-                throw new InvalidDataException($"Expected datatype: {expected} | Actual datatype: {dt}");
-
-            ushort size = stream.ReadUShort();
-            byte[] data = new byte[size + 4]; //with datatype and size included
-            stream.Seek(-4, SeekOrigin.Current);
-            if (!stream.ReadAll(data, 0, data.Length))
-                throw new EndOfStreamException($"Failed to read {size} bytes from stream");
-            return data;
+#if NET6_0_OR_GREATER
+            return Convert.ToHexString(bytes);
+#else
+            return string.Concat(bytes.Select(b => b.ToString("X2")));
+#endif
         }
+#if !NET6_0_OR_GREATER
+        private static int IndexOfSequence(byte[] array, byte[] sequence)
+        {
+            if (sequence.Length == 0)
+                return -1;
 
-        private static byte[] ReadField(Stream stream, Datatype expected)
-        {
-            Datatype dt = (Datatype)stream.ReadUShort();
-            if (dt != expected)
-                throw new InvalidDataException($"Expected datatype: {expected} | Actual datatype: {dt}");
-
-            ushort size = stream.ReadUShort();
-            byte[] data = new byte[size];
-            if (!stream.ReadAll(data, 0, size))
-                throw new EndOfStreamException($"Failed to read {size} bytes from stream");
-            return data;
+            for (int i = 0; i <= array.Length - sequence.Length; i++)
+            {
+                bool found = true;
+                for (int j = 0; j < sequence.Length; j++)
+                {
+                    if (array[i + j] != sequence[j])
+                    {
+                        found = false;
+                        break;
+                    }
+                }
+                if (found)
+                    return i;
+            }
+            return -1;
         }
-
-        private static byte[] ReadBody(Stream stream) => ReadField(stream, Datatype.Body);
-        private static byte[] ReadFullBody(Stream stream) => ReadFullField(stream, Datatype.Body);
-        private static byte[] ReadFooter(Stream stream) => ReadField(stream, Datatype.Footer);
-        private static byte[] ReadFullFooter(Stream stream) => ReadFullField(stream, Datatype.Footer);
-        private static byte[] ReadBinary(Stream stream) => ReadField(stream, Datatype.Binary);
-        private static byte[] ReadFullBinary(Stream stream) => ReadFullField(stream, Datatype.Binary);
-		
-        private static string ReadBinaryAsString(Stream stream)
+#endif
+        private static Asn1Sequence ParseSignature(XI5Ticket ticket)
         {
-            byte[] data = ReadBinary(stream);
-            int inx = Array.FindIndex(data, 0, (x) => x == 0);//search for 0
-            if (inx >= 0)
-                return Encoding.UTF8.GetString(data, 0, inx);
-            return Encoding.UTF8.GetString(data);
-        }
-		
-        private static uint ReadUInt(Stream stream)
-        {
-            byte[] data = ReadField(stream, Datatype.UInt);
-            if (BitConverter.IsLittleEndian)
-                Array.Reverse(data);
-            return BitConverter.ToUInt32(data, 0);
-        }
-		
-        private static DateTime ReadTime(Stream stream)
-        {
-            byte[] data = ReadField(stream, Datatype.Time);
-            if (BitConverter.IsLittleEndian)
-                Array.Reverse(data);
-            return DateTimeOffset.FromUnixTimeMilliseconds((long)BitConverter.ToUInt64(data, 0)).UtcDateTime;
-        }
-
-        private static ulong ReadULong(Stream stream)
-        {
-            byte[] data = ReadField(stream, Datatype.ULong);
-            if (BitConverter.IsLittleEndian)
-                Array.Reverse(data);
-            return BitConverter.ToUInt64(data, 0);
-        }
-
-        private static string ReadString(Stream stream)
-        {
-            byte[] data = ReadField(stream, Datatype.String);
-            int inx = Array.FindIndex(data, 0, (x) => x == 0);//search for 0
-            if (inx >= 0)
-                return Encoding.UTF8.GetString(data, 0, inx);
-            return Encoding.UTF8.GetString(data);
+            for (byte i = 0; i < 3; i++)
+            {
+                try
+                {
+                    Asn1Object.FromByteArray(ticket.SignatureData);
+                    break;
+                }
+                catch
+                {
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+                    ticket.SignatureData = ticket.SignatureData.SkipLast(1).ToArray();
+#else
+                    if (ticket.SignatureData.Length > 0)
+                        ticket.SignatureData = ticket.SignatureData.Take(ticket.SignatureData.Length - 1).ToArray();
+#endif
+                }
+            }
+            return (Asn1Sequence)Asn1Object.FromByteArray(ticket.SignatureData);
         }
 
         public override string ToString()
         {
-            StringBuilder builder = new StringBuilder();
-            builder.AppendLine("{");
-            builder.AppendLine("    TicketVersion = " + TicketVersion);
-            builder.AppendLine("    Serial = " + Serial);
-            builder.AppendLine("    IssuerId = " + IssuerId);
-            builder.AppendLine("    Issued = " + Issued);
-            builder.AppendLine("    Expires = " + Expires);
-            builder.AppendLine("    UserId = " + UserId);
-            builder.AppendLine("    OnlineId = " + OnlineId);
-            builder.AppendLine("    Region = " + Region);
-            builder.AppendLine("    Domain = " + Domain);
-            builder.AppendLine("    ServiceId = " + ServiceId);
-            builder.AppendLine("    Status = " + Status);
-            builder.AppendLine("    IssuerName = " + IssuerName);
-            builder.AppendLine("}");
-            return builder.ToString();
-        }
+            var sb = new StringBuilder();
 
-        enum Datatype : ushort
-        {
-            Empty = 0,
-            UInt = 1,
-            ULong = 2,
-            String = 4,
-            Time = 7,
-            Binary = 8,
-            Body = 0x3000,
-            Footer = 0x3002
+            sb.AppendLine($"Version: {Version}");
+            sb.AppendLine($"SerialId: {SerialId}");
+            sb.AppendLine($"IssuerId: {IssuerId}");
+            sb.AppendLine($"IssuedDate: {IssuedDate}");
+            sb.AppendLine($"ExpiryDate: {ExpiryDate}");
+            sb.AppendLine($"UserId: {UserId}");
+            sb.AppendLine($"Username: {Username}");
+            sb.AppendLine($"Country: {Country}");
+            sb.AppendLine($"Domain: {Domain}");
+            sb.AppendLine($"ServiceId: {ServiceId}");
+            sb.AppendLine($"TitleId: {TitleId}");
+            sb.AppendLine($"Status: {Status}");
+            sb.AppendLine($"TicketLength: {TicketLength}");
+            sb.AppendLine($"SignatureIdentifier: {SignatureIdentifier}");
+            sb.AppendLine($"SignatureData: {(SignatureData != null ? BitConverter.ToString(SignatureData).Replace("-", string.Empty) : "null")}");
+            sb.AppendLine($"Message: {(Message != null ? BitConverter.ToString(Message).Replace("-", string.Empty) : "null")}");
+            sb.AppendLine($"HashedMessage: {(HashedMessage != null ? BitConverter.ToString(HashedMessage).Replace("-", string.Empty) : "null")}");
+            sb.AppendLine($"HashName: {HashName}");
+            sb.AppendLine($"CurveName: {CurveName}");
+            sb.AppendLine($"R: {R}");
+            sb.AppendLine($"S: {S}");
+            sb.AppendLine($"Valid: {Valid}");
+
+            return sb.ToString();
         }
+#if NET7_0_OR_GREATER
+
+        [GeneratedRegex("(?<=-)[A-Z0-9]{9}(?=_)", RegexOptions.Compiled)]
+        private static partial Regex GeneratedRegex();
+#endif
     }
 }

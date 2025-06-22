@@ -172,7 +172,7 @@ namespace Horizon.DME
                             {
                                 PlayerId = (ushort)ClientObject.DmeId,
                                 ScertId = ClientObject.ScertId,
-                                PlayerCount = (ushort?)ClientObject.DmeWorld?.Clients.Count ?? 0x0001,
+                                PlayerCount = (ushort?)ClientObject.DmeWorld?.Clients.Length ?? 0x0001,
                                 EndPoint = ClientObject.RemoteUdpEndpoint
                             };
 

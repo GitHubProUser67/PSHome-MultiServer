@@ -48,8 +48,6 @@ public static class SVOServerConfiguration
 
     public static DbController? Database = new(DatabaseConfig);
 
-    public static List<string>? BannedIPs { get; set; }
-
     /// <summary>
     /// Tries to load the specified configuration file.
     /// Throws an exception if it fails to find the file.
@@ -61,12 +59,13 @@ public static class SVOServerConfiguration
         // Make sure the file exists
         if (!File.Exists(configPath))
         {
-            LoggerAccessor.LogWarn("Could not find the svo.json file, writing and using server's default.");
+            LoggerAccessor.LogWarn($"Could not find the configuration file:{configPath}, writing and using server's default.");
 
             Directory.CreateDirectory(Path.GetDirectoryName(configPath) ?? Directory.GetCurrentDirectory() + "/static");
 
             // Write the JObject to a file
             File.WriteAllText(configPath, new JObject(
+                new JProperty("config_version", 2),
                 new JProperty("static_folder", SVOStaticFolder),
                 new JProperty("enable_keep_alive", EnableKeepAlive),
                 new JProperty("https_bypass", SVOHTTPSBypass),
@@ -76,8 +75,7 @@ public static class SVOServerConfiguration
                 new JProperty("certificate_hashing_algorithm", HTTPSCertificateHashingAlgorithm.Name),
                 new JProperty("database", DatabaseConfig),
                 new JProperty("pshome_rpcs3workaround", PSHomeRPCS3Workaround),
-                new JProperty("MOTD", string.Empty),
-                new JProperty("BannedIPs", new JArray(BannedIPs ?? new List<string> { }))
+                new JProperty("MOTD", string.Empty)
             ).ToString());
 
             return;
@@ -88,38 +86,32 @@ public static class SVOServerConfiguration
             // Parse the JSON configuration
             dynamic config = JObject.Parse(File.ReadAllText(configPath));
 
-            SVOStaticFolder = GetValueOrDefault(config, "static_folder", SVOStaticFolder);
-            EnableKeepAlive = GetValueOrDefault(config, "enable_keep_alive", EnableKeepAlive);
-            SVOHTTPSBypass = GetValueOrDefault(config, "https_bypass", SVOHTTPSBypass);
-            HTTPSCertificateFile = GetValueOrDefault(config, "certificate_file", HTTPSCertificateFile);
-            HTTPSCertificatePassword = GetValueOrDefault(config, "certificate_password", HTTPSCertificatePassword);
-            HTTPSCertificateHashingAlgorithm = new HashAlgorithmName(GetValueOrDefault(config, "certificate_hashing_algorithm", HTTPSCertificateHashingAlgorithm.Name));
-            HTTPSDNSList = GetValueOrDefault(config, "https_dns_list", HTTPSDNSList);
-            DatabaseConfig = GetValueOrDefault(config, "database", DatabaseConfig);
-            HTTPSCertificateFile = GetValueOrDefault(config, "certificate_file", HTTPSCertificateFile);
-            PSHomeRPCS3Workaround = GetValueOrDefault(config, "pshome_rpcs3workaround", PSHomeRPCS3Workaround);
-            // Look for the MOTD xml file.
-            string motd_file = GetValueOrDefault(config, "MOTD", string.Empty);
-            if (string.IsNullOrEmpty(motd_file) || !File.Exists(motd_file))
-                LoggerAccessor.LogWarn("Could not find the MOTD file, using default xml.");
+            ushort config_version = GetValueOrDefault(config, "config_version", (ushort)0);
+            if (config_version >= 2)
+            {
+                SVOStaticFolder = GetValueOrDefault(config, "static_folder", SVOStaticFolder);
+                EnableKeepAlive = GetValueOrDefault(config, "enable_keep_alive", EnableKeepAlive);
+                SVOHTTPSBypass = GetValueOrDefault(config, "https_bypass", SVOHTTPSBypass);
+                HTTPSCertificateFile = GetValueOrDefault(config, "certificate_file", HTTPSCertificateFile);
+                HTTPSCertificatePassword = GetValueOrDefault(config, "certificate_password", HTTPSCertificatePassword);
+                HTTPSCertificateHashingAlgorithm = new HashAlgorithmName(GetValueOrDefault(config, "certificate_hashing_algorithm", HTTPSCertificateHashingAlgorithm.Name));
+                HTTPSDNSList = GetValueOrDefault(config, "https_dns_list", HTTPSDNSList);
+                DatabaseConfig = GetValueOrDefault(config, "database", DatabaseConfig);
+                HTTPSCertificateFile = GetValueOrDefault(config, "certificate_file", HTTPSCertificateFile);
+                PSHomeRPCS3Workaround = GetValueOrDefault(config, "pshome_rpcs3workaround", PSHomeRPCS3Workaround);
+                // Look for the MOTD xml file.
+                string motd_file = GetValueOrDefault(config, "MOTD", string.Empty);
+                if (string.IsNullOrEmpty(motd_file) || !File.Exists(motd_file))
+                    LoggerAccessor.LogWarn("Could not find the MOTD file, using default xml.");
+                else
+                    MOTD = File.ReadAllText(motd_file);
+            }
             else
-                MOTD = File.ReadAllText(motd_file);
-            // Deserialize BannedIPs if it exists
-            try
-            {
-                JArray bannedIPsArray = config.BannedIPs;
-                // Deserialize BannedIPs if it exists
-                if (bannedIPsArray != null)
-                    BannedIPs = bannedIPsArray.ToObject<List<string>>();
-            }
-            catch
-            {
-
-            }
+                LoggerAccessor.LogWarn($"{configPath} file is outdated, using server's default.");
         }
         catch (Exception ex)
         {
-            LoggerAccessor.LogWarn($"svo.json file is malformed (exception: {ex}), using server's default.");
+            LoggerAccessor.LogWarn($"{configPath} file is malformed (exception: {ex}), using server's default.");
         }
     }
 
@@ -180,7 +172,7 @@ class Program
 
     static void Main()
     {
-        if (!NetworkLibrary.Extension.Windows.Win32API.IsWindows)
+        if (!NetworkLibrary.Extension.Microsoft.Win32API.IsWindows)
             GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
         else
             TechnitiumLibrary.Net.Firewall.FirewallHelper.CheckFirewallEntries(Assembly.GetEntryAssembly()?.Location);

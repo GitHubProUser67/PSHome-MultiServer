@@ -3,6 +3,7 @@ using NetworkLibrary.Extension;
 using SpaceWizards.HttpListener;
 using System.Text;
 using System.Text.RegularExpressions;
+using XI5;
 
 namespace SVO.Games.PS3
 {
@@ -693,6 +694,8 @@ namespace SVO.Games.PS3
                             switch (method)
                             {
                                 case "POST":
+                                    const string RPCNSigner = "RPCN";
+
                                     response.SendChunked = true;
 
                                     string signature = string.Empty;
@@ -751,28 +754,38 @@ namespace SVO.Games.PS3
                                         // Read the contents of the memory stream into the byte array
                                         ms.Read(buffer, 0, contentLength);
 
-                                        // Extract the desired portion of the binary data
-                                        byte[] extractedData = new byte[0x63 - 0x54 + 1];
+                                        // get ticket
+                                        XI5Ticket ticket = XI5Ticket.ReadFromBytes(buffer);
 
-                                        // Copy it
-                                        Array.Copy(buffer, 0x54, extractedData, 0, extractedData.Length);
+                                        // setup username
+                                        psnname = ticket.Username;
 
-                                        // Convert 0x00 bytes to 0x20 so we pad as space.
-                                        for (int i = 0; i < extractedData.Length; i++)
+                                        // invalid ticket
+                                        if (!ticket.Valid)
                                         {
-                                            if (extractedData[i] == 0x00)
-                                            {
-                                                extractedData[i] = 0x20;
-                                            }
+                                            // log to console
+                                            LoggerAccessor.LogWarn($"[OTG] - Wipeout2048 : User {psnname} tried to alter their ticket data");
+
+                                            response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                            return;
                                         }
 
-                                        // Convert the modified data to a string
-                                        psnname = Encoding.ASCII.GetString(extractedData).Replace(" ", string.Empty);
+                                        // RPCN
+                                        if (ticket.SignatureIdentifier == RPCNSigner)
+                                        {
+                                            LoggerAccessor.LogInfo($"[OTG] - Wipeout2048 : User {psnname} connected at: {DateTime.Now} and is on RPCN");
 
-                                        if (ByteUtils.FindBytePattern(buffer, new byte[] { 0x52, 0x50, 0x43, 0x4E }, 184) != -1)
-                                            LoggerAccessor.LogInfo($"[OTG] : Wipeout2048 - User {psnname} logged in and is on RPCN");
+                                            psnname += $"@{RPCNSigner}";
+                                        }
+                                        else if (psnname.EndsWith($"@{RPCNSigner}"))
+                                        {
+                                            LoggerAccessor.LogError($"[OTG] - Wipeout2048 : User {psnname} was caught using a RPCN suffix while not on it!");
+
+                                            response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                            return;
+                                        }
                                         else
-                                            LoggerAccessor.LogInfo($"[OTG] : Wipeout2048 - User {psnname} logged in and is on PSN");
+                                            LoggerAccessor.LogInfo($"[OTG] - Wipeout2048 : User {psnname} connected at: {DateTime.Now} and is on PSN");
 
                                         ms.Flush();
                                     }
@@ -795,11 +808,11 @@ namespace SVO.Games.PS3
                                         accountId = 0;
                                     }
 
-                                    response.Headers.Add("Set-Cookie", $"id=ddb4fac6-f908-33e5-80f9-febd2e2ef58f; Path=/");
-                                    response.Headers.Add("Set-Cookie", $"name={psnname}; Path=/");
-                                    response.Headers.Add("Set-Cookie", $"authKey=2b8e1723-9e40-41e6-a740-05ddefacfe94; Path=/");
-                                    response.Headers.Add("Set-Cookie", $"timeZone=GMT; Path=/");
-                                    response.Headers.Add("Set-Cookie", $"signature=ghpE-ws_dBmIY-WNbkCQb1NnamA; Path=/");
+                                    response.AddHeader("Set-Cookie", $"id=ddb4fac6-f908-33e5-80f9-febd2e2ef58f; Path=/");
+                                    response.AppendHeader("Set-Cookie", $"name={(psnname.EndsWith($"@{RPCNSigner}") ? psnname.Replace($"@{RPCNSigner}", string.Empty) : psnname)}; Path=/");
+                                    response.AppendHeader("Set-Cookie", $"authKey=2b8e1723-9e40-41e6-a740-05ddefacfe94; Path=/");
+                                    response.AppendHeader("Set-Cookie", $"timeZone=GMT; Path=/");
+                                    response.AppendHeader("Set-Cookie", $"signature=ghpE-ws_dBmIY-WNbkCQb1NnamA; Path=/");
 
                                     response.Headers.Set("Content-Type", "application/xml;charset=UTF-8");
                                     response.Headers.Set("Content-Language", string.Empty);

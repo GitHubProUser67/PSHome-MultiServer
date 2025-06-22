@@ -1,8 +1,5 @@
 ﻿using CustomLogger;
-using IronPython.Hosting;
-using Microsoft.Scripting.Hosting;
 using System.Diagnostics;
-using System.Text;
 
 namespace MultiSpy.Servers
 {
@@ -10,48 +7,52 @@ namespace MultiSpy.Servers
     {
         private static readonly string? pythonPath = FindPythonPath();
 
-        private string? pythonScript;
+        private Process? pythonProcess;
+        private StreamReader? standardOutput;
+
+        private string? scriptPath;
 
         public Thread? Thread;
 
-        private ScriptEngine? engine;
-
         public ChatServer()
         {
-            if (!NetworkLibrary.Extension.Windows.Win32API.IsWindows)
+            if (string.IsNullOrEmpty(pythonPath))
             {
-                LoggerAccessor.LogError("[ChatServer] - Server is only supported on Windows...");
-                return;
-            }
-            else if (string.IsNullOrEmpty(pythonPath))
-            {
-                LoggerAccessor.LogError("[ChatServer] - Python installation not found, quitting the engine...");
+                LoggerAccessor.LogError("[ChatServer] - Python installation invalid, quitting the engine...");
                 return;
             }
 
-            string serverScript = MultiSpyServerConfiguration.ChatServerPath;
-			
-            if (!string.IsNullOrEmpty(serverScript) && File.Exists(serverScript))
+            scriptPath = MultiSpyServerConfiguration.ChatServerPath;
+
+            if (!string.IsNullOrEmpty(scriptPath))
             {
-                if (serverScript.EndsWith(".EdgeZlib"))
-                    pythonScript = Encoding.UTF8.GetString(CompressionLibrary.Edge.Zlib.EdgeZlibDecompress(File.ReadAllBytes(serverScript)).Result);
+                const string edgeZlibExtension = ".EdgeZlib";
+
+                string zlibFilePath = scriptPath + edgeZlibExtension;
+
+                if (File.Exists(zlibFilePath) && !File.Exists(scriptPath))
+                {
+                    File.WriteAllBytes(scriptPath.Replace(edgeZlibExtension, string.Empty), CompressionLibrary.Edge.Zlib.EdgeZlibDecompress(File.ReadAllBytes(zlibFilePath)).Result);
+                    File.Move(zlibFilePath, zlibFilePath + ".old");
+                }
+                else if (File.Exists(scriptPath))
+                {
+                    
+                }
                 else
-                    pythonScript = File.ReadAllText(serverScript);
+                {
+                    LoggerAccessor.LogError("[ChatServer] - Python script not found, quitting the engine...");
+                    return;
+                }
+
+                Thread = new Thread(StartServer)
+                {
+                    Name = "Chat Thread"
+                };
+                Thread.Start();
             }
             else
-            {
-                LoggerAccessor.LogError("[ChatServer] - Python script not found, quitting the engine...");
-                return;
-            }
-			
-            engine = Python.CreateEngine();
-            engine.SetSearchPaths(new List<string>(engine.GetSearchPaths()) { pythonPath + "\\Lib" });
-
-            Thread = new Thread(StartServer)
-            {
-                Name = "Chat Thread"
-            };
-            Thread.Start();
+                LoggerAccessor.LogError("[ChatServer] - Python script path was invalid, quitting the engine...");
         }
 
         public void Dispose()
@@ -66,8 +67,19 @@ namespace MultiSpy.Servers
             {
                 if (disposing)
                 {
-                    engine?.Runtime.Shutdown();
-                    engine = null;
+                    if (pythonProcess != null && !pythonProcess.HasExited)
+                    {
+                        try
+                        {
+                            // Kill the Python process
+                            pythonProcess.Kill();
+                            pythonProcess.WaitForExit();
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggerAccessor.LogError("[ChatServer] - Error terminating the python process: " + ex);
+                        }
+                    }
                 }
             }
             catch (Exception)
@@ -84,13 +96,40 @@ namespace MultiSpy.Servers
         {
             LoggerAccessor.LogInfo("[ChatServer] - Starting Chat Server");
 
+            // Create a new process for Python
+            pythonProcess = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    WorkingDirectory = Path.GetDirectoryName(scriptPath),
+                    FileName = Path.Combine(pythonPath, "python.exe"),
+                    Arguments = $"\"{scriptPath}\"",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+
+            // Start the process
+            pythonProcess.Start();
+            pythonProcess.PriorityClass = ProcessPriorityClass.High;
+
+            // Get the standard output
+            standardOutput = pythonProcess.StandardOutput;
+
+            // Read the output of the Python script line by line
+            string? output;
+
             try
             {
-                engine.Execute(pythonScript, engine.CreateScope());
+                while ((output = standardOutput?.ReadLine()) != null)
+                {
+                    LoggerAccessor.LogInfo("[ChatServer] - " + output);
+                }
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[ChatServer] - Python script thrown an assertion: {ex}");
+                LoggerAccessor.LogError("[ChatServer] - Error while reading python output: " + ex);
             }
         }
 
@@ -101,10 +140,10 @@ namespace MultiSpy.Servers
 
             if (!string.IsNullOrEmpty(envPath))
             {
-                foreach (string? path in envPath.Split(';'))
+                foreach (string? path in envPath.Split(Path.PathSeparator))
                 {
-                    if (!string.IsNullOrEmpty(path) && path.EndsWith("python.exe", StringComparison.InvariantCultureIgnoreCase)
-                        && File.Exists(path) && IsPython27Windows(path))
+                    if (!string.IsNullOrEmpty(path) && path.Contains("python", StringComparison.InvariantCultureIgnoreCase)
+                        && File.Exists(path) && IsPython27(path))
                         return Path.GetDirectoryName(path);
                 }
             }
@@ -112,7 +151,7 @@ namespace MultiSpy.Servers
             return null;
         }
 
-        private static bool IsPython27Windows(string pythonExePath)
+        private static bool IsPython27(string pythonExePath)
         {
             try
             {

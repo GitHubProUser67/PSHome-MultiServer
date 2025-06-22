@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using XI5;
 
 namespace WebAPIService.HEAVYWATER
 {
@@ -273,34 +274,39 @@ namespace WebAPIService.HEAVYWATER
 
                                         if (isValidBase64Data.Item1)
                                         {
-                                            // Extract the desired portion of the binary data for a npticket 4.0
-                                            byte[] extractedData = new byte[0x63 - 0x54 + 1];
+                                            const string RPCNSigner = "RPCN";
 
-                                            // Copy it
-                                            Array.Copy(isValidBase64Data.Item2, 0x54, extractedData, 0, extractedData.Length);
+                                            // get ticket
+                                            XI5Ticket ticket = XI5Ticket.ReadFromBytes(isValidBase64Data.Item2);
 
-                                            // Trim null bytes
-                                            int nullByteIndex = Array.IndexOf(extractedData, (byte)0x00);
-                                            if (nullByteIndex >= 0)
+                                            // setup username
+                                            string username = ticket.Username;
+
+                                            // invalid ticket
+                                            if (!ticket.Valid)
                                             {
-                                                byte[] trimmedData = new byte[nullByteIndex];
-                                                Array.Copy(extractedData, trimmedData, nullByteIndex);
-                                                extractedData = trimmedData;
+                                                // log to console
+                                                LoggerAccessor.LogWarn($"[HeavyWaterClass] : User {username} tried to alter their ticket data");
+
+                                                return null;
                                             }
 
-                                            string UserId = Encoding.UTF8.GetString(extractedData);
+                                            // RPCN
+                                            if (ticket.SignatureIdentifier == RPCNSigner)
+                                                LoggerAccessor.LogInfo($"[HeavyWaterClass] : User {username} connected at: {DateTime.Now} and is on RPCN");
+                                            else if (username.EndsWith($"@{RPCNSigner}"))
+                                            {
+                                                LoggerAccessor.LogError($"[HeavyWaterClass] : User {username} was caught using a RPCN suffix while not on it!");
 
-                                            if (ByteUtils.FindBytePattern(isValidBase64Data.Item2, new byte[] { 0x52, 0x50, 0x43, 0x4E }, 184) != -1)
-                                                LoggerAccessor.LogInfo($"[HeavyWaterClass] - ProcessRequest : User {UserId} logged in and is on RPCN");
+                                                return null;
+                                            }
                                             else
-                                                LoggerAccessor.LogInfo($"[HeavyWaterClass] - ProcessRequest : User {UserId} logged in and is on PSN");
-
-                                            string id = GenerateD2OGuid(UserId);
+                                                LoggerAccessor.LogInfo($"[HeavyWaterClass] : User {username} connected at: {DateTime.Now} and is on PSN");
 
                                             return $@"{{
                                                     ""STATUS"": ""SUCCESS"",
                                                     ""result"": {{
-                                                      ""d2oID"": ""{id}""
+                                                      ""d2oID"": ""{GenerateD2OGuid(username)}""
                                                     }}
                                                   }}";
                                         }
@@ -310,7 +316,11 @@ namespace WebAPIService.HEAVYWATER
                         }
                         break;
                     case "PUT":
+#if NET6_0_OR_GREATER
                         if (PostData.Length > 0 && PostData.Length <= Array.MaxLength)
+#else
+                        if (PostData.Length > 0 && PostData.Length <= 0x7FFFFFC7)
+#endif
                         {
                             if (match.Success)
                             {

@@ -9,7 +9,6 @@ using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Tls;
 using MultiSocks.ProtoSSL;
 using MultiSocks.ProtoSSL.Crypto;
-using NetworkLibrary.Extension;
 
 namespace MultiSocks.Aries
 {
@@ -219,7 +218,7 @@ namespace MultiSocks.Aries
 
         public void SendMessage(AbstractMessage msg)
         {
-            if (msg._Name.Equals("+gam") && !CanAsyncGameSearch)
+            if ("+gam".Equals(msg._Name) && !CanAsyncGameSearch)
                 return;
             else if (msg._Name.StartsWith('+'))
             {

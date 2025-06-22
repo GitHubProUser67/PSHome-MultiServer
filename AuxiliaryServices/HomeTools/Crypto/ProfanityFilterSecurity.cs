@@ -1,4 +1,4 @@
-﻿using NetworkLibrary.Extension;
+﻿using EndianTools;
 
 namespace HomeTools.Crypto
 {
@@ -18,7 +18,7 @@ namespace HomeTools.Crypto
         {
             if (ciphertext.Length <= 1) { return null; }
 
-            uint[] v = ciphertext.ToUint32(false);
+            uint[] v = EndianAwareConverter.ToUInt32(ciphertext, Endianness.BigEndian);
 
             uint n = (uint)v.Length,
                    z,
@@ -48,7 +48,7 @@ namespace HomeTools.Crypto
                 y = v[0] -= (z >> 5 ^ y0) + (y1 ^ z << 4) ^ (sum ^ y) + (z ^ ProfanityFilterKey[e]);
             }
 
-            return v.ToBytes();
+            return EndianAwareConverter.GetBytes(v, Endianness.LittleEndian);
         }
     }
 }

@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Numerics;
 using CustomLogger;
+using NetworkLibrary.Extension;
 
 namespace HomeTools.PS3_Creator
 {
@@ -244,7 +245,7 @@ namespace HomeTools.PS3_Creator
             else
             {
 #if DEBUG
-                LoggerAccessor.LogInfo("[PS3 Creator] - EDAT - DECRYPTION KEY: " + ConversionUtils.getHexString(rifkey));
+                LoggerAccessor.LogInfo("[PS3 Creator] - EDAT - DECRYPTION KEY: " + rifkey.ToHexString());
 #endif
             }
             result = checkHeader(rifkey, data, npd, fin);
@@ -432,7 +433,7 @@ namespace HomeTools.PS3_Creator
             if (result1)
             {
 #if DEBUG
-                LoggerAccessor.LogInfo("[PS3 Creator] - EDAT - NPD hash 1 is valid (" + ConversionUtils.getHexString(hash1) + ")");
+                LoggerAccessor.LogInfo("[PS3 Creator] - EDAT - NPD hash 1 is valid (" + hash1.ToHexString() + ")");
 #endif
             }
             return result1;
@@ -447,7 +448,7 @@ namespace HomeTools.PS3_Creator
             if (result2)
             {
 #if DEBUG
-                LoggerAccessor.LogInfo("[PS3 Creator] - EDAT - NPD hash 2 is valid (" + ConversionUtils.getHexString(calculated) + ")");
+                LoggerAccessor.LogInfo("[PS3 Creator] - EDAT - NPD hash 2 is valid (" + calculated.ToHexString() + ")");
 #endif
             }
             return result2;
@@ -519,7 +520,7 @@ namespace HomeTools.PS3_Creator
                 byte[] generatedHash = new byte[20];
                 a.doAll(hashFlag, npd.getVersion() == 4, cryptoFlag, decryptedData, 0, encryptedData, 0, decryptedData.Length, key, iv, hash, generatedHash, 0);
                 o.Seek(baseOffset + i * (metadataSectionSize + data.getBlockSize()), 0);
-                byte[] encryptedDataForFile = ConversionUtils.getByteArray("555555555555555555555555");
+                byte[] encryptedDataForFile = "555555555555555555555555".HexStringToByteArray();
                 byte[] expectedKeyForFile = new byte[16];
                 byte[] expectedHashForFile = new byte[16];
                 ConversionUtils.arraycopy(generatedHash, 16, expectedHashForFile, 0L, 4);
@@ -529,7 +530,7 @@ namespace HomeTools.PS3_Creator
                 o.Write(expectedHashForFile, 0, expectedHashForFile.Length);
                 o.Write(encryptedData, 0, encryptedData.Length);
             }
-            byte[] EDATAVersion = ConversionUtils.getByteArray("534441544120332E332E302E57000000");
+            byte[] EDATAVersion = "534441544120332E332E302E57000000".HexStringToByteArray();
             o.Write(EDATAVersion, 0, EDATAVersion.Length);
             return STATUS_OK;
         }

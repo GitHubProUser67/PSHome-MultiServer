@@ -7,10 +7,10 @@ using System.Security.Cryptography;
 using NetworkLibrary.SNMP;
 using NetworkLibrary;
 using Microsoft.Extensions.Logging;
+using HomeTools.Crypto;
 
 public static class SSFWServerConfiguration
 {
-    public static bool ForceOfficialRPCNSignature { get; set; } = false;
     public static bool SSFWCrossSave { get; set; } = true;
     public static int SSFWTTL { get; set; } = 60;
     public static string SSFWMinibase { get; set; } = "[]";
@@ -44,7 +44,6 @@ public static class SSFWServerConfiguration
             "nonprod4.homeidentity.online.scee.com",
             "nonprod4.homeserverservices.online.scee.com",
         };
-    public static List<string>? BannedIPs { get; set; }
 
     /// <summary>
     /// Tries to load the specified configuration file.
@@ -57,13 +56,13 @@ public static class SSFWServerConfiguration
         // Make sure the file exists
         if (!File.Exists(configPath))
         {
-            LoggerAccessor.LogWarn("Could not find the ssfw.json file, writing and using server's default.");
+            LoggerAccessor.LogWarn($"Could not find the configuration file:{configPath}, writing and using server's default.");
 
             Directory.CreateDirectory(Path.GetDirectoryName(configPath) ?? Directory.GetCurrentDirectory() + "/static");
 
             // Write the JObject to a file
             File.WriteAllText(configPath, new JObject(
-                new JProperty("force_official_rpcn_signature", ForceOfficialRPCNSignature),
+                new JProperty("config_version", (ushort)2),
                 new JProperty("minibase", SSFWMinibase),
                 new JProperty("legacyKey", SSFWLegacyKey),
                 new JProperty("sessionidKey", SSFWSessionIdKey),
@@ -74,8 +73,7 @@ public static class SSFWServerConfiguration
                 new JProperty("certificate_file", HTTPSCertificateFile),
                 new JProperty("certificate_password", HTTPSCertificatePassword),
                 new JProperty("certificate_hashing_algorithm", HTTPSCertificateHashingAlgorithm.Name),
-                new JProperty("scenelist_file", ScenelistFile),
-                new JProperty("BannedIPs", new JArray(BannedIPs ?? new List<string> { }))
+                new JProperty("scenelist_file", ScenelistFile)
             ).ToString());
 
             return;
@@ -86,34 +84,27 @@ public static class SSFWServerConfiguration
             // Parse the JSON configuration
             dynamic config = JObject.Parse(File.ReadAllText(configPath));
 
-            ForceOfficialRPCNSignature = GetValueOrDefault(config, "force_official_rpcn_signature", ForceOfficialRPCNSignature);
-            SSFWMinibase = GetValueOrDefault(config, "minibase", SSFWMinibase);
-            SSFWTTL = GetValueOrDefault(config, "time_to_live", SSFWTTL);
-            SSFWLegacyKey = GetValueOrDefault(config, "legacyKey", SSFWLegacyKey);
-            SSFWSessionIdKey = GetValueOrDefault(config, "sessionidKey", SSFWSessionIdKey);
-            SSFWCrossSave = GetValueOrDefault(config, "cross_save", SSFWCrossSave);
-            SSFWStaticFolder = GetValueOrDefault(config, "static_folder", SSFWStaticFolder);
-            HTTPSCertificateFile = GetValueOrDefault(config, "certificate_file", HTTPSCertificateFile);
-            HTTPSCertificatePassword = GetValueOrDefault(config, "certificate_password", HTTPSCertificatePassword);
-            HTTPSCertificateHashingAlgorithm = new HashAlgorithmName(GetValueOrDefault(config, "certificate_hashing_algorithm", HTTPSCertificateHashingAlgorithm.Name));
-            HTTPSDNSList = GetValueOrDefault(config, "https_dns_list", HTTPSDNSList);
-            ScenelistFile = GetValueOrDefault(config, "scenelist_file", ScenelistFile);
-            // Deserialize BannedIPs if it exists
-            try
+            ushort config_version = GetValueOrDefault(config, "config_version", (ushort)0);
+            if (config_version >= 2)
             {
-                JArray bannedIPsArray = config.BannedIPs;
-                // Deserialize BannedIPs if it exists
-                if (bannedIPsArray != null)
-                    BannedIPs = bannedIPsArray.ToObject<List<string>>();
+                SSFWMinibase = GetValueOrDefault(config, "minibase", SSFWMinibase);
+                SSFWTTL = GetValueOrDefault(config, "time_to_live", SSFWTTL);
+                SSFWLegacyKey = GetValueOrDefault(config, "legacyKey", SSFWLegacyKey);
+                SSFWSessionIdKey = GetValueOrDefault(config, "sessionidKey", SSFWSessionIdKey);
+                SSFWCrossSave = GetValueOrDefault(config, "cross_save", SSFWCrossSave);
+                SSFWStaticFolder = GetValueOrDefault(config, "static_folder", SSFWStaticFolder);
+                HTTPSCertificateFile = GetValueOrDefault(config, "certificate_file", HTTPSCertificateFile);
+                HTTPSCertificatePassword = GetValueOrDefault(config, "certificate_password", HTTPSCertificatePassword);
+                HTTPSCertificateHashingAlgorithm = new HashAlgorithmName(GetValueOrDefault(config, "certificate_hashing_algorithm", HTTPSCertificateHashingAlgorithm.Name));
+                HTTPSDNSList = GetValueOrDefault(config, "https_dns_list", HTTPSDNSList);
+                ScenelistFile = GetValueOrDefault(config, "scenelist_file", ScenelistFile);
             }
-            catch
-            {
-
-            }
+            else
+                LoggerAccessor.LogWarn($"{configPath} file is outdated, using server's default.");
         }
         catch (Exception ex)
         {
-            LoggerAccessor.LogWarn($"ssfw.json file is malformed (exception: {ex}), using server's default.");
+            LoggerAccessor.LogWarn($"{configPath} file is malformed (exception: {ex}), using server's default.");
         }
     }
 
@@ -147,7 +138,7 @@ public static class SSFWServerConfiguration
 class Program
 {
     private static string configDir = Directory.GetCurrentDirectory() + "/static/";
-    private static string configPath = configDir + "ssfw.json";
+    private static string configPath = configDir + "SSFWServer.json";
     private static string configNetworkLibraryPath = configDir + "NetworkLibrary.json";
     private static SnmpTrapSender? trapSender = null;
     private static SSFWClass? Server;
@@ -177,7 +168,7 @@ class Program
 
     static void Main()
     {
-        if (!NetworkLibrary.Extension.Windows.Win32API.IsWindows)
+        if (!NetworkLibrary.Extension.Microsoft.Win32API.IsWindows)
             GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
         else
             TechnitiumLibrary.Net.Firewall.FirewallHelper.CheckFirewallEntries(Assembly.GetEntryAssembly()?.Location);
@@ -242,7 +233,20 @@ class Program
             }
         }
 
+        // Previous versions had an erronious config label, we hotfix that.
+        string oldConfigPath = Path.GetDirectoryName(configPath) + $"/ssfw.json";
+        if (File.Exists(oldConfigPath))
+        {
+            if (!File.Exists(configPath))
+            {
+                LoggerAccessor.LogWarn("[Main] - Detected older incorrect SSFWServer configuration file path, performing file renaming...");
+                File.Move(oldConfigPath, configPath);
+            }
+        }
+
         SSFWServerConfiguration.RefreshVariables(configPath);
+
+        LoggerAccessor.LogInfo($"[Program] - Home client certificate challenges exporting to disk {(ToolsImplementation.ClientsCertificatesWrittenToDisk ? "was successful" : "failed, challenges check will be disabled")}.");
 
         StartOrUpdateServer();
 

@@ -8,6 +8,7 @@ using QuazalServer.RDVServices.RMC;
 using RDVServices;
 using CustomLogger;
 using QuazalServer.QNetZ.DDL;
+using AlcatrazService.DTO;
 
 namespace QuazalServer.RDVServices.GameServices.PS3GFRSServices
 {
@@ -36,7 +37,6 @@ namespace QuazalServer.RDVServices.GameServices.PS3GFRSServices
                         plInfo.Client.TimeSinceLastPacket < Constants.ClientTimeoutSeconds)
                     {
                         LoggerAccessor.LogWarn($"[RMC Authentication] - User login request {userName} was already logged-in - disconnecting...");
-                        /*
                         return Result(new Login(0)
                         {
                             retVal = (uint)ErrorCode.RendezVous_ConcurrentLoginDenied,
@@ -47,7 +47,6 @@ namespace QuazalServer.RDVServices.GameServices.PS3GFRSServices
                             strReturnMsg = string.Empty,
                             pbufResponse = new byte[] { }
                         });
-                        */
                     }
                     else
                         NetworkPlayers.DropPlayerInfo(plInfo);
@@ -115,6 +114,8 @@ namespace QuazalServer.RDVServices.GameServices.PS3GFRSServices
                     plInfo.PID = NetworkPlayers.GenerateUniqueUint(userName + "a1nPut!");
                     plInfo.AccountId = userName;
                     plInfo.Name = userName;
+
+                    DBHelper.RegisterUplayUser(Context.Handler.Factory.Item1, new UserRegisterModel() { Username = userName, PlayerNickName = userName, Password = "tmp" });
 
                     return Result(new Login(plInfo.PID)
                     {

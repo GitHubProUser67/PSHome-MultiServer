@@ -31,14 +31,14 @@ namespace WebAPIService.VEEMEE
 
             string result = null;
             string resultContentType = null;
-
+#if NET6_0_OR_GREATER
             if(absolutepath.Contains("//WardrobeWars/Images") && method == "GET")
             {
                 byte[] resultImage = Podium.RequestWWImage(contentType, apiPath, absolutepath);
                 resultContentType = "image/jpeg";
                 return (resultImage, resultContentType);
             }
-
+#endif
             switch (method)
             {
                 case "POST":

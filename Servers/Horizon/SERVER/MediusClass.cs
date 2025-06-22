@@ -2,7 +2,6 @@ using CustomLogger;
 using Newtonsoft.Json;
 using Horizon.RT.Common;
 using Horizon.RT.Models;
-using Horizon.LIBRARY.Common;
 using Horizon.SERVER.Config;
 using System.Diagnostics;
 using System.Net;
@@ -542,7 +541,7 @@ namespace Horizon.SERVER
                 Settings.NATIp = "natservice.pdonline.scea.com";
 
             // Update default rsa key
-            Horizon.LIBRARY.Pipeline.Attribute.ScertClientAttribute.DefaultRsaAuthKey = Settings.DefaultKey;
+            LIBRARY.Pipeline.Attribute.ScertClientAttribute.DefaultRsaAuthKey = Settings.DefaultKey;
 
             if (Settings.DefaultKey != null)
                 GlobalAuthPublic = new RSA_KEY(Settings.DefaultKey.N.ToByteArrayUnsigned().Reverse().ToArray());

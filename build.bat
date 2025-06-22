@@ -1,5 +1,8 @@
 @echo off
-@echo MultiServer build script 03/04/2025
+@echo MultiServer build script 09/06/2025
+@echo.
+
+@echo Make sure to download and install the latest Powershell revision here: https://github.com/PowerShell/PowerShell
 @echo.
 
 @echo Cleaning up directories:
@@ -22,8 +25,11 @@ xcopy /E /Y /I "Servers/SVO/bin" "~BuildOutput"
 xcopy /E /Y /I "Servers/MultiSpy/bin" "~BuildOutput"
 xcopy /E /Y /I "Servers/ApacheNet/bin" "~BuildOutput"
 xcopy /E /Y /I "Servers/MitmDNS/bin" "~BuildOutput"
-xcopy /E /Y /I "RemoteControl/bin/Debug/net6.0-windows" "~BuildOutput/Debug"
-xcopy /E /Y /I "RemoteControl/bin/Release/net6.0-windows" "~BuildOutput/Release"
+xcopy /E /Y /I "Servers/EdenServer/bin" "~BuildOutput"
+xcopy /E /Y /I "GUI/RemoteControl/bin/Debug/net6.0-windows" "~BuildOutput/Debug"
+xcopy /E /Y /I "GUI/RemoteControl/bin/Release/net6.0-windows" "~BuildOutput/Release"
+xcopy /E /Y /I "GUI/Json Editor/bin/Debug/net6.0-windows" "~BuildOutput/Debug"
+xcopy /E /Y /I "GUI/Json Editor/bin/Release/net6.0-windows" "~BuildOutput/Release"
 if exist "Plugins/HTTP/HomeWebTools/bin/Debug/net6.0/static" (
     xcopy /E /Y /I "Plugins/HTTP/HomeWebTools/bin/Debug/net6.0/static" "~BuildOutput/Debug/net6.0/static"
 )

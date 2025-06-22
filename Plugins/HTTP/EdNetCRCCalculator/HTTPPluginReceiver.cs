@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using WatsonWebserver.Core;
 using System.Net;
 using ApacheNet.PluginManager;
+using EdNetService.CRC;
 
 namespace EdNetCRCCalculator
 {
@@ -38,10 +39,7 @@ namespace EdNetCRCCalculator
                                         response.Headers.Add("Date", DateTime.Now.ToString("r"));
                                         response.StatusCode = (int)HttpStatusCode.OK;
                                         response.ContentType = "text/plain";
-                                        if (request.QuerystringExists("v2") && request.RetrieveQueryValue("v2").Equals("true", StringComparison.InvariantCultureIgnoreCase))
-                                            sent = response.Send(EdNetService.CRCUtils.GetCRCFromStringHexadecimal(request.RetrieveQueryValue("str"), true)).Result;
-                                        else
-                                            sent = response.Send(EdNetService.CRCUtils.GetCRCFromStringHexadecimal(request.RetrieveQueryValue("str"), false)).Result;
+                                        sent = response.Send(Utils.GetCRCFromStringHexadecimal(request.RetrieveQueryValue("str"))).Result;
                                     }
                                     else
                                     {

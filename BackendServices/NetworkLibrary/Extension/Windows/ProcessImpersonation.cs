@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 
-namespace NetworkLibrary.Extension.Windows
+namespace NetworkLibrary.Extension.Microsoft
 {
     public delegate object Invoker();
 

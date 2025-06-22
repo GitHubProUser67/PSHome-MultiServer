@@ -66,7 +66,7 @@ namespace WebAPIService.VEEMEE.audi_sled
                             {
                                 if (File.Exists(highestScorePath))
                                 {
-                                    float currentTime = (float)double.Parse(File.ReadAllText(highestScorePath).Split(":")[0], CultureInfo.InvariantCulture);
+                                    float currentTime = (float)double.Parse(File.ReadAllText(highestScorePath).Split(':')[0], CultureInfo.InvariantCulture);
                                     if (currentTime > time)
                                         File.WriteAllText(highestScorePath, time.ToString().Replace(",", ".") + $":{psnid}:{numOfRaces}");
                                     else
@@ -93,7 +93,7 @@ namespace WebAPIService.VEEMEE.audi_sled
                             {
                                 if (File.Exists(highestScorePath))
                                 {
-                                    float currentTime = (float)double.Parse(File.ReadAllText(highestScorePath).Split(":")[0], CultureInfo.InvariantCulture);
+                                    float currentTime = (float)double.Parse(File.ReadAllText(highestScorePath).Split(':')[0], CultureInfo.InvariantCulture);
                                     if (currentTime > time)
                                         File.WriteAllText(highestScorePath, time.ToString().Replace(",", ".") + $":{psnid}:{numOfRaces}");
                                     else
@@ -177,7 +177,7 @@ namespace WebAPIService.VEEMEE.audi_sled
                             string scoreData;
                             lock (_Lock)
                             {
-                                scoreData = File.ReadAllText(highestScorePath).Split(":")[0];
+                                scoreData = File.ReadAllText(highestScorePath).Split(':')[0];
                             }
                             return Regex.Replace(File.ReadAllText(filePath), @"<time>\d+(\.\d+)?</time>", $"<time>{scoreData}</time>");
                         }
@@ -281,7 +281,7 @@ namespace WebAPIService.VEEMEE.audi_sled
                     {
                         try
                         {
-                            string[] scoreData = File.ReadAllText(file).Split(":");
+                            string[] scoreData = File.ReadAllText(file).Split(':');
                             if (scoreData.Length == 3)
                                 scores.Add((scoreData[1], (float)double.Parse(scoreData[0], CultureInfo.InvariantCulture), scoreData[2]));
                         }
@@ -292,7 +292,7 @@ namespace WebAPIService.VEEMEE.audi_sled
                 }
             }
 
-            return scores.OrderByDescending(s => s).Take(8).ToList();
+            return scores.Where(s => s.Item2 != 0F).OrderBy(s => s.Item2).Take(8).ToList();
         }
     }
 }

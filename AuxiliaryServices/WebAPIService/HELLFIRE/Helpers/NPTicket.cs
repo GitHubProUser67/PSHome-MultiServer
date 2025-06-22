@@ -4,8 +4,8 @@ using WebAPIService.SSFW;
 using System.Text;
 using System.IO;
 using System;
-using NetworkLibrary.Extension;
 using NetHasher;
+using XI5;
 
 namespace WebAPIService.HELLFIRE.Helpers
 {
@@ -48,7 +48,7 @@ namespace WebAPIService.HELLFIRE.Helpers
                 }
             }
 
-            if (ticketData != null)
+            if (ticketData != null && ticketData.Length > 188)
             {
                 // Extract the desired portion of the binary data
                 byte[] extractedData = new byte[0x63 - 0x54 + 1];
@@ -63,10 +63,26 @@ namespace WebAPIService.HELLFIRE.Helpers
                         extractedData[i] = 0x20;
                 }
 
-                if (ByteUtils.FindBytePattern(ticketData, new byte[] { 0x52, 0x50, 0x43, 0x4E }, 184) != -1)
-                {
-                    LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {Encoding.ASCII.GetString(extractedData).Replace("H", string.Empty)} logged in and is on RPCN");
+                const string RPCNSigner = "RPCN";
 
+                // get ticket
+                XI5Ticket ticket = XI5Ticket.ReadFromBytes(ticketData);
+
+                // setup username
+                string username = ticket.Username;
+
+                // invalid ticket
+                if (!ticket.Valid)
+                {
+                    // log to console
+                    LoggerAccessor.LogWarn($"[HFGames] - NovusPrime : User {username} tried to alter their ticket data");
+
+                    return null;
+                }
+
+                // RPCN
+                if (ticket.SignatureIdentifier == RPCNSigner)
+                {
                     // Convert the modified data to a string
                     resultString = Encoding.ASCII.GetString(extractedData) + "RPCN";
 
@@ -82,11 +98,17 @@ namespace WebAPIService.HELLFIRE.Helpers
                     resultString += hash;
 
                     sessionid = GuidGenerator.SSFWGenerateGuid(hash, resultString);
+
+                    LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on RPCN");
+                }
+                else if (username.EndsWith($"@{RPCNSigner}"))
+                {
+                    LoggerAccessor.LogError($"[HFGames] - NovusPrime : User {username} was caught using a RPCN suffix while not on it!");
+
+                    return null;
                 }
                 else
                 {
-                    LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : {Encoding.ASCII.GetString(extractedData).Replace("H", string.Empty)} logged in and is on PSN");
-
                     // Convert the modified data to a string
                     resultString = Encoding.ASCII.GetString(extractedData);
 
@@ -102,6 +124,8 @@ namespace WebAPIService.HELLFIRE.Helpers
                     resultString += hash;
 
                     sessionid = GuidGenerator.SSFWGenerateGuid(hash, resultString);
+
+                    LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on PSN");
                 }
 
                 return $"<response><Thing>{userid};{sessionid}</Thing></response>";

@@ -13,8 +13,11 @@ namespace MultiSocks.Aries.Model
 
         public override bool AddUser(AriesUser? user, string VERS = "")
         {
+            if (user == null)
+                return false;
+
             if (Users.Count >= Room.Max) return false;
-            base.AddUser(user);
+            if (!base.AddUser(user)) return false;
 
             //send move to this user
             Move move = new Move()
@@ -25,22 +28,11 @@ namespace MultiSocks.Aries.Model
             };
             user.Connection?.SendMessage(move);
 
+            user.CurrentRoom = Room;
+
             //send who to this user to tell them who they are
+            user.SendPlusWho(user, VERS);
 
-            PlusUser info = user.GetInfo();
-
-            user.Connection?.SendMessage(new PlusWho()
-            {
-                I = info.I ?? string.Empty,
-                N = info.N,
-                M = info.M,
-                A = info.A ?? string.Empty,
-                X = info.X,
-                R = Room.Name,
-                RI = Room.ID.ToString(),
-                S = string.Empty,
-                F = string.Empty
-            });
             RefreshUser(user);
             ListToUser(user);
             Room.BroadcastPopulation();
@@ -49,8 +41,11 @@ namespace MultiSocks.Aries.Model
 
         public override bool AddUserWithRoomMesg(AriesUser? user, string VERS = "")
         {
+            if (user == null)
+                return false;
+
             if (Users.Count >= Room.Max) return false;
-            base.AddUser(user);
+            if (!base.AddUser(user)) return false;
 
             //send move to this user
             Room move = new Room()
@@ -61,22 +56,11 @@ namespace MultiSocks.Aries.Model
             };
             user.Connection?.SendMessage(move);
 
+            user.CurrentRoom = Room;
+
             //send who to this user to tell them who they are
+            user.SendPlusWho(user, VERS);
 
-            PlusUser info = user.GetInfo();
-
-            user.Connection?.SendMessage(new PlusWho()
-            {
-                I = info.I ?? string.Empty,
-                N = info.N,
-                M = info.M,
-                A = info.A ?? string.Empty,
-                X = info.X,
-                R = Room.Name,
-                RI = Room.ID.ToString(),
-                S = string.Empty,
-                F = string.Empty
-            });
             RefreshUser(user);
             ListToUser(user);
             Room.BroadcastPopulation();
@@ -133,28 +117,14 @@ namespace MultiSocks.Aries.Model
         public override bool RemoveUser(AriesUser? user)
         {
             base.RemoveUser(user);
-            if (Room.Users != null)
+            Broadcast(new PlusUser()
             {
-                Broadcast(new PlusUser()
-                {
-                    I = user.ID.ToString(),
-                    T = Room.Users.Count().ToString(),
-                    F = null,
-                    P = null,
-                    S = null
-                });
-            }
-            else
-            {
-                Broadcast(new PlusUser()
-                {
-                    I = user.ID.ToString(),
-                    T = "0",
-                    F = null,
-                    P = null,
-                    S = null
-                });
-            }
+                I = user.ID.ToString(),
+                T = Room.Users.Count().ToString(),
+                F = null,
+                P = null,
+                S = null
+            });
 
             Broadcast(new PlusMesg()
             {
@@ -165,7 +135,43 @@ namespace MultiSocks.Aries.Model
 
             Room.BroadcastPopulation();
             Room.RemoveChallenges(user);
+            user.CurrentRoom = null;
             return true;
+        }
+
+        public bool RemoveUserAndCheckRoomValidity(AriesUser? user)
+        {
+            if (Room.IsGlobal)
+            {
+                RemoveUser(user);
+                return false;
+            }
+
+            base.RemoveUser(user);
+            Broadcast(new PlusUser()
+            {
+                I = user.ID.ToString(),
+                T = Room.Users.Count().ToString(),
+                F = null,
+                P = null,
+                S = null
+            });
+
+            Broadcast(new PlusMesg()
+            {
+                F = "C",
+                T = "\"has left the room\"",
+                N = user.PersonaName
+            });
+
+            Room.BroadcastPopulation();
+            Room.RemoveChallenges(user);
+            user.CurrentRoom = null;
+
+            if (Room.Users.Count() == 0)
+                return true;
+
+            return false;
         }
     }
 }

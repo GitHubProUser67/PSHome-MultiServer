@@ -886,6 +886,9 @@ namespace ApacheNet.Extensions.Lockwood
                                         <applet>
 		                                    <Telescope_def></Telescope_def>
 	                                    </applet>
+                                        <entityGroup>
+		                                    <EntityGroup_def></EntityGroup_def>
+	                                    </entityGroup>
                                         <detectors>
 		                                    <detectorsTelescope_def></detectorsTelescope_def>
 	                                    </detectors>
@@ -915,6 +918,22 @@ namespace ApacheNet.Extensions.Lockwood
                                                     </override>
 		                                        </detectors>
 		                                    </root>
+                                            <root_telescope>
+			                                    <rot type='vec'>0,-190,0,-190</rot>
+                                                <scale type='vec'>1,1,1,1</scale>
+                                                <pos type='vec'>-67.069,2.211,-27.122,0</pos>
+                                                <entityGroup>
+			                                        <name>EntityGroup_def</name>
+                                                    <override>
+                                                        <entities>
+                                                            <_>
+                                                                <mdl>Telescope.mdl</mdl>
+                                                                <hkx>Telescope.hkx</hkx>
+                                                            </_>
+                                                        </entities>
+                                                    </override>
+		                                        </entityGroup>
+		                                    </root_telescope>
 	                                    </feature_root>
                                     </lua>");
                                     return;
@@ -1038,55 +1057,6 @@ namespace ApacheNet.Extensions.Lockwood
                                                     </override>
 		                                        </applet>
 		                                    </root_commerce>
-                                            <root_telescope>
-			                                    <rot type='vec'>0,-190,0,-190</rot>
-                                                <scale type='vec'>1,1,1,1</scale>
-                                                <pos type='vec'>-67.069,2.211,-27.122,0</pos>
-                                                <applet>
-			                                        <name>Posertrons_V2</name>
-                                                    <override>
-                                                        <appletId>Posertron_Applet</appletId>
-                                                        <register>AppletRegister_posertron.lua</register>
-                                                        <params>
-                                                            <model>
-                                                                <mdl>Telescope.mdl</mdl>
-                                                                <hkx>Telescope.hkx</hkx>
-                                                            </model>
-                                                        </params>
-                                                    </override>
-		                                        </applet>
-		                                    </root_telescope>
-	                                    </feature_root>
-                                    </lua>");
-                                    return;
-                                }
-                                else if (sceneIdent == "Lounge")
-                                {
-                                    await ctx.Response.Send($@"<lua>
-	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
-                                        <applet>
-		                                    <Posertrons_V2></Posertrons_V2>
-	                                    </applet>
-	                                    <feature_root>
-		                                    <root>
-			                                    <rot type='vec'>0,15,0,15</rot>
-                                                <scale type='vec'>1,1,1,1</scale>
-                                                <pos type='vec'>6.910,-0.2,22.800,0</pos>
-                                                <applet>
-			                                        <name>Posertrons_V2</name>
-                                                    <override>
-                                                        <appletId>Posertron_Applet</appletId>
-                                                        <register>AppletRegister_posertron.lua</register>
-                                                        <params>
-                                                            <model>
-                                                                <mdl>lock.mdl</mdl>
-                                                                <skn>lock.skn</skn>
-                                                                <ani>lock.ani</ani>
-                                                            </model>
-                                                        </params>
-                                                    </override>
-		                                        </applet>
-		                                    </root>
 	                                    </feature_root>
                                     </lua>");
                                     return;
@@ -1100,6 +1070,9 @@ namespace ApacheNet.Extensions.Lockwood
                                         <applet>
 		                                    <UUIDGate_def></UUIDGate_def>
 	                                    </applet>
+                                        <entityGroup>
+		                                    <EntityGroup_def></EntityGroup_def>
+	                                    </entityGroup>
                                         <detectors>
 		                                    <detectorsGate_def></detectorsGate_def>
 	                                    </detectors>
@@ -1131,6 +1104,23 @@ namespace ApacheNet.Extensions.Lockwood
                                                     </override>
 		                                        </detectors>
 		                                    </root>
+                                            <root_gate>
+			                                    <rot type='vec'>0,15,0,15</rot>
+                                                <scale type='vec'>1,1,1,1</scale>
+                                                <pos type='vec'>6.910,-0.2,22.800,0</pos>
+                                                <entityGroup>
+			                                        <name>EntityGroup_def</name>
+                                                    <override>
+                                                        <entities>
+                                                            <_>
+                                                                <mdl>lock.mdl</mdl>
+                                                                <skn>lock.skn</skn>
+                                                                <ani>lock.ani</ani>
+                                                            </_>
+                                                        </entities>
+                                                    </override>
+		                                        </entityGroup>
+		                                    </root_gate>
                                             <gate_dest>
 			                                    <rot type='vec'>0,0,0,0</rot>
                                                 <scale type='vec'>0,0,0,0</scale>

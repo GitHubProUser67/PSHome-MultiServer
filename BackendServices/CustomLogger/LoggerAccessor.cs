@@ -1,4 +1,5 @@
 using Figgle;
+using Figgle.Fonts;
 using Microsoft.Extensions.Logging;
 using NReco.Logging.File;
 using System;
@@ -48,7 +49,9 @@ namespace CustomLogger
 
         public static void SetupLogger(string project, string CurrentDir)
         {
-            string logfilePath = Path.Combine(CurrentDir, $"logs/{project}.log");
+            const string logsDir = "logs";
+
+            string logfilePath = Path.Combine(CurrentDir, $"{logsDir}/{project}.log");
 
             try
             {
@@ -61,7 +64,7 @@ namespace CustomLogger
 
             }
 
-            Console.WriteLine(FiggleFonts.Ogre.Render(project));
+            RenderFiggle(FiggleFonts.Banner3D, project);
 
             ILoggerFactory factory = LoggerFactory.Create(builder =>
             {
@@ -77,19 +80,29 @@ namespace CustomLogger
                 if (File.Exists(logfilePath))
                     using (FileStream stream = File.Open(logfilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
 
-                Directory.CreateDirectory(Path.Combine(CurrentDir, "logs"));
+                Directory.CreateDirectory(Path.Combine(CurrentDir, logsDir));
 
                 factory.AddProvider(_fileLogger = new FileLoggerProvider(logfilePath, new FileLoggerOptions()
                 {
                     UseUtcTimestamp = true,
                     Append = false,
-                    FileSizeLimitBytes = 4294967295, // 4GB (FAT32 max size) - 1 byte
+                    FileSizeLimitBytes = 2147483648, // 2GB (FAT32 safe size)
                     MaxRollingFiles = 100
                 }));
             }
             catch { }
 
-            Logger = factory.CreateLogger(string.Empty);
+            Logger = factory.CreateLogger(project);
+        }
+
+        private static void RenderFiggle(object graffiti, string project)
+        {
+            throw new NotImplementedException();
+        }
+
+        private static void RenderFiggle(FiggleFont font, string s, int? smushOverride = null)
+        {
+            Console.WriteLine(font.Render(s, smushOverride));
         }
 
 #pragma warning disable

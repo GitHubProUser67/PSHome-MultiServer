@@ -6,18 +6,23 @@ namespace BlazeCommon
 {
     public static class BlazeUtils
     {
-        internal static void LogPacket(IBlazeComponent? component, IBlazePacket packet, bool inbound)
+        internal static string LogPacket(IBlazeComponent? component, IBlazePacket packet, bool inbound)
         {
+            string message;
+
             if (component == null)
             {
-                LoggerAccessor.LogInfo($"[BlazeUtils] - PacketData: {packet.Frame.ToString(inbound)}");
-                return;
+                message = $"[BlazeUtils] - PacketData: {packet.Frame.ToString(inbound)}";
+                LoggerAccessor.LogInfo(message);
+                return message;
             }
 #if DEBUG
-            LoggerAccessor.LogInfo($"[BlazeUtils] - PacketData: {packet.ToString(component, inbound)}");
+            message = $"[BlazeUtils] - PacketData: {packet.ToString(component, inbound)}";
 #else
-            LoggerAccessor.LogInfo($"[BlazeUtils] - PacketData: {packet.Frame.ToString(component, inbound)}");
+            message = $"[BlazeUtils] - PacketData: {packet.Frame.ToString(component, inbound)}";
 #endif
+            LoggerAccessor.LogInfo(message);
+            return message;
         }
 
         public static IPAddress ToIpAddress(uint ip)

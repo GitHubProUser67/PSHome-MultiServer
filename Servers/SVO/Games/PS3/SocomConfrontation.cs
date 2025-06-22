@@ -3,6 +3,7 @@ using NetworkLibrary.Extension;
 using SpaceWizards.HttpListener;
 using System.Text;
 using System.Web;
+using XI5;
 
 namespace SVO.Games.PS3
 {
@@ -258,26 +259,40 @@ namespace SVO.Games.PS3
                                             // Read the contents of the memory stream into the byte array
                                             ms.Read(buffer, 0, contentLength);
 
-                                            // Extract the desired portion of the binary data
-                                            byte[] extractedData = new byte[0x63 - 0x54 + 1];
+                                            const string RPCNSigner = "RPCN";
 
-                                            // Copy it
-                                            Array.Copy(buffer, 0x54, extractedData, 0, extractedData.Length);
+                                            // get ticket
+                                            XI5Ticket ticket = XI5Ticket.ReadFromBytes(buffer);
 
-                                            // Convert 0x00 bytes to 0x20 so we pad as space.
-                                            for (int i = 0; i < extractedData.Length; i++)
+                                            // setup username
+                                            psnname = ticket.Username;
+
+                                            // invalid ticket
+                                            if (!ticket.Valid)
                                             {
-                                                if (extractedData[i] == 0x00)
-                                                    extractedData[i] = 0x20;
+                                                // log to console
+                                                LoggerAccessor.LogWarn($"[SVO] - User {psnname} tried to alter their ticket data");
+
+                                                response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                                return;
                                             }
 
-                                            // Convert the modified data to a string
-                                            psnname = Encoding.ASCII.GetString(extractedData).Replace(" ", string.Empty);
+                                            // RPCN
+                                            if (ticket.SignatureIdentifier == RPCNSigner)
+                                            {
+                                                LoggerAccessor.LogInfo($"[SVO] - User {psnname} connected at: {DateTime.Now} and is on RPCN");
 
-                                            if (ByteUtils.FindBytePattern(buffer, new byte[] { 0x52, 0x50, 0x43, 0x4E }) != -1)
-                                                LoggerAccessor.LogInfo($"SVO : User {psnname} logged in and is on RPCN");
+                                                psnname += $"@{RPCNSigner}";
+                                            }
+                                            else if (psnname.EndsWith($"@{RPCNSigner}"))
+                                            {
+                                                LoggerAccessor.LogError($"[SVO] - User {psnname} was caught using a RPCN suffix while not on it!");
+
+                                                response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                                return;
+                                            }
                                             else
-                                                LoggerAccessor.LogInfo($"SVO : User {psnname} logged in and is on PSN");
+                                                LoggerAccessor.LogInfo($"[SVO] - User {psnname} connected at: {DateTime.Now} and is on PSN");
 
                                             ms.Flush();
                                         }

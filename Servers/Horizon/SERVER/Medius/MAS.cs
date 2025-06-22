@@ -20,6 +20,7 @@ using XI5;
 using EndianTools;
 using Horizon.MUM.Models;
 using Horizon.SERVER.Extension.PlayStationHome;
+using System.Text.RegularExpressions;
 
 namespace Horizon.SERVER.Medius
 {
@@ -1916,75 +1917,68 @@ namespace Horizon.SERVER.Medius
                             break;
                         }
 
-                        string accountLoggingMsg = string.Empty;
-                        byte[] XI5TicketData = ByteUtils.CombineByteArrays(BitConverter.GetBytes(
+                        const string RPCNSigner = "RPCN";
+
+                        // get ticket
+                        XI5Ticket ticket = XI5Ticket.ReadFromBytes(ByteUtils.CombineByteArrays(BitConverter.GetBytes(
                             BitConverter.IsLittleEndian ? EndianUtils.ReverseUint(ticketLoginRequest.Version) : ticketLoginRequest.Version), BitConverter.GetBytes(
-                            BitConverter.IsLittleEndian ? EndianUtils.ReverseUint(ticketLoginRequest.Size) : ticketLoginRequest.Size), ticketLoginRequest.TicketData);
+                            BitConverter.IsLittleEndian ? EndianUtils.ReverseUint(ticketLoginRequest.Size) : ticketLoginRequest.Size), ticketLoginRequest.TicketData));
 
-                        // Extract the desired portion of the binary data for a npticket 4.0
-                        byte[] extractedData = new byte[0x63 - 0x54 + 1];
+                        // setup username
+                        string username = ticket.Username;
 
-                        // Copy it
-                        Array.Copy(XI5TicketData, 0x54, extractedData, 0, extractedData.Length);
-
-                        // Trim null bytes
-                        int nullByteIndex = Array.IndexOf(extractedData, (byte)0x00);
-                        if (nullByteIndex >= 0)
+                        // invalid ticket
+                        if (!ticket.Valid)
                         {
-                            byte[] trimmedData = new byte[nullByteIndex];
-                            Array.Copy(extractedData, trimmedData, nullByteIndex);
-                            extractedData = trimmedData;
+                            // log to console
+                            LoggerAccessor.LogWarn($"[MAS] - MediusTicketLoginRequest: User {username} tried to alter their ticket data");
+
+                            data.ClientObject.Queue(new MediusTicketLoginResponse()
+                            {
+                                MessageID = ticketLoginRequest.MessageID,
+                                StatusCodeTicketLogin = MediusCallbackStatus.MediusDBError
+                            });
+
+                            break;
                         }
 
-                        string UserOnlineId = Encoding.UTF8.GetString(extractedData);
-                        XI5Ticket ticker = new XI5Ticket(XI5TicketData);
-
-                        if (ByteUtils.FindBytePattern(XI5TicketData, new byte[] { 0x52, 0x50, 0x43, 0x4E }, 184) != -1)
+                        // RPCN
+                        if (ticket.SignatureIdentifier == RPCNSigner)
                         {
-                            if (MediusClass.Settings.ForceOfficialRPCNSignature && !ticker.SignedByOfficialRPCN)
-                            {
-                                LoggerAccessor.LogError($"[MAS] - MediusTicketLoginRequest : User {UserOnlineId} was caught using an invalid RPCN signature!");
+                            LoggerAccessor.LogInfo($"[MAS] - MediusTicketLoginRequest : User {username} connected at: {DateTime.Now} and is on RPCN");
 
+                            data.ClientObject.IsOnRPCN = true;
+                            username += $"@{RPCNSigner}";
+                        }
+                        else if (username.EndsWith($"@{RPCNSigner}"))
+                        {
+                            LoggerAccessor.LogError($"[MAS] - MediusTicketLoginRequest : User {username} was caught using a RPCN suffix while not on it!");
+
+                            await HorizonServerConfiguration.Database.BanIp(data.ClientObject.IP).ContinueWith((r) =>
+                            {
+                                if (r.IsCompletedSuccessfully && r.Result)
+                                {
+                                    // Banned
+                                    QueueBanMessage(data);
+                                }
                                 // Account is banned
-                                // Temporary solution is to tell the client the login failed
                                 data.ClientObject.Queue(new MediusTicketLoginResponse()
                                 {
                                     MessageID = ticketLoginRequest.MessageID,
                                     StatusCodeTicketLogin = MediusCallbackStatus.MediusMachineBanned
                                 });
-
-                                break;
-                            }
-
-                            accountLoggingMsg = $"[MAS] - MediusTicketLoginRequest : User {UserOnlineId} logged in and is on RPCN";
-                            data.ClientObject.IsOnRPCN = true;
-                            UserOnlineId += "@RPCN";
-                        }
-                        else if (UserOnlineId.EndsWith("@RPCN"))
-                        {
-                            LoggerAccessor.LogError($"[MAS] - MediusTicketLoginRequest : User {UserOnlineId} was caught using a RPCN suffix while not on it!");
-
-                            // Account is banned
-                            // Temporary solution is to tell the client the login failed
-                            data.ClientObject.Queue(new MediusTicketLoginResponse()
-                            {
-                                MessageID = ticketLoginRequest.MessageID,
-                                StatusCodeTicketLogin = MediusCallbackStatus.MediusMachineBanned
                             });
 
                             break;
                         }
                         else
-                            accountLoggingMsg = $"[MAS] - MediusTicketLoginRequest : User {UserOnlineId} logged in and is on PSN";
+                            LoggerAccessor.LogInfo($"[MAS] - MediusTicketLoginRequest : User {username} connected at: {DateTime.Now} and is on PSN");
 
-                        _ = data.ClientObject.CurrentChannel?.BroadcastSystemMessage(data.ClientObject.CurrentChannel.LocalClients.Where(client => client != data.ClientObject), accountLoggingMsg, byte.MinValue);
+                        // get existing account
+                        ClientObject? existingClient = MediusClass.Manager.GetClientByAccountName(username, data.ClientObject.ApplicationId);
 
-                        LoggerAccessor.LogInfo(accountLoggingMsg);
-
-                        ClientObject? ExsitingClient = MediusClass.Manager.GetClientByAccountName(UserOnlineId, data.ClientObject.ApplicationId);
-
-                        // Check the client isn't already logged in
-                        if (ExsitingClient != null && ExsitingClient.IsLoggedIn)
+                        // account already logged in
+                        if (existingClient != null && existingClient.IsLoggedIn)
                         {
                             data.ClientObject.Queue(new MediusTicketLoginResponse()
                             {
@@ -1995,144 +1989,143 @@ namespace Horizon.SERVER.Medius
                             break;
                         }
 
-                        //Check if their MacBanned
-                        await HorizonServerConfiguration.Database.GetIsMacBanned(data.MachineId ?? string.Empty).ContinueWith(async (r) =>
+                        // get client ip
+                        string clientIp = Regex.Match(clientChannel.RemoteAddress.ToString(), @"\[(?:.*?:)?(?<ip>\d+\.\d+\.\d+\.\d+)\]").Groups["ip"].Value;
+
+                        // ip is banned
+                        if (await HorizonServerConfiguration.Database.GetIsIpBanned(IPAddress.Parse(clientIp)))
                         {
-                            if (r.IsCompletedSuccessfully && data != null && data.ClientObject != null && data.ClientObject.IsConnected)
+                            LoggerAccessor.LogWarn($"[MAS] - MediusTicketLoginRequest: User {username} tried to login with banned IP {clientIp}");
+
+                            data?.ClientObject?.Queue(new MediusTicketLoginResponse()
                             {
-                                data.IsBanned = r.IsCompletedSuccessfully && r.Result;
+                                MessageID = ticketLoginRequest.MessageID,
+                                StatusCodeTicketLogin = MediusCallbackStatus.MediusAccountBanned
+                            });
 
-                                #region isBanned?
-                                LoggerAccessor.LogInfo($"Is Connected User MAC Banned: {data.IsBanned}");
+                            // Then queue send ban message
+                            await QueueBanMessage(data, "Your IP has been banned");
 
-                                if (data.IsBanned == true)
-                                {
-                                    LoggerAccessor.LogError($"Account MachineID {data.MachineId} is BANNED!");
+                            break;
+                        }
 
-                                    // Account is banned
-                                    // Temporary solution is to tell the client the login failed
-                                    data?.ClientObject?.Queue(new MediusTicketLoginResponse()
-                                    {
-                                        MessageID = ticketLoginRequest.MessageID,
-                                        StatusCodeTicketLogin = MediusCallbackStatus.MediusMachineBanned
-                                    });
+                        // cid is banned
+                        if (await HorizonServerConfiguration.Database.GetIsMacBanned(data.MachineId ?? string.Empty))
+                        {
+                            LoggerAccessor.LogWarn($"[MAS] - MediusTicketLoginRequest: User {username} tried to login with banned CID {data.MachineId}");
 
-                                    // Send ban message
-                                    //await QueueBanMessage(data);
-                                }
-                                else
-                                {
-                                    await HorizonServerConfiguration.Database.GetAccountByName(UserOnlineId, data.ClientObject.ApplicationId, true).ContinueWith(async (r) =>
-                                    {
-                                        if (data == null || data.ClientObject == null || !data.ClientObject.IsConnected)
-                                            return;
-
-                                        if (r.IsCompletedSuccessfully && r.Result != null && data != null && data.ClientObject != null && data.ClientObject.IsConnected)
-                                        {
-                                            bool isHomeRejected = !MediusClass.Settings.PlaystationHomeAllowAnyEboot && (data.ClientObject.ApplicationId == 20371 || data.ClientObject.ApplicationId == 20374) && data.ClientObject.ClientHomeData == null;
-
-                                            LoggerAccessor.LogInfo($"Account found for AppId from Client: {data.ClientObject.ApplicationId}");
-
-                                            if (r.Result.IsBanned || isHomeRejected)
-                                            {
-                                                // Account is banned
-                                                // Respond with Statuscode MediusAccountBanned
-                                                data?.ClientObject?.Queue(new MediusTicketLoginResponse()
-                                                {
-                                                    MessageID = ticketLoginRequest.MessageID,
-                                                    StatusCodeTicketLogin = MediusCallbackStatus.MediusAccountBanned
-                                                });
-
-                                                // Then queue send ban message
-                                                await QueueBanMessage(data, isHomeRejected ? "You was caught using an anti Poke/Query eboot" : "Your CID has been banned");
-                                            }
-                                            else
-                                            {
-                                                #region AccountWhitelist Check
-                                                if (appSettings.EnableAccountWhitelist && !appSettings.AccountIdWhitelist.Contains(r.Result.AccountId))
-                                                {
-                                                    LoggerAccessor.LogError($"AppId {data.ClientObject.ApplicationId} has EnableAccountWhitelist enabled or\n" +
-                                                        $"Contains a AccountIdWhitelist!");
-
-                                                    // Account not allowed to sign in
-                                                    data?.ClientObject?.Queue(new MediusTicketLoginResponse()
-                                                    {
-                                                        MessageID = ticketLoginRequest.MessageID,
-                                                        StatusCodeTicketLogin = MediusCallbackStatus.MediusFail
-                                                    });
-                                                }
-                                                #endregion
-
-                                                if (data != null)
-                                                    await Login(ticketLoginRequest.MessageID, clientChannel, data, r.Result, true);
-                                            }
-
-                                        }
-                                        else
-                                        {
-                                            // Account not found, create new and login
-                                            #region AccountCreationDisabled?
-                                            // Check that account creation is enabled
-                                            if (appSettings.DisableAccountCreation)
-                                            {
-                                                LoggerAccessor.LogError($"AppId {data?.ClientObject?.ApplicationId} has DisableAllowCreation enabled!");
-
-                                                // Reply error
-                                                data?.ClientObject?.Queue(new MediusTicketLoginResponse()
-                                                {
-                                                    MessageID = ticketLoginRequest.MessageID,
-                                                    StatusCodeTicketLogin = MediusCallbackStatus.MediusFail,
-                                                });
-                                                return;
-                                            }
-                                            #endregion
-
-                                            if (data != null)
-                                            {
-                                                LoggerAccessor.LogInfo($"Account not found for AppId from Client: {data.ClientObject?.ApplicationId}");
-
-                                                if (data.ClientObject != null)
-                                                {
-                                                    _ = HorizonServerConfiguration.Database.CreateAccount(new CreateAccountDTO()
-                                                    {
-                                                        AccountName = UserOnlineId,
-                                                        AccountPassword = "UNSET",
-                                                        MachineId = data.MachineId,
-                                                        MediusStats = Convert.ToBase64String(new byte[Constants.ACCOUNTSTATS_MAXLEN]),
-                                                        AppId = data.ClientObject.ApplicationId
-                                                    }, clientChannel).ContinueWith(async (r) =>
-                                                    {
-                                                        LoggerAccessor.LogInfo($"Creating New Account for user {UserOnlineId}!");
-
-                                                        if (r.IsCompletedSuccessfully && r.Result != null)
-                                                            await Login(ticketLoginRequest.MessageID, clientChannel, data, r.Result, true);
-                                                        else
-                                                        {
-                                                            // Reply error
-                                                            data.ClientObject.Queue(new MediusTicketLoginResponse()
-                                                            {
-                                                                MessageID = ticketLoginRequest.MessageID,
-                                                                StatusCodeTicketLogin = MediusCallbackStatus.MediusDBError
-                                                            });
-                                                        }
-                                                    });
-                                                }
-                                            }
-                                        }
-                                    });
-                                }
-                                #endregion
-                            }
-                            else
+                            data?.ClientObject?.Queue(new MediusTicketLoginResponse()
                             {
+                                MessageID = ticketLoginRequest.MessageID,
+                                StatusCodeTicketLogin = MediusCallbackStatus.MediusAccountBanned
+                            });
+
+                            // Then queue send ban message
+                            await QueueBanMessage(data, "Your CID has been banned");
+
+                            break;
+                        }
+
+                        // get account
+                        AccountDTO? account = await HorizonServerConfiguration.Database.GetAccountByName(username, data.ClientObject.ApplicationId, true);
+
+                        // account doesn't exist
+                        if (account == null)
+                        {
+                            // account creation disabled
+                            if (appSettings.DisableAccountCreation)
+                            {
+                                LoggerAccessor.LogError($"[MAS] - MediusTicketLoginRequest: AppId {data?.ClientObject?.ApplicationId} has account creation disabled");
+
                                 // Reply error
                                 data?.ClientObject?.Queue(new MediusTicketLoginResponse()
                                 {
                                     MessageID = ticketLoginRequest.MessageID,
-                                    StatusCodeTicketLogin = MediusCallbackStatus.MediusDBError,
+                                    StatusCodeTicketLogin = MediusCallbackStatus.MediusFail,
                                 });
+
+                                break;
                             }
-                        });
+
+                            // create new account
+                            account = await HorizonServerConfiguration.Database.CreateAccount(new CreateAccountDTO()
+                            {
+                                AccountName = username,
+                                AccountPassword = "UNSET",
+                                MachineId = data.MachineId,
+                                MediusStats = Convert.ToBase64String(new byte[Constants.ACCOUNTSTATS_MAXLEN]),
+                                AppId = data.ClientObject.ApplicationId
+                            }, clientChannel);
+
+                            // error creating account
+                            if (account == null)
+                            {
+                                data.ClientObject.Queue(new MediusTicketLoginResponse()
+                                {
+                                    MessageID = ticketLoginRequest.MessageID,
+                                    StatusCodeTicketLogin = MediusCallbackStatus.MediusDBError
+                                });
+
+                                break;
+                            }
+                        }
+
+                        // account not whitelisted
+                        else if (appSettings.EnableAccountWhitelist &&
+                            !appSettings.AccountIdWhitelist.Contains(account.AccountId))
+                        {
+                            LoggerAccessor.LogError($"[MAS] - MediusTicketLoginRequest: {username} tried to login without being whitelisted");
+
+                            data?.ClientObject?.Queue(new MediusTicketLoginResponse()
+                            {
+                                MessageID = ticketLoginRequest.MessageID,
+                                StatusCodeTicketLogin = MediusCallbackStatus.MediusFail
+                            });
+
+                            break;
+                        }
+
+                        // account is banned
+                        if (account.IsBanned)
+                        {
+                            LoggerAccessor.LogWarn($"[MAS] - MediusTicketLoginRequest: User {username} tried to login with banned account");
+
+                            data?.ClientObject?.Queue(new MediusTicketLoginResponse()
+                            {
+                                MessageID = ticketLoginRequest.MessageID,
+                                StatusCodeTicketLogin = MediusCallbackStatus.MediusAccountBanned
+                            });
+
+                            // Then queue send ban message
+                            await QueueBanMessage(data, "Your account has been banned");
+
+                            break;
+                        }
+
+                        // get anti poke ban records (PS Home only right now)
+                        bool isAntiPoke = !MediusClass.Settings.PlaystationHomeAllowAnyEboot &&
+                            (data.ClientObject.ApplicationId == 20371 || data.ClientObject.ApplicationId == 20374) &&
+                            data.ClientObject.ClientHomeData == null;
+
+                        // account disabled poking in the eboot
+                        if (isAntiPoke)
+                        {
+                            LoggerAccessor.LogWarn($"[MAS] - MediusTicketLoginRequest: User {username} tried to login while using an anti Poke/Query eboot");
+
+                            data?.ClientObject?.Queue(new MediusTicketLoginResponse()
+                            {
+                                MessageID = ticketLoginRequest.MessageID,
+                                StatusCodeTicketLogin = MediusCallbackStatus.MediusAccountBanned
+                            });
+
+                            // Then queue send ban message
+                            await QueueBanMessage(data, "You was caught using an anti Poke/Query eboot");
+
+                            break;
+                        }
+
+                        // login user
+                        await Login(ticketLoginRequest.MessageID, clientChannel, data, account, true);
                         break;
                     }
 

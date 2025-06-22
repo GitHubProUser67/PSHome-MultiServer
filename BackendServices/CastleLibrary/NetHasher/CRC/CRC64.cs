@@ -1,7 +1,4 @@
 ﻿using System;
-#if NETCOREAPP || NETSTANDARD1_0_OR_GREATER || NET40_OR_GREATER
-using System.Threading.Tasks;
-#endif
 
 namespace NetHasher.CRC
 {
@@ -14,22 +11,6 @@ namespace NetHasher.CRC
         {
             ulong[] m_crc_tab = new ulong[256];
 
-#if NETCOREAPP || NETSTANDARD1_0_OR_GREATER || NET40_OR_GREATER
-            Parallel.For(0, 256, i =>
-            {
-                ulong crc = (ulong)i;
-
-                for (uint j = 0; j < 8; ++j)
-                {
-                    if ((crc & 1) == 1)
-                        crc = crc >> 1 ^ a_poly64;
-                    else
-                        crc >>= 1;
-                }
-
-                m_crc_tab[i] = crc;
-            });
-#else
             for (uint i = 0; i < 256; ++i)
             {
                 ulong crc = i;
@@ -44,7 +25,6 @@ namespace NetHasher.CRC
 
                 m_crc_tab[i] = crc;
             }
-#endif
 
             return m_crc_tab;
         }

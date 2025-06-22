@@ -51,8 +51,10 @@ namespace WatsonWebserver.Lite.Extensions
         {
             if (UseChunkedTransfer)
             {
+                byte[] chunkBytes = Encoding.ASCII.GetBytes((count - offset).ToString("X") + newLine);
+
                 // Send chunk
-                inner.Write(Encoding.ASCII.GetBytes((count - offset).ToString("X") + newLine).AsSpan());
+                inner.Write(chunkBytes, 0, chunkBytes.Length);
                 inner.Write(buffer, offset, count);
                 inner.Write(newLineBytes, 0, newLineBytes.Length);
             }
@@ -70,11 +72,14 @@ namespace WatsonWebserver.Lite.Extensions
         {
             if (UseChunkedTransfer)
             {
+                byte[] separatorBytes = Encoding.ASCII.GetBytes($"0{newLine}");
+                byte[] trailerBytes = Encoding.ASCII.GetBytes(trailer + newLine);
+
                 // Write terminating chunk if need
                 try
                 {
-                    inner.Write(Encoding.ASCII.GetBytes($"0{newLine}").AsSpan());
-                    inner.Write(Encoding.ASCII.GetBytes(trailer + newLine).AsSpan());
+                    inner.Write(separatorBytes, 0, separatorBytes.Length);
+                    inner.Write(trailerBytes, 0, trailerBytes.Length);
                 }
                 catch { /* Sometimes an connection lost may occur here. It's not a reason to worry. */ };
             }

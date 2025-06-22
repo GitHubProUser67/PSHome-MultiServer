@@ -7,7 +7,7 @@ namespace MultiSocks.Aries.Model
         public MatchmakerServer? Server;
         public int ID;
         public string? Name;
-        public RoomUserCollection? Users;
+        public RoomUserCollection Users;
         public List<AriesGame> Games = new();
         public bool IsGlobal; // if a room is global, it is always open
         public int Max = 24;

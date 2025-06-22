@@ -6,7 +6,6 @@ using Horizon.RT.Common;
 using Horizon.RT.Cryptography;
 using Horizon.RT.Models;
 using Horizon.LIBRARY.Pipeline.Tcp;
-using Horizon.LIBRARY.Common;
 using Horizon.DME.Models;
 using System.Collections.Concurrent;
 using System.Net;
@@ -48,7 +47,7 @@ namespace Horizon.DME
         private Bootstrap? _bootstrap = null;
         private ScertServerHandler? _scertHandler = null;
 
-        private ConcurrentList<World> _worlds = new();
+        private readonly ConcurrentList<World> _worlds = new();
         private ConcurrentQueue<World> _removeWorldQueue = new();
 
         private ConcurrentQueue<BaseScertMessage> _mpsRecvQueue { get; } = new();
@@ -103,6 +102,8 @@ namespace Horizon.DME
 
             _sessionKeyToClient.TryRemove(client.SessionKey, out _);
             _accessTokenToClient.TryRemove(client.Token, out _);
+
+            return;
         }
 
         #endregion
@@ -214,13 +215,7 @@ namespace Horizon.DME
                 }
 
                 // Handle incoming for each world
-                await Task.WhenAll(
-                    _worlds.SelectMany(world => new Task[]
-                    {
-                        world.HandleIncomingJoinGame(),
-                        world.HandleIncomingMessages()
-                    })
-                );
+                await Task.WhenAll(_worlds.Select(x => x.HandleIncomingMessages())).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -238,7 +233,7 @@ namespace Horizon.DME
             try
             {
                 // Handle outgoing for each world
-                await Task.WhenAll(_worlds.Select(x => x.HandleOutgoingMessages()));
+                await Task.WhenAll(_worlds.Select(x => x.HandleOutgoingMessages())).ConfigureAwait(false);
 
                 // Handle world removals
                 while (_removeWorldQueue.TryDequeue(out var world))

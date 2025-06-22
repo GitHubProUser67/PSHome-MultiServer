@@ -75,7 +75,7 @@ namespace Horizon.NAT
                                     buffer.WriteUnsignedShort(DestPort);
 
                                     // send response message 3 times
-                                    for (int i = 0; i < 3; i++)
+                                    for (byte i = 0; i < 3; i++)
                                     {
                                         channel.WriteAsync(new DatagramPacket(buffer.Copy(), sender));
                                     }

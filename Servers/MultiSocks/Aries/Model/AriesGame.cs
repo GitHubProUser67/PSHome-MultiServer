@@ -9,11 +9,11 @@ namespace MultiSocks.Aries.Model
         public int MinSize;
         public int ID;
         public int RoomID;
-        public string CustFlags;
+        public string SysFlags;
+        public string? CustFlags;
         public string Params;
         public string Name;
-        public string Seed;
-        public string SysFlags;
+        public string? Seed;
         public string? pass;
         public AriesUser? Host;
         public AriesUser? GPSHost;
@@ -26,8 +26,8 @@ namespace MultiSocks.Aries.Model
 
         private object _ClientIndexlock = new();
 
-        public AriesGame(int maxSize, int minSize, int id, string custFlags, string @params,
-                string name, bool priv, string seed, string sysFlags, string? Pass, int roomId)
+        public AriesGame(int maxSize, int minSize, int id, string? custFlags, string @params,
+                string name, bool priv, string? seed, string sysFlags, string? Pass, int roomId)
         {
             MaxSize = maxSize;
             MinSize = minSize;
@@ -182,10 +182,11 @@ namespace MultiSocks.Aries.Model
                 { "MINSIZE", MinSize.ToString() },
                 { "COUNT", Users?.Count().ToString() ?? "1" },
                 { "PRIV", Priv ? "1" : "0" },
-                { "CUSTFLAGS", CustFlags },
-                { "SYSFLAGS", Started ? "528448" : SysFlags },
+                { "CUSTFLAGS", CustFlags ?? "0" },
+                { "SYSFLAGS", GetSysflags() },
+                { "EVID", "0" },
                 { "EVGID", "0" },
-                { "SEED", Seed },
+                { "SEED", Seed ?? "0" },
                 { "GPSHOST", GPSHost?.Username },
                 { "GPSREGION", "0" },
                 { "GAMEMODE", "0" },
@@ -197,8 +198,10 @@ namespace MultiSocks.Aries.Model
                 { "PARTPARAMS0", string.Empty }
             };
 
-            // Use LINQ to add all key-value pairs from AdditionalCache to OutputCache
-            GetPlayersList().ToList().ForEach(pair => OutputCache[pair.Key] = pair.Value);
+            foreach (var pair in GetPlayersList())
+            {
+                OutputCache[pair.Key] = pair.Value;
+            }
 
             return new GenericMessage(msg)
             {
@@ -217,6 +220,59 @@ namespace MultiSocks.Aries.Model
             Users.Broadcast(GetGameDetails("+ses"));
         }
 
+        public bool IsRanked(string sysFlags)
+        {
+            return ((string.IsNullOrEmpty(sysFlags) ? 0 : int.Parse(sysFlags)) & (1 << 18)) != 0;
+        }
+
+        public bool MatchesSysFlags(string? sysmaskParam, string? sysflagsParam)
+        {
+            if (string.IsNullOrEmpty(sysmaskParam))
+                return true;
+
+            int gameFlags = 0;
+            int clientMask = int.Parse(sysmaskParam);
+
+            // Calculate game's flags based on ranked and password status
+            if (!string.IsNullOrEmpty(pass))
+                gameFlags |= (1 << 16);  // Set bit 16 for password
+            if (IsRanked(GetSysflags()))
+                gameFlags |= (1 << 18);  // Set bit 18 for ranked
+
+            // Only check the bits that the client cares about (specified in mask)
+            return (gameFlags & clientMask) == ((string.IsNullOrEmpty(sysflagsParam) ? 0 : int.Parse(sysflagsParam)) & clientMask);
+        }
+
+        public bool MatchesCustFlags(string? custmaskParam, string? custflagsParam)
+        {
+            if (string.IsNullOrEmpty(custmaskParam))
+                return true;
+
+            int clientMask = int.Parse(custmaskParam);
+
+            // Only check the bits that the client cares about (specified in mask)
+            return ((string.IsNullOrEmpty(CustFlags) ? 0 : int.Parse(CustFlags)) & clientMask) == ((string.IsNullOrEmpty(custflagsParam) ? 0 : int.Parse(custflagsParam)) & clientMask);
+        }
+
+        public string GetSysflags()
+        {
+            string sysflags = SysFlags;
+            if (Started)
+            {
+                int gameStartedFlags = 0;
+                // Add game started flags (6th, 12th and 19th bits)
+                gameStartedFlags |= 1 << 6;
+                gameStartedFlags |= 1 << 12;
+                gameStartedFlags |= 1 << 19;
+                sysflags = gameStartedFlags.ToString();
+            }
+            if (IsRanked(SysFlags))
+                sysflags = (int.Parse(sysflags) | (1 << 18)).ToString(); // Add ranked flag (18th bit)
+            if (!string.IsNullOrEmpty(pass))
+                sysflags = (int.Parse(sysflags) | (1 << 16)).ToString(); // Add password flag (16th bit)
+            return sysflags;
+        }
+
         private Dictionary<string, string> GetPlayersList()
         {
             int i = 0;
@@ -226,7 +282,7 @@ namespace MultiSocks.Aries.Model
             {
                 PLAYERSLIST.Add($"OPPO{i}", user == Host ? '@' + user.Username : user.Username);
                 PLAYERSLIST.Add($"OPPART{i}", "0");
-                PLAYERSLIST.Add($"OPFLAG{i}", "0");
+                PLAYERSLIST.Add($"OPFLAG{i}", user.Flags);
                 PLAYERSLIST.Add($"PRES{i}", "0");
                 PLAYERSLIST.Add($"OPID{i}", user.ID.ToString());
                 PLAYERSLIST.Add($"ADDR{i}", user.ADDR);
@@ -236,17 +292,24 @@ namespace MultiSocks.Aries.Model
                 if (!string.IsNullOrEmpty(user.Connection?.Context.Project) && user.Connection.Context.Project.Contains("BURNOUT5"))
                 {
                     // Burnout uses a custom function to attribute ther player colors via the server based on player index in the game, thank you Bo98!
-                    string PlayerColorModifer(int index, string param)
+                    (bool, string) PlayerColorModifer(int index, string param)
                     {
+                        const string playerIndexToChange = "ff";
+
                         if (index == 3)
                         {
-                            const string playerIndexToChange = "ff";
                             if (param.StartsWith(playerIndexToChange))
-                                return string.Concat($"{user.CurrentGameIndex},", param.AsSpan(2));
-                            return user.CurrentGameIndex.ToString();
+                                return (true, string.Concat($"{user.CurrentGameIndex},", param.AsSpan(2)));
+                            return (true, user.CurrentGameIndex.ToString());
+                        }
+                        else if (index == 2 && param.Length > 1)
+                        {
+                            if (param.EndsWith(playerIndexToChange))
+                                return (true, $"{param.Substring(0, param.Length - 2)}{user.CurrentGameIndex},");
+                            return (true, param.Substring(0, param.Length - 1) + user.CurrentGameIndex.ToString());
                         }
 
-                        return param;
+                        return (false, param);
                     }
 
                     PLAYERSLIST.Add($"OPPARAM{i}", user.GetParametersString(PlayerColorModifer));

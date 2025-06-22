@@ -33,11 +33,11 @@ namespace ApacheNet
             if (!string.IsNullOrEmpty(ApacheNetServerConfiguration.DNSOnlineConfig))
             {
                 LoggerAccessor.LogInfo("[HTTPS_DNS] - Downloading Configuration File...");
-                if (NetworkLibrary.Extension.Windows.Win32API.IsWindows) ServicePointManager.ServerCertificateValidationCallback = MyRemoteCertificateValidationCallback;
+                if (NetworkLibrary.Extension.Microsoft.Win32API.IsWindows) ServicePointManager.ServerCertificateValidationCallback = MyRemoteCertificateValidationCallback;
                 try
                 {
 #if NET7_0_OR_GREATER
-                    HttpResponseMessage response = new HttpClient().GetAsync(HTTPSServerConfiguration.DNSOnlineConfig).Result;
+                    HttpResponseMessage response = new HttpClient().GetAsync(ApacheNetServerConfiguration.DNSOnlineConfig).Result;
                     response.EnsureSuccessStatusCode();
                     ParseRules(response.Content.ReadAsStringAsync().Result, false);
 #else

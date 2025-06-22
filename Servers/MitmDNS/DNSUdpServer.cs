@@ -4,7 +4,6 @@ using System;
 using System.Net.Sockets;
 using System.Threading;
 using System.Collections.Generic;
-using System.Net;
 
 namespace MitmDNS
 {
@@ -32,7 +31,7 @@ namespace MitmDNS
 
         public static bool IsIPBanned(string ipAddress, int? clientport)
         {
-            if (MitmDNSServerConfiguration.BannedIPs != null && MitmDNSServerConfiguration.BannedIPs.Contains(ipAddress))
+            if (NetworkLibrary.NetworkLibraryConfiguration.BannedIPs != null && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs.Contains(ipAddress))
             {
                 LoggerAccessor.LogError($"[SECURITY] - {ipAddress}:{clientport} Requested the DNS_UDP server while being banned!");
                 return true;
@@ -115,7 +114,7 @@ namespace MitmDNS
                         catch
                         {
                         }
-                        _ = Task.Run(() => { ProcessMessagesFromClient(result); });
+                        _ = ProcessMessagesFromClient(result);
                     }));
 
 
@@ -126,7 +125,7 @@ namespace MitmDNS
         }
 
         #region Protected Functions
-        protected virtual bool ProcessMessagesFromClient(UdpReceiveResult? result)
+        protected virtual async Task<bool> ProcessMessagesFromClient(UdpReceiveResult? result)
         {
             if (!result.HasValue)
                 return false;
@@ -141,12 +140,12 @@ namespace MitmDNS
             if (!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(clientip, clientport))
                 return false;
 
-            byte[] ResultBuffer = DNSResolver.ProcRequest(resultVal.Buffer);
+            byte[] ResultBuffer = await DNSResolver.ProcRequest(resultVal.Buffer);
             if (ResultBuffer != null)
             {
                 try
                 {
-                    _ = listener.SendAsync(ResultBuffer, ResultBuffer.Length, resultVal.RemoteEndPoint);
+                    _ = listener?.SendAsync(ResultBuffer, ResultBuffer.Length, resultVal.RemoteEndPoint);
                 }
                 catch (SocketException ex)
                 {

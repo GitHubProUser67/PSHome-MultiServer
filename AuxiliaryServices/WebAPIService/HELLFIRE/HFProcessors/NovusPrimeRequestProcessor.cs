@@ -1,5 +1,6 @@
 ﻿using CustomLogger;
 using HttpMultipartParser;
+using NetHasher;
 using NetworkLibrary.Extension;
 using NetworkLibrary.HTTP;
 using System;
@@ -8,6 +9,7 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using WebAPIService.HELLFIRE.Helpers;
+using XI5;
 
 namespace WebAPIService.HELLFIRE.HFProcessors
 {
@@ -62,76 +64,87 @@ namespace WebAPIService.HELLFIRE.HFProcessors
 
                     if (ticketData != null && ticketData.Length > 188)
                     {
-                        // Extract the desired portion of the binary data
-                        byte[] extractedData = new byte[0x63 - 0x54 + 1];
+                        const string RPCNSigner = "RPCN";
 
-                        // Copy it
-                        Array.Copy(ticketData, 0x54, extractedData, 0, extractedData.Length);
+                        // get ticket
+                        XI5Ticket ticket = XI5Ticket.ReadFromBytes(ticketData);
 
-                        // Convert 0x00 bytes to 0x20 so we pad as space.
-                        for (int i = 0; i < extractedData.Length; i++)
+                        // setup username
+                        string username = ticket.Username;
+
+                        // invalid ticket
+                        if (!ticket.Valid)
                         {
-                            if (extractedData[i] == 0x00)
-                                extractedData[i] = 0x20;
+                            // log to console
+                            LoggerAccessor.LogWarn($"[HFGames] - NovusPrime : User {username} tried to alter their ticket data");
+
+                            return null;
                         }
 
-                        if (ByteUtils.FindBytePattern(ticketData, new byte[] { 0x52, 0x50, 0x43, 0x4E }, 184) != -1)
-                            LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {Encoding.ASCII.GetString(extractedData).Replace("H", string.Empty)} logged in and is on RPCN");
+                        // RPCN
+                        if (ticket.SignatureIdentifier == RPCNSigner)
+                            LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on RPCN");
+                        else if (username.EndsWith($"@{RPCNSigner}"))
+                        {
+                            LoggerAccessor.LogError($"[HFGames] - NovusPrime : User {username} was caught using a RPCN suffix while not on it!");
+
+                            return null;
+                        }
                         else
-                            LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : {Encoding.ASCII.GetString(extractedData).Replace("H", string.Empty)} logged in and is on PSN");
-                    }
+                            LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on PSN");
 
-                    Command = data.GetParameterValue("Command");
-                    UserID = data.GetParameterValue("UserId");
+                        Command = data.GetParameterValue("Command");
+                        UserID = data.GetParameterValue("UserId");
 
-                    LoggerAccessor.LogInfo($"[HFGAMES] Command detected as {Command}");
+                        LoggerAccessor.LogInfo($"[HFGAMES] Command detected as {Command}");
 
-                    try
-                    {
-                        DisplayName = data.GetParameterValue("DisplayName");
-                    }
-                    catch
-                    {
-                        // Not Important.
-                    }
-                    try
-                    {
-                        InstanceID = data.GetParameterValue("InstanceID");
-                    }
-                    catch
-                    {
-                        // Not Important.
-                    }
-                    try
-                    {
-                        Region = data.GetParameterValue("Region");
-                    }
-                    catch
-                    {
-                        // Not Important.
-                    }
-                    try
-                    {
-                        Achievements = data.GetParameterValue("Achievements");
-                    }
-                    catch
-                    {
-                        // Not Important.
-                    }
+                        try
+                        {
+                            DisplayName = data.GetParameterValue("DisplayName");
+                        }
+                        catch
+                        {
+                            // Not Important.
+                        }
+                        try
+                        {
+                            InstanceID = data.GetParameterValue("InstanceID");
+                        }
+                        catch
+                        {
+                            // Not Important.
+                        }
+                        try
+                        {
+                            Region = data.GetParameterValue("Region");
+                        }
+                        catch
+                        {
+                            // Not Important.
+                        }
+                        try
+                        {
+                            Achievements = data.GetParameterValue("Achievements");
+                        }
+                        catch
+                        {
+                            // Not Important.
+                        }
 
-                    try
-                    {
-                        //for Log cmd
-                        Type = data.GetParameterValue("Type");
-                        Str = data.GetParameterValue("Str");
-                        Amount = data.GetParameterValue("Amount");
-                    }
-                    catch
-                    {
-                        // Not Important.
-                    }
+                        try
+                        {
+                            //for Log cmd
+                            Type = data.GetParameterValue("Type");
+                            Str = data.GetParameterValue("Str");
+                            Amount = data.GetParameterValue("Amount");
+                        }
+                        catch
+                        {
+                            // Not Important.
+                        }
 
-                    ms.Flush();
+                        ms.Flush();
+                    }
                 }
 
                 if (!string.IsNullOrEmpty(Command))
@@ -233,7 +246,7 @@ namespace WebAPIService.HELLFIRE.HFProcessors
                             return "<Response></Response>";
                         case "CompleteAchievements":
                             StringBuilder achievementsSt = new StringBuilder();
-                            foreach (string achievement in Achievements.Split(","))
+                            foreach (string achievement in Achievements.Split(','))
                             {
                                 if (!string.IsNullOrEmpty(achievement))
                                     achievementsSt.Append($"<Achievement><AchievementID>{achievement}</AchievementID></Achievement>");

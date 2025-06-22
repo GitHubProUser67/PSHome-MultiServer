@@ -502,7 +502,7 @@ namespace NetCoreServer
                     else if (encoding.Contains("deflate"))
                     {
                         SetHeader("Content-Encoding", "deflate");
-                        payload = HTTPProcessor.Inflate(payload);
+                        payload = HTTPProcessor.Deflate(payload);
                     }
                 }
 
@@ -583,7 +583,7 @@ namespace NetCoreServer
                     else if (encoding.Contains("deflate"))
                     {
                         SetHeader("Content-Encoding", "deflate");
-                        payload = HTTPProcessor.Inflate(payload);
+                        payload = HTTPProcessor.Deflate(payload);
                     }
                 }
 

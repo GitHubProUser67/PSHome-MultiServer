@@ -71,7 +71,7 @@ public static class ImageOptimizer
                     magickProc?.WaitForExit();
                     if (magickProc?.ExitCode is 0)
                     {
-                        if (Extension.Windows.Win32API.IsWindows)
+                        if (Extension.Microsoft.Win32API.IsWindows)
                         {
                             // FidelityFx doesn't work well with transparency data...
                             bool isFidelityFxCompatible;

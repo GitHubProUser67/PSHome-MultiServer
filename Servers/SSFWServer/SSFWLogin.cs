@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using WebAPIService.SSFW;
 using XI5;
 using NetHasher;
+using WebAPIService.VEEMEE;
 
 namespace SSFWServer
 {
@@ -149,6 +150,8 @@ namespace SSFWServer
         {
             if (ticketBuffer != null)
             {
+                const string RPCNSigner = "RPCN";
+
                 bool IsRPCN = false;
                 string salt = string.Empty;
                 string? RPCNsessionIdFallback = null;
@@ -166,28 +169,43 @@ namespace SSFWServer
                         extractedData[i] = 0x48;
                 }
 
-                XI5Ticket ticket = new XI5Ticket(ticketBuffer);
+                // setup username
+                string username = Encoding.ASCII.GetString(extractedData);
 
-                if (ByteUtils.FindBytePattern(ticketBuffer, new byte[] { 0x52, 0x50, 0x43, 0x4E }, 184) != -1)
+                // get ticket
+                XI5Ticket ticket = XI5Ticket.ReadFromBytes(ticketBuffer);
+
+                // invalid ticket
+                if (!ticket.Valid)
                 {
-                    if (SSFWServerConfiguration.ForceOfficialRPCNSignature && !ticket.SignedByOfficialRPCN)
-                    {
-                        LoggerAccessor.LogError($"[SSFW] : User {Encoding.ASCII.GetString(extractedData).Replace("H", string.Empty)} was caught using an invalid RPCN signature!");
-                        return null;
-                    }
+                    // log to console
+                    LoggerAccessor.LogWarn($"[SSFW] : User {username.Replace("H", string.Empty)} tried to alter their ticket data");
+
+                    return null;
+                }
+
+                // RPCN
+                if (ticket.SignatureIdentifier == RPCNSigner)
+                {
+                    LoggerAccessor.LogInfo($"[SSFW] : User {username.Replace("H", string.Empty)} connected at: {DateTime.Now} and is on RPCN");
 
                     IsRPCN = true;
-                    LoggerAccessor.LogInfo($"[SSFW] : User {Encoding.ASCII.GetString(extractedData).Replace("H", string.Empty)} logged in and is on RPCN");
+                }
+                else if (username.EndsWith($"@{RPCNSigner}"))
+                {
+                    LoggerAccessor.LogError($"[SSFW] : User {username.Replace("H", string.Empty)} was caught using a RPCN suffix while not on it!");
+
+                    return null;
                 }
                 else
-                    LoggerAccessor.LogInfo($"[SSFW] : {Encoding.ASCII.GetString(extractedData).Replace("H", string.Empty)} logged in and is on PSN");
+                    LoggerAccessor.LogInfo($"[SSFW] : User {username.Replace("H", string.Empty)} connected at: {DateTime.Now} and is on PSN");
 
                 (string, string) UserNames = new();
                 (string, string) ResultStrings = new();
                 (string, string) SessionIDs = new();
 
                 // Convert the modified data to a string
-                UserNames.Item2 = ResultStrings.Item2 = Encoding.ASCII.GetString(extractedData) + homeClientVersion;
+                UserNames.Item2 = ResultStrings.Item2 = username + homeClientVersion;
 
                 // Calculate the MD5 hash of the result
                 if (!string.IsNullOrEmpty(xsignature))
@@ -210,7 +228,7 @@ namespace SSFWServer
                 if (IsRPCN)
                 {
                     // Convert the modified data to a string
-                    UserNames.Item1 = ResultStrings.Item1 = Encoding.ASCII.GetString(extractedData) + "RPCN" + homeClientVersion;
+                    UserNames.Item1 = ResultStrings.Item1 = username + "RPCN" + homeClientVersion;
 
                     // Calculate the MD5 hash of the result
                     if (!string.IsNullOrEmpty(xsignature))
@@ -233,7 +251,7 @@ namespace SSFWServer
 
                 if (!string.IsNullOrEmpty(UserNames.Item1) && !SSFWServerConfiguration.SSFWCrossSave) // RPCN confirmed.
                 {
-                    SSFWUserSessionManager.RegisterUser(UserNames.Item1, SessionIDs.Item1!, ResultStrings.Item1!, ticket.OnlineId.Length);
+                    SSFWUserSessionManager.RegisterUser(UserNames.Item1, SessionIDs.Item1!, ResultStrings.Item1!, ticket.Username.Length);
 
                     if (SSFWAccountManagement.AccountExists(UserNames.Item2, SessionIDs.Item2))
                         SSFWAccountManagement.CopyAccountProfile(UserNames.Item2, UserNames.Item1, SessionIDs.Item2, SessionIDs.Item1!, key);
@@ -244,7 +262,7 @@ namespace SSFWServer
                 {
                     IsRPCN = false;
 
-                    SSFWUserSessionManager.RegisterUser(UserNames.Item2, SessionIDs.Item2, ResultStrings.Item2, ticket.OnlineId.Length);
+                    SSFWUserSessionManager.RegisterUser(UserNames.Item2, SessionIDs.Item2, ResultStrings.Item2, ticket.Username.Length);
                 }
 
                 int logoncount = SSFWAccountManagement.ReadOrMigrateAccount(extractedData, IsRPCN ? UserNames.Item1 : UserNames.Item2, IsRPCN ? SessionIDs.Item1 : SessionIDs.Item2, key);

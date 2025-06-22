@@ -575,7 +575,26 @@ namespace PS2FloatLibrary
             else if (!a.IsDenormalized() && b.IsDenormalized())
                 return new ps2float(sign, a.Exponent, a.Mantissa);
             else if (a.IsDenormalized() && b.IsDenormalized())
-                return new ps2float(sign, 0, 0);
+            {
+                if (add)
+                {
+                    if (!a.Sign || !b.Sign)
+                        return new ps2float(false, 0, 0);
+                    else if (a.Sign && b.Sign)
+                        return new ps2float(true, 0, 0);
+                    else
+                        throw new InvalidOperationException("Unhandled addition operation flags");
+                }
+                else
+                {
+                    if (!a.Sign || b.Sign)
+                        return new ps2float(false, 0, 0);
+                    else if (a.Sign && !b.Sign)
+                        return new ps2float(true, 0, 0);
+                    else
+                        throw new InvalidOperationException("Unhandled subtraction operation flags");
+                }
+            }
             else
                 throw new InvalidOperationException("Both numbers are not denormalized");
         }
@@ -587,31 +606,11 @@ namespace PS2FloatLibrary
 
         private static bool DetermineAdditionOperationSign(ps2float a, ps2float b)
         {
-            if (a.IsZero() && b.IsZero())
-            {
-                if (!a.Sign || !b.Sign)
-                    return false;
-                else if (a.Sign && b.Sign)
-                    return true;
-                else
-                    throw new InvalidOperationException("Unhandled addition operation flags");
-            }
-
             return a.CompareOperands(b) >= 0 ? a.Sign : b.Sign;
         }
 
         private static bool DetermineSubtractionOperationSign(ps2float a, ps2float b)
         {
-            if (a.IsZero() && b.IsZero())
-            {
-                if (!a.Sign || b.Sign)
-                    return false;
-                else if (a.Sign && !b.Sign)
-                    return true;
-                else
-                    throw new InvalidOperationException("Unhandled subtraction operation flags");
-            }
-
             return a.CompareOperands(b) >= 0 ? a.Sign : !b.Sign;
         }
 
@@ -674,32 +673,6 @@ namespace PS2FloatLibrary
         public static explicit operator ps2float(float f)
         {
             return new ps2float(f);
-        }
-
-        /// <summary>
-        /// Creates a float number from a ps2float value
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static explicit operator float(ps2float f)
-        {
-            // vuDouble hack from: https://github.com/PCSX2/pcsx2/blob/master/pcsx2/VUops.cpp
-
-            uint rawf = f.raw;
-
-            switch (rawf & 0x7F800000)
-            {
-                case 0x0:
-                    rawf &= 0x80000000;
-                    return *(float*)&rawf;
-                case 0x7F800000:
-                    if (f.of)
-                    {
-                        uint d = (rawf & 0x80000000) | 0x7F7FFFFF;
-                        return *(float*)&d;
-                    }
-                    break;
-            }
-            return *(float*)&rawf;
         }
 
         /// <summary>

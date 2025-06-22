@@ -13,7 +13,7 @@ namespace HomeTools.PS3_Creator
         public string line;
         public string trash;
         //public StreamWriter sw3 = new StreamWriter(@".\temp3.txt");
-        byte[] Name2 = ConversionUtils.getByteArray("504152414d2e53464f");
+        byte[] Name2 = "504152414d2e53464f".HexStringToByteArray();
         //PSP
         private byte[] PSPAesKey = new byte[16] {
             0x07, 0xF2, 0xC6, 0x82, 0x90, 0xB5, 0x0D, 0x2C,

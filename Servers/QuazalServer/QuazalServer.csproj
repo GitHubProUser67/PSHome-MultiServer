@@ -6,7 +6,86 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 	<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-	<DockerfileRunArguments>-p 21032:21032 -p 30160:30160 -p 30161:30161 -p 30200:30200 -p 30201:30201 -p 30560:30560 -p 30561:30561 -p 60001:60001 -p 60105:60105 -p 60106:60106 -p 60115:60115 -p 60116:60116 -p 61110:61110 -p 61111:61111 -p 61120:61120 -p 61121:61121 -p 61125:61125 -p 61126:61126 -p 61127:61127 -p 61128:61128 -p 61129:61129 -p 61130:61130 -p 61131:61131 -p 61132:61132 -p 61133:61133 -p 61134:61134 -p 61135:61135 -p 61136:61136 -p 61137:61137 -p 61138:61138 -p 62110:62110 -p 62111:62111 -p 62125:62125 -p 62126:62126 -p 62127:62127 -p 62128:62128 -p 65535:65535</DockerfileRunArguments>
+	<DockerfileRunArguments>
+	  -p 65535:65535
+	  -p 13015:13015
+	  -p 30200:30200
+	  -p 30201:30201
+	  -p 30215:30215
+	  -p 30216:30216
+	  -p 30600:30600
+	  -p 30601:30601
+	  -p 30550:30550
+	  -p 30551:30551
+	  -p 21221:21221
+	  -p 21225:21225
+	  -p 23940:23940
+	  -p 60105:60105
+	  -p 60106:60106
+	  -p 60107:60107
+	  -p 60108:60108
+	  -p 61105:61105
+	  -p 61106:61106
+	  -p 61110:61110
+	  -p 61111:61111
+	  -p 62110:62110
+	  -p 62111:62111
+	  -p 60115:60115
+	  -p 60116:60116
+	  -p 61119:61119
+	  -p 61120:61120
+	  -p 61121:61121
+	  -p 61122:61122
+	  -p 23900:23900
+	  -p 21065:21065
+	  -p 21067:21067
+	  -p 23941:23941
+	  -p 23901:23901
+	  -p 61125:61125
+	  -p 61126:61126
+	  -p 62125:62125
+	  -p 62126:62126
+	  -p 61127:61127
+	  -p 61128:61128
+	  -p 62127:62127
+	  -p 62128:62128
+	  -p 61129:61129
+	  -p 61130:61130
+	  -p 61131:61131
+	  -p 61132:61132
+	  -p 61133:61133
+	  -p 61134:61134
+	  -p 61135:61135
+	  -p 61137:61137
+	  -p 61138:61138
+	  -p 33333:33333
+	  -p 28783:28783
+	  -p 30040:30040
+	  -p 30041:30041
+	  -p 30060:30060
+	  -p 30061:30061
+	  -p 24250:24250
+	  -p 24251:24251
+	  -p 61139:61139
+	  -p 61140:61140
+	  -p 31080:31080
+	  -p 31081:31081
+	  -p 31020:31020
+	  -p 31021:31021
+	  -p 30380:30380
+	  -p 60001:60001
+	  -p 21032:21032
+	  -p 30160:30160
+	  -p 30161:30161
+	  -p 30560:30560
+	  -p 30561:30561
+	  -p 31040:31040
+	  -p 31041:31041
+	  -p 25000:25000
+	  -p 25001:25001
+	  -p 30640:30640
+	  -p 30641:30641
+	</DockerfileRunArguments>
 	<ApplicationIcon>QuazalServer.ico</ApplicationIcon>
 	<ServerGarbageCollection>true</ServerGarbageCollection>
 	<DockerfileContext>..\..</DockerfileContext>
@@ -36,8 +115,7 @@
   </ItemGroup>
   
   <Target Name="ModifyDepsFile" AfterTargets="AfterBuild">
-    <!-- Path to the JSON file you want to modify -->
-    <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath $(OutDir)$(ProjectName).deps.json -targetFramework $(TargetFramework)" />
+    <Exec Command="cmd /c (where pwsh &gt;nul 2&gt;&amp;1 &amp;&amp; pwsh -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath &quot;$(OutDir)$(ProjectName).deps.json&quot; -targetFramework &quot;$(TargetFramework)&quot;) || (powershell -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath &quot;$(OutDir)$(ProjectName).deps.json&quot; -targetFramework &quot;$(TargetFramework)&quot;)" />
   </Target>
 
 </Project>

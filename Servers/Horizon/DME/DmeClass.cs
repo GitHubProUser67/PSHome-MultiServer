@@ -1,7 +1,6 @@
 using CustomLogger;
 using Newtonsoft.Json;
 using Horizon.RT.Models;
-using Horizon.LIBRARY.Common;
 using Horizon.DME.Config;
 using Horizon.DME.Models;
 using System.Diagnostics;
@@ -214,7 +213,7 @@ namespace Horizon.DME
                 // tick
                 await TickAsync();
 
-                await Task.Delay(5); // DME needs a super tight refresh timing, it handles P2P stuff so it's necessary.
+                await Task.Delay(100);
             }
         }
 
@@ -312,7 +311,7 @@ namespace Horizon.DME
             }
 
             // Update default rsa key
-            Horizon.LIBRARY.Pipeline.Attribute.ScertClientAttribute.DefaultRsaAuthKey = Settings.DefaultKey;
+            LIBRARY.Pipeline.Attribute.ScertClientAttribute.DefaultRsaAuthKey = Settings.DefaultKey;
 
             if (Settings.DefaultKey != null)
                 GlobalAuthPublic = new RSA_KEY(Settings.DefaultKey.N.ToByteArrayUnsigned().Reverse().ToArray());

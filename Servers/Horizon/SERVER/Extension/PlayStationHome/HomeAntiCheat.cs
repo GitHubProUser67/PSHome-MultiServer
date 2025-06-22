@@ -34,7 +34,7 @@ namespace Horizon.SERVER.Extension.PlayStationHome
 
         #endregion
 
-        protected virtual Task QueueBanMessage(ChannelData? data, string msg = "You have caught cheating!")
+        protected virtual Task QueueBanMessage(ChannelData? data, string msg = "You have been caught cheating!")
         {
             // Send ban message
             data?.SendQueue.Enqueue(new RT_MSG_SERVER_SYSTEM_MESSAGE()
@@ -114,6 +114,32 @@ namespace Horizon.SERVER.Extension.PlayStationHome
                                             });
                                         }
                                         break;
+                                    case 0x10480d30:
+                                        if (clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 4)
+                                        {
+                                            if (client.Hub_LocalPerson_ms_pInstance == 0)
+                                            {
+                                                client.SetPointer(BitConverter.ToUInt32(BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(QueryData) : QueryData));
+
+                                                client.TryAddTask("1.86 HDK ANTI FREEZE", () =>
+                                                {
+                                                    while (true)
+                                                    {
+                                                        if (client.IsInGame)
+                                                        {
+                                                            CheatQuery(client.Hub_LocalPerson_ms_pInstance + 5300U, 8, client, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY);
+                                                            CheatQuery(client.Hub_LocalPerson_ms_pInstance + 6928U, 84, client, CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH);
+
+                                                            Thread.Sleep(3500);
+                                                        }
+                                                        else
+                                                            Thread.Sleep(6000);
+                                                    }
+
+                                                });
+                                            }
+                                        }
+                                        break;
                                 }
                                 break;
                             default:
@@ -154,6 +180,32 @@ namespace Horizon.SERVER.Extension.PlayStationHome
                                             });
                                         }
                                         break;
+                                    case 0x10470990:
+                                        if (clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 4)
+                                        {
+                                            if (client.Hub_LocalPerson_ms_pInstance == 0)
+                                            {
+                                                client.SetPointer(BitConverter.ToUInt32(BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(QueryData) : QueryData));
+
+                                                client.TryAddTask("1.82 HDK Online (Dbg Symbols) ANTI FREEZE", () =>
+                                                {
+                                                    while (true)
+                                                    {
+                                                        if (client.IsInGame)
+                                                        {
+                                                            CheatQuery(client.Hub_LocalPerson_ms_pInstance + 5300U, 8, client, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY);
+                                                            CheatQuery(client.Hub_LocalPerson_ms_pInstance + 6928U, 84, client, CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH);
+
+                                                            Thread.Sleep(3500);
+                                                        }
+                                                        else
+                                                            Thread.Sleep(6000);
+                                                    }
+
+                                                });
+                                            }
+                                        }
+                                        break;
                                 }
                                 break;
                             default:
@@ -187,6 +239,32 @@ namespace Horizon.SERVER.Extension.PlayStationHome
                                             });
                                         }
                                         break;
+                                    case 0x104809f0:
+                                        if (clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 4)
+                                        {
+                                            if (client.Hub_LocalPerson_ms_pInstance == 0)
+                                            {
+                                                client.SetPointer(BitConverter.ToUInt32(BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(QueryData) : QueryData));
+
+                                                client.TryAddTask("1.83 QA ANTI FREEZE", () =>
+                                                {
+                                                    while (true)
+                                                    {
+                                                        if (client.IsInGame)
+                                                        {
+                                                            CheatQuery(client.Hub_LocalPerson_ms_pInstance + 5300U, 8, client, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY);
+                                                            CheatQuery(client.Hub_LocalPerson_ms_pInstance + 6928U, 84, client, CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH);
+
+                                                            Thread.Sleep(3500);
+                                                        }
+                                                        else
+                                                            Thread.Sleep(6000);
+                                                    }
+
+                                                });
+                                            }
+                                        }
+                                        break;
                                 }
                                 break;
                             case "01.86.09":
@@ -211,6 +289,32 @@ namespace Horizon.SERVER.Extension.PlayStationHome
                                                 client.ForceDisconnect();
                                                 _ = client.Logout();
                                             });
+                                        }
+                                        break;
+                                    case 0x10480b58:
+                                        if (clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 4)
+                                        {
+                                            if (client.Hub_LocalPerson_ms_pInstance == 0)
+                                            {
+                                                client.SetPointer(BitConverter.ToUInt32(BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(QueryData) : QueryData));
+
+                                                client.TryAddTask("1.86 QA ANTI FREEZE", () =>
+                                                {
+                                                    while (true)
+                                                    {
+                                                        if (client.IsInGame)
+                                                        {
+                                                            CheatQuery(client.Hub_LocalPerson_ms_pInstance + 5300U, 8, client, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY);
+                                                            CheatQuery(client.Hub_LocalPerson_ms_pInstance + 6928U, 84, client, CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH);
+
+                                                            Thread.Sleep(3500);
+                                                        }
+                                                        else
+                                                            Thread.Sleep(6000);
+                                                    }
+
+                                                });
+                                            }
                                         }
                                         break;
                                 }
@@ -271,18 +375,18 @@ namespace Horizon.SERVER.Extension.PlayStationHome
                                     case 0x104F7320:
                                         if (clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 4)
                                         {
-                                            if (client.HomePointer == 0)
+                                            if (client.Hub_LocalPerson_ms_pInstance == 0)
                                             {
                                                 client.SetPointer(BitConverter.ToUInt32(BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(QueryData) : QueryData));
 
-                                                client.Tasks.TryAdd("1.86 Retail ANTI FREEZE", Task.Run(() =>
+                                                client.TryAddTask("1.86 Retail ANTI FREEZE", () =>
                                                 {
                                                     while (true)
                                                     {
                                                         if (client.IsInGame)
                                                         {
-                                                            CheatQuery(client.HomePointer + 5300U, 8, client, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY);
-                                                            CheatQuery(client.HomePointer + 6928U, 84, client, CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH);
+                                                            CheatQuery(client.Hub_LocalPerson_ms_pInstance + 5300U, 8, client, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY);
+                                                            CheatQuery(client.Hub_LocalPerson_ms_pInstance + 6928U, 84, client, CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH);
 															
                                                             Thread.Sleep(3500);
                                                         }
@@ -290,14 +394,14 @@ namespace Horizon.SERVER.Extension.PlayStationHome
                                                             Thread.Sleep(6000);
                                                     }
 
-                                                }));
+                                                });
                                             }
                                         }
                                         break;
                                     default:
                                         if (client != null)
                                         {
-                                            if (clientCheatQuery.StartAddress == client.HomePointer + 6928U && clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH && QueryData.Length == 16 && QueryData.EqualsTo(Ref5))
+                                            if (clientCheatQuery.StartAddress == client.Hub_LocalPerson_ms_pInstance + 6928U && clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH && QueryData.Length == 16 && QueryData.EqualsTo(Ref5))
                                             {
                                                 string anticheatMsg = $"[SECURITY] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: LAG FREEZE ATTEMPT) - User:{client.IP + ":" + client.AccountName} CID:{data.MachineId}";
 
@@ -316,7 +420,7 @@ namespace Horizon.SERVER.Extension.PlayStationHome
                                                     _ = client.Logout();
                                                 });
                                             }
-                                            else if (clientCheatQuery.StartAddress == client.HomePointer + 5300U && clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 8 && QueryData.EqualsTo(Ref6))
+                                            else if (clientCheatQuery.StartAddress == client.Hub_LocalPerson_ms_pInstance + 5300U && clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 8 && QueryData.EqualsTo(Ref6))
                                             {
                                                 string anticheatMsg = $"[SECURITY] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: FREEZE ATTEMPT) - User:{client.IP + ":" + client.AccountName} CID:{data.MachineId}";
 
@@ -362,6 +466,7 @@ namespace Horizon.SERVER.Extension.PlayStationHome
                                 results.Add((0x101590b0, 20, CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH, 1));
                                 if (MediusClass.Settings.PlaystationHomeForceInviteExploitPatch)
                                     results.Add((0x0016cb68, 364, CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH, 1));
+                                results.Add((0x10480d30, 4, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY, 1));
                                 break;
                             default:
                                 break;
@@ -380,6 +485,7 @@ namespace Horizon.SERVER.Extension.PlayStationHome
                             case "01.82.09":
                                 if (MediusClass.Settings.PlaystationHomeForceInviteExploitPatch)
                                     results.Add((0x0016b490, 172, CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH, 1));
+                                results.Add((0x10470990, 4, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY, 1));
                                 break;
                             default:
                                 break;
@@ -391,10 +497,12 @@ namespace Horizon.SERVER.Extension.PlayStationHome
                             case "01.83.12":
                                 if (MediusClass.Settings.PlaystationHomeForceInviteExploitPatch)
                                     results.Add((0x001709a0, 168, CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH, 1));
+                                results.Add((0x104809f0, 4, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY, 1));
                                 break;
                             case "01.86.09":
                                 if (MediusClass.Settings.PlaystationHomeForceInviteExploitPatch)
                                     results.Add((0x0016da80, 168, CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH, 1));
+                                results.Add((0x10480b58, 4, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY, 1));
                                 break;
                             default:
                                 break;

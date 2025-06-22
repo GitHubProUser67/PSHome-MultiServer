@@ -7,7 +7,6 @@ using System.Reflection;
 using System.Runtime;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using NetworkLibrary.Extension;
 using NetworkLibrary.SNMP;
 using NetworkLibrary;
@@ -20,7 +19,6 @@ public static class MitmDNSServerConfiguration
     public static bool DNSAllowUnsafeRequests { get; set; } = true;
     public static bool EnableAdguardFiltering { get; set; } = false;
     public static bool EnableDanPollockHosts { get; set; } = false;
-    public static List<string> BannedIPs { get; set; }
 
     /// <summary>
     /// Tries to load the specified configuration file.
@@ -33,18 +31,18 @@ public static class MitmDNSServerConfiguration
         // Make sure the file exists
         if (!File.Exists(configPath))
         {
-            LoggerAccessor.LogWarn("Could not find the dns.json file, writing and using server's default.");
+            LoggerAccessor.LogWarn($"Could not find the configuration file:{configPath}, writing and using server's default.");
 
             Directory.CreateDirectory(Path.GetDirectoryName(configPath) ?? Directory.GetCurrentDirectory() + "/static");
 
             // Write the JObject to a file
             File.WriteAllText(configPath, new JObject(
+                new JProperty("config_version", (ushort)2),
                 new JProperty("online_routes_config", DNSOnlineConfig),
                 new JProperty("routes_config", DNSConfig),
                 new JProperty("allow_unsafe_requests", DNSAllowUnsafeRequests),
                 new JProperty("enable_adguard_filtering", EnableAdguardFiltering),
-                new JProperty("enable_dan_pollock_hosts", EnableDanPollockHosts),
-                new JProperty("BannedIPs", new JArray(BannedIPs ?? new List<string> { }))
+                new JProperty("enable_dan_pollock_hosts", EnableDanPollockHosts)
             ).ToString());
 
             return;
@@ -55,27 +53,21 @@ public static class MitmDNSServerConfiguration
             // Parse the JSON configuration
             dynamic config = JObject.Parse(File.ReadAllText(configPath));
 
-            DNSOnlineConfig = GetValueOrDefault(config, "online_routes_config", DNSOnlineConfig);
-            DNSConfig = GetValueOrDefault(config, "routes_config", DNSConfig);
-            DNSAllowUnsafeRequests = GetValueOrDefault(config, "allow_unsafe_requests", DNSAllowUnsafeRequests);
-            EnableAdguardFiltering = GetValueOrDefault(config, "enable_adguard_filtering", EnableAdguardFiltering);
-            EnableDanPollockHosts = GetValueOrDefault(config, "enable_dan_pollock_hosts", EnableDanPollockHosts);
-            // Deserialize BannedIPs if it exists
-            try
+            ushort config_version = GetValueOrDefault(config, "config_version", (ushort)0);
+            if (config_version >= 2)
             {
-                JArray bannedIPsArray = config.BannedIPs;
-                // Deserialize BannedIPs if it exists
-                if (bannedIPsArray != null)
-                    BannedIPs = bannedIPsArray.ToObject<List<string>>();
+                DNSOnlineConfig = GetValueOrDefault(config, "online_routes_config", DNSOnlineConfig);
+                DNSConfig = GetValueOrDefault(config, "routes_config", DNSConfig);
+                DNSAllowUnsafeRequests = GetValueOrDefault(config, "allow_unsafe_requests", DNSAllowUnsafeRequests);
+                EnableAdguardFiltering = GetValueOrDefault(config, "enable_adguard_filtering", EnableAdguardFiltering);
+                EnableDanPollockHosts = GetValueOrDefault(config, "enable_dan_pollock_hosts", EnableDanPollockHosts);
             }
-            catch
-            {
-
-            }
+            else
+                LoggerAccessor.LogWarn($"{configPath} file is outdated, using server's default.");
         }
         catch (Exception ex)
         {
-            LoggerAccessor.LogWarn($"dns.json file is malformed (exception: {ex}), using server's default.");
+            LoggerAccessor.LogWarn($"{configPath} file is malformed (exception: {ex}), using server's default.");
         }
     }
 
@@ -109,7 +101,7 @@ public static class MitmDNSServerConfiguration
 class Program
 {
     private static string configDir = Directory.GetCurrentDirectory() + "/static/";
-    private static string configPath = configDir + "dns.json";
+    private static string configPath = configDir + "MitmDNS.json";
     private static string configNetworkLibraryPath = configDir + "NetworkLibrary.json";
     private static string DNSconfigMD5 = string.Empty;
     private static Task DNSThread = null;
@@ -221,7 +213,7 @@ class Program
         dnswatcher.NotifyFilter = NotifyFilters.LastWrite;
         dnswatcher.Changed += OnDNSChanged;
 
-        if (!NetworkLibrary.Extension.Windows.Win32API.IsWindows)
+        if (!NetworkLibrary.Extension.Microsoft.Win32API.IsWindows)
             GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
         else
             TechnitiumLibrary.Net.Firewall.FirewallHelper.CheckFirewallEntries(Assembly.GetEntryAssembly()?.Location);
@@ -242,6 +234,17 @@ class Program
             args.SetObserved();
         };
 #endif
+
+        // Previous versions had an erronious config label, we hotfix that.
+        string oldConfigPath = Path.GetDirectoryName(configPath) + $"/dns.json";
+        if (File.Exists(oldConfigPath))
+        {
+            if (!File.Exists(configPath))
+            {
+                LoggerAccessor.LogWarn("[Main] - Detected older incorrect MitmDNS configuration file path, performing file renaming...");
+                File.Move(oldConfigPath, configPath);
+            }
+        }
 
         NetworkLibraryConfiguration.RefreshVariables(configNetworkLibraryPath);
 
