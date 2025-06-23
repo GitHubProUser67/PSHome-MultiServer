@@ -22,7 +22,7 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 
             if (!string.IsNullOrEmpty(stringSearch))
             {
-                string directoryPath = QuazalServerConfiguration.QuazalStaticFolder + "/StaticFiles";
+                string directoryPath = QuazalServerConfiguration.QuazalStaticFolder + "/StaticFiles/DriverPC";
 
                 if (stringSearch == "*")
                 {

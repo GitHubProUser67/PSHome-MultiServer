@@ -33,7 +33,7 @@ namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
         {
             StorageFile reply = new();
 
-            string path = Path.Combine(QuazalServerConfiguration.QuazalStaticFolder + "/StaticFiles", strTag);
+            string path = Path.Combine(QuazalServerConfiguration.QuazalStaticFolder + "/StaticFiles/DriverPS3", strTag);
 
             if (File.Exists(path))
             {

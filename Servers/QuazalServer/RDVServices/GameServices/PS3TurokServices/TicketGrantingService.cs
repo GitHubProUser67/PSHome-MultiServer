@@ -25,8 +25,38 @@ namespace QuazalServer.RDVServices.GameServices.PS3TurokServices
                 if (QuazalServerConfiguration.UsePublicIP)
                     prudplink = string.IsNullOrWhiteSpace(QuazalServerConfiguration.ServerPublicBindAddress) ? Dns.GetHostName() : QuazalServerConfiguration.ServerPublicBindAddress;
 
-                // create tracking client info
-                PlayerInfo? plInfo = NetworkPlayers.GetPlayerInfoByUsername(userName);
+                PlayerInfo? plInfo = null;
+
+                if (userName == "guest")
+                {
+                    plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
+                    plInfo.PID = 100;
+                    plInfo.AccountId = userName;
+                    plInfo.Name = userName;
+
+                    return Result(new Login(plInfo.PID)
+                    {
+                        retVal = (int)ErrorCode.Core_NoError,
+                        pConnectionData = new RVConnectionData()
+                        {
+                            m_urlRegularProtocols = new(
+                                    "prudps",
+                                    prudplink,
+                                    new Dictionary<string, int>() {
+                                            { "port", Context.Handler.BackendPort },
+                                            { "CID", 1 },
+                                            { "PID", (int)Context.Client.sPID },
+                                            { "sid", 1 },
+                                            { "stream", 3 },
+                                            { "type", 2 } // Public, not BehindNAT
+                                    })
+                        },
+                        strReturnMsg = string.Empty,
+                        pbufResponse = new KerberosTicket(plInfo.PID, Context.Client.sPID, Constants.SessionKey, Constants.TicketData).ToBuffer(Context.Handler.AccessKey, "h7fyctiuucf")
+                    });
+                }
+
+                plInfo = NetworkPlayers.GetPlayerInfoByUsername(userName);
 
                 if (plInfo != null)
                 {
@@ -54,18 +84,17 @@ namespace QuazalServer.RDVServices.GameServices.PS3TurokServices
 
                 plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
 
-                if (userName == "guest")
-                {
-                    plInfo.PID = 100;
-                    plInfo.AccountId = userName;
-                    plInfo.Name = userName;
+                // Console login not uses Quazal storage, they use a given account to log-in.
+                plInfo.PID = NetworkPlayers.GenerateUniqueUint(userName + "a1nPut!");
+                plInfo.AccountId = userName;
+                plInfo.Name = userName;
 
-                    return Result(new Login(plInfo.PID)
+                return Result(new Login(plInfo.PID)
+                {
+                    retVal = (int)ErrorCode.Core_NoError,
+                    pConnectionData = new RVConnectionData()
                     {
-                        retVal = (int)ErrorCode.Core_NoError,
-                        pConnectionData = new RVConnectionData()
-                        {
-                            m_urlRegularProtocols = new(
+                        m_urlRegularProtocols = new(
                                     "prudps",
                                     prudplink,
                                     new Dictionary<string, int>() {
@@ -76,38 +105,10 @@ namespace QuazalServer.RDVServices.GameServices.PS3TurokServices
                                             { "stream", 3 },
                                             { "type", 2 } // Public, not BehindNAT
                                     })
-                        },
-                        strReturnMsg = string.Empty,
-                        pbufResponse = new KerberosTicket(plInfo.PID, Context.Client.sPID, Constants.SessionKey, Constants.TicketData).ToBuffer(Context.Handler.AccessKey, "h7fyctiuucf")
-                    });
-                }
-                else // Console login not uses Quazal storage, they use a given account to log-in.
-                {
-                    plInfo.PID = NetworkPlayers.GenerateUniqueUint(userName + "a1nPut!");
-                    plInfo.AccountId = userName;
-                    plInfo.Name = userName;
-
-                    return Result(new Login(plInfo.PID)
-                    {
-                        retVal = (int)ErrorCode.Core_NoError,
-                        pConnectionData = new RVConnectionData()
-                        {
-                            m_urlRegularProtocols = new(
-                                        "prudps",
-                                        prudplink,
-                                        new Dictionary<string, int>() {
-                                            { "port", Context.Handler.BackendPort },
-                                            { "CID", 1 },
-                                            { "PID", (int)Context.Client.sPID },
-                                            { "sid", 1 },
-                                            { "stream", 3 },
-                                            { "type", 2 } // Public, not BehindNAT
-                                        })
-                        },
-                        strReturnMsg = string.Empty,
-                        pbufResponse = new KerberosTicket(plInfo.PID, Context.Client.sPID, Constants.SessionKey, Constants.TicketData).ToBuffer(Context.Handler.AccessKey)
-                    });
-                }
+                    },
+                    strReturnMsg = string.Empty,
+                    pbufResponse = new KerberosTicket(plInfo.PID, Context.Client.sPID, Constants.SessionKey, Constants.TicketData).ToBuffer(Context.Handler.AccessKey)
+                });
             }
 
             return Error(0);

@@ -33,7 +33,7 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         {
             StorageFile reply = new();
 
-            string path = Path.Combine(QuazalServerConfiguration.QuazalStaticFolder + "/StaticFiles", strTag);
+            string path = Path.Combine(QuazalServerConfiguration.QuazalStaticFolder + "/StaticFiles/DriverPC", strTag);
 
             if (File.Exists(path))
             {

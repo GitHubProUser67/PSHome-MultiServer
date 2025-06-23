@@ -26,8 +26,38 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
                 if (QuazalServerConfiguration.UsePublicIP)
                     prudplink = string.IsNullOrWhiteSpace(QuazalServerConfiguration.ServerPublicBindAddress) ? Dns.GetHostName() : QuazalServerConfiguration.ServerPublicBindAddress;
 
-                // create tracking client info
-                PlayerInfo? plInfo = NetworkPlayers.GetPlayerInfoByUsername(userName);
+                PlayerInfo? plInfo = null;
+
+                if (userName == "guest")
+                {
+                    plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
+                    plInfo.PID = 100;
+                    plInfo.AccountId = userName;
+                    plInfo.Name = userName;
+
+                    return Result(new Login(plInfo.PID)
+                    {
+                        retVal = (int)ErrorCode.Core_NoError,
+                        pConnectionData = new RVConnectionData()
+                        {
+                            m_urlRegularProtocols = new(
+                                    "prudps",
+                                    prudplink,
+                                    new Dictionary<string, int>() {
+                                        { "port", Context.Handler.BackendPort },
+                                        { "CID", 1 },
+                                        { "PID", (int)Context.Client.sPID },
+                                        { "sid", 1 },
+                                        { "stream", 3 },
+                                        { "type", 2 } // Public, not BehindNAT
+                                    })
+                        },
+                        strReturnMsg = string.Empty,
+                        pbufResponse = new KerberosTicket(plInfo.PID, Context.Client.sPID, Constants.SessionKey, Constants.TicketData).ToBuffer(Context.Handler.AccessKey)
+                    });
+                }
+
+                plInfo = NetworkPlayers.GetPlayerInfoByUsername(userName);
 
                 if (plInfo != null)
                 {
@@ -56,34 +86,7 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
                 User? dbUser = DBHelper.GetUserByUserName(Context.Handler.Factory.Item1, userName);
                 plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
 
-                if (userName == "guest")
-                {
-                    plInfo.PID = 100;
-                    plInfo.AccountId = userName;
-                    plInfo.Name = userName;
-
-                    return Result(new Login(plInfo.PID)
-                    {
-                        retVal = (int)ErrorCode.Core_NoError,
-                        pConnectionData = new RVConnectionData()
-                        {
-                            m_urlRegularProtocols = new(
-                                    "prudps",
-                                    prudplink,
-                                    new Dictionary<string, int>() {
-                                        { "port", Context.Handler.BackendPort },
-                                        { "CID", 1 },
-                                        { "PID", (int)Context.Client.sPID },
-                                        { "sid", 1 },
-                                        { "stream", 3 },
-                                        { "type", 2 } // Public, not BehindNAT
-                                    })
-                        },
-                        strReturnMsg = string.Empty,
-                        pbufResponse = new KerberosTicket(plInfo.PID, Context.Client.sPID, Constants.SessionKey, Constants.TicketData).ToBuffer(Context.Handler.AccessKey)
-                    });
-                }
-                else if (dbUser != null && File.Exists(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_passwords/{userName}_password.txt"))
+                if (dbUser != null && File.Exists(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_passwords/{userName}_password.txt"))
                 {
                     plInfo.PID = dbUser.Id;
                     plInfo.AccountId = userName;
@@ -130,7 +133,6 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
                 if (QuazalServerConfiguration.UsePublicIP)
                     prudplink = string.IsNullOrWhiteSpace(QuazalServerConfiguration.ServerPublicBindAddress) ? Dns.GetHostName() : QuazalServerConfiguration.ServerPublicBindAddress;
 
-                // create tracking client info
                 PlayerInfo? plInfo = NetworkPlayers.GetPlayerInfoByUsername(userName);
 
                 if (plInfo != null)

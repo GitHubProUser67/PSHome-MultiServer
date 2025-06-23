@@ -22,7 +22,7 @@ namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
 
             if (!string.IsNullOrEmpty(stringSearch))
             {
-                string directoryPath = QuazalServerConfiguration.QuazalStaticFolder + "/StaticFiles";
+                string directoryPath = QuazalServerConfiguration.QuazalStaticFolder + "/StaticFiles/DriverPS3";
 
                 if (stringSearch == "*")
                 {
