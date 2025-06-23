@@ -148,7 +148,7 @@ namespace Horizon.HTTPSERVICE
                                 DmeId = client.DmeId,
                                 Name = client.Client!.AccountName,
                                 Languages = client.Client.LanguageType.ToString(),
-                                Host = client.Client.IsGameHost
+                                Host = client.Client == game.Host
                             };
 
                             if (!string.IsNullOrEmpty(gameSession.Name) && gameSession.Name.Contains("AP|"))
@@ -196,7 +196,7 @@ namespace Horizon.HTTPSERVICE
                                 DmeId = client.DmeId,
                                 Name = client.Client!.AccountName,
                                 Languages = client.Client.LanguageType.ToString(),
-                                Host = client.Client.IsGameHost
+                                Host = client.Client == party.Host
                             };
 
                             if (!string.IsNullOrEmpty(gameSession.Name) && gameSession.Name.Contains("AP|"))
