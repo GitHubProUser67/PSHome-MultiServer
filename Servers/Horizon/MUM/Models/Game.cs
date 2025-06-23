@@ -1,15 +1,12 @@
 using CustomLogger;
 using Horizon.RT.Common;
 using Horizon.RT.Models;
-using Horizon.LIBRARY.Common;
 using Horizon.LIBRARY.Database.Models;
 using Horizon.SERVER.PluginArgs;
 using System.Data;
 using Horizon.PluginManager;
-using Horizon.HTTPSERVICE;
 using Horizon.SERVER;
 using NetworkLibrary.Extension;
-using System.Drawing.Text;
 
 namespace Horizon.MUM.Models
 {
@@ -446,6 +443,8 @@ namespace Horizon.MUM.Models
 
             MediusWorldId = GameChannel!.Id = reassignGameMediusWorldID.NewMediusWorldID;
 
+            Channel.UnregisterId(ApplicationId, reassignGameMediusWorldID.OldMediusWorldID);
+
             return MediusWorldId;
         }
 
@@ -549,17 +548,6 @@ namespace Horizon.MUM.Models
             else
                 LoggerAccessor.LogInfo($"[Game] -> OnPlayerJoined -> {player.Client?.ApplicationId} - {player.Client?.CurrentGame?.GameName} (id : {player.Client?.CurrentGame?.MediusWorldId}) -> {player.Client?.AccountName} -> {player.Client?.LanguageType}");
 
-            try
-            {
-                if (player.Client != null && GameHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
-                    RoomManager.UpdateOrCreateRoom(player.Client.ApplicationId.ToString(), player.Client.CurrentGame?.GameName, player.Client.CurrentGame?.MediusWorldId,
-                        player.Client.CurrentChannel?.Id.ToString(), player.Client.AccountName, player.Client.DmeId, player.Client.LanguageType.ToString(), ishost);
-            }
-            catch
-            {
-                // Not Important
-            }
-
             // Send to plugins
             await MediusClass.Plugins.OnEvent(PluginEvent.MEDIUS_PLAYER_ON_JOINED_GAME, new OnPlayerGameArgs() { Player = player.Client, Game = this });
         }
@@ -606,16 +594,6 @@ namespace Horizon.MUM.Models
         {
             bool MigrateHost = false;
             LoggerAccessor.LogInfo($"Game {MediusWorldId}: {GameName}: {client} removed.");
-
-            try
-            {
-                if (!string.IsNullOrEmpty(client.CurrentGame?.GameName) && !string.IsNullOrEmpty(client.AccountName) && !string.IsNullOrEmpty(WorldId) && GameHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
-                    RoomManager.RemoveUserFromGame(client.ApplicationId.ToString(), client.CurrentGame.GameName, WorldId, client.AccountName);
-            }
-            catch
-            {
-                // Not Important
-            }
 
             // Send to plugins
             await MediusClass.Plugins.OnEvent(PluginEvent.MEDIUS_PLAYER_ON_LEFT_GAME, new OnPlayerGameArgs() { Player = client, Game = this });
@@ -724,18 +702,6 @@ namespace Horizon.MUM.Models
                 if (!utcTimeEnded.HasValue)
                     _ = HorizonServerConfiguration.Database.UpdateGame(ToGameDTO());
             }
-
-            if (GameHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
-            {
-                try
-                {
-                    RoomManager.UpdateGameName(ApplicationId.ToString(), MediusWorldId.ToString(), previousGameName, GameName);
-                }
-                catch
-                {
-                    // Not Important
-                }
-            }
         }
 
         public virtual async Task OnWorldReport0(MediusWorldReport0 report)
@@ -794,18 +760,6 @@ namespace Horizon.MUM.Models
                 // Update db
                 if (!utcTimeEnded.HasValue)
                     _ = HorizonServerConfiguration.Database.UpdateGame(ToGameDTO());
-            }
-
-            if (GameHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
-            {
-                try
-                {
-                    RoomManager.UpdateGameName(ApplicationId.ToString(), MediusWorldId.ToString(), previousGameName, GameName);
-                }
-                catch
-                {
-                    // Not Important
-                }
             }
         }
 
@@ -873,18 +827,6 @@ namespace Horizon.MUM.Models
                 if (!utcTimeEnded.HasValue)
                     _ = HorizonServerConfiguration.Database.UpdateGame(ToGameDTO());
             }
-
-            if (GameHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
-            {
-                try
-                {
-                    RoomManager.UpdateGameName(ApplicationId.ToString(), MediusWorldId.ToString(), previousGameName, GameName);
-                }
-                catch
-                {
-                    // Not Important
-                }
-            }
         }
 
         public virtual Task GameCreated()
@@ -926,18 +868,6 @@ namespace Horizon.MUM.Models
                     MediusWorldID = MediusWorldId,
                     BrutalFlag = false
                 });
-
-                if (GameHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
-                {
-                    try
-                    {
-                        RoomManager.RemoveGame(appid.ToString(), MediusWorldId.ToString(), GameName);
-                    }
-                    catch
-                    {
-                        // Not Important
-                    }
-                }
 
                 // destroy flag
                 Destroyed = true;

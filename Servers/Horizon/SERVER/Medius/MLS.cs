@@ -6840,14 +6840,7 @@ namespace Horizon.SERVER.Medius
                         }
 
                         if (client.CurrentGame != null)
-                        {
-                            if (client.CurrentGame.GameHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
-                                RoomManager.UpdateOrCreateRoom(client.CurrentGame.ApplicationId.ToString(), client.CurrentGame.GameName,
-                                    client.CurrentGame.MediusWorldId, client.CurrentChannel?.Id.ToString(), client.AccountName,
-                                    client.DmeId, client.LanguageType.ToString(), client == client.CurrentGame.Host);
-
                             await client.CurrentGame.OnWorldReport0(worldReport0);
-                        }
                         break;
                     }
 
@@ -6898,22 +6891,10 @@ namespace Horizon.SERVER.Medius
                                         });
                             }
 
-                            if (data.ClientObject.CurrentGame.GameHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
-                                RoomManager.UpdateOrCreateRoom(data.ClientObject.CurrentGame.ApplicationId.ToString(), data.ClientObject.CurrentGame.GameName,
-                                    data.ClientObject.CurrentGame.MediusWorldId, data.ClientObject.CurrentChannel?.Id.ToString(), data.ClientObject.AccountName,
-                                    data.ClientObject.DmeId, data.ClientObject.LanguageType.ToString(), data.ClientObject == data.ClientObject.CurrentGame.Host);
-
                             await data.ClientObject.CurrentGame.OnWorldReport(worldReport, data.ClientObject.ApplicationId);
                         }
                         else if (data.ClientObject.CurrentParty != null)
-                        {
-                            if (data.ClientObject.CurrentParty.PartyHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
-                                RoomManager.UpdateOrCreateRoom(data.ClientObject.CurrentParty.ApplicationId.ToString(), data.ClientObject.CurrentParty.PartyName,
-                                    data.ClientObject.CurrentParty.MediusWorldId, data.ClientObject.CurrentChannel?.Id.ToString(), data.ClientObject.AccountName,
-                                    data.ClientObject.DmeId, data.ClientObject.LanguageType.ToString(), data.ClientObject == data.ClientObject.CurrentParty.Host);
-
                             await data.ClientObject.CurrentParty.OnWorldReport(worldReport, data.ClientObject.ApplicationId);
-                        }
 
                         break;
                     }

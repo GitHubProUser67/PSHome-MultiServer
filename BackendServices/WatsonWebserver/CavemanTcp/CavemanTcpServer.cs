@@ -1345,19 +1345,16 @@
                     while (TcpClientTasks.Count < MaxConcurrentListeners) //Maximum number of concurrent listeners
                     {
 #if NET6_0_OR_GREATER
-                        TcpClientTasks.Add(_Listener.AcceptTcpClientAsync(_Token).AsTask().ContinueWith(t =>
+                        TcpClientTasks.Add(_Listener.AcceptTcpClientAsync(_Token).AsTask().ContinueWith(async t =>
 #else
-                        TcpClientTasks.Add(_Listener.AcceptTcpClientAsync().ContinueWith(t => 
+                        TcpClientTasks.Add(_Listener.AcceptTcpClientAsync().ContinueWith(async t => 
 #endif
                         {
                             ClientMetadata client = null;
 
                             try
                             {
-                                if (!t.IsCompleted)
-                                    return;
-
-                                TcpClient tcpClient = t.Result;
+                                TcpClient tcpClient = await t.ConfigureAwait(false);
                                 tcpClient.NoDelay = true;
 
                                 string clientIpPort = tcpClient.Client.RemoteEndPoint.ToString();

@@ -1445,7 +1445,7 @@ namespace Horizon.MUM
                     quickLookup.AppIdToChannel[channel.ApplicationId].Add(channel);
             }
 
-            await channel.OnChannelCreate(channel);
+            await channel.OnChannelCreate(channel).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -2049,16 +2049,9 @@ namespace Horizon.MUM
                                 channelKeyPair.Value.Remove(channel);
 
                                 Channel.UnregisterId(channelKeyPair.Key, channel.Id);
-
-                                try
-                                {
-                                    RoomManager.RemoveWorld(channelKeyPair.Key.ToString(), channel.Id.ToString());
-                                }
-                                catch
-                                {
-                                    // Not Important
-                                }
                             }
+
+                            RoomManager.UpdateRoomsFromChannels(channelKeyPair.Value);
                         }
                     }
                 }
@@ -2080,37 +2073,75 @@ namespace Horizon.MUM
                 foreach (var quickLookup in _lookupsByAppId)
                 {
                     int appid = quickLookup.Key;
+                    List<int> gameKeysToUpdate = new List<int>();
+                    List<int> partyKeysToUpdate = new List<int>();
+
                     foreach (var gameKeyPair in quickLookup.Value.GameIdToGame)
                     {
-                        if (gameKeyPair.Value.ReadyToDestroy)
+                        var game = gameKeyPair.Value;
+
+                        if (game.MediusWorldId != gameKeyPair.Key)
                         {
-                            LoggerAccessor.LogWarn($"Destroying Game {gameKeyPair.Value}");
-                            await gameKeyPair.Value.EndGame(appid);
+                            LoggerAccessor.LogWarn($"Game Id mismatch: key {gameKeyPair.Key} != game.MediusWorldId {game.MediusWorldId}, updating.");
+                            gameKeysToUpdate.Add(gameKeyPair.Key);
+                        }
+                        if (game.ReadyToDestroy)
+                        {
+                            LoggerAccessor.LogWarn($"Destroying Game {game}");
+                            await game.EndGame(appid);
                             gamesToRemove.Enqueue((quickLookup.Value, gameKeyPair.Key));
                         }
-                        else if (gameKeyPair.Value.Destroyed)
+                        else if (game.Destroyed)
                         {
-                            LoggerAccessor.LogWarn($"Removing destroyed Game {gameKeyPair.Value}");
+                            LoggerAccessor.LogWarn($"Removing destroyed Game {game}");
                             gamesToRemove.Enqueue((quickLookup.Value, gameKeyPair.Key));
                         }
                         else
-                            await gameKeyPair.Value.Tick();
+                            await game.Tick();
                     }
+
+                    lock (quickLookup.Value.GameIdToGame)
+                    {
+                        foreach (var previousKey in gameKeysToUpdate)
+                        {
+                            var game = quickLookup.Value.GameIdToGame[previousKey];
+                            quickLookup.Value.GameIdToGame.Remove(previousKey);
+                            quickLookup.Value.GameIdToGame[game.MediusWorldId] = game;
+                        }
+                    }
+
                     foreach (var partyKeyPair in quickLookup.Value.PartyIdToGame)
                     {
-                        if (partyKeyPair.Value.ReadyToDestroy)
+                        var party = partyKeyPair.Value;
+
+                        if (party.MediusWorldId != partyKeyPair.Key)
                         {
-                            LoggerAccessor.LogWarn($"Destroying Party {partyKeyPair.Value}");
-                            await partyKeyPair.Value.EndParty(appid);
+                            LoggerAccessor.LogWarn($"Party Id mismatch: key {partyKeyPair.Key} != party.MediusWorldId {party.MediusWorldId}, updating.");
+                            partyKeysToUpdate.Add(partyKeyPair.Key);
+                        }
+                        if (party.ReadyToDestroy)
+                        {
+                            LoggerAccessor.LogWarn($"Destroying Party {party}");
+                            await party.EndParty(appid);
                             partiesToRemove.Enqueue((quickLookup.Value, partyKeyPair.Key));
                         }
-                        else if (partyKeyPair.Value.Destroyed)
+                        else if (party.Destroyed)
                         {
-                            LoggerAccessor.LogWarn($"Removing destroyed Party {partyKeyPair.Value}");
+                            LoggerAccessor.LogWarn($"Removing destroyed Party {party}");
                             partiesToRemove.Enqueue((quickLookup.Value, partyKeyPair.Key));
                         }
                         else
-                            await partyKeyPair.Value.Tick();
+                            await party.Tick();
+                    }
+
+                    lock (quickLookup.Value.PartyIdToGame)
+                    {
+                        foreach (var previousKey in partyKeysToUpdate)
+                        {
+                            var party = quickLookup.Value.PartyIdToGame[previousKey];
+                            quickLookup.Value.PartyIdToGame.Remove(previousKey);
+                            quickLookup.Value.PartyIdToGame[party.MediusWorldId] = party;
+                        }
                     }
                 }
 

@@ -239,14 +239,11 @@
                     }
 
                     while (HttpClientTasks.Count < MaxConcurrentListeners) //Maximum number of concurrent listeners
-                        HttpClientTasks.Add(_HttpListener.GetContextAsync().ContinueWith(t =>
+                        HttpClientTasks.Add(_HttpListener.GetContextAsync().ContinueWith(async t =>
                         {
                             try
                             {
-                                if (!t.IsCompleted)
-                                    return;
-
-                                HttpListenerContext listenerCtx = t.Result;
+                                HttpListenerContext listenerCtx = await t.ConfigureAwait(false);
                                 listenerCtx.Response.KeepAlive = Settings.IO.EnableKeepAlive;
 
                                 Interlocked.Increment(ref _RequestCount);

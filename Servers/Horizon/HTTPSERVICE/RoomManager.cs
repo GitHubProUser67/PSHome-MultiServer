@@ -2,6 +2,9 @@ using Horizon.SERVER;
 using NetworkLibrary.Extension;
 using WebAPIService.WebCrypto;
 using Newtonsoft.Json;
+using Horizon.MUM.Models;
+using static Horizon.MUM.Models.Game;
+using static Horizon.MUM.Models.Party;
 
 namespace Horizon.HTTPSERVICE
 {
@@ -9,14 +12,12 @@ namespace Horizon.HTTPSERVICE
     {
         private static readonly byte[] RandSecSaltKey = ByteUtils.GenerateRandomBytes((ushort)NetObfuscator.SecSalt.Length);
 
-        private static readonly ConcurrentList<Room> rooms = new ConcurrentList<Room>();
-
-        private static object _Lock = new object();
+        private static readonly List<Room> rooms = new List<Room>();
 
         // Update or Create a Room based on the provided parameters
         public static void UpdateOrCreateRoom(string appId, string? gameName, int? gameId, string? worldId, string? accountName, int accountDmeId, string? languageType, bool host)
         {
-            lock (_Lock)
+            lock (rooms)
             {
                 Room? roomToUpdate = rooms.FirstOrDefault(r => r.AppId == appId);
 
@@ -72,97 +73,155 @@ namespace Horizon.HTTPSERVICE
             }
         }
 
-        // Remove a user from a specific room based on the provided parameters
-        public static void RemoveUserFromGame(string appId, string gameName, string worldId, string accountName)
+        public static void UpdateRoomsFromChannels(List<Channel> channels)
         {
-            Room? roomToRemoveUser = rooms.FirstOrDefault(r => r.AppId == appId);
-
-            if (roomToRemoveUser != null)
+            lock (rooms)
             {
-                World? WorldToRemoveUser = roomToRemoveUser.Worlds?.FirstOrDefault(w => w.WorldId == worldId);
+                var validWorldIds = channels.Select(c => c.Id.ToString()).Distinct().ToList();
 
-                if (WorldToRemoveUser != null)
+                foreach (var channel in channels)
                 {
-                    GameList? GameToRemoveUser = WorldToRemoveUser.GameSessions?.FirstOrDefault(w => w.Name == gameName);
+                    string appIdStr = channel.ApplicationId.ToString();
+                    string worldIdStr = channel.Id.ToString();
 
-                    if (GameToRemoveUser != null && !string.IsNullOrEmpty(GameToRemoveUser.Name))
+                    Room? room = rooms.FirstOrDefault(r => r.AppId == appIdStr);
+                    if (room == null)
                     {
-                        if (GameToRemoveUser.Name.Contains("AP|"))
-                            GameToRemoveUser.Clients?.RemoveAll(p => p.Name == CipherString(accountName, HorizonServerConfiguration.MediusAPIKey));
+                        room = new Room
+                        {
+                            AppId = appIdStr,
+                            Worlds = new List<World>()
+                        };
+                        rooms.Add(room);
+                    }
+
+                    room.Worlds?.RemoveAll(w => !validWorldIds.Contains(w.WorldId!));
+
+                    World? world = room.Worlds!.FirstOrDefault(w => w.WorldId == worldIdStr);
+                    if (world == null)
+                    {
+                        world = new World
+                        {
+                            WorldId = worldIdStr,
+                            GameSessions = new List<GameList>()
+                        };
+                        room.Worlds!.Add(world);
+                    }
+
+                    var incomingGames = channel._games
+                        .Select(g => g.MediusWorldId)
+                        .ToList();
+
+                    incomingGames.AddRange(channel._parties
+                        .Select(g => g.MediusWorldId)
+                        .ToList());
+
+                    world.GameSessions!.RemoveAll(p => !incomingGames.Contains(p.DmeWorldId));
+
+                    foreach (var game in channel._games)
+                    {
+                        GameClient[] gameClients = game.LocalClients.ToArray();
+
+                        var incomingGameClients = gameClients.Select(c => c.DmeId).ToList();
+
+                        GameList? gameSession = world.GameSessions.FirstOrDefault(g => g.DmeWorldId == game.MediusWorldId);
+                        if (gameSession == null)
+                        {
+                            gameSession = new GameList
+                            {
+                                DmeWorldId = game.MediusWorldId,
+                                Name = game.GameName,
+                                CreationDate = game.utcTimeCreated,
+                                Clients = new List<Player>()
+                            };
+                            world.GameSessions.Add(gameSession);
+                        }
                         else
-                            GameToRemoveUser.Clients?.RemoveAll(p => p.Name == accountName);
+                            gameSession.Name = game.GameName;
+
+                        gameSession.Clients!.RemoveAll(p => !incomingGameClients.Contains(p.DmeId));
+
+                        foreach (var client in gameClients)
+                        {
+                            Player player = new Player
+                            {
+                                DmeId = client.DmeId,
+                                Name = client.Client!.AccountName,
+                                Languages = client.Client.LanguageType.ToString(),
+                                Host = client.Client.IsGameHost
+                            };
+
+                            if (!string.IsNullOrEmpty(gameSession.Name) && gameSession.Name.Contains("AP|"))
+                                player.Name = CipherString(player.Name!, HorizonServerConfiguration.MediusAPIKey);
+
+                            var existingPlayer = gameSession.Clients!.FirstOrDefault(p => p.DmeId == player.DmeId);
+                            if (existingPlayer == null)
+                                gameSession.Clients!.Add(player);
+                            else
+                            {
+                                existingPlayer.Name = player.Name;
+                                existingPlayer.Languages = player.Languages;
+                                existingPlayer.Host = player.Host;
+                            }
+                        }
                     }
-                }
-            }
-        }
 
-        // Remove a world from a specific room based on the provided parameters
-        public static void RemoveWorld(string appId, string? worldId)
-        {
-            Room? roomToRemove = rooms.FirstOrDefault(r => r.AppId == appId);
-
-            if (roomToRemove != null)
-            {
-                World? worldToRemove = roomToRemove.Worlds?.FirstOrDefault(w => w.WorldId == worldId);
-
-                if (worldToRemove != null)
-                    roomToRemove.Worlds?.RemoveAll(w => w.WorldId == worldId);
-            }
-        }
-
-        // Remove a game from a specific room based on the provided parameters
-        public static void RemoveGame(string appId, string? worldId, string? gameName)
-        {
-            if (!string.IsNullOrEmpty(gameName))
-            {
-                Room? roomToRemove = rooms.FirstOrDefault(r => r.AppId == appId);
-
-                if (roomToRemove != null)
-                {
-                    World? worldToRemove = roomToRemove.Worlds?.FirstOrDefault(w => w.WorldId == worldId);
-
-                    if (worldToRemove != null)
+                    foreach (var party in channel._parties)
                     {
-                        GameList? gameToRemove = worldToRemove.GameSessions?.FirstOrDefault(w => w.Name == gameName);
+                        PartyClient[] partyClients = party.LocalClients.ToArray();
 
-                        if (gameToRemove != null)
-                            worldToRemove.GameSessions?.RemoveAll(w => w.Name == gameName);
+                        var incomingPartyClients = partyClients.Select(c => c.DmeId).ToList();
+
+                        GameList? gameSession = world.GameSessions.FirstOrDefault(g => g.DmeWorldId == party.MediusWorldId);
+                        if (gameSession == null)
+                        {
+                            gameSession = new GameList
+                            {
+                                DmeWorldId = party.MediusWorldId,
+                                Name = party.PartyName,
+                                CreationDate = party.utcTimeCreated,
+                                Clients = new List<Player>()
+                            };
+                            world.GameSessions.Add(gameSession);
+                        }
+                        else
+                            gameSession.Name = party.PartyName;
+
+                        gameSession.Clients!.RemoveAll(p => !incomingPartyClients.Contains(p.DmeId));
+
+                        foreach (var client in partyClients)
+                        {
+                            Player player = new Player
+                            {
+                                DmeId = client.DmeId,
+                                Name = client.Client!.AccountName,
+                                Languages = client.Client.LanguageType.ToString(),
+                                Host = client.Client.IsGameHost
+                            };
+
+                            if (!string.IsNullOrEmpty(gameSession.Name) && gameSession.Name.Contains("AP|"))
+                                player.Name = CipherString(player.Name!, HorizonServerConfiguration.MediusAPIKey);
+
+                            var existingPlayer = gameSession.Clients!.FirstOrDefault(p => p.DmeId == player.DmeId);
+                            if (existingPlayer == null)
+                                gameSession.Clients!.Add(player);
+                            else
+                            {
+                                existingPlayer.Name = player.Name;
+                                existingPlayer.Languages = player.Languages;
+                                existingPlayer.Host = player.Host;
+                            }
+                        }
                     }
                 }
             }
-        }
-
-        public static void UpdateGameName(string appId, string? worldId, string? previousGameName, string? gameName)
-        {
-            if (!string.IsNullOrEmpty(previousGameName) && !string.IsNullOrEmpty(gameName))
-            {
-                Room? roomToRemove = rooms.FirstOrDefault(r => r.AppId == appId);
-
-                if (roomToRemove != null)
-                {
-                    World? worldToRemove = roomToRemove.Worlds?.FirstOrDefault(w => w.WorldId == worldId);
-
-                    if (worldToRemove != null)
-                    {
-                        GameList? gameToUpdate = worldToRemove.GameSessions?.FirstOrDefault(w => w.Name == previousGameName);
-
-                        if (gameToUpdate != null)
-                            gameToUpdate.Name = gameName;
-                    }
-                }
-            }
-        }
-
-        // Remove a Room by AppId
-        public static void RemoveRoom(string appId)
-        {
-            rooms.RemoveAll(r => r.AppId == appId);
         }
 
         // Get a list of all Rooms
         public static List<Room> GetAllRooms()
         {
-            return rooms.ToList();
+            lock (rooms)
+                return rooms.ToList();
         }
 
         public static List<KeyValuePair<string, int>> GetAllLoggedInUsers()

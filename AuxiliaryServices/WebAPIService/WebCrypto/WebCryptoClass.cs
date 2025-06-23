@@ -7,7 +7,6 @@ using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Security;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Security.Cryptography;
 using NetworkLibrary.Extension;
 
 namespace WebAPIService.WebCrypto
@@ -87,9 +86,9 @@ namespace WebAPIService.WebCrypto
                 CustomLogger.LoggerAccessor.LogDebug($"[WebCrypto] - GenerateRandomBase64KeyAsync - an exception was thrown while fetching the key:{ex}, switching to built-in engine...");
             }
 #if NET7_0_OR_GREATER
-            return Convert.ToBase64String(NetworkLibrary.Extension.ByteUtils.GenerateRandomBytes(32));
+            return Convert.ToBase64String(ByteUtils.GenerateRandomBytes(32));
 #else
-            return Task.FromResult(Convert.ToBase64String(NetworkLibrary.Extension.ByteUtils.GenerateRandomBytes(32)));
+            return Task.FromResult(Convert.ToBase64String(ByteUtils.GenerateRandomBytes(32)));
 #endif
         }
 

@@ -1,6 +1,5 @@
 using Horizon.RT.Common;
 using Horizon.RT.Models;
-using Horizon.LIBRARY.Common;
 using Horizon.SERVER;
 using Newtonsoft.Json;
 using System.Collections.Concurrent;
@@ -24,13 +23,13 @@ namespace Horizon.MUM.Models
         private static ConcurrentDictionary<int, ConcurrentDictionary<int, bool>> _IdCounter = new();
 
         [JsonIgnore]
-        public List<ClientObject> LocalClients = new();
+        public ConcurrentList<ClientObject> LocalClients = new();
         [JsonIgnore]
-        public List<Game> _games = new();
+        public ConcurrentList<Game> _games = new();
         [JsonIgnore]
-        public List<Party> _parties = new();
+        public ConcurrentList<Party> _parties = new();
 
-        public List<Channel> LocalChannels = new();
+        public ConcurrentList<Channel> LocalChannels = new();
 
         public string LobbyIp = MediusClass.SERVER_IP.ToString();
         public string RegionCode = NetworkLibrary.GeoLocalization.GeoIP.GetGeoCodeFromIP(MediusClass.SERVER_IP) ?? string.Empty;

@@ -2,12 +2,9 @@ using CustomLogger;
 using Horizon.RT.Common;
 using Horizon.RT.Models;
 using Horizon.LIBRARY.Database.Models;
-using Horizon.SERVER.PluginArgs;
 using System.Data;
-using Horizon.PluginManager;
 using Horizon.SERVER;
 using NetworkLibrary.Extension;
-using Horizon.HTTPSERVICE;
 
 namespace Horizon.MUM.Models
 {
@@ -174,6 +171,8 @@ namespace Horizon.MUM.Models
 
             MediusWorldId = GameChannel!.Id = reassignGameMediusWorldID.NewMediusWorldID;
 
+            Channel.UnregisterId(ApplicationId, reassignGameMediusWorldID.OldMediusWorldID);
+
             return MediusWorldId;
         }
 
@@ -261,17 +260,6 @@ namespace Horizon.MUM.Models
             else
                 LoggerAccessor.LogInfo($"[Party] -> OnPlayerJoined -> {player.Client?.ApplicationId} - {player.Client?.CurrentParty?.PartyName} (id : {player.Client?.CurrentParty?.MediusWorldId}) -> {player.Client?.AccountName} -> {player.Client?.LanguageType}");
 
-            try
-            {
-                if (player.Client != null && PartyHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
-                    RoomManager.UpdateOrCreateRoom(player.Client.ApplicationId.ToString(), player.Client.CurrentParty?.PartyName, player.Client.CurrentParty?.MediusWorldId,
-                        player.Client.CurrentChannel?.Id.ToString(), player.Client.AccountName, player.Client.DmeId, player.Client.LanguageType.ToString(), ishost);
-            }
-            catch
-            {
-                // Not Important
-            }
-
             return Task.CompletedTask;
         }
 
@@ -317,16 +305,6 @@ namespace Horizon.MUM.Models
         {
             bool MigrateHost = false;
             LoggerAccessor.LogInfo($"Party {MediusWorldId}: {PartyName}: {client} removed.");
-
-            try
-            {
-                if (!string.IsNullOrEmpty(client.CurrentParty?.PartyName) && !string.IsNullOrEmpty(client.AccountName) && !string.IsNullOrEmpty(WorldId) && PartyHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
-                    RoomManager.RemoveUserFromGame(client.ApplicationId.ToString(), client.CurrentParty.PartyName, WorldId, client.AccountName);
-            }
-            catch
-            {
-                // Not Important
-            }
 
             // Remove host
             if (Host == client)
@@ -433,18 +411,6 @@ namespace Horizon.MUM.Models
                 if (!utcTimeEnded.HasValue)
                     _ = HorizonServerConfiguration.Database.UpdateParty(ToPartyDTO());
             }
-
-            if (PartyHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
-            {
-                try
-                {
-                    RoomManager.UpdateGameName(ApplicationId.ToString(), MediusWorldId.ToString(), previousGameName, PartyName);
-                }
-                catch
-                {
-                    // Not Important
-                }
-            }
         }
 
         public virtual async Task OnWorldReportOnMe(MediusServerWorldReportOnMe report)
@@ -511,18 +477,6 @@ namespace Horizon.MUM.Models
                 if (!utcTimeEnded.HasValue)
                     _ = HorizonServerConfiguration.Database.UpdateParty(ToPartyDTO());
             }
-
-            if (PartyHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
-            {
-                try
-                {
-                    RoomManager.UpdateGameName(ApplicationId.ToString(), MediusWorldId.ToString(), previousGameName, PartyName);
-                }
-                catch
-                {
-                    // Not Important
-                }
-            }
         }
 
         public virtual Task PartyCreated()
@@ -561,18 +515,6 @@ namespace Horizon.MUM.Models
                     MediusWorldID = MediusWorldId,
                     BrutalFlag = false
                 });
-
-                if (PartyHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
-                {
-                    try
-                    {
-                        RoomManager.RemoveGame(appid.ToString(), MediusWorldId.ToString(), PartyName);
-                    }
-                    catch
-                    {
-                        // Not Important
-                    }
-                }
 
                 // destroy flag
                 Destroyed = true;
