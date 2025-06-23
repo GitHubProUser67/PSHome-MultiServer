@@ -158,7 +158,7 @@ namespace WebAPIService.OHS
                                         resultfromcommand = "{ }"; // Just bounce for now.
                                         break;
                                     case "voucher/":
-                                        resultfromcommand = "{ [\"exhuasted\"] = true }"; // Just bounce for now.
+                                        resultfromcommand = "{ [\"voucher\"] = \"xxxx-xxxx-xxxx\", [\"fresh\"] = true, [\"exhausted\"] = true }";
                                         break;
                                     default:
                                         LoggerAccessor.LogWarn($"[OHS] - Batch requested a method I don't know about, please report it to GITHUB {method} in {project} with data {data}");
