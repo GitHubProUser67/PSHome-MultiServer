@@ -60,6 +60,7 @@ namespace QuazalServer.RDVServices.GameServices.PS3GFRSServices
                 else if (userName == "Tracking")
                 {
                     plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
+                    plInfo.PID = 0;
                     plInfo.AccountId = userName;
                     plInfo.Name = userName;
 
