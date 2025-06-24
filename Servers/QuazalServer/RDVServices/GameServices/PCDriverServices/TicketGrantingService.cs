@@ -59,6 +59,7 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                 else if (userName == "Tracking")
                 {
                     plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
+                    plInfo.PID = 0;
                     plInfo.AccountId = userName;
                     plInfo.Name = userName;
 

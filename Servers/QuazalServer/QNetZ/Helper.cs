@@ -6,7 +6,6 @@ using EndianTools;
 using NetworkLibrary.Extension;
 using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 using ICSharpCode.SharpZipLib.Zip.Compression;
-using FixedZlib;
 
 namespace QuazalServer.QNetZ
 {
@@ -258,20 +257,13 @@ namespace QuazalServer.QNetZ
 
         public static byte[] Compress(byte[] InData)
         {
-			byte[]? output = null;
-            if (NativeZlib.CanRun)
-                output = NativeZlib.Deflate(InData);
-			if (output == null)
-			{
-                using (MemoryStream memoryStream = new())
-                {
-                    DeflaterOutputStream deflaterOutputStream = new(memoryStream, new Deflater(9));
-                    deflaterOutputStream.Write(InData, 0, InData.Length);
-                    deflaterOutputStream.Dispose();
-                    output = memoryStream.ToArray();
-                }
+            using (MemoryStream memoryStream = new())
+            {
+                DeflaterOutputStream deflaterOutputStream = new(memoryStream, new Deflater(9));
+                deflaterOutputStream.Write(InData, 0, InData.Length);
+                deflaterOutputStream.Dispose();
+                return memoryStream.ToArray(); // Send OG data if compressed size higher?
             }
-			return output; // Send OG data if compressed size higher?
         }
 
         public static byte[] Encrypt(string key, byte[] data)

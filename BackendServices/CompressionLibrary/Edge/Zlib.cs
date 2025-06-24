@@ -7,7 +7,6 @@ using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
-using FixedZlib;
 using System.Threading;
 
 namespace CompressionLibrary.Edge
@@ -131,15 +130,10 @@ namespace CompressionLibrary.Edge
             {
                 if (header.CompressedSize == header.SourceSize)
                     return Task.FromResult(InData);
-                byte[] array = null;
-                if (NativeZlib.CanRun)
-                    array = NativeZlib.InflateRaw(InData);
-                if (array != null)
-                    return Task.FromResult(array);
                 using (MemoryStream memoryStream = new MemoryStream())
                 using (ZOutputStream zoutputStream = new ZOutputStream(memoryStream, true))
                 {
-                    array = new byte[InData.Length];
+                    byte[] array = new byte[InData.Length];
                     Array.Copy(InData, 0, array, 0, InData.Length);
                     zoutputStream.Write(array, 0, array.Length);
                     zoutputStream.Close();
@@ -155,23 +149,17 @@ namespace CompressionLibrary.Edge
 
         private static Task<byte[]> ComponentAceCompressEdgeZlibChunk(byte[] InData)
         {
-            byte[] array2;
-            byte[] array = null;
+            byte[] array, array2;
 
             try
             {
-                if (NativeZlib.CanRun)
-                    array = NativeZlib.DeflateRaw(InData);
-                if (array == null)
+                using (MemoryStream memoryStream = new MemoryStream())
+                using (ZOutputStream zoutputStream = new ZOutputStream(memoryStream, 9, true))
                 {
-                    using (MemoryStream memoryStream = new MemoryStream())
-                    using (ZOutputStream zoutputStream = new ZOutputStream(memoryStream, 9, true))
-                    {
-                        zoutputStream.Write(InData, 0, InData.Length);
-                        zoutputStream.Close();
-                        memoryStream.Close();
-                        array = memoryStream.ToArray();
-                    }
+                    zoutputStream.Write(InData, 0, InData.Length);
+                    zoutputStream.Close();
+                    memoryStream.Close();
+                    array = memoryStream.ToArray();
                 }
                 if (array.Length >= InData.Length)
                     array2 = InData;

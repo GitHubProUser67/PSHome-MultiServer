@@ -3,7 +3,6 @@ using ZstdSharp;
 using ZstdSharp.Unsafe;
 using NetworkLibrary.Extension;
 using Ionic.Exploration;
-using FixedZlib;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -1078,8 +1077,6 @@ namespace NetworkLibrary.HTTP
         {
             if (input == null)
                 return null;
-            if (NativeZlib.CanRun)
-                return NativeZlib.DeflateRaw(input, 1);
             using (MemoryStream output = new MemoryStream())
             {
                 ZOutputStream zlibStream = new ZOutputStream(output, 1, true);
