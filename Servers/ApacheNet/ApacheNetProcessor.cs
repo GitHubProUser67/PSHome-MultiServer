@@ -555,9 +555,9 @@ namespace ApacheNet
                                             HTTPProcessor.GetMimeType(Path.GetExtension(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}"), ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor._mimeTypes), noCompressCacheControl);
                                     else
                                     {
-                                        FileStream stream = FileSystemUtils.TryOpen(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}");
+                                        FileStream fs = await FileSystemUtils.TryOpen(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}", FileSystemUtils.FileAccessMode.Read, LocalFileStreamHelper.FileLockAwaitMs).ConfigureAwait(false);
 
-                                        if (stream == null)
+                                        if (fs == null)
                                         {
                                             ctx.Response.ChunkedTransfer = false;
                                             statusCode = HttpStatusCode.InternalServerError;
@@ -567,13 +567,13 @@ namespace ApacheNet
                                         }
                                         else
                                         {
-                                            using (stream)
+                                            using (fs)
                                             {
                                                 byte[]? buffer = null;
 
                                                 using (MemoryStream ms = new())
                                                 {
-                                                    stream.CopyTo(ms);
+                                                    fs.CopyTo(ms);
                                                     buffer = ms.ToArray();
                                                 }
 

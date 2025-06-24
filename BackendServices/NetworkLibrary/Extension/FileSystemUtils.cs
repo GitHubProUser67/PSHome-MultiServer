@@ -10,6 +10,12 @@ namespace NetworkLibrary.Extension
 {
     public static class FileSystemUtils
     {
+        public enum FileAccessMode
+        {
+            Read,
+            Write
+        }
+
         private const FileAttributes hiddenAttribute = FileAttributes.Hidden;
 
         public static IEnumerable<FileSystemInfo> AllFilesAndFolders(this DirectoryInfo directory)
@@ -62,13 +68,16 @@ namespace NetworkLibrary.Extension
         }
 
         // https://stackoverflow.com/questions/24279882/file-open-hangs-and-freezes-thread-when-accessing-a-local-file
-        public static async Task<bool> IsLocked(this FileInfo file)
+        public static async Task<bool> IsLocked(this FileInfo file, FileAccessMode mode)
         {
             Task<bool> checkTask = Task.Run(() =>
             {
                 try
                 {
-                    using (file.Open(FileMode.Open, FileAccess.Read, FileShare.None)) { };
+                    if (mode == FileAccessMode.Write)
+                        using (file.Open(FileMode.Open, FileAccess.Read, FileShare.None)) { }
+                    else
+                        using (file.OpenRead()) { }
                     return false;
                 }
                 catch
@@ -90,7 +99,7 @@ namespace NetworkLibrary.Extension
             return true;
         }
 
-        public static async Task<FileStream> TryOpen(string filePath, int AwaiterTimeoutInMS = -1)
+        public static async Task<FileStream> TryOpen(string filePath, FileAccessMode mode, int AwaiterTimeoutInMS = -1)
         {
             if (AwaiterTimeoutInMS != -1)
             {
@@ -105,17 +114,13 @@ namespace NetworkLibrary.Extension
                 }
                 const int lockCheckInterval = 100;
                 int elapsedTime = 0;
-                bool TimedOut = false;
-                while (await IsLocked(info).ConfigureAwait(false))
+                while (await IsLocked(info, mode).ConfigureAwait(false))
                 {
-                    TimedOut = elapsedTime >= AwaiterTimeoutInMS;
-                    if (TimedOut)
-                        break;
+                    if (elapsedTime >= AwaiterTimeoutInMS)
+                        return null;
                     await Task.Delay(lockCheckInterval).ConfigureAwait(false);
                     elapsedTime += lockCheckInterval;
                 }
-                if (TimedOut)
-                    return null;
             }
             try
             {
@@ -126,36 +131,6 @@ namespace NetworkLibrary.Extension
             }
 
             return null;
-        }
-
-        public static FileStream TryOpen(string filePath)
-        {
-            try
-            {
-                return File.OpenRead(filePath);
-            }
-            catch
-            {
-            }
-
-            return null;
-        }
-
-        public static async Task<bool> TryDelete(string filePath)
-        {
-            try
-            {
-                FileInfo file = new FileInfo(filePath);
-                for (byte tries = 0; await file.IsLocked().ConfigureAwait(false) && tries < 5; tries++)
-                    await Task.Delay(1000).ConfigureAwait(false);
-                file.Delete();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                LoggerAccessor.LogError($"[FileSystemUtils] - TryDelete failed with Exception:{ex} on file:{filePath}");
-            }
-            return false;
         }
 
         public static long GetLength(this DirectoryInfo dir)

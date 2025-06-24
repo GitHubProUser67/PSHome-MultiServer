@@ -12,6 +12,8 @@ namespace ApacheNet
 {
     public class LocalFileStreamHelper
     {
+        public const int FileLockAwaitMs = 500;
+
         public const long compressionSizeLimit = 800L * 1024 * 1024; // 800MB in bytes
 
         public static async Task<bool> HandleRequest(HttpContextBase ctx, string encoding, string absolutepath, string filePath, string ContentType, bool isVideoOrAudio, bool isHtmlCompatible, bool noCompressCacheControl)
@@ -160,28 +162,28 @@ namespace ApacheNet
                     if (encoding.Contains("zstd"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "zstd");
-                        st = HTTPProcessor.ZstdCompressStream(FileSystemUtils.TryOpen(filePath));
+                        st = HTTPProcessor.ZstdCompressStream(await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false));
                     }
                     else if (encoding.Contains("br"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "br");
-                        st = HTTPProcessor.BrotliCompressStream(FileSystemUtils.TryOpen(filePath));
+                        st = HTTPProcessor.BrotliCompressStream(await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false));
                     }
                     else if (encoding.Contains("gzip"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "gzip");
-                        st = HTTPProcessor.GzipCompressStream(FileSystemUtils.TryOpen(filePath));
+                        st = HTTPProcessor.GzipCompressStream(await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false));
                     }
                     else if (encoding.Contains("deflate"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                        st = HTTPProcessor.DeflateStream(FileSystemUtils.TryOpen(filePath));
+                        st = HTTPProcessor.DeflateStream(await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false));
                     }
                     else
-                        st = FileSystemUtils.TryOpen(filePath);
+                        st = await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false);
                 }
                 else
-                    st = FileSystemUtils.TryOpen(filePath);
+                    st = await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false);
             }
 
             if (st == null)
@@ -249,7 +251,7 @@ namespace ApacheNet
             {
                 try
                 {
-                    FileStream fs = FileSystemUtils.TryOpen(filePath);
+                    FileStream fs = await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false);
 
                     if (fs != null)
                     {
