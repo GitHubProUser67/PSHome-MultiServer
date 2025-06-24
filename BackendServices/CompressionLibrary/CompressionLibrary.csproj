@@ -7,22 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Costura.Fody" Version="6.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <!--<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>-->
-    </PackageReference>
     <PackageReference Include="SevenZip" Version="19.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CustomLogger\CustomLogger.csproj" />
     <ProjectReference Include="..\EndianTools\EndianTools.csproj" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <EmbeddedResource Include="costura-win-x86\zlib1.dll" />
-    <EmbeddedResource Include="costura-win-x64\zlib1.dll" />
-	<EmbeddedResource Include="costura-win-arm64\zlib1.dll" />
   </ItemGroup>
 
 </Project>

@@ -12,6 +12,7 @@ namespace XI5.Verification
         {
             // game title ID, signing key, e.x
             // { "NPUAXXXXX", new ExempleSigningKey() },
+            { "BLUS30536", new DriverSFNtscDiscSigningKey() },
         };
 
         /// <summary>
