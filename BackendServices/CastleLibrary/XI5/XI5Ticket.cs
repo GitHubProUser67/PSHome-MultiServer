@@ -100,6 +100,12 @@ namespace XI5
                     LoggerAccessor.LogError($"[XI5Ticket] - Expected ticket length to be at least {ticket.TicketLength} bytes, but was {actualLength} bytes.");
                     return null;
                 }
+                else if (ticket.TicketLength < actualLength)
+                {
+                    byte[] trimmedTicket = new byte[ticket.TicketLength + headerLength];
+                    Array.Copy(ticketData, 0, trimmedTicket, 0, trimmedTicket.Length);
+                    return ReadFromBytes(trimmedTicket);
+                }
 
                 ticket.BodySection = reader.ReadTicketSectionHeader();
                 if (ticket.BodySection.Type != TicketDataSectionType.Body)

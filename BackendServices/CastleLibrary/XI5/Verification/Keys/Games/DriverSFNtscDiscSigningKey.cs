@@ -2,7 +2,7 @@
 {
     public class DriverSFNtscDiscSigningKey : PsnSigningKey
     {
-        public override string PublicKeyX => "71fa056eb9ce1c16e4e1aa3fa93cda3b34eb630eb9ce61e8";
-        public override string PublicKeyY => "7439fd2212f389473da7112481eb5134f66730ceca60ed62";
+        public override string PublicKeyX => "f2a4ae0d8815740e0d8e7a6c50a30ca539658f07c3d49192";
+        public override string PublicKeyY => "643fa0e449b98c20d6cf97af3a7639e8ba1c95c78bf78588";
     }
 }
