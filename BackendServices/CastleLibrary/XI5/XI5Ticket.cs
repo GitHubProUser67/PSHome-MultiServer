@@ -168,11 +168,15 @@ namespace XI5
             }
 
             // verify ticket signature
-            ticket.Valid = new TicketVerifier(ticketData, ticket, SigningKeyResolver.GetSigningKey(ticket.SignatureIdentifier, ticket.TitleId)).IsTicketValid();
+            ticket.Valid = SigningKeyResolver.GetSigningKeys(ticket.SignatureIdentifier, ticket.TitleId).Any(key =>
+               new TicketVerifier(ticketData, ticket, key).IsTicketValid());
 
             // ticket invalid
+#if DEBUG
             if (!ticket.Valid)
             {
+                LoggerAccessor.LogWarn($"[XI5Ticket] - Invalid ticket data sent at:{DateTime.Now} with payload:{{{BytesToHex(ticketData)}}}");
+
                 var curveCache = new Dictionary<string, ECDomainParameters>();
                 var validPoints = new List<Org.BouncyCastle.Math.EC.ECPoint>();
 
@@ -217,7 +221,7 @@ namespace XI5
                 if (alreadyChecked.Count == 0)
                     LoggerAccessor.LogWarn("[XI5Ticket] - all points are unique :(");
             }
-
+#endif
             return ticket;
         }
 
