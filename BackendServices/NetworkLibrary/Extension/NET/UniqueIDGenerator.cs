@@ -14,6 +14,11 @@
             return ++UniqueIDCounter;
         }
 
+        public uint SetCurrentID(uint idToSet)
+        {
+            return UniqueIDCounter = idToSet;
+        }
+
         public uint GetCurrentID()
         {
             return UniqueIDCounter;

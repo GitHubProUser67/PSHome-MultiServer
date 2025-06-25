@@ -30,13 +30,22 @@ namespace Horizon.DME.Models
 
         private void RegisterWorld(int MediusWorldId)
         {
-            if (_idToWorld.Count > MAX_WORLDS)
+            this.MediusWorldId = MediusWorldId;
+
+            int totalIdsCounted = 0;
+            while (totalIdsCounted < MAX_WORLDS && _idToWorld.ContainsKey((int)_idCounter.GetCurrentID()))
             {
+                _idCounter.SetCurrentID((uint)(((int)_idCounter.GetCurrentID() + 1) % MAX_WORLDS));
+                ++totalIdsCounted;
+            }
+
+            if (totalIdsCounted == MAX_WORLDS)
+            {
+                WorldId = -1;
                 LoggerAccessor.LogError("[DMEWorld] - Max worlds reached!");
                 return;
             }
 
-            this.MediusWorldId = MediusWorldId;
             WorldId = (int)_idCounter.CreateUniqueID();
 
             if (_idToWorld.TryAdd(WorldId, this))
