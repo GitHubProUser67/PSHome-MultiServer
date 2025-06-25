@@ -13,5 +13,10 @@
         {
             return ++UniqueIDCounter;
         }
+
+        public uint GetCurrentID()
+        {
+            return UniqueIDCounter;
+        }
     }
 }

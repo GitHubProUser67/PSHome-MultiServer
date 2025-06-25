@@ -108,7 +108,7 @@ namespace Horizon.MUM.Models
             return false;
         }
 
-        private static bool TryRegisterNewId(int ApplicationId, int idToAdd, bool Pre108)
+        public static bool TryRegisterNewId(int ApplicationId, int idToAdd, bool Pre108)
         {
             if (idToAdd <= 0)
                 return false;

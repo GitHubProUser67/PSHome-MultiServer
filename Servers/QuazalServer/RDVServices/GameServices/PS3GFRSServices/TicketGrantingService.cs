@@ -64,7 +64,7 @@ namespace QuazalServer.RDVServices.GameServices.PS3GFRSServices
                     plInfo.AccountId = userName;
                     plInfo.Name = userName;
 
-                    return Result(new Login(0)
+                    return Result(new Login(plInfo.PID)
                     {
                         retVal = (int)ErrorCode.Core_NoError,
                         pConnectionData = new RVConnectionData()
