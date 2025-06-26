@@ -167,9 +167,18 @@ namespace XI5
                 }
             }
 
+            DateTimeOffset validityCheckTime = DateTimeOffset.UtcNow;
+            bool isValidTimestamp = ticket.IssuedDate <= validityCheckTime && ticket.ExpiryDate > validityCheckTime;
+
             // verify ticket signature
             ticket.Valid = SigningKeyResolver.GetSigningKeys(ticket.SignatureIdentifier, ticket.TitleId).Any(key =>
-               new TicketVerifier(ticketData, ticket, key).IsTicketValid());
+               new TicketVerifier(ticketData, ticket, key).IsTicketValid()) && isValidTimestamp;
+
+            if (!isValidTimestamp)
+            {
+                LoggerAccessor.LogError($"[XI5Ticket] - Timestamp of the ticket data was invalid, likely an exploit. (IssuedDate:{ticket.IssuedDate} ExpiryDate:{ticket.ExpiryDate} CurrentTime:{validityCheckTime}");
+                return ticket;
+            }
 
             // ticket invalid
 #if DEBUG
