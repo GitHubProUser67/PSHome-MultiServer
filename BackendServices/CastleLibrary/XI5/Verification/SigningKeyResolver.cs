@@ -13,7 +13,7 @@ namespace XI5.Verification
             // game title ID, signing key, e.x
             // { "NPUAXXXXX", new List<ITicketSigningKey> { new ExempleSigningKey() } },
             { "BLUS30536", new List<ITicketSigningKey> { new DriverSFNtscDiscSigningKey() } },
-            { "NPUR00071", new List<ITicketSigningKey> { new HomeTycoonSigningKey(), new NovusPrimeSigningKey(), new NovusPrimeNTSC_JSigningKey() } },
+            { "NPUR00071", new List<ITicketSigningKey> { new HellfirePALSigningKey(), new HellfireNTSCSigningKey(), new NovusPrimeNTSC_JSigningKey() } },
         };
 
         /// <summary>
