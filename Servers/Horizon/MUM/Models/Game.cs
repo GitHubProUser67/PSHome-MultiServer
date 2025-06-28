@@ -437,13 +437,45 @@ namespace Horizon.MUM.Models
 
         public virtual int ReassignGameMediusWorldID(MediusReassignGameMediusWorldID reassignGameMediusWorldID)
         {
-            // Ensure reassignedGame Old MediusWorldID matches current Game
-            if (reassignGameMediusWorldID.OldMediusWorldID != MediusWorldId)
+            int newId = reassignGameMediusWorldID.NewMediusWorldID;
+            int oldId = reassignGameMediusWorldID.OldMediusWorldID;
+
+            // Ensure reassignedGame Old MediusWorldID matches current Game.
+            if (oldId != MediusWorldId)
+                return 0;
+            // Ensure the Id is free to use.
+            else if (!Channel.TryRegisterNewId(ApplicationId, newId, MediusVersion <= 108))
                 return 0;
 
-            MediusWorldId = GameChannel!.Id = reassignGameMediusWorldID.NewMediusWorldID;
+            MediusWorldId = GameChannel!.Id = newId;
 
-            Channel.UnregisterId(ApplicationId, reassignGameMediusWorldID.OldMediusWorldID);
+            Channel.UnregisterId(ApplicationId, oldId);
+
+            DMEServer?.Queue(new MediusServerMoveGameWorldOnMeRequest()
+            {
+                MessageID = new MessageId(),
+                CurrentMediusWorldID = oldId,
+                NewGameMediusWorldID = newId,
+            });
+
+            return MediusWorldId;
+        }
+
+        public virtual int ReassignGameMediusWorldID(MediusServerMoveGameWorldOnMeRequest reassignGameMediusWorldID)
+        {
+            int newId = reassignGameMediusWorldID.NewGameMediusWorldID;
+            int oldId = reassignGameMediusWorldID.CurrentMediusWorldID;
+
+            // Ensure reassignedGame Old MediusWorldID matches current Game.
+            if (oldId != MediusWorldId)
+                return 0;
+            // Ensure the Id is free to use.
+            else if (!Channel.TryRegisterNewId(ApplicationId, newId, MediusVersion <= 108))
+                return 0;
+
+            MediusWorldId = GameChannel!.Id = newId;
+
+            Channel.UnregisterId(ApplicationId, oldId);
 
             return MediusWorldId;
         }

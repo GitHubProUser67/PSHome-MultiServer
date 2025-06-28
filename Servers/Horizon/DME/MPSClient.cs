@@ -469,12 +469,12 @@ namespace Horizon.DME
                                     // Not Important.
                                 }
 
-                                World world = new(this, createGameWithAttributesRequest.ApplicationID, createGameWithAttributesRequest.MaxClients, createGameWithAttributesRequest.WorldID, gameOrPartyId);
+                                World world = new(this, createGameWithAttributesRequest.ApplicationID, createGameWithAttributesRequest.MaxClients, gameOrPartyId);
 
                                 if (world.WorldId == -1)
                                     Enqueue(new MediusServerCreateGameWithAttributesResponse()
                                     {
-                                        MessageID = new MessageId($"{world.WorldId}-{accountId}-{msgId}-{partyType}"),
+                                        MessageID = new MessageId($"{world.MediusWorldId}-{accountId}-{msgId}-{partyType}"),
                                         Confirmation = MGCL_ERROR_CODE.MGCL_WORLDID_INUSE
                                     });
                                 else
@@ -483,7 +483,7 @@ namespace Horizon.DME
 
                                     Enqueue(new MediusServerCreateGameWithAttributesResponse()
                                     {
-                                        MessageID = new MessageId($"{world.WorldId}-{accountId}-{msgId}-{partyType}"),
+                                        MessageID = new MessageId($"{world.MediusWorldId}-{accountId}-{msgId}-{partyType}"),
                                         Confirmation = MGCL_ERROR_CODE.MGCL_SUCCESS,
                                         MediusWorldId = createGameWithAttributesRequest.WorldID,
                                     });
@@ -501,7 +501,7 @@ namespace Horizon.DME
                     {
                         if (int.TryParse(joinGameRequest.MessageID?.Value.Split('-')[0], out int gameOrPartyId))
                         {
-                            World? world = _worlds.FirstOrDefault(x => x.WorldId == gameOrPartyId && !x.Destroyed);
+                            World? world = _worlds.FirstOrDefault(x => x.MediusWorldId == gameOrPartyId && !x.Destroyed);
                             if (world == null)
                                 Enqueue(new MediusServerJoinGameResponse()
                                 {
@@ -524,9 +524,31 @@ namespace Horizon.DME
 
                         break;
                     }
+                case MediusServerMoveGameWorldOnMeRequest moveGameRequest:
+                    {
+                        World? world = _worlds.FirstOrDefault(x => x.MediusWorldId == moveGameRequest.CurrentMediusWorldID);
+                        if (world == null)
+                            Enqueue(new MediusServerMoveGameWorldOnMeResponse()
+                            {
+                                MessageID = moveGameRequest.MessageID,
+                                Confirmation = MGCL_ERROR_CODE.MGCL_UNSUCCESSFUL,
+                            });
+                        else
+                        {
+                            world.MoveGameWorldId(moveGameRequest.NewGameMediusWorldID);
+                            Enqueue(new MediusServerMoveGameWorldOnMeResponse()
+                            {
+                                MessageID = moveGameRequest.MessageID,
+                                Confirmation = MGCL_ERROR_CODE.MGCL_SUCCESS,
+                                MediusWorldID = world.MediusWorldId
+                            });
+                        }
+
+                        break;
+                    }
                 case MediusServerEndGameRequest endGameRequest:
                     {
-                        _worlds.FirstOrDefault(x => x.WorldId == endGameRequest.MediusWorldID)?.OnEndGameRequest(endGameRequest);
+                        _worlds.FirstOrDefault(x => x.MediusWorldId == endGameRequest.MediusWorldID)?.OnEndGameRequest(endGameRequest);
 
                         break;
                     }

@@ -1,7 +1,5 @@
 ﻿using CustomLogger;
 using HttpMultipartParser;
-using NetHasher;
-using NetworkLibrary.Extension;
 using NetworkLibrary.HTTP;
 using System;
 using System.Globalization;
@@ -92,59 +90,59 @@ namespace WebAPIService.HELLFIRE.HFProcessors
                         }
                         else
                             LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on PSN");
-
-                        Command = data.GetParameterValue("Command");
-                        UserID = data.GetParameterValue("UserId");
-
-                        LoggerAccessor.LogInfo($"[HFGAMES] Command detected as {Command}");
-
-                        try
-                        {
-                            DisplayName = data.GetParameterValue("DisplayName");
-                        }
-                        catch
-                        {
-                            // Not Important.
-                        }
-                        try
-                        {
-                            InstanceID = data.GetParameterValue("InstanceID");
-                        }
-                        catch
-                        {
-                            // Not Important.
-                        }
-                        try
-                        {
-                            Region = data.GetParameterValue("Region");
-                        }
-                        catch
-                        {
-                            // Not Important.
-                        }
-                        try
-                        {
-                            Achievements = data.GetParameterValue("Achievements");
-                        }
-                        catch
-                        {
-                            // Not Important.
-                        }
-
-                        try
-                        {
-                            //for Log cmd
-                            Type = data.GetParameterValue("Type");
-                            Str = data.GetParameterValue("Str");
-                            Amount = data.GetParameterValue("Amount");
-                        }
-                        catch
-                        {
-                            // Not Important.
-                        }
-
-                        ms.Flush();
                     }
+
+                    Command = data.GetParameterValue("Command");
+                    UserID = data.GetParameterValue("UserId");
+
+                    LoggerAccessor.LogInfo($"[HFGAMES] Command detected as {Command}");
+
+                    try
+                    {
+                        DisplayName = data.GetParameterValue("DisplayName");
+                    }
+                    catch
+                    {
+                        // Not Important.
+                    }
+                    try
+                    {
+                        InstanceID = data.GetParameterValue("InstanceID");
+                    }
+                    catch
+                    {
+                        // Not Important.
+                    }
+                    try
+                    {
+                        Region = data.GetParameterValue("Region");
+                    }
+                    catch
+                    {
+                        // Not Important.
+                    }
+                    try
+                    {
+                        Achievements = data.GetParameterValue("Achievements");
+                    }
+                    catch
+                    {
+                        // Not Important.
+                    }
+
+                    try
+                    {
+                        //for Log cmd
+                        Type = data.GetParameterValue("Type");
+                        Str = data.GetParameterValue("Str");
+                        Amount = data.GetParameterValue("Amount");
+                    }
+                    catch
+                    {
+                        // Not Important.
+                    }
+
+                    ms.Flush();
                 }
 
                 if (!string.IsNullOrEmpty(Command))

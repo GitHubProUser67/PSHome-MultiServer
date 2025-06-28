@@ -100,6 +100,12 @@ namespace XI5
                     LoggerAccessor.LogError($"[XI5Ticket] - Expected ticket length to be at least {ticket.TicketLength} bytes, but was {actualLength} bytes.");
                     return null;
                 }
+                else if (ticket.TicketLength < actualLength)
+                {
+                    byte[] trimmedTicket = new byte[ticket.TicketLength + headerLength];
+                    Array.Copy(ticketData, 0, trimmedTicket, 0, trimmedTicket.Length);
+                    return ReadFromBytes(trimmedTicket);
+                }
 
                 ticket.BodySection = reader.ReadTicketSectionHeader();
                 if (ticket.BodySection.Type != TicketDataSectionType.Body)
@@ -161,12 +167,25 @@ namespace XI5
                 }
             }
 
+            DateTimeOffset validityCheckTime = DateTimeOffset.UtcNow;
+            bool isValidTimestamp = ticket.IssuedDate <= validityCheckTime && ticket.ExpiryDate > validityCheckTime;
+
             // verify ticket signature
-            ticket.Valid = new TicketVerifier(ticketData, ticket, SigningKeyResolver.GetSigningKey(ticket.SignatureIdentifier, ticket.TitleId)).IsTicketValid();
+            ticket.Valid = SigningKeyResolver.GetSigningKeys(ticket.SignatureIdentifier, ticket.TitleId).Any(key =>
+               new TicketVerifier(ticketData, ticket, key).IsTicketValid()) && isValidTimestamp;
+
+            if (!isValidTimestamp)
+            {
+                LoggerAccessor.LogError($"[XI5Ticket] - Timestamp of the ticket data was invalid, likely an exploit. (IssuedDate:{ticket.IssuedDate} ExpiryDate:{ticket.ExpiryDate} CurrentTime:{validityCheckTime}");
+                return ticket;
+            }
 
             // ticket invalid
+#if DEBUG
             if (!ticket.Valid)
             {
+                LoggerAccessor.LogWarn($"[XI5Ticket] - Invalid ticket data sent at:{DateTime.Now} with payload:{{{BytesToHex(ticketData)}}}");
+
                 var curveCache = new Dictionary<string, ECDomainParameters>();
                 var validPoints = new List<Org.BouncyCastle.Math.EC.ECPoint>();
 
@@ -211,7 +230,7 @@ namespace XI5
                 if (alreadyChecked.Count == 0)
                     LoggerAccessor.LogWarn("[XI5Ticket] - all points are unique :(");
             }
-
+#endif
             return ticket;
         }
 

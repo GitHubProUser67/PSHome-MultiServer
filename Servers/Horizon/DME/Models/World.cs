@@ -16,6 +16,8 @@ namespace Horizon.DME.Models
     {
         private static Counter worldsCreated = Metrics.CreateCounter("dme_worlds_created_total", "Total number of created worlds in DME.");
 
+        private static UniqueIDGenerator _idCounter = new UniqueIDGenerator();
+
         public int MAX_CLIENTS_PER_WORLD = DmeClass.Settings.MaxClientsPerWorld;
         public int MAX_WORLDS = DmeClass.Settings.DmeServerMaxWorld;
 
@@ -26,16 +28,25 @@ namespace Horizon.DME.Models
 
         private readonly object _ClientIndexlock = new();
 
-        private void RegisterWorld(int GameChannelWorldId, int WorldId)
+        private void RegisterWorld(int MediusWorldId)
         {
-            if (_idToWorld.Count > MAX_WORLDS)
+            this.MediusWorldId = MediusWorldId;
+
+            int totalIdsCounted = 0;
+            while (totalIdsCounted < MAX_WORLDS && _idToWorld.ContainsKey((int)_idCounter.GetCurrentID()))
             {
-                LoggerAccessor.LogError("[DMEWorld] - Max worlds reached or requested WorldId higher than allowed value in DME config!");
+                _idCounter.SetCurrentID((uint)(((int)_idCounter.GetCurrentID() + 1) % MAX_WORLDS));
+                ++totalIdsCounted;
+            }
+
+            if (totalIdsCounted == MAX_WORLDS)
+            {
+                WorldId = -1;
+                LoggerAccessor.LogError("[DMEWorld] - Max worlds reached!");
                 return;
             }
 
-            this.GameChannelWorldId = GameChannelWorldId;
-            this.WorldId = WorldId;
+            WorldId = (int)_idCounter.CreateUniqueID();
 
             if (_idToWorld.TryAdd(WorldId, this))
             {
@@ -44,7 +55,7 @@ namespace Horizon.DME.Models
             }
             else
             {
-                this.WorldId = -1;
+                WorldId = -1;
                 LoggerAccessor.LogError($"[DMEWorld] - Failed to register world with id {WorldId}");
             }
         }
@@ -57,9 +68,9 @@ namespace Horizon.DME.Models
                 LoggerAccessor.LogError($"[DMEWorld] - Failed to unregister world with id {WorldId}");
         }
 
-        public World? GetWorldById(int GameChannelWorldId, int DmeWorldId)
+        public World? GetWorldById(int MediusWorldId, int DmeWorldId)
         {
-            return _idToWorld.Values.FirstOrDefault(world => world.GameChannelWorldId == GameChannelWorldId && world.WorldId == DmeWorldId);
+            return _idToWorld.Values.FirstOrDefault(world => world.MediusWorldId == MediusWorldId && world.WorldId == DmeWorldId);
         }
 
         private bool TryRegisterNewClientIndex(out int index)
@@ -94,7 +105,7 @@ namespace Horizon.DME.Models
 
         public int WorldId { get; protected set; } = -1;
 
-        public int GameChannelWorldId { get; protected set; } = -1;
+        public int MediusWorldId { get; protected set; } = -1;
 
         public int ApplicationId { get; protected set; } = 0;
 
@@ -133,7 +144,7 @@ namespace Horizon.DME.Models
             }
         }
 
-        public World(MPSClient manager, int appId, int maxPlayers, int GameChannelWorldId, int WorldId)
+        public World(MPSClient manager, int appId, int maxPlayers, int MediusWorldId)
         {
             MaxPlayers = (DmeClass.Settings.MaxClientsOverride != -1) ? DmeClass.Settings.MaxClientsOverride : maxPlayers;
 
@@ -150,7 +161,7 @@ namespace Horizon.DME.Models
             for (int i = 0; i < MAX_CLIENTS_PER_WORLD; ++i)
                 _pIdIsUsed.TryAdd(i, false);
 
-            RegisterWorld(GameChannelWorldId, WorldId);
+            RegisterWorld(MediusWorldId);
 
             PlayerJoinQueue = new Thread(RunJoinGameLoop);
             PlayerJoinQueue.Start();
@@ -296,6 +307,11 @@ namespace Horizon.DME.Models
 
                 Manager?.RemoveWorld(this);
             }
+        }
+
+        public void MoveGameWorldId(int NewGameMediusWorldID)
+        {
+            MediusWorldId = NewGameMediusWorldID;
         }
 
         #region Send
@@ -473,7 +489,7 @@ namespace Horizon.DME.Models
             // Tell server
             Manager?.Enqueue(new MediusServerConnectNotification()
             {
-                MediusWorldUID = WorldId,
+                MediusWorldUID = MediusWorldId,
                 PlayerSessionKey = player.SessionKey ?? string.Empty,
                 ConnectEventType = MGCL_EVENT_TYPE.MGCL_EVENT_CLIENT_CONNECT
             });
@@ -534,7 +550,7 @@ namespace Horizon.DME.Models
             // Tell server
             Manager?.Enqueue(new MediusServerConnectNotification()
             {
-                MediusWorldUID = WorldId,
+                MediusWorldUID = MediusWorldId,
                 PlayerSessionKey = player.SessionKey ?? string.Empty,
                 ConnectEventType = MGCL_EVENT_TYPE.MGCL_EVENT_CLIENT_DISCONNECT
             });

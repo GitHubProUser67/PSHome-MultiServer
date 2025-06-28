@@ -150,13 +150,14 @@ namespace QuazalServer.QNetZ
 			else
 				payloadSize = (ushort)(stream.Length - stream.Position - (NewerCheckum ? 4 : 1));
 
-			MemoryStream pl = new();
+			using (MemoryStream pl = new())
+			{
+                if (payloadSize != 0)
+                    for (int i = 0; i < payloadSize; i++)
+                        pl.WriteByte(Helper.ReadU8(stream));
 
-			if (payloadSize != 0)
-				for (int i = 0; i < payloadSize; i++)
-					pl.WriteByte(Helper.ReadU8(stream));
-
-			payload = pl.ToArray();
+                payload = pl.ToArray();
+            }
 
 			if (payload != null && payload.Length > 0 && type != PACKETTYPE.SYN && m_oSourceVPort.type != STREAMTYPE.NAT)
 			{
@@ -167,15 +168,19 @@ namespace QuazalServer.QNetZ
 
 				if (usesCompression)
 				{
-					MemoryStream m2 = new();
-					m2.Write(payload, 1, payload.Length - 1);
-					payload = Helper.Decompress(AccessKey, m2.ToArray());
+					using (MemoryStream m2 = new())
+					{
+                        m2.Write(payload, 1, payload.Length - 1);
+                        payload = Helper.Decompress(AccessKey, m2.ToArray());
+                    }
 				}
 				else
 				{
-					MemoryStream m2 = new();
-					m2.Write(payload, 1, payload.Length - 1);
-					payload = m2.ToArray();
+					using (MemoryStream m2 = new())
+					{
+                        m2.Write(payload, 1, payload.Length - 1);
+                        payload = m2.ToArray();
+                    }
 				}
 
 				payloadSize = (ushort)payload.Length;
@@ -200,17 +205,21 @@ namespace QuazalServer.QNetZ
 					if ((sizeBefore % buff.Length) != 0)
 						count++;
 
-					MemoryStream m2 = new();
-					m2.WriteByte(count);
-					m2.Write(buff, 0, buff.Length);
-					tmpPayload = m2.ToArray();
+					using (MemoryStream m2 = new())
+					{
+                        m2.WriteByte(count);
+                        m2.Write(buff, 0, buff.Length);
+                        tmpPayload = m2.ToArray();
+                    }
 				}
 				else
 				{
-					MemoryStream m2 = new();
-					m2.WriteByte(0);
-					m2.Write(tmpPayload, 0, tmpPayload.Length);
-					tmpPayload = m2.ToArray();
+					using (MemoryStream m2 = new())
+					{
+                        m2.WriteByte(0);
+                        m2.Write(tmpPayload, 0, tmpPayload.Length);
+                        tmpPayload = m2.ToArray();
+                    }
 				}
 
 				if (m_oSourceVPort?.type == STREAMTYPE.RVSecure && AccessKey != "hg7j1") // TDU PS2 Beta has no encryption at all!
@@ -232,34 +241,36 @@ namespace QuazalServer.QNetZ
 			}
 
 			// write
-			MemoryStream m = new();
-			if (m_oSourceVPort != null)
-				Helper.WriteU8(m, m_oSourceVPort.toByte());
-			if (m_oDestinationVPort != null)
-				Helper.WriteU8(m, m_oDestinationVPort.toByte());
-			Helper.WriteU8(m, typeFlag);
-			Helper.WriteU8(m, m_bySessionID);
-			Helper.WriteU32(m, m_uiSignature);
-			Helper.WriteU16(m, uiSeqId);
-
-			if (type == PACKETTYPE.SYN || type == PACKETTYPE.CONNECT)
-				Helper.WriteU32(m, m_uiConnectionSignature);
-
-			if (type == PACKETTYPE.DATA)
-				Helper.WriteU8(m, m_byPartNumber);
-
-			// compress
-			byte[]? processedPayload = getProcessedPayload(AccessKey);
-
-			if (processedPayload != null)
+			using (MemoryStream m = new())
 			{
-				if (flags != null && flags.Contains(PACKETFLAG.FLAG_HAS_SIZE))
-					Helper.WriteU16(m, (ushort)processedPayload.Length);
+                if (m_oSourceVPort != null)
+                    Helper.WriteU8(m, m_oSourceVPort.toByte());
+                if (m_oDestinationVPort != null)
+                    Helper.WriteU8(m, m_oDestinationVPort.toByte());
+                Helper.WriteU8(m, typeFlag);
+                Helper.WriteU8(m, m_bySessionID);
+                Helper.WriteU32(m, m_uiSignature);
+                Helper.WriteU16(m, uiSeqId);
 
-				m.Write(processedPayload, 0, processedPayload.Length);
+                if (type == PACKETTYPE.SYN || type == PACKETTYPE.CONNECT)
+                    Helper.WriteU32(m, m_uiConnectionSignature);
 
-				return AddCheckSum(m.ToArray(), AccessKey, NewerCheckum, ref checkSum);
-			}
+                if (type == PACKETTYPE.DATA)
+                    Helper.WriteU8(m, m_byPartNumber);
+
+                // compress
+                byte[]? processedPayload = getProcessedPayload(AccessKey);
+
+                if (processedPayload != null)
+                {
+                    if (flags != null && flags.Contains(PACKETFLAG.FLAG_HAS_SIZE))
+                        Helper.WriteU16(m, (ushort)processedPayload.Length);
+
+                    m.Write(processedPayload, 0, processedPayload.Length);
+
+                    return AddCheckSum(m.ToArray(), AccessKey, NewerCheckum, ref checkSum);
+                }
+            }
 
 			return Array.Empty<byte>();
 		}
@@ -316,9 +327,10 @@ namespace QuazalServer.QNetZ
 			if (setting == 0xFF)
 				setting = GetProtocolSetting((byte)(data[0] >> 4), AccessKey);
 
-			uint tmp = 0;
+			bool isBigEndian = !BitConverter.IsLittleEndian;
+            uint tmp = 0;
 			for (int i = 0; i < data.Length / 4; i++)
-				tmp += BitConverter.ToUInt32(!BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(data) : data, i * 4);
+				tmp += BitConverter.ToUInt32(isBigEndian ? EndianUtils.ReverseArray(data) : data, i * 4);
 
 			uint leftOver = (uint)data.Length & 3;
 			uint processed = 0;
@@ -369,14 +381,16 @@ namespace QuazalServer.QNetZ
             int len = data.Length;
             len -= len % 4;
 
-            using BinaryReader reader = new(new MemoryStream(data.Take(len).ToArray()));
-            uint dataSum = reader.ReadUInt32();
-            while (reader.BaseStream.Position < reader.BaseStream.Length)
-            {
-                dataSum += reader.ReadUInt32();
+			uint dataSum;
+            using (MemoryStream ms = new(data.Take(len).ToArray()))
+			using (BinaryReader reader = new(ms))
+			{
+                dataSum = reader.ReadUInt32();
+                while (reader.BaseStream.Position < reader.BaseStream.Length)
+                {
+                    dataSum += reader.ReadUInt32();
+                }
             }
-
-            reader.Close();
 
             // copying trailing bytes
             byte[] trailerBytes = new byte[4];

@@ -853,7 +853,9 @@ namespace Horizon.SERVER.Medius
 
                         if (game != null)
                         {
-                            if (game.MediusWorldId != serverMoveGameWorldOnMeRequest.CurrentMediusWorldID)
+                            int result = game.ReassignGameMediusWorldID(serverMoveGameWorldOnMeRequest);
+
+                            if (result == 0)
                             {
                                 data.MeClientObject?.Queue(new MediusServerMoveGameWorldOnMeResponse()
                                 {
@@ -863,7 +865,6 @@ namespace Horizon.SERVER.Medius
                             }
                             else
                             {
-                                game.MediusWorldId = serverMoveGameWorldOnMeRequest.NewGameMediusWorldID;
                                 game.netAddressList.AddressList[0] = serverMoveGameWorldOnMeRequest.AddressList.AddressList[0];
                                 game.netAddressList.AddressList[1] = serverMoveGameWorldOnMeRequest.AddressList.AddressList[1];
 
@@ -877,7 +878,9 @@ namespace Horizon.SERVER.Medius
                         }
                         else if (party != null)
                         {
-                            if (party.MediusWorldId != serverMoveGameWorldOnMeRequest.CurrentMediusWorldID)
+                            int result = party.ReassignGameMediusWorldID(serverMoveGameWorldOnMeRequest);
+
+                            if (result == 0)
                             {
                                 data.MeClientObject?.Queue(new MediusServerMoveGameWorldOnMeResponse()
                                 {
@@ -887,7 +890,6 @@ namespace Horizon.SERVER.Medius
                             }
                             else
                             {
-                                party.MediusWorldId = serverMoveGameWorldOnMeRequest.NewGameMediusWorldID;
                                 party.netAddressList.AddressList[0] = serverMoveGameWorldOnMeRequest.AddressList.AddressList[0];
                                 party.netAddressList.AddressList[1] = serverMoveGameWorldOnMeRequest.AddressList.AddressList[1];
 
