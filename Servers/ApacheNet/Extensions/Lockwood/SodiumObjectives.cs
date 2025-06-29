@@ -287,6 +287,13 @@ namespace ApacheNet.Extensions.Lockwood
                                         }},
                                         description = ""Own the vickie statue and a pair of vickie headphones""
                                     }},
+                                    sodium_72 = {{
+                                        title = ""Bird on a Wire"",
+                                        hints = {{
+                                            ""-""
+                                        }},
+                                        description = ""Reach the sky!""
+                                    }},
                                     sodium_81 = {{
                                         title = ""Joining The Fold"",
                                         hints = {{
@@ -553,10 +560,10 @@ namespace ApacheNet.Extensions.Lockwood
                                     ""sodium_102"", ""sodium_103"", ""sodium_98"", ""sodium_8"", ""sodium_9"", ""sodium_31"", 
                                     ""sodium_64"", ""sodium_150"", ""sodium_151"", ""sodium_152"", ""sodium_153"", ""sodium_154"", 
                                     ""sodium_18"", ""sodium_11"", ""sodium_48"", ""sodium_49"", ""sodium_12"", ""sodium_50"", 
-                                    ""sodium_13"", ""sodium_19"", ""sodium_47"", ""sodium_51"", ""sodium_81"", ""sodium_82"", 
-                                    ""sodium_83"", ""sodium_84"", ""sodium_85"", ""sodium_86"", ""sodium_10"", ""sodium_16"", 
-                                    ""sodium_17"", ""sodium_92"", ""sodium_93"", ""sodium_104"", ""sodium_107"", ""sodium_115"",
-                                    ""sodium_116"", ""sodium_111"", ""sodium_113"", ""sodium_112"", ""sodium_106"",
+                                    ""sodium_13"", ""sodium_19"", ""sodium_47"", ""sodium_51"", ""sodium_72"", ""sodium_81"",
+                                    ""sodium_82"", ""sodium_83"", ""sodium_84"", ""sodium_85"", ""sodium_86"", ""sodium_10"",
+                                    ""sodium_16"", ""sodium_17"", ""sodium_92"", ""sodium_93"", ""sodium_104"", ""sodium_107"",
+                                    ""sodium_115"", ""sodium_116"", ""sodium_111"", ""sodium_113"", ""sodium_112"", ""sodium_106"",
                                 }
                             }
 
@@ -840,6 +847,14 @@ namespace ApacheNet.Extensions.Lockwood
                                       project = ""npc"",
                                       obtype = ""EVENT"",
                                       unlock_target = 1,
+                                  }},
+                                  sodium_72 = {{
+                                      credits = 10000,
+                                      img_incmplt = ""https://www.outso-srv1.com/webassets/Sodium/objectives/images/{version}/vickie_incomplete.dds"",
+                                      img_cmplt = ""https://www.outso-srv1.com/webassets/Sodium/objectives/images/{version}/vickie_complete.dds"",
+                                      project = ""desert_quench"",
+                                      obtype = ""EVENT"",
+                                      unlock_target = false,
                                   }},
                                   sodium_81 = {{
                                       credits = 1000,

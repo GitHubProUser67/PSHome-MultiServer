@@ -130,7 +130,7 @@ namespace HomeTools.Crypto
 
         public static readonly byte[] MetaDataV1IVA = InitiateMetaDataV1IVA();
 
-        public static readonly bool ClientsCertificatesWrittenToDisk = InitiateDecryptedClientsCertificates();
+        public static readonly bool ClientsCertificatesWrittenToDisk = InitiateDecryptedClientsCertificates().GetAwaiter().GetResult();
 
         public static ulong BuildSignatureIv(int fileSize, int compressedSize, int dataStart, int userData)
         {
@@ -146,6 +146,85 @@ namespace HomeTools.Crypto
                 increment = newValue >> 8; // Carry over the overflow to the next byte
                 if (increment == 0)
                     break; // No more overflow, we're done
+            }
+        }
+
+        public static byte[] ProcessCrypt_Decrypt(byte[] inData, byte[] KeyBytes, byte[] IV, byte mode)
+        {
+            byte BlockSize;
+            int chunkIndex = 0;
+            int inputLength = inData.Length;
+            List<KeyValuePair<(int, int), byte[]>> libsecureResults = new List<KeyValuePair<(int, int), byte[]>>();
+
+            switch (mode)
+            {
+                case 0: // Xtea
+                case 1: // Blowfish
+                    BlockSize = 8;
+                    break;
+                case 2: // AES
+                    BlockSize = 16;
+                    break;
+                default:
+                    CustomLogger.LoggerAccessor.LogError($"[ToolsImplementation] - ProcessCrypt_Decrypt: unknown crypto mode selected:{mode}.");
+                    return null;
+            }
+
+            using (MemoryStream memoryStream = new MemoryStream(inData))
+            {
+                while (memoryStream.Position < memoryStream.Length)
+                {
+                    byte[] libsecureResult;
+                    byte[] block = new byte[BlockSize];
+                    byte[] blockIV = (byte[])IV.Clone();
+                    int currentBlockSize = Math.Min(BlockSize, inputLength - chunkIndex);
+                    if (currentBlockSize < BlockSize)
+                    {
+                        int difference = BlockSize - currentBlockSize;
+                        Buffer.BlockCopy(new byte[difference], 0, block, block.Length - difference, difference);
+                    }
+                    memoryStream.Read(block, 0, currentBlockSize);
+                    switch (mode)
+                    {
+                        case 0: // Xtea
+                            libsecureResult = LIBSECURE.InitiateXTEABuffer(block, KeyBytes, blockIV, "CTR");
+                            break;
+                        case 1: // Blowfish
+                            libsecureResult = LIBSECURE.InitiateBlowfishBuffer(block, KeyBytes, blockIV, "CTR");
+                            break;
+                        default: // AES
+                            libsecureResult = LIBSECURE.InitiateAESBuffer(block, KeyBytes, blockIV, "CTR");
+                            break;
+                    }
+                    libsecureResults.Add(new KeyValuePair<(int, int), byte[]>((chunkIndex, currentBlockSize), libsecureResult));
+                    IncrementIVBytes(IV, 1);
+                    chunkIndex += currentBlockSize;
+                }
+            }
+
+            using (MemoryStream memoryStream = new MemoryStream(inData.Length))
+            {
+                foreach (var result in libsecureResults.OrderBy(kv => kv.Key.Item1))
+                {
+                    try
+                    {
+                        // attrib each decryption result
+                        byte[] decryptedChunk = result.Value;
+                        if (decryptedChunk == null) // We failed.
+                            return null;
+                        if (decryptedChunk.Length < result.Key.Item2)
+                            memoryStream.Write(decryptedChunk, 0, decryptedChunk.Length);
+                        else
+                            memoryStream.Write(decryptedChunk, 0, result.Key.Item2);
+                    }
+                    catch (Exception ex)
+                    {
+                        CustomLogger.LoggerAccessor.LogError($"[ToolsImplementation] - ProcessCrypt_DecryptAsync: Error during decryption at chunk {result.Key}", ex);
+                        return null;
+                    }
+                }
+
+                return memoryStream.ToArray();
             }
         }
 
@@ -167,7 +246,7 @@ namespace HomeTools.Crypto
                     break;
                 default:
                     CustomLogger.LoggerAccessor.LogError($"[ToolsImplementation] - ProcessCrypt_DecryptAsync: unknown crypto mode selected:{mode}.");
-                    return Array.Empty<byte>();
+                    return null;
             }
 
             using (MemoryStream memoryStream = new MemoryStream(inData))
@@ -211,8 +290,8 @@ namespace HomeTools.Crypto
                     {
                         // Await each decryption task
                         byte[] decryptedChunk = await result.Value.ConfigureAwait(false);
-                        if (decryptedChunk == null) // We failed so we send original file back.
-                            return inData;
+                        if (decryptedChunk == null) // We failed.
+                            return null;
                         if (decryptedChunk.Length < result.Key.Item2)
                             memoryStream.Write(decryptedChunk, 0, decryptedChunk.Length);
                         else
@@ -220,7 +299,8 @@ namespace HomeTools.Crypto
                     }
                     catch (Exception ex)
                     {
-                        throw new InvalidOperationException($"[ToolsImplementation] - ProcessCrypt_DecryptAsync: Error during decryption at chunk {result.Key}", ex);
+                        CustomLogger.LoggerAccessor.LogError($"[ToolsImplementation] - ProcessCrypt_DecryptAsync: Error during decryption at chunk {result.Key}", ex);
+                        return null;
                     }
                 }
 
@@ -283,7 +363,7 @@ namespace HomeTools.Crypto
             return ciphertextBytes;
         }
 
-        private static bool InitiateDecryptedClientsCertificates()
+        private static async Task<bool> InitiateDecryptedClientsCertificates()
         {
             byte[] certificateSha1 = new byte[20];
 
@@ -2442,7 +2522,7 @@ namespace HomeTools.Crypto
 
             Buffer.BlockCopy(encryptedHDKCertData, HDKCertSize - 20, certificateSha1, 0, certificateSha1.Length);
 
-            byte[] decrytedCert = ProcessCrypt_DecryptAsync(encryptedHDKCertData.SubArray(20), HDKBlowfishKey, BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(Sha1toNonce(certificateSha1)) : Sha1toNonce(certificateSha1)), 1).Result;
+            byte[] decrytedCert = await ProcessCrypt_DecryptAsync(encryptedHDKCertData.SubArray(20), HDKBlowfishKey, BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(Sha1toNonce(certificateSha1)) : Sha1toNonce(certificateSha1)), 1).ConfigureAwait(false);
 
             if (!DotNetHasher.ComputeSHA1(decrytedCert).EqualsTo(certificateSha1))
                 throw new Exception("[ToolsImplementation] - An error happened while initialising the HDK Client Certificate, should never happen!!!");
@@ -2500,7 +2580,7 @@ namespace HomeTools.Crypto
 
             Buffer.BlockCopy(encryptedHDKCertData, encryptedHDKCertData.Length - 20, certificateSha1, 0, certificateSha1.Length);
 
-            decrytedCert = ProcessCrypt_DecryptAsync(encryptedHDKCertData.SubArray(20), BlowfishKey, BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(Sha1toNonce(certificateSha1)) : Sha1toNonce(certificateSha1)), 1).Result;
+            decrytedCert = await ProcessCrypt_DecryptAsync(encryptedHDKCertData.SubArray(20), BlowfishKey, BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(Sha1toNonce(certificateSha1)) : Sha1toNonce(certificateSha1)), 1).ConfigureAwait(false);
 
             if (!DotNetHasher.ComputeSHA1(decrytedCert).EqualsTo(certificateSha1))
                 throw new Exception("[ToolsImplementation] - An error happened while initialising the Retail Client Certificate, should never happen!!!");
@@ -2554,7 +2634,7 @@ namespace HomeTools.Crypto
 
             Buffer.BlockCopy(encryptedHDKCertData, encryptedHDKCertData.Length - 20, certificateSha1, 0, certificateSha1.Length);
 
-            decrytedCert = ProcessCrypt_DecryptAsync(encryptedHDKCertData.SubArray(20), BetaBlowfishKey, BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(Sha1toNonce(certificateSha1)) : Sha1toNonce(certificateSha1)), 1).Result;
+            decrytedCert = await ProcessCrypt_DecryptAsync(encryptedHDKCertData.SubArray(20), BetaBlowfishKey, BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUlong(Sha1toNonce(certificateSha1)) : Sha1toNonce(certificateSha1)), 1).ConfigureAwait(false);
 
             if (!DotNetHasher.ComputeSHA1(decrytedCert).EqualsTo(certificateSha1))
                 throw new Exception("[ToolsImplementation] - An error happened while initialising the Closed Beta Client Certificate, should never happen!!!");

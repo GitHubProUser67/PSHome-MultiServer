@@ -93,7 +93,7 @@ namespace HomeTools.UnBAR
             }
         }
 
-        private static Task RunExtract(string filePath, string outDir, ushort cdnMode)
+        private static async Task RunExtract(string filePath, string outDir, ushort cdnMode)
         {
             bool isSharc = false;
             bool isLittleEndian = false;
@@ -109,7 +109,7 @@ namespace HomeTools.UnBAR
                     RawBarData = File.ReadAllBytes(filePath);
 
                     if (RawBarData.Length < 12)
-                        return Task.CompletedTask; // File not a BAR.
+                        return; // File not a BAR.
                     else
                     {
                         if (RawBarData[0] == 0xAD && RawBarData[1] == 0xEF && RawBarData[2] == 0x17 && RawBarData[3] == 0xE1)
@@ -119,7 +119,7 @@ namespace HomeTools.UnBAR
                         else if (RawBarData[0] == 0xE1 && RawBarData[1] == 0x17 && RawBarData[2] == 0xEF && RawBarData[3] == 0xAD)
                             isLittleEndian = true;
                         else
-                            return Task.CompletedTask; // File not a BAR.
+                            return; // File not a BAR.
 
                         switch (isLittleEndian)
                         {
@@ -149,35 +149,35 @@ namespace HomeTools.UnBAR
 
                                 Buffer.BlockCopy(RawBarData, 24, SharcHeader, 0, SharcHeader.Length);
 
-                                SharcHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(SharcHeader,
-                                 options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2).Result;
+                                SharcHeader = await ToolsImplementation.ProcessCrypt_DecryptAsync(SharcHeader,
+                                 options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2).ConfigureAwait(false);
 
                                 if (SharcHeader == null)
-                                    return Task.CompletedTask; // Sharc Header failed to decrypt.
+                                    return; // Sharc Header failed to decrypt.
                                 else if (!(new byte[] { SharcHeader[0], SharcHeader[1], SharcHeader[2], SharcHeader[3] }).EqualsTo(EmptyArray))
                                 {
                                     options = ToolsImplementation.base64CDNKey1;
 
                                     Buffer.BlockCopy(RawBarData, 24, SharcHeader, 0, SharcHeader.Length);
 
-                                    SharcHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(SharcHeader,
-                                     options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2).Result;
+                                    SharcHeader = await ToolsImplementation.ProcessCrypt_DecryptAsync(SharcHeader,
+                                     options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2).ConfigureAwait(false);
 
                                     if (SharcHeader == null)
-                                        return Task.CompletedTask; // Sharc Header failed to decrypt.
+                                        return; // Sharc Header failed to decrypt.
                                     else if (!(new byte[] { SharcHeader[0], SharcHeader[1], SharcHeader[2], SharcHeader[3] }).EqualsTo(EmptyArray))
                                     {
                                         options = ToolsImplementation.base64DefaultSharcKey;
 
                                         Buffer.BlockCopy(RawBarData, 24, SharcHeader, 0, SharcHeader.Length);
 
-                                        SharcHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(SharcHeader,
-                                         options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2).Result;
+                                        SharcHeader = await ToolsImplementation.ProcessCrypt_DecryptAsync(SharcHeader,
+                                         options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2).ConfigureAwait(false);
 
                                         if (SharcHeader == null)
-                                            return Task.CompletedTask; // Sharc Header failed to decrypt.
+                                            return; // Sharc Header failed to decrypt.
                                         else if (!(new byte[] { SharcHeader[0], SharcHeader[1], SharcHeader[2], SharcHeader[3] }).EqualsTo(EmptyArray))
-                                            return Task.CompletedTask; // All keys failed to decrypt.
+                                            return; // All keys failed to decrypt.
                                     }
                                 }
 
@@ -203,7 +203,7 @@ namespace HomeTools.UnBAR
 
                                     ToolsImplementation.IncrementIVBytes(HeaderIV, 1); // Increment IV by one (supposed to be the continuation of the header cypher context).
 
-                                    SharcTOC = ToolsImplementation.ProcessCrypt_DecryptAsync(SharcTOC, options.IsBase64().Item2, HeaderIV, 2).Result;
+                                    SharcTOC = await ToolsImplementation.ProcessCrypt_DecryptAsync(SharcTOC, options.IsBase64().Item2, HeaderIV, 2).ConfigureAwait(false);
 
                                     if (SharcTOC != null)
                                     {
@@ -268,27 +268,52 @@ namespace HomeTools.UnBAR
                         archive.Load();
                         //archive.WriteMap(filePath);
                         File.WriteAllText(barDirectoryPath + "/timestamp.txt", archive.BARHeader.UserData.ToString("X"));
-#if NETCOREAPP || NETSTANDARD1_0_OR_GREATER || NET40_OR_GREATER
-                        // Process Environment.ProcessorCount patherns at a time, removing the limit is not tolerable as CPU usage can go high.
-                        Parallel.ForEach(archive.TableOfContents.Cast<TOCEntry>(), new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, tableOfContent =>
+#if NET6_0_OR_GREATER
+                        await Parallel.ForEachAsync(
+                        archive.TableOfContents.Cast<TOCEntry>(),
+                        new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                        async (tableOfContent, cancellationToken) =>
                         {
                             byte[] FileData = tableOfContent.GetData(archive.GetHeader().Flags);
 
                             try
                             {
                                 if (archive.GetHeader().Version == 512)
-                                    ExtractToFileBarVersion2(archive.GetHeader().Key, FileData, archive, tableOfContent.FileName, barDirectoryPath);
+                                    await ExtractToFileBarVersion2(archive.GetHeader().Key, FileData, archive, tableOfContent.FileName, barDirectoryPath).ConfigureAwait(false);
                                 else
-                                    ExtractToFileBarVersion1(RawBarData, FileData, archive, tableOfContent.FileName, barDirectoryPath, cdnMode);
+                                    await ExtractToFileBarVersion1(RawBarData, FileData, archive, tableOfContent.FileName, barDirectoryPath, cdnMode).ConfigureAwait(false);
                             }
                             catch (Exception ex)
                             {
                                 LoggerAccessor.LogWarn($"[RunUnBAR] - RunExtract Errored out on file:{tableOfContent.FileName} (Exception: {ex})");
 
                                 if (archive.GetHeader().Version == 512)
-                                    ExtractToFileBarVersion2(archive.GetHeader().Key, FileData, archive, tableOfContent.FileName, barDirectoryPath);
+                                    await ExtractToFileBarVersion2(archive.GetHeader().Key, FileData, archive, tableOfContent.FileName, barDirectoryPath).ConfigureAwait(false);
                                 else
-                                    ExtractToFileBarVersion1(RawBarData, FileData, archive, tableOfContent.FileName, barDirectoryPath, cdnMode);
+                                    await ExtractToFileBarVersion1(RawBarData, FileData, archive, tableOfContent.FileName, barDirectoryPath, cdnMode).ConfigureAwait(false);
+                            }
+                        }).ConfigureAwait(false);
+#elif NETCOREAPP || NETSTANDARD1_0_OR_GREATER || NET40_OR_GREATER
+                        // Process Environment.ProcessorCount patherns at a time, removing the limit is not tolerable as CPU usage can go high.
+                        Parallel.ForEach(archive.TableOfContents.Cast<TOCEntry>(), new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, async tableOfContent =>
+                        {
+                            byte[] FileData = tableOfContent.GetData(archive.GetHeader().Flags);
+
+                            try
+                            {
+                                if (archive.GetHeader().Version == 512)
+                                    await ExtractToFileBarVersion2(archive.GetHeader().Key, FileData, archive, tableOfContent.FileName, barDirectoryPath).ConfigureAwait(false);
+                                else
+                                    await ExtractToFileBarVersion1(RawBarData, FileData, archive, tableOfContent.FileName, barDirectoryPath, cdnMode).ConfigureAwait(false);
+                            }
+                            catch (Exception ex)
+                            {
+                                LoggerAccessor.LogWarn($"[RunUnBAR] - RunExtract Errored out on file:{tableOfContent.FileName} (Exception: {ex})");
+
+                                if (archive.GetHeader().Version == 512)
+                                    await ExtractToFileBarVersion2(archive.GetHeader().Key, FileData, archive, tableOfContent.FileName, barDirectoryPath).ConfigureAwait(false);
+                                else
+                                    await ExtractToFileBarVersion1(RawBarData, FileData, archive, tableOfContent.FileName, barDirectoryPath, cdnMode).ConfigureAwait(false);
                             }
                         });
 #else
@@ -299,18 +324,18 @@ namespace HomeTools.UnBAR
                             try
                             {
                                 if (archive.GetHeader().Version == 512)
-                                    ExtractToFileBarVersion2(archive.GetHeader().Key, FileData, archive, tableOfContent.FileName, barDirectoryPath);
+                                    await ExtractToFileBarVersion2(archive.GetHeader().Key, FileData, archive, tableOfContent.FileName, barDirectoryPath).ConfigureAwait(false);
                                 else
-                                    ExtractToFileBarVersion1(RawBarData, FileData, archive, tableOfContent.FileName, barDirectoryPath, cdnMode);
+                                    await ExtractToFileBarVersion1(RawBarData, FileData, archive, tableOfContent.FileName, barDirectoryPath, cdnMode).ConfigureAwait(false);
                             }
                             catch (Exception ex)
                             {
                                 LoggerAccessor.LogWarn($"[RunUnBAR] - RunExtract Errored out on file:{tableOfContent.FileName} (Exception: {ex})");
 
                                 if (archive.GetHeader().Version == 512)
-                                    ExtractToFileBarVersion2(archive.GetHeader().Key, FileData, archive, tableOfContent.FileName, barDirectoryPath);
+                                    await ExtractToFileBarVersion2(archive.GetHeader().Key, FileData, archive, tableOfContent.FileName, barDirectoryPath).ConfigureAwait(false);
                                 else
-                                    ExtractToFileBarVersion1(RawBarData, FileData, archive, tableOfContent.FileName, barDirectoryPath, cdnMode);
+                                    await ExtractToFileBarVersion1(RawBarData, FileData, archive, tableOfContent.FileName, barDirectoryPath, cdnMode).ConfigureAwait(false);
                             }
                         }
 #endif
@@ -328,10 +353,10 @@ namespace HomeTools.UnBAR
                 }
             }
 
-            return Task.CompletedTask;
+            return;
         }
 
-        private static async void ExtractToFileBarVersion1(byte[] RawBarData, byte[] data, BARArchive archive, HashedFileName FileName, string outDir, int cdnMode)
+        private static async Task ExtractToFileBarVersion1(byte[] RawBarData, byte[] data, BARArchive archive, HashedFileName FileName, string outDir, int cdnMode)
         {
             TOCEntry tableOfContent = archive.TableOfContents[FileName];
             string path = null;
@@ -366,13 +391,13 @@ namespace HomeTools.UnBAR
                     switch (cdnMode)
                     {
                         case 2:
-                            DecryptedSignatureHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(EncryptedSignatureHeader, ToolsImplementation.HDKSignatureKey, SignatureIV, 1).Result;
+                            DecryptedSignatureHeader = await ToolsImplementation.ProcessCrypt_DecryptAsync(EncryptedSignatureHeader, ToolsImplementation.HDKSignatureKey, SignatureIV, 1).ConfigureAwait(false);
                             break;
                         case 1:
-                            DecryptedSignatureHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(EncryptedSignatureHeader, ToolsImplementation.BetaSignatureKey, SignatureIV, 1).Result;
+                            DecryptedSignatureHeader = await ToolsImplementation.ProcessCrypt_DecryptAsync(EncryptedSignatureHeader, ToolsImplementation.BetaSignatureKey, SignatureIV, 1).ConfigureAwait(false);
                             break;
                         default:
-                            DecryptedSignatureHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(EncryptedSignatureHeader, ToolsImplementation.SignatureKey, SignatureIV, 1).Result;
+                            DecryptedSignatureHeader = await ToolsImplementation.ProcessCrypt_DecryptAsync(EncryptedSignatureHeader, ToolsImplementation.SignatureKey, SignatureIV, 1).ConfigureAwait(false);
                             break;
                     }
 
@@ -420,13 +445,13 @@ namespace HomeTools.UnBAR
                                 switch (cdnMode)
                                 {
                                     case 2:
-                                        FileBytes = ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.HDKBlowfishKey, SignatureIV, 1).Result;
+                                        FileBytes = await ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.HDKBlowfishKey, SignatureIV, 1).ConfigureAwait(false);
                                         break;
                                     case 1:
-                                        FileBytes = ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.BetaBlowfishKey, SignatureIV, 1).Result;
+                                        FileBytes = await ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.BetaBlowfishKey, SignatureIV, 1).ConfigureAwait(false);
                                         break;
                                     default:
-                                        FileBytes = ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.BlowfishKey, SignatureIV, 1).Result;
+                                        FileBytes = await ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.BlowfishKey, SignatureIV, 1).ConfigureAwait(false);
                                         break;
                                 }
 
@@ -545,7 +570,7 @@ namespace HomeTools.UnBAR
             tableOfContent = null;
         }
 
-        private static async void ExtractToFileBarVersion2(byte[] Key, byte[] data, BARArchive archive, HashedFileName FileName, string outDir)
+        private static async Task ExtractToFileBarVersion2(byte[] Key, byte[] data, BARArchive archive, HashedFileName FileName, string outDir)
         {
             TOCEntry tableOfContent = archive.TableOfContents[FileName];
             string path = null;

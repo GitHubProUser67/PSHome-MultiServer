@@ -13,6 +13,8 @@ using CompressionLibrary.Edge;
 using NetworkLibrary.Extension;
 using HomeTools.AFS;
 using NetworkLibrary.HTTP;
+using EndianTools.BinaryExtension;
+
 #if NET6_0_OR_GREATER
 using NetworkLibrary.Upscalers;
 #endif
@@ -56,7 +58,7 @@ namespace HomeTools.BARFramework
             m_toc = new TOC(this);
             m_deletedFileSection = new Dictionary<HashedFileName, TOCEntry>();
             m_sourceFile = string.Empty;
-            m_endian = EndianType.LittleEndian;
+            m_endian = Endianness.LittleEndian;
             m_allowWhitespaceInFilenames = true;
         }
 
@@ -68,7 +70,7 @@ namespace HomeTools.BARFramework
             this.cdnMode = cdnMode;
             m_header.UserData = UserData;
             if (bigendian)
-                m_endian = EndianType.BigEndian;
+                m_endian = Endianness.BigEndian;
             if (encrypt)
                 this.encrypt = true;
             if (!string.IsNullOrEmpty(version2key))
@@ -165,7 +167,7 @@ namespace HomeTools.BARFramework
             }
         }
 
-        public EndianType Endian
+        public Endianness Endian
         {
             get
             {
@@ -237,7 +239,7 @@ namespace HomeTools.BARFramework
                     {
                         EndianAwareBinaryReader endianAwareBinaryReader = EndianAwareBinaryReader.Create(dataReadStream, m_endian);
                         uint num2 = endianAwareBinaryReader.ReadUInt32();
-                        EndianAwareBinaryReader endianAwareBinaryReader2 = EndianAwareBinaryReader.Create(dataReadStream, EndianType.LittleEndian);
+                        EndianAwareBinaryReader endianAwareBinaryReader2 = EndianAwareBinaryReader.Create(dataReadStream, Endianness.LittleEndian);
                         byte[] inData = endianAwareBinaryReader2.ReadBytes((int)num2);
                         CompressionMethod method = CompressionMethod.ZLib;
                         byte[] buffer = CompressionFactory.Decompress(inData, method, m_header.Flags);
@@ -275,7 +277,7 @@ namespace HomeTools.BARFramework
                     {
                         TOCEntry tocentry = (TOCEntry)obj;
                         dataReadStream.Seek((long)(ulong)(num + tocentry.DataOffset), SeekOrigin.Begin);
-                        EndianAwareBinaryReader endianAwareBinaryReader3 = EndianAwareBinaryReader.Create(dataReadStream, EndianType.LittleEndian);
+                        EndianAwareBinaryReader endianAwareBinaryReader3 = EndianAwareBinaryReader.Create(dataReadStream, Endianness.LittleEndian);
                         byte[] array = null;
                         if (tocentry.CompressedSize <= 4194304UL)
                             array = endianAwareBinaryReader3.ReadBytes((int)tocentry.CompressedSize);
@@ -318,11 +320,11 @@ namespace HomeTools.BARFramework
             }
         }
 
-        private EndianType GetEndianness(Stream inStream)
+        private Endianness GetEndianness(Stream inStream)
         {
-            EndianType result = EndianType.LittleEndian;
+            Endianness result = Endianness.LittleEndian;
             if (inStream.ReadByte() == 173)
-                result = EndianType.BigEndian;
+                result = Endianness.BigEndian;
             inStream.Seek(0L, SeekOrigin.Begin);
             return result;
         }
@@ -366,7 +368,7 @@ namespace HomeTools.BARFramework
 
         private int WriteDataAlignedSection(byte[] data, Stream outStream)
         {
-            EndianAwareBinaryWriter endianAwareBinaryWriter = EndianAwareBinaryWriter.Create(outStream, EndianType.LittleEndian);
+            EndianAwareBinaryWriter endianAwareBinaryWriter = EndianAwareBinaryWriter.Create(outStream, Endianness.LittleEndian);
             endianAwareBinaryWriter.Write(data);
 
             long currentPosition = outStream.Position;
@@ -528,14 +530,14 @@ namespace HomeTools.BARFramework
             else if (m_header.Version == 512)
             {
                 LoggerAccessor.LogInfo("BAR Version 2 Detected", m_sourceFile);
-                if (m_endian == EndianType.BigEndian)
+                if (m_endian == Endianness.BigEndian)
                     m_header.IV = EndianUtils.EndianSwap(endianAwareBinaryReader.ReadBytes(16));
                 else
                     m_header.IV = endianAwareBinaryReader.ReadBytes(16);
                 m_header.Priority = endianAwareBinaryReader.ReadInt32();
                 m_header.UserData = endianAwareBinaryReader.ReadInt32();
                 m_header.NumFiles = endianAwareBinaryReader.ReadUInt32();
-                if (m_endian == EndianType.BigEndian)
+                if (m_endian == Endianness.BigEndian)
                     m_header.Key = EndianUtils.EndianSwap(endianAwareBinaryReader.ReadBytes(16));
                 else
                     m_header.Key = endianAwareBinaryReader.ReadBytes(16);
@@ -549,7 +551,7 @@ namespace HomeTools.BARFramework
             return true;
         }
 
-        private bool ReadTOC(Stream inStream, EndianType endian)
+        private bool ReadTOC(Stream inStream, Endianness endian)
         {
             bool isok = true;
             try
@@ -571,7 +573,7 @@ namespace HomeTools.BARFramework
                     if (m_header.Version == 512)
                     {
                         byte[] IV = null;
-                        if (endian == EndianType.BigEndian) // IV is always little endian.
+                        if (endian == Endianness.BigEndian) // IV is always little endian.
                             IV = EndianUtils.EndianSwap(endianAwareBinaryReader.ReadBytes(8));
                         else
                             IV = endianAwareBinaryReader.ReadBytes(8);
@@ -617,7 +619,7 @@ namespace HomeTools.BARFramework
                     Array.Reverse(UserDataBytes);
                     Array.Reverse(NumFilesBytes);
                 }
-                if (m_endian == EndianType.LittleEndian) // By default data is in big endian.
+                if (m_endian == Endianness.LittleEndian) // By default data is in big endian.
                 {
                     PriorityBytes = EndianUtils.EndianSwap(PriorityBytes);
                     UserDataBytes = EndianUtils.EndianSwap(UserDataBytes);
@@ -628,15 +630,15 @@ namespace HomeTools.BARFramework
                 Buffer.BlockCopy(UserDataBytes, 0, CipheredHeaderData, PriorityBytes.Length, UserDataBytes.Length);
                 Buffer.BlockCopy(NumFilesBytes, 0, CipheredHeaderData, PriorityBytes.Length + UserDataBytes.Length, NumFilesBytes.Length);
                 Buffer.BlockCopy(m_header.Key, 0, CipheredHeaderData, PriorityBytes.Length + UserDataBytes.Length + NumFilesBytes.Length, m_header.Key.Length);
-                if (m_endian == EndianType.BigEndian) // This data is always little endian.
+                if (m_endian == Endianness.BigEndian) // This data is always little endian.
                 {
                     writer.Write(EndianUtils.EndianSwap(IV));
-                    writer.Write(EndianUtils.EndianSwap(ToolsImplementation.ProcessCrypt_DecryptAsync(CipheredHeaderData, version2key.IsBase64().Item2, IV, 2).Result ?? Array.Empty<byte>()));
+                    writer.Write(EndianUtils.EndianSwap(ToolsImplementation.ProcessCrypt_Decrypt(CipheredHeaderData, version2key.IsBase64().Item2, IV, 2)));
                 }
                 else
                 {
                     writer.Write(IV);
-                    writer.Write(ToolsImplementation.ProcessCrypt_DecryptAsync(CipheredHeaderData, version2key.IsBase64().Item2, IV, 2).Result ?? Array.Empty<byte>());
+                    writer.Write(ToolsImplementation.ProcessCrypt_Decrypt(CipheredHeaderData, version2key.IsBase64().Item2, IV, 2));
                 }
             }
             else
@@ -745,16 +747,16 @@ namespace HomeTools.BARFramework
                     }
                     int count = (int)m_toc.Count;
                     tocEntry.Index = count;
-                    if (m_endian == EndianType.BigEndian)
+                    if (m_endian == Endianness.BigEndian)
                         tocEntry.RawData = ByteUtils.CombineByteArrays(ToolsImplementation.ApplyBigEndianPaddingPrefix(new byte[20]), new byte[][]
                         {
-                             EndianUtils.EndianSwap(Utils.IntToByteArray(array2.Length)),
+                             EndianUtils.EndianSwap(BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseInt(array2.Length) : array2.Length)),
                              array2
                         });
                     else
                         tocEntry.RawData = ByteUtils.CombineByteArrays(ToolsImplementation.ApplyLittleEndianPaddingPrefix(new byte[20]), new byte[][]
                         {
-                             Utils.IntToByteArray(array2.Length),
+                             BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseInt(array2.Length) : array2.Length),
                              array2
                         });
                     }
@@ -1010,7 +1012,7 @@ namespace HomeTools.BARFramework
             if (Dirty)
                 m_toc.ResortOffsets();
             EndianAwareBinaryWriter endianAwareBinaryWriter = EndianAwareBinaryWriter.Create(dataWriterStream, m_endian);
-            EndianAwareBinaryWriter endianAwareBinaryWriter2 = EndianAwareBinaryWriter.Create(dataWriterStream, EndianType.LittleEndian);
+            EndianAwareBinaryWriter endianAwareBinaryWriter2 = EndianAwareBinaryWriter.Create(dataWriterStream, Endianness.LittleEndian);
             byte[] array = Array.Empty<byte>();
             if (m_header.Version == 512)
             {
@@ -1021,7 +1023,7 @@ namespace HomeTools.BARFramework
             }
             else
                 array = m_toc.GetBytesVersion1();
-            if (m_endian == EndianType.BigEndian && m_header.Version != 512)
+            if (m_endian == Endianness.BigEndian && m_header.Version != 512)
                 array = EndianUtils.EndianSwap(array);
             if ((ushort)(m_header.Flags & ArchiveFlags.Bar_Flag_ZTOC) == 1 && m_header.Version != 512)
             {
@@ -1074,13 +1076,13 @@ namespace HomeTools.BARFramework
                     switch (cdnMode)
                     {
                         case 2:
-                            FileBytes = ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.HDKBlowfishKey, SignatureIV, 1).Result;
+                            FileBytes = ToolsImplementation.ProcessCrypt_Decrypt(FileBytes, ToolsImplementation.HDKBlowfishKey, SignatureIV, 1);
                             break;
                         case 1:
-                            FileBytes = ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.BetaBlowfishKey, SignatureIV, 1).Result;
+                            FileBytes = ToolsImplementation.ProcessCrypt_Decrypt(FileBytes, ToolsImplementation.BetaBlowfishKey, SignatureIV, 1);
                             break;
                         default:
-                            FileBytes = ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.BlowfishKey, SignatureIV, 1).Result;
+                            FileBytes = ToolsImplementation.ProcessCrypt_Decrypt(FileBytes, ToolsImplementation.BlowfishKey, SignatureIV, 1);
                             break;
                     }
                     if (FileBytes != null)
@@ -1093,13 +1095,13 @@ namespace HomeTools.BARFramework
                         switch (cdnMode)
                         {
                             case 2:
-                                SignatureHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(SignatureHeader, ToolsImplementation.HDKSignatureKey, OriginalSigntureIV, 1).Result;
+                                SignatureHeader = ToolsImplementation.ProcessCrypt_Decrypt(SignatureHeader, ToolsImplementation.HDKSignatureKey, OriginalSigntureIV, 1);
                                 break;
                             case 1:
-                                SignatureHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(SignatureHeader, ToolsImplementation.BetaSignatureKey, OriginalSigntureIV, 1).Result;
+                                SignatureHeader = ToolsImplementation.ProcessCrypt_Decrypt(SignatureHeader, ToolsImplementation.BetaSignatureKey, OriginalSigntureIV, 1);
                                 break;
                             default:
-                                SignatureHeader = ToolsImplementation.ProcessCrypt_DecryptAsync(SignatureHeader, ToolsImplementation.SignatureKey, OriginalSigntureIV, 1).Result;
+                                SignatureHeader = ToolsImplementation.ProcessCrypt_Decrypt(SignatureHeader, ToolsImplementation.SignatureKey, OriginalSigntureIV, 1);
                                 break;
                         }
                         if (SignatureHeader != null)
@@ -1377,7 +1379,7 @@ namespace HomeTools.BARFramework
 
         private CompressionMethod m_defaultCompression = CompressionMethod.EdgeZLib;
 
-        private EndianType m_endian;
+        private Endianness m_endian;
 
         private bool m_keepExtension;
 

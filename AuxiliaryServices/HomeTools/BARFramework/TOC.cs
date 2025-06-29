@@ -167,13 +167,13 @@ namespace HomeTools.BARFramework
             return memoryStream.ToArray();
         }
 
-        public byte[] GetBytesVersion2(string key, byte[] IV, EndianType endian)
+        public byte[] GetBytesVersion2(string key, byte[] IV, Endianness endian)
         {
             MemoryStream memoryStream = new MemoryStream();
             BinaryWriter binaryWriter = new BinaryWriter(memoryStream);
             foreach (TOCEntry tocentry in m_entries.Values.Reverse()) // IMPORTANT, HOME EBOOT WANT THE TOC BACKWARD (spent a considerable amount of reverse...)
             {
-                if (endian == EndianType.BigEndian)
+                if (endian == Endianness.BigEndian)
                 {
                     binaryWriter.Write(EndianUtils.ReverseInt((int)tocentry.FileName));
                     binaryWriter.Write(EndianUtils.ReverseUint(tocentry.DataOffset |= (uint)tocentry.Compression));
@@ -191,7 +191,7 @@ namespace HomeTools.BARFramework
                 binaryWriter.Write(tocentry.IV);
             }
             binaryWriter.Close();
-            return ToolsImplementation.ProcessCrypt_DecryptAsync(memoryStream.ToArray(), key.IsBase64().Item2, IV, 2).Result ?? Array.Empty<byte>();
+            return ToolsImplementation.ProcessCrypt_Decrypt(memoryStream.ToArray(), key.IsBase64().Item2, IV, 2);
         }
 
         public uint Version1Size

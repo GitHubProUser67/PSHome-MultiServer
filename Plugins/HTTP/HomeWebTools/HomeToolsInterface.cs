@@ -974,24 +974,24 @@ namespace HomeWebTools
                                 {
                                     byte[] ProcessedFileBytes = new byte[buffer.Length - 8];
                                     Buffer.BlockCopy(buffer, 8, ProcessedFileBytes, 0, ProcessedFileBytes.Length);
-                                    ProcessedFileBytes = ToolsImplementation.ProcessCrypt_DecryptAsync(ProcessedFileBytes, ToolsImplementation.TicketListV1Key, ToolsImplementation.TicketListV1IV.ShadowCopy(), 1).Result;
+                                    ProcessedFileBytes = ToolsImplementation.ProcessCrypt_Decrypt(ProcessedFileBytes, ToolsImplementation.TicketListV1Key, ToolsImplementation.TicketListV1IV.ShadowCopy(), 1);
                                     if (ProcessedFileBytes != null)
                                         TasksResult.Add((ProcessedFileBytes, $"{filename}_Decrypted.lst"));
                                 }
                                 else if (version1 == "on")
-                                    TasksResult.Add((ByteUtils.CombineByteArray(new byte[] { 0xBE, 0xE5, 0xBE, 0xE5, 0x00, 0x00, 0x00, 0x01 }, ToolsImplementation.ProcessCrypt_DecryptAsync(buffer, ToolsImplementation.TicketListV1Key, ToolsImplementation.TicketListV1IV.ShadowCopy(), 1).Result)
+                                    TasksResult.Add((ByteUtils.CombineByteArray(new byte[] { 0xBE, 0xE5, 0xBE, 0xE5, 0x00, 0x00, 0x00, 0x01 }, ToolsImplementation.ProcessCrypt_Decrypt(buffer, ToolsImplementation.TicketListV1Key, ToolsImplementation.TicketListV1IV.ShadowCopy(), 1))
                                             , $"{filename}_Encrypted.lst"));
                                 else if (buffer.Length > 8 && buffer[0] == 0xBE && buffer[1] == 0xE5 && buffer[2] == 0xBE && buffer[3] == 0xE5
                                     && buffer[4] == 0x00 && buffer[5] == 0x00 && buffer[6] == 0x00 && buffer[7] == 0x00)
                                 {
                                     byte[] ProcessedFileBytes = new byte[buffer.Length - 8];
                                     Buffer.BlockCopy(buffer, 8, ProcessedFileBytes, 0, ProcessedFileBytes.Length);
-                                    ProcessedFileBytes = ToolsImplementation.ProcessCrypt_DecryptAsync(ProcessedFileBytes, ToolsImplementation.TicketListV0Key, ToolsImplementation.TicketListV0IV.ShadowCopy(), 1).Result;
+                                    ProcessedFileBytes = ToolsImplementation.ProcessCrypt_Decrypt(ProcessedFileBytes, ToolsImplementation.TicketListV0Key, ToolsImplementation.TicketListV0IV.ShadowCopy(), 1);
                                     if (ProcessedFileBytes != null)
                                         TasksResult.Add((ProcessedFileBytes, $"{filename}_Decrypted.lst"));
                                 }
                                 else
-                                    TasksResult.Add((ByteUtils.CombineByteArray(new byte[] { 0xBE, 0xE5, 0xBE, 0xE5, 0x00, 0x00, 0x00, 0x00 }, ToolsImplementation.ProcessCrypt_DecryptAsync(buffer, ToolsImplementation.TicketListV0Key, ToolsImplementation.TicketListV0IV.ShadowCopy(), 1).Result)
+                                    TasksResult.Add((ByteUtils.CombineByteArray(new byte[] { 0xBE, 0xE5, 0xBE, 0xE5, 0x00, 0x00, 0x00, 0x00 }, ToolsImplementation.ProcessCrypt_Decrypt(buffer, ToolsImplementation.TicketListV0Key, ToolsImplementation.TicketListV0IV.ShadowCopy(), 1))
                                             , $"{filename}_Encrypted.lst"));
 
                                 i++;
