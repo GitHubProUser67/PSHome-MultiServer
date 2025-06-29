@@ -597,10 +597,13 @@ namespace NetworkLibrary.HTTP
                 else
                 {
                     string mediaInfoResult = HTTPProcessor.RequestURLGET($"http://localhost:{ServerPort}/media/info?item={Uri.EscapeDataString(new Uri(node.Link).AbsolutePath)}");
-                    double? vBitrate = PlayerData.GetVBitRate(mediaInfoResult);
-                    double? vFrameRate = PlayerData.GetVFrameRate(mediaInfoResult);
-                    sb.AppendLine("<p style='color: red;'>This video format is not supported for direct streaming. To watch it using your browser, Please use this link instead :</p>");
-                    sb.AppendLine($"<a href='{HttpUtility.HtmlEncode(node.Link)}?offset=&vbitrate={(vBitrate == null ? "NaN" : vBitrate.ToString().Replace(",", "."))}&vtranscode=true&vframerate={(vFrameRate == null ? string.Empty : vFrameRate.ToString().Replace(",", "."))}&format={fileFormat}' download>Download Transcoded Video</a>");
+                    if (!string.IsNullOrEmpty(mediaInfoResult))
+                    {
+                        double? vBitrate = PlayerData.GetVBitRate(mediaInfoResult);
+                        double? vFrameRate = PlayerData.GetVFrameRate(mediaInfoResult);
+                        sb.AppendLine("<p style='color: red;'>This video format is not supported for direct streaming. To watch it using your browser, Please use this link instead :</p>");
+                        sb.AppendLine($"<a href='{HttpUtility.HtmlEncode(node.Link)}?offset=&vbitrate={(vBitrate == null ? "NaN" : vBitrate.ToString().Replace(",", "."))}&vtranscode=true&vframerate={(vFrameRate == null ? string.Empty : vFrameRate.ToString().Replace(",", "."))}&format={fileFormat}' download>Download Transcoded Video</a>");
+                    }
                 }
                 sb.AppendLine("</div>");
             }

@@ -1,10 +1,9 @@
 ﻿using NetworkLibrary.Extension;
-using System.Linq;
 using System.Text.Json;
 
 namespace NetworkLibrary.HTTP
 {
-    internal static class PlayerData
+    public static class PlayerData
     {
         public static double? GetVBitRate(string jsonInfoData)
         {

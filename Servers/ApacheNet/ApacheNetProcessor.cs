@@ -2056,7 +2056,7 @@ namespace ApacheNet
                                                         // send file
                                                         LoggerAccessor.LogInfo($"[{loggerprefix}] - {clientip}:{clientport} Requested a file : {absolutepath}");
 
-                                                        sent = await LocalFileStreamHelper.HandleRequest(ctx, encoding, absolutepath, filePath, ContentType, isVideo || isAudio, isHtmlCompatible, noCompressCacheControl);
+                                                        sent = await LocalFileStreamHelper.HandleRequest(ctx, encoding, absolutepath, filePath, ContentType, request.Useragent, isVideo || isAudio, isHtmlCompatible, noCompressCacheControl);
                                                     }
                                                 }
                                             }
@@ -2635,7 +2635,7 @@ namespace ApacheNet
                                                     // send file
                                                     LoggerAccessor.LogInfo($"[{loggerprefix}] - {clientip}:{clientport} Requested a file : {absolutepath}");
 
-                                                    sent = await LocalFileStreamHelper.HandleRequest(ctx, encoding, absolutepath, filePath, ContentType, isVideo || isAudio, isHtmlCompatible, noCompressCacheControl);
+                                                    sent = await LocalFileStreamHelper.HandleRequest(ctx, encoding, absolutepath, filePath, ContentType, request.Useragent, isVideo || isAudio, isHtmlCompatible, noCompressCacheControl);
                                                 }
                                             }
                                             else

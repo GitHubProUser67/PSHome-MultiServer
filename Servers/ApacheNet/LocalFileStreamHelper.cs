@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using WatsonWebserver.Core;
 using NetworkLibrary.HTTP;
@@ -16,7 +16,8 @@ namespace ApacheNet
 
         public const long compressionSizeLimit = 800L * 1024 * 1024; // 800MB in bytes
 
-        public static async Task<bool> HandleRequest(HttpContextBase ctx, string encoding, string absolutepath, string filePath, string ContentType, bool isVideoOrAudio, bool isHtmlCompatible, bool noCompressCacheControl)
+        public static async Task<bool> HandleRequest(HttpContextBase ctx, string encoding, string absolutepath, string filePath
+            , string ContentType, string UserAgent, bool isVideoOrAudio, bool isHtmlCompatible, bool noCompressCacheControl)
         {
             bool isNoneMatchValid = false;
             string ifModifiedSince = ctx.Request.RetrieveHeaderValue("If-Modified-Since");
@@ -85,8 +86,130 @@ namespace ApacheNet
             }
             else if (isHtmlCompatible && isVideoOrAudio)
             {
+                string htmlContent;
                 // Generate an HTML page with the video element
-                const string htmlPart = @"
+                if (!string.IsNullOrEmpty(UserAgent) && (UserAgent.Contains("PLAYSTATION 3") || UserAgent.Contains("CellOS")))
+                {
+                    switch (ctx.Request.RetrieveQueryValue("PS3"))
+                    {
+                        case "play":
+                            ctx.Response.ContentType = ContentType;
+
+                            if (compressionSettingEnabled && !noCompressCacheControl && !string.IsNullOrEmpty(encoding) && new FileInfo(filePath).Length <= compressionSizeLimit)
+                            {
+                                if (encoding.Contains("gzip"))
+                                {
+                                    ctx.Response.Headers.Add("Content-Encoding", "gzip");
+                                    st = HTTPProcessor.GzipCompressStream(await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false));
+                                }
+                                else if (encoding.Contains("deflate"))
+                                {
+                                    ctx.Response.Headers.Add("Content-Encoding", "deflate");
+                                    st = HTTPProcessor.DeflateStream(await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false));
+                                }
+                                else
+                                    st = await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false);
+                            }
+                            else
+                                st = await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false);
+
+                            goto sendImmediate;
+                        default:
+                            if (HTTPProcessor.IsPS3SupportedContentType(ContentType))
+                                htmlContent = @"
+                                <!DOCTYPE html>
+                                <html>
+                                <head>
+                                  <title>PlayStation Media Player</title>
+                                  <style>
+                                    body {
+                                      background-color: #000000;
+                                      color: #FFFFFF;
+                                      text-align: center;
+                                      font-family: Arial, sans-serif;
+                                      margin: 0;
+                                      padding: 20px;
+                                    }
+                                    h1 {
+                                      font-size: 24px;
+                                      margin-bottom: 20px;
+                                    }
+                                    a.button {
+                                      display: inline-block;
+                                      background-color: #0070D1;
+                                      color: #FFFFFF;
+                                      padding: 14px 28px;
+                                      text-decoration: none;
+                                      border-radius: 8px;
+                                      font-size: 18px;
+                                    }
+                                    a.button:hover {
+                                      background-color: #0055A4;
+                                    }
+                                    p {
+                                      margin-top: 40px;
+                                      font-size: 14px;
+                                      color: #AAAAAA;
+                                    }
+                                  </style>
+                                </head>
+                                <body>
+                                  <h1>Media Player</h1>
+                                  <a class='button' href='" + absolutepath + @"?PS3=play' target='_blank'>▶ Play Video</a>
+                                  <p>Media compatible with the PlayStation 3 System</p>
+                                </body>
+                                </html>";
+                            else
+                                htmlContent = @"
+                                <!DOCTYPE html>
+                                <html>
+                                <head>
+                                  <title>PlayStation Media Player</title>
+                                  <style>
+                                    body {
+                                      background-color: #000000;
+                                      color: #FFFFFF;
+                                      text-align: center;
+                                      font-family: Arial, sans-serif;
+                                      margin: 0;
+                                      padding: 20px;
+                                    }
+                                    h1 {
+                                      font-size: 24px;
+                                      margin-bottom: 20px;
+                                    }
+                                    a.button {
+                                      display: inline-block;
+                                      background-color: #0070D1;
+                                      color: #FFFFFF;
+                                      padding: 14px 28px;
+                                      text-decoration: none;
+                                      border-radius: 8px;
+                                      font-size: 18px;
+                                    }
+                                    a.button:hover {
+                                      background-color: #0055A4;
+                                    }
+                                    p {
+                                      margin-top: 40px;
+                                      font-size: 14px;
+                                      color: #AAAAAA;
+                                    }
+                                  </style>
+                                </head>
+                                <body>
+                                  <h1>Media Player</h1>
+                                  <a class='button' href='" + absolutepath + @"?PS3=play' target='_blank'>▶ Backup Video to external storage</a>
+                                  <p>Media not compatible with the PlayStation 3 System</p>
+                                </body>
+                                </html>";
+
+                            break;
+                    }
+                }
+                else // TODO, support more older browsers?
+                {
+                    htmlContent = @"
                             <!DOCTYPE html>
                             <html>
                             <head>
@@ -114,12 +237,12 @@ namespace ApacheNet
                             <body>
                               <div id=""video-container"">
                                 <video controls>
-                                  <source src=""";
-                string htmlContent = htmlPart + absolutepath + $@""" type=""{ContentType}"">
+                                  <source src=""" + absolutepath + $@""" type=""{ContentType}"">
                                 </video>
                               </div>
                             </body>
                             </html>";
+                }
 
                 ctx.Response.ContentType = "text/html; charset=UTF-8";
 
@@ -185,7 +308,7 @@ namespace ApacheNet
                 else
                     st = await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false);
             }
-
+sendImmediate:
             if (st == null)
             {
                 ctx.Response.ChunkedTransfer = false;
