@@ -88,12 +88,14 @@ namespace ApacheNet
             {
                 string htmlContent;
                 // Generate an HTML page with the video element
-                if (!string.IsNullOrEmpty(UserAgent) && (UserAgent.Contains("PLAYSTATION 3") || UserAgent.Contains("CellOS")))
+                if (!string.IsNullOrEmpty(UserAgent) && (UserAgent.Contains("PLAYSTATION 3") || UserAgent.Contains("PSP (PlayStation Portable)")))
                 {
                     switch (ctx.Request.RetrieveQueryValue("PS3"))
                     {
                         case "play":
                             ctx.Response.ContentType = ContentType;
+
+                            ctx.Response.Headers.Add("Accept-Ranges", "bytes");
 
                             if (compressionSettingEnabled && !noCompressCacheControl && !string.IsNullOrEmpty(encoding) && new FileInfo(filePath).Length <= compressionSizeLimit)
                             {
@@ -115,26 +117,32 @@ namespace ApacheNet
 
                             goto sendImmediate;
                         default:
-                            if (HTTPProcessor.IsPS3SupportedContentType(ContentType))
-                                htmlContent = @"
+#if DEBUG
+                            bool debug = true;
+#else
+                            bool debug = false;
+#endif
+                            bool flashPlayer7 = !UserAgent.Contains("AppleWebKit"); // The HDK documentation states that only Flash player 7 is supported on the "in-game" browser mode (silk_npflashplayer.sprx). Normal browser uses Flash Player 9 (silk_npflashplayer9.sprx).
+                            bool isSupported = HTTPProcessor.IsPS3SupportedContentType(ContentType);
+                            htmlContent = $@"
                                 <!DOCTYPE html>
                                 <html>
                                 <head>
                                   <title>PlayStation Media Player</title>
                                   <style>
-                                    body {
+                                    body {{
                                       background-color: #000000;
                                       color: #FFFFFF;
                                       text-align: center;
                                       font-family: Arial, sans-serif;
                                       margin: 0;
                                       padding: 20px;
-                                    }
-                                    h1 {
+                                    }}
+                                    h1 {{
                                       font-size: 24px;
                                       margin-bottom: 20px;
-                                    }
-                                    a.button {
+                                    }}
+                                    a.button {{
                                       display: inline-block;
                                       background-color: #0070D1;
                                       color: #FFFFFF;
@@ -142,68 +150,51 @@ namespace ApacheNet
                                       text-decoration: none;
                                       border-radius: 8px;
                                       font-size: 18px;
-                                    }
-                                    a.button:hover {
+                                    }}
+                                    a.button:hover {{
                                       background-color: #0055A4;
-                                    }
-                                    p {
+                                    }}
+                                    p {{
                                       margin-top: 40px;
                                       font-size: 14px;
                                       color: #AAAAAA;
-                                    }
+                                    }}
                                   </style>
                                 </head>
+                                <script type=""text/javascript"">
+                                   {(flashPlayer7 ? @$"function playerReady() {{
+                                    {(debug ? "alert(\"DEBUG: Media player loaded.\");" : string.Empty)}
+                                  }}
+                                  {WebAPIService.AdobeFlash.binaries.JwPlayer.swfObjectJs.Content}" : @$"function printTrace() {{
+                                    {(debug ? "alert(\"DEBUG: Media player loaded.\");" : string.Empty)}
+                                  }}
+                                  {WebAPIService.AdobeFlash.binaries.JwPlayer.jwPlayer53Js.Content}")}
+                                </script>
                                 <body>
                                   <h1>Media Player</h1>
-                                  <a class='button' href='" + absolutepath + @"?PS3=play' target='_blank'>▶ Play Video</a>
-                                  <p>Media compatible with the PlayStation 3 System</p>
+                                  <a class='button' href='{absolutepath}?PS3=play' target='_blank'>{(isSupported ? "▶ Download Video" : "Backup Video to external storage")}</a>
+                                  <p>Media {(isSupported ? string.Empty : "not ")}compatible with the PlayStation 3 System</p>
+                                  {(flashPlayer7 ? $@"{(IsPS3PlayerCompatibleFormat(ContentType) ? $@"<div id=""player"">Loading player...</div>
+                                    <script type=""text/javascript"">
+                                    var so = new SWFObject('/jwplayer/ps3player43.swf','mpl','860','580','6');
+                                    so.addParam('allowscriptaccess','always');
+                                    so.addParam('allowfullscreen','true');
+                                    so.addVariable('controlbar', 'bottom');
+                                    so.addParam('flashvars','&file={absolutepath}?PS3=play');
+                                    so.write('player');
+                                    </script>" : string.Empty)}" : $@"{(IsPS3PlayerCompatibleFormat(ContentType) ? $@"<br />
+                                    <div id=""player"">Loading player...</div>
+                                    <script type=""text/javascript"">
+                                      jwplayer(""player"").setup({{
+                                        file: ""{absolutepath}?PS3=play"",
+                                        width: 860,
+                                        height: 580,
+                                        controlbar: ""bottom"",
+                                        allowfullscreen: ""true""
+                                      }});
+                                    </script>" : string.Empty)}")}
                                 </body>
                                 </html>";
-                            else
-                                htmlContent = @"
-                                <!DOCTYPE html>
-                                <html>
-                                <head>
-                                  <title>PlayStation Media Player</title>
-                                  <style>
-                                    body {
-                                      background-color: #000000;
-                                      color: #FFFFFF;
-                                      text-align: center;
-                                      font-family: Arial, sans-serif;
-                                      margin: 0;
-                                      padding: 20px;
-                                    }
-                                    h1 {
-                                      font-size: 24px;
-                                      margin-bottom: 20px;
-                                    }
-                                    a.button {
-                                      display: inline-block;
-                                      background-color: #0070D1;
-                                      color: #FFFFFF;
-                                      padding: 14px 28px;
-                                      text-decoration: none;
-                                      border-radius: 8px;
-                                      font-size: 18px;
-                                    }
-                                    a.button:hover {
-                                      background-color: #0055A4;
-                                    }
-                                    p {
-                                      margin-top: 40px;
-                                      font-size: 14px;
-                                      color: #AAAAAA;
-                                    }
-                                  </style>
-                                </head>
-                                <body>
-                                  <h1>Media Player</h1>
-                                  <a class='button' href='" + absolutepath + @"?PS3=play' target='_blank'>▶ Backup Video to external storage</a>
-                                  <p>Media not compatible with the PlayStation 3 System</p>
-                                </body>
-                                </html>";
-
                             break;
                     }
                 }
@@ -734,6 +725,33 @@ sendImmediate:
                 ctx.Response.ContentType = "text/plain";
                 return await ctx.Response.Send().ConfigureAwait(false);
             }
+        }
+
+        private static bool IsPS3PlayerCompatibleFormat(string contentType)
+        {
+            // Normalize to lowercase for comparison
+            contentType = contentType.ToLowerInvariant();
+
+            // List of compatible MIME types for JW Player Flash mode
+            foreach (var type in new[]
+            {
+                "video/x-flv",           // FLV video
+                "video/mp4",             // MP4 video (H.264 + AAC)
+                "video/mpeg",            // Sometimes for .3gp or MPEG-4
+                "audio/mpeg",            // MP3 audio
+                "audio/mp3",             // MP3 audio (sometimes used)
+                "audio/aac",             // AAC audio
+                "audio/x-aac",           // AAC audio
+                "video/3gpp",            // 3GP video (if H.264 + AAC)
+                "video/quicktime",       // MOV (H.264 + AAC)
+                "video/x-m4v"            // Apple M4V (MP4 variant)
+            })
+            {
+                if (contentType == type)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

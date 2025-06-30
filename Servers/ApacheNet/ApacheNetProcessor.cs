@@ -2031,7 +2031,7 @@ namespace ApacheNet
                                                 bool hasUserAgent = !string.IsNullOrEmpty(request.Useragent);
 
                                                 // Hotfix PSHome videos not being displayed in HTTP using chunck encoding (game bug).
-                                                if (hasUserAgent && request.Useragent.Contains("PSHome") && (isVideo || isAudio))
+                                                if (hasUserAgent && request.Useragent.Contains("CellOS") && (isVideo || isAudio))
                                                     response.ChunkedTransfer = false;
 
                                                 if (request.QuerystringExists("offset") && request.RetrieveQueryValue("format") != "mp4" && (isVideo || isAudio))
@@ -2625,7 +2625,7 @@ namespace ApacheNet
                                                 bool hasUserAgent = !string.IsNullOrEmpty(request.Useragent);
 
                                                 // Hotfix PSHome videos not being displayed in HTTP using chunck encoding (game bug).
-                                                if (hasUserAgent && request.Useragent.Contains("PSHome") && (isVideo || isAudio))
+                                                if (hasUserAgent && request.Useragent.Contains("CellOS") && (isVideo || isAudio))
                                                     response.ChunkedTransfer = false;
 
                                                 if (ApacheNetServerConfiguration.RangeHandling && !string.IsNullOrEmpty(request.RetrieveHeaderValue("Range")))

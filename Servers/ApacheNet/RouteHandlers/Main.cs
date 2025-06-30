@@ -13,6 +13,7 @@ using System.Globalization;
 using NetworkLibrary.Extension;
 using System.Text.Json;
 using WebAPIService.COGS;
+using WebAPIService.AdobeFlash.binaries.JwPlayer;
 
 namespace ApacheNet.RouteHandlers
 {
@@ -107,6 +108,21 @@ namespace ApacheNet.RouteHandlers
                             ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                             return ctx.Response.Send("Invalid instance ID format.").Result;
                         }
+                        return false;
+                     }
+                },
+                new() {
+                    Name = "AdobeFlash PS3 Player",
+                    UrlRegex = "jwplayer/ps3player",
+                    Method = "GET",
+                    Host = null,
+                    Callable = (HttpContextBase ctx) => {
+                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                        ctx.Response.ContentType = "application/x-shockwave-flash";
+                        if (ctx.Request.Url.RawWithoutQuery.EndsWith("53.swf", StringComparison.InvariantCultureIgnoreCase))
+                            return ctx.Response.Send(jwPlayer53Swf.Data).Result;
+                        else if (ctx.Request.Url.RawWithoutQuery.EndsWith("43.swf", StringComparison.InvariantCultureIgnoreCase))
+                            return ctx.Response.Send(jwPlayer43Swf.Data).Result;
                         return false;
                      }
                 },

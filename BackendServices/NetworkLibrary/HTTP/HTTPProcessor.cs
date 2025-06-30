@@ -14,7 +14,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 using System.Text.Json;
-using System.Runtime.InteropServices;
 #if NET7_0_OR_GREATER
 using System.Net.Http;
 #else
@@ -27,7 +26,17 @@ namespace NetworkLibrary.HTTP
     {
         public static readonly Dictionary<string, string> _mimeTypes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase)
         {
-             #region Big freaking list of mime types
+            #region PS3 MimeTypes
+
+            {".divx", "video/divx"},
+            {".ptf", "application/x-psp-theme"},
+            {".p3t", "application/x-ps3-theme"},
+            {".pup", "application/x-ps3-update"},
+            {".pbp", "application/x-psp-update"},
+
+            #endregion
+
+            #region Big freaking list of mime types
 
             // combination of values from Windows 7 Registry and 
             // from C:\Windows\System32\inetsrv\config\applicationHost.config
@@ -386,7 +395,6 @@ namespace NetworkLibrary.HTTP
             {".psm", "application/octet-stream"},
             {".psp", "application/octet-stream"},
             {".pub", "application/x-mspublisher"},
-            {".pup", "application/x-ps3-update"},
             {".pwz", "application/vnd.ms-powerpoint"},
             {".qht", "text/x-html-insertion"},
             {".qhtm", "text/x-html-insertion"},
