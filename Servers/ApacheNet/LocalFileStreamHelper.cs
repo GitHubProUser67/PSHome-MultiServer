@@ -1,10 +1,12 @@
 ﻿using System.Net;
 using System.Text;
-using WatsonWebserver.Core;
-using NetworkLibrary.HTTP;
+using System.Text.RegularExpressions;
 using System.IO;
 using System;
 using System.Threading.Tasks;
+using System.Globalization;
+using WatsonWebserver.Core;
+using NetworkLibrary.HTTP;
 using NetworkLibrary.Extension;
 using NetworkLibrary.Upscalers;
 
@@ -122,7 +124,14 @@ namespace ApacheNet
 #else
                             bool debug = false;
 #endif
-                            bool flashPlayer7 = !UserAgent.Contains("AppleWebKit"); // The HDK documentation states that only Flash player 7 is supported on the "in-game" browser mode (silk_npflashplayer.sprx). Normal browser uses Flash Player 9 (silk_npflashplayer9.sprx).
+                            // The HDK documentation states that only Flash player 7 is supported on the "in-game" browser mode (silk_npflashplayer.sprx). Normal browser uses Flash Player 9 (silk_npflashplayer9.sprx).
+                            bool flashPlayer7 = true;
+                            if (ctx.Request.HeaderExists("x-ps3-browser"))
+                            {
+                                var match = Regex.Match(ctx.Request.RetrieveHeaderValue("x-ps3-browser"), @"system=(\d+\.\d+)");
+                                if (match.Success)
+                                    flashPlayer7 = double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) < 2.50;
+                            }
                             bool isSupported = HTTPProcessor.IsPS3SupportedContentType(ContentType);
                             htmlContent = $@"
                                 <!DOCTYPE html>
