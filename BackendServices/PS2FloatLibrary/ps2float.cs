@@ -56,7 +56,7 @@ namespace PS2FloatLibrary
             raw |= mantissa & 0x7FFFFF;
         }
 
-        public static ps2float Zero => new ps2float(0);
+        public static ps2float Zero => new ps2float(byte.MinValue);
         public static ps2float MaxValue => new ps2float(MAX_FLOATING_POINT_VALUE);
         public static ps2float MinValue => new ps2float(MIN_FLOATING_POINT_VALUE);
         public static ps2float One => new ps2float(ONE);
