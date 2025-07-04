@@ -693,7 +693,7 @@ namespace HomeTools.BARFramework
                 inStream.Close();
                 byte[] array2 = null;
                 if (isvalid)
-                    array2 = await Zlib.EdgeZlibCompress(array).ConfigureAwait(false);
+                    array2 = Zlib.EdgeZlibCompress(array);
                 if (array2 != null)
                 {
                     tocEntry.CompressedSize = (uint)array2.Length;
@@ -707,7 +707,7 @@ namespace HomeTools.BARFramework
                     tocEntry.Index = count;
                     byte[] IV = new byte[8];
                     Buffer.BlockCopy(tocEntry.IV, 0, IV, 0, tocEntry.IV.Length);
-                    tocEntry.RawData = await ToolsImplementation.ProcessCrypt_DecryptAsync(array2, m_header.Key, IV, 0).ConfigureAwait(false);
+                    tocEntry.RawData = ToolsImplementation.ProcessCrypt_Decrypt(array2, m_header.Key, IV, 0);
                 }
                 else
                 {
@@ -735,7 +735,7 @@ namespace HomeTools.BARFramework
                 inStream.Close();
                 byte[] array2 = null;
                 if (isvalid)
-                    array2 = await Zlib.EdgeZlibCompress(array).ConfigureAwait(false);
+                    array2 = Zlib.EdgeZlibCompress(array);
                 if (array2 != null)
                 {
                     tocEntry.CompressedSize = (uint)array2.Length + 28;

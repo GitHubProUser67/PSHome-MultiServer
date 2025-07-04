@@ -149,8 +149,8 @@ namespace HomeTools.UnBAR
 
                                 Buffer.BlockCopy(RawBarData, 24, SharcHeader, 0, SharcHeader.Length);
 
-                                SharcHeader = await ToolsImplementation.ProcessCrypt_DecryptAsync(SharcHeader,
-                                 options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2).ConfigureAwait(false);
+                                SharcHeader = ToolsImplementation.ProcessCrypt_Decrypt(SharcHeader,
+                                 options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2);
 
                                 if (SharcHeader == null)
                                     return; // Sharc Header failed to decrypt.
@@ -160,8 +160,8 @@ namespace HomeTools.UnBAR
 
                                     Buffer.BlockCopy(RawBarData, 24, SharcHeader, 0, SharcHeader.Length);
 
-                                    SharcHeader = await ToolsImplementation.ProcessCrypt_DecryptAsync(SharcHeader,
-                                     options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2).ConfigureAwait(false);
+                                    SharcHeader = ToolsImplementation.ProcessCrypt_Decrypt(SharcHeader,
+                                     options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2);
 
                                     if (SharcHeader == null)
                                         return; // Sharc Header failed to decrypt.
@@ -171,8 +171,8 @@ namespace HomeTools.UnBAR
 
                                         Buffer.BlockCopy(RawBarData, 24, SharcHeader, 0, SharcHeader.Length);
 
-                                        SharcHeader = await ToolsImplementation.ProcessCrypt_DecryptAsync(SharcHeader,
-                                         options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2).ConfigureAwait(false);
+                                        SharcHeader = ToolsImplementation.ProcessCrypt_Decrypt(SharcHeader,
+                                         options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2);
 
                                         if (SharcHeader == null)
                                             return; // Sharc Header failed to decrypt.
@@ -203,7 +203,7 @@ namespace HomeTools.UnBAR
 
                                     ToolsImplementation.IncrementIVBytes(HeaderIV, 1); // Increment IV by one (supposed to be the continuation of the header cypher context).
 
-                                    SharcTOC = await ToolsImplementation.ProcessCrypt_DecryptAsync(SharcTOC, options.IsBase64().Item2, HeaderIV, 2).ConfigureAwait(false);
+                                    SharcTOC = ToolsImplementation.ProcessCrypt_Decrypt(SharcTOC, options.IsBase64().Item2, HeaderIV, 2);
 
                                     if (SharcTOC != null)
                                     {
@@ -391,13 +391,13 @@ namespace HomeTools.UnBAR
                     switch (cdnMode)
                     {
                         case 2:
-                            DecryptedSignatureHeader = await ToolsImplementation.ProcessCrypt_DecryptAsync(EncryptedSignatureHeader, ToolsImplementation.HDKSignatureKey, SignatureIV, 1).ConfigureAwait(false);
+                            DecryptedSignatureHeader = ToolsImplementation.ProcessCrypt_Decrypt(EncryptedSignatureHeader, ToolsImplementation.HDKSignatureKey, SignatureIV, 1);
                             break;
                         case 1:
-                            DecryptedSignatureHeader = await ToolsImplementation.ProcessCrypt_DecryptAsync(EncryptedSignatureHeader, ToolsImplementation.BetaSignatureKey, SignatureIV, 1).ConfigureAwait(false);
+                            DecryptedSignatureHeader = ToolsImplementation.ProcessCrypt_Decrypt(EncryptedSignatureHeader, ToolsImplementation.BetaSignatureKey, SignatureIV, 1);
                             break;
                         default:
-                            DecryptedSignatureHeader = await ToolsImplementation.ProcessCrypt_DecryptAsync(EncryptedSignatureHeader, ToolsImplementation.SignatureKey, SignatureIV, 1).ConfigureAwait(false);
+                            DecryptedSignatureHeader = ToolsImplementation.ProcessCrypt_Decrypt(EncryptedSignatureHeader, ToolsImplementation.SignatureKey, SignatureIV, 1);
                             break;
                     }
 
@@ -445,13 +445,13 @@ namespace HomeTools.UnBAR
                                 switch (cdnMode)
                                 {
                                     case 2:
-                                        FileBytes = await ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.HDKBlowfishKey, SignatureIV, 1).ConfigureAwait(false);
+                                        FileBytes = ToolsImplementation.ProcessCrypt_Decrypt(FileBytes, ToolsImplementation.HDKBlowfishKey, SignatureIV, 1);
                                         break;
                                     case 1:
-                                        FileBytes = await ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.BetaBlowfishKey, SignatureIV, 1).ConfigureAwait(false);
+                                        FileBytes = ToolsImplementation.ProcessCrypt_Decrypt(FileBytes, ToolsImplementation.BetaBlowfishKey, SignatureIV, 1);
                                         break;
                                     default:
-                                        FileBytes = await ToolsImplementation.ProcessCrypt_DecryptAsync(FileBytes, ToolsImplementation.BlowfishKey, SignatureIV, 1).ConfigureAwait(false);
+                                        FileBytes = ToolsImplementation.ProcessCrypt_Decrypt(FileBytes, ToolsImplementation.BlowfishKey, SignatureIV, 1);
                                         break;
                                 }
 
@@ -459,7 +459,7 @@ namespace HomeTools.UnBAR
                                 {
                                     try
                                     {
-                                        FileBytes = await Zlib.EdgeZlibDecompress(FileBytes).ConfigureAwait(false);
+                                        FileBytes = Zlib.EdgeZlibDecompress(FileBytes);
                                     }
                                     catch
                                     {
@@ -469,7 +469,7 @@ namespace HomeTools.UnBAR
 
                                         try
                                         {
-                                            FileBytes = await Zlib.EdgeZlibDecompress(FileBytes, true).ConfigureAwait(false);
+                                            FileBytes = Zlib.EdgeZlibDecompress(FileBytes, true);
                                         }
                                         catch (Exception ex)
                                         {
@@ -582,11 +582,11 @@ namespace HomeTools.UnBAR
                 LoggerAccessor.LogInfo($"IV - {tableOfContent.IV.ToHexString()}");
 #endif
 
-                byte[] FileBytes = await ToolsImplementation.ProcessCrypt_DecryptAsync(data, Key, tableOfContent.IV.ShadowCopy(), 0).ConfigureAwait(false);
+                byte[] FileBytes = ToolsImplementation.ProcessCrypt_Decrypt(data, Key, tableOfContent.IV.ShadowCopy(), 0);
 
                 try
                 {
-                    FileBytes = await Zlib.EdgeZlibDecompress(FileBytes).ConfigureAwait(false);
+                    FileBytes = Zlib.EdgeZlibDecompress(FileBytes);
                 }
                 catch
                 {
@@ -596,7 +596,7 @@ namespace HomeTools.UnBAR
 
                     try
                     {
-                        FileBytes = await Zlib.EdgeZlibDecompress(FileBytes, true).ConfigureAwait(false);
+                        FileBytes = Zlib.EdgeZlibDecompress(FileBytes, true);
                     }
                     catch (Exception ex)
                     {
