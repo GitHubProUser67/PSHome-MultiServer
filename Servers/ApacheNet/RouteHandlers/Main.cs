@@ -112,8 +112,8 @@ namespace ApacheNet.RouteHandlers
                      }
                 },
                 new() {
-                    Name = "AdobeFlash PS3 Player",
-                    UrlRegex = "jwplayer/jwplayer",
+                    Name = "AdobeFlash JW Player",
+                    UrlRegex = "jwplayer/player",
                     Method = "GET",
                     Host = null,
                     Callable = (HttpContextBase ctx) => {

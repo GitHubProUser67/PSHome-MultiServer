@@ -186,7 +186,7 @@ namespace ApacheNet
                                   {(flashPlayer7 ? $@"{(IsJWPlayerCompatibleFormat(ContentType) ? $@"<br />
                                     <div id=""player"">Loading player...</div>
                                     <script type=""text/javascript"">
-                                    var so = new SWFObject('/jwplayer/jwplayer43.swf','mpl','860','580','6');
+                                    var so = new SWFObject('/jwplayer/player43.swf','mpl','860','580','6');
                                     so.addParam('allowscriptaccess','always');
                                     so.addParam('allowfullscreen','true');
                                     so.addVariable('controlbar', 'bottom');
