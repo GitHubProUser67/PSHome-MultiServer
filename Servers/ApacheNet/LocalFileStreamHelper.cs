@@ -174,7 +174,7 @@ namespace ApacheNet
                                    {(flashPlayer7 ? @$"function playerReady() {{
                                     {(debug ? "alert(\"DEBUG: Media player loaded.\");" : string.Empty)}
                                   }}
-                                  {WebAPIService.AdobeFlash.binaries.JwPlayer.swfObjectJs.Content}" : @$"function printTrace() {{
+                                  {WebAPIService.AdobeFlash.binaries.JwPlayer.swfObject43Js.Content}" : @$"function printTrace() {{
                                     {(debug ? "alert(\"DEBUG: Media player loaded.\");" : string.Empty)}
                                   }}
                                   {WebAPIService.AdobeFlash.binaries.JwPlayer.jwPlayer53Js.Content}")}
@@ -183,15 +183,16 @@ namespace ApacheNet
                                   <h1>Media Player</h1>
                                   <a class='button' href='{absolutepath}?PS3=play' target='_blank'>{(isSupported ? "▶ Download Video" : "Backup Video to external storage")}</a>
                                   <p>Media {(isSupported ? string.Empty : "not ")}compatible with the PlayStation 3 System</p>
-                                  {(flashPlayer7 ? $@"{(IsPS3PlayerCompatibleFormat(ContentType) ? $@"<div id=""player"">Loading player...</div>
+                                  {(flashPlayer7 ? $@"{(IsJWPlayerCompatibleFormat(ContentType) ? $@"<br />
+                                    <div id=""player"">Loading player...</div>
                                     <script type=""text/javascript"">
-                                    var so = new SWFObject('/jwplayer/ps3player43.swf','mpl','860','580','6');
+                                    var so = new SWFObject('/jwplayer/jwplayer43.swf','mpl','860','580','6');
                                     so.addParam('allowscriptaccess','always');
                                     so.addParam('allowfullscreen','true');
                                     so.addVariable('controlbar', 'bottom');
                                     so.addParam('flashvars','&file={absolutepath}?PS3=play');
                                     so.write('player');
-                                    </script>" : string.Empty)}" : $@"{(IsPS3PlayerCompatibleFormat(ContentType) ? $@"<br />
+                                    </script>" : string.Empty)}" : $@"{(IsJWPlayerCompatibleFormat(ContentType) ? $@"<br />
                                     <div id=""player"">Loading player...</div>
                                     <script type=""text/javascript"">
                                       jwplayer(""player"").setup({{
@@ -736,7 +737,7 @@ sendImmediate:
             }
         }
 
-        private static bool IsPS3PlayerCompatibleFormat(string contentType)
+        private static bool IsJWPlayerCompatibleFormat(string contentType)
         {
             // Normalize to lowercase for comparison
             contentType = contentType.ToLowerInvariant();

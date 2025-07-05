@@ -1,6 +1,6 @@
 ﻿namespace WebAPIService.AdobeFlash.binaries.JwPlayer
 {
-    public static class swfObjectJs
+    public static class swfObject43Js
     {
         public const string Content = @"/**
  * SWFObject v1.5: Flash Player detection and embed - http://blog.deconcept.com/swfobject/

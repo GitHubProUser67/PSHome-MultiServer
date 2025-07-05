@@ -113,7 +113,7 @@ namespace ApacheNet.RouteHandlers
                 },
                 new() {
                     Name = "AdobeFlash PS3 Player",
-                    UrlRegex = "jwplayer/ps3player",
+                    UrlRegex = "jwplayer/jwplayer",
                     Method = "GET",
                     Host = null,
                     Callable = (HttpContextBase ctx) => {
@@ -123,7 +123,7 @@ namespace ApacheNet.RouteHandlers
                             return ctx.Response.Send(jwPlayer53Swf.Data).Result;
                         else if (ctx.Request.Url.RawWithoutQuery.EndsWith("43.swf", StringComparison.InvariantCultureIgnoreCase))
                             return ctx.Response.Send(jwPlayer43Swf.Data).Result;
-                        return false;
+                        return ctx.Response.Send(jwPlayer6Swf.Data).Result;
                      }
                 },
                 new() {
