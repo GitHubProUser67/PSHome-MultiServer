@@ -41,7 +41,7 @@ namespace WebAPIService.LOOT
                     {
                         case "/moviedb/settings/":
                             {
-                                return LOOTTeleporter.FetchTeleporterInfo(workpath);
+                                return LOOTMovieDb.FetchDBInfo(workpath, QueryParameters["id"]);
                             }
                         default:
                             LoggerAccessor.LogWarn($"[LOOT] Unhandled GET request {absolutepath} please report to GITHUB");
