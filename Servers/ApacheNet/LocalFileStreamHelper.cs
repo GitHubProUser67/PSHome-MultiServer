@@ -1,10 +1,12 @@
-using System.Net;
+﻿using System.Net;
 using System.Text;
-using WatsonWebserver.Core;
-using NetworkLibrary.HTTP;
+using System.Text.RegularExpressions;
 using System.IO;
 using System;
 using System.Threading.Tasks;
+using System.Globalization;
+using WatsonWebserver.Core;
+using NetworkLibrary.HTTP;
 using NetworkLibrary.Extension;
 using NetworkLibrary.Upscalers;
 
@@ -16,7 +18,8 @@ namespace ApacheNet
 
         public const long compressionSizeLimit = 800L * 1024 * 1024; // 800MB in bytes
 
-        public static async Task<bool> HandleRequest(HttpContextBase ctx, string encoding, string absolutepath, string filePath, string ContentType, bool isVideoOrAudio, bool isHtmlCompatible, bool noCompressCacheControl)
+        public static async Task<bool> HandleRequest(HttpContextBase ctx, string encoding, string absolutepath, string filePath
+            , string ContentType, string UserAgent, bool isVideoOrAudio, bool isHtmlCompatible, bool noCompressCacheControl)
         {
             bool isNoneMatchValid = false;
             string ifModifiedSince = ctx.Request.RetrieveHeaderValue("If-Modified-Since");
@@ -85,8 +88,129 @@ namespace ApacheNet
             }
             else if (isHtmlCompatible && isVideoOrAudio)
             {
+                string htmlContent;
                 // Generate an HTML page with the video element
-                const string htmlPart = @"
+                if (!string.IsNullOrEmpty(UserAgent) && (UserAgent.Contains("PLAYSTATION 3") || UserAgent.Contains("PSP (PlayStation Portable)")))
+                {
+                    switch (ctx.Request.RetrieveQueryValue("PS3"))
+                    {
+                        case "play":
+                            ctx.Response.ContentType = ContentType;
+
+                            ctx.Response.Headers.Add("Accept-Ranges", "bytes");
+
+                            if (compressionSettingEnabled && !noCompressCacheControl && !string.IsNullOrEmpty(encoding) && new FileInfo(filePath).Length <= compressionSizeLimit)
+                            {
+                                if (encoding.Contains("gzip"))
+                                {
+                                    ctx.Response.Headers.Add("Content-Encoding", "gzip");
+                                    st = HTTPProcessor.GzipCompressStream(await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false));
+                                }
+                                else if (encoding.Contains("deflate"))
+                                {
+                                    ctx.Response.Headers.Add("Content-Encoding", "deflate");
+                                    st = HTTPProcessor.DeflateStream(await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false));
+                                }
+                                else
+                                    st = await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false);
+                            }
+                            else
+                                st = await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false);
+
+                            goto sendImmediate;
+                        default:
+#if DEBUG
+                            bool debug = true;
+#else
+                            bool debug = false;
+#endif
+                            // The HDK documentation states that only Flash player 7 is supported on the "in-game" browser mode (silk_npflashplayer.sprx). Normal browser uses Flash Player 9 (silk_npflashplayer9.sprx).
+                            bool flashPlayer7 = true;
+                            if (ctx.Request.HeaderExists("x-ps3-browser"))
+                            {
+                                var match = Regex.Match(ctx.Request.RetrieveHeaderValue("x-ps3-browser"), @"system=(\d+\.\d+)");
+                                if (match.Success)
+                                    flashPlayer7 = double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) < 2.50;
+                            }
+                            bool isSupported = HTTPProcessor.IsPS3SupportedContentType(ContentType);
+                            htmlContent = $@"
+                                <!DOCTYPE html>
+                                <html>
+                                <head>
+                                  <title>PlayStation Media Player</title>
+                                  <style>
+                                    body {{
+                                      background-color: #000000;
+                                      color: #FFFFFF;
+                                      text-align: center;
+                                      font-family: Arial, sans-serif;
+                                      margin: 0;
+                                      padding: 20px;
+                                    }}
+                                    h1 {{
+                                      font-size: 24px;
+                                      margin-bottom: 20px;
+                                    }}
+                                    a.button {{
+                                      display: inline-block;
+                                      background-color: #0070D1;
+                                      color: #FFFFFF;
+                                      padding: 14px 28px;
+                                      text-decoration: none;
+                                      border-radius: 8px;
+                                      font-size: 18px;
+                                    }}
+                                    a.button:hover {{
+                                      background-color: #0055A4;
+                                    }}
+                                    p {{
+                                      margin-top: 40px;
+                                      font-size: 14px;
+                                      color: #AAAAAA;
+                                    }}
+                                  </style>
+                                </head>
+                                <script type=""text/javascript"">
+                                   {(flashPlayer7 ? @$"function playerReady() {{
+                                    {(debug ? "alert(\"DEBUG: Media player loaded.\");" : string.Empty)}
+                                  }}
+                                  {WebAPIService.AdobeFlash.binaries.JwPlayer.swfObject43Js.Content}" : @$"function printTrace() {{
+                                    {(debug ? "alert(\"DEBUG: Media player loaded.\");" : string.Empty)}
+                                  }}
+                                  {WebAPIService.AdobeFlash.binaries.JwPlayer.jwPlayer53Js.Content}")}
+                                </script>
+                                <body>
+                                  <h1>Media Player</h1>
+                                  <a class='button' href='{absolutepath}?PS3=play' target='_blank'>{(isSupported ? "▶ Download Video" : "Backup Video to external storage")}</a>
+                                  <p>Media {(isSupported ? string.Empty : "not ")}compatible with the PlayStation 3 System</p>
+                                  {(flashPlayer7 ? $@"{(IsJWPlayerCompatibleFormat(ContentType) ? $@"<br />
+                                    <div id=""player"">Loading player...</div>
+                                    <script type=""text/javascript"">
+                                    var so = new SWFObject('/jwplayer/player43.swf','mpl','860','580','6');
+                                    so.addParam('allowscriptaccess','always');
+                                    so.addParam('allowfullscreen','true');
+                                    so.addVariable('controlbar', 'bottom');
+                                    so.addParam('flashvars','&file={absolutepath}?PS3=play');
+                                    so.write('player');
+                                    </script>" : string.Empty)}" : $@"{(IsJWPlayerCompatibleFormat(ContentType) ? $@"<br />
+                                    <div id=""player"">Loading player...</div>
+                                    <script type=""text/javascript"">
+                                      jwplayer(""player"").setup({{
+                                        file: ""{absolutepath}?PS3=play"",
+                                        width: 860,
+                                        height: 580,
+                                        controlbar: ""bottom"",
+                                        allowfullscreen: ""true""
+                                      }});
+                                    </script>" : string.Empty)}")}
+                                </body>
+                                </html>";
+                            break;
+                    }
+                }
+                else // TODO, support more older browsers?
+                {
+                    htmlContent = @"
                             <!DOCTYPE html>
                             <html>
                             <head>
@@ -114,12 +238,12 @@ namespace ApacheNet
                             <body>
                               <div id=""video-container"">
                                 <video controls>
-                                  <source src=""";
-                string htmlContent = htmlPart + absolutepath + $@""" type=""{ContentType}"">
+                                  <source src=""" + absolutepath + $@""" type=""{ContentType}"">
                                 </video>
                               </div>
                             </body>
                             </html>";
+                }
 
                 ctx.Response.ContentType = "text/html; charset=UTF-8";
 
@@ -185,7 +309,7 @@ namespace ApacheNet
                 else
                     st = await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileAccessMode.Read, FileLockAwaitMs).ConfigureAwait(false);
             }
-
+sendImmediate:
             if (st == null)
             {
                 ctx.Response.ChunkedTransfer = false;
@@ -611,6 +735,33 @@ namespace ApacheNet
                 ctx.Response.ContentType = "text/plain";
                 return await ctx.Response.Send().ConfigureAwait(false);
             }
+        }
+
+        private static bool IsJWPlayerCompatibleFormat(string contentType)
+        {
+            // Normalize to lowercase for comparison
+            contentType = contentType.ToLowerInvariant();
+
+            // List of compatible MIME types for JW Player Flash mode
+            foreach (var type in new[]
+            {
+                "video/x-flv",           // FLV video
+                "video/mp4",             // MP4 video (H.264 + AAC)
+                "video/mpeg",            // Sometimes for .3gp or MPEG-4
+                "audio/mpeg",            // MP3 audio
+                "audio/mp3",             // MP3 audio (sometimes used)
+                "audio/aac",             // AAC audio
+                "audio/x-aac",           // AAC audio
+                "video/3gpp",            // 3GP video (if H.264 + AAC)
+                "video/quicktime",       // MOV (H.264 + AAC)
+                "video/x-m4v"            // Apple M4V (MP4 variant)
+            })
+            {
+                if (contentType == type)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

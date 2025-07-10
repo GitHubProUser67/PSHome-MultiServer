@@ -1,7 +1,6 @@
 using CustomLogger;
 using Newtonsoft.Json;
 using Horizon.RT.Models;
-using Horizon.LIBRARY.Common;
 using Horizon.MUIS.Config;
 using Horizon.PluginManager;
 using System.Net;
@@ -758,6 +757,25 @@ namespace Horizon.MUIS
                 });
 
                 Settings.Universes.Add(21354, new UniverseInfo[]
+                {
+                    new UniverseInfo()
+                    {
+                        Name = "Singstar Lobby",
+                        Description = "SingAllTogether",
+                        Status = 1,
+                        UserCount = 1,
+                        MaxUsers = 256,
+                        Endpoint = iptofile,
+                        SvoURL = $"http://{iptofile}:10060/SINGSTARPS3_SVML/start.jsp ",
+                        ExtendedInfo = null,
+                        UniverseBilling = "SCEA",
+                        BillingSystemName = "Sony Computer Entertainment America, Inc. Billing System",
+                        Port = 10075,
+                        UniverseId = 1
+                    }
+                });
+
+                Settings.Universes.Add(23014, new UniverseInfo[]
                 {
                     new UniverseInfo()
                     {

@@ -35,6 +35,7 @@ namespace EdenServer.EdNet.ProxyMessages
 
             foreach (ushort handler_crc in request_crc_in)
             {
+                response.InsertUInt16(handler_crc);
                 if (handler_crc != 0)
                 {
                     var matchingField = storeBank
@@ -56,7 +57,6 @@ namespace EdenServer.EdNet.ProxyMessages
                                 ushort? configPort = service.Value.port;
                                 if (!string.IsNullOrEmpty(configIp) && configPort.HasValue)
                                 {
-                                    response.InsertUInt16(handler_crc);
                                     response.InsertUInt32(InternetProtocolUtils.GetIPAddressAsUInt(configIp));
                                     response.InsertUInt16(configPort.Value);
                                     continue;
@@ -65,7 +65,6 @@ namespace EdenServer.EdNet.ProxyMessages
                         }
 
                         // Default to Proxy IP.
-                        response.InsertUInt16(handler_crc);
                         response.InsertUInt32(targetIp);
                         response.InsertUInt16(targetPort);
                     }
@@ -74,10 +73,14 @@ namespace EdenServer.EdNet.ProxyMessages
 #if DEBUG
                         CustomLogger.LoggerAccessor.LogWarn($"[GetRequestHandlersEx] - Unknown service for CRC:{handler_crc:X4}");
 #endif
-                        response.InsertUInt16(handler_crc);
                         response.InsertUInt32(0);
                         response.InsertUInt16(0);
                     }
+                }
+                else
+                {
+                    response.InsertUInt32(0);
+                    response.InsertUInt16(0);
                 }
             }
 

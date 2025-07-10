@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace HomeTools.BARFramework
+namespace EndianTools.BinaryExtension
 {
     public abstract class EndianAwareBinaryWriter
     {
@@ -9,9 +9,9 @@ namespace HomeTools.BARFramework
             m_bw = new BinaryWriter(output);
         }
 
-        public static EndianAwareBinaryWriter Create(Stream output, EndianType endian)
+        public static EndianAwareBinaryWriter Create(Stream output, Endianness endian)
         {
-            if (endian == EndianType.LittleEndian)
+            if (endian == Endianness.LittleEndian)
                 return new LEBinaryWriter(output);
             return new BEBinaryWriter(output);
         }

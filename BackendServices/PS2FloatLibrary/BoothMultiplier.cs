@@ -1,4 +1,6 @@
-﻿namespace PS2FloatLibrary
+﻿using Tommunism.SoftFloat;
+
+namespace PS2FloatLibrary
 {
     //****************************************************************
     // Booth Multiplier
@@ -48,9 +50,7 @@
             else
             {
                 Wallace wallace = new Wallace(a, b);
-                ulong fs_man = wallace.fs_multiplier & 0xFFFFFFFFFFFFF;
-                ulong ft_man = wallace.ft_multiplier & 0xFFFFFFFFFFFFF;
-                full = fs_man + ft_man;
+                full = Float64.FromBitsUI64(wallace.fs_multiplier).RawMantissa + Float64.FromBitsUI64(wallace.ft_multiplier).RawMantissa;
             }
             BoothRecode b0 = Booth(a, b, 0);
             BoothRecode b1 = Booth(a, b, 1);

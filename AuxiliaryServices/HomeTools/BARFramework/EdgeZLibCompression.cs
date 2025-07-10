@@ -16,12 +16,12 @@ namespace HomeTools.BARFramework
 
         public override byte[] Compress(byte[] inData)
         {
-            return Zlib.EdgeZlibCompress(inData).Result;
+            return Zlib.EdgeZlibCompress(inData);
         }
 
         public override byte[] Decompress(byte[] inData)
         {
-            return Zlib.EdgeZlibDecompress(inData).Result;
+            return Zlib.EdgeZlibDecompress(inData);
         }
 
         public override CompressionMethod Method

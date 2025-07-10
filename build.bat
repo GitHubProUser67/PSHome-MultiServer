@@ -1,8 +1,5 @@
 @echo off
-@echo MultiServer build script 09/06/2025
-@echo.
-
-@echo Make sure to download and install the latest Powershell revision here: https://github.com/PowerShell/PowerShell
+@echo MultiServer build script 30/06/2025
 @echo.
 
 @echo Cleaning up directories:

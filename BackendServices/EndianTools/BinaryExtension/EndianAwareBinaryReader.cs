@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace HomeTools.BARFramework
+namespace EndianTools.BinaryExtension
 {
     public abstract class EndianAwareBinaryReader
     {
@@ -9,9 +9,9 @@ namespace HomeTools.BARFramework
             m_br = new BinaryReader(input);
         }
 
-        public static EndianAwareBinaryReader Create(Stream input, EndianType endian)
+        public static EndianAwareBinaryReader Create(Stream input, Endianness endian)
         {
-            if (endian == EndianType.LittleEndian)
+            if (endian == Endianness.LittleEndian)
                 return new LEBinaryReader(input);
             return new BEBinaryReader(input);
         }
