@@ -18,6 +18,7 @@ namespace MultiSocks.Aries
         private readonly AbstractAriesServer? RedirectorNFLStreet2_NTSC;
         private readonly AbstractAriesServer? RedirectorNFLStreet3_NTSC;
         private readonly AbstractAriesServer? Redirector007EverythingOrNothing_NTSC;
+        private readonly AbstractAriesServer? RedirectorPGA06_NTSC;
         private readonly AbstractAriesServer? RedirectorNCAAMM06_NTSC;
         private readonly AbstractAriesServer? RedirectorMaddenNFL06_NTSC;
         private readonly AbstractAriesServer? RedirectorBurnout3Takedown_NTSC;
@@ -43,6 +44,7 @@ namespace MultiSocks.Aries
         private readonly AbstractAriesServer? EverythingOrNothing007_NTSC_Matchmaker;
         private readonly AbstractAriesServer? LordOfTheRingsTheReturnOfTheKing_NTSC_Matchmaker;
         private readonly AbstractAriesServer? NascarThunder04_NTSC_Matchmaker;
+        private readonly AbstractAriesServer? PGA06_NTSC_Matchmaker;
         private readonly AbstractAriesServer? NCAAMM06_NTSC_Matchmaker;
         private readonly AbstractAriesServer? HASBROFAMILYGAMENIGHTPS3Matchmaker;
         private readonly AbstractAriesServer? NFLStreet_NTSCMatchmaker;
@@ -283,6 +285,20 @@ namespace MultiSocks.Aries
             catch (Exception ex)
             {
                 LoggerAccessor.LogError($"[Redirector] MIRRORSEDGE PS3 Failed to start! Exception: {ex}");
+            }
+            #endregion
+
+
+            #region Tiger Woods PGA Tour 06
+            try
+            {
+                RedirectorPGA06_NTSC = new RedirectorServer(30200, ListenIP, 30201, "PS2-PGA-2006", "PS2", false, "ps2tw06.ea.com");
+
+                LoggerAccessor.LogInfo($"[Redirector] Tiger Woods PGA Tour 06 NTSC Started!");
+            }
+            catch (Exception ex)
+            {
+                LoggerAccessor.LogError($"[Redirector] Tiger Woods PGA Tour 06 NTSC Failed to start! Exception: {ex}");
             }
             #endregion
 
@@ -553,6 +569,15 @@ namespace MultiSocks.Aries
 
             try
             {
+                PGA06_NTSC_Matchmaker = new MatchmakerServer(30201, ListenIP, null, "PS2-PGA-06", "PS2");
+            }
+            catch (Exception ex)
+            {
+                LoggerAccessor.LogError($"[Hasbro Family Game Night NTSC Matchmaker] Failed to start! Exception: {ex}");
+            }
+
+            try
+            {
                 HASBROFAMILYGAMENIGHTPS3Matchmaker = new MatchmakerServer(32951, ListenIP, null, "DPR-09", "PS3");
             }
             catch (Exception ex)
@@ -643,6 +668,7 @@ namespace MultiSocks.Aries
                     RedirectorFifa06_NTSC?.Dispose();
                     RedirectorFightNight_NTSC?.Dispose();
                     RedirectorFightNightR2_NTSC?.Dispose();
+                    RedirectorPGA06_NTSC?.Dispose();
                     RedirectorNCAAMM06_NTSC?.Dispose();
                     RedirectorMaddenNFL06_NTSC?.Dispose();
                     RedirectorBurnout3Takedown_NTSC?.Dispose();
@@ -679,6 +705,7 @@ namespace MultiSocks.Aries
                     NascarThunder04_NTSC_Matchmaker?.Dispose();
                     MaddenNFL06_NTSC_Matchmaker?.Dispose();
                     MarvelNemesis_NTSC_Matchmaker?.Dispose();
+                    PGA06_NTSC_Matchmaker.Dispose();
                     NCAAMM06_NTSC_Matchmaker?.Dispose();
                     NFSMWA124_PAL_Matchmaker?.Dispose();
                     HASBROFAMILYGAMENIGHTPS3Matchmaker?.Dispose();
