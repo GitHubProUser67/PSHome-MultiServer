@@ -14,7 +14,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 using System.Text.Json;
-using System.Runtime.InteropServices;
 #if NET7_0_OR_GREATER
 using System.Net.Http;
 #else
@@ -27,7 +26,17 @@ namespace NetworkLibrary.HTTP
     {
         public static readonly Dictionary<string, string> _mimeTypes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase)
         {
-             #region Big freaking list of mime types
+            #region PS3 MimeTypes
+
+            {".divx", "video/divx"},
+            {".ptf", "application/x-psp-theme"},
+            {".p3t", "application/x-ps3-theme"},
+            {".pup", "application/x-ps3-update"},
+            {".pbp", "application/x-psp-update"},
+
+            #endregion
+
+            #region Big freaking list of mime types
 
             // combination of values from Windows 7 Registry and 
             // from C:\Windows\System32\inetsrv\config\applicationHost.config
@@ -386,7 +395,6 @@ namespace NetworkLibrary.HTTP
             {".psm", "application/octet-stream"},
             {".psp", "application/octet-stream"},
             {".pub", "application/x-mspublisher"},
-            {".pup", "application/x-ps3-update"},
             {".pwz", "application/vnd.ms-powerpoint"},
             {".qht", "text/x-html-insertion"},
             {".qhtm", "text/x-html-insertion"},
@@ -614,6 +622,31 @@ namespace NetworkLibrary.HTTP
             { "video/mp4", new byte[] { 0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, 0x6D, 0x70 } }
         };
 
+        public static readonly HashSet<string> SupportedPS3ContentTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // MP4 / H.264
+            "video/mp4",
+            // MPEG-1 / MPEG-2
+            "video/mpeg",
+            "video/mp2t",             // MPEG-2 TS
+            "video/mp2p",             // MPEG-2 PS (less common)
+            // AVI
+            "video/x-msvideo",
+            // AVCHD (no standard MIME, often sent as video/mp2t)
+            "video/mp2t",
+            // DivX (commonly identified as avi)
+            "video/x-msvideo",
+            // WMV (VC-1)
+            "video/x-ms-wmv",
+            // Audio types
+            "audio/mpeg",             // MPEG Audio Layer 2 / MP3
+            "audio/aac",              // AAC LC
+            "audio/mp4",              // AAC in MP4
+            "audio/ac3",              // AC3 Dolby Digital
+            "audio/l16",              // LPCM
+            "audio/x-ms-wma"          // WMA Standard V2
+        };
+
         public static string[] _DefaultFiles =
         {
             "index.html",
@@ -836,6 +869,11 @@ namespace NetworkLibrary.HTTP
                 return ".unknown";
             else
                 return mimeTypesDic.FirstOrDefault(x => x.Value == mimeType).Key ?? ".unknown";
+        }
+
+        public static bool IsPS3SupportedContentType(string contentType)
+        {
+            return SupportedPS3ContentTypes.Contains(contentType);
         }
 
         public static bool CheckHeaderMatch(byte[] byteArray, int startIndex, string header)

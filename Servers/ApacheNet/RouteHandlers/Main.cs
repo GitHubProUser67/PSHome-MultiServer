@@ -13,6 +13,7 @@ using System.Globalization;
 using NetworkLibrary.Extension;
 using System.Text.Json;
 using WebAPIService.COGS;
+using WebAPIService.AdobeFlash.binaries.JwPlayer;
 
 namespace ApacheNet.RouteHandlers
 {
@@ -108,6 +109,21 @@ namespace ApacheNet.RouteHandlers
                             return ctx.Response.Send("Invalid instance ID format.").Result;
                         }
                         return false;
+                     }
+                },
+                new() {
+                    Name = "AdobeFlash JW Player",
+                    UrlRegex = "jwplayer/player",
+                    Method = "GET",
+                    Host = null,
+                    Callable = (HttpContextBase ctx) => {
+                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                        ctx.Response.ContentType = "application/x-shockwave-flash";
+                        if (ctx.Request.Url.RawWithoutQuery.EndsWith("53.swf", StringComparison.InvariantCultureIgnoreCase))
+                            return ctx.Response.Send(jwPlayer53Swf.Data).Result;
+                        else if (ctx.Request.Url.RawWithoutQuery.EndsWith("43.swf", StringComparison.InvariantCultureIgnoreCase))
+                            return ctx.Response.Send(jwPlayer43Swf.Data).Result;
+                        return ctx.Response.Send(jwPlayer6Swf.Data).Result;
                      }
                 },
                 new() {

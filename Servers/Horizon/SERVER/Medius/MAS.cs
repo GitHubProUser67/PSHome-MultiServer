@@ -205,6 +205,9 @@ namespace Horizon.SERVER.Medius
                                 case 22924:
                                     CheatQuery(0x00df0008, 6, clientChannel); // Starhawk v1.4 Retail
                                     break;
+                                case 23014:
+                                    CheatQuery(0x010e6b30, 6, clientChannel); // SingStar Viewer
+                                    break;
                             }
                         }
 

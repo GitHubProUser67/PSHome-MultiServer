@@ -33,6 +33,7 @@ namespace MultiSocks.Aries
         private readonly ConcurrentQueue<AbstractMessage> AsyncMessageQueue = new();
         private Stream? ClientStream;
         private string CommandName = "null";
+        private uint ErrorCode = 0;
 
         private (AsymmetricKeyParameter, Certificate, X509Certificate2) SecureKeyCert;
 
@@ -136,6 +137,7 @@ namespace MultiSocks.Aries
                                         break;
                                     }
                                     CommandName = Encoding.ASCII.GetString(TempData)[..4];
+                                    ErrorCode = (uint)(TempData[7] | TempData[6] << 8 | TempData[5] << 16 | TempData[4] << 24);
 
                                     TempData = new byte[size - 12];
                                     TempDatOff = 0;
@@ -143,7 +145,7 @@ namespace MultiSocks.Aries
                                 else
                                 {
                                     // message complete, process in a sync manner to avoids issues.
-                                    GotMessage(CommandName, TempData.ToArray());
+                                    GotMessage(CommandName, ErrorCode, TempData.ToArray());
 
                                     TempDatOff = 0;
                                     ExpectedBytes = -1;
@@ -165,11 +167,11 @@ namespace MultiSocks.Aries
             Context.RemoveClient(this);
         }
 
-        private void GotMessage(string name, byte[] data)
+        private void GotMessage(string name, uint errorCode, byte[] data)
         {
             Task.Run(() =>
             {
-                Context.HandleMessage(name, data, this);
+                Context.HandleMessage(name, errorCode, data, this);
             }).Wait();
         }
 

@@ -14,9 +14,6 @@ namespace CompressionLibrary.Edge
     // Partially from https://github.com/AdmiralCurtiss/ToVPatcher/blob/master/Tales/tlzc/TLZC.cs
     public class LZMA
     {
-        // Process Environment.ProcessorCount process at a time, removing the limit is not tolerable as CPU usage goes way too high.
-        private static readonly SemaphoreSlim lzmaSema = new SemaphoreSlim(Environment.ProcessorCount);
-
         private static int dictionary = 1 << 23;
 
         // static Int32 posStateBits = 2;
@@ -245,7 +242,7 @@ namespace CompressionLibrary.Edge
                     if (TOCData.Length % 8 == 0)
                     {
                         int chunkIndex = 0;
-                        List<KeyValuePair<int, Task<byte[]>>> lzmaTasks = new List<KeyValuePair<int, Task<byte[]>>>();
+                        List<KeyValuePair<int, byte[]>> lzmaResults = new List<KeyValuePair<int, byte[]>>();
 
                         for (int i = 0; i < TOCData.Length; i += 8)
                         {
@@ -259,101 +256,81 @@ namespace CompressionLibrary.Edge
                             Buffer.BlockCopy(TOCData, SegmentIndex + 2, SegmentOriginalSizeByte, 0, SegmentOriginalSizeByte.Length);
                             Buffer.BlockCopy(TOCData, SegmentIndex + 4, SegmentOffsetByte, 0, SegmentOffsetByte.Length);
 
-                            lzmaSema.Wait();
+                            int SegmentOffset;
+                            byte[] CompressedData, output;
 
-                            lzmaTasks.Add(new KeyValuePair<int, Task<byte[]>>(chunkIndex, Task.Run(() =>
+                            if (LittleEndian)
                             {
-                                int SegmentOffset;
-                                byte[] CompressedData, output;
+                                Array.Reverse(SegmentCompressedSizeByte);
+                                Array.Reverse(SegmentOriginalSizeByte);
+                                Array.Reverse(SegmentOffsetByte);
+                            }
 
-                                try
+                            int SegmentCompressedSize = BitConverter.ToUInt16(SegmentCompressedSizeByte, 0);
+                            bool hasCompressedData = SegmentCompressedSize > 0;
+                            int SegmentOriginalSize = BitConverter.ToUInt16(SegmentOriginalSizeByte, 0);
+
+                            if (!hasCompressedData)
+                            {
+                                SegmentOffset = BitConverter.ToInt32(SegmentOffsetByte, 0);
+                                CompressedData = new byte[65536];
+                            }
+                            else
+                            {
+                                SegmentOffset = BitConverter.ToInt32(SegmentOffsetByte, 0) - 1; // -1 cause there is an offset for compressed content... sdk bug?
+                                CompressedData = new byte[SegmentCompressedSize];
+                            }
+
+                            Buffer.BlockCopy(inbuffer, SegmentOffset, CompressedData, 0, CompressedData.Length);
+
+                            if (hasCompressedData && CompressedData.Length > 3 && CompressedData[0] == 0x5D && CompressedData[1] == 0x00 && CompressedData[2] == 0x00)
+                            {
+                                using (MemoryStream compressedStream = new MemoryStream(CompressedData))
+                                using (MemoryStream decompressedStream = new MemoryStream())
                                 {
-                                    if (LittleEndian)
+                                    try
                                     {
-                                        Array.Reverse(SegmentCompressedSizeByte);
-                                        Array.Reverse(SegmentOriginalSizeByte);
-                                        Array.Reverse(SegmentOffsetByte);
+                                        SegmentDecompress(compressedStream, decompressedStream);
+
+                                        // Find the number of bytes in the stream
+                                        int contentLength = (int)decompressedStream.Length;
+
+                                        // Create a byte array
+                                        byte[] buffer = new byte[contentLength];
+
+                                        // Read the contents of the memory stream into the byte array
+                                        decompressedStream.Read(buffer, 0, contentLength);
+
+                                        output = buffer;
                                     }
-
-                                    int SegmentCompressedSize = BitConverter.ToUInt16(SegmentCompressedSizeByte, 0);
-                                    bool hasCompressedData = SegmentCompressedSize > 0;
-                                    int SegmentOriginalSize = BitConverter.ToUInt16(SegmentOriginalSizeByte, 0);
-
-                                    if (!hasCompressedData)
+                                    catch // Not a LZMA stream. Can in theory happen with file data being uncompressed and starting with 0x5D,NULL,NULL bytes (haven't seen any for now).
                                     {
-                                        SegmentOffset = BitConverter.ToInt32(SegmentOffsetByte, 0);
-                                        CompressedData = new byte[65536];
+                                        output = CompressedData;
                                     }
-                                    else
-                                    {
-                                        SegmentOffset = BitConverter.ToInt32(SegmentOffsetByte, 0) - 1; // -1 cause there is an offset for compressed content... sdk bug?
-                                        CompressedData = new byte[SegmentCompressedSize];
-                                    }
-
-                                    Buffer.BlockCopy(inbuffer, SegmentOffset, CompressedData, 0, CompressedData.Length);
-
-                                    if (hasCompressedData && CompressedData.Length > 3 && CompressedData[0] == 0x5D && CompressedData[1] == 0x00 && CompressedData[2] == 0x00)
-                                    {
-                                        using (MemoryStream compressedStream = new MemoryStream(CompressedData))
-                                        using (MemoryStream decompressedStream = new MemoryStream())
-                                        {
-                                            try
-                                            {
-                                                SegmentDecompress(compressedStream, decompressedStream);
-
-                                                // Find the number of bytes in the stream
-                                                int contentLength = (int)decompressedStream.Length;
-
-                                                // Create a byte array
-                                                byte[] buffer = new byte[contentLength];
-
-                                                // Read the contents of the memory stream into the byte array
-                                                decompressedStream.Read(buffer, 0, contentLength);
-
-                                                output = buffer;
-                                            }
-                                            catch // Not a LZMA stream. Can in theory happen with file data being uncompressed and starting with 0x5D,NULL,NULL bytes (haven't seen any for now).
-                                            {
-                                                output = CompressedData;
-                                            }
-                                        }
-                                    }
-                                    else
-                                        output = CompressedData; // Can happen, just means segment is not compressed.
-
-                                    int sizeOfSegment = output.Length;
-
-                                    if (SegmentOriginalSize != 0 && sizeOfSegment != SegmentOriginalSize)
-                                    {
-                                        LoggerAccessor.LogError($"[Edge] - LZMA - Segs: Segment at position:{SegmentIndex} has a size that is different than the one indicated in TOC! (Got:{sizeOfSegment}, Expected:{SegmentOriginalSize}).");
-                                        return null;
-                                    }
-
-                                    return output;
                                 }
-                                finally
-                                {
-                                    lzmaSema.Release();
-                                }
-                            })));
+                            }
+                            else
+                                output = CompressedData; // Can happen, just means segment is not compressed.
+
+                            int sizeOfSegment = output.Length;
+
+                            if (SegmentOriginalSize != 0 && sizeOfSegment != SegmentOriginalSize)
+                            {
+                                LoggerAccessor.LogError($"[Edge] - LZMA - Segs: Segment at position:{SegmentIndex} has a size that is different than the one indicated in TOC! (Got:{sizeOfSegment}, Expected:{SegmentOriginalSize}).");
+                                return null;
+                            }
+
+                            lzmaResults.Add(new KeyValuePair<int, byte[]>(chunkIndex, output));
 
                             chunkIndex++;
                         }
 
                         using (MemoryStream memoryStream = new MemoryStream())
                         {
-                            foreach (var result in lzmaTasks.OrderBy(kv => kv.Key))
+                            foreach (var result in lzmaResults.OrderBy(kv => kv.Key))
                             {
-                                try
-                                {
-                                    // Await each decompression task
-                                    byte[] decompressedChunk = result.Value.Result;
-                                    memoryStream.Write(decompressedChunk, 0, decompressedChunk.Length);
-                                }
-                                catch (Exception ex)
-                                {
-                                    throw new InvalidOperationException($"[Edge] - LZMA - Segs: Error during decompression at chunk {result.Key}", ex);
-                                }
+                                byte[] decompressedChunk = result.Value;
+                                memoryStream.Write(decompressedChunk, 0, decompressedChunk.Length);
                             }
                             if (memoryStream.Length == OriginalSize)
                                 return memoryStream.ToArray();

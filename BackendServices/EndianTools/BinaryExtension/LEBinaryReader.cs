@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace HomeTools.BARFramework
+namespace EndianTools.BinaryExtension
 {
     internal class LEBinaryReader : EndianAwareBinaryReader
     {

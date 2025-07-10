@@ -5,137 +5,115 @@ using Org.BouncyCastle.Security;
 using EndianTools;
 using System.Text;
 using System;
-using System.Threading.Tasks;
 using NetworkLibrary.Extension;
 
 namespace HomeTools.Crypto
 {
     public class LIBSECURE
     {
-        public static Task<byte[]> InitiateXTEABufferAsync(byte[] FileBytes, byte[] KeyBytes, byte[] m_iv, string mode, bool memxor = true, bool encrypt = false)
+        public static byte[] InitiateXTEABuffer(byte[] FileBytes, byte[] KeyBytes, byte[] m_iv, string mode, bool memxor = true, bool encrypt = false)
         {
-            try
+            if (KeyBytes.Length == 16)
             {
-                if (KeyBytes.Length == 16)
+                // Create the cipher
+                IBufferedCipher cipher = CipherUtilities.GetCipher($"LIBSECUREXTEA/{mode}/NOPADDING");
+
+                if (mode == "CTR" || mode == "CBC")
                 {
-                    // Create the cipher
-                    IBufferedCipher cipher = CipherUtilities.GetCipher($"LIBSECUREXTEA/{mode}/NOPADDING");
-
-                    if (mode == "CTR" || mode == "CBC")
+                    if (m_iv == null || m_iv.Length != 8)
                     {
-                        if (m_iv == null || m_iv.Length != 8)
-                        {
-                            LoggerAccessor.LogError("[LIBSECURE] - InitiateXTEABuffer - Invalid IV!");
-                            return Task.FromResult<byte[]>(null);
-                        }
-
-                        cipher.Init(encrypt, new ParametersWithIV(new KeyParameter(EndianUtils.EndianSwap(KeyBytes)), EndianUtils.EndianSwap(m_iv)));
+                        LoggerAccessor.LogError("[LIBSECURE] - InitiateXTEABuffer - Invalid IV!");
+                        return null;
                     }
-                    else
-                        cipher.Init(encrypt, new KeyParameter(EndianUtils.EndianSwap(KeyBytes)));
 
-                    // Encrypt the plaintext
-                    byte[] ciphertextBytes = new byte[cipher.GetOutputSize(FileBytes.Length)];
-                    int ciphertextLength = cipher.ProcessBytes(memxor ? new byte[FileBytes.Length] : EndianUtils.EndianSwap(FileBytes), 0, FileBytes.Length, ciphertextBytes, 0); // Little optimization for nulled bytes array, no need to endian swap a bunch of nulls.
-                    cipher.DoFinal(ciphertextBytes, ciphertextLength);
-
-                    cipher = null;
-
-                    return Task.FromResult(memxor ? Crypt_Decrypt(FileBytes, EndianUtils.EndianSwap(ciphertextBytes), 8) : EndianUtils.EndianSwap(ciphertextBytes));
+                    cipher.Init(encrypt, new ParametersWithIV(new KeyParameter(EndianUtils.EndianSwap(KeyBytes)), EndianUtils.EndianSwap(m_iv)));
                 }
                 else
-                    LoggerAccessor.LogError("[LIBSECURE] - InitiateXTEABuffer - Invalid KeyByes!");
+                    cipher.Init(encrypt, new KeyParameter(EndianUtils.EndianSwap(KeyBytes)));
 
-                return Task.FromResult<byte[]>(null);
+                // Encrypt the plaintext
+                byte[] ciphertextBytes = new byte[cipher.GetOutputSize(FileBytes.Length)];
+                int ciphertextLength = cipher.ProcessBytes(memxor ? new byte[FileBytes.Length] : EndianUtils.EndianSwap(FileBytes), 0, FileBytes.Length, ciphertextBytes, 0); // Little optimization for nulled bytes array, no need to endian swap a bunch of nulls.
+                cipher.DoFinal(ciphertextBytes, ciphertextLength);
+
+                cipher = null;
+
+                return memxor ? Crypt_Decrypt(FileBytes, EndianUtils.EndianSwap(ciphertextBytes), 8) : EndianUtils.EndianSwap(ciphertextBytes);
             }
-            finally
-            {
-                ToolsImplementation.libsecureSema.Release();
-            }
+            else
+                LoggerAccessor.LogError("[LIBSECURE] - InitiateXTEABuffer - Invalid KeyByes!");
+
+            return null;
         }
 
-        public static Task<byte[]> InitiateBlowfishBufferAsync(byte[] FileBytes, byte[] KeyBytes, byte[] m_iv, string mode, bool memxor = true, bool encrypt = false)
+        public static byte[] InitiateBlowfishBuffer(byte[] FileBytes, byte[] KeyBytes, byte[] m_iv, string mode, bool memxor = true, bool encrypt = false)
         {
-            try
+            if (KeyBytes.Length == 32)
             {
-                if (KeyBytes.Length == 32)
+                // Create the cipher
+                IBufferedCipher cipher = CipherUtilities.GetCipher($"Blowfish/{mode}/NOPADDING");
+
+                if (mode == "CTR" || mode == "CBC")
                 {
-                    // Create the cipher
-                    IBufferedCipher cipher = CipherUtilities.GetCipher($"Blowfish/{mode}/NOPADDING");
-
-                    if (mode == "CTR" || mode == "CBC")
+                    if (m_iv == null || m_iv.Length != 8)
                     {
-                        if (m_iv == null || m_iv.Length != 8)
-                        {
-                            LoggerAccessor.LogError("[LIBSECURE] - InitiateBlowfishBuffer - Invalid IV!");
-                            return Task.FromResult<byte[]>(null);
-                        }
-
-                        cipher.Init(encrypt, new ParametersWithIV(new KeyParameter(KeyBytes), m_iv));
+                        LoggerAccessor.LogError("[LIBSECURE] - InitiateBlowfishBuffer - Invalid IV!");
+                        return null;
                     }
-                    else
-                        cipher.Init(encrypt, new KeyParameter(KeyBytes));
 
-                    // Encrypt the plaintext
-                    byte[] ciphertextBytes = new byte[cipher.GetOutputSize(FileBytes.Length)];
-                    int ciphertextLength = cipher.ProcessBytes(memxor ? new byte[FileBytes.Length] : FileBytes, 0, FileBytes.Length, ciphertextBytes, 0);
-                    cipher.DoFinal(ciphertextBytes, ciphertextLength);
-
-                    cipher = null;
-
-                    return Task.FromResult(memxor ? Crypt_Decrypt(FileBytes, ciphertextBytes, 8) : ciphertextBytes);
+                    cipher.Init(encrypt, new ParametersWithIV(new KeyParameter(KeyBytes), m_iv));
                 }
                 else
-                    LoggerAccessor.LogError("[LIBSECURE] - InitiateBlowfishBuffer - Invalid KeyByes!");
+                    cipher.Init(encrypt, new KeyParameter(KeyBytes));
 
-                return Task.FromResult<byte[]>(null);
+                // Encrypt the plaintext
+                byte[] ciphertextBytes = new byte[cipher.GetOutputSize(FileBytes.Length)];
+                int ciphertextLength = cipher.ProcessBytes(memxor ? new byte[FileBytes.Length] : FileBytes, 0, FileBytes.Length, ciphertextBytes, 0);
+                cipher.DoFinal(ciphertextBytes, ciphertextLength);
+
+                cipher = null;
+
+                return memxor ? Crypt_Decrypt(FileBytes, ciphertextBytes, 8) : ciphertextBytes;
             }
-            finally
-            {
-                ToolsImplementation.libsecureSema.Release();
-            }
+            else
+                LoggerAccessor.LogError("[LIBSECURE] - InitiateBlowfishBuffer - Invalid KeyByes!");
+
+            return null;
         }
 
-        public static Task<byte[]> InitiateAESBufferAsync(byte[] FileBytes, byte[] KeyBytes, byte[] m_iv, string mode, bool memxor = true, bool encrypt = false)
+        public static byte[] InitiateAESBuffer(byte[] FileBytes, byte[] KeyBytes, byte[] m_iv, string mode, bool memxor = true, bool encrypt = false)
         {
-            try
+            if (KeyBytes.Length >= 16)
             {
-                if (KeyBytes.Length >= 16)
+                // Create the cipher
+                IBufferedCipher cipher = CipherUtilities.GetCipher($"AES/{mode}/NOPADDING");
+
+                if (mode == "CTR" || mode == "CBC")
                 {
-                    // Create the cipher
-                    IBufferedCipher cipher = CipherUtilities.GetCipher($"AES/{mode}/NOPADDING");
-
-                    if (mode == "CTR" || mode == "CBC")
+                    if (m_iv == null || m_iv.Length != 16)
                     {
-                        if (m_iv == null || m_iv.Length != 16)
-                        {
-                            LoggerAccessor.LogError("[LIBSECURE] - InitiateAESBuffer - Invalid IV!");
-                            return Task.FromResult<byte[]>(null);
-                        }
-
-                        cipher.Init(encrypt, new ParametersWithIV(new KeyParameter(KeyBytes), m_iv));
+                        LoggerAccessor.LogError("[LIBSECURE] - InitiateAESBuffer - Invalid IV!");
+                        return null;
                     }
-                    else
-                        cipher.Init(encrypt, new KeyParameter(KeyBytes));
 
-                    // Encrypt the plaintext
-                    byte[] ciphertextBytes = new byte[cipher.GetOutputSize(FileBytes.Length)];
-                    int ciphertextLength = cipher.ProcessBytes(memxor ? new byte[FileBytes.Length] : FileBytes, 0, FileBytes.Length, ciphertextBytes, 0);
-                    cipher.DoFinal(ciphertextBytes, ciphertextLength);
-
-                    cipher = null;
-
-                    return Task.FromResult(memxor ? Crypt_Decrypt(FileBytes, ciphertextBytes, 16) : ciphertextBytes);
+                    cipher.Init(encrypt, new ParametersWithIV(new KeyParameter(KeyBytes), m_iv));
                 }
                 else
-                    LoggerAccessor.LogError("[LIBSECURE] - InitiateAESBuffer - Invalid KeyByes!");
+                    cipher.Init(encrypt, new KeyParameter(KeyBytes));
 
-                return Task.FromResult<byte[]>(null);
+                // Encrypt the plaintext
+                byte[] ciphertextBytes = new byte[cipher.GetOutputSize(FileBytes.Length)];
+                int ciphertextLength = cipher.ProcessBytes(memxor ? new byte[FileBytes.Length] : FileBytes, 0, FileBytes.Length, ciphertextBytes, 0);
+                cipher.DoFinal(ciphertextBytes, ciphertextLength);
+
+                cipher = null;
+
+                return memxor ? Crypt_Decrypt(FileBytes, ciphertextBytes, 16) : ciphertextBytes;
             }
-            finally
-            {
-                ToolsImplementation.libsecureSema.Release();
-            }
+            else
+                LoggerAccessor.LogError("[LIBSECURE] - InitiateAESBuffer - Invalid KeyByes!");
+
+            return null;
         }
 
         public static string MemXOR(string IV, string block, byte blocksize)
@@ -144,52 +122,14 @@ namespace HomeTools.Crypto
 
             try
             {
-                switch (blocksize)
+                for (int i = blocksize / 2; i != 0; --i)
                 {
-                    case 2:
-                        for (int i = 1; i != 0; --i)
-                        {
-                            string BlockIV = IV.Substring(0, 4);
-                            string CipherBlock = block.Substring(0, 4);
-                            IV = IV.Substring(4);
-                            block = block.Substring(4);
+                    string BlockIV = IV.Substring(0, 4);
+                    string CipherBlock = block.Substring(0, 4);
+                    IV = IV.Substring(4);
+                    block = block.Substring(4);
 
-                            CryptoBytes.Append(((ushort)(Convert.ToUInt16(BlockIV, 16) ^ Convert.ToUInt16(CipherBlock, 16))).ToString("X4").HexStringToByteArray().ToHexString());
-                        }
-                        break;
-                    case 4:
-                        for (int i = 2; i != 0; --i)
-                        {
-                            string BlockIV = IV.Substring(0, 4);
-                            string CipherBlock = block.Substring(0, 4);
-                            IV = IV.Substring(4);
-                            block = block.Substring(4);
-
-                            CryptoBytes.Append(((ushort)(Convert.ToUInt16(BlockIV, 16) ^ Convert.ToUInt16(CipherBlock, 16))).ToString("X4").HexStringToByteArray().ToHexString());
-                        }
-                        break;
-                    case 8:
-                        for (int i = 4; i != 0; --i)
-                        {
-                            string BlockIV = IV.Substring(0, 4);
-                            string CipherBlock = block.Substring(0, 4);
-                            IV = IV.Substring(4);
-                            block = block.Substring(4);
-
-                            CryptoBytes.Append(((ushort)(Convert.ToUInt16(BlockIV, 16) ^ Convert.ToUInt16(CipherBlock, 16))).ToString("X4").HexStringToByteArray().ToHexString());
-                        }
-                        break;
-                    case 16:
-                        for (int i = 8; i != 0; --i)
-                        {
-                            string BlockIV = IV.Substring(0, 4);
-                            string CipherBlock = block.Substring(0, 4);
-                            IV = IV.Substring(4);
-                            block = block.Substring(4);
-
-                            CryptoBytes.Append(((ushort)(Convert.ToUInt16(BlockIV, 16) ^ Convert.ToUInt16(CipherBlock, 16))).ToString("X4").HexStringToByteArray().ToHexString());
-                        }
-                        break;
+                    CryptoBytes.Append(((ushort)(Convert.ToUInt16(BlockIV, 16) ^ Convert.ToUInt16(CipherBlock, 16))).ToString("X4"));
                 }
             }
             catch (Exception ex)

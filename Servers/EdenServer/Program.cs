@@ -44,7 +44,7 @@ public static partial class EdenServerConfiguration
     public static uint AMHProxyEncryptionKey { get; set; } = 0x12345678;
     public static ushort AMHMasterServerPort { get; set; } = 8124;
     public static bool EnableEncryption { get; set; } = true;
-    public static bool EnableTDU2ConsoleMode { get; set; } = true;
+    public static bool BigEndianEncryption { get; set; } = true;
     public static int ClientLongTimeoutSeconds { get; set; } = 60 * 5;
 
     public static (string? address, ushort? port)? GetServerConfigByServiceName(string serviceName)
@@ -91,6 +91,7 @@ public static partial class EdenServerConfiguration
             // Write the JsonObject to a file
             var configObject = new
             {
+                config_version = (ushort)1,
                 telnet = new
                 {
                     enable = EnableTelnet,
@@ -100,6 +101,11 @@ public static partial class EdenServerConfiguration
                     proxy_server_address = AMHProxyServerAddress,
                     proxy_encryption_key = AMHProxyEncryptionKey,
                     master_server_port = AMHMasterServerPort,
+                },
+                encryption = new
+                {
+                    enable = EnableEncryption,
+                    big_endian = BigEndianEncryption,
                 },
                 proxy_server_address = ProxyServerAddress,
                 proxy_server_port = ProxyServerPort,
@@ -125,8 +131,6 @@ public static partial class EdenServerConfiguration
                 ranking_server_port = RANKINGServerPort,
                 savegame_server_address = SAVEGAMEServerAddress,
                 savegame_server_port = SAVEGAMEServerPort,
-                enable_encryption = EnableEncryption,
-                enable_tdu2_console_mode = EnableTDU2ConsoleMode,
                 client_long_timeout_seconds = ClientLongTimeoutSeconds,
             };
 
@@ -145,6 +149,8 @@ public static partial class EdenServerConfiguration
             {
                 JsonElement config = doc.RootElement;
 
+                ushort config_version = GetValueOrDefault(config, "config_version", (ushort)0);
+
                 if (config.TryGetProperty("telnet", out JsonElement telnetElement) &&
                     telnetElement.TryGetProperty("enable", out JsonElement enableElement))
                     EnableTelnet = enableElement.GetBoolean();
@@ -153,6 +159,16 @@ public static partial class EdenServerConfiguration
                     AMHProxyServerAddress = GetValueOrDefault(amhElement, "proxy_server_address", AMHProxyServerAddress);
                     AMHProxyEncryptionKey = GetValueOrDefault(amhElement, "proxy_encryption_key", AMHProxyEncryptionKey);
                     AMHMasterServerPort = GetValueOrDefault(amhElement, "master_server_port", AMHMasterServerPort);
+                }
+                if (config.TryGetProperty("encryption", out JsonElement encryptionElement))
+                {
+                    EnableEncryption = GetValueOrDefault(encryptionElement, "enable", EnableEncryption);
+                    BigEndianEncryption = GetValueOrDefault(encryptionElement, "big_endian", BigEndianEncryption);
+                }
+                else if (config_version < 1)
+                {
+                    EnableEncryption = GetValueOrDefault(config, "enable_encryption", EnableEncryption);
+                    BigEndianEncryption = GetValueOrDefault(config, "enable_tdu2_console_mode", BigEndianEncryption);
                 }
                 ProxyServerAddress = GetValueOrDefault(config, "proxy_server_address", ProxyServerAddress);
                 ProxyServerPort = GetValueOrDefault(config, "proxy_server_port", ProxyServerPort);
@@ -178,8 +194,6 @@ public static partial class EdenServerConfiguration
                 RANKINGServerPort = GetValueOrDefault(config, "ranking_server_port", RANKINGServerPort);
                 SAVEGAMEServerAddress = GetValueOrDefault(config, "savegame_server_address", SAVEGAMEServerAddress);
                 SAVEGAMEServerPort = GetValueOrDefault(config, "savegame_server_port", SAVEGAMEServerPort);
-                EnableEncryption = GetValueOrDefault(config, "enable_encryption", EnableEncryption);
-                EnableTDU2ConsoleMode = GetValueOrDefault(config, "enable_tdu2_console_mode", EnableTDU2ConsoleMode);
                 ClientLongTimeoutSeconds = GetValueOrDefault(config, "client_long_timeout_seconds", ClientLongTimeoutSeconds);
             }
         }

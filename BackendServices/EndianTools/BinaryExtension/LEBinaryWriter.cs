@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace HomeTools.BARFramework
+namespace EndianTools.BinaryExtension
 {
     internal class LEBinaryWriter : EndianAwareBinaryWriter
     {

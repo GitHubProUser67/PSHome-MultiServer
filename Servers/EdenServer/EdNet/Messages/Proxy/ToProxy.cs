@@ -131,8 +131,8 @@ namespace EdenServer.EdNet.Messages
                         Version = VersionStr,
                     };
 
-                    // Detect PS3/360 Consoles (CELL and XENON are big endian).
-                    if (VersionStr.Contains("TDU2") && EdenServerConfiguration.EnableTDU2ConsoleMode)
+                    // Check config for PS3/360 Consoles encryption mode (CELL and XENON are big endian).
+                    if (EdenServerConfiguration.BigEndianEncryption)
                         client.CPUEndianness = Endianness.BigEndian;
 
                     init2Response.InsertStart((ushort)ProxyCrcList.FROM_PROXY);
