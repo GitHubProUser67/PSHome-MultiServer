@@ -7,7 +7,6 @@ using MultiServerLibrary;
 using MultiServerLibrary.Extension;
 using MultiServerLibrary.GeoLocalization;
 using MultiServerLibrary.SNMP;
-using NthDeveloper.TelnetServer;
 using System.Net;
 using System.Reflection;
 using System.Runtime;
@@ -17,7 +16,6 @@ using System.Text.RegularExpressions;
 
 public static partial class EdenServerConfiguration
 {
-    public static bool EnableTelnet { get; set; } = true;
     public static string ProxyServerAddress { get; set; } = "0.0.0.0";
     public static ushort ProxyServerPort { get; set; } = 0;
     public static string ORBServerAddress { get; set; } = InternetProtocolUtils.TryGetServerIP(out string ip).Result ? ip : ip;
@@ -97,10 +95,6 @@ public static partial class EdenServerConfiguration
             var configObject = new
             {
                 config_version = (ushort)2,
-                telnet = new
-                {
-                    enable = EnableTelnet,
-                },
                 database = new
                 {
                     login = LoginDatabasePath
@@ -164,9 +158,6 @@ public static partial class EdenServerConfiguration
 
                 if (config_version >= 2)
                 {
-                    if (config.TryGetProperty("telnet", out JsonElement telnetElement) &&
-                    telnetElement.TryGetProperty("enable", out JsonElement enableElement))
-                        EnableTelnet = enableElement.GetBoolean();
                     if (config.TryGetProperty("amh", out JsonElement amhElement))
                     {
                         AMHProxyServerAddress = GetValueOrDefault(amhElement, "proxy_server_address", AMHProxyServerAddress);
@@ -268,7 +259,6 @@ class Program
     private static ProxyServer? proxyServer = null;
     private static ORBServer? orbServer = null;
     private static SnmpTrapSender? trapSender = null;
-    private static TelnetService? _telnetService = null;
     private static EventHandler? _closeHandler;
 
     [DllImport("Kernel32")]
@@ -276,11 +266,6 @@ class Program
 
     private static void StartOrUpdateServer()
     {
-        if (_telnetService != null)
-        {
-            _telnetService.Stop();
-            _telnetService = null;
-        }
         proxyServer?.Stop();
         orbServer?.Stop();
 
@@ -289,22 +274,6 @@ class Program
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
-
-        if (EdenServerConfiguration.EnableTelnet)
-        {
-            //Create the TelnetService object
-            _telnetService = new TelnetService(new TCPServer(), new ITelnetCommand[0]);
-
-            TelnetServiceSettings telnetServiceSettings = new TelnetServiceSettings()
-            {
-                DebugInput = true
-            };
-
-            //Start with default settings
-            _telnetService.Start(telnetServiceSettings);
-
-            LoggerAccessor.LogInfo($"[TELNET] - Server started on port {telnetServiceSettings.PortNumber}...");
-        }
 
         if (proxyServer == null)
             proxyServer = new(8889);
