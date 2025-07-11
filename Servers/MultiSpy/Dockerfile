@@ -11,7 +11,7 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["Servers/MultiSpy/MultiSpy.csproj", "Servers/MultiSpy/"]
 COPY ["AuxiliaryServices/MultiSpyService/MultiSpyService.csproj", "AuxiliaryServices/MultiSpyService/"]
-COPY ["BackendServices/NetworkLibrary/NetworkLibrary.csproj", "BackendServices/NetworkLibrary/"]
+COPY ["BackendServices/MultiServerLibrary/MultiServerLibrary.csproj", "BackendServices/MultiServerLibrary/"]
 COPY ["BackendServices/CastleLibrary/CastleLibrary.csproj", "BackendServices/CastleLibrary/"]
 COPY ["BackendServices/CustomLogger/CustomLogger.csproj", "BackendServices/CustomLogger/"]
 COPY ["BackendServices/EndianTools/EndianTools.csproj", "BackendServices/EndianTools/"]

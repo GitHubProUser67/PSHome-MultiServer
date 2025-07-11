@@ -8,7 +8,7 @@
     using System.Text;
     using System.Collections.Generic;
     using System.Net;
-    using NetworkLibrary.HTTP;
+    using MultiServerLibrary.HTTP;
 
     /// <summary>
     /// Watson webserver.

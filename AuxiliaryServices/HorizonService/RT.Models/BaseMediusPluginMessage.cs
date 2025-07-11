@@ -2,6 +2,8 @@ using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
 using System.Collections.Generic;
 using System;
+using EndianTools.ZipperEndian;
+using EndianTools;
 
 namespace Horizon.RT.Models
 {
@@ -13,7 +15,7 @@ namespace Horizon.RT.Models
         /// </summary>
         public abstract byte IncomingMessage { get; }
 
-        public abstract byte Size { get; }
+        public abstract int Size { get; }
 
         public abstract byte PluginId { get; }
 
@@ -26,7 +28,11 @@ namespace Horizon.RT.Models
         /// When true, skips encryption when sending this particular message instance.
         /// </summary>
         public virtual bool SkipEncryption { get; set; } = false;
-
+#if DEBUG
+        private static bool debug = true;
+#else
+        private static bool debug = false;
+#endif
         public BaseMediusPluginMessage()
         {
 
@@ -53,25 +59,12 @@ namespace Horizon.RT.Models
 
         #endregion
 
-        #region Logging
-        /*
-        /// <summary>
-        /// Whether or not this message passes the log filter.
-        /// </summary>
-        public virtual bool CanLog()
-        {
-            
-        }
-        */
-        #endregion
-
         #region Dynamic Instantiation
 
         private static Dictionary<NetMessageTypeIds, Type> _netPluginMessageTypeById = null;
 
         private static int _messageClassByIdLockValue = 0;
         private static object _messageClassByIdLockObject = _messageClassByIdLockValue;
-
 
         private static void Initialize()
         {
@@ -109,17 +102,9 @@ namespace Horizon.RT.Models
 
             Type classType = null;
 
-            var msgSize = reader.ReadByte();
-
-            //reader.ReadBytes(2);
-            //var msgSize = reader.ReadUInt16();
-            var msgTypeBW = reader.Read<NetMessageTypeIds>();
-
-            var msgTypeReversed = ReverseBytesInt(Convert.ToInt32(msgTypeBW));
-            //var reversedMsgType = Reverse(Convert.ToInt32(msgTypeBW));
-
-
-            NetMessageTypeIds msgType = (NetMessageTypeIds)msgTypeReversed;
+            byte[] buffer = reader.ReadBytes(3);
+            int msgSize = (buffer[0] << 16) | (buffer[1] << 8) | buffer[2];
+            NetMessageTypeIds msgType = (NetMessageTypeIds)EndianAwareConverter.ToUInt16(reader.ReadBytes(2), Endianness.BigEndian, 0);
 
             // Init
             Initialize();
@@ -138,28 +123,17 @@ namespace Horizon.RT.Models
             return msg;
         }
 
-
         public static BaseMediusPluginMessage InstantiateServerPlugin(MessageReader reader)
         {
             BaseMediusPluginMessage msg;
 
             Type classType = null;
 
-            var incomingMsg = reader.ReadByte();
-            reader.ReadByte();
-            var msgSize = reader.ReadByte();
-            var PluginId = reader.ReadByte();
-
-            var msgSizeReversed = ReverseBytesInt(Convert.ToInt32(msgSize));
-
-            var msgTypeBW = reader.Read<NetMessageTypeIds>();
-
-            var msgTypeByteInt = Convert.ToInt32(msgTypeBW);
-            var msgTypeReversed = ReverseBytesInt(msgTypeByteInt);
-            //var reversedMsgType = Reverse(Convert.ToInt32(msgTypeBW));
-
-
-            NetMessageTypeIds msgType = (NetMessageTypeIds)msgTypeReversed;
+            byte incomingMsg = reader.ReadByte();
+            ushort msgSize = EndianAwareConverter.ToUInt16(reader.ReadBytes(2), Endianness.BigEndian, 0);
+            byte PluginId = reader.ReadByte();
+            reader.ReadBytes(2);
+            NetMessageTypeIds msgType = (NetMessageTypeIds)EndianAwareConverter.ToUInt16(reader.ReadBytes(2), Endianness.BigEndian, 0);
 
             // Init
             Initialize();
@@ -169,7 +143,7 @@ namespace Horizon.RT.Models
 
             // Instantiate
             if (classType == null)
-                msg = new RawMediusServerMessage(incomingMsg, Convert.ToByte(msgSizeReversed), PluginId, msgType);
+                msg = new RawMediusServerMessage(incomingMsg, msgSize, PluginId, msgType);
             else
                 msg = (BaseMediusPluginMessage)Activator.CreateInstance(classType);
 
@@ -179,18 +153,6 @@ namespace Horizon.RT.Models
         }
 
         #endregion
-
-        public static uint ReverseBytesUInt(uint value)
-        {
-            return (uint)((value & 0x000000FFU) << 24 | (value & 0x0000FF00U) << 8 |
-                (value & 0x00FF0000U) >> 8 | (value & 0xFF000000U) >> 24);
-        }
-
-        public static int ReverseBytesInt(int value)
-        {
-            return (int)((value & 0x000000FFU) << 24 | (value & 0x0000FF00U) << 8 |
-                (value & 0x00FF0000U) >> 8 | (value & 0xFF000000U) >> 24);
-        }
     }
     #endregion
 }

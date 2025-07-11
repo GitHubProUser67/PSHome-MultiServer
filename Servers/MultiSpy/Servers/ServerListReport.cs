@@ -1,5 +1,5 @@
 using CustomLogger;
-using NetworkLibrary.GeoLocalization;
+using MultiServerLibrary.GeoLocalization;
 using MultiSpyService.Data;
 using System.Collections.Concurrent;
 using System.Globalization;
@@ -8,7 +8,7 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using NetworkLibrary.Extension.LinqSQL;
+using MultiServerLibrary.Extension.LinqSQL;
 
 namespace MultiSpy.Servers
 {
@@ -260,18 +260,14 @@ namespace MultiSpy.Servers
 
 		private bool ParseServerDetails(IPEndPoint remote, byte[] data)
 		{
-			string key = String.Format("{0}:{1}", remote.Address, remote.Port);
+			string key = string.Format("{0}:{1}", remote.Address, remote.Port);
 			string receivedData = Encoding.UTF8.GetString(data);
 			
-			//Console.WriteLine(receivedData.Replace("\x00", "\\x00").Replace("\x02", "\\x02"));
-
 			// split by 000 (info/player separator) and 002 (players/teams separator)
 			// the players/teams separator is really 00, but because 00 may also be used elsewhere (an empty value for example), we hardcode it to 002
 			// the 2 is the size of the teams, for BF2 this is always 2.
 			string[] sections = receivedData.Split(new string[] { "\x00\x00\x00", "\x00\x00\x02" }, StringSplitOptions.None);
 			
-			//Console.WriteLine(sections.Length);
-
 			if (sections.Length != 3 && !receivedData.EndsWith("\x00\x00"))
 				return true; // true means we don't send back a response
 
@@ -353,10 +349,6 @@ namespace MultiSpy.Servers
 
 			// you've got to have all these properties in order for your server to be valid
 			if (!String.IsNullOrWhiteSpace(server.hostname) &&
-				!String.IsNullOrWhiteSpace(server.gamevariant) &&
-				!String.IsNullOrWhiteSpace(server.gamever) &&
-				!String.IsNullOrWhiteSpace(server.gametype) &&
-				!String.IsNullOrWhiteSpace(server.mapname) &&
 				server.hostport > 1024 && server.hostport <= UInt16.MaxValue &&
 				server.maxplayers > 0) {
 				server.Valid = true;

@@ -99,7 +99,7 @@ namespace Tommunism.SoftFloat
 
         public bool Equals(SFUInt128 other) => this == other;
 
-        public override bool Equals(object? obj) => obj is SFUInt128 int128 && Equals(int128);
+        public override bool Equals(object obj) => obj is SFUInt128 int128 && Equals(int128);
 
         public override int GetHashCode() => HashCode.Combine(V00, V64);
 

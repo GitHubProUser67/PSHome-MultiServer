@@ -9,11 +9,11 @@ using NetCoreServer;
 using CustomLogger;
 using SSFWServer.Services;
 using SSFWServer.SaveDataHelper;
-using NetworkLibrary.Extension;
-using NetworkLibrary.HTTP;
+using MultiServerLibrary.Extension;
+using MultiServerLibrary.HTTP;
 using System.Collections.Concurrent;
 using SSFWServer.Helpers.FileHelper;
-using NetworkLibrary.SSL;
+using MultiServerLibrary.SSL;
 
 namespace SSFWServer
 {
@@ -133,7 +133,7 @@ namespace SSFWServer
 
         public static bool IsHostBanned(string host)
         {
-            if (!string.IsNullOrEmpty(host) && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs != null && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs.Contains(host))
+            if (!string.IsNullOrEmpty(host) && MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs.Contains(host))
                 return true;
 
             return false;

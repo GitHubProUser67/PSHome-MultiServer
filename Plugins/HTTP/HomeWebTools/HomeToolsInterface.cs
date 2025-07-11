@@ -3,7 +3,7 @@ using HomeTools.BARFramework;
 using HomeTools.ChannelID;
 using HomeTools.Crypto;
 using HomeTools.UnBAR;
-using NetworkLibrary.HTTP;
+using MultiServerLibrary.HTTP;
 using HomeTools.CDS;
 using HttpMultipartParser;
 using System.IO.Compression;
@@ -13,7 +13,7 @@ using System;
 using System.Threading.Tasks;
 using System.Linq;
 using CompressionLibrary.Edge;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using WebAPIService.Utils;
 using EndianTools;
 

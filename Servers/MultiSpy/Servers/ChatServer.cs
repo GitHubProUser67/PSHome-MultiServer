@@ -1,5 +1,7 @@
 ﻿using CustomLogger;
 using System.Diagnostics;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MultiSpy.Servers
 {
@@ -9,16 +11,18 @@ namespace MultiSpy.Servers
 
         private Process? pythonProcess;
         private StreamReader? standardOutput;
+        private StreamReader? errorOutput;
 
         private string? scriptPath;
 
         public Thread? Thread;
+        public Thread? ErrThread;
 
         public ChatServer()
         {
             if (string.IsNullOrEmpty(pythonPath))
             {
-                LoggerAccessor.LogError("[ChatServer] - Python installation invalid, quitting the engine...");
+                LoggerAccessor.LogError("[ChatServer] - Python installation invalid, please make sure to install python with the PATH option selected, quitting the engine...");
                 return;
             }
 
@@ -35,9 +39,22 @@ namespace MultiSpy.Servers
                     File.WriteAllBytes(scriptPath.Replace(edgeZlibExtension, string.Empty), CompressionLibrary.Edge.Zlib.EdgeZlibDecompress(File.ReadAllBytes(zlibFilePath)));
                     File.Move(zlibFilePath, zlibFilePath + ".old");
                 }
-                else if (File.Exists(scriptPath))
+
+                if (File.Exists(scriptPath))
                 {
-                    
+                    StringBuilder sb = new StringBuilder();
+
+                    foreach (var kvp in MultiSpyServerConfiguration.GamesKey)
+                    {
+                        // Convert string to bytes (UTF-8) and encode as Python byte escape sequences
+                        var bytes = Encoding.UTF8.GetBytes(kvp.Value);
+                        var safeValue = string.Concat(bytes.Select(b => $"\\x{b:X2}"));
+
+                        sb.AppendLine($"        \"{kvp.Key}\": b\"{safeValue}\",");
+                    }
+
+                    // Replace the dictionary contents inside the Python class string
+                    File.WriteAllText(scriptPath, Regex.Replace(File.ReadAllText(scriptPath), @"(__gamekeys\s*=\s*\{)[\s\S]*?(\})", $"$1\n{sb}    $2"));
                 }
                 else
                 {
@@ -45,11 +62,7 @@ namespace MultiSpy.Servers
                     return;
                 }
 
-                Thread = new Thread(StartServer)
-                {
-                    Name = "Chat Thread"
-                };
-                Thread.Start();
+                StartServer();
             }
             else
                 LoggerAccessor.LogError("[ChatServer] - Python script path was invalid, quitting the engine...");
@@ -92,7 +105,7 @@ namespace MultiSpy.Servers
             Dispose(false);
         }
 
-        private void StartServer(object? parameter)
+        private void StartServer()
         {
             LoggerAccessor.LogInfo("[ChatServer] - Starting Chat Server");
 
@@ -103,8 +116,13 @@ namespace MultiSpy.Servers
                 {
                     WorkingDirectory = Path.GetDirectoryName(scriptPath),
                     FileName = Path.Combine(pythonPath, "python.exe"),
+#if DEBUG
+                    Arguments = $"\"{scriptPath}\" --debug",
+#else
                     Arguments = $"\"{scriptPath}\"",
+#endif
                     RedirectStandardOutput = true,
+                    RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true
                 }
@@ -114,23 +132,46 @@ namespace MultiSpy.Servers
             pythonProcess.Start();
             pythonProcess.PriorityClass = ProcessPriorityClass.High;
 
-            // Get the standard output
+            // Get the standard output and error streams
             standardOutput = pythonProcess.StandardOutput;
+            errorOutput = pythonProcess.StandardError;
 
-            // Read the output of the Python script line by line
-            string? output;
-
-            try
+            // Read both standard output and error in parallel threads
+            Thread = new Thread(() =>
             {
-                while ((output = standardOutput?.ReadLine()) != null)
+                string? output;
+                try
                 {
-                    LoggerAccessor.LogInfo("[ChatServer] - " + output);
+                    while ((output = standardOutput?.ReadLine()) != null)
+                    {
+                        LoggerAccessor.LogInfo("[ChatServer] - " + output);
+                    }
                 }
-            }
-            catch (Exception ex)
+                catch (Exception ex)
+                {
+                    LoggerAccessor.LogError("[ChatServer] - Error while reading python output: " + ex);
+                }
+            })
+            { Name = "Chat Server" };
+            Thread.Start();
+
+            ErrThread = new Thread(() =>
             {
-                LoggerAccessor.LogError("[ChatServer] - Error while reading python output: " + ex);
-            }
+                string? error;
+                try
+                {
+                    while ((error = errorOutput?.ReadLine()) != null)
+                    {
+                        LoggerAccessor.LogError("[ChatServer] - Python Error: " + error);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggerAccessor.LogError("[ChatServer] - Error while reading python error output: " + ex);
+                }
+            })
+            { Name = "Chat Server Error" };
+            ErrThread.Start();
         }
 
         private static string? FindPythonPath()
@@ -142,8 +183,7 @@ namespace MultiSpy.Servers
             {
                 foreach (string? path in envPath.Split(Path.PathSeparator))
                 {
-                    if (!string.IsNullOrEmpty(path) && path.Contains("python", StringComparison.InvariantCultureIgnoreCase)
-                        && File.Exists(path) && IsPython27(path))
+                    if (!string.IsNullOrEmpty(path) && path.Contains("python", StringComparison.InvariantCultureIgnoreCase) && IsPython3(path))
                         return Path.GetDirectoryName(path);
                 }
             }
@@ -151,13 +191,36 @@ namespace MultiSpy.Servers
             return null;
         }
 
-        private static bool IsPython27(string pythonExePath)
+        private static bool IsPython3(string pythonPath)
         {
+            if (File.Exists(pythonPath))
+            {
+
+            }
+            else if (Directory.Exists(pythonPath))
+            {
+                string pythonExePath = pythonPath + ((pythonPath.EndsWith("\\") || pythonPath.EndsWith("/")) ? "python.exe" : "/python.exe");
+                if (File.Exists(pythonExePath))
+                    pythonPath = pythonExePath;
+                else
+                {
+#if DEBUG
+                    LoggerAccessor.LogWarn($"[ChatServer] - The path:{pythonPath} sepcified is not a valid python root path, skipping...");
+#endif
+                    return false;
+                }
+            }
+            else
+            {
+                LoggerAccessor.LogError($"[ChatServer] - The path:{pythonPath} sepcified matched no valid folders/executables on the system.");
+                return false;
+            }
+
             try
             {
                 using (Process? process = Process.Start(new ProcessStartInfo
                 {
-                    FileName = pythonExePath,
+                    FileName = pythonPath,
                     Arguments = "--version",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -167,18 +230,18 @@ namespace MultiSpy.Servers
                 {
                     if (process != null)
                     {
-                        string output = process.StandardError.ReadToEnd().Trim(); // Version info is usually in stderr
+                        string output = process.StandardOutput.ReadToEnd().Trim();
 
                         process.WaitForExit();
 
-                        // Check if the output indicates Python 2.7
-                        return output.StartsWith("Python 2.7");
+                        // Check if the output indicates Python 3.x
+                        return output.StartsWith("Python 3.");
                     }
                 }
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError("[ChatServer] - Error while checking if python is of version 2.7: " + ex);
+                LoggerAccessor.LogError("[ChatServer] - Error while checking if python is at least of version 3: " + ex);
             }
 
             return false;

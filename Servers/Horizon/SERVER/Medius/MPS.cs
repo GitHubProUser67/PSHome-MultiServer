@@ -12,7 +12,7 @@ using Horizon.PluginManager;
 using Horizon.RT.Models.MGCL;
 using Horizon.MUM.Models;
 using Horizon.DME;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.SERVER.Medius
 {

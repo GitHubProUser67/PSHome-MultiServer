@@ -27,7 +27,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CastleLibrary", "BackendSer
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CompressionLibrary", "BackendServices\CompressionLibrary\CompressionLibrary.csproj", "{2B033404-74EB-4588-9422-5EDA13FBEB76}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetworkLibrary", "BackendServices\NetworkLibrary\NetworkLibrary.csproj", "{31077DA5-92AD-42D5-88BF-48409CF4309B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MultiServerLibrary", "BackendServices\MultiServerLibrary\MultiServerLibrary.csproj", "{31077DA5-92AD-42D5-88BF-48409CF4309B}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpaceWizards.HttpListener", "BackendServices\SpaceWizards.HttpListener\SpaceWizards.HttpListener.csproj", "{A78BDDE7-4116-472A-8DA5-7074CAC5805C}"
 EndProject

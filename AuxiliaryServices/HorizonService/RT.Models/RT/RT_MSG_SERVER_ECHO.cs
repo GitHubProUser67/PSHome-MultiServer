@@ -2,7 +2,7 @@ using System.IO;
 using Horizon.RT.Common;
 using Horizon.LIBRARY.Common;
 using Horizon.LIBRARY.Common.Stream;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.RT.Models
 {

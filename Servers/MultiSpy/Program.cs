@@ -1,5 +1,5 @@
 using CustomLogger;
-using NetworkLibrary.GeoLocalization;
+using MultiServerLibrary.GeoLocalization;
 using MultiSpy.Data;
 using MultiSpy.Servers;
 using System.Net;
@@ -8,8 +8,8 @@ using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
 using System.Text.Json;
-using NetworkLibrary.SNMP;
-using NetworkLibrary;
+using MultiServerLibrary.SNMP;
+using MultiServerLibrary;
 using Microsoft.Extensions.Logging;
 
 public static class MultiSpyServerConfiguration
@@ -4848,11 +4848,20 @@ public static class MultiSpyServerConfiguration
 
 class Program
 {
-    private delegate bool EventHandler(LoginDatabase.CtrlType sig);
+    public enum CtrlType
+    {
+        CTRL_C_EVENT = 0,
+        CTRL_BREAK_EVENT = 1,
+        CTRL_CLOSE_EVENT = 2,
+        CTRL_LOGOFF_EVENT = 5,
+        CTRL_SHUTDOWN_EVENT = 6
+    }
+
+    private delegate bool EventHandler(CtrlType sig);
 
     private static string configDir = Directory.GetCurrentDirectory() + "/static/";
     private static string configPath = configDir + "multispy.json";
-    private static string configNetworkLibraryPath = configDir + "NetworkLibrary.json";
+    private static string configMultiServerLibraryPath = configDir + "MultiServerLibrary.json";
     private static IPAddress bindAddr = IPAddress.Any;
     private static SnmpTrapSender? trapSender = null;
     private static LoginServer? serverLogin = null;
@@ -4904,7 +4913,7 @@ class Program
             serverChat = new ChatServer();
     }
 
-    private static bool CloseHandler(LoginDatabase.CtrlType sig)
+    private static bool CloseHandler(CtrlType sig)
     {
         LoginDatabase._instance?.Dispose();
 
@@ -4913,10 +4922,10 @@ class Program
 
         switch (sig)
         {
-            case LoginDatabase.CtrlType.CTRL_C_EVENT:
-            case LoginDatabase.CtrlType.CTRL_LOGOFF_EVENT:
-            case LoginDatabase.CtrlType.CTRL_SHUTDOWN_EVENT:
-            case LoginDatabase.CtrlType.CTRL_CLOSE_EVENT:
+            case CtrlType.CTRL_C_EVENT:
+            case CtrlType.CTRL_LOGOFF_EVENT:
+            case CtrlType.CTRL_SHUTDOWN_EVENT:
+            case CtrlType.CTRL_CLOSE_EVENT:
             default:
                 return false;
         }
@@ -4924,7 +4933,7 @@ class Program
 
     static void Main()
     {
-        if (!NetworkLibrary.Extension.Microsoft.Win32API.IsWindows)
+        if (!MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows)
             GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
         else
             TechnitiumLibrary.Net.Firewall.FirewallHelper.CheckFirewallEntries(Assembly.GetEntryAssembly()?.Location);
@@ -4948,43 +4957,43 @@ class Program
 
         GeoIP.Initialize();
 
-        NetworkLibraryConfiguration.RefreshVariables(configNetworkLibraryPath);
+        MultiServerLibraryConfiguration.RefreshVariables(configMultiServerLibraryPath);
 
-        if (NetworkLibraryConfiguration.EnableSNMPReports)
+        if (MultiServerLibraryConfiguration.EnableSNMPReports)
         {
-            trapSender = new SnmpTrapSender(NetworkLibraryConfiguration.SNMPHashAlgorithm.Name, NetworkLibraryConfiguration.SNMPTrapHost, NetworkLibraryConfiguration.SNMPUserName,
-                    NetworkLibraryConfiguration.SNMPAuthPassword, NetworkLibraryConfiguration.SNMPPrivatePassword,
-                    NetworkLibraryConfiguration.SNMPEnterpriseOid);
+            trapSender = new SnmpTrapSender(MultiServerLibraryConfiguration.SNMPHashAlgorithm.Name, MultiServerLibraryConfiguration.SNMPTrapHost, MultiServerLibraryConfiguration.SNMPUserName,
+                    MultiServerLibraryConfiguration.SNMPAuthPassword, MultiServerLibraryConfiguration.SNMPPrivatePassword,
+                    MultiServerLibraryConfiguration.SNMPEnterpriseOid);
 
             if (trapSender.report != null)
             {
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Information, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendInfo(msg);
                 });
 
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Warning, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendWarn(msg);
                 });
 
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Error, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendCrit(msg);
                 });
 
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Critical, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendCrit(msg);
                 });
 #if DEBUG
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Debug, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendInfo(msg);
                 });
 #endif
@@ -5019,7 +5028,7 @@ class Program
                         {
                             LoggerAccessor.LogInfo("Shutting down. Goodbye!");
 
-							CloseHandler(LoginDatabase.CtrlType.CTRL_C_EVENT);
+							CloseHandler(CtrlType.CTRL_C_EVENT);
 
                             Environment.Exit(0);
                         }

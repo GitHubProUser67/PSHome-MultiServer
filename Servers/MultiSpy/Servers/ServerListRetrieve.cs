@@ -4,7 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
-using NetworkLibrary.Extension.LinqSQL;
+using MultiServerLibrary.Extension.LinqSQL;
 using Reality.Net.GameSpy.Servers;
 
 namespace MultiSpy.Servers

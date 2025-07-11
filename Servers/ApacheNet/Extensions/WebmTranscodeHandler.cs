@@ -1,6 +1,6 @@
 using CustomLogger;
-using NetworkLibrary.Extension;
-using NetworkLibrary.HTTP;
+using MultiServerLibrary.Extension;
+using MultiServerLibrary.HTTP;
 using SpaceWizards.HttpListener;
 using System;
 using System.Collections.Generic;

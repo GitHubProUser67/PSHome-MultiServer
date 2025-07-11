@@ -46,8 +46,8 @@ namespace Horizon.RT.Models
 
     public class RawMediusClientMessage : BaseMediusPluginMessage
     {
-        protected byte _size;
-        public override byte Size => _size;
+        protected int _size;
+        public override int Size => _size;
 
 
         protected NetMessageTypeIds _messageType;
@@ -64,7 +64,7 @@ namespace Horizon.RT.Models
 
         }
 
-        public RawMediusClientMessage(byte size, NetMessageTypeIds messageType)
+        public RawMediusClientMessage(int size, NetMessageTypeIds messageType)
         {
             _size = size;
             _messageType = messageType;
@@ -92,8 +92,8 @@ namespace Horizon.RT.Models
         protected byte _incomingMessage;
         public override byte IncomingMessage => _incomingMessage;
 
-        protected byte _size;
-        public override byte Size => _size;
+        protected ushort _size;
+        public override int Size => _size;
 
         protected byte _pluginId;
         public override byte PluginId => _pluginId;
@@ -109,7 +109,7 @@ namespace Horizon.RT.Models
 
         }
 
-        public RawMediusServerMessage(byte incomingMesg, byte size, byte PluginId, NetMessageTypeIds messageType)
+        public RawMediusServerMessage(byte incomingMesg, ushort size, byte PluginId, NetMessageTypeIds messageType)
         {
             _pluginId = PluginId;
             _incomingMessage = incomingMesg;
@@ -133,52 +133,4 @@ namespace Horizon.RT.Models
             return base.ToString() + $" MsgType: {PacketType} Contents: {BitConverter.ToString(Contents)}";
         }
     }
-    /*
-    public class RawGHSMediusMessage : BaseMediusGHSMessage
-    {
-        protected ushort _msgSize;
-        public override ushort msgSize => _msgSize;
-
-        protected GhsOpcode _messageType;
-        public override GhsOpcode GhsOpcode => _messageType;
-
-        public byte[] Contents { get; set; }
-
-        public RawGHSMediusMessage()
-        {
-
-        }
-
-        public RawGHSMediusMessage(GhsOpcode messageType, ushort msgSize)
-        {
-            _messageType = (GhsOpcode)ReverseBytes16((ushort)messageType);
-            _msgSize = msgSize;
-        }
-
-        public override void Deserialize(MessageReader reader)
-        {
-            Contents = reader.ReadRest();
-        }
-
-        public override void Serialize(MessageWriter writer)
-        {
-            if (Contents != null)
-                writer.Write(Contents);
-        }
-
-        public override string ToString()
-        {
-            return base.ToString() + $" MsgType: {GhsOpcode} Contents: {BitConverter.ToString(Contents)}";
-        } 
-        /// <summary>
-          /// Reverses UInt16 
-          /// </summary>
-          /// <param name="nValue"></param>
-          /// <returns></returns>
-        public static new ushort ReverseBytes16(ushort nValue)
-        {
-            return (ushort)((ushort)((nValue >> 8)) | (nValue << 8));
-        }
-    }
-    */
 }

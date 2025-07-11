@@ -6,7 +6,7 @@ using DotNetty.Handlers.Logging;
 using Horizon.LIBRARY.Pipeline.Udp;
 using System.Net;
 using DotNetty.Buffers;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.BWPS
 {

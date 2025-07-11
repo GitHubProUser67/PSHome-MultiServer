@@ -4,7 +4,7 @@ using BlazeCommon;
 using CustomLogger;
 using MultiSocks.Blaze.Redirector;
 using MultiSocks.ProtoSSL;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using System.Net;
 using System.Security.Authentication;
 using System.Security.Cryptography;

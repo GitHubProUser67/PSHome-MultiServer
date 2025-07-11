@@ -59,7 +59,7 @@ namespace Tommunism.SoftFloat
             v = V;
         }
 
-        public override bool Equals(object? obj) => obj is UInt64Extra extra && Equals(extra);
+        public override bool Equals(object obj) => obj is UInt64Extra extra && Equals(extra);
 
         public bool Equals(UInt64Extra other) => Extra == other.Extra && V == other.V;
 

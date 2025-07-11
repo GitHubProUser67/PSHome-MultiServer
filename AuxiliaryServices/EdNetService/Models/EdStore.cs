@@ -63,8 +63,7 @@ namespace EdNetService.Models
 
         public void MoveTo(uint offset)
         {
-            if (_data != null && offset >= 0 && offset < _data.Length)
-                _position = offset;
+            _position = offset;
         }
 
         public void MoveToStart()
@@ -351,6 +350,24 @@ namespace EdNetService.Models
                 InsertUInt16(shortLength);
                 Encoding.ASCII.GetBytes(value).CopyTo(_data, _position);
                 _position += shortLength;
+            }
+            return true;
+        }
+
+        public bool InsertStringWithPadding(string value, ushort size)
+        {
+            if (value == null || value.Length == 0)
+                InsertUInt16(0);
+            else
+            {
+                if (size < value.Length)
+                    size = (ushort)value.Length;
+                byte[] paddedTextPayload = new byte[size];
+                byte[] textPayload = Encoding.ASCII.GetBytes(value);
+                Array.Copy(textPayload, 0, paddedTextPayload, 0, textPayload.Length);
+                InsertUInt16(size);
+                paddedTextPayload.CopyTo(_data, _position);
+                _position += size;
             }
             return true;
         }

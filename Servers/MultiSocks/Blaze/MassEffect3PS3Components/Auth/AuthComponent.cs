@@ -1,9 +1,9 @@
-﻿using Blaze3SDK.Blaze.Authentication;
+using Blaze3SDK.Blaze.Authentication;
 using Blaze3SDK.Components;
 using BlazeCommon;
 using CustomLogger;
 using MultiSocks.Blaze.MassEffect3PS3Components.Model;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using System.Text;
 using XI5;
 

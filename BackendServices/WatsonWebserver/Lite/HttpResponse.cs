@@ -9,7 +9,7 @@
     using System.Text.Json.Serialization;
     using System.Threading;
     using System.Threading.Tasks;
-    using NetworkLibrary.Extension;
+    using MultiServerLibrary.Extension;
     using WatsonWebserver.Core;
     using WatsonWebserver.Lite.Extensions;
 

@@ -1,8 +1,8 @@
 using System.Text;
 using ApacheNet.Extensions;
-using NetworkLibrary.HTTP;
-using NetworkLibrary.AdBlocker;
-using NetworkLibrary.GeoLocalization;
+using MultiServerLibrary.HTTP;
+using MultiServerLibrary.AdBlocker;
+using MultiServerLibrary.GeoLocalization;
 using WebAPIService.LOOT;
 using WebAPIService.NDREAMS;
 using WebAPIService.OHS;
@@ -41,7 +41,7 @@ using WatsonWebserver.Core;
 using WatsonWebserver.Native;
 using WatsonWebserver.Lite;
 using WatsonWebserver;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using DNS.Protocol;
 using ApacheNet.RouteHandlers;
 using DNSLibrary;
@@ -183,7 +183,7 @@ namespace ApacheNet
             string IpToBan = ctx.Request.Source.IpAddress;
             if (!"::1".Equals(IpToBan) && !"127.0.0.1".Equals(IpToBan) && !"localhost".Equals(IpToBan, StringComparison.InvariantCultureIgnoreCase))
             {
-                if (!string.IsNullOrEmpty(IpToBan) && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs != null && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs.Contains(IpToBan))
+                if (!string.IsNullOrEmpty(IpToBan) && MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs.Contains(IpToBan))
                 {
                     LoggerAccessor.LogError($"[SECURITY] - Client - {ctx.Request.Source.IpAddress}:{ctx.Request.Source.Port} Requested the HTTPS server while being banned!");
                     ctx.Response.StatusCode = 403;
@@ -555,7 +555,7 @@ namespace ApacheNet
                                             HTTPProcessor.GetMimeType(Path.GetExtension(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}"), ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor._mimeTypes), noCompressCacheControl);
                                     else
                                     {
-                                        FileStream fs = await FileSystemUtils.TryOpen(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}", FileSystemUtils.FileAccessMode.Read, LocalFileStreamHelper.FileLockAwaitMs).ConfigureAwait(false);
+                                        FileStream fs = await FileSystemUtils.TryOpen(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}", FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs).ConfigureAwait(false);
 
                                         if (fs == null)
                                         {
@@ -1904,7 +1904,7 @@ namespace ApacheNet
                                                             }
                                                             else
                                                             {
-                                                                using FileStream stream = new(filePath + $"/{indexFile}", FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                                                                using FileStream stream = await FileSystemUtils.TryOpen(filePath + $"/{indexFile}", FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs).ConfigureAwait(false);
                                                                 byte[]? buffer = null;
 
                                                                 using (MemoryStream ms = new())
@@ -2015,7 +2015,7 @@ namespace ApacheNet
                                                 string ContentType = HTTPProcessor.GetMimeType(Path.GetExtension(filePath), ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor._mimeTypes);
                                                 if (ContentType == "application/octet-stream")
                                                 {
-                                                    byte[] VerificationChunck = FileSystemUtils.ReadFileChunck(filePath, 10);
+                                                    byte[] VerificationChunck = FileSystemUtils.TryReadFileChunck(filePath, 10, FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs);
                                                     foreach (var entry in HTTPProcessor._PathernDictionary)
                                                     {
                                                         if (ByteUtils.FindBytePattern(VerificationChunck, entry.Value) != -1)
@@ -2496,7 +2496,7 @@ namespace ApacheNet
                                                             }
                                                             else
                                                             {
-                                                                using FileStream stream = new(filePath + $"/{indexFile}", FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                                                                using FileStream stream = await FileSystemUtils.TryOpen(filePath + $"/{indexFile}", FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs).ConfigureAwait(false);
                                                                 byte[]? buffer = null;
 
                                                                 using (MemoryStream ms = new())
@@ -2609,7 +2609,7 @@ namespace ApacheNet
 
                                                 if (ContentType == "application/octet-stream")
                                                 {
-                                                    byte[] VerificationChunck = FileSystemUtils.ReadFileChunck(filePath, 10);
+                                                    byte[] VerificationChunck = FileSystemUtils.TryReadFileChunck(filePath, 10, FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs);
                                                     foreach (var entry in HTTPProcessor._PathernDictionary)
                                                     {
                                                         if (ByteUtils.FindBytePattern(VerificationChunck, entry.Value) != -1)
@@ -2737,7 +2737,7 @@ namespace ApacheNet
                                         if (ContentType == "application/octet-stream")
                                         {
                                             bool matched = false;
-                                            byte[] VerificationChunck = FileSystemUtils.ReadFileChunck(filePath, 10);
+                                            byte[] VerificationChunck = FileSystemUtils.TryReadFileChunck(filePath, 10, FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs);
                                             foreach (var entry in HTTPProcessor._PathernDictionary)
                                             {
                                                 if (ByteUtils.FindBytePattern(VerificationChunck, entry.Value) != -1)
@@ -2786,7 +2786,7 @@ namespace ApacheNet
                                         string ContentType = HTTPProcessor.GetMimeType(Path.GetExtension(filePath), ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor._mimeTypes);
                                         if (ContentType == "application/octet-stream")
                                         {
-                                            byte[] VerificationChunck = FileSystemUtils.ReadFileChunck(filePath, 10);
+                                            byte[] VerificationChunck = FileSystemUtils.TryReadFileChunck(filePath, 10, FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs);
                                             foreach (var entry in HTTPProcessor._PathernDictionary)
                                             {
                                                 if (ByteUtils.FindBytePattern(VerificationChunck, entry.Value) != -1)

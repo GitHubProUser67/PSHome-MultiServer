@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\BackendServices\NetworkLibrary\NetworkLibrary.csproj" />
+    <ProjectReference Include="..\..\BackendServices\MultiServerLibrary\MultiServerLibrary.csproj" />
   </ItemGroup>
 
   <ItemGroup>

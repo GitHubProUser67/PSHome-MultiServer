@@ -1,7 +1,7 @@
 using CustomLogger;
 using DotNetty.Common.Internal.Logging;
 using Horizon.LIBRARY.Database.Models;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using Org.BouncyCastle.Asn1.Ocsp;
 using SVO;
 using System.Net;

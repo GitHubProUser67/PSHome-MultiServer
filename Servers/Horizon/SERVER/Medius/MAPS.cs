@@ -1,12 +1,12 @@
+using System.Net;
 using CustomLogger;
 using DotNetty.Transport.Channels;
 using Horizon.RT.Cryptography;
 using Horizon.RT.Models;
-using Horizon.RT.Models.ServerPlugins;
-using System.Net;
 using Horizon.MUM.Models;
 using Horizon.LIBRARY.Pipeline.Attribute;
-using EndianTools;
+using HorizonService.RT.Models.ServerPlugins.MAPS;
+using HorizonService.ZipperPlugin.Models;
 
 namespace Horizon.SERVER.Medius
 {
@@ -14,6 +14,8 @@ namespace Horizon.SERVER.Medius
     {
         public override int TCPPort => MediusClass.Settings.MAPSTCPPort;
         public override int UDPPort => MediusClass.Settings.MAPSUDPPort;
+
+        public static FactionManager factionManager = new FactionManager(0x7);
 
         public MAPS()
         {
@@ -191,95 +193,40 @@ namespace Horizon.SERVER.Medius
 
                 case NetMessageHello netMessageHello:
                     {
-
                         //MAGDevBuild3 = 1725
                         //MAG BCET70016 v1.3 = 7002
-                        data.ClientObject.Queue(new NetMessageTypeProtocolInfo()
+                        data.ClientObject?.Queue(new NetMessageProtocolInfo()
                         {
-                            protocolInfo = EndianUtils.ReverseUint(1725), //1725 //1958
-                            //protocolInfo = 1958,
-                            buildNumber = EndianUtils.ReverseUint(0)
+                            protocolInfo = 7002,
+                            buildNumber = 0
                         });
-                        
-
                         break;
                     }
 
-                case NetMessageTypeProtocolInfo protocolInfo:
+                case NetMessageProtocolInfo protocolInfo:
                     {
-                        byte[] availFactions = new byte[] { 0b00000111, 0, 0, 0 }; //= new byte[4];
-
-                        //0b11100000
-                        //availFactions[0] = 0;
-                        //availFactions[1] = 0;
-                        //availFactions[2] = 0;
-                        //availFactions[3] = 31;
-
-                        data.ClientObject.Queue(new NetMAPSHelloMessage()
+                        // NOT WORKING YET.
+                        data.ClientObject?.Queue(new NetMAPSHelloMessage()
                         {
                             m_success = true,
                             m_isOnline = true,
-                            m_availableFactions = availFactions
-
+                            m_availableFactions = new CBitset3u() { m_bitArray = factionManager.GetMask() }
                         });
-
-                        //Time
-                        DateTime time = DateTime.Now;
-                        long timeBS = time.Ticks >> 1;
-
-                        //bool finBs = true >> 1;
-                        //Content string bitshift
-                        //string newsBs = ShiftString("Test News");
-                        //string eulaBs = ShiftString("Test Eula");
-                        // News/Eula Type bitshifted
-                        int newsBS = 0;//Convert.ToInt32(NetMessageNewsEulaResponseContentType.News) >> 1;
-                        int eulaBS = 1;//Convert.ToInt32(NetMessageNewsEulaResponseContentType.Eula) >> 1;
-
-                        byte[] sequence = new byte[1];
-                        byte[] type = new byte[1];
-
-                        /*
-                        data.ClientObject.Queue(new NetMessageNewsEulaRequest()
-                        {
-                            m_languageExtension = "",
-                        });
-                        */
-                        /*
-                        data.ClientObject.Queue(new NetMessageNewsEulaResponse()
-                        {
-                            m_finished = BitShift(sequence, 1).First(),
-                            m_content = newsBs,
-                            m_type = (NetMessageNewsEulaResponseContentType)BitShift(type, 1).First(),
-                            m_timestamp = timeBS
-                        });
-                        data.ClientObject.Queue(new NetMessageNewsEulaResponse()
-                        {
-                            m_finished = 1,
-                            m_content = eulaBs,
-                            m_type = (NetMessageNewsEulaResponseContentType)eulaBS,
-                            m_timestamp = timeBS
-                        });
-                        
-                        */
-
                         break;
                     }
-
-                    /*
-                case NetMessageTypeKeepAlive keepAlive:
-                    {
-                        data.ClientObject.KeepAliveUntilNextConnection();
-                        break;
-                    }
-                    */
 
                 case NetMessageAccountLogoutRequest accountLogoutRequest:
                     {
-                        bool success = true;
+                        // Nothing to timeout for now.
+
                         data.ClientObject?.Queue(new NetMessageAccountLogoutResponse()
                         {
-                            m_success = success,
+                            m_success = true,
                         });
+
+                        _ = clientChannel.CloseAsync();
+
+                        LoggerAccessor.LogWarn($"[MAPS] - Client disconnected by request");
 
                         break;
                     }

@@ -14,7 +14,7 @@ using Horizon.LIBRARY.Database.Models;
 using Horizon.MUM;
 using Horizon.MUM.Models;
 using Horizon.SERVER.Extension.PlayStationHome;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.SERVER
 {
@@ -185,12 +185,12 @@ namespace Horizon.SERVER
                 LoggerAccessor.LogInfo("**************************************************");
 
                 #region Anti-Cheat Init (WIP)
-                if (Settings.AntiCheatOn == true)
+                if (Settings.AntiCheatOn)
                     await AntiCheatPlugin.AntiCheatInit(LM_SEVERITY_LEVEL.LM_INFO, Settings.AntiCheatOn);
                 #endregion
 
                 #region MediusGetVersion
-                if (Settings.MediusServerVersionOverride == true)
+                if (Settings.MediusServerVersionOverride)
                 {
                     #region MAPS - Zipper Interactive MAG/Socom 4
                     if (Settings.EnableMAPS == true)
@@ -478,20 +478,6 @@ namespace Horizon.SERVER
                 #endregion
 
                 LoggerAccessor.LogInfo("Medius Initialized.");
-
-                /*
-                #region MFS
-                if (!GetAppSettingsOrDefault(appId).EnableMediusFileServices == true)
-                {
-                    LoggerAccessor.LogInfo($"Initializing MFS Download Queue of size {Settings.MFSDownloadQSize}");
-
-                    LoggerAccessor.LogInfo($"Initializing MFS Upload Queue of size {Settings.MFSUploadQSize}");
-                    MFS_transferInit();
-
-                    LoggerAccessor.LogInfo($"MFS Queue Timeout Interval {Settings.MFSQueueTimeoutInterval}");
-                }
-                #endregion
-                */
 
                 started = true;
 

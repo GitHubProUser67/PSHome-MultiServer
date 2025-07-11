@@ -1,7 +1,7 @@
 ﻿using CustomLogger;
 using EdNetService.Models;
 using NetHasher.CRC;
-using EdNetService.ClientChallengeData.TDU;
+using System.Diagnostics;
 
 namespace EdenServer.ClientChallengeService
 {
@@ -13,43 +13,30 @@ namespace EdenServer.ClientChallengeService
 
         private static ThreadLocal<uint> _holdrand = new ThreadLocal<uint>(() => 1);
 
+        private static Dictionary<string, byte[]> exeBytesChal = GenerateChallenges();
+
         public static bool GenerateClientChallenge(string Version, ClientObject client)
         {
             bool isValid = false;
 
-            switch (Version)
-            {
-                case "MC 1.45 A":
-                    isValid = GenerateKeySet(TestDriveUnlimited145AExe.Data, client);
-                    break;
-                case "MC 1.66 A":
-                    isValid = GenerateKeySet(TestDriveUnlimited166AExe.Data, client);
-                    break;
-                default:
-                    if (Version.StartsWith(devFlag))
-                        isValid = GenerateKeySet(null, client);
-                    else
-                        LoggerAccessor.LogWarn($"[ChallengeHandler] - GenerateClientChallenge: Unknown Version:{Version} requested by User:{client.Username}, please report to GITHUB!");
-                    break;
-            }
+            if (exeBytesChal.ContainsKey(Version))
+                isValid = GenerateKeySet(exeBytesChal[Version], client);
+            else if (Version.StartsWith(devFlag))
+                isValid = GenerateKeySet(null, client);
+            else
+                LoggerAccessor.LogWarn($"[ChallengeHandler] - GenerateClientChallenge: Unknown Version:{Version} requested by User:{client.Username}, if the version is legit, please insert the challenge data in the TDUClientsEXEs folder.");
 
             return isValid;
         }
 
         public static (uint, uint, uint) GenerateClientQuestions(string Version)
         {
-            switch (Version)
-            {
-                case "MC 1.45 A":
-                    return GenerateQuestions(TestDriveUnlimited145AExe.Data);
-                case "MC 1.66 A":
-                    return GenerateQuestions(TestDriveUnlimited166AExe.Data);
-                default:
-                    if (Version.StartsWith(devFlag))
-                        return GenerateQuestions(null);
-                    LoggerAccessor.LogWarn($"[ChallengeHandler] - GenerateClientQuestions: Unknown Version:{Version} requested, please report to GITHUB!");
-                    break;
-            }
+            if (exeBytesChal.ContainsKey(Version))
+                return GenerateQuestions(exeBytesChal[Version]);
+            else if (Version.StartsWith(devFlag))
+                return GenerateQuestions(null);
+
+            LoggerAccessor.LogWarn($"[ChallengeHandler] - GenerateClientQuestions: Unknown Version:{Version} requested, if the version is legit, please insert the challenge data in the TDUClientsEXEs folder.");
 
             return (0,0,0);
         }
@@ -105,6 +92,38 @@ namespace EdenServer.ClientChallengeService
             uint uVar2 = _holdrand.Value * 0x343fd + 0x269ec3;
             _holdrand.Value = uVar2;
             return (uVar2 >> 16) & 0x7fff;
+        }
+
+        private static Dictionary<string, byte[]> GenerateChallenges()
+        {
+            Dictionary<string, byte[]> result = new Dictionary<string, byte[]>();
+            string chalsDir = Directory.GetCurrentDirectory() + "/static/TDUClientsEXEs";
+
+            if (Directory.Exists(chalsDir))
+            {
+                foreach (var filePath in Directory.GetFiles(chalsDir, "*.*", SearchOption.AllDirectories))
+                {
+                    try
+                    {
+                        var versionInfo = FileVersionInfo.GetVersionInfo(filePath);
+                        if (versionInfo != null && !string.IsNullOrEmpty(versionInfo.ProductVersion))
+                        {
+                            result[versionInfo.ProductVersion] = File.ReadAllBytes(filePath);
+                            LoggerAccessor.LogInfo($"[ChallengeHandler] - File: {filePath} with ProductVersion:{versionInfo.ProductVersion} was added to the challenge list.");
+                        }
+                        else
+                            LoggerAccessor.LogInfo($"[ChallengeHandler] - File: {filePath} has no ProductVersion, skipping...");
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggerAccessor.LogError($"[ChallengeHandler] - Failed to process {filePath}: {ex.Message}, skipping...");
+                    }
+                }
+            }
+            else
+                LoggerAccessor.LogWarn($"[ChallengeHandler] - No Challenges folder found at location:{chalsDir}, generating empty challenge listing...");
+
+            return result;
         }
     }
 }

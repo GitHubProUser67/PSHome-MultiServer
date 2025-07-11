@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\BackendServices\NetworkLibrary\NetworkLibrary.csproj" />
+    <ProjectReference Include="..\..\BackendServices\MultiServerLibrary\MultiServerLibrary.csproj" />
   </ItemGroup>
 
 </Project>

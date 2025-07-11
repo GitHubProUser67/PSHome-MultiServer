@@ -4,7 +4,7 @@ using Org.BouncyCastle.Security;
 using System.Security.Cryptography;
 using System.Text;
 using CustomLogger;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace SSFWServer.Helpers.FileHelper
 {

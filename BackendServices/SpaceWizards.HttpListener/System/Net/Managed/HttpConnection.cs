@@ -30,7 +30,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using NetworkLibrary.SSL;
+using MultiServerLibrary.SSL;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;

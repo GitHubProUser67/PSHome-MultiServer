@@ -8,7 +8,7 @@ using Horizon.HTTPSERVICE;
 using Horizon.LIBRARY.Database.Models;
 using Horizon.MUM;
 using Horizon.SERVER.Extension.PlayStationHome;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.MUIS
 {
@@ -119,7 +119,7 @@ namespace Horizon.MUIS
             LoggerAccessor.LogInfo($"* Medius Universe Information Server Version {gpszVersionString}");
             LoggerAccessor.LogInfo($"* Launched on {datetime}");
 
-            if (HorizonServerConfiguration.Database._settings.SimulatedMode == true)
+            if (HorizonServerConfiguration.Database._settings.SimulatedMode)
                 LoggerAccessor.LogInfo("* Database Disabled Medius Stack");
             else
                 LoggerAccessor.LogInfo("* Database Enabled Medius Stack");
@@ -206,11 +206,11 @@ namespace Horizon.MUIS
                 // Add the appids to the ApplicationIds list
                 Settings.CompatibleApplicationIds.AddRange(new List<int>
                 {
-                    11204, 11354, 21914, 21624, 20764, 20371, 20384, 22500, 10540, 22920, 22923, 22924, 21731,
-                    21834, 23624, 20032, 20034, 20454, 20314, 21874, 21244, 20304, 20463, 21614, 20344, 20434,
-                    22204, 23360, 21513, 21064, 20804, 20374, 21094, 20060, 10984, 10782, 10421, 10130, 10954,
-                    21784, 21564, 21354, 21564, 21574, 21584, 21594, 22274, 22284, 22294, 22304, 23014, 20040,
-                    20041, 20042, 20043, 20044
+                    11204, 11354, 21914, 21624, 20764, 20371, 20384, 22500, 10540, 10550, 10582, 10584, 22920, 
+                    22923, 22924, 21731, 21834, 23624, 20032, 20034, 20454, 20314, 21874, 21244, 20304, 20463,
+                    21614, 20344, 20434, 22204, 23360, 21513, 21064, 20804, 20374, 21094, 20060, 10984, 10782,
+                    10421, 10130, 10954, 21784, 21564, 21354, 21564, 21574, 21584, 21594, 22274, 22284, 22294,
+                    22304, 23014, 20040, 20041, 20042, 20043, 20044
                 });
 
                 string? iptofile = SERVER_IP?.ToString();
@@ -243,6 +243,63 @@ namespace Horizon.MUIS
                     {
                         Name = "Hardware Online Arena Beta",
                         Description = "Beta Universe",
+                        Endpoint = iptofile,
+                        Port = 10075,
+                        UniverseId = 31,
+                        SvoURL = null,
+                        Status = 1,
+                        UserCount = 1,
+                        MaxUsers = 256,
+                        ExtendedInfo = null,
+                        UniverseBilling = "SCEA",
+                        BillingSystemName = "Sony Computer Entertainment America, Inc. Billing System"
+                    }
+                });
+
+                Settings.Universes.Add(10550, new UniverseInfo[]
+                {
+                    new UniverseInfo()
+                    {
+                        Name = "Eyetoy Chat Beta",
+                        Description = "Beta Universe",
+                        Endpoint = iptofile,
+                        Port = 10075,
+                        UniverseId = 1,
+                        SvoURL = null,
+                        Status = 1,
+                        UserCount = 1,
+                        MaxUsers = 256,
+                        ExtendedInfo = null,
+                        UniverseBilling = "SCEA",
+                        BillingSystemName = "Sony Computer Entertainment America, Inc. Billing System"
+                    }
+                });
+
+                Settings.Universes.Add(10582, new UniverseInfo[]
+                {
+                    new UniverseInfo()
+                    {
+                        Name = "Hot Shots Golf: Fore! Online Public Beta",
+                        Description = "PuBeta Universe",
+                        Endpoint = iptofile,
+                        Port = 10075,
+                        UniverseId = 31,
+                        SvoURL = null,
+                        Status = 1,
+                        UserCount = 1,
+                        MaxUsers = 256,
+                        ExtendedInfo = null,
+                        UniverseBilling = "SCEA",
+                        BillingSystemName = "Sony Computer Entertainment America, Inc. Billing System"
+                    }
+                });
+
+                Settings.Universes.Add(10584, new UniverseInfo[]
+                {
+                    new UniverseInfo()
+                    {
+                        Name = "Hot Shots Golf: Fore!",
+                        Description = "Retail Universe",
                         Endpoint = iptofile,
                         Port = 10075,
                         UniverseId = 31,

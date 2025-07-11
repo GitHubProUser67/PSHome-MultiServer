@@ -10,13 +10,13 @@ using System.IO;
 using System.Collections.Generic;
 using System;
 using CompressionLibrary.Edge;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using HomeTools.AFS;
-using NetworkLibrary.HTTP;
+using MultiServerLibrary.HTTP;
 using EndianTools.BinaryExtension;
 
 #if NET6_0_OR_GREATER
-using NetworkLibrary.Upscalers;
+using MultiServerLibrary.Upscalers;
 #endif
 namespace HomeTools.BARFramework
 {

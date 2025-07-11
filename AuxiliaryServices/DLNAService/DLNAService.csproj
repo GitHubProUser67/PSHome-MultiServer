@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\BackendServices\NetworkLibrary\NetworkLibrary.csproj" />
+    <ProjectReference Include="..\..\BackendServices\MultiServerLibrary\MultiServerLibrary.csproj" />
   </ItemGroup>
 
 </Project>

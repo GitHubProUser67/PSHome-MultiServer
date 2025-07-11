@@ -5,7 +5,7 @@ using QuazalServer.QNetZ.DDL;
 using QuazalServer.QNetZ.Interfaces;
 using QuazalServer.QNetZ.Connection;
 using System.Text;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 {

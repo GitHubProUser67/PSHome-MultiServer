@@ -1,7 +1,7 @@
 ﻿using CustomLogger;
 using HttpMultipartParser;
 using NetHasher;
-using NetworkLibrary.HTTP;
+using MultiServerLibrary.HTTP;
 using System;
 using System.Collections.Generic;
 using System.Globalization;

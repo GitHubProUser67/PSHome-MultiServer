@@ -1,7 +1,7 @@
 using CustomLogger;
 using EdenServer.EdNet.Messages;
 using EdNetService.Models;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using System.Net;
 using System.Net.Sockets;
 
@@ -36,7 +36,7 @@ namespace EdenServer.EdNet
 
         public static bool IsIPBanned(string ipAddress, int? clientport)
         {
-            if (NetworkLibrary.NetworkLibraryConfiguration.BannedIPs != null && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs.Contains(ipAddress))
+            if (MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs.Contains(ipAddress))
             {
                 LoggerAccessor.LogError($"[SECURITY] - {ipAddress}:{clientport} Requested the EDEN_UDP server while being banned!");
                 return true;

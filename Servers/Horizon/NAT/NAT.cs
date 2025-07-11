@@ -7,7 +7,7 @@ using System.Net;
 using CustomLogger;
 using DotNetty.Buffers;
 using System.Text;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.NAT
 {

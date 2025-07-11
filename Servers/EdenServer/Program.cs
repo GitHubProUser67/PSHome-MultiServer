@@ -1,15 +1,17 @@
-﻿using CustomLogger;
+using CustomLogger;
 using EdenServer.AMHLair;
+using EdenServer.Database;
 using EdenServer.EdNet;
 using Microsoft.Extensions.Logging;
-using NetworkLibrary;
-using NetworkLibrary.Extension;
-using NetworkLibrary.GeoLocalization;
-using NetworkLibrary.SNMP;
+using MultiServerLibrary;
+using MultiServerLibrary.Extension;
+using MultiServerLibrary.GeoLocalization;
+using MultiServerLibrary.SNMP;
 using NthDeveloper.TelnetServer;
 using System.Net;
 using System.Reflection;
 using System.Runtime;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -40,11 +42,14 @@ public static partial class EdenServerConfiguration
     public static ushort RANKINGServerPort { get; set; } = 9009;
     public static string SAVEGAMEServerAddress { get; set; } = InternetProtocolUtils.TryGetServerIP(out string ip).Result ? ip : ip;
     public static ushort SAVEGAMEServerPort { get; set; } = 9010;
+    public static string LOGINServerAddress { get; set; } = InternetProtocolUtils.TryGetServerIP(out string ip).Result ? ip : ip;
+    public static ushort LOGINServerPort { get; set; } = 9011;
     public static string AMHProxyServerAddress { get; set; } = InternetProtocolUtils.TryGetServerIP(out string ip).Result ? ip : ip;
     public static uint AMHProxyEncryptionKey { get; set; } = 0x12345678;
     public static ushort AMHMasterServerPort { get; set; } = 8124;
     public static bool EnableEncryption { get; set; } = true;
     public static bool BigEndianEncryption { get; set; } = true;
+    public static string LoginDatabasePath { get; set; } = $"{Directory.GetCurrentDirectory()}/static/Eden/Database/tdu_accounts.sqlite";
     public static int ClientLongTimeoutSeconds { get; set; } = 60 * 5;
 
     public static (string? address, ushort? port)? GetServerConfigByServiceName(string serviceName)
@@ -91,10 +96,14 @@ public static partial class EdenServerConfiguration
             // Write the JsonObject to a file
             var configObject = new
             {
-                config_version = (ushort)1,
+                config_version = (ushort)2,
                 telnet = new
                 {
                     enable = EnableTelnet,
+                },
+                database = new
+                {
+                    login = LoginDatabasePath
                 },
                 amh = new
                 {
@@ -131,6 +140,8 @@ public static partial class EdenServerConfiguration
                 ranking_server_port = RANKINGServerPort,
                 savegame_server_address = SAVEGAMEServerAddress,
                 savegame_server_port = SAVEGAMEServerPort,
+                login_server_address = LOGINServerAddress,
+                login_server_port = LOGINServerPort,
                 client_long_timeout_seconds = ClientLongTimeoutSeconds,
             };
 
@@ -151,50 +162,56 @@ public static partial class EdenServerConfiguration
 
                 ushort config_version = GetValueOrDefault(config, "config_version", (ushort)0);
 
-                if (config.TryGetProperty("telnet", out JsonElement telnetElement) &&
+                if (config_version >= 2)
+                {
+                    if (config.TryGetProperty("telnet", out JsonElement telnetElement) &&
                     telnetElement.TryGetProperty("enable", out JsonElement enableElement))
-                    EnableTelnet = enableElement.GetBoolean();
-                if (config.TryGetProperty("amh", out JsonElement amhElement))
-                {
-                    AMHProxyServerAddress = GetValueOrDefault(amhElement, "proxy_server_address", AMHProxyServerAddress);
-                    AMHProxyEncryptionKey = GetValueOrDefault(amhElement, "proxy_encryption_key", AMHProxyEncryptionKey);
-                    AMHMasterServerPort = GetValueOrDefault(amhElement, "master_server_port", AMHMasterServerPort);
+                        EnableTelnet = enableElement.GetBoolean();
+                    if (config.TryGetProperty("amh", out JsonElement amhElement))
+                    {
+                        AMHProxyServerAddress = GetValueOrDefault(amhElement, "proxy_server_address", AMHProxyServerAddress);
+                        AMHProxyEncryptionKey = GetValueOrDefault(amhElement, "proxy_encryption_key", AMHProxyEncryptionKey);
+                        AMHMasterServerPort = GetValueOrDefault(amhElement, "master_server_port", AMHMasterServerPort);
+                    }
+                    if (config.TryGetProperty("database", out JsonElement databaseElement))
+                    {
+                        LoginDatabasePath = GetValueOrDefault(amhElement, "login", LoginDatabasePath);
+                    }
+                    if (config.TryGetProperty("encryption", out JsonElement encryptionElement))
+                    {
+                        EnableEncryption = GetValueOrDefault(encryptionElement, "enable", EnableEncryption);
+                        BigEndianEncryption = GetValueOrDefault(encryptionElement, "big_endian", BigEndianEncryption);
+                    }
+                    ProxyServerAddress = GetValueOrDefault(config, "proxy_server_address", ProxyServerAddress);
+                    ProxyServerPort = GetValueOrDefault(config, "proxy_server_port", ProxyServerPort);
+                    ORBServerAddress = GetValueOrDefault(config, "orb_server_address", ORBServerAddress);
+                    ORBServerPort = GetValueOrDefault(config, "orb_server_port", ORBServerPort);
+                    STATSServerAddress = GetValueOrDefault(config, "stats_server_address", STATSServerAddress);
+                    STATSServerPort = GetValueOrDefault(config, "stats_server_port", STATSServerPort);
+                    CLANServerAddress = GetValueOrDefault(config, "clan_server_address", CLANServerAddress);
+                    CLANServerPort = GetValueOrDefault(config, "clan_server_port", CLANServerPort);
+                    WEATHERServerAddress = GetValueOrDefault(config, "weather_server_address", WEATHERServerAddress);
+                    WEATHERServerPort = GetValueOrDefault(config, "weather_server_port", WEATHERServerPort);
+                    PHOTOServerAddress = GetValueOrDefault(config, "photo_server_address", PHOTOServerAddress);
+                    PHOTOServerPort = GetValueOrDefault(config, "photo_server_port", PHOTOServerPort);
+                    GAMBLINGServerAddress = GetValueOrDefault(config, "gambling_server_address", GAMBLINGServerAddress);
+                    GAMBLINGServerPort = GetValueOrDefault(config, "gambling_server_port", GAMBLINGServerPort);
+                    MODERATIONServerAddress = GetValueOrDefault(config, "moderation_server_address", MODERATIONServerAddress);
+                    MODERATIONServerPort = GetValueOrDefault(config, "moderation_server_port", MODERATIONServerPort);
+                    CHECKServerAddress = GetValueOrDefault(config, "check_server_address", CHECKServerAddress);
+                    CHECKServerPort = GetValueOrDefault(config, "check_server_port", CHECKServerPort);
+                    CARDEALERServerAddress = GetValueOrDefault(config, "cardealer_server_address", CARDEALERServerAddress);
+                    CARDEALERServerPort = GetValueOrDefault(config, "cardealer_server_port", CARDEALERServerPort);
+                    RANKINGServerAddress = GetValueOrDefault(config, "ranking_server_address", RANKINGServerAddress);
+                    RANKINGServerPort = GetValueOrDefault(config, "ranking_server_port", RANKINGServerPort);
+                    SAVEGAMEServerAddress = GetValueOrDefault(config, "savegame_server_address", SAVEGAMEServerAddress);
+                    SAVEGAMEServerPort = GetValueOrDefault(config, "savegame_server_port", SAVEGAMEServerPort);
+                    LOGINServerAddress = GetValueOrDefault(config, "login_server_address", LOGINServerAddress);
+                    LOGINServerPort = GetValueOrDefault(config, "login_server_port", LOGINServerPort);
+                    ClientLongTimeoutSeconds = GetValueOrDefault(config, "client_long_timeout_seconds", ClientLongTimeoutSeconds);
                 }
-                if (config.TryGetProperty("encryption", out JsonElement encryptionElement))
-                {
-                    EnableEncryption = GetValueOrDefault(encryptionElement, "enable", EnableEncryption);
-                    BigEndianEncryption = GetValueOrDefault(encryptionElement, "big_endian", BigEndianEncryption);
-                }
-                else if (config_version < 1)
-                {
-                    EnableEncryption = GetValueOrDefault(config, "enable_encryption", EnableEncryption);
-                    BigEndianEncryption = GetValueOrDefault(config, "enable_tdu2_console_mode", BigEndianEncryption);
-                }
-                ProxyServerAddress = GetValueOrDefault(config, "proxy_server_address", ProxyServerAddress);
-                ProxyServerPort = GetValueOrDefault(config, "proxy_server_port", ProxyServerPort);
-                ORBServerAddress = GetValueOrDefault(config, "orb_server_address", ORBServerAddress);
-                ORBServerPort = GetValueOrDefault(config, "orb_server_port", ORBServerPort);
-                STATSServerAddress = GetValueOrDefault(config, "stats_server_address", STATSServerAddress);
-                STATSServerPort = GetValueOrDefault(config, "stats_server_port", STATSServerPort);
-                CLANServerAddress = GetValueOrDefault(config, "clan_server_address", CLANServerAddress);
-                CLANServerPort = GetValueOrDefault(config, "clan_server_port", CLANServerPort);
-                WEATHERServerAddress = GetValueOrDefault(config, "weather_server_address", WEATHERServerAddress);
-                WEATHERServerPort = GetValueOrDefault(config, "weather_server_port", WEATHERServerPort);
-                PHOTOServerAddress = GetValueOrDefault(config, "photo_server_address", PHOTOServerAddress);
-                PHOTOServerPort = GetValueOrDefault(config, "photo_server_port", PHOTOServerPort);
-                GAMBLINGServerAddress = GetValueOrDefault(config, "gambling_server_address", GAMBLINGServerAddress);
-                GAMBLINGServerPort = GetValueOrDefault(config, "gambling_server_port", GAMBLINGServerPort);
-                MODERATIONServerAddress = GetValueOrDefault(config, "moderation_server_address", MODERATIONServerAddress);
-                MODERATIONServerPort = GetValueOrDefault(config, "moderation_server_port", MODERATIONServerPort);
-                CHECKServerAddress = GetValueOrDefault(config, "check_server_address", CHECKServerAddress);
-                CHECKServerPort = GetValueOrDefault(config, "check_server_port", CHECKServerPort);
-                CARDEALERServerAddress = GetValueOrDefault(config, "cardealer_server_address", CARDEALERServerAddress);
-                CARDEALERServerPort = GetValueOrDefault(config, "cardealer_server_port", CARDEALERServerPort);
-                RANKINGServerAddress = GetValueOrDefault(config, "ranking_server_address", RANKINGServerAddress);
-                RANKINGServerPort = GetValueOrDefault(config, "ranking_server_port", RANKINGServerPort);
-                SAVEGAMEServerAddress = GetValueOrDefault(config, "savegame_server_address", SAVEGAMEServerAddress);
-                SAVEGAMEServerPort = GetValueOrDefault(config, "savegame_server_port", SAVEGAMEServerPort);
-                ClientLongTimeoutSeconds = GetValueOrDefault(config, "client_long_timeout_seconds", ClientLongTimeoutSeconds);
+                else
+                    LoggerAccessor.LogWarn($"{configPath} file is outdated, using server's default.");
             }
         }
         catch (Exception ex)
@@ -231,16 +248,31 @@ public static partial class EdenServerConfiguration
 
 class Program
 {
+    public enum CtrlType
+    {
+        CTRL_C_EVENT = 0,
+        CTRL_BREAK_EVENT = 1,
+        CTRL_CLOSE_EVENT = 2,
+        CTRL_LOGOFF_EVENT = 5,
+        CTRL_SHUTDOWN_EVENT = 6
+    }
+
+    private delegate bool EventHandler(CtrlType sig);
+
     const string serverName = "EdenServer";
 
     private static string configDir = Directory.GetCurrentDirectory() + "/static/";
     private static string configPath = configDir + serverName + ".json";
-    private static string configNetworkLibraryPath = configDir + "NetworkLibrary.json";
+    private static string configMultiServerLibraryPath = configDir + "MultiServerLibrary.json";
     private static TDUMasterServer? amhTDUMasterServer = null;
     private static ProxyServer? proxyServer = null;
     private static ORBServer? orbServer = null;
     private static SnmpTrapSender? trapSender = null;
     private static TelnetService? _telnetService = null;
+    private static EventHandler? _closeHandler;
+
+    [DllImport("Kernel32")]
+    private static extern bool SetConsoleCtrlHandler(EventHandler handler, bool add);
 
     private static void StartOrUpdateServer()
     {
@@ -287,9 +319,24 @@ class Program
         amhTDUMasterServer = new TDUMasterServer(IPAddress.Any, EdenServerConfiguration.AMHMasterServerPort);
     }
 
+    private static bool CloseHandler(CtrlType sig)
+    {
+        LoginDatabase._instance?.Dispose();
+
+        switch (sig)
+        {
+            case CtrlType.CTRL_C_EVENT:
+            case CtrlType.CTRL_LOGOFF_EVENT:
+            case CtrlType.CTRL_SHUTDOWN_EVENT:
+            case CtrlType.CTRL_CLOSE_EVENT:
+            default:
+                return false;
+        }
+    }
+
     static void Main()
     {
-        if (!NetworkLibrary.Extension.Microsoft.Win32API.IsWindows)
+        if (!MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows)
             GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
         else
             TechnitiumLibrary.Net.Firewall.FirewallHelper.CheckFirewallEntries(Assembly.GetEntryAssembly()?.Location);
@@ -313,43 +360,50 @@ class Program
 
         GeoIP.Initialize();
 
-        NetworkLibraryConfiguration.RefreshVariables(configNetworkLibraryPath);
+        MultiServerLibraryConfiguration.RefreshVariables(configMultiServerLibraryPath);
 
-        if (NetworkLibraryConfiguration.EnableSNMPReports)
+        // we need to safely dispose of the database when the application closes
+        // this is a console app, so we need to hook into the console ctrl signal
+        _closeHandler += CloseHandler;
+        SetConsoleCtrlHandler(_closeHandler, true);
+
+        LoginDatabase.Initialize(EdenServerConfiguration.LoginDatabasePath);
+
+        if (MultiServerLibraryConfiguration.EnableSNMPReports)
         {
-            trapSender = new SnmpTrapSender(NetworkLibraryConfiguration.SNMPHashAlgorithm.Name, NetworkLibraryConfiguration.SNMPTrapHost, NetworkLibraryConfiguration.SNMPUserName,
-                    NetworkLibraryConfiguration.SNMPAuthPassword, NetworkLibraryConfiguration.SNMPPrivatePassword,
-                    NetworkLibraryConfiguration.SNMPEnterpriseOid);
+            trapSender = new SnmpTrapSender(MultiServerLibraryConfiguration.SNMPHashAlgorithm.Name, MultiServerLibraryConfiguration.SNMPTrapHost, MultiServerLibraryConfiguration.SNMPUserName,
+                    MultiServerLibraryConfiguration.SNMPAuthPassword, MultiServerLibraryConfiguration.SNMPPrivatePassword,
+                    MultiServerLibraryConfiguration.SNMPEnterpriseOid);
 
             if (trapSender.report != null)
             {
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Information, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendInfo(msg);
                 });
 
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Warning, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendWarn(msg);
                 });
 
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Error, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendCrit(msg);
                 });
 
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Critical, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendCrit(msg);
                 });
 #if DEBUG
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Debug, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendInfo(msg);
                 });
 #endif
@@ -378,6 +432,8 @@ class Program
                         if (char.ToLower(Console.ReadKey().KeyChar) == 'y')
                         {
                             LoggerAccessor.LogInfo("Shutting down. Goodbye!");
+
+                            CloseHandler(CtrlType.CTRL_C_EVENT);
 
                             Environment.Exit(0);
                         }

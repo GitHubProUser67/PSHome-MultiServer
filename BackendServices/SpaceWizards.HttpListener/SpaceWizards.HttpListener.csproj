@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ForceManagedImplementation>true</ForceManagedImplementation>
@@ -74,6 +74,6 @@
     <Compile Include="System\Net\StreamHelper.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\NetworkLibrary\NetworkLibrary.csproj" />
+    <ProjectReference Include="..\MultiServerLibrary\MultiServerLibrary.csproj" />
   </ItemGroup>
 </Project>

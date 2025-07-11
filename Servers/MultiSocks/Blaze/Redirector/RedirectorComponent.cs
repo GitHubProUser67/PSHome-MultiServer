@@ -3,7 +3,7 @@ using Blaze3SDK.Blaze.Redirector;
 using Blaze3SDK.Components;
 using BlazeCommon;
 using CustomLogger;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace MultiSocks.Blaze.Redirector
 {

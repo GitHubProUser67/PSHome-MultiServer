@@ -11,7 +11,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using Horizon.LIBRARY.Pipeline.Attribute;
 using Horizon.SERVER;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.DME
 {

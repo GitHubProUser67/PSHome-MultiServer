@@ -5,12 +5,11 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-	<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-	<DockerfileRunArguments>-p 23:23 -p 8889:8889 -p 9000:9000 -p 9001:9001 -p 9002:9002 -p 9003:9003 -p 9004:9004 -p 9005:9005 -p 9006:9006 -p 9007:9007 -p 9008:9008 -p 9009:9009 -p 9010:9010 -p 65535:65535</DockerfileRunArguments>
-	<ServerGarbageCollection>true</ServerGarbageCollection>
-	<PublishSingleFile>false</PublishSingleFile> <!-- Single mode cannot load plugins due to no assembly loading support. -->
-	<DockerfileContext>..\..</DockerfileContext>
+	<DockerDefaultTargetOS>Windows</DockerDefaultTargetOS>
+	<DockerfileRunArguments>-p 23:23 -p 8889:8889 -p 9000:9000 -p 9001:9001 -p 9002:9002 -p 9003:9003 -p 9004:9004 -p 9005:9005 -p 9006:9006 -p 9007:9007 -p 9008:9008 -p 9009:9009 -p 9010:9010 -p 9011:9011 -p 65535:65535</DockerfileRunArguments>
 	<ApplicationIcon>EdenServer.ico</ApplicationIcon>
+	<ServerGarbageCollection>true</ServerGarbageCollection>
+	<DockerfileContext>..\..</DockerfileContext>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +18,7 @@
       <!--<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>-->
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
+	<PackageReference Include="System.Data.SQLite" Version="1.0.119" />
   </ItemGroup>
 
   <ItemGroup>
@@ -34,6 +34,11 @@
   
   <ItemGroup>
     <Content Include="EdenServer.ico" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Include="costura-win-x86\SQLite.Interop.dll" />
+    <EmbeddedResource Include="costura-win-x64\SQLite.Interop.dll" />
   </ItemGroup>
   
   <Target Name="ModifyDepsFile" AfterTargets="AfterBuild">

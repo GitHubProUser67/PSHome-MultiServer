@@ -2,16 +2,16 @@ using CustomLogger;
 using Horizon.LIBRARY.Database;
 using Horizon.PluginManager;
 using Newtonsoft.Json.Linq;
-using NetworkLibrary.GeoLocalization;
+using MultiServerLibrary.GeoLocalization;
 using System.Runtime;
 using System.Security.Cryptography;
 using System.Collections.Concurrent;
 using System.Reflection;
 using Horizon.HTTPSERVICE;
 using Horizon.MUM;
-using NetworkLibrary.Extension;
-using NetworkLibrary.SNMP;
-using NetworkLibrary;
+using MultiServerLibrary.Extension;
+using MultiServerLibrary.SNMP;
+using MultiServerLibrary;
 using Microsoft.Extensions.Logging;
 using Prometheus;
 
@@ -183,7 +183,7 @@ class Program
 {
     private static string configDir = Directory.GetCurrentDirectory() + "/static/";
     private static string configPath = configDir + "horizon.json";
-    private static string configNetworkLibraryPath = configDir + "NetworkLibrary.json";
+    private static string configMultiServerLibraryPath = configDir + "MultiServerLibrary.json";
     private static SnmpTrapSender? trapSender = null;
     private static ConcurrentBag<CrudServerHandler>? HTTPBag;
     private static MumServerHandler? MUMServer;
@@ -267,7 +267,7 @@ class Program
         GC.Collect();
 
         if (HorizonServerConfiguration.EnableMedius)
-            NetworkLibrary.SSL.CertificateHelper.InitializeSSLChainSignedCertificates(HorizonServerConfiguration.HTTPSCertificateFile, HorizonServerConfiguration.HTTPSCertificatePassword,
+            MultiServerLibrary.SSL.CertificateHelper.InitializeSSLChainSignedCertificates(HorizonServerConfiguration.HTTPSCertificateFile, HorizonServerConfiguration.HTTPSCertificatePassword,
                     HorizonServerConfiguration.HTTPSDNSList, HorizonServerConfiguration.HTTPSCertificateHashingAlgorithm);
 
         HorizonStarter().Wait();
@@ -275,7 +275,7 @@ class Program
 
     static void Main()
     {
-        if (!NetworkLibrary.Extension.Microsoft.Win32API.IsWindows)
+        if (!MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows)
             GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
         else
             TechnitiumLibrary.Net.Firewall.FirewallHelper.CheckFirewallEntries(Assembly.GetEntryAssembly()?.Location);
@@ -299,43 +299,43 @@ class Program
 
         GeoIP.Initialize();
 
-        NetworkLibraryConfiguration.RefreshVariables(configNetworkLibraryPath);
+        MultiServerLibraryConfiguration.RefreshVariables(configMultiServerLibraryPath);
 
-        if (NetworkLibraryConfiguration.EnableSNMPReports)
+        if (MultiServerLibraryConfiguration.EnableSNMPReports)
         {
-            trapSender = new SnmpTrapSender(NetworkLibraryConfiguration.SNMPHashAlgorithm.Name, NetworkLibraryConfiguration.SNMPTrapHost, NetworkLibraryConfiguration.SNMPUserName,
-                    NetworkLibraryConfiguration.SNMPAuthPassword, NetworkLibraryConfiguration.SNMPPrivatePassword,
-                    NetworkLibraryConfiguration.SNMPEnterpriseOid);
+            trapSender = new SnmpTrapSender(MultiServerLibraryConfiguration.SNMPHashAlgorithm.Name, MultiServerLibraryConfiguration.SNMPTrapHost, MultiServerLibraryConfiguration.SNMPUserName,
+                    MultiServerLibraryConfiguration.SNMPAuthPassword, MultiServerLibraryConfiguration.SNMPPrivatePassword,
+                    MultiServerLibraryConfiguration.SNMPEnterpriseOid);
 
             if (trapSender.report != null)
             {
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Information, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendInfo(msg);
                 });
 
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Warning, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendWarn(msg);
                 });
 
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Error, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendCrit(msg);
                 });
 
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Critical, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendCrit(msg);
                 });
 #if DEBUG
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Debug, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendInfo(msg);
                 });
 #endif

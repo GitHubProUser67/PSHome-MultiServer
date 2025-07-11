@@ -49,9 +49,9 @@ namespace Tommunism.SoftFloat
         #region Fields
 
         [ThreadStatic]
-        private static SoftFloatContext? _currentThreadContext;
+        private static SoftFloatContext _currentThreadContext;
 
-        private static SoftFloatContext? _sharedContext;
+        private static SoftFloatContext _sharedContext;
 
         #endregion
 

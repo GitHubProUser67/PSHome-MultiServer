@@ -10,7 +10,7 @@
     using System.Threading.Tasks;
     using System.Text.Json.Serialization;
     using WatsonWebserver.Core;
-    using NetworkLibrary.Extension;
+    using MultiServerLibrary.Extension;
     using System.Net;
 
     /// <summary>

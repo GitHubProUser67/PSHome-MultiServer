@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Net;
 using System.Text.RegularExpressions;
-using NetworkLibrary.AdBlocker;
+using MultiServerLibrary.AdBlocker;
 using DNS.Protocol;
 using System.Linq;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using DNSLibrary;
 using System.Threading.Tasks;
 

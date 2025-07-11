@@ -3,7 +3,7 @@ using HttpMultipartParser;
 using System.Text;
 using System.IO;
 using System;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using NetHasher;
 using XI5;
 

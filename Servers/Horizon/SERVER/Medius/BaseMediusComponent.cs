@@ -13,7 +13,7 @@ using Horizon.LIBRARY.Pipeline.Tcp;
 using System.Collections.Concurrent;
 using System.Net;
 using Horizon.MUM.Models;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.SERVER.Medius
 {

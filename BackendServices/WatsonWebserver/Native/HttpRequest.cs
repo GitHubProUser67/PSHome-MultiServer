@@ -1,6 +1,6 @@
 ﻿namespace WatsonWebserver.Native
 {
-    using NetworkLibrary.Extension;
+    using MultiServerLibrary.Extension;
     using System;
     using System.Collections.Specialized;
     using System.Globalization;

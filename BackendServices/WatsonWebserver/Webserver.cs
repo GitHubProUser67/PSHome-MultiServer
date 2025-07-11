@@ -8,8 +8,8 @@
     using System.Text;
     using SpaceWizards.HttpListener;
     using System.Collections.Generic;
-    using NetworkLibrary.Extension;
-    using NetworkLibrary.HTTP;
+    using MultiServerLibrary.Extension;
+    using MultiServerLibrary.HTTP;
 
     /// <summary>
     /// Watson webserver.

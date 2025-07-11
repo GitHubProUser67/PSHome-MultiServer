@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System;
 using System.Threading.Tasks;
 using System.Linq;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.LIBRARY.libAntiCheat.Models
 {

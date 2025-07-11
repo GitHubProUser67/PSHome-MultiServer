@@ -10,8 +10,8 @@
     using System.Threading;
     using System.Threading.Tasks;
     using CavemanTcp;
-    using NetworkLibrary.Extension;
-    using NetworkLibrary.HTTP;
+    using MultiServerLibrary.Extension;
+    using MultiServerLibrary.HTTP;
     using WatsonWebserver.Core;
 
     /// <summary>

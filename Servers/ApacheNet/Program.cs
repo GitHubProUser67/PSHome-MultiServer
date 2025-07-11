@@ -3,21 +3,21 @@ using Newtonsoft.Json.Linq;
 using ApacheNet;
 using ApacheNet.PluginManager;
 using System.Runtime;
-using NetworkLibrary.GeoLocalization;
+using MultiServerLibrary.GeoLocalization;
 using System.IO;
 using System.Collections.Generic;
 using System.Threading;
 using System;
 using System.Threading.Tasks;
-using NetworkLibrary.AIModels;
+using MultiServerLibrary.AIModels;
 using System.Security.Cryptography;
 using System.Reflection;
-using NetworkLibrary.HTTP;
+using MultiServerLibrary.HTTP;
 using System.Collections.Concurrent;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using System.Diagnostics;
-using NetworkLibrary.SNMP;
-using NetworkLibrary;
+using MultiServerLibrary.SNMP;
+using MultiServerLibrary;
 using Microsoft.Extensions.Logging;
 
 public static class ApacheNetServerConfiguration
@@ -338,7 +338,7 @@ class Program
 
     private static string configDir = Directory.GetCurrentDirectory() + "/static/";
     public static string configPath = configDir + "ApacheNet.json";
-    private static string configNetworkLibraryPath = configDir + "NetworkLibrary.json";
+    private static string configMultiServerLibraryPath = configDir + "MultiServerLibrary.json";
     private static string DNSconfigMD5 = string.Empty;
     private static Timer? FilesystemTree = null;
     private static Task? DNSThread = null;
@@ -399,7 +399,7 @@ class Program
 
         WebAPIService.WebArchive.WebArchiveRequest.ArchiveDateLimit = ApacheNetServerConfiguration.NotFoundWebArchiveDateLimit;
 
-        NetworkLibrary.SSL.CertificateHelper.InitializeSSLChainSignedCertificates(ApacheNetServerConfiguration.HTTPSCertificateFile, ApacheNetServerConfiguration.HTTPSCertificatePassword,
+        MultiServerLibrary.SSL.CertificateHelper.InitializeSSLChainSignedCertificates(ApacheNetServerConfiguration.HTTPSCertificateFile, ApacheNetServerConfiguration.HTTPSCertificatePassword,
             ApacheNetServerConfiguration.HTTPSDNSList, ApacheNetServerConfiguration.HTTPSCertificateHashingAlgorithm);
 
         if (ApacheNetServerConfiguration.DNSOverEthernetEnabled)
@@ -497,7 +497,7 @@ class Program
         dnswatcher.NotifyFilter = NotifyFilters.LastWrite;
         dnswatcher.Changed += OnDNSChanged;
 
-        if (!NetworkLibrary.Extension.Microsoft.Win32API.IsWindows)
+        if (!MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows)
             GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
         else
             TechnitiumLibrary.Net.Firewall.FirewallHelper.CheckFirewallEntries(Assembly.GetEntryAssembly()?.Location);
@@ -521,43 +521,43 @@ class Program
 
         GeoIP.Initialize();
 
-        NetworkLibraryConfiguration.RefreshVariables(configNetworkLibraryPath);
+        MultiServerLibraryConfiguration.RefreshVariables(configMultiServerLibraryPath);
 
-        if (NetworkLibraryConfiguration.EnableSNMPReports)
+        if (MultiServerLibraryConfiguration.EnableSNMPReports)
         {
-            trapSender = new SnmpTrapSender(NetworkLibraryConfiguration.SNMPHashAlgorithm.Name, NetworkLibraryConfiguration.SNMPTrapHost, NetworkLibraryConfiguration.SNMPUserName,
-                    NetworkLibraryConfiguration.SNMPAuthPassword, NetworkLibraryConfiguration.SNMPPrivatePassword,
-                    NetworkLibraryConfiguration.SNMPEnterpriseOid);
+            trapSender = new SnmpTrapSender(MultiServerLibraryConfiguration.SNMPHashAlgorithm.Name, MultiServerLibraryConfiguration.SNMPTrapHost, MultiServerLibraryConfiguration.SNMPUserName,
+                    MultiServerLibraryConfiguration.SNMPAuthPassword, MultiServerLibraryConfiguration.SNMPPrivatePassword,
+                    MultiServerLibraryConfiguration.SNMPEnterpriseOid);
 
             if (trapSender.report != null)
             {
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Information, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendInfo(msg);
                 });
 
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Warning, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendWarn(msg);
                 });
 
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Error, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendCrit(msg);
                 });
 
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Critical, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendCrit(msg);
                 });
 #if DEBUG
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Debug, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendInfo(msg);
                 });
 #endif
@@ -567,11 +567,11 @@ class Program
         ApacheNetServerConfiguration.RefreshVariables(configPath);
 
         if (ApacheNetServerConfiguration.PreferNativeHttpListenerEngine
-            && NetworkLibrary.Extension.Microsoft.Win32API.IsWindows
-            && !NetworkLibrary.Extension.Microsoft.Win32API.IsAdministrator())
+            && MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows
+            && !MultiServerLibrary.Extension.Microsoft.Win32API.IsAdministrator())
         {
             LoggerAccessor.LogWarn("[Program] - Trying to restart as admin...");
-            if (NetworkLibrary.Extension.Microsoft.Win32API.StartAsAdmin(Process.GetCurrentProcess().MainModule?.FileName))
+            if (MultiServerLibrary.Extension.Microsoft.Win32API.StartAsAdmin(Process.GetCurrentProcess().MainModule?.FileName))
                 Environment.Exit(0);
         }
 

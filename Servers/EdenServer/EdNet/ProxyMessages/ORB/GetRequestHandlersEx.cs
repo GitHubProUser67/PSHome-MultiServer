@@ -1,7 +1,7 @@
-﻿using EdNetService.CRC;
+using EdNetService.CRC;
 using EdNetService.Models;
 using EndianTools;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using System.Net;
 using System.Reflection;
 
@@ -10,6 +10,8 @@ namespace EdenServer.EdNet.ProxyMessages
     public class GetRequestHandlersEx : AbstractProxyMessage
     {
         private static readonly FieldInfo[] storeBank = typeof(edStoreBank).GetFields(BindingFlags.Public | BindingFlags.Static);
+
+        private static List<ushort> exceptionList = new List<ushort>() { 0xCE94, 0xF5FB, 0x4445, 0x03D4, 0xCB67, 0x8CF6, 0x8731, 0xC0A0, 0x0813, 0x4F82, 0xC2AC, 0x853D, 0x95A8 };
 
         public override byte[]? Process(IPEndPoint endpoint, IPEndPoint target, ClientTask task, ushort PacketMagic)
         {
@@ -50,7 +52,7 @@ namespace EdenServer.EdNet.ProxyMessages
 #endif
                         if (serviceName.EndsWith("SERVER"))
                         {
-                           var service = EdenServerConfiguration.GetServerConfigByServiceName(serviceName);
+                            var service = EdenServerConfiguration.GetServerConfigByServiceName(serviceName);
                             if (service != null)
                             {
                                 string? configIp = service.Value.address;
@@ -65,6 +67,12 @@ namespace EdenServer.EdNet.ProxyMessages
                         }
 
                         // Default to Proxy IP.
+                        response.InsertUInt32(targetIp);
+                        response.InsertUInt16(targetPort);
+                    }
+                    else if (exceptionList.Contains(handler_crc))
+                    {
+                        // Force handler CRC to Proxy IP.
                         response.InsertUInt32(targetIp);
                         response.InsertUInt16(targetPort);
                     }

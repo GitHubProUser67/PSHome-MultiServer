@@ -1,5 +1,5 @@
 using CustomLogger;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SSFWServer.Helpers.FileHelper;

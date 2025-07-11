@@ -17,7 +17,7 @@ COPY ["BackendServices/CustomLogger/CustomLogger.csproj", "BackendServices/Custo
 COPY ["BackendServices/EndianTools/EndianTools.csproj", "BackendServices/EndianTools/"]
 COPY ["BlazeSDK/Tdf/Tdf.csproj", "BlazeSDK/Tdf/"]
 COPY ["BlazeSDK/Blaze3SDK/Blaze3SDK.csproj", "BlazeSDK/Blaze3SDK/"]
-COPY ["BackendServices/NetworkLibrary/NetworkLibrary.csproj", "BackendServices/NetworkLibrary/"]
+COPY ["BackendServices/MultiServerLibrary/MultiServerLibrary.csproj", "BackendServices/MultiServerLibrary/"]
 COPY ["BackendServices/CompressionLibrary/CompressionLibrary.csproj", "BackendServices/CompressionLibrary/"]
 COPY ["BackendServices/TechnitiumLibrary.Net.Firewall/TechnitiumLibrary.Net.Firewall.csproj", "BackendServices/TechnitiumLibrary.Net.Firewall/"]
 RUN dotnet restore "./Servers/MultiSocks/MultiSocks.csproj"

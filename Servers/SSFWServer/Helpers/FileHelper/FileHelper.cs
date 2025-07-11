@@ -1,6 +1,6 @@
 using CompressionLibrary.Edge;
 using CustomLogger;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using System.Text;
 
 namespace SSFWServer.Helpers.FileHelper

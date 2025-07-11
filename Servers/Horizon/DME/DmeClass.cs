@@ -9,7 +9,7 @@ using Horizon.PluginManager;
 using Horizon.HTTPSERVICE;
 using Horizon.LIBRARY.Database.Models;
 using System.Collections.Concurrent;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.DME
 {

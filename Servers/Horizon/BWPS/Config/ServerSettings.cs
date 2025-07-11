@@ -1,6 +1,6 @@
 
 
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.BWPS.Config
 {

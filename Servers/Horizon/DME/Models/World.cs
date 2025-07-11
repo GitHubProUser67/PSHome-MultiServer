@@ -5,7 +5,7 @@ using Horizon.DME.PluginArgs;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using Horizon.PluginManager;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using Horizon.SERVER;
 using Horizon.MUM.Models;
 using Prometheus;

@@ -7,9 +7,9 @@ using System.Reflection;
 using System.Runtime;
 using System.Threading;
 using System.Threading.Tasks;
-using NetworkLibrary.Extension;
-using NetworkLibrary.SNMP;
-using NetworkLibrary;
+using MultiServerLibrary.Extension;
+using MultiServerLibrary.SNMP;
+using MultiServerLibrary;
 using Microsoft.Extensions.Logging;
 
 public static class MitmDNSServerConfiguration
@@ -102,7 +102,7 @@ class Program
 {
     private static string configDir = Directory.GetCurrentDirectory() + "/static/";
     private static string configPath = configDir + "MitmDNS.json";
-    private static string configNetworkLibraryPath = configDir + "NetworkLibrary.json";
+    private static string configMultiServerLibraryPath = configDir + "MultiServerLibrary.json";
     private static string DNSconfigMD5 = string.Empty;
     private static Task DNSThread = null;
     private static Task DNSRefreshThread = null;
@@ -213,7 +213,7 @@ class Program
         dnswatcher.NotifyFilter = NotifyFilters.LastWrite;
         dnswatcher.Changed += OnDNSChanged;
 
-        if (!NetworkLibrary.Extension.Microsoft.Win32API.IsWindows)
+        if (!MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows)
             GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
         else
             TechnitiumLibrary.Net.Firewall.FirewallHelper.CheckFirewallEntries(Assembly.GetEntryAssembly()?.Location);
@@ -246,43 +246,43 @@ class Program
             }
         }
 
-        NetworkLibraryConfiguration.RefreshVariables(configNetworkLibraryPath);
+        MultiServerLibraryConfiguration.RefreshVariables(configMultiServerLibraryPath);
 
-        if (NetworkLibraryConfiguration.EnableSNMPReports)
+        if (MultiServerLibraryConfiguration.EnableSNMPReports)
         {
-            trapSender = new SnmpTrapSender(NetworkLibraryConfiguration.SNMPHashAlgorithm.Name, NetworkLibraryConfiguration.SNMPTrapHost, NetworkLibraryConfiguration.SNMPUserName,
-                    NetworkLibraryConfiguration.SNMPAuthPassword, NetworkLibraryConfiguration.SNMPPrivatePassword,
-                    NetworkLibraryConfiguration.SNMPEnterpriseOid);
+            trapSender = new SnmpTrapSender(MultiServerLibraryConfiguration.SNMPHashAlgorithm.Name, MultiServerLibraryConfiguration.SNMPTrapHost, MultiServerLibraryConfiguration.SNMPUserName,
+                    MultiServerLibraryConfiguration.SNMPAuthPassword, MultiServerLibraryConfiguration.SNMPPrivatePassword,
+                    MultiServerLibraryConfiguration.SNMPEnterpriseOid);
 
             if (trapSender.report != null)
             {
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Information, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendInfo(msg);
                 });
 
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Warning, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendWarn(msg);
                 });
 
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Error, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendCrit(msg);
                 });
 
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Critical, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendCrit(msg);
                 });
 #if DEBUG
                 LoggerAccessor.RegisterPostLogAction(LogLevel.Debug, (msg, args) =>
                 {
-                    if (NetworkLibraryConfiguration.EnableSNMPReports)
+                    if (MultiServerLibraryConfiguration.EnableSNMPReports)
                         trapSender!.SendInfo(msg);
                 });
 #endif

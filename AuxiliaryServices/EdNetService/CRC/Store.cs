@@ -2,10 +2,10 @@
 {
     public enum ProxyCrcList : ushort
     {
-        TO_PROXY = 0xFDC7,
-        FROM_PROXY = 0x1D35,
-        CLIENT_TO_ORB = 0x509A,
-        ORB_TO_CLIENT = 0x984E,
+        TO_PROXY_HEADER = 0xFDC7,
+        FROM_PROXY_HEADER = 0x1D35,
+        CRC_R_CALLACTION = 0x509A,
+        CRC_A_CALLACTION = 0x984E,
         COREREQUEST_CONTAINER = 0xD572,
         CLIENT_ORB_KEEP_ALIVE = 0x08E7,
         NETBUFFER_RESPONSE = 0xA4BC,
@@ -169,6 +169,7 @@
         public const ushort CRC_A_CARDEALER_BUY = 0xAD29;
         public const ushort CRC_E_STATS_SERVER = 0x88AD;
         public const ushort CRC_E_STATS_USER_STATISTICS_UPDATE = 0x39FA;
+        public static readonly ushort CRC_E_STATS_USER_STATISTICS_UPDATE_V2 = Utils.GetCRCFromString("Stats::e_user_statistics_update_v2(object userrights)");
         public const ushort CRC_R_STATS_PLAYER_FRIENDS_LIST = 0x736D;
         public const ushort CRC_A_STATS_PLAYER_FRIENDS_LIST = 0xD690;
         public const ushort CRC_R_STATS_GET_ICE_STATISTICS = 0x687F;
@@ -430,8 +431,27 @@
         public const ushort CRC_GPSTRACKER_R_TRACK_UNKNOWN_USERS = 0x4C04;
         public const ushort CRC_GPSTRACKER_A_TRACK_UNKNOWN_USERS = 0x81CF;
         public const ushort CRC_EDL_ATTRIBUTELIST = 0x1FEF;
+        public static readonly ushort CRC_R_ORB_OPENFILE = Utils.GetCRCFromString("ednetresourceorb::r_open_file(byte facility,uint user_id,string filename,byte bupdload_wanted,ed32 uploadtotalsize)");
+        public static readonly ushort CRC_A_ORB_OPENFILE = Utils.GetCRCFromString("ednetresourceorb::a_open_file(byte errcode,uint fileid,uint totalsize,uint maxretry,uint timeout)");
+        public static readonly ushort CRC_R_ORB_GETFILE = Utils.GetCRCFromString("ednetresourceorb::r_getfile(uint fileid,uint offset)");
+        public static readonly ushort CRC_A_ORB_GETFILE = Utils.GetCRCFromString("ednetresourceorb::a_getfile(byte errcode,uint fileid,uint offset,ushort nexttimewait,buffer datas=NULL)");
+        public static readonly ushort CRC_R_ORB_PUTFILE = Utils.GetCRCFromString("ednetresourceorb::r_putfile(uint fileid,uint offset,buffer datas)");
+        public static readonly ushort CRC_A_ORB_PUTFILE = Utils.GetCRCFromString("ednetresourceorb::a_putfile(byte errcode,uint fileid,uint offset)");
+        public static readonly ushort CRC_R_ORB_RENAMEFILE = Utils.GetCRCFromString("ednetresourceorb::r_renamefile(byte facility,uint user_id,string filename_currrent_name,string filename_new_name)");
+        public static readonly ushort CRC_A_ORB_RENAMEFILE = Utils.GetCRCFromString("ednetresourceorb::a_renamefile(byte errcode)");
+        public static readonly ushort CRC_R_ORB_FILEEXISTS = Utils.GetCRCFromString("ednetresourceorb::r_fileexists(byte facility,uint user_id,string filename)");
+        public static readonly ushort CRC_A_ORB_FILEEXISTS = Utils.GetCRCFromString("ednetresourceorb::a_fileexists(byte errcode)");
 
         // TDU1 Only.
+        public const ushort CRC_R_LOGIN_SERVER = 0x55AE;
+        public static readonly ushort COREREQUESTS_R_LOGIN_PC = Utils.GetCRCFromString("Database::r_login_pc(string,string,uint,ulonglong,byte,string)");
+        public static readonly ushort COREREQUESTS_A_LOGIN = Utils.GetCRCFromString("Database::a_login(byte,uint,uint)");
+        public static readonly ushort COREREQUESTS_A_LOGINCHANGED = Utils.GetCRCFromString("Database::a_loginchanged()");
+
+        public const ushort CRC_R_GET_EDNETBUFFER = 0x407E;
+        public static readonly ushort CRC_A_GET_EDNETBUFFER = Utils.GetCRCFromString("edNetServiceNetBuffer::a_get_ednetbuffer(uint bufferid,byte errcode,{uint offset,uint totalsize,ushort buffer_crc,buffer}=NULL)");
+        public const ushort CRC_E_GET_EDNETBUFFER_ACK = 0x0CD1;
+
         public const ushort CRC_R_EBAYQUERYCOUNT2 = 0xA177;
         public const ushort CRC_R_EBAYQUERYCOUNT2GROUP = 0x3870;
         public const ushort CRC_R_EBAYHISTOBUYQUERYCOUNT = 0xA1A7;
@@ -490,29 +510,74 @@
         public const ushort CRC_E_EXLUDE_MEMBER = 0x428A;
         public const ushort CRC_E_DELETE_CLUB = 0xE197;
         public const ushort CRC_E_NAME_VICE_PRES = 0xD112;
-        public const ushort COREREQUESTS_R_TEAM_EXIST = 0xDE5D;
-        public const ushort COREREQUESTS_A_TEAM_ADD = 0xBDE4;
-        public const ushort COREREQUESTS_R_TEAM_DELETE = 0x400E;
-        public const ushort COREREQUESTS_R_TEAM_UPDATE = 0xBED1;
-        public const ushort COREREQUESTS_R_TEAM_DETAILS = 0xE19D;
-        public const ushort COREREQUESTS_A_TEAM_DETAILS = 0xBDFD;
-        public const ushort COREREQUESTS_A_TEAM_GET_NB = 0x4F1E;
-        public const ushort COREREQUESTS_A_TEAM_ENUM = 0x3645;
-        public const ushort COREREQUESTS_A_TEAMMEMBER_ADD = 0x1123;
-        public const ushort COREREQUESTS_R_TEAMMEMBER_REMOVE = 0x7691;
-        public const ushort COREREQUESTS_A_TEAMMEMBER_REMOVE = 0x1715;
-        public const ushort COREREQUESTS_R_TEAMMEMBER_DETAILS = 0xFD71;
-        public const ushort COREREQUESTS_A_TEAMMEMBER_GET_NB = 0x4A65;
-        public const ushort COREREQUESTS_R_TEAMMEMBER_ENUM = 0xEF1F;
+        public static readonly ushort COREREQUESTS_R_TEAM_EXIST0 = Utils.GetCRCFromString("coreresquests::r_team_exist(uint user_id_in, STeamDetails team_details_in)");
+        public const ushort COREREQUESTS_R_TEAM_EXIST1 = 0xDE5D;
+        public static readonly ushort COREREQUESTS_A_TEAM_EXIST0 = Utils.GetCRCFromString("coreresquests::a_team_exist(TeamResult res_out)");
+        public static readonly ushort COREREQUESTS_A_TEAM_EXIST1 = Utils.GetCRCFromString("coreresquests::club_a_team_exist(TeamResult res_out)");
+        public static readonly ushort COREREQUESTS_R_TEAM_ADD0 = Utils.GetCRCFromString("coreresquests::r_team_add(uint user_id_in, STeamDetails team_details_in)");
+        public static readonly ushort COREREQUESTS_R_TEAM_ADD1 = Utils.GetCRCFromString("coreresquests::team_r_team_add(uint user_id_in, STeamDetails team_details_in)");
+        public static readonly ushort COREREQUESTS_A_TEAM_ADD0 = Utils.GetCRCFromString("coreresquests::a_team_add(TeamResult res_out, STeamDetails team_details_out)");
+        public const ushort COREREQUESTS_A_TEAM_ADD1 = 0xBDE4;
+        public static readonly ushort COREREQUESTS_R_TEAM_DELETE0 = Utils.GetCRCFromString("coreresquests::r_team_delete(uint user_id_in, uint team_id_in)");
+        public const ushort COREREQUESTS_R_TEAM_DELETE1 = 0x400E;
+        public static readonly ushort COREREQUESTS_A_TEAM_DELETE0 = Utils.GetCRCFromString("coreresquests::a_team_delete(TeamResult res_out)");
+        public static readonly ushort COREREQUESTS_A_TEAM_DELETE1 = Utils.GetCRCFromString("coreresquests::club_a_team_delete(TeamResult res_out)");
+        public static readonly ushort COREREQUESTS_R_TEAM_UPDATE0 = Utils.GetCRCFromString("coreresquests::r_team_update(uint user_id_in, STeamDetails team_details_in)");
+        public const ushort COREREQUESTS_R_TEAM_UPDATE1 = 0xBED1;
+        public static readonly ushort COREREQUESTS_A_TEAM_UPDATE0 = Utils.GetCRCFromString("coreresquests::a_team_update(TeamResult res_out)");
+        public static readonly ushort COREREQUESTS_A_TEAM_UPDATE1 = Utils.GetCRCFromString("coreresquests::club_a_team_delete(TeamResult res_out)");
+        public static readonly ushort COREREQUESTS_R_TEAM_DETAILS0 = Utils.GetCRCFromString("coreresquests::r_team_details(uint user_id_in, uint team_id_in)");
+        public const ushort COREREQUESTS_R_TEAM_DETAILS1 = 0xE19D;
+        public static readonly ushort COREREQUESTS_A_TEAM_DETAILS0 = Utils.GetCRCFromString("coreresquests::a_team_details(TeamResult res_out, STeamDetails team_details_out)");
+        public const ushort COREREQUESTS_A_TEAM_DETAILS1 = 0xBDFD;
+        public static readonly ushort COREREQUESTS_R_TEAM_GET_NB0 = Utils.GetCRCFromString("coreresquests::r_team_getnb(uint user_id_in)");
+        public static readonly ushort COREREQUESTS_R_TEAM_GET_NB1 = Utils.GetCRCFromString("coreresquests::club_r_team_getnb(uint user_id_in)");
+        public static readonly ushort COREREQUESTS_A_TEAM_GET_NB0 = Utils.GetCRCFromString("coreresquests::a_team_getnb(int res_out)");
+        public const ushort COREREQUESTS_A_TEAM_GET_NB1 = 0x4F1E;
+        public static readonly ushort COREREQUESTS_R_TEAM_ENUM0 = Utils.GetCRCFromString("coreresquests::r_team_enum(uint user_id_in, int offset_in, int nb_wanted_in)");
+        public static readonly ushort COREREQUESTS_R_TEAM_ENUM1 = Utils.GetCRCFromString("coreresquests::club_r_team_enum(uint user_id_in, int offset_in, int nb_wanted_in)");
+        public static readonly ushort COREREQUESTS_A_TEAM_ENUM0 = Utils.GetCRCFromString("coreresquests::a_team_enum(int nb_teams_out, char *buffer_out)");
+        public const ushort COREREQUESTS_A_TEAM_ENUM1 = 0x3645;
+        public static readonly ushort COREREQUESTS_R_TEAMMEMBER_ADD0 = Utils.GetCRCFromString("coreresquests::r_teammember_add(uint user_id_in, STeamMemberDetails member_details_in)");
+        public static readonly ushort COREREQUESTS_R_TEAMMEMBER_ADD1 = Utils.GetCRCFromString("coreresquests::team_r_teammember_add(uint user_id_in, STeamMemberDetails member_details_in)");
+        public static readonly ushort COREREQUESTS_A_TEAMMEMBER_ADD0 = Utils.GetCRCFromString("coreresquests::a_teammember_add(TeamResult res_out, STeamMemberDetails member_details_out)");
+        public const ushort COREREQUESTS_A_TEAMMEMBER_ADD1 = 0x1123;
+        public static readonly ushort COREREQUESTS_R_TEAMMEMBER_REMOVE0 = Utils.GetCRCFromString("coreresquests::r_teammember_delete(uint user_id_in, uint team_id_in, uint member_id_in)");
+        public const ushort COREREQUESTS_R_TEAMMEMBER_REMOVE1 = 0x7691;
+        public static readonly ushort COREREQUESTS_A_TEAMMEMBER_REMOVE0 = Utils.GetCRCFromString("coreresquests::a_teammember_delete(TeamResult res_out)");
+        public const ushort COREREQUESTS_A_TEAMMEMBER_REMOVE1 = 0x1715;
+        public static readonly ushort COREREQUESTS_R_TEAMMEMBER_DETAILS0 = Utils.GetCRCFromString("coreresquests::r_teammember_details(uint user_id_in, uint member_id_in)");
+        public const ushort COREREQUESTS_R_TEAMMEMBER_DETAILS1 = 0xFD71;
+        public static readonly ushort COREREQUESTS_A_TEAMMEMBER_DETAILS0 = Utils.GetCRCFromString("coreresquests::a_teammember_details(TeamResult res_out, STeamMemberDetails member_details_out)");
+        public static readonly ushort COREREQUESTS_A_TEAMMEMBER_DETAILS1 = Utils.GetCRCFromString("coreresquests::team_a_teammember_details(TeamResult res_out, STeamMemberDetails member_details_out)");
+        public static readonly ushort COREREQUESTS_R_TEAMMEMBER_GET_NB0 = Utils.GetCRCFromString("coreresquests::r_teammember_getnb(uint user_id_in, uint team_id_in)");
+        public static readonly ushort COREREQUESTS_R_TEAMMEMBER_GET_NB1 = Utils.GetCRCFromString("coreresquests::club_r_teammember_getnb(uint user_id_in, uint team_id_in)");
+        public static readonly ushort COREREQUESTS_A_TEAMMEMBER_GET_NB0 = Utils.GetCRCFromString("coreresquests::a_teammember_getnb(int res_out)");
+        public const ushort COREREQUESTS_A_TEAMMEMBER_GET_NB1 = 0x4A65;
+        public static readonly ushort COREREQUESTS_R_TEAMMEMBER_ENUM0 = Utils.GetCRCFromString("coreresquests::r_teammember_enum(uint user_id_in, uint team_id_in)");
+        public const ushort COREREQUESTS_R_TEAMMEMBER_ENUM1 = 0xEF1F;
+        public static readonly ushort COREREQUESTS_A_TEAMMEMBER_ENUM0 = Utils.GetCRCFromString("coreresquests::a_teammember_enum(int nb_members_out, char *buffer_out)");
+        public static readonly ushort COREREQUESTS_A_TEAMMEMBER_ENUM1 = Utils.GetCRCFromString("coreresquests::team_a_teammember_enum(int nb_members_out, char *buffer_out)");
         public const ushort COREREQUESTS_R_TEAMPRIZE_ADD = 0xF4B5;
+        public static readonly ushort COREREQUESTS_A_TEAMPRIZE_ADD = Utils.GetCRCFromString("coreresquests::a_teamprize_add(TeamResult res_out, STeamPrizeDetails prize_details_out)");
+        public static readonly ushort COREREQUESTS_R_TEAMPRIZE_REMOVE = Utils.GetCRCFromString("coreresquests::r_teamprizer_delete(uint user_id_in, uint team_id_in, uint prize_id)");
         public const ushort COREREQUESTS_A_TEAMPRIZE_REMOVE = 0xD4BD;
+        public static readonly ushort COREREQUESTS_R_TEAMPRIZE_DETAILS = Utils.GetCRCFromString("coreresquests::r_teamprize_details(uint user_id_in, uint team_id_in, uint prize_id)");
         public const ushort COREREQUESTS_A_TEAMPRIZE_DETAILS = 0x3E72;
         public const ushort COREREQUESTS_R_TEAMPRIZE_GET_NB = 0x7928;
+        public static readonly ushort COREREQUESTS_A_TEAMPRIZE_GET_NB = Utils.GetCRCFromString("coreresquests::club_a_teammember_getnb(int res_out)");
         public const ushort COREREQUESTS_R_TEAMPRIZE_ENUM = 0xBBA7;
+        public static readonly ushort COREREQUESTS_A_TEAMPRIZE_ENUM = Utils.GetCRCFromString("coreresquests::a_teamprize_enum(int nb_prizes_out, char *buffer_out)");
         public const ushort COREREQUESTS_R_FRIENDS_TEAMS = 0x161C;
         public const ushort COREREQUESTS_A_FRIENDS_TEAMS = 0x9A36;
         public const ushort CRC_GPSTRACKER_A_TRACK_USERS = 0x61CB;
         public const ushort CRC_GPSTRACKER_A_GET_DENSITYMAP_BY_LEVEL = 0xD768;
         public const ushort CRC_GPSTRACKER_A_GET_DENSITYMAP_BY_LEVEL_EX = 0x8BD0;
+
+        public static readonly ushort UserHostedNetBufferGarage = Utils.GetCRCFromString("uhedNetServiceNetBufferGarage");
+        public static readonly ushort NetBufferGarage = Utils.GetCRCFromString("edNetServiceNetBufferGarage");
+
+        public static readonly ushort STeamMemberDetails0 = Utils.GetCRCFromString("STeamMemberDetails 03/05/2006");
+        public static readonly ushort STeamMemberDetails1 = Utils.GetCRCFromString("STeamMemberDetails 06/07/2006");
     }
 }

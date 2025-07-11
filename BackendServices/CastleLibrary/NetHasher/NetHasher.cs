@@ -1,17 +1,23 @@
 using System;
-using HashLib;
 using Tpm2Lib;
 
 namespace NetHasher
 {
     public class DotNetHasher
     {
+        private const string MD5Const = "MD5";
+        private const string Sha1Const = "SHA1";
+        private const string Sha224Const = "SHA224";
+        private const string Sha256Const = "SHA256";
+        private const string Sha384Const = "SHA384";
+        private const string Sha512Const = "SHA512";
+
         public static byte[] ComputeMD5(object input)
         {
-            byte[] result = HashFactory.Crypto.BuildIn.CreateMD5CryptoServiceProvider().ComputeObject(input).GetBytes();
+            byte[] result = HashCompute.ComputeObject(input, MD5Const);
 
             if (result.Length != 16)
-                throw new InvalidOperationException("The computed MD5 hash is not 16 bytes long.");
+                throw new InvalidOperationException("[DotNetHasher] - ComputeMD5 - The computed MD5 hash is not 16 bytes long.");
 
             return result;
         }
@@ -50,10 +56,10 @@ namespace NetHasher
             }
 
             if (result == null)
-                result = HashFactory.Crypto.BuildIn.CreateSHA1Managed().ComputeObject(input).GetBytes();
+                result = HashCompute.ComputeObject(input, Sha1Const);
 
             if (result.Length != 20)
-                throw new InvalidOperationException("The computed SHA1 hash is not 20 bytes long.");
+                throw new InvalidOperationException("[DotNetHasher] - ComputeSHA1 - The computed SHA1 hash is not 20 bytes long.");
 
             return result;
         }
@@ -65,10 +71,10 @@ namespace NetHasher
 
         public static byte[] ComputeSHA224(object input)
         {
-            byte[] result = HashFactory.Crypto.CreateSHA224().ComputeObject(input).GetBytes();
+            byte[] result = HashCompute.ComputeObject(input, Sha224Const);
 
             if (result.Length != 28)
-                throw new InvalidOperationException("The computed SHA224 hash is not 28 bytes long.");
+                throw new InvalidOperationException("[DotNetHasher] - ComputeSHA224 - The computed SHA224 hash is not 28 bytes long.");
 
             return result;
         }
@@ -107,10 +113,10 @@ namespace NetHasher
             }
 
             if (result == null)
-                result = HashFactory.Crypto.BuildIn.CreateSHA256Managed().ComputeObject(input).GetBytes();
+                result = HashCompute.ComputeObject(input, Sha256Const);
 
             if (result.Length != 32)
-                throw new InvalidOperationException("The computed SHA256 hash is not 32 bytes long.");
+                throw new InvalidOperationException("[DotNetHasher] - ComputeSHA256 - The computed SHA256 hash is not 32 bytes long.");
 
             return result;
         }
@@ -149,10 +155,10 @@ namespace NetHasher
             }
 
             if (result == null)
-                result = HashFactory.Crypto.BuildIn.CreateSHA384Managed().ComputeObject(input).GetBytes();
+                result = HashCompute.ComputeObject(input, Sha384Const);
 
             if (result.Length != 48)
-                throw new InvalidOperationException("The computed SHA384 hash is not 48 bytes long.");
+                throw new InvalidOperationException("[DotNetHasher] - ComputeSHA384 - The computed SHA384 hash is not 48 bytes long.");
 
             return result;
         }
@@ -191,10 +197,10 @@ namespace NetHasher
             }
 
             if (result == null)
-                result = HashFactory.Crypto.BuildIn.CreateSHA512Managed().ComputeObject(input).GetBytes();
+                result = HashCompute.ComputeObject(input, Sha512Const);
 
             if (result.Length != 64)
-                throw new InvalidOperationException("The computed SHA512 hash is not 64 bytes long.");
+                throw new InvalidOperationException("[DotNetHasher] - ComputeSHA512 - The computed SHA512 hash is not 64 bytes long.");
 
             return result;
         }

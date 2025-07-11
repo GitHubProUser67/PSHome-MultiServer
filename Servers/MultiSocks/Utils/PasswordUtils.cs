@@ -1,4 +1,4 @@
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using System.Text;
 
 namespace MultiSocks.Utils

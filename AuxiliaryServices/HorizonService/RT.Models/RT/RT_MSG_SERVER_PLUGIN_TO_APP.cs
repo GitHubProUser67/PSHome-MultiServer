@@ -1,6 +1,8 @@
 using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
 using System;
+using EndianTools.ZipperEndian;
+using EndianTools;
 
 namespace Horizon.RT.Models
 {
@@ -20,7 +22,11 @@ namespace Horizon.RT.Models
                 base.SkipEncryption = value;
             }
         }
-
+#if DEBUG
+        private static bool debug = true;
+#else
+        private static bool debug = false;
+#endif
         public override void Deserialize(MessageReader reader)
         {
             Message = BaseMediusPluginMessage.InstantiateServerPlugin(reader);
@@ -30,18 +36,15 @@ namespace Horizon.RT.Models
         {
             if (Message != null)
             {
+                byte[] buffer = new byte[2];
+                EndianAwareConverter.WriteUInt16(buffer, Endianness.BigEndian, 0, (ushort)Message.Size);
+                byte[] buffer1 = new byte[2];
+                EndianAwareConverter.WriteUInt16(buffer1, Endianness.BigEndian, 0, (ushort)Message.PacketType);
                 writer.Write(Message.IncomingMessage);
-                writer.Write(new byte[1]);
-
-                var msgSizeInt = Convert.ToInt16(Message.Size);
-                var msgSizeReverse = ReverseBytes(msgSizeInt);
-                writer.Write(Message.Size);
+                writer.Write(buffer, buffer.Length);
                 writer.Write(Message.PluginId);
-
-                var msgTypeInt = Convert.ToInt32(Message.PacketType);
-                var msgTypeReverse = ReverseBytes(msgTypeInt);
-                
-                writer.Write(msgTypeReverse);
+                writer.Write(new byte[2]);
+                writer.Write(buffer1, buffer1.Length);
                 Message.SerializePlugin(writer);
             }
         }
@@ -59,12 +62,6 @@ namespace Horizon.RT.Models
         {
             return base.ToString() + " " +
                 $"Message: {Message}";
-        }
-
-        public static int ReverseBytes(int value)
-        {
-            return (int)((value & 0x000000FFU) << 24 | (value & 0x0000FF00U) << 8 |
-                (value & 0x00FF0000U) >> 8 | (value & 0xFF000000U) >> 24);
         }
     }
 }

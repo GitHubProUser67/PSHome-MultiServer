@@ -1,6 +1,6 @@
 using CustomLogger;
-using NetworkLibrary.GeoLocalization;
-using NetworkLibrary.HTTP;
+using MultiServerLibrary.GeoLocalization;
+using MultiServerLibrary.HTTP;
 using Horizon.DME.Extension.PlayStationHome;
 using Horizon.SERVER;
 using Horizon.SERVER.Extension.PlayStationHome;
@@ -52,7 +52,7 @@ namespace Horizon.HTTPSERVICE
             string IpToBan = ctx.Request.Source.IpAddress;
             if (!"::1".Equals(IpToBan) && !"127.0.0.1".Equals(IpToBan) && !"localhost".Equals(IpToBan, StringComparison.InvariantCultureIgnoreCase))
             {
-                if (!string.IsNullOrEmpty(IpToBan) && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs != null && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs.Contains(IpToBan))
+                if (!string.IsNullOrEmpty(IpToBan) && MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs.Contains(IpToBan))
                 {
                     LoggerAccessor.LogError($"[SECURITY] - Client - {ctx.Request.Source.IpAddress}:{ctx.Request.Source.Port} Requested the Medius CRUD API server while being banned!");
                     ctx.Response.StatusCode = 403;

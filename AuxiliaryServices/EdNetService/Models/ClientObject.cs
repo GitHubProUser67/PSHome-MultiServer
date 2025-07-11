@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using EdNetService.CRC;
 using EdNetService.Crypto;
 using EndianTools;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace EdNetService.Models
 {
@@ -24,9 +24,11 @@ namespace EdNetService.Models
     [Flags]
     public enum ClientMode
     {
-        Server = 0,
-        ProxyServer = 1,
-        Client = 2
+        None = 0,
+        Server = 1,
+        ProxyServer = 2,
+        ProxyServerRaw = 3,
+        Client = 4
     }
 
     public class ClientTask
@@ -52,7 +54,7 @@ namespace EdNetService.Models
 
         protected IPEndPoint _target = new IPEndPoint(IPAddress.Any, byte.MinValue);
 
-        protected ClientMode _clientMode = ClientMode.Client;
+        protected ClientMode _clientMode;
 
         public ClientTask(ClientObject client, uint targetIp, ushort targetPort)
         {
@@ -163,7 +165,7 @@ namespace EdNetService.Models
 
             if (_mode == RequestMode.Reliable)
             {
-                store.InsertStart((ushort)ProxyCrcList.CLIENT_TO_ORB);
+                store.InsertStart((ushort)ProxyCrcList.CRC_R_CALLACTION);
                 store.InsertUInt32(SequenceId);
                 store.InsertUInt32(TimeOut);
                 store.InsertDataStore(_request);
@@ -188,21 +190,26 @@ namespace EdNetService.Models
 
             _state = ClientState.Sending;
 
-            if (SequenceId != 0U && _response != null && _response.CurrentSize != 0)
+            if (_response != null && _response.CurrentSize != 0)
             {
                 EdStore store = new EdStore(null, 1400);
-                if (ReliableId != 0U)
+                if (SequenceId != 0U)
                 {
-                    store.InsertStart((ushort)ProxyCrcList.NETBUFFER_RESPONSE);
-                    store.InsertUInt32(SequenceId);
-                    store.InsertUInt32(ReliableId);
-                    store.InsertUInt32(ReliableBufferSize);
+                    if (ReliableId != 0U)
+                    {
+                        store.InsertStart((ushort)ProxyCrcList.NETBUFFER_RESPONSE);
+                        store.InsertUInt32(SequenceId);
+                        store.InsertUInt32(ReliableId);
+                        store.InsertUInt32(ReliableBufferSize);
+                    }
+                    else
+                    {
+                        store.InsertStart((ushort)ProxyCrcList.CRC_A_CALLACTION);
+                        store.InsertUInt32(SequenceId);
+                    }
                 }
                 else
-                {
-                    store.InsertStart((ushort)ProxyCrcList.ORB_TO_CLIENT);
-                    store.InsertUInt32(SequenceId);
-                }
+                    store.InsertStart((ushort)ProxyCrcList.COREREQUEST_CONTAINER);
                 if (_response.CurrentSize > 0)
                     store.InsertDataStore(_response);
                 store.InsertEnd();
@@ -221,29 +228,34 @@ namespace EdNetService.Models
 
             _state = ClientState.Sending;
 
-            if (SequenceId != 0U && _response != null && _response.CurrentSize != 0)
+            if (_response != null && _response.CurrentSize != 0)
             {
                 EdStore fromProxyStore = new EdStore(null, 1400);
                 EdStore store = new EdStore(null, 1400);
-                fromProxyStore.InsertStart((ushort)ProxyCrcList.FROM_PROXY);
+                fromProxyStore.InsertStart((ushort)ProxyCrcList.FROM_PROXY_HEADER);
                 fromProxyStore.InsertUInt8(5); // ORB To Client
                 fromProxyStore.InsertUInt8(0);
                 fromProxyStore.InsertUInt32(TargetIp);
                 fromProxyStore.InsertUInt16(TargetPort);
                 fromProxyStore.InsertUInt16(0);
                 fromProxyStore.InsertUInt32(Client.Id);
-                if (ReliableId != 0U)
+                if (SequenceId != 0U)
                 {
-                    store.InsertStart((ushort)ProxyCrcList.NETBUFFER_RESPONSE);
-                    store.InsertUInt32(SequenceId);
-                    store.InsertUInt32(ReliableId);
-                    store.InsertUInt32(ReliableBufferSize);
+                    if (ReliableId != 0U)
+                    {
+                        store.InsertStart((ushort)ProxyCrcList.NETBUFFER_RESPONSE);
+                        store.InsertUInt32(SequenceId);
+                        store.InsertUInt32(ReliableId);
+                        store.InsertUInt32(ReliableBufferSize);
+                    }
+                    else
+                    {
+                        store.InsertStart((ushort)ProxyCrcList.CRC_A_CALLACTION);
+                        store.InsertUInt32(SequenceId);
+                    }
                 }
                 else
-                {
-                    store.InsertStart((ushort)ProxyCrcList.ORB_TO_CLIENT);
-                    store.InsertUInt32(SequenceId);
-                }
+                    store.InsertStart((ushort)ProxyCrcList.COREREQUEST_CONTAINER);
                 if (_response.CurrentSize > 0)
                     store.InsertDataStore(_response);
                 store.InsertEnd();
@@ -267,6 +279,45 @@ namespace EdNetService.Models
             return result;
         }
 
+        public bool SendProxyRawResponse(IPEndPoint target)
+        {
+            Client.LastPacketSent = DateTimeUtils.GetHighPrecisionUtcTime();
+            _lastBufferEmited = DateTimeUtils.GetHighPrecisionUtcTime();
+
+            bool result = true;
+
+            _state = ClientState.Sending;
+
+            if (_response != null && _response.CurrentSize != 0)
+            {
+                EdStore fromProxyStore = new EdStore(null, 1400);
+                fromProxyStore.InsertStart((ushort)ProxyCrcList.FROM_PROXY_HEADER);
+                fromProxyStore.InsertUInt8(5); // ORB To Client
+                fromProxyStore.InsertUInt8(0);
+                fromProxyStore.InsertUInt32(TargetIp);
+                fromProxyStore.InsertUInt16(TargetPort);
+                fromProxyStore.InsertUInt16(0);
+                fromProxyStore.InsertUInt32(Client.Id);
+                ushort responseSize = (ushort)_response.CurrentSize;
+                fromProxyStore.InsertUInt16(responseSize);
+                fromProxyStore.InsertUInt16(0);
+                if (Client.BCipher)
+                {
+                    ushort length = (ushort)(responseSize + (Blowfish.BlockSize - (responseSize % Blowfish.BlockSize)));
+                    byte[] payloadToEncrypt = new byte[length];
+                    Array.Copy(_response.Data, 0, payloadToEncrypt, 0, responseSize);
+                    Client.EncipherData(payloadToEncrypt);
+                    fromProxyStore.InsertRawBytes(payloadToEncrypt, (ushort)payloadToEncrypt.Length);
+                }
+                else
+                    fromProxyStore.InsertRawBytes(_response.Data, responseSize);
+                fromProxyStore.InsertEnd();
+                result = Client.Send(target, fromProxyStore);
+            }
+
+            return result;
+        }
+
         public void RefreshTask()
         {
             if (!InternetProtocolUtils.IsZeroIpv4Address(_target.Address) && _target.Port != 0)
@@ -281,13 +332,23 @@ namespace EdNetService.Models
                             if (SendProxyResponse(_target))
                                 _state = ClientState.Sent;
                         }
+                        else if (_clientMode == ClientMode.ProxyServerRaw)
+                        {
+                            if (SendProxyRawResponse(_target))
+                                _state = ClientState.Sent;
+                        }
                         else if (_clientMode == ClientMode.Server)
                         {
                             if (SendResponse(_target))
                                 _state = ClientState.Sent;
                         }
-                        else if (SendRequest(_target))
-                            _state = ClientState.Sent;
+                        else if (_clientMode == ClientMode.Client)
+                        {
+                            if (SendRequest(_target))
+                                _state = ClientState.Sent;
+                        }
+                        else
+                            _state = ClientState.Error;
                     }
                     else
                         _state = ClientState.Error | ClientState.TimedOut;
@@ -316,6 +377,7 @@ namespace EdNetService.Models
         public uint Question1;
         public uint Question2;
         public uint Question3;
+        public uint StorageUserId;
         public uint UserId;
         public ulong SessionId;
 

@@ -25,7 +25,7 @@ namespace RemoteControl
                 CreateNoWindow = true
             };
 
-            if (NetworkLibrary.Extension.Microsoft.Win32API.IsWindows && NetworkLibrary.Extension.Microsoft.Win32API.IsAdministrator())
+            if (MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows && MultiServerLibrary.Extension.Microsoft.Win32API.IsAdministrator())
                 startInfo.Verb = "runas";
 
             Process process = new Process()

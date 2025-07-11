@@ -1,7 +1,7 @@
 using CustomLogger;
 using MultiSocks.Aries.Messages;
 using MultiSocks.ProtoSSL;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;

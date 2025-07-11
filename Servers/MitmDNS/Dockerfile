@@ -12,7 +12,7 @@ WORKDIR /src
 COPY ["Servers/MitmDNS/MitmDNS.csproj", "Servers/MitmDNS/"]
 COPY ["BackendServices/DNSLibrary/DNSLibrary.csproj", "BackendServices/DNSLibrary/"]
 COPY ["BackendServices/EndianTools/EndianTools.csproj", "BackendServices/EndianTools/"]
-COPY ["BackendServices/NetworkLibrary/NetworkLibrary.csproj", "BackendServices/NetworkLibrary/"]
+COPY ["BackendServices/MultiServerLibrary/MultiServerLibrary.csproj", "BackendServices/MultiServerLibrary/"]
 COPY ["BackendServices/CastleLibrary/CastleLibrary.csproj", "BackendServices/CastleLibrary/"]
 COPY ["BackendServices/CustomLogger/CustomLogger.csproj", "BackendServices/CustomLogger/"]
 COPY ["BackendServices/CompressionLibrary/CompressionLibrary.csproj", "BackendServices/CompressionLibrary/"]

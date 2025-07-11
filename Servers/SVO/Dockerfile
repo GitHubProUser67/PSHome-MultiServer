@@ -11,7 +11,7 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["Servers/SVO/SVO.csproj", "Servers/SVO/"]
 COPY ["AuxiliaryServices/HorizonService/HorizonService.csproj", "AuxiliaryServices/HorizonService/"]
-COPY ["BackendServices/NetworkLibrary/NetworkLibrary.csproj", "BackendServices/NetworkLibrary/"]
+COPY ["BackendServices/MultiServerLibrary/MultiServerLibrary.csproj", "BackendServices/MultiServerLibrary/"]
 COPY ["BackendServices/CastleLibrary/CastleLibrary.csproj", "BackendServices/CastleLibrary/"]
 COPY ["BackendServices/CustomLogger/CustomLogger.csproj", "BackendServices/CustomLogger/"]
 COPY ["BackendServices/EndianTools/EndianTools.csproj", "BackendServices/EndianTools/"]

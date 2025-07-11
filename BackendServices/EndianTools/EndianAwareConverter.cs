@@ -1,13 +1,23 @@
 ﻿using System;
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
 using System.Buffers.Binary;
+using System.Linq;
 #endif
 
 namespace EndianTools
 {
+    // Massives thanks to TDUWorld for their endian helper class.
     public static class EndianAwareConverter
     {
         private static readonly bool isLittleEndianSystem = BitConverter.IsLittleEndian;
+
+        public static byte ToUInt8(byte[] buf, Endianness endianness, uint address)
+        {
+            if (endianness != Endianness.Automatic)
+                throw new ArgumentException("[EndianAwareConverter] - UInt8 reads doesn't have an endianness to resolve to");
+
+            return buf[(int)address];
+        }
 
         public static ushort ToUInt16(byte[] buf, Endianness endianness, uint address)
         {
@@ -94,6 +104,14 @@ namespace EndianTools
                 buf[(int)address]
             }, 0);
 #endif
+        }
+
+        public static sbyte ToInt8(byte[] buf, Endianness endianness, uint address)
+        {
+            if (endianness != Endianness.Automatic)
+                throw new ArgumentException("[EndianAwareConverter] - Int8 reads doesn't have an endianness to resolve to");
+
+            return (sbyte)buf[(int)address];
         }
 
         public static short ToInt16(byte[] buf, Endianness endianness, uint address)
@@ -188,7 +206,16 @@ namespace EndianTools
             }, 0);
         }
 
-        public static void WriteInt16(byte[] buf, Endianness endianness, uint address, short value)
+        public static void WriteUInt8(byte[] buf, Endianness endianness, uint address, byte value)
+        {
+            if (endianness != Endianness.Automatic)
+                throw new ArgumentException("[EndianAwareConverter] - UInt8 writes doesn't have an endianness to resolve to");
+
+            byte[] bytes = new byte[] { value };
+            Array.Copy(bytes, 0, buf, address, bytes.Length);
+        }
+
+        public static void WriteUInt16(byte[] buf, Endianness endianness, uint address, ushort value)
         {
             byte[] bytes = BitConverter.GetBytes(value);
             if (endianness != (isLittleEndianSystem ? Endianness.LittleEndian : Endianness.BigEndian))
@@ -196,7 +223,33 @@ namespace EndianTools
             Array.Copy(bytes, 0, buf, address, 2);
         }
 
-        public static void WriteUInt16(byte[] buf, Endianness endianness, uint address, ushort value)
+        public static void WriteUInt32(byte[] buf, Endianness endianness, uint address, uint value)
+        {
+            byte[] bytes = BitConverter.GetBytes(value);
+            if (endianness != (isLittleEndianSystem ? Endianness.LittleEndian : Endianness.BigEndian))
+                Array.Reverse(bytes);
+            Array.Copy(bytes, 0, buf, address, 4);
+        }
+
+        public static void WriteUInt64(byte[] buf, Endianness endianness, uint address, ulong value)
+        {
+            byte[] bytes = BitConverter.GetBytes(value);
+            if (endianness != (isLittleEndianSystem ? Endianness.LittleEndian : Endianness.BigEndian))
+                Array.Reverse(bytes);
+            Array.Copy(bytes, 0, buf, address, 8);
+        }
+
+        public static void WriteInt8(byte[] buf, Endianness endianness, uint address, sbyte value)
+        {
+            if (endianness != Endianness.Automatic)
+                throw new ArgumentException("[EndianAwareConverter] - Int8 writes doesn't have an endianness to resolve to");
+
+            sbyte[] bytes = new sbyte[] { value };
+            Array.Copy(bytes.Select(b => (byte)b).ToArray(), 0, buf, address, bytes.Length);
+        }
+
+
+        public static void WriteInt16(byte[] buf, Endianness endianness, uint address, short value)
         {
             byte[] bytes = BitConverter.GetBytes(value);
             if (endianness != (isLittleEndianSystem ? Endianness.LittleEndian : Endianness.BigEndian))
@@ -212,23 +265,7 @@ namespace EndianTools
             Array.Copy(bytes, 0, buf, address, 4);
         }
 
-        public static void WriteUInt32(byte[] buf, Endianness endianness, uint address, uint value)
-        {
-            byte[] bytes = BitConverter.GetBytes(value);
-            if (endianness != (isLittleEndianSystem ? Endianness.LittleEndian : Endianness.BigEndian))
-                Array.Reverse(bytes);
-            Array.Copy(bytes, 0, buf, address, 4);
-        }
-
         public static void WriteInt64(byte[] buf, Endianness endianness, uint address, long value)
-        {
-            byte[] bytes = BitConverter.GetBytes(value);
-            if (endianness != (isLittleEndianSystem ? Endianness.LittleEndian : Endianness.BigEndian))
-                Array.Reverse(bytes);
-            Array.Copy(bytes, 0, buf, address, 8);
-        }
-
-        public static void WriteUInt64(byte[] buf, Endianness endianness, uint address, ulong value)
         {
             byte[] bytes = BitConverter.GetBytes(value);
             if (endianness != (isLittleEndianSystem ? Endianness.LittleEndian : Endianness.BigEndian))

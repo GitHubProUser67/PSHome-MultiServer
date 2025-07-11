@@ -1,4 +1,4 @@
-﻿using NetworkLibrary.Extension;
+﻿using MultiServerLibrary.Extension;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
@@ -20,7 +20,7 @@ namespace RemoteControl
             {
                 string fileName = ofd.FileName;
 
-                if (Encoding.ASCII.GetString(FileSystemUtils.ReadFileChunck(fileName, 2)) == "MZ")
+                if (Encoding.ASCII.GetString(FileSystemUtils.TryReadFileChunck(fileName, 2, FileSystemUtils.FileShareMode.ReadWrite)) == "MZ")
                 {
                     textBox.Text = fileName;
                     return fileName;

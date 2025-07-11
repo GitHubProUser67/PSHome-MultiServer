@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Collections.Generic;
 using System.Threading;
 using System.Linq;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace NetCoreServer
 {

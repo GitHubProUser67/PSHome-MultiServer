@@ -4,7 +4,7 @@ using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.DDL;
 using QuazalServer.QNetZ.Interfaces;
 using QuazalServer.QNetZ.Connection;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using XI5;
 
 namespace QuazalServer.RDVServices.GameServices.PS3UbisoftServices

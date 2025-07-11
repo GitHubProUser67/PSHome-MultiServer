@@ -6,7 +6,7 @@ using Horizon.SERVER.PluginArgs;
 using System.Data;
 using Horizon.PluginManager;
 using Horizon.SERVER;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.MUM.Models
 {

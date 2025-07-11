@@ -2,7 +2,7 @@ using CustomLogger;
 using Newtonsoft.Json;
 using Horizon.BWPS.Config;
 using Horizon.LIBRARY.Common;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.BWPS
 {

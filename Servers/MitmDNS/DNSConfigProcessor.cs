@@ -1,5 +1,5 @@
 using CustomLogger;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -33,7 +33,7 @@ namespace MitmDNS
             if (!string.IsNullOrEmpty(MitmDNSServerConfiguration.DNSOnlineConfig))
             {
                 LoggerAccessor.LogInfo("[DNS] - Downloading Configuration File...");
-                if (NetworkLibrary.Extension.Microsoft.Win32API.IsWindows) ServicePointManager.ServerCertificateValidationCallback = MyRemoteCertificateValidationCallback;
+                if (MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows) ServicePointManager.ServerCertificateValidationCallback = MyRemoteCertificateValidationCallback;
                 try
                 {
 #if NET7_0_OR_GREATER
@@ -42,7 +42,7 @@ namespace MitmDNS
                     ParseRules(response.Content.ReadAsStringAsync().Result, false);
 #else
 #pragma warning disable // NET 6.0 and lower has a bug where GetAsync() is EXTREMLY slow to operate (https://github.com/dotnet/runtime/issues/65375).
-                    ParseRules(new WebClient().DownloadStringTaskAsync(MitmDNSServerConfiguration.DNSOnlineConfig).Result, false);
+                    ParseRules(new GZipWebClient().DownloadStringTaskAsync(MitmDNSServerConfiguration.DNSOnlineConfig).Result, false);
 #pragma warning restore
 #endif
                 }

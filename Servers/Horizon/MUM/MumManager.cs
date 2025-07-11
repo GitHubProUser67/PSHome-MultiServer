@@ -9,7 +9,7 @@ using Horizon.HTTPSERVICE;
 using Horizon.SERVER;
 using Horizon.SERVER.Medius;
 using Horizon.MUM.Models;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using Prometheus;
 
 namespace Horizon.MUM

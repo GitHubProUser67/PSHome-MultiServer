@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 using System;
 using System.Collections.Concurrent;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace HomeTools.AFS
 {

@@ -1,11 +1,11 @@
-using NetworkLibrary.HTTP;
+using MultiServerLibrary.HTTP;
 using CustomLogger;
 using HttpMultipartParser;
 using System.Text;
 using SpaceWizards.HttpListener;
 using System.Security.Cryptography.X509Certificates;
 using SVO.Games.PS3;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace SVO
 {
@@ -38,7 +38,7 @@ namespace SVO
 
         public static bool IsIPBanned(string ipAddress)
         {
-            if (NetworkLibrary.NetworkLibraryConfiguration.BannedIPs != null && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs.Contains(ipAddress))
+            if (MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs.Contains(ipAddress))
                 return true;
 
             return false;

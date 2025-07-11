@@ -2,7 +2,7 @@ using Org.BouncyCastle.Math;
 using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
 using System;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.RT.Models
 {
@@ -67,7 +67,7 @@ namespace Horizon.RT.Models
                 // copy to cert
                 Array.Copy(rsakey, 0, MLSCert, 0x194, rsakey.Length);
 
-                //writer.Write(EncryptFlagDisable);
+                // write
                 writer.Write(MLSCert);
             }
             else //Send PS2 Server Hello

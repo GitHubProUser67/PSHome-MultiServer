@@ -31,7 +31,7 @@ namespace MitmDNS
 
         public static bool IsIPBanned(string ipAddress, int? clientport)
         {
-            if (NetworkLibrary.NetworkLibraryConfiguration.BannedIPs != null && NetworkLibrary.NetworkLibraryConfiguration.BannedIPs.Contains(ipAddress))
+            if (MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs.Contains(ipAddress))
             {
                 LoggerAccessor.LogError($"[SECURITY] - {ipAddress}:{clientport} Requested the DNS_UDP server while being banned!");
                 return true;

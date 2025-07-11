@@ -1,4 +1,4 @@
-using NetworkLibrary.HTTP;
+using MultiServerLibrary.HTTP;
 using System.Collections.Generic;
 using System.Net;
 using WebAPIService.THQ;
@@ -10,7 +10,7 @@ using System;
 using CustomLogger;
 using System.Threading.Tasks;
 using System.Globalization;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using System.Text.Json;
 using WebAPIService.COGS;
 using WebAPIService.AdobeFlash.binaries.JwPlayer;

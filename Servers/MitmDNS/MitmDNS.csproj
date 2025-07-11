@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -16,7 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\BackendServices\DNSLibrary\DNSLibrary.csproj" />
-    <ProjectReference Include="..\..\BackendServices\NetworkLibrary\NetworkLibrary.csproj" />
+    <ProjectReference Include="..\..\BackendServices\MultiServerLibrary\MultiServerLibrary.csproj" />
     <ProjectReference Include="..\..\BackendServices\TechnitiumLibrary.Net.Firewall\TechnitiumLibrary.Net.Firewall.csproj" />
   </ItemGroup>
   

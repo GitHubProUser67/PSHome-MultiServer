@@ -15,7 +15,7 @@ using System.Globalization;
 using System.Text;
 using Horizon.HTTPSERVICE;
 using System.Buffers;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using XI5;
 using EndianTools;
 using Horizon.MUM.Models;

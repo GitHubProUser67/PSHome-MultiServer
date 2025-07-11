@@ -8,7 +8,7 @@ using static Horizon.LIBRARY.libAntiCheat.Models.Game;
 using System.Collections.Generic;
 using System;
 using System.Linq;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.LIBRARY.libAntiCheat.Models
 {

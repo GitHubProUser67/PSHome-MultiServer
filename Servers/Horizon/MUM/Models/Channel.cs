@@ -4,7 +4,7 @@ using Horizon.SERVER;
 using Newtonsoft.Json;
 using System.Collections.Concurrent;
 using CustomLogger;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.MUM.Models
 {
@@ -32,7 +32,7 @@ namespace Horizon.MUM.Models
         public ConcurrentList<Channel> LocalChannels = new();
 
         public string LobbyIp = MediusClass.SERVER_IP.ToString();
-        public string RegionCode = NetworkLibrary.GeoLocalization.GeoIP.GetGeoCodeFromIP(MediusClass.SERVER_IP) ?? string.Empty;
+        public string RegionCode = MultiServerLibrary.GeoLocalization.GeoIP.GetGeoCodeFromIP(MediusClass.SERVER_IP) ?? string.Empty;
         public int LobbyPort = MediusClass.LobbyServer.TCPPort;
         public int Id = 0;
         public int ApplicationId = 0;
@@ -256,7 +256,8 @@ namespace Horizon.MUM.Models
 
         public static Channel GetDefaultChannel(int ApplicationId, int mediusVersion)
         {
-            return new Channel(1, ApplicationId, mediusVersion) { Name = "Default", Type = ChannelType.Lobby };
+            return new Channel(1, ApplicationId, mediusVersion) { Name = "Default", Type = ChannelType.Lobby,
+                LobbyFilterMaskLevelType = MediusLobbyFilterMaskLevelType.MediusLobbyFilterMaskLevel1, GenericField1 = 1000 };
         }
 
         public virtual Task Tick()

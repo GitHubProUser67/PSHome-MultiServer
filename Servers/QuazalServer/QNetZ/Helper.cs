@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using lzo.net;
 using System.Text.RegularExpressions;
 using EndianTools;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using Ionic.Zlib;
 
 namespace QuazalServer.QNetZ

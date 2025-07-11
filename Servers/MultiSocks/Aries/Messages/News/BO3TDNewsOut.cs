@@ -1,4 +1,4 @@
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace MultiSocks.Aries.Messages
 {

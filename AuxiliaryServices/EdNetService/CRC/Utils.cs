@@ -21,17 +21,13 @@ namespace EdNetService.CRC
 
         public static ushort GetCRCFromBuffer(char[] b)
         {
-            uint CRCValue = 0;
+            uint CRCValue = GetCRCFromBuffer32(b);
+            return (ushort)((CRCValue ^ uint.MaxValue) & 65535U ^ ((CRCValue ^ uint.MaxValue) & 4294901760U) >> 16);
+        }
 
-            if (b.Length >= 2 && b[0] == '"' && b[b.Length - 1] == '"')
-            {
-                char[] result = new char[b.Length - 2];
-                Array.Copy(b, 1, result, 0, result.Length);
-                CRCValue = GetCRCFromBuffer32(result);
-            }
-            else
-                CRCValue = GetCRCFromBuffer32(b);
-
+        public static ushort GetCRCFromBuffer(byte[] b)
+        {
+            uint CRCValue = GetCRCFromBuffer32(b);
             return (ushort)((CRCValue ^ uint.MaxValue) & 65535U ^ ((CRCValue ^ uint.MaxValue) & 4294901760U) >> 16);
         }
 
@@ -43,6 +39,21 @@ namespace EdNetService.CRC
                 InitializeCRCTable();
 
             foreach (byte byteValue in b.Select(v => (byte)v))
+            {
+                CRCValue = CRCValue >> 8 ^ CRCTable[(CRCValue ^ byteValue) & byte.MaxValue];
+            }
+
+            return ~CRCValue;
+        }
+
+        private static uint GetCRCFromBuffer32(byte[] b)
+        {
+            uint CRCValue = uint.MaxValue;
+
+            if (!IsCRCTableInitiated)
+                InitializeCRCTable();
+
+            foreach (byte byteValue in b)
             {
                 CRCValue = CRCValue >> 8 ^ CRCTable[(CRCValue ^ byteValue) & byte.MaxValue];
             }

@@ -14,7 +14,7 @@ using Horizon.MUIS.Config;
 using Horizon.SERVER;
 using static Horizon.SERVER.Medius.BaseMediusComponent;
 using Horizon.MUM.Models;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.MUIS
 {

@@ -6,7 +6,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using CustomLogger;
 using Horizon.RT.Cryptography;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using Horizon.MUM.Models;
 
 namespace Horizon.DME.Models

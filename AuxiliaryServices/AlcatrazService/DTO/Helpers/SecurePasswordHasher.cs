@@ -15,28 +15,24 @@ namespace Alcatraz.DTO.Helpers
 		{
 			// Create salt
 			byte[] salt;
+#if NET6_0_OR_GREATER
+            RandomNumberGenerator.Fill(salt = new byte[SaltSize]);
+#else
 			using (var rng = new RNGCryptoServiceProvider())
-			{
 				rng.GetBytes(salt = new byte[SaltSize]);
-			}
-
-			// Create hash
-			byte[] hash;
+#endif
+            // Create hash
+            byte[] hash;
 			using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations))
-			{
-				hash = pbkdf2.GetBytes(HashSize);
-			}
+                hash = pbkdf2.GetBytes(HashSize);
 
-			// Combine salt and hash
-			var hashBytes = new byte[SaltSize + HashSize];
+            // Combine salt and hash
+            byte[] hashBytes = new byte[SaltSize + HashSize];
 			Array.Copy(salt, 0, hashBytes, 0, SaltSize);
 			Array.Copy(hash, 0, hashBytes, SaltSize, HashSize);
 
-			// Convert to base64
-			var base64Hash = Convert.ToHexString(hashBytes);
-
-			// Format hash with extra information
-			return base64Hash;
+            // Convert to base64 and Format hash with extra information
+            return Convert.ToHexString(hashBytes);
 		}
 
 		public static string Hash(string password)
@@ -47,29 +43,25 @@ namespace Alcatraz.DTO.Helpers
 		public static bool Verify(string password, string base64Hash)
 		{
 			// Get hash bytes
-			var hashBytes = Convert.FromHexString(base64Hash);
+			byte[] hashBytes = Convert.FromHexString(base64Hash);
 
-			// Get salt
-			var salt = new byte[SaltSize];
+            // Get salt
+            byte[] salt = new byte[SaltSize];
 			Array.Copy(hashBytes, 0, salt, 0, SaltSize);
 
 			// Create hash with given salt
 			byte[] hash;
 			using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, HashIterations))
-			{
-				hash = pbkdf2.GetBytes(HashSize);
-			}
+                hash = pbkdf2.GetBytes(HashSize);
 
-			// Get result
-			for (var i = 0; i < HashSize; i++)
+            // Get result
+            for (var i = 0; i < HashSize; i++)
 			{
 				if (hashBytes[i + SaltSize] != hash[i])
-				{
-					return false;
-				}
-			}
-			return true;
+                    return false;
+            }
+            return true;
 		}
 	}
 #endif
-}
+		}

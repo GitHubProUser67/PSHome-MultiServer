@@ -7,7 +7,7 @@ using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Security;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace WebAPIService.WebCrypto
 {
@@ -19,7 +19,7 @@ namespace WebAPIService.WebCrypto
         public static async Task<string> GenerateRandomBase64KeyAsync()
 #else
 #pragma warning disable
-        public class WebClientWithTimeout : System.Net.WebClient
+        public class GZipWebClientWithTimeout : System.Net.GZipWebClient
         {
             public int Timeout { get; set; } = 5000; // milliseconds
 
@@ -49,9 +49,9 @@ namespace WebAPIService.WebCrypto
                     content = await client.GetStringAsync(url).ConfigureAwait(false);
                 }
 #else
-                using (WebClientWithTimeout client = new WebClientWithTimeout())
+                using (GZipWebClientWithTimeout client = new GZipWebClientWithTimeout())
                 {
-                    // Fetch the webpage content using WebClient
+                    // Fetch the webpage content using GZipWebClient
                     content = client.DownloadString(url);
                 }
 #endif

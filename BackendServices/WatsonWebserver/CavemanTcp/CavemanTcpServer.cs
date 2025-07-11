@@ -1,6 +1,6 @@
 ﻿namespace CavemanTcp
 {
-    using NetworkLibrary.SSL;
+    using MultiServerLibrary.SSL;
     using System;
     using System.Collections.Generic;
     using System.IO;

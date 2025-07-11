@@ -1,7 +1,4 @@
 using System;
-#if NETCOREAPP || NETSTANDARD1_0_OR_GREATER || NET40_OR_GREATER
-using System.Threading.Tasks;
-#endif
 #if NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
 using System.Buffers.Binary;
 #endif
@@ -20,30 +17,17 @@ namespace EndianTools
         {
             if (dataIn == null)
                 return null;
-            else if (dataIn.Length == 0)
-                return Array.Empty<byte>();
 
             const byte chunkSize = 4;
 
-#if NETCOREAPP || NETSTANDARD1_0_OR_GREATER || NET40_OR_GREATER
             int inputLength = dataIn.Length;
 
             byte[] reversedArray = new byte[inputLength];
+
             Array.Copy(dataIn, reversedArray, inputLength);
 
-            // Process Environment.ProcessorCount patherns at a time, removing the limit is not tolerable as CPU usage can go high with large arrays.
-            Parallel.For(0, (inputLength + chunkSize - 1) / chunkSize /*Ceiling division*/, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, chunkIndex =>
-            {
-                int start = chunkIndex * chunkSize;
-                Array.Reverse(reversedArray, start, Math.Min(chunkSize, inputLength - start));
-            });
-
-            return reversedArray;
-#else
-            int inputLength = dataIn.Length;
-            byte[] reversedArray = new byte[inputLength];
-            Array.Copy(dataIn, reversedArray, inputLength);
             int numofBytes;
+
             for (int i = 0; i < inputLength; i += numofBytes)
             {
                 numofBytes = chunkSize;
@@ -52,16 +36,14 @@ namespace EndianTools
                     numofBytes = remainingBytes;
                 Array.Reverse(reversedArray, i, numofBytes);
             }
+
             return reversedArray;
-#endif
         }
 
         public static byte[] EndianSwap2(byte[] dataIn)
         {
             if (dataIn == null)
                 return null;
-            else if (dataIn.Length == 0)
-                return Array.Empty<byte>();
             else if (dataIn.Length % 4 != 0)
                 throw new ArgumentException("[EndianUtils] - EndianSwap2: Array length must be a multiple of 4.");
 
@@ -95,6 +77,23 @@ namespace EndianTools
             byte[] reversedArray = (byte[])dataIn.Clone();
             Array.Reverse(reversedArray);
             return reversedArray;
+        }
+
+        /// <summary>
+        /// Reverse the endianess of a given char.
+        /// <para>change l'endianess d'un char.</para>
+        /// </summary>
+        /// <param name="dataIn">The char to endian-swap.</param>
+        /// <returns>A char.</returns>
+        public static char ReverseChar(char dataIn)
+        {
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+            return (char)BinaryPrimitives.ReverseEndianness((ushort)dataIn);
+#else
+            byte[] bytes = BitConverter.GetBytes(dataIn);
+            Array.Reverse(bytes);
+            return BitConverter.ToChar(bytes, 0);
+#endif
         }
 
         /// <summary>

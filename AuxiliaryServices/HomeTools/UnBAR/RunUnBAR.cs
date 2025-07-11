@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Linq;
 using CompressionLibrary.Edge;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using HomeTools.BARFramework;
 using HomeTools.Crypto;
 using HomeTools.PS3_Creator;
@@ -56,7 +56,7 @@ namespace HomeTools.UnBAR
                     LoggerAccessor.LogError($"[RunUnBAR] - RunDecrypt failed with status code : {ExitCode}");
                 else if (ExitCode == sbyte.MinValue)
                 {
-                    string makeNpExePath = converterPath + "/make_npdata/" + (!NetworkLibrary.Extension.Microsoft.Win32API.IsWindows ? "make_npdata_win32.exe" : "make_npdata");
+                    string makeNpExePath = converterPath + "/make_npdata/" + (!MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows ? "make_npdata_win32.exe" : "make_npdata");
 
                     if (File.Exists(makeNpExePath))
                     {

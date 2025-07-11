@@ -245,7 +245,7 @@ namespace Tommunism.SoftFloat
         public void Deconstruct(out ulong v192, out ulong v128, out ulong v64, out ulong v0) =>
             (v192, v128, v64, v0) = BitConverter.IsLittleEndian ? (_v3, _v2, _v1, _v0) : (_v0, _v1, _v2, _v3);
 
-        public override bool Equals(object? obj) => obj is SFUInt256 int256 && Equals(int256);
+        public override bool Equals(object obj) => obj is SFUInt256 int256 && Equals(int256);
 
         public bool Equals(SFUInt256 other) =>
             _v0 == other._v0 && _v1 == other._v1 && _v2 == other._v2 && _v3 == other._v3;

@@ -1,9 +1,9 @@
-﻿using Blaze3SDK.Blaze;
+using Blaze3SDK.Blaze;
 using Blaze3SDK.Blaze.Util;
 using Blaze3SDK.Components;
 using BlazeCommon;
 using CustomLogger;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace MultiSocks.Blaze.MassEffect3PS3Components.Util
 {

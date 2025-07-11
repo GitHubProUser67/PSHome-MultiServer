@@ -1,9 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.IO;
+using System.Linq;
+using System.Text;
 using CustomLogger;
 using Newtonsoft.Json.Linq;
 using NLua;
-using System;
-using System.Linq;
-using System.Text;
 
 namespace WebAPIService.OHS
 {
@@ -114,7 +117,22 @@ namespace WebAPIService.OHS
                 return token.ToString(); // For other value types, use their raw string representation
         }
 
-        public static object[] ExecuteLuaScript(string luaScript)
+        public static object ConvertLuaTableToDictionary(LuaTable table)
+        {
+            Dictionary<object, object> dict = new Dictionary<object, object>();
+            foreach (var key in table.Keys)
+            {
+                var value = table[key];
+                if (value is LuaTable nestedTable)
+                    dict[key] = ConvertLuaTableToDictionary(nestedTable);
+                else
+                    dict[key] = value;
+            }
+            return dict;
+        }
+
+        // Function to execute a lua script contained within a string.
+        public static object[] ExecuteLuaScript(string luaScript, NameValueCollection queryParams = null, string postData = null)
         {
             object[] returnValues = null;
 
@@ -122,21 +140,77 @@ namespace WebAPIService.OHS
             {
                 try
                 {
+                    if (queryParams != null)
+                    {
+                        // Set query params as a Lua table
+                        lua.DoString("query = {}");
+                        LuaTable queryTable = (LuaTable)lua["query"];
+                        foreach (string key in queryParams.AllKeys)
+                        {
+                            queryTable[key] = queryParams[key];
+                        }
+                    }
+
+                    if (postData != null)
+                        lua["postData"] = postData;
+
                     // Execute the Lua script
                     returnValues = lua.DoString(luaScript);
 
-                    // If the script returns no values, return an empty object array
-                    if (returnValues == null || returnValues.Length == 0)
+                    // If the script returns null, return an empty object array
+                    if (returnValues == null)
                         returnValues = Array.Empty<object>();
                 }
                 catch (Exception ex)
                 {
                     // Handle any exceptions that might occur during script execution
-                    LoggerAccessor.LogError("[ExecuteLuaScript] - Error executing Lua script: " + ex);
+                    LoggerAccessor.LogError("[ExecuteLuaScriptString] - Error executing Lua script: " + ex);
                     returnValues = Array.Empty<object>();
                 }
+            }
 
-                lua.Close();
+            return returnValues;
+        }
+
+        // Function to execute a lua script stored in a given file (luac compatible).
+        public static object[] ExecuteLuaScriptFile(string luaPath, NameValueCollection queryParams = null, string postData = null)
+        {
+            if (!File.Exists(luaPath))
+                return Array.Empty<object>();
+
+            object[] returnValues = null;
+
+            using (Lua lua = new Lua())
+            {
+                try
+                {
+                    if (queryParams != null)
+                    {
+                        // Set query params as a Lua table
+                        lua.DoString("query = {}");
+                        LuaTable queryTable = (LuaTable)lua["query"];
+                        foreach (string key in queryParams.AllKeys)
+                        {
+                            queryTable[key] = queryParams[key];
+                        }
+                    }
+
+                    if (postData != null)
+                        lua["postData"] = postData;
+
+                    // Execute the Lua script
+                    returnValues = lua.LoadFile(luaPath).Call();
+
+                    // If the script returns null, return an empty object array
+                    if (returnValues == null)
+                        returnValues = Array.Empty<object>();
+                }
+                catch (Exception ex)
+                {
+                    // Handle any exceptions that might occur during script execution
+                    LoggerAccessor.LogError("[ExecuteLuaScriptFile] - Error executing Lua script: " + ex);
+                    returnValues = Array.Empty<object>();
+                }
             }
 
             return returnValues;

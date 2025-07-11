@@ -4,7 +4,7 @@ using Horizon.RT.Models;
 using Horizon.LIBRARY.Database.Models;
 using System.Data;
 using Horizon.SERVER;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 namespace Horizon.MUM.Models
 {

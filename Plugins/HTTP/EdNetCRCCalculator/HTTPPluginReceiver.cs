@@ -1,4 +1,4 @@
-using NetworkLibrary.HTTP;
+using MultiServerLibrary.HTTP;
 using System;
 using System.Threading.Tasks;
 using WatsonWebserver.Core;
@@ -39,7 +39,7 @@ namespace EdNetCRCCalculator
                                         response.Headers.Add("Date", DateTime.Now.ToString("r"));
                                         response.StatusCode = (int)HttpStatusCode.OK;
                                         response.ContentType = "text/plain";
-                                        sent = response.Send(Utils.GetCRCFromStringHexadecimal(request.RetrieveQueryValue("str"))).Result;
+                                        sent = response.Send(Utils.GetCRCFromStringHexadecimal(request.RetrieveQueryValue("str").Replace("\"", string.Empty))).Result;
                                     }
                                     else
                                     {

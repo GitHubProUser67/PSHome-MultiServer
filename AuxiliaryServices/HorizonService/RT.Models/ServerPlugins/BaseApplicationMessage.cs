@@ -1,5 +1,3 @@
-using Horizon.RT.Common;
-
 namespace Horizon.RT.Models
 {
     public abstract class BaseApplicationMessage : BaseMediusPluginMessage
@@ -8,6 +6,5 @@ namespace Horizon.RT.Models
         {
 
         }
-
     }
 }

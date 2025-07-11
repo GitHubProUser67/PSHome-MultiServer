@@ -1,6 +1,6 @@
 using Org.BouncyCastle.Math;
 using Horizon.RT.Cryptography.RSA;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 
 
 namespace Horizon.DME.Config

@@ -14,7 +14,7 @@ using DotNetty.Handlers.Timeout;
 using Horizon.DME.PluginArgs;
 using Horizon.PluginManager;
 using EndianTools;
-using NetworkLibrary.Extension;
+using MultiServerLibrary.Extension;
 using Horizon.SERVER;
 using Horizon.MUM.Models;
 using Horizon.SERVER.Medius;
@@ -391,17 +391,11 @@ namespace Horizon.DME
                             mumClient.ApplicationId = clientConnectTcpAuxUdp.AppId;
                             mumClient.OnConnected();
                         }
-                        else // MAG uses DME directly to register a ClientObject.
+                        else
                         {
-                            LoggerAccessor.LogInfo($"[DME] - TcpServer - Client Connected {clientChannel.RemoteAddress} with new ClientObject!");
-
-                            mumClient = new(scertClient.MediusVersion ?? 0)
-                            {
-                                ApplicationId = clientConnectTcpAuxUdp.AppId
-                            };
-                            mumClient.OnConnected();
-
-                            MAS.ReserveClient(mumClient); // ONLY RESERVE CLIENTS HERE!
+                            data.Ignore = true;
+                            LoggerAccessor.LogError($"[DME] - TcpServer - ClientObject could not be found for {clientChannel.RemoteAddress}:{data.DMEObject}: {clientConnectTcpAuxUdp}");
+                            break;
                         }
 
                         await mumClient.JoinChannel(targetChannel);
