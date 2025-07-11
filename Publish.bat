@@ -1,5 +1,5 @@
 @echo off
-@echo MultiServer publisher script 09/06/2025
+@echo MultiServer publisher script 11/07/2025
 @echo.
 
 @echo Make sure to download and install the latest Powershell revision here: https://github.com/PowerShell/PowerShell
@@ -10,8 +10,8 @@
 @echo.
 
 :Build
-dotnet restore MultiServer3.sln
-dotnet clean MultiServer3.sln
+dotnet restore MultiServer3.slnf
+dotnet clean MultiServer3.slnf
 dotnet build "Plugins/HTTP/HomeWebTools/HomeWebTools.csproj" --configuration Debug --property WarningLevel=0
 dotnet build "Plugins/HTTP/HomeWebTools/HomeWebTools.csproj" --configuration Release --property WarningLevel=0
 dotnet build "Plugins/HTTP/EdNetCRCCalculator/EdNetCRCCalculator.csproj" --configuration Debug --property WarningLevel=0
@@ -31,8 +31,8 @@ set params=-p:PublishReadyToRun=true -p:DebugType=None -p:DebugSymbols=false --p
 
 for %%r in (%RIDs%) do (
     @echo Publishing MultiServer for %%r ...
-    dotnet publish MultiServer3.sln -r %%r -c Debug %params%
-    dotnet publish MultiServer3.sln -r %%r -c Release %params%
+    dotnet publish MultiServer3.slnf -r %%r -c Debug %params%
+    dotnet publish MultiServer3.slnf -r %%r -c Release %params%
 	
 	@echo Copying %%r build output to ~PublishOutput...
 	xcopy /E /Y /I "Servers/Horizon/bin/Debug/net6.0/%%r/publish" "~PublishOutput/%%r/Debug"
@@ -78,16 +78,16 @@ for %%r in (%RIDs%) do (
 		xcopy /E /Y /I "Plugins/HTTP/PdfToJpeg/bin/Release/net6.0/runtimes" "~PublishOutput/%%r/Release/runtimes"
 	)
 	if "%%r"=="win-x64" (
-		xcopy /E /Y /I "GUI/RemoteControl/bin/Debug/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Debug"
-		xcopy /E /Y /I "GUI/RemoteControl/bin/Release/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Release"
-		xcopy /E /Y /I "GUI/Json Editor/bin/Debug/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Debug"
-		xcopy /E /Y /I "GUI/Json Editor/bin/Release/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Release"
+		xcopy /E /Y /I "Win32GUI/RemoteControl/bin/Debug/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Debug"
+		xcopy /E /Y /I "Win32GUI/RemoteControl/bin/Release/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Release"
+		xcopy /E /Y /I "Win32GUI/Json Editor/bin/Debug/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Debug"
+		xcopy /E /Y /I "Win32GUI/Json Editor/bin/Release/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Release"
 	)
 	if "%%r"=="win-x86" (
-		xcopy /E /Y /I "GUI/RemoteControl/bin/Debug/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Debug"
-		xcopy /E /Y /I "GUI/RemoteControl/bin/Release/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Release"
-		xcopy /E /Y /I "GUI/Json Editor/bin/Debug/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Debug"
-		xcopy /E /Y /I "GUI/Json Editor/bin/Release/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Release"
+		xcopy /E /Y /I "Win32GUI/RemoteControl/bin/Debug/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Debug"
+		xcopy /E /Y /I "Win32GUI/RemoteControl/bin/Release/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Release"
+		xcopy /E /Y /I "Win32GUI/Json Editor/bin/Debug/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Debug"
+		xcopy /E /Y /I "Win32GUI/Json Editor/bin/Release/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Release"
 	)
 )
 

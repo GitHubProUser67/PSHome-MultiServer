@@ -1,5 +1,5 @@
 @echo off
-@echo MultiServer build script 30/06/2025
+@echo MultiServer build script 11/07/2025
 @echo.
 
 @echo Cleaning up directories:
@@ -8,10 +8,10 @@
 
 :Build
 @echo Building MultiServer...
-dotnet restore MultiServer3.sln
-dotnet clean MultiServer3.sln
-dotnet build MultiServer3.sln --configuration Debug --property WarningLevel=0
-dotnet build MultiServer3.sln --configuration Release --property WarningLevel=0
+dotnet restore MultiServer3.slnf
+dotnet clean MultiServer3.slnf
+dotnet build MultiServer3.slnf --configuration Debug --property WarningLevel=0
+dotnet build MultiServer3.slnf --configuration Release --property WarningLevel=0
 
 @echo Copying build output to ~BuildOutput...
 xcopy /E /Y /I "Servers/Horizon/bin" "~BuildOutput"
@@ -23,10 +23,10 @@ xcopy /E /Y /I "Servers/MultiSpy/bin" "~BuildOutput"
 xcopy /E /Y /I "Servers/ApacheNet/bin" "~BuildOutput"
 xcopy /E /Y /I "Servers/MitmDNS/bin" "~BuildOutput"
 xcopy /E /Y /I "Servers/EdenServer/bin" "~BuildOutput"
-xcopy /E /Y /I "GUI/RemoteControl/bin/Debug/net6.0-windows" "~BuildOutput/Debug"
-xcopy /E /Y /I "GUI/RemoteControl/bin/Release/net6.0-windows" "~BuildOutput/Release"
-xcopy /E /Y /I "GUI/Json Editor/bin/Debug/net6.0-windows" "~BuildOutput/Debug"
-xcopy /E /Y /I "GUI/Json Editor/bin/Release/net6.0-windows" "~BuildOutput/Release"
+xcopy /E /Y /I "Win32GUI/RemoteControl/bin/Debug/net6.0-windows" "~BuildOutput/Debug"
+xcopy /E /Y /I "Win32GUI/RemoteControl/bin/Release/net6.0-windows" "~BuildOutput/Release"
+xcopy /E /Y /I "Win32GUI/Json Editor/bin/Debug/net6.0-windows" "~BuildOutput/Debug"
+xcopy /E /Y /I "Win32GUI/Json Editor/bin/Release/net6.0-windows" "~BuildOutput/Release"
 if exist "Plugins/HTTP/HomeWebTools/bin/Debug/net6.0/static" (
     xcopy /E /Y /I "Plugins/HTTP/HomeWebTools/bin/Debug/net6.0/static" "~BuildOutput/Debug/net6.0/static"
 )
