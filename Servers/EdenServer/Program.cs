@@ -11,6 +11,7 @@ using System.Net;
 using System.Reflection;
 using System.Runtime;
 using System.Runtime.InteropServices;
+using System.Runtime.Loader;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -239,17 +240,6 @@ public static partial class EdenServerConfiguration
 
 class Program
 {
-    public enum CtrlType
-    {
-        CTRL_C_EVENT = 0,
-        CTRL_BREAK_EVENT = 1,
-        CTRL_CLOSE_EVENT = 2,
-        CTRL_LOGOFF_EVENT = 5,
-        CTRL_SHUTDOWN_EVENT = 6
-    }
-
-    private delegate bool EventHandler(CtrlType sig);
-
     const string serverName = "EdenServer";
 
     private static string configDir = Directory.GetCurrentDirectory() + "/static/";
@@ -260,9 +250,6 @@ class Program
     private static ORBServer? orbServer = null;
     private static SnmpTrapSender? trapSender = null;
     private static EventHandler? _closeHandler;
-
-    [DllImport("Kernel32")]
-    private static extern bool SetConsoleCtrlHandler(EventHandler handler, bool add);
 
     private static void StartOrUpdateServer()
     {
@@ -288,19 +275,19 @@ class Program
         amhTDUMasterServer = new TDUMasterServer(IPAddress.Any, EdenServerConfiguration.AMHMasterServerPort);
     }
 
-    private static bool CloseHandler(CtrlType sig)
+    private static void ConsoleExitHandler(object sender, ConsoleCancelEventArgs args)
     {
         LoginDatabase._instance?.Dispose();
+    }
 
-        switch (sig)
-        {
-            case CtrlType.CTRL_C_EVENT:
-            case CtrlType.CTRL_LOGOFF_EVENT:
-            case CtrlType.CTRL_SHUTDOWN_EVENT:
-            case CtrlType.CTRL_CLOSE_EVENT:
-            default:
-                return false;
-        }
+    private static void ProcessExitHandler(object sender, EventArgs e)
+    {
+        LoginDatabase._instance?.Dispose();
+    }
+
+    private static void UnloadHandler(AssemblyLoadContext obj)
+    {
+        LoginDatabase._instance?.Dispose();
     }
 
     static void Main()
@@ -333,8 +320,9 @@ class Program
 
         // we need to safely dispose of the database when the application closes
         // this is a console app, so we need to hook into the console ctrl signal
-        _closeHandler += CloseHandler;
-        SetConsoleCtrlHandler(_closeHandler, true);
+        AppDomain.CurrentDomain.ProcessExit += ProcessExitHandler;
+        AssemblyLoadContext.Default.Unloading += UnloadHandler;
+        Console.CancelKeyPress += new ConsoleCancelEventHandler(ConsoleExitHandler);
 
         LoginDatabase.Initialize(EdenServerConfiguration.LoginDatabasePath);
 
@@ -401,8 +389,6 @@ class Program
                         if (char.ToLower(Console.ReadKey().KeyChar) == 'y')
                         {
                             LoggerAccessor.LogInfo("Shutting down. Goodbye!");
-
-                            CloseHandler(CtrlType.CTRL_C_EVENT);
 
                             Environment.Exit(0);
                         }

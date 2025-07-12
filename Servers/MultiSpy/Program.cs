@@ -11,6 +11,7 @@ using System.Text.Json;
 using MultiServerLibrary.SNMP;
 using MultiServerLibrary;
 using Microsoft.Extensions.Logging;
+using System.Runtime.Loader;
 
 public static class MultiSpyServerConfiguration
 {
@@ -4848,17 +4849,6 @@ public static class MultiSpyServerConfiguration
 
 class Program
 {
-    public enum CtrlType
-    {
-        CTRL_C_EVENT = 0,
-        CTRL_BREAK_EVENT = 1,
-        CTRL_CLOSE_EVENT = 2,
-        CTRL_LOGOFF_EVENT = 5,
-        CTRL_SHUTDOWN_EVENT = 6
-    }
-
-    private delegate bool EventHandler(CtrlType sig);
-
     private static string configDir = Directory.GetCurrentDirectory() + "/static/";
     private static string configPath = configDir + "multispy.json";
     private static string configMultiServerLibraryPath = configDir + "MultiServerLibrary.json";
@@ -4870,11 +4860,6 @@ class Program
     private static ServerListRetrieve? serverListRetrieve = null;
     private static ServerNatNeg? serverNatNeg = null;
     private static ChatServer? serverChat = null;
-    private static EventHandler? _closeHandler;
-
-
-    [DllImport("Kernel32")]
-    private static extern bool SetConsoleCtrlHandler(EventHandler handler, bool add);
 
     private static void StartOrUpdateServer()
     {
@@ -4913,22 +4898,28 @@ class Program
             serverChat = new ChatServer();
     }
 
-    private static bool CloseHandler(CtrlType sig)
+    private static void ConsoleExitHandler(object sender, ConsoleCancelEventArgs args)
     {
         LoginDatabase._instance?.Dispose();
 
-		// Kill python process.
-		serverChat?.Dispose();
+        // Kill python process.
+        serverChat?.Dispose();
+    }
 
-        switch (sig)
-        {
-            case CtrlType.CTRL_C_EVENT:
-            case CtrlType.CTRL_LOGOFF_EVENT:
-            case CtrlType.CTRL_SHUTDOWN_EVENT:
-            case CtrlType.CTRL_CLOSE_EVENT:
-            default:
-                return false;
-        }
+    private static void ProcessExitHandler(object sender, EventArgs e)
+    {
+        LoginDatabase._instance?.Dispose();
+
+        // Kill python process.
+        serverChat?.Dispose();
+    }
+
+    private static void UnloadHandler(AssemblyLoadContext obj)
+    {
+        LoginDatabase._instance?.Dispose();
+
+        // Kill python process.
+        serverChat?.Dispose();
     }
 
     static void Main()
@@ -5004,8 +4995,9 @@ class Program
 
         // we need to safely dispose of the database when the application closes
         // this is a console app, so we need to hook into the console ctrl signal
-        _closeHandler += CloseHandler;
-        SetConsoleCtrlHandler(_closeHandler, true);
+        AppDomain.CurrentDomain.ProcessExit += ProcessExitHandler;
+        AssemblyLoadContext.Default.Unloading += UnloadHandler;
+        Console.CancelKeyPress += new ConsoleCancelEventHandler(ConsoleExitHandler);
 
         StartOrUpdateServer();
 
@@ -5027,8 +5019,6 @@ class Program
                         if (char.ToLower(Console.ReadKey().KeyChar) == 'y')
                         {
                             LoggerAccessor.LogInfo("Shutting down. Goodbye!");
-
-							CloseHandler(CtrlType.CTRL_C_EVENT);
 
                             Environment.Exit(0);
                         }
