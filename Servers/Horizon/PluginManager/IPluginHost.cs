@@ -2,7 +2,7 @@ using Horizon.RT.Common;
 
 namespace Horizon.PluginManager
 {
-    public delegate Task OnRegisterActionHandler(PluginEvent eventType, object data);
+    public delegate Task OnRegisterActionHandler(PluginEvent eventType, object? data);
     public delegate Task OnRegisterMessageActionHandler(RT_MSG_TYPE msgId, object data);
     public delegate Task OnRegisterMediusMessageActionHandler(NetMessageClass msgClass, byte msgType, object data);
 
