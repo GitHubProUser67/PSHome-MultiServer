@@ -4,7 +4,7 @@ using lzo.net;
 using System.Text.RegularExpressions;
 using EndianTools;
 using MultiServerLibrary.Extension;
-using Ionic.Zlib;
+using Org.BouncyCastle.Utilities.Zlib;
 
 namespace QuazalServer.QNetZ
 {
@@ -223,7 +223,6 @@ namespace QuazalServer.QNetZ
         public static byte[] Decompress(string AccessKey, byte[] data)
         {
             using (MemoryStream outMemoryStream = new())
-            using (MemoryStream inMemoryStream = new(data))
 			{
                 switch (AccessKey)
                 {
@@ -231,6 +230,7 @@ namespace QuazalServer.QNetZ
                     case "yh64s":
                     case "uG9Kv3p":
                     case "1WguH+y":
+                        using (MemoryStream inMemoryStream = new(data))
                         using (LzoStream lzo = new(inMemoryStream, System.IO.Compression.CompressionMode.Decompress))
                         {
                             lzo.CopyTo(outMemoryStream);
@@ -238,10 +238,15 @@ namespace QuazalServer.QNetZ
                             return outMemoryStream.ToArray();
                         }
                     default:
-						using (ZlibStream s = new ZlibStream(inMemoryStream, CompressionMode.Decompress))
-						{
-                            s.CopyTo(outMemoryStream);
-                            return outMemoryStream.ToArray();
+                        using (MemoryStream memoryStream = new MemoryStream())
+                        using (ZOutputStream zoutputStream = new ZOutputStream(memoryStream, false))
+                        {
+                            byte[] array = new byte[data.Length];
+                            Array.Copy(data, 0, array, 0, data.Length);
+                            zoutputStream.Write(array, 0, array.Length);
+                            zoutputStream.Close();
+                            memoryStream.Close();
+                            return memoryStream.ToArray();
                         }
                 }
             }
@@ -249,12 +254,13 @@ namespace QuazalServer.QNetZ
 
         public static byte[] Compress(byte[] data)
         {
-            using (MemoryStream outMemoryStream = new())
-            using (MemoryStream inMemoryStream = new(data))
-            using (ZlibStream s = new(inMemoryStream, CompressionMode.Compress))
-			{
-                s.CopyTo(outMemoryStream);
-                return outMemoryStream.ToArray(); // Send OG data if compressed size higher?
+            using (MemoryStream memoryStream = new MemoryStream())
+            using (ZOutputStream zoutputStream = new ZOutputStream(memoryStream, 9, false))
+            {
+                zoutputStream.Write(data, 0, data.Length);
+                zoutputStream.Close();
+                memoryStream.Close();
+                return memoryStream.ToArray(); // Send OG data if compressed size higher?
             }
         }
 

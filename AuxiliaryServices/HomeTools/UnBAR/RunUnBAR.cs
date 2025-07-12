@@ -3,7 +3,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Linq;
-using CompressionLibrary.Edge;
+using SonyEdge;
 using MultiServerLibrary.Extension;
 using HomeTools.BARFramework;
 using HomeTools.Crypto;
@@ -461,22 +461,11 @@ namespace HomeTools.UnBAR
                                     {
                                         FileBytes = Zlib.EdgeZlibDecompress(FileBytes);
                                     }
-                                    catch
+                                    catch (Exception ex)
                                     {
-                                        // Explanation, some files requires ICSharp handling for decompression, this is an expected behaviour.
+                                        LoggerAccessor.LogError($"[RunUnBar] - Errored out when processing Encryption Proxy encrypted content - {ex}");
 
-                                        LoggerAccessor.LogDebug($"[RunUnBar] - ComponentAce failed to decompress file, switching to ICSharp engine...");
-
-                                        try
-                                        {
-                                            FileBytes = Zlib.EdgeZlibDecompress(FileBytes, true);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            LoggerAccessor.LogError($"[RunUnBar] - Errored out when processing Encryption Proxy encrypted content - {ex}");
-
-                                            FileBytes = data;
-                                        }
+                                        FileBytes = data;
                                     }
 
                                     using (MemoryStream memoryStream = new MemoryStream(FileBytes))
@@ -588,22 +577,11 @@ namespace HomeTools.UnBAR
                 {
                     FileBytes = Zlib.EdgeZlibDecompress(FileBytes);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Explanation, some files requires ICSharp handling for decompression, this is an expected behaviour.
+                    LoggerAccessor.LogError($"[RunUnBar] - Errored out when processing XTEA Proxy encrypted content - {ex}");
 
-                    LoggerAccessor.LogDebug($"[RunUnBar] - ComponentAce failed to decompress file, switching to ICSharp engine...");
-
-                    try
-                    {
-                        FileBytes = Zlib.EdgeZlibDecompress(FileBytes, true);
-                    }
-                    catch (Exception ex)
-                    {
-                        LoggerAccessor.LogError($"[RunUnBar] - Errored out when processing XTEA Proxy encrypted content - {ex}");
-
-                        FileBytes = data;
-                    }
+                    FileBytes = data;
                 }
 
                 using (MemoryStream memoryStream = new MemoryStream(FileBytes))

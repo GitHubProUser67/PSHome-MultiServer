@@ -23,6 +23,7 @@
   <ItemGroup>
     <PackageReference Include="Lextm.SharpSnmpLib" Version="12.5.5" />
     <PackageReference Include="Microsoft.TSS" Version="2.1.1" />
+    <PackageReference Include="SharpCompress" Version="0.40.0" />
   </ItemGroup>
 
   <ItemGroup>

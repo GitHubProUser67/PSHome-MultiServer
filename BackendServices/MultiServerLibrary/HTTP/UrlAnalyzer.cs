@@ -6,10 +6,9 @@ using System.IO;
 using System.Threading;
 using MultiServerLibrary.Extension;
 
-namespace MultiServerLibrary.AIModels
+namespace MultiServerLibrary.HTTP
 {
-    // Self contained AI engine for HTTP driven use.
-    public class WebMachineLearning
+    public class UrlAnalyzer
     {
         private static object _Lock = new object();
         public static IEnumerable<FileSystemInfo> fileSystemCache = null;
@@ -172,7 +171,7 @@ namespace MultiServerLibrary.AIModels
             {
                 for (int j = 1; j <= text2.Length; j++)
                 {
-                    int cost = (text2[j - 1] == text1[i - 1]) ? 0 : 1;
+                    int cost = text2[j - 1] == text1[i - 1] ? 0 : 1;
                     matrix[i, j] = new[] {
                         matrix[i - 1, j] + 1,
                         matrix[i, j - 1] + 1,
@@ -197,12 +196,12 @@ namespace MultiServerLibrary.AIModels
 
                 if (Directory.Exists(HttpRootFolder))
                 {
-                    CustomLogger.LoggerAccessor.LogWarn("[WebMachineLearning] - Caching fileSystem structure, this might longer on very slow hard drives...");
+                    CustomLogger.LoggerAccessor.LogWarn("[UrlAnalyzer] - Caching fileSystem structure, this might longer on very slow hard drives...");
 
                     lock (_Lock)
-                        fileSystemCache = FileSystemUtils.AllFilesAndFoldersLinq(new DirectoryInfo(HttpRootFolder));
+                        fileSystemCache = new DirectoryInfo(HttpRootFolder).AllFilesAndFoldersLinq();
 
-                    CustomLogger.LoggerAccessor.LogInfo("[WebMachineLearning] - fileSystem Cache has been actualized and is ready!");
+                    CustomLogger.LoggerAccessor.LogInfo("[UrlAnalyzer] - fileSystem Cache has been actualized and is ready!");
                 }
             }
         }

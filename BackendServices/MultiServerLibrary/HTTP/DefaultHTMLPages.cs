@@ -1,4 +1,3 @@
-using MultiServerLibrary.AIModels;
 using System.Collections.Concurrent;
 using System;
 using System.Collections.Generic;
@@ -33,7 +32,7 @@ namespace MultiServerLibrary.HTTP
 
             if (status == HttpStatusCode.NotFound)
             {
-                if (AIAssistant && WebMachineLearning.IsAvailable())
+                if (AIAssistant && UrlAnalyzer.IsAvailable())
                 {
                     List<string> Urls = null;
 
@@ -42,7 +41,7 @@ namespace MultiServerLibrary.HTTP
                         Urls = value.Item2;
                     else if (searchSemaphore.Wait(0)) // We not await for the semaphore, rather we check if yes or not we can enter.
                     {
-                        Urls = WebMachineLearning.GenerateUrlsSuggestions(absolutepathUrl, HttpRootFolder, 0.1)?.Where(url => url != null).ToList();
+                        Urls = UrlAnalyzer.GenerateUrlsSuggestions(absolutepathUrl, HttpRootFolder, 0.1)?.Where(url => url != null).ToList();
 
                         if (Urls != null)
                         {

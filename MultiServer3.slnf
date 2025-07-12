@@ -9,7 +9,6 @@
       "AuxiliaryServices\\MultiSpyService\\MultiSpyService.csproj",
       "AuxiliaryServices\\WebAPIService\\WebAPIService.csproj",
       "BackendServices\\CastleLibrary\\CastleLibrary.csproj",
-      "BackendServices\\CompressionLibrary\\CompressionLibrary.csproj",
       "BackendServices\\CustomLogger\\CustomLogger.csproj",
       "BackendServices\\DNSLibrary\\DNSLibrary.csproj",
       "BackendServices\\EndianTools\\EndianTools.csproj",

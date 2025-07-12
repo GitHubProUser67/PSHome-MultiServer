@@ -1,5 +1,5 @@
-using ComponentAce.Compression.Libs.zlib;
 using CustomLogger;
+using Org.BouncyCastle.Utilities.Zlib;
 using System;
 using System.IO;
 

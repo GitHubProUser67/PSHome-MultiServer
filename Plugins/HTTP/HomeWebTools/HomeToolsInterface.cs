@@ -12,7 +12,7 @@ using System.Collections.Generic;
 using System;
 using System.Threading.Tasks;
 using System.Linq;
-using CompressionLibrary.Edge;
+using SonyEdge;
 using MultiServerLibrary.Extension;
 using WebAPIService.Utils;
 using EndianTools;
@@ -884,7 +884,7 @@ namespace HomeWebTools
 
                                 filename = multipartfile.FileName;
 
-                                byte[] DecompressedData = LZMA.Decompress(buffer, true);
+                                byte[] DecompressedData = LZMA.SegmentsDecompress(buffer);
 
                                 if (DecompressedData != null)
                                     TasksResult.Add((DecompressedData, $"{filename}_Unpacked.sql"));

@@ -1,4 +1,4 @@
-using CompressionLibrary.Edge;
+using SonyEdge;
 
 namespace HomeTools.BARFramework
 {

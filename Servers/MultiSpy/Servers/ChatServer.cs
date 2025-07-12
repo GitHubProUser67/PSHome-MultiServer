@@ -36,7 +36,7 @@ namespace MultiSpy.Servers
 
                 if (File.Exists(zlibFilePath) && !File.Exists(scriptPath))
                 {
-                    File.WriteAllBytes(scriptPath.Replace(edgeZlibExtension, string.Empty), CompressionLibrary.Edge.Zlib.EdgeZlibDecompress(File.ReadAllBytes(zlibFilePath)));
+                    File.WriteAllBytes(scriptPath.Replace(edgeZlibExtension, string.Empty), SonyEdge.Zlib.EdgeZlibDecompress(File.ReadAllBytes(zlibFilePath)));
                     File.Move(zlibFilePath, zlibFilePath + ".old");
                 }
 

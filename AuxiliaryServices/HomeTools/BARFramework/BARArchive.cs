@@ -9,11 +9,12 @@ using System.Xml;
 using System.IO;
 using System.Collections.Generic;
 using System;
-using CompressionLibrary.Edge;
 using MultiServerLibrary.Extension;
 using HomeTools.AFS;
 using MultiServerLibrary.HTTP;
 using EndianTools.BinaryExtension;
+using SonyEdge;
+
 
 #if NET6_0_OR_GREATER
 using MultiServerLibrary.Upscalers;

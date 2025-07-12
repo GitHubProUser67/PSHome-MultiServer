@@ -20,7 +20,6 @@ $propertiesToRemove = @(
     "Blaze3SDK/1.0.0",
     "BlazeCommon/1.0.0",
     "CastleLibrary/1.0.0",
-    "CompressionLibrary/1.0.0",
     "CustomLogger/1.0.0",
     "MultiServerLibrary/1.0.0",
     "EndianTools/1.0.0",

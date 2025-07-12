@@ -1,8 +1,6 @@
-using ComponentAce.Compression.Libs.zlib;
 using ZstdSharp;
 using ZstdSharp.Unsafe;
 using MultiServerLibrary.Extension;
-using Ionic.Exploration;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -14,6 +12,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 using System.Text.Json;
+using Org.BouncyCastle.Utilities.Zlib;
 #if NET7_0_OR_GREATER
 using System.Net.Http;
 #else
@@ -1089,7 +1088,7 @@ namespace MultiServerLibrary.HTTP
                 return null;
 
             using (MemoryStream output = new MemoryStream())
-            using (BrotliStream brStream = new BrotliStream(output, CompressionLevel.Fastest))
+            using (BrotliStream brStream = new BrotliStream(output, System.IO.Compression.CompressionLevel.Fastest))
             {
                 brStream.Write(input, 0, input.Length);
                 brStream.Flush();
@@ -1103,10 +1102,10 @@ namespace MultiServerLibrary.HTTP
                 return null;
 
             using (MemoryStream output = new MemoryStream())
+            using (var gZipStream = new System.IO.Compression.GZipStream(output, System.IO.Compression.CompressionLevel.Fastest))
             {
-                ParallelGZipOutputStream gzipStream = new ParallelGZipOutputStream(output, Ionic.Zlib.CompressionLevel.BestSpeed, Ionic.Zlib.CompressionStrategy.Filtered, true, Environment.ProcessorCount);
-                gzipStream.Write(input, 0, input.Length);
-                gzipStream.Close();
+                gZipStream.Write(input, 0, input.Length);
+                gZipStream.Close();
                 return output.ToArray();
             }
         }
@@ -1116,8 +1115,8 @@ namespace MultiServerLibrary.HTTP
             if (input == null)
                 return null;
             using (MemoryStream output = new MemoryStream())
+            using (var zlibStream = new ZOutputStream(output, 1, true))
             {
-                ZOutputStream zlibStream = new ZOutputStream(output, 1, true);
                 zlibStream.Write(input, 0, input.Length);
                 zlibStream.Close();
                 return output.ToArray();
@@ -1167,7 +1166,7 @@ namespace MultiServerLibrary.HTTP
                         outMemoryStream = new HugeMemoryStream();
                     else
                         outMemoryStream = new MemoryStream();
-                    using (BrotliStream outBStream = new BrotliStream(outMemoryStream, CompressionLevel.Fastest, true))
+                    using (BrotliStream outBStream = new BrotliStream(outMemoryStream, System.IO.Compression.CompressionLevel.Fastest, true))
                     {
                         StreamUtils.CopyStream(input, outBStream);
                         outBStream.Flush();
@@ -1196,8 +1195,8 @@ namespace MultiServerLibrary.HTTP
                         outMemoryStream = new HugeMemoryStream();
                     else
                         outMemoryStream = new MemoryStream();
-                    using (ParallelGZipOutputStream outGStream = new ParallelGZipOutputStream(outMemoryStream, Ionic.Zlib.CompressionLevel.BestSpeed, Ionic.Zlib.CompressionStrategy.Filtered, true, Environment.ProcessorCount))
-                        StreamUtils.CopyStream(input, outGStream);
+                    using (var gZipStream = new System.IO.Compression.GZipStream(outMemoryStream, System.IO.Compression.CompressionLevel.Fastest, true))
+                        StreamUtils.CopyStream(input, gZipStream);
                     outMemoryStream.Seek(0, SeekOrigin.Begin);
                 }
                 catch

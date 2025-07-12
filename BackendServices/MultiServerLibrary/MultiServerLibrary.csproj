@@ -25,7 +25,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CastleLibrary\CastleLibrary.csproj" />
-    <ProjectReference Include="..\CompressionLibrary\CompressionLibrary.csproj" />
   </ItemGroup>
 
 </Project>

@@ -3,7 +3,7 @@ namespace WebAPIService.AdobeFlash.binaries.JwPlayer
     // This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/3.0/ or send a letter to Creative Commons, 171 Second Street, Suite 300, San Francisco, California, 94105, USA.
     public static class jwPlayer43Swf
     {
-        public static readonly byte[] Data = CompressionLibrary.Edge.Zlib.EdgeZlibDecompress(new byte[]
+        public static readonly byte[] Data = SonyEdge.Zlib.EdgeZlibDecompress(new byte[]
         {
  0xA6, 0x46, 0xA6, 0x46, 0x43, 0x57, 0x53, 0x09, 0x71, 0x56, 0x01, 0x00, 0x78, 0x9C, 0xEC, 0x7C,
  0x77, 0x60, 0x54, 0xC5, 0xF6, 0xFF, 0x9D, 0x7B, 0xE7, 0xDE, 0xBB, 0x77, 0xB3, 0xA9, 0x04, 0x88,

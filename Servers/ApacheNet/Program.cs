@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System;
 using System.Threading.Tasks;
-using MultiServerLibrary.AIModels;
 using System.Security.Cryptography;
 using System.Reflection;
 using MultiServerLibrary.HTTP;
@@ -432,7 +431,7 @@ class Program
             dnswatcher.EnableRaisingEvents = false;
 
         if (ApacheNetServerConfiguration.NotFoundSuggestions && FilesystemTree == null)
-            FilesystemTree = new Timer(WebMachineLearning.ScheduledfileSystemUpdate, ApacheNetServerConfiguration.HTTPStaticFolder, TimeSpan.Zero, TimeSpan.FromMinutes(1440));
+            FilesystemTree = new Timer(UrlAnalyzer.ScheduledfileSystemUpdate, ApacheNetServerConfiguration.HTTPStaticFolder, TimeSpan.Zero, TimeSpan.FromMinutes(1440));
         else if (!ApacheNetServerConfiguration.NotFoundSuggestions && FilesystemTree != null)
             _ = FilesystemTree.DisposeAsync();
 

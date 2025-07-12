@@ -17,7 +17,6 @@ $propertyPath = ".NETCoreApp,Version=v$version"
 # Define an array of property names to remove
 $propertiesToRemove = @(
     "CastleLibrary/1.0.0",
-    "CompressionLibrary/1.0.0",
     "CustomLogger/1.0.0",
     "MultiServerLibrary/1.0.0",
 	"PS2FloatLibrary/1.0.0",

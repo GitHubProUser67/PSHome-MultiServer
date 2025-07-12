@@ -1,17 +1,15 @@
 using EndianTools;
+using Org.BouncyCastle.Utilities.Zlib;
 using System;
-using System.IO;
-using ComponentAce.Compression.Libs.zlib;
-using ICSharpCode.SharpZipLib.Zip.Compression;
-using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
-namespace CompressionLibrary.Edge
+namespace SonyEdge
 {
     public class Zlib
     {
-        public static byte[] EdgeZlibDecompress(byte[] inData, bool ICSharp = false)
+        public static byte[] EdgeZlibDecompress(byte[] inData)
         {
             int chunkIndex = 0;
             List<KeyValuePair<int, byte[]>> zlibResults = new List<KeyValuePair<int, byte[]>>();
@@ -26,9 +24,7 @@ namespace CompressionLibrary.Edge
                     int compressedSize = header.CompressedSize;
                     byte[] array2 = new byte[compressedSize];
                     memoryStream.Read(array2, 0, compressedSize);
-                    zlibResults.Add(ICSharp
-                        ? new KeyValuePair<int, byte[]>(chunkIndex, ICSharpDecompressEdgeZlibChunk(array2, header))
-                        : new KeyValuePair<int, byte[]>(chunkIndex, ComponentAceDecompressEdgeZlibChunk(array2, header)));
+                    zlibResults.Add(new KeyValuePair<int, byte[]>(chunkIndex, DecompressEdgeZlibChunk(array2, header)));
                     chunkIndex++;
                 }
             }
@@ -57,7 +53,7 @@ namespace CompressionLibrary.Edge
                     int currentBlockSize = Math.Min((int)(memoryStream.Length - memoryStream.Position), ushort.MaxValue);
                     byte[] array = new byte[currentBlockSize];
                     memoryStream.Read(array, 0, currentBlockSize);
-                    zlibResults.Add(new KeyValuePair<int, byte[]>(chunkIndex, ComponentAceCompressEdgeZlibChunk(array)));
+                    zlibResults.Add(new KeyValuePair<int, byte[]>(chunkIndex, CompressEdgeZlibChunk(array)));
                     chunkIndex++;
                 }
             }
@@ -74,27 +70,7 @@ namespace CompressionLibrary.Edge
             }
         }
 
-        private static byte[] ICSharpDecompressEdgeZlibChunk(byte[] inData, ChunkHeader header)
-        {
-            if (header.CompressedSize == header.SourceSize)
-                return inData;
-            InflaterInputStream inflaterInputStream = new InflaterInputStream(new MemoryStream(inData), new Inflater(true));
-            using (MemoryStream memoryStream = new MemoryStream())
-            {
-                byte[] array = new byte[4096];
-                for (; ; )
-                {
-                    int processedBytes = inflaterInputStream.Read(array, 0, array.Length);
-                    if (processedBytes <= 0)
-                        break;
-                    memoryStream.Write(array, 0, processedBytes);
-                }
-                inflaterInputStream.Dispose();
-                return memoryStream.ToArray();
-            }
-        }
-
-        private static byte[] ComponentAceDecompressEdgeZlibChunk(byte[] InData, ChunkHeader header)
+        private static byte[] DecompressEdgeZlibChunk(byte[] InData, ChunkHeader header)
         {
             if (header.CompressedSize == header.SourceSize)
                 return InData;
@@ -110,7 +86,7 @@ namespace CompressionLibrary.Edge
             }
         }
 
-        private static byte[] ComponentAceCompressEdgeZlibChunk(byte[] InData)
+        private static byte[] CompressEdgeZlibChunk(byte[] InData)
         {
             byte[] array, array2;
 
