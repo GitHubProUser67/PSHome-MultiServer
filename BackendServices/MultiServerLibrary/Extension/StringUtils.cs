@@ -24,21 +24,6 @@ namespace MultiServerLibrary.Extension
         [DllImport("kernel32.dll")]
         private static extern bool IsProcessorFeaturePresent(int processorFeature);
 #endif
-
-        public static string GenerateRandomString(int length)
-        {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            Random random = new Random();
-            StringBuilder stringBuilder = new StringBuilder();
-
-            for (int i = 0; i < length; i++)
-            {
-                stringBuilder.Append(chars[random.Next(chars.Length)]);
-            }
-
-            return stringBuilder.ToString();
-        }
-
         public static string ChopOffBefore(this string s, string Before)
         {
             // Usefull function for chopping up strings
@@ -162,23 +147,6 @@ namespace MultiServerLibrary.Extension
             }
 
             return byteArray;
-        }
-
-        /// <summary>
-        /// Converts a Wireshark string dump into a byte array.
-        /// </summary>
-        /// <param name="wiresharkDump">The Wireshark dump as a string</param>
-        /// <returns>Byte array constructed from the dump</returns>
-        public static byte[] WiresharkDumpToByteArray(string wiresharkDump)
-        {
-            List<byte> byteList = new List<byte>();
-
-            foreach (Match match in new Regex(@"\b[0-9a-fA-F]{2}\b").Matches(wiresharkDump))
-            {
-                byteList.Add(Convert.ToByte(match.Value, 16));
-            }
-
-            return byteList.ToArray();
         }
 
         /// <summary>

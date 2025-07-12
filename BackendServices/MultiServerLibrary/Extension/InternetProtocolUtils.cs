@@ -20,8 +20,6 @@ namespace MultiServerLibrary.Extension
         private static readonly object _TryGetIpLock = new object();
         private static readonly object _PublicIpLock = new object();
 
-        private static readonly string _CacheSalt = StringUtils.GenerateRandomString(2);
-
         private static readonly TimedDictionary<byte, (bool, string)> _InternalIpCache = new TimedDictionary<byte, (bool, string)>();
 
         /// <summary>
@@ -108,7 +106,7 @@ namespace MultiServerLibrary.Extension
             const string fallbackIpv4Url = "https://api4.ipify.org";
 
             string result = null;
-            byte cacheKey = CRC8.Create(Encoding.UTF8.GetBytes($"Public{allowipv6}{ipv6urlformat}{_CacheSalt}"));
+            byte cacheKey = CRC8.Create(Encoding.UTF8.GetBytes($"Public{allowipv6}{ipv6urlformat}"));
 
             lock (_PublicIpLock)
             {
@@ -255,7 +253,7 @@ namespace MultiServerLibrary.Extension
                 isPublic = false;
 
             string ServerIP;
-            byte cacheKey = CRC8.Create(Encoding.UTF8.GetBytes($"Neg{allowipv6}{_CacheSalt}"));
+            byte cacheKey = CRC8.Create(Encoding.UTF8.GetBytes($"Neg{allowipv6}"));
 
             lock (_TryGetIpLock)
             {
