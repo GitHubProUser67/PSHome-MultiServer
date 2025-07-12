@@ -15,8 +15,8 @@ namespace ApacheNet.PluginManager
             {
                 foreach (string dllFile in Directory.GetFiles(folderPath, "*.dll", SearchOption.AllDirectories))
                 {
-                    HTTPPlugin plugin = LoadPlugin(dllFile);
-                    if (plugin != null)
+                    HTTPPlugin? plugin = LoadPlugin(dllFile);
+                    if (plugin is not null)
                     {
                         CustomLogger.LoggerAccessor.LogInfo($"[PluginLoader] - Plugin: {dllFile} Loaded.");
                         plugins.Add(Path.GetFileNameWithoutExtension(dllFile), plugin);
@@ -29,7 +29,7 @@ namespace ApacheNet.PluginManager
             return plugins;
         }
 
-        public static HTTPPlugin LoadPlugin(string pluginPath)
+        public static HTTPPlugin? LoadPlugin(string pluginPath)
         {
             try
             {
