@@ -47,12 +47,6 @@
     <EmbeddedResource Include="costura-win-x64\SQLite.Interop.dll" />
   </ItemGroup>
   
-  <ItemGroup>
-    <Reference Include="Reality.Net">
-      <HintPath>External\Reality.Net.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-  
   <Target Name="ModifyDepsFile" AfterTargets="AfterBuild">
     <Exec Command="cmd /c (where pwsh &gt;nul 2&gt;&amp;1 &amp;&amp; pwsh -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath &quot;$(OutDir)$(ProjectName).deps.json&quot; -targetFramework &quot;$(TargetFramework)&quot;) || (powershell -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath &quot;$(OutDir)$(ProjectName).deps.json&quot; -targetFramework &quot;$(TargetFramework)&quot;)" />
   </Target>

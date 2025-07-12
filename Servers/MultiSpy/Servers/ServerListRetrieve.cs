@@ -5,7 +5,8 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using MultiServerLibrary.Extension.LinqSQL;
-using Reality.Net.GameSpy.Servers;
+using MultiSpyService.Utils;
+using MultiSpyService.GSEncoding;
 
 namespace MultiSpy.Servers
 {
@@ -340,7 +341,7 @@ namespace MultiSpy.Servers
 			}
 
 			byte[] unencryptedServerList = PackServerList(state, servers, fields);
-			byte[] encryptedServerList = GSEncoding.Encode(DataFunctions.StringToBytes(MultiSpyServerConfiguration.GetKeyFromGameName(gamename)),
+			byte[] encryptedServerList = EncodingHelper.Encode(DataFunctions.StringToBytes(MultiSpyServerConfiguration.GetKeyFromGameName(gamename)),
 				DataFunctions.StringToBytes(validate), unencryptedServerList, unencryptedServerList.LongLength);
 			SendToClient(state, encryptedServerList);
 			return true;

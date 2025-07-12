@@ -37,7 +37,7 @@ namespace EdenServer.EdNet.ProxyMessages.Database.Login
             else
             {
                 response.InsertUInt8(1); // Success
-                response.InsertUInt32(Convert.ToUInt32(userData["id"]));
+                response.InsertUInt32(userId);
                 response.InsertUInt8(LoginDatabase.Instance.LogLogin(userName, clientIp) ? (byte)1 : (byte)0);
             }
 

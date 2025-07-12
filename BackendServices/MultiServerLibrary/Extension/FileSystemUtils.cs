@@ -10,6 +10,8 @@ namespace MultiServerLibrary.Extension
 {
     public static class FileSystemUtils
     {
+        public const string ASCIIChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
         public enum FileShareMode
         {
             //
@@ -179,7 +181,7 @@ namespace MultiServerLibrary.Extension
 
         public static string RemoveInvalidPathChars(string input)
         {
-            const string allowedChars = "-_.abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/\\";
+            string allowedChars = $"-_.{ASCIIChars}/\\";
             StringBuilder empty = new StringBuilder();
             foreach (char ch in input)
             {

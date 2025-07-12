@@ -1,6 +1,5 @@
 using MultiSpy.Data;
-using Reality.Net.Extensions;
-using Reality.Net.GameSpy.Servers;
+using MultiSpyService.Utils;
 using System.Net;
 using System.Text;
 
@@ -180,7 +179,7 @@ namespace MultiSpy.Servers
 					return DataFunctions.StringToBytes(@"\error\\err\0\fatal\\errmsg\The password is too long, must be 30 characters at most!\id\1\final\"); 
 				}
 
-				LoginDatabase.Instance.CreateUser(state.Name, password.ToMD5(), state.Email, "??", ((IPEndPoint)state.Socket.RemoteEndPoint).Address);
+				LoginDatabase.Instance.CreateUser(state.Name, NetHasher.DotNetHasher.ComputeMD5String(Encoding.ASCII.GetBytes(password)).ToLower(), state.Email, "??", ((IPEndPoint)state.Socket.RemoteEndPoint).Address);
 				
 				var clientData = LoginDatabase.Instance.GetData(state.Name);
 
@@ -217,7 +216,7 @@ namespace MultiSpy.Servers
 				password = keyValues["pass"];
 			}
 
-			password = password.ToMD5();
+			password = NetHasher.DotNetHasher.ComputeMD5String(Encoding.ASCII.GetBytes(password)).ToLower();
 
 			var clientData = LoginDatabase.Instance.GetData(keyValues["email"], password);
 
@@ -286,7 +285,7 @@ namespace MultiSpy.Servers
 			value += state.ClientChallenge;
 			value += state.PasswordEncrypted;
 
-			return value.ToMD5();
+			return NetHasher.DotNetHasher.ComputeMD5String(Encoding.ASCII.GetBytes(value)).ToLower();
 		}
 
 		private static string GenerateResponseValue(ref LoginSocketState state)
@@ -298,7 +297,7 @@ namespace MultiSpy.Servers
 			value += state.ServerChallenge;
 			value += state.PasswordEncrypted;
 
-			return value.ToMD5();
+			return NetHasher.DotNetHasher.ComputeMD5String(Encoding.ASCII.GetBytes(value)).ToLower();
 		}
 
 		private static readonly ushort[] SessionCRCTable = new ushort[256] {
