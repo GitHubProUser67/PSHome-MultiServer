@@ -46,7 +46,6 @@ public static class ApacheNetServerConfiguration
     public static string HTTPSCertificatePassword { get; set; } = "qwerty";
     public static HashAlgorithmName HTTPSCertificateHashingAlgorithm { get; set; } = HashAlgorithmName.SHA384;
     public static bool PreferNativeHttpListenerEngine { get; set; } = false;
-    public static bool UseLiteEngine { get; set; } = false;
     public static bool RangeHandling { get; set; } = false;
     public static bool ChunkedTransfers { get; set; } = false;
     public static bool DomainFolder { get; set; } = false;
@@ -181,7 +180,6 @@ public static class ApacheNetServerConfiguration
                 new JProperty("404_not_found_web_archive", NotFoundWebArchive),
                 new JProperty("404_not_found_web_archive_date_limit", NotFoundWebArchiveDateLimit),
                 new JProperty("prefer_native_httplistener_engine", PreferNativeHttpListenerEngine),
-                new JProperty("use_lite_engine", UseLiteEngine),
                 new JProperty("enable_range_handling", RangeHandling),
                 new JProperty("enable_chunked_transfers", ChunkedTransfers),
                 new JProperty("enable_domain_folder", DomainFolder),
@@ -234,7 +232,6 @@ public static class ApacheNetServerConfiguration
                 NotFoundWebArchive = GetValueOrDefault(config, "404_not_found_web_archive", NotFoundWebArchive);
                 NotFoundWebArchiveDateLimit = GetValueOrDefault(config, "404_not_found_web_archive_date_limit", NotFoundWebArchiveDateLimit);
                 PreferNativeHttpListenerEngine = GetValueOrDefault(config, "prefer_native_httplistener_engine", PreferNativeHttpListenerEngine);
-                UseLiteEngine = GetValueOrDefault(config, "use_lite_engine", UseLiteEngine);
                 RangeHandling = GetValueOrDefault(config, "enable_range_handling", RangeHandling);
                 ChunkedTransfers = GetValueOrDefault(config, "enable_chunked_transfers", ChunkedTransfers);
                 DomainFolder = GetValueOrDefault(config, "enable_domain_folder", DomainFolder);

@@ -39,7 +39,6 @@ using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using WatsonWebserver.Core;
 using WatsonWebserver.Native;
-using WatsonWebserver.Lite;
 using WatsonWebserver;
 using MultiServerLibrary.Extension;
 using DNS.Protocol;
@@ -64,8 +63,6 @@ namespace ApacheNet
 
         private WebserverBase? _Server;
         private readonly ushort port;
-
-        private readonly bool _UsingLite = ApacheNetServerConfiguration.UseLiteEngine;
 
         #region Domains
         private readonly static List<string> HPDDomains = new() {
@@ -131,27 +128,22 @@ namespace ApacheNet
                 settings.Ssl.PfxCertificatePassword = certpass;
                 settings.Ssl.Enable = true;
             }
-            if (!_UsingLite)
+            if (useHttpSys)
             {
-                if (useHttpSys)
-                {
-                    _Server = new NativeWebserver(settings, DefaultRoute, MaxConcurrentListeners);
+                _Server = new NativeWebserver(settings, DefaultRoute, MaxConcurrentListeners);
 #if !DEBUG
                     ((NativeWebserver)_Server).LogResponseSentMsg = false;
 #endif
-                    ((NativeWebserver)_Server).KeepAliveResponseData = false;
-                }
-                else
-                {
-                    _Server = new Webserver(settings, DefaultRoute, MaxConcurrentListeners);
+                ((NativeWebserver)_Server).KeepAliveResponseData = false;
+            }
+            else
+            {
+                _Server = new Webserver(settings, DefaultRoute, MaxConcurrentListeners);
 #if !DEBUG
                     ((Webserver)_Server).LogResponseSentMsg = false;
 #endif
-                    ((Webserver)_Server).KeepAliveResponseData = false;
-                }
+                ((Webserver)_Server).KeepAliveResponseData = false;
             }
-            else
-                _Server = new WebserverLite(settings, DefaultRoute, MaxConcurrentListeners);
 
             StartServer();
         }
