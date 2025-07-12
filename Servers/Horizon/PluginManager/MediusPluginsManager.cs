@@ -53,7 +53,7 @@ namespace Horizon.PluginManager
 
         #region On Event
 
-        public async Task OnEvent(PluginEvent eventType, object data)
+        public async Task OnEvent(PluginEvent eventType, object? data)
         {
             if (!_pluginCallbackInstances.ContainsKey(eventType))
                 return;
@@ -164,7 +164,7 @@ namespace Horizon.PluginManager
             LoggerAccessor.LogWarn($"Reloading plugins");
 
             // Ensure valid plugins directory
-            if (_pluginDir != null && !_pluginDir.Exists)
+            if (_pluginDir == null || !_pluginDir.Exists)
                 return;
 
             // Add assemblies
@@ -179,9 +179,9 @@ namespace Horizon.PluginManager
 
                     foreach (var plugin in plugins)
                     {
-                        IPlugin instance = (IPlugin)Activator.CreateInstance(plugin);
+                        IPlugin? instance = Activator.CreateInstance(plugin) as IPlugin;
 
-                        if (instance != null && file.Directory != null)
+                        if (instance is not null && file.Directory is not null)
                             _ = instance.Start(file.Directory.FullName, this);
 
                         //Output the Plugin name
