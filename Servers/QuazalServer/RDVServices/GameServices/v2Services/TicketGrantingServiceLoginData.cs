@@ -86,7 +86,7 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
                 User? dbUser = DBHelper.GetUserByUserName(Context.Handler.Factory.Item1, userName);
                 plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
 
-                if (dbUser != null && File.Exists(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_passwords/{userName}_password.txt"))
+                if (dbUser != null)
                 {
                     plInfo.PID = dbUser.Id;
                     plInfo.AccountId = userName;
@@ -110,8 +110,7 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
                             })
                         },
                         strReturnMsg = string.Empty,
-                        pbufResponse = new KerberosTicket(plInfo.PID, Context.Client.sPID, Constants.SessionKey, Constants.TicketData).ToBuffer(Context.Handler.AccessKey,
-                        File.ReadAllText(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_passwords/{userName}_password.txt"))
+                        pbufResponse = new KerberosTicket(plInfo.PID, Context.Client.sPID, Constants.SessionKey, Constants.TicketData).ToBuffer(Context.Handler.AccessKey, dbUser.Password)
                     });
                 }
                 else
@@ -162,22 +161,12 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
                 User? dbUser = DBHelper.GetUserByUserName(Context.Handler.Factory.Item1, userName);
                 plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
 
-                if (dbUser != null && File.Exists(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_passwords/{userName}_password.txt"))
+                if (dbUser != null)
                 {
                     plInfo.PID = dbUser.Id;
                     plInfo.AccountId = userName;
                     plInfo.Name = userName;
-
-                    try
-                    {
-                        Directory.CreateDirectory(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_custom_data");
-
-                        File.WriteAllText(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_passwords/mac_address.txt", oExtraData.data?.macAddress);
-                    }
-                    catch
-                    {
-                        // Not Important.
-                    }
+                    dbUser.MACAddress = oExtraData.data?.macAddress;
 
                     return Result(new Login(plInfo.PID)
                     {
@@ -197,8 +186,7 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
                             })
                         },
                         strReturnMsg = string.Empty,
-                        pbufResponse = new KerberosTicket(plInfo.PID, Context.Client.sPID, Constants.SessionKey, Constants.TicketData).ToBuffer(Context.Handler.AccessKey,
-                        File.ReadAllText(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_passwords/{userName}_password.txt"))
+                        pbufResponse = new KerberosTicket(plInfo.PID, Context.Client.sPID, Constants.SessionKey, Constants.TicketData).ToBuffer(Context.Handler.AccessKey, dbUser.Password)
                     });
                 }
                 else
@@ -226,8 +214,8 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
                 {
                     User? dbUser = DBHelper.GetUserByPID(Context.Handler.Factory.Item1, sourcePID);
 
-                    if (dbUser != null && File.Exists(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_passwords/{dbUser.Username}_password.txt"))
-                        ticketData.pbufResponse = kerberos.ToBuffer(Context.Handler.AccessKey, File.ReadAllText(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_passwords/{dbUser.Username}_password.txt"));
+                    if (dbUser != null)
+                        ticketData.pbufResponse = kerberos.ToBuffer(Context.Handler.AccessKey, dbUser.Password);
                     else
                         ticketData.pbufResponse = kerberos.ToBuffer(Context.Handler.AccessKey);
                 }

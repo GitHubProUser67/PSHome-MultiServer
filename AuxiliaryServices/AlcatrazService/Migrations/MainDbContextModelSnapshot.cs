@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
+#nullable disable
+
 namespace AlcatrazDbContext.Migrations
 {
     [DbContext(typeof(MainDbContext))]
@@ -13,8 +15,7 @@ namespace AlcatrazDbContext.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "5.0.8");
+            modelBuilder.HasAnnotation("ProductVersion", "7.0.20");
 
             modelBuilder.Entity("Alcatraz.Context.Entities.PlayerStatisticsBoard", b =>
                 {
@@ -79,13 +80,28 @@ namespace AlcatrazDbContext.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("MACAddress")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Password")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PlayerNickName")
                         .HasColumnType("TEXT");
 
+                    b.Property<byte[]>("PrivateData")
+                        .HasColumnType("BLOB");
+
+                    b.Property<byte[]>("PublicData")
+                        .HasColumnType("BLOB");
+
                     b.Property<int>("RewardFlags")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UbiData")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UbiTokens")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Username")

@@ -435,6 +435,7 @@ pdc-lb-rdv-prod07.ubisoft.com,Redirect,IP
 pdc-lb-rdv-prod08.ubisoft.com,Redirect,IP
 pdc-lb-rdv-prod09.ubisoft.com,Redirect,IP
 pdc-lb-rdv-prod10.ubisoft.com,Redirect,IP
+lb-rdv-as-prod01.ubisoft.com,Redirect,IP
 mdc-mm-rdv01.ubisoft.com,Redirect,IP
 mdc-mm-rdv02.ubisoft.com,Redirect,IP
 mdc-mm-rdv03.ubisoft.com,Redirect,IP

@@ -49,7 +49,7 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
         }
 
         [RMCMethod(4)]
-        public RMCResult RegisterEx(ICollection<StationURL> vecMyURLs, AnyData<UbiAuthenticationLoginCustomData> hCustomData)
+        public RMCResult RegisterEx(ICollection<StationURL> vecMyURLs, AnyData<LoginData> hCustomData)
         {
             if (hCustomData.data != null && Context != null && Context.Client.PlayerInfo != null)
             {

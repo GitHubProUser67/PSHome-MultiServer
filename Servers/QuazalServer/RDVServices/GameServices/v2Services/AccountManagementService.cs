@@ -16,21 +16,7 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
         public RMCResult CreateAccount(string strPrincipalName, string strKey, uint uiGroups, string strEmail)
         {
             if (Context != null && DBHelper.RegisterUser(Context.Handler.Factory.Item1, strPrincipalName, strKey, NetworkPlayers.GenerateUniqueUint(strPrincipalName)))
-            {
-                try
-                {
-                    Directory.CreateDirectory(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_passwords");
-
-                    File.WriteAllText(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_passwords/{strPrincipalName}_email.txt", strEmail);
-                    File.WriteAllText(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_passwords/{strPrincipalName}_password.txt", strKey);
-
-                    return new RMCResult(new RMCPResponseEmpty());
-                }
-                catch (Exception ex)
-                {
-                    CustomLogger.LoggerAccessor.LogError($"[AccountManagementService] - CreateAccount thrown an assertion while Creating account for: {strPrincipalName} with Email: {strEmail}. (Exception: {ex})");
-                }
-            }
+                return new RMCResult(new RMCPResponseEmpty());
             else
                 CustomLogger.LoggerAccessor.LogError($"[AccountManagementService] - Failed to Create Account: {strPrincipalName} with Email: {strEmail}");
 
@@ -172,33 +158,8 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
         [RMCMethod(21)]
         public RMCResult CreateAccountWithCustomData(string strPrincipalName, string strKey, uint uiGroups, string strEmail, AnyData<PlayerData> oPublicData, AnyData<AccountInfoPrivateData> oPrivateData)
         {
-            if (Context != null && DBHelper.RegisterUser(Context.Handler.Factory.Item1, strPrincipalName, strKey, NetworkPlayers.GenerateUniqueUint(strPrincipalName)))
-            {
-                try
-                {
-                    Directory.CreateDirectory(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_passwords");
-                    Directory.CreateDirectory(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_custom_data");
-
-                    File.WriteAllText(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_passwords/{strPrincipalName}_email.txt", strEmail);
-                    File.WriteAllText(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_passwords/{strPrincipalName}_password.txt", strKey);
-
-                    using (FileStream fileStream = new(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_custom_data/{strPrincipalName}_privatedata.dat", FileMode.Create, FileAccess.Write))
-                    {
-                        oPrivateData.Write(fileStream);
-                    }
-
-                    using (FileStream fileStream = new(QuazalServerConfiguration.QuazalStaticFolder + $"/Database/RendezVous_v2/account_custom_data/{strPrincipalName}_publicdata.dat", FileMode.Create, FileAccess.Write))
-                    {
-                        oPublicData.Write(fileStream);
-                    }
-
-                    return new RMCResult(new RMCPResponseEmpty());
-                }
-                catch (Exception ex)
-                {
-                    CustomLogger.LoggerAccessor.LogError($"[AccountManagementService] - CreateAccountWithCustomData thrown an assertion while Creating account for: {strPrincipalName} with Email: {strEmail}. (Exception: {ex})");
-                }
-            }
+            if (Context != null && DBHelper.RegisterUserWithExtraData(Context.Handler.Factory.Item1, strPrincipalName, strKey, NetworkPlayers.GenerateUniqueUint(strPrincipalName), oPublicData, oPrivateData))
+                return new RMCResult(new RMCPResponseEmpty());
             else
                 CustomLogger.LoggerAccessor.LogError($"[AccountManagementService] - Failed to Create Account: {strPrincipalName} with Email: {strEmail}");
 

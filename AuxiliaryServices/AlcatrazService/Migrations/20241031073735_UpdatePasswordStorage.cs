@@ -20,10 +20,13 @@ namespace Alcatraz.Context.Migrations
 		/// <inheritdoc />
 		protected override void Up(MigrationBuilder migrationBuilder)
         {
-			foreach (var user in _dbContext.Users)
-            {
-				user.Password = SecurePasswordHasher.Hash($"{user.Id}-{user.Password}");
-			}
+			/* Disabled password updating since v2 services expect the classic passwd format (and causes problems with further migrations).
+			 * 
+			 *  foreach (var user in _dbContext.Users)
+                {
+				    user.Password = SecurePasswordHasher.Hash($"{user.Id}-{user.Password}");
+			    }
+            */
         }
 
         /// <inheritdoc />

@@ -14,7 +14,8 @@ public static class MultiSocksServerConfiguration
     public static string ServerBindAddress { get; set; } = InternetProtocolUtils.TryGetServerIP(out string extractedIp).Result ? extractedIp : extractedIp;
     public static bool RPCS3Workarounds { get; set; } = true;
     public static bool EnableBlazeEncryption { get; set; } = false;
-    public static string DirtySocksDatabasePath { get; set; } = $"{Directory.GetCurrentDirectory()}/static/dirtysocks.db.json";
+    public static string DirtySocksDatabasePath { get; set; } = $"{Directory.GetCurrentDirectory()}/static/dirtysocks.db.sqlite" +
+        $"";
 
     /// <summary>
     /// Tries to load the specified configuration file.

@@ -1,9 +1,7 @@
 using QuazalServer.RDVServices.DDL.Models;
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
-using QuazalServer.RDVServices.RMC;
 using RDVServices;
-using Newtonsoft.Json;
 using QuazalServer.QNetZ;
 
 namespace QuazalServer.RDVServices.GameServices.PCDriverServices
@@ -19,10 +17,36 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         {
             if (Context != null && Context.Client.PlayerInfo != null)
             {
-                UbiAccount? account = UplayDBHelper.RegisterUser(Context.Client.PlayerInfo);
+                PlayerInfo playerInfo = Context.Client.PlayerInfo;
 
-                if (account != null)
+                UbiAccount account = new()
+                {
+                    m_ubi_account_id = playerInfo.AccountId,
+                    m_username = playerInfo.UbiAcctName,
+                    m_password = playerInfo.UbiPass,
+                    m_first_name = playerInfo.Name,
+                    m_last_name = string.Empty,
+                    m_country_code = playerInfo.UbiCountryCode,
+                    m_email = playerInfo.UbiMail,
+                    m_preferred_language = playerInfo.UbiLanguageCode,
+                    m_gender = 0,
+                    m_opt_in = true,
+                    m_third_party_opt_in = true,
+                    m_status = new UbiAccountStatus()
+                    {
+                        m_basic_status = 2,
+                        m_missing_required_informations = false,
+                        m_pending_deactivation = false,
+                        m_recovering_password = false
+                    },
+                    m_date_of_birth = new System.DateTime(1990, 11, 1)
+                };
+
+                if (DBHelper.UpdateUbiAccountDataByUserName(Context.Handler.Factory.Item1, playerInfo.Name!, account))
+                {
+                    DBHelper.UpdateUbiTokensDataByUserName(Context.Handler.Factory.Item1, playerInfo.Name!, 10);
                     return Result(new { ubi_account = account, failed_reasons = new List<ValidationFailureReason>() });
+                }
 
                 // TODO, reverse validation reasons!
             }
@@ -47,8 +71,6 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 
                 if (string.IsNullOrEmpty(userName))
                     return Result(new { exist = false });
-
-                string UplayDataPath = QuazalServerConfiguration.QuazalStaticFolder + $"/Database/Uplay/account_data/{userName}.json";
 
                 if (userName == "Tracking")
                 {
@@ -101,33 +123,36 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                         exist = true
                     });
                 }
-                else if (File.Exists(UplayDataPath))
-                    return Result(new { account = JsonConvert.DeserializeObject<UbiAccount>(File.ReadAllText(UplayDataPath)), exist = true });
-                else // DFS Workaround for lack of Uplay.
+                else
                 {
-                    return Result(new
+                    UbiAccount? account = DBHelper.GetUbiAccountDataByUserName(Context!.Handler.Factory.Item1, userName);
+                    if (account != null)
+                        return Result(new { account = account, exist = true });
+                    else // DFS Workaround for lack of Uplay.
                     {
-                        account = new UbiAccount()
+                        return Result(new
                         {
-                            m_ubi_account_id = playerInfo.AccountId,
-                            m_username = playerInfo.Name,
-                            m_password = "",
-                            m_first_name = "",
-                            m_last_name = "",
-                            m_country_code = "KZ",
-                            m_email = "whatever@dontcare.com",
-                            m_preferred_language = "en",
-                            m_gender = 0,
-                            m_opt_in = true,
-                            m_third_party_opt_in = true,
-                            m_status = new UbiAccountStatus()
+                            account = new UbiAccount()
                             {
-                                m_basic_status = 2,
-                                m_missing_required_informations = false,
-                                m_pending_deactivation = false,
-                                m_recovering_password = true
-                            },
-                            m_external_accounts = new List<ExternalAccount>()
+                                m_ubi_account_id = playerInfo.AccountId,
+                                m_username = playerInfo.Name,
+                                m_password = "",
+                                m_first_name = "",
+                                m_last_name = "",
+                                m_country_code = "KZ",
+                                m_email = "whatever@dontcare.com",
+                                m_preferred_language = "en",
+                                m_gender = 0,
+                                m_opt_in = true,
+                                m_third_party_opt_in = true,
+                                m_status = new UbiAccountStatus()
+                                {
+                                    m_basic_status = 2,
+                                    m_missing_required_informations = false,
+                                    m_pending_deactivation = false,
+                                    m_recovering_password = true
+                                },
+                                m_external_accounts = new List<ExternalAccount>()
                         {
                             new ExternalAccount()
                             {
@@ -149,10 +174,11 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                             }
 
                         },
-                            m_date_of_birth = new DateTime(1990, 11, 1)
-                        },
-                        exist = true
-                    });
+                                m_date_of_birth = new DateTime(1990, 11, 1)
+                            },
+                            exist = true
+                        });
+                    }
                 }
             }
 
@@ -164,7 +190,7 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         {
             if (Context != null && Context.Client.PlayerInfo != null)
             {
-                UbiAccount? account = UplayDBHelper.GetUserByUbiUserName(ubi_account_username);
+                UbiAccount? account = DBHelper.GetUbiAccountDataByUserName(Context.Handler.Factory.Item1, ubi_account_username);
 
                 if (account != null && account.m_password == ubi_account_password)
                 {

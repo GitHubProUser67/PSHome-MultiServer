@@ -6,7 +6,7 @@ namespace MultiSocks.Aries.DataStore
 {
     public class DirtySocksJSONDatabase : IDatabase
     {
-        public int AutoInc = 2;
+        public int AutoInc = 1;
         public List<DbAccount> Accounts = new();
         public HashSet<string> Personas = new();
         public HashSet<string> Friends = new();

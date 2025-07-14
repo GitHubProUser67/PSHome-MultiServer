@@ -222,33 +222,31 @@ namespace QuazalServer.QNetZ
 
         public static byte[] Decompress(string AccessKey, byte[] data)
         {
-            using (MemoryStream outMemoryStream = new())
-			{
-                switch (AccessKey)
-                {
-                    case "hg7j1":
-                    case "yh64s":
-                    case "uG9Kv3p":
-                    case "1WguH+y":
-                        using (MemoryStream inMemoryStream = new(data))
-                        using (LzoStream lzo = new(inMemoryStream, System.IO.Compression.CompressionMode.Decompress))
-                        {
-                            lzo.CopyTo(outMemoryStream);
-                            lzo.Dispose();
-                            return outMemoryStream.ToArray();
-                        }
-                    default:
-                        using (MemoryStream memoryStream = new MemoryStream())
-                        using (ZOutputStream zoutputStream = new ZOutputStream(memoryStream, false))
-                        {
-                            byte[] array = new byte[data.Length];
-                            Array.Copy(data, 0, array, 0, data.Length);
-                            zoutputStream.Write(array, 0, array.Length);
-                            zoutputStream.Close();
-                            memoryStream.Close();
-                            return memoryStream.ToArray();
-                        }
-                }
+            switch (AccessKey)
+            {
+                case "hg7j1":
+                case "yh64s":
+                case "uG9Kv3p":
+                case "1WguH+y":
+                    using (MemoryStream inMemoryStream = new(data))
+                    using (MemoryStream outMemoryStream = new())
+                    using (LzoStream lzo = new(inMemoryStream, System.IO.Compression.CompressionMode.Decompress))
+                    {
+                        lzo.CopyTo(outMemoryStream);
+                        lzo.Dispose();
+                        return outMemoryStream.ToArray();
+                    }
+                default:
+                    using (MemoryStream memoryStream = new MemoryStream())
+                    using (ZOutputStream zoutputStream = new ZOutputStream(memoryStream, false))
+                    {
+                        byte[] array = new byte[data.Length];
+                        Array.Copy(data, 0, array, 0, data.Length);
+                        zoutputStream.Write(array, 0, array.Length);
+                        zoutputStream.Close();
+                        memoryStream.Close();
+                        return memoryStream.ToArray();
+                    }
             }
         }
 

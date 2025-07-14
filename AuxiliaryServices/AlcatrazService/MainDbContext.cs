@@ -16,10 +16,10 @@ namespace Alcatraz.Context
 		MySQL = 1,
 	}
 
-	// TO run migrations:
-	// Add-Migration NAME -Project AlcatrazDbContext -StartupProject AlcatrazGameServices -Context MainDbContext
+    // TO run migrations:
+    // EntityFrameworkCore\Add-Migration NAME -Project AlcatrazService -StartupProject MultiServerWebServices -Context MainDbContext
 
-	public class MainDbContext : DbContext
+    public class MainDbContext : DbContext
 	{
 		public static DbContextOptionsBuilder OnContextBuilding(DbContextOptionsBuilder opt, DBType type, string connectionString)
 		{
@@ -47,7 +47,7 @@ namespace Alcatraz.Context
 		{
 		}
 
-		public async Task EnsureSeedData()
+        public async Task EnsureSeedData()
 		{
 		
 		}

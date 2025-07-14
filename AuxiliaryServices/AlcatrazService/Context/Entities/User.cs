@@ -10,6 +10,12 @@ namespace Alcatraz.Context.Entities
 		public string PlayerNickName { get; set; }
 		[JsonIgnore]
 		public string Password { get; set; }
+        [JsonIgnore]
+        public string MACAddress { get; set; }
         public int RewardFlags { get; set; }
+        public byte[] PrivateData { get; set; }
+        public byte[] PublicData { get; set; }
+        public int UbiTokens { get; set; }
+        public string UbiData { get; set; }
     }
 }

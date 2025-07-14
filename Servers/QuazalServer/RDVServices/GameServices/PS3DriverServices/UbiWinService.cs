@@ -1,6 +1,7 @@
 using QuazalServer.RDVServices.DDL.Models;
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
+using RDVServices;
 
 namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
 {
@@ -177,17 +178,12 @@ namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
         }
 
         [RMCMethod(11)]
-        public RMCResult GetVirtualCurrencyUserBalance(string platform_code)
+        public RMCResult GetVirtualCurrencyUserBalance()
         {
             int numOfTokens = 0;
 
-            if (Context != null && Context.Client.PlayerInfo != null && !string.IsNullOrEmpty(Context.Client.PlayerInfo.Name))
-            {
-                string tokenProfileDataPath = QuazalServerConfiguration.QuazalStaticFolder + $"/Database/Uplay/account_data/currency/{Context.Client.PlayerInfo.Name}.txt";
-
-                if (File.Exists(tokenProfileDataPath) && int.TryParse(File.ReadAllText(tokenProfileDataPath), out int localNumOfTokens))
-                    numOfTokens = localNumOfTokens;
-            }
+            if (Context != null && Context.Client.PlayerInfo != null)
+                numOfTokens = DBHelper.GetUbiTokensDataByUserName(Context.Handler.Factory.Item1, Context.Client.PlayerInfo.Name!);
 
             return Result(new { numOfTokens });
         }

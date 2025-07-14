@@ -4,8 +4,10 @@ using Alcatraz.DTO.Helpers;
 using AlcatrazService.DTO;
 using CustomLogger;
 using Microsoft.EntityFrameworkCore;
-using QuazalServer.QNetZ;
-using QuazalServer.RDVServices;
+using Newtonsoft.Json;
+using QuazalServer.QNetZ.DDL;
+using QuazalServer.RDVServices.DDL.Models;
+using System.IO;
 
 namespace RDVServices
 {
@@ -192,7 +194,7 @@ namespace RDVServices
                         if (HasNickName)
                             dbUser.PlayerNickName = NickName;
 
-                        dbUser.Password = SecurePasswordHasher.Hash($"{dbUser.Id}-{password}");
+                        dbUser.Password = password;
 
                         try
                         {
@@ -210,6 +212,114 @@ namespace RDVServices
             }
 
             return false;
+        }
+
+        public static bool RegisterUserWithExtraData(string serviceClass, string userName, string password, uint PID, AnyData<PlayerData> oPublicData, AnyData<AccountInfoPrivateData> oPrivateData, string? NickName = null)
+        {
+            using (MainDbContext? context = GetDbContext(serviceClass))
+            {
+                if (context != null)
+                {
+                    bool HasNickName = !string.IsNullOrEmpty(NickName);
+
+                    if (!context.Users.Any(x => x.Username == userName || x.Id == PID || (HasNickName && x.PlayerNickName == NickName)))
+                    {
+                        User dbUser = new User() { Id = PID, Username = userName };
+
+                        if (HasNickName)
+                            dbUser.PlayerNickName = NickName;
+
+                        dbUser.Password = password;
+
+                        using (MemoryStream ms = new())
+                        using (MemoryStream ms1 = new())
+                        {
+                            oPublicData.Write(ms);
+                            oPrivateData.Write(ms1);
+
+                            dbUser.PublicData = ms.ToArray();
+                            dbUser.PrivateData = ms1.ToArray();
+                        }
+
+                        try
+                        {
+                            context.Users.Add(dbUser);
+                            context.SaveChanges();
+
+                            return true;
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggerAccessor.LogError($"[DBHelper] - An assertion was thrown while adding User:{dbUser} to the database. (Exception: {ex})");
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        public static bool UpdateUbiTokensDataByUserName(string serviceClass, string userName, int numOfTokens)
+        {
+            using (MainDbContext? context = GetDbContext(serviceClass))
+            {
+                User? user = context?.Users
+                    .SingleOrDefault(x => x.Username == userName);
+
+                if (user != null)
+                {
+                    user.UbiTokens = numOfTokens;
+                    context?.SaveChanges();
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static bool UpdateUbiAccountDataByUserName(string serviceClass, string userName, UbiAccount account)
+        {
+            using (MainDbContext? context = GetDbContext(serviceClass))
+            {
+                User? user = context?.Users
+                    .SingleOrDefault(x => x.Username == userName);
+
+                if (user != null)
+                {
+                    user.UbiData = JsonConvert.SerializeObject(account);
+                    context?.SaveChanges();
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static int GetUbiTokensDataByUserName(string serviceClass, string userName)
+        {
+            using (MainDbContext? context = GetDbContext(serviceClass))
+            {
+                return context?.Users
+                    .AsNoTracking()
+                    .SingleOrDefault(x => x.Username == userName)?.UbiTokens ?? 0;
+            }
+        }
+
+        public static UbiAccount? GetUbiAccountDataByUserName(string serviceClass, string userName)
+        {
+            using (MainDbContext? context = GetDbContext(serviceClass))
+            {
+                string? ubiData = context?.Users
+                    .AsNoTracking()
+                    .SingleOrDefault(x => x.Username == userName)?.UbiData;
+
+                if (!string.IsNullOrEmpty(ubiData))
+                    return JsonConvert.DeserializeObject<UbiAccount>(ubiData);
+            }
+
+            return null;
         }
 
         public static User? GetUserByUserName(string serviceClass, string userName)

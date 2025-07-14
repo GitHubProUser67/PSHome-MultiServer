@@ -31,6 +31,7 @@
       "Servers\\EdenServer\\EdenServer.csproj",
       "Servers\\Horizon\\Horizon.csproj",
       "Servers\\MitmDNS\\MitmDNS.csproj",
+      "Servers\\MultiServerWebServices\\MultiServerWebServices.csproj",
       "Servers\\MultiSocks\\MultiSocks.csproj",
       "Servers\\MultiSpy\\MultiSpy.csproj",
       "Servers\\QuazalServer\\QuazalServer.csproj",

@@ -18,7 +18,10 @@ namespace QuazalServer.ServerProcessors
 
             _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            Parallel.ForEach(PrudpInstances, tuple => { new Thread(() => HandleClient(tuple.Item1, BackendPID, tuple.Item2, tuple.Item3, tuple.Item4)).Start(); });
+            foreach (var instance in PrudpInstances)
+            {
+                HandleClient(instance.Item1, BackendPID, instance.Item2, instance.Item3, instance.Item4);
+            }
         }
 
         public void Stop()

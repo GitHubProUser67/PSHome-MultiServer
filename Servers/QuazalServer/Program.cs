@@ -38,7 +38,7 @@ public static class QuazalServerConfiguration
                         Tuple.Create(62126, "cYoqGd4f", "PS3UbisoftServices"), // PRIVAC3PS3
                         Tuple.Create(61128, "cYoqGd4f", "PS3UbisoftServices"), // AC3MULTPS3
                         Tuple.Create(62128, "cYoqGd4f", "PS3UbisoftServices"), // AC3PRIVMULTPS3
-                        Tuple.Create(61129, "h0rszqTw", "PS3UbisoftServices"), // AC2PS3
+                        Tuple.Create(61130, "h0rszqTw", "PS3UbisoftServices"), // AC2PS3
                         Tuple.Create(61132, "lON6yKGp", "PS3UbisoftServices"), // SCBLACKLISTPS3
                         Tuple.Create(61134, "ex5LYTJ0", "PS3UbisoftServices"), // WATCHDOGSPS3
                         Tuple.Create(61138, "4TeVtJ7V", "PS3UbisoftServices"), // BGEHDPS3
@@ -82,7 +82,7 @@ public static class QuazalServerConfiguration
                         Tuple.Create(62125, 62126, "cYoqGd4f", "PS3UbisoftServices"), // AC3PRIVPS3
                         Tuple.Create(61127, 61128, "cYoqGd4f", "PS3UbisoftServices"), // AC3MULTPS3
                         Tuple.Create(62127, 62128, "cYoqGd4f", "PS3UbisoftServices"), // AC3PRIVMULTPS3
-                        Tuple.Create(61130, 61129, "h0rszqTw", "PS3UbisoftServices"), // AC2PS3
+                        Tuple.Create(61129, 61130, "h0rszqTw", "PS3UbisoftServices"), // AC2PS3
                         Tuple.Create(61131, 61132, "lON6yKGp", "PS3UbisoftServices"), // SCBLACKLISTPS3
                         Tuple.Create(61133, 61134, "ex5LYTJ0", "PS3UbisoftServices"), // WATCHDOGSPS3
                         Tuple.Create(61137, 61138, "4TeVtJ7V", "PS3UbisoftServices"), // BGEHDPS3

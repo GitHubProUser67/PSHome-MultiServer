@@ -65,7 +65,10 @@ namespace MultiSocks.Aries
         {
             string ListenIP = MultiSocksServerConfiguration.ServerBindAddress;
 
-            Database = new DirtySocksJSONDatabase();
+            if (MultiSocksServerConfiguration.DirtySocksDatabasePath.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase))
+                Database = new DirtySocksJSONDatabase();
+            else
+                Database = new DirtySocksSQLiteDatabase();
 
             #region Redirector
             try

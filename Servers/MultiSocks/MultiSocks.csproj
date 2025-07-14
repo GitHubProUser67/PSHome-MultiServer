@@ -80,17 +80,7 @@
 	<ServerGarbageCollection>true</ServerGarbageCollection>
 	<DockerfileContext>..\..</DockerfileContext>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Content Include="MultiSocks.ico" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <Content Include="static\**\*.*">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>  
-  </ItemGroup>
-  
+    
   <ItemGroup>
     <PackageReference Include="Costura.Fody" Version="6.0.0">
       <PrivateAssets>all</PrivateAssets>
@@ -98,13 +88,23 @@
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="System.Data.SQLite" Version="1.0.119" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <ProjectReference Include="..\..\AuxiliaryServices\WebAPIService\WebAPIService.csproj" />
     <ProjectReference Include="..\..\BlazeSDK\Blaze2SDK\Blaze2SDK.csproj" />
     <ProjectReference Include="..\..\BlazeSDK\Blaze3SDK\Blaze3SDK.csproj" />
 	<ProjectReference Include="..\..\BackendServices\TechnitiumLibrary.Net.Firewall\TechnitiumLibrary.Net.Firewall.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="MultiSocks.ico" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Include="costura-win-x86\SQLite.Interop.dll" />
+    <EmbeddedResource Include="costura-win-x64\SQLite.Interop.dll" />
   </ItemGroup>
   
   <Target Name="ModifyDepsFile" AfterTargets="AfterBuild">
