@@ -80,6 +80,8 @@ namespace WebAPIService.JUGGERNAUT
                             return farm.wood_earned.ProcessWoodEarned(QueryParameters, apiStaticPath);
                         case "/farm/remodel_getall.php":
                             return farm.remodel_getall.ProcessGetAll(QueryParameters, apiStaticPath);
+                        case "/farm/remodel_bought.php":
+                            return farm.remodel_bought.ProcessBought(QueryParameters, apiStaticPath);
                         case "/farm/animal_getall.php":
                             return animal_getall.ProcessGetAll(QueryParameters, apiStaticPath);
                         case "/farm/plant_getall.php":
