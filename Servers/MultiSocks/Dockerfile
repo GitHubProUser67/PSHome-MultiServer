@@ -10,15 +10,15 @@ FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["Servers/MultiSocks/MultiSocks.csproj", "Servers/MultiSocks/"]
-COPY ["BlazeSDK/Blaze2SDK/Blaze2SDK.csproj", "BlazeSDK/Blaze2SDK/"]
-COPY ["BlazeSDK/BlazeCommon/BlazeCommon.csproj", "BlazeSDK/BlazeCommon/"]
+COPY ["AuxiliaryServices/WebAPIService/WebAPIService.csproj", "AuxiliaryServices/WebAPIService/"]
+COPY ["BackendServices/MultiServerLibrary/MultiServerLibrary.csproj", "BackendServices/MultiServerLibrary/"]
 COPY ["BackendServices/CastleLibrary/CastleLibrary.csproj", "BackendServices/CastleLibrary/"]
 COPY ["BackendServices/CustomLogger/CustomLogger.csproj", "BackendServices/CustomLogger/"]
 COPY ["BackendServices/EndianTools/EndianTools.csproj", "BackendServices/EndianTools/"]
+COPY ["BlazeSDK/Blaze2SDK/Blaze2SDK.csproj", "BlazeSDK/Blaze2SDK/"]
+COPY ["BlazeSDK/BlazeCommon/BlazeCommon.csproj", "BlazeSDK/BlazeCommon/"]
 COPY ["BlazeSDK/Tdf/Tdf.csproj", "BlazeSDK/Tdf/"]
 COPY ["BlazeSDK/Blaze3SDK/Blaze3SDK.csproj", "BlazeSDK/Blaze3SDK/"]
-COPY ["BackendServices/MultiServerLibrary/MultiServerLibrary.csproj", "BackendServices/MultiServerLibrary/"]
-COPY ["BackendServices/CompressionLibrary/CompressionLibrary.csproj", "BackendServices/CompressionLibrary/"]
 COPY ["BackendServices/TechnitiumLibrary.Net.Firewall/TechnitiumLibrary.Net.Firewall.csproj", "BackendServices/TechnitiumLibrary.Net.Firewall/"]
 RUN dotnet restore "./Servers/MultiSocks/MultiSocks.csproj"
 COPY . .

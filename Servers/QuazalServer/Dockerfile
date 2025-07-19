@@ -16,7 +16,6 @@ COPY ["BackendServices/MultiServerLibrary/MultiServerLibrary.csproj", "BackendSe
 COPY ["BackendServices/CastleLibrary/CastleLibrary.csproj", "BackendServices/CastleLibrary/"]
 COPY ["BackendServices/CustomLogger/CustomLogger.csproj", "BackendServices/CustomLogger/"]
 COPY ["BackendServices/EndianTools/EndianTools.csproj", "BackendServices/EndianTools/"]
-COPY ["BackendServices/CompressionLibrary/CompressionLibrary.csproj", "BackendServices/CompressionLibrary/"]
 RUN dotnet restore "./Servers/QuazalServer/QuazalServer.csproj"
 COPY . .
 WORKDIR "/src/Servers/QuazalServer"

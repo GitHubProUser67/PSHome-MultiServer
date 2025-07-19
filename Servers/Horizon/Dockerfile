@@ -2,7 +2,6 @@
 
 # Cet index est utilisé lors de l’exécution à partir de VS en mode rapide (par défaut pour la configuration de débogage)
 FROM mcr.microsoft.com/dotnet/runtime:6.0 AS base
-USER app
 WORKDIR /app
 
 
@@ -16,7 +15,6 @@ COPY ["BackendServices/MultiServerLibrary/MultiServerLibrary.csproj", "BackendSe
 COPY ["BackendServices/CastleLibrary/CastleLibrary.csproj", "BackendServices/CastleLibrary/"]
 COPY ["BackendServices/CustomLogger/CustomLogger.csproj", "BackendServices/CustomLogger/"]
 COPY ["BackendServices/EndianTools/EndianTools.csproj", "BackendServices/EndianTools/"]
-COPY ["BackendServices/CompressionLibrary/CompressionLibrary.csproj", "BackendServices/CompressionLibrary/"]
 COPY ["AuxiliaryServices/WebAPIService/WebAPIService.csproj", "AuxiliaryServices/WebAPIService/"]
 COPY ["BackendServices/Prometheus/Prometheus.csproj", "BackendServices/Prometheus/"]
 COPY ["BackendServices/SpaceWizards.HttpListener/SpaceWizards.HttpListener.csproj", "BackendServices/SpaceWizards.HttpListener/"]

@@ -15,10 +15,10 @@ COPY ["BackendServices/MultiServerLibrary/MultiServerLibrary.csproj", "BackendSe
 COPY ["BackendServices/CastleLibrary/CastleLibrary.csproj", "BackendServices/CastleLibrary/"]
 COPY ["BackendServices/CustomLogger/CustomLogger.csproj", "BackendServices/CustomLogger/"]
 COPY ["BackendServices/EndianTools/EndianTools.csproj", "BackendServices/EndianTools/"]
-COPY ["BackendServices/CompressionLibrary/CompressionLibrary.csproj", "BackendServices/CompressionLibrary/"]
 COPY ["AuxiliaryServices/WebAPIService/WebAPIService.csproj", "AuxiliaryServices/WebAPIService/"]
-COPY ["BackendServices/NetCoreServer/NetCoreServer.csproj", "BackendServices/NetCoreServer/"]
 COPY ["BackendServices/TechnitiumLibrary.Net.Firewall/TechnitiumLibrary.Net.Firewall.csproj", "BackendServices/TechnitiumLibrary.Net.Firewall/"]
+COPY ["BackendServices/WatsonWebserver/WatsonWebserver.csproj", "BackendServices/WatsonWebserver/"]
+COPY ["BackendServices/SpaceWizards.HttpListener/SpaceWizards.HttpListener.csproj", "BackendServices/SpaceWizards.HttpListener/"]
 RUN dotnet restore "./Servers/SSFWServer/SSFWServer.csproj"
 COPY . .
 WORKDIR "/src/Servers/SSFWServer"
