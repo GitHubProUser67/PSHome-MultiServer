@@ -45,6 +45,7 @@ using DNS.Protocol;
 using ApacheNet.RouteHandlers;
 using DNSLibrary;
 using XI5;
+using System.Threading;
 
 namespace ApacheNet
 {
@@ -63,6 +64,7 @@ namespace ApacheNet
 
         private WebserverBase? _Server;
         private readonly ushort port;
+        private Thread? StarterThread;
 
         #region Domains
         private readonly static List<string> HPDDomains = new() {
@@ -145,7 +147,11 @@ namespace ApacheNet
                 ((Webserver)_Server).KeepAliveResponseData = false;
             }
 
-            StartServer();
+            StarterThread = new Thread(StartServer)
+            {
+                Name = "Server Starter"
+            };
+            StarterThread.Start();
         }
 
         private static void SetCorsHeaders(HttpContextBase ctx)

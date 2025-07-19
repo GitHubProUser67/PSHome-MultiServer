@@ -1114,6 +1114,7 @@ namespace MultiServerLibrary.HTTP
         {
             if (input == null)
                 return null;
+
             using (MemoryStream output = new MemoryStream())
             using (var zlibStream = new ZOutputStream(output, 1, true))
             {

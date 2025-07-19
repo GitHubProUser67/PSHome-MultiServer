@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using System.Security.Cryptography;
 using System.Reflection;
 using MultiServerLibrary.HTTP;
-using System.Collections.Concurrent;
 using MultiServerLibrary.Extension;
 using System.Diagnostics;
 using MultiServerLibrary.SNMP;
@@ -340,8 +339,9 @@ class Program
     private static Task? DNSThread = null;
     private static Task? DNSRefreshThread = null;
     private static SnmpTrapSender? trapSender = null;
-    private static ConcurrentBag<ApacheNetProcessor>? HTTPSBag = null;
+    private static List<ApacheNetProcessor>? HTTPBag = null;
     private static readonly FileSystemWatcher dnswatcher = new();
+    private static Thread? WarmUpThread;
 
     // Event handler for DNS change event
     private static void OnDNSChanged(object source, FileSystemEventArgs e)
@@ -376,9 +376,9 @@ class Program
 
     public static void StartOrUpdateServer()
     {
-        if (HTTPSBag != null)
+        if (HTTPBag != null)
         {
-            foreach (ApacheNetProcessor httpsBag in HTTPSBag)
+            foreach (ApacheNetProcessor httpsBag in HTTPBag)
             {
                 httpsBag.StopServer();
             }
@@ -444,22 +444,32 @@ class Program
 
         if (ApacheNetServerConfiguration.Ports != null && ApacheNetServerConfiguration.Ports.Count > 0)
         {
-            const ushort optimalProcessorCount = 4;
-
-            HTTPSBag = new();
-
-            _ = Parallel.ForEachAsync(ApacheNetServerConfiguration.Ports, (port, cancellationToken) =>
+            WarmUpThread = new Thread(WarmUpServers)
             {
-                if (TCPUtils.IsTCPPortAvailable(port))
-                    HTTPSBag.Add(new ApacheNetProcessor(ApacheNetServerConfiguration.HTTPSCertificateFile, ApacheNetServerConfiguration.HTTPSCertificatePassword, "*", port, port.ToString().EndsWith("443"), Environment.ProcessorCount * optimalProcessorCount));
-
-                return ValueTask.CompletedTask;
-            });
+                Name = "Server Warm Up"
+            };
+            WarmUpThread.Start();
         }
         else
         {
-            HTTPSBag = null;
+            HTTPBag = null;
             LoggerAccessor.LogError("[ApacheNet] - No ports were found in the server configuration, ignoring server startup...");
+        }
+    }
+
+    private static void WarmUpServers()
+    {
+        int optimalProcessorCount = Environment.ProcessorCount;
+
+        HTTPBag = new();
+
+        lock (HTTPBag)
+        {
+            foreach (var port in ApacheNetServerConfiguration.Ports!)
+            {
+                if (TCPUtils.IsTCPPortAvailable(port))
+                    HTTPBag.Add(new ApacheNetProcessor(ApacheNetServerConfiguration.HTTPSCertificateFile, ApacheNetServerConfiguration.HTTPSCertificatePassword, "*", port, port.ToString().EndsWith("443"), optimalProcessorCount));
+            }
         }
     }
 

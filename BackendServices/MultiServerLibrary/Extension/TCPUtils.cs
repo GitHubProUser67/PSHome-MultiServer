@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.NetworkInformation;
-using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
 namespace MultiServerLibrary.Extension
@@ -165,19 +165,30 @@ namespace MultiServerLibrary.Extension
         /// <returns>A boolean.</returns>
         public static bool IsTCPPortAvailable(int port, string ip = "localhost")
         {
-            try
-            {
-                using (TcpClient tcpClient = new TcpClient(ip, port))
-                    tcpClient.Close();
-            }
-            catch
-            {
-                // The port is available as connection failed.
-                return true;
-            }
+#if DEBUG
+            CustomLogger.LoggerAccessor.LogInfo("[TCPUtils] - Checking Port {0}", port);
+#endif
+            bool isAvailable = true;
 
-            // The port is in use as we could connect to it.
-            return false;
+            // Evaluate current system tcp connections. This is the same information provided
+            // by the netstat command line application, just in .Net strongly-typed object
+            // form.  We will look through the list, and if our port we would like to use
+            // in our TcpClient is occupied, we will set isAvailable to false.
+            IPGlobalProperties ipGlobalProperties = IPGlobalProperties.GetIPGlobalProperties();
+            IPEndPoint[] tcpConnInfoArray = ipGlobalProperties.GetActiveTcpListeners();
+
+            foreach (IPEndPoint endpoint in tcpConnInfoArray)
+            {
+                if (endpoint.Port == port)
+                {
+                    isAvailable = false;
+                    break;
+                }
+            }
+#if DEBUG
+            CustomLogger.LoggerAccessor.LogInfo("[TCPUtils] - Port {0} available = {1}", port, isAvailable);
+#endif
+            return isAvailable;
         }
     }
 }

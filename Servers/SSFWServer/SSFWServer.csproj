@@ -33,8 +33,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\AuxiliaryServices\HomeTools\HomeTools.csproj" />
     <ProjectReference Include="..\..\AuxiliaryServices\WebAPIService\WebAPIService.csproj" />
-    <ProjectReference Include="..\..\BackendServices\NetCoreServer\NetCoreServer.csproj" />
 	<ProjectReference Include="..\..\BackendServices\TechnitiumLibrary.Net.Firewall\TechnitiumLibrary.Net.Firewall.csproj" />
+	<ProjectReference Include="..\..\BackendServices\WatsonWebserver\WatsonWebserver.csproj" />
   </ItemGroup>
   
   <Target Name="ModifyDepsFile" AfterTargets="AfterBuild">

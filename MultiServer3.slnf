@@ -13,7 +13,6 @@
       "BackendServices\\DNSLibrary\\DNSLibrary.csproj",
       "BackendServices\\EndianTools\\EndianTools.csproj",
       "BackendServices\\MultiServerLibrary\\MultiServerLibrary.csproj",
-      "BackendServices\\NetCoreServer\\NetCoreServer.csproj",
       "BackendServices\\PS2FloatLibrary\\PS2FloatLibrary.csproj",
       "BackendServices\\Prometheus\\Prometheus.csproj",
       "BackendServices\\SpaceWizards.HttpListener\\SpaceWizards.HttpListener.csproj",

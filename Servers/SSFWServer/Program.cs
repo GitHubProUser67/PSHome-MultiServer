@@ -8,11 +8,16 @@ using MultiServerLibrary.SNMP;
 using MultiServerLibrary;
 using Microsoft.Extensions.Logging;
 using HomeTools.Crypto;
+using MultiServerLibrary.Extension;
 
 public static class SSFWServerConfiguration
 {
     public static bool SSFWCrossSave { get; set; } = true;
+    public static bool EnableHTTPCompression { get; set; } = false;
     public static int SSFWTTL { get; set; } = 60;
+    public static bool PreferNativeHttpListenerEngine { get; set; } = false;
+    public static int BufferSize { get; set; } = 4096;
+    public static bool EnableKeepAlive { get; set; } = false;
     public static string SSFWMinibase { get; set; } = "[]";
     public static string SSFWLegacyKey { get; set; } = "**NoNoNoYouCantHaxThis****69";
     public static string SSFWSessionIdKey { get; set; } = WebAPIService.WebCrypto.WebCryptoClass.GenerateRandomBase64KeyAsync().Result;
@@ -62,12 +67,16 @@ public static class SSFWServerConfiguration
 
             // Write the JObject to a file
             File.WriteAllText(configPath, new JObject(
-                new JProperty("config_version", (ushort)2),
+                new JProperty("config_version", (ushort)3),
                 new JProperty("minibase", SSFWMinibase),
                 new JProperty("legacyKey", SSFWLegacyKey),
                 new JProperty("sessionidKey", SSFWSessionIdKey),
                 new JProperty("time_to_live", SSFWTTL),
                 new JProperty("cross_save", SSFWCrossSave),
+                new JProperty("prefer_native_httplistener_engine", PreferNativeHttpListenerEngine),
+                new JProperty("buffer_size", BufferSize),
+                new JProperty("enable_keep_alive", EnableKeepAlive),
+                new JProperty("enable_http_compression", EnableHTTPCompression),
                 new JProperty("static_folder", SSFWStaticFolder),
                 new JProperty("https_dns_list", HTTPSDNSList ?? Array.Empty<string>()),
                 new JProperty("certificate_file", HTTPSCertificateFile),
@@ -87,6 +96,13 @@ public static class SSFWServerConfiguration
             ushort config_version = GetValueOrDefault(config, "config_version", (ushort)0);
             if (config_version >= 2)
             {
+                if (config_version >= 3)
+                {
+                    PreferNativeHttpListenerEngine = GetValueOrDefault(config, "prefer_native_httplistener_engine", PreferNativeHttpListenerEngine);
+                    BufferSize = GetValueOrDefault(config, "buffer_size", BufferSize);
+                    EnableKeepAlive = GetValueOrDefault(config, "enable_keep_alive", EnableKeepAlive);
+                    EnableHTTPCompression = GetValueOrDefault(config, "enable_http_compression", EnableHTTPCompression);
+                }
                 SSFWMinibase = GetValueOrDefault(config, "minibase", SSFWMinibase);
                 SSFWTTL = GetValueOrDefault(config, "time_to_live", SSFWTTL);
                 SSFWLegacyKey = GetValueOrDefault(config, "legacyKey", SSFWLegacyKey);
@@ -141,15 +157,23 @@ class Program
     private static string configPath = configDir + "SSFWServer.json";
     private static string configMultiServerLibraryPath = configDir + "MultiServerLibrary.json";
     private static SnmpTrapSender? trapSender = null;
-    private static SSFWClass? Server;
     private static Timer? SceneListTimer;
     private static Timer? SessionTimer;
+    private static List<SSFWProcessor>? HTTPBag = null;
+    private static Thread? WarmUpThread;
 
     private static void StartOrUpdateServer()
     {
+        if (HTTPBag != null)
+        {
+            foreach (var httpsBag in HTTPBag)
+            {
+                httpsBag.StopServer();
+            }
+        }
+
         SceneListTimer?.Dispose();
         SessionTimer?.Dispose();
-        Server?.StopSSFW();
 
         GC.Collect();
         GC.WaitForPendingFinalizers();
@@ -161,9 +185,27 @@ class Program
         MultiServerLibrary.SSL.CertificateHelper.InitializeSSLChainSignedCertificates(SSFWServerConfiguration.HTTPSCertificateFile, SSFWServerConfiguration.HTTPSCertificatePassword,
             SSFWServerConfiguration.HTTPSDNSList, SSFWServerConfiguration.HTTPSCertificateHashingAlgorithm);
 
-        Server = new SSFWClass(SSFWServerConfiguration.HTTPSCertificateFile, SSFWServerConfiguration.HTTPSCertificatePassword, SSFWServerConfiguration.SSFWLegacyKey);
+        WarmUpThread = new Thread(WarmUpServers)
+        {
+            Name = "Server Warm Up"
+        };
+        WarmUpThread.Start();
+    }
 
-        Server.StartSSFW();
+    private static void WarmUpServers()
+    {
+        int optimalProcessorCount = Environment.ProcessorCount;
+
+        HTTPBag = new();
+
+        lock (HTTPBag)
+        {
+            foreach (var port in new ushort[] { 8080, 10443 })
+            {
+                if (TCPUtils.IsTCPPortAvailable(port))
+                    HTTPBag.Add(new SSFWProcessor(SSFWServerConfiguration.HTTPSCertificateFile, SSFWServerConfiguration.HTTPSCertificatePassword, "*", port, port.ToString().EndsWith("443"), optimalProcessorCount));
+            }
+        }
     }
 
     static void Main()
