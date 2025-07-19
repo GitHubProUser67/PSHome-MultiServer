@@ -9,6 +9,7 @@ using MultiServerLibrary;
 using Microsoft.Extensions.Logging;
 using HomeTools.Crypto;
 using MultiServerLibrary.Extension;
+using System.Diagnostics;
 
 public static class SSFWServerConfiguration
 {
@@ -233,6 +234,15 @@ class Program
 #endif
 
         MultiServerLibraryConfiguration.RefreshVariables(configMultiServerLibraryPath);
+
+        if (SSFWServerConfiguration.PreferNativeHttpListenerEngine
+            && MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows
+            && !MultiServerLibrary.Extension.Microsoft.Win32API.IsAdministrator())
+        {
+            LoggerAccessor.LogWarn("[Program] - Trying to restart as admin...");
+            if (MultiServerLibrary.Extension.Microsoft.Win32API.StartAsAdmin(Process.GetCurrentProcess().MainModule?.FileName))
+                Environment.Exit(0);
+        }
 
         if (MultiServerLibraryConfiguration.EnableSNMPReports)
         {

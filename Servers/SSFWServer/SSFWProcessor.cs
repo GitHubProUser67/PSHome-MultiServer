@@ -1351,17 +1351,7 @@ namespace SSFWServer
         {
             if (SSFWServerConfiguration.EnableHTTPCompression && !string.IsNullOrEmpty(encoding))
             {
-                if (encoding.Contains("zstd"))
-                {
-                    response.Headers.Add("Content-Encoding", "zstd");
-                    return HTTPProcessor.CompressZstd(data);
-                }
-                else if (encoding.Contains("br"))
-                {
-                    response.Headers.Add("Content-Encoding", "br");
-                    return HTTPProcessor.CompressBrotli(data);
-                }
-                else if (encoding.Contains("gzip"))
+                if (encoding.Contains("gzip"))
                 {
                     response.Headers.Add("Content-Encoding", "gzip");
                     return HTTPProcessor.CompressGzip(data);
@@ -1382,17 +1372,7 @@ namespace SSFWServer
                 return null;
             else if (SSFWServerConfiguration.EnableHTTPCompression && !string.IsNullOrEmpty(encoding))
             {
-                if (encoding.Contains("zstd"))
-                {
-                    response.Headers.Add("Content-Encoding", "zstd");
-                    return HTTPProcessor.CompressZstd(Encoding.UTF8.GetBytes(data));
-                }
-                else if (encoding.Contains("br"))
-                {
-                    response.Headers.Add("Content-Encoding", "br");
-                    return HTTPProcessor.CompressBrotli(Encoding.UTF8.GetBytes(data));
-                }
-                else if (encoding.Contains("gzip"))
+                if (encoding.Contains("gzip"))
                 {
                     response.Headers.Add("Content-Encoding", "gzip");
                     return HTTPProcessor.CompressGzip(Encoding.UTF8.GetBytes(data));
