@@ -1,7 +1,7 @@
 ﻿using CustomLogger;
 using Newtonsoft.Json;
 using System.Text;
-using WebAPIService.SSFW;
+using WebAPIService.GameServices.SSFW;
 
 namespace SSFWServer.Services
 {

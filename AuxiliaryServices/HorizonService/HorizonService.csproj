@@ -12,7 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\BackendServices\MultiServerLibrary\MultiServerLibrary.csproj" />
     <ProjectReference Include="..\WebAPIService\WebAPIService.csproj" />
   </ItemGroup>
 

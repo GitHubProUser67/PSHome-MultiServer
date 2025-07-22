@@ -3,28 +3,23 @@ using ApacheNet.Extensions;
 using MultiServerLibrary.HTTP;
 using MultiServerLibrary.AdBlocker;
 using MultiServerLibrary.GeoLocalization;
-using WebAPIService.LOOT;
-using WebAPIService.NDREAMS;
-using WebAPIService.OHS;
-using WebAPIService.PREMIUMAGENCY;
-using WebAPIService.HELLFIRE;
-using WebAPIService.VEEMEE;
-using WebAPIService.UBISOFT.HERMES_API;
-using WebAPIService.CAPONE;
-using WebAPIService.CDM;
-using WebAPIService.MultiMedia;
-using WebAPIService.OUWF;
-using WebAPIService.JUGGERNAUT;
-using WebAPIService.FROMSOFTWARE;
-using WebAPIService.UBISOFT.gsconnect;
-using WebAPIService.HTS;
-using WebAPIService.ILoveSony;
-using WebAPIService.DIGITAL_LEISURE;
-using WebAPIService.HEAVYWATER;
-using WebAPIService.UBISOFT.BuildAPI;
-using WebAPIService.CCPGames;
-using WebAPIService.DEMANGLER;
-using WebAPIService.WebArchive;
+using WebAPIService.GameServices.LOOT;
+using WebAPIService.GameServices.NDREAMS;
+using WebAPIService.GameServices.OHS;
+using WebAPIService.GameServices.PREMIUMAGENCY;
+using WebAPIService.GameServices.HELLFIRE;
+using WebAPIService.GameServices.VEEMEE;
+using WebAPIService.GameServices.UBISOFT.HERMES_API;
+using WebAPIService.GameServices.CAPONE;
+using WebAPIService.GameServices.CDM;
+using WebAPIService.GameServices.OUWF;
+using WebAPIService.GameServices.FROMSOFTWARE;
+using WebAPIService.GameServices.HTS;
+using WebAPIService.GameServices.I_Love_Sony;
+using WebAPIService.GameServices.DIGITAL_LEISURE;
+using WebAPIService.GameServices.HEAVYWATER;
+using WebAPIService.GameServices.UBISOFT.BuildAPI;
+using WebAPIService.GameServices.CCPGames;
 using CustomLogger;
 using HttpMultipartParser;
 using Newtonsoft.Json;
@@ -46,6 +41,11 @@ using ApacheNet.RouteHandlers;
 using DNSLibrary;
 using XI5;
 using System.Threading;
+using WebAPIService.WebServices.MultiMedia;
+using WebAPIService.WebServices.WebArchive;
+using WebAPIService.GameServices.JUGGERNAUT;
+using WebAPIService.GameServices.DEMANGLER;
+using WebAPIService.GameServices.UBISOFT.gsconnect;
 
 namespace ApacheNet
 {
@@ -1816,7 +1816,7 @@ namespace ApacheNet
                                                     response.Headers.Add("Date", DateTime.Now.ToString("r"));
                                                     response.StatusCode = (int)statusCode;
                                                     response.ContentType = isHtmlCompatible ? "text/html" : "application/json" + ";charset=utf-8";
-                                                    byte[] reportOutputBytes = Encoding.UTF8.GetBytes(await FileStructureFormater.GetFileStructureAsync(endsWithSlash ? filePath[..^1] : filePath, $"{(secure ? "https" : "http")}://{Host}:{ServerPort}{(endsWithSlash ? absolutepath[..^1] : absolutepath)}",
+                                                    byte[] reportOutputBytes = Encoding.UTF8.GetBytes(await FileStructureFormater.GetFileStructureAsync(endsWithSlash ? filePath[..^1] : filePath, $"{(secure ? "https" : "http")}://{Host}{(endsWithSlash ? absolutepath[..^1] : absolutepath)}",
                                                         ServerPort, isHtmlCompatible, ApacheNetServerConfiguration.NestedDirectoryReporting, request.RetrieveQueryValue("properties") == "on", ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor._mimeTypes));
                                                     if (ApacheNetServerConfiguration.EnableHTTPCompression && !noCompressCacheControl && !string.IsNullOrEmpty(encoding))
                                                     {
@@ -1848,7 +1848,7 @@ namespace ApacheNet
                                                 }
                                                 else if (request.RetrieveQueryValue("m3u") == "on")
                                                 {
-                                                    string? m3ufile = FileSystemUtils.GetM3UStreamFromDirectory(endsWithSlash ? filePath[..^1] : filePath, $"{(secure ? "https" : "http")}://{Host}:{ServerPort}{(endsWithSlash ? absolutepath[..^1] : absolutepath)}");
+                                                    string? m3ufile = FileSystemUtils.GetM3UStreamFromDirectory(endsWithSlash ? filePath[..^1] : filePath, $"{(secure ? "https" : "http")}://{Host}{(endsWithSlash ? absolutepath[..^1] : absolutepath)}");
                                                     if (!string.IsNullOrEmpty(m3ufile))
                                                     {
                                                         statusCode = HttpStatusCode.OK;
@@ -2064,7 +2064,7 @@ namespace ApacheNet
 
                                                 if (ApacheNetServerConfiguration.NotFoundWebArchive && !string.IsNullOrEmpty(Host) && !Host.Equals("web.archive.org") && !Host.Equals("archive.org"))
                                                 {
-                                                    WebArchiveRequest archiveReq = new($"{(secure ? "https" : "http")}://{Host}:{ServerPort}" + fulluripath);
+                                                    WebArchiveRequest archiveReq = new($"{(secure ? "https" : "http")}://{Host}" + fulluripath);
                                                     if (archiveReq.Archived)
                                                     {
                                                         const string archivedSourceHeaderKey = "x-archive-src";
@@ -2408,7 +2408,7 @@ namespace ApacheNet
                                                     response.Headers.Add("Date", DateTime.Now.ToString("r"));
                                                     response.StatusCode = (int)statusCode;
                                                     response.ContentType = isHtmlCompatible ? "text/html" : "application/json" + ";charset=utf-8";
-                                                    byte[] reportOutputBytes = Encoding.UTF8.GetBytes(await FileStructureFormater.GetFileStructureAsync(endsWithSlash ? filePath[..^1] : filePath, $"{(secure ? "https" : "http")}://{Host}:{ServerPort}{(endsWithSlash ? absolutepath[..^1] : absolutepath)}",
+                                                    byte[] reportOutputBytes = Encoding.UTF8.GetBytes(await FileStructureFormater.GetFileStructureAsync(endsWithSlash ? filePath[..^1] : filePath, $"{(secure ? "https" : "http")}://{Host}{(endsWithSlash ? absolutepath[..^1] : absolutepath)}",
                                                         ServerPort, isHtmlCompatible, ApacheNetServerConfiguration.NestedDirectoryReporting, request.RetrieveQueryValue("properties") == "on", ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor._mimeTypes));
                                                     if (ApacheNetServerConfiguration.EnableHTTPCompression && !noCompressCacheControl && !string.IsNullOrEmpty(encoding))
                                                     {
@@ -2440,7 +2440,7 @@ namespace ApacheNet
                                                 }
                                                 else if (request.RetrieveQueryValue("m3u") == "on")
                                                 {
-                                                    string? m3ufile = FileSystemUtils.GetM3UStreamFromDirectory(endsWithSlash ? filePath[..^1] : filePath, $"{(secure ? "https" : "http")}://{Host}:{ServerPort}{(endsWithSlash ? absolutepath[..^1] : absolutepath)}");
+                                                    string? m3ufile = FileSystemUtils.GetM3UStreamFromDirectory(endsWithSlash ? filePath[..^1] : filePath, $"{(secure ? "https" : "http")}://{Host}{(endsWithSlash ? absolutepath[..^1] : absolutepath)}");
                                                     if (!string.IsNullOrEmpty(m3ufile))
                                                     {
                                                         statusCode = HttpStatusCode.OK;

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net;
 using WatsonWebserver.Core;
+using WebAPIService.GameServices.OHS;
 
 namespace ApacheNet.Extensions.Lockwood
 {
@@ -1057,7 +1058,7 @@ namespace ApacheNet.Extensions.Lockwood
                     case "dig_defs.xml":
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                         ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(WebAPIService.OHS.LUA2XmlProcessor.TransformLuaTableToXml(@"
+                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
                          local TableFromInput = {
                             defs = {
                                 rewards = { 
@@ -1095,7 +1096,7 @@ namespace ApacheNet.Extensions.Lockwood
                     case "sound_defs.xml":
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                         ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(WebAPIService.OHS.LUA2XmlProcessor.TransformLuaTableToXml(@"
+                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
                          local TableFromInput = {
                             defs = {
                                 TELEPAD_HUM = {
@@ -1453,7 +1454,7 @@ namespace ApacheNet.Extensions.Lockwood
                     case "gfx_defs.xml":
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                         ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(WebAPIService.OHS.LUA2XmlProcessor.TransformLuaTableToXml(@"
+                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
                          local TableFromInput = {
                             defs = {
                                 CLOUD_002 = {
@@ -1525,7 +1526,7 @@ namespace ApacheNet.Extensions.Lockwood
                     case "map_defs.xml":
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                         ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(WebAPIService.OHS.LUA2XmlProcessor.TransformLuaTableToXml(@"
+                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
                             local TableFromInput = {
                                 [""def""] = {
                                     [""cloud_gfx""] = { ""CLOUD_002"", ""CLOUD_003"" },
@@ -1566,7 +1567,7 @@ namespace ApacheNet.Extensions.Lockwood
                     case "prop_defs.xml":
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                         ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(WebAPIService.OHS.LUA2XmlProcessor.TransformLuaTableToXml(@"
+                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
                             local TableFromInput = {
                                 [""defs""] = {
                                     [""PROPS""] = {},
@@ -1580,7 +1581,7 @@ namespace ApacheNet.Extensions.Lockwood
                     case "craft_defs.xml":
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                         ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(WebAPIService.OHS.LUA2XmlProcessor.TransformLuaTableToXml(@"
+                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
                             local TableFromInput = {
                                 [""defs""] = {
                                     [""SKIN_basic""] = {

@@ -21,6 +21,8 @@ namespace MultiServerLibrary.SSL
 {
     public static class CertificateHelper
     {
+        const string certificate_email = "MultiServer@gmail.com";
+
         // PEM file headers.
         public const string certBegin = "-----BEGIN CERTIFICATE-----";
         public const string certEnd = "-----END CERTIFICATE-----";
@@ -335,7 +337,9 @@ namespace MultiServerLibrary.SSL
                     SubjectAlternativeNameBuilder sanBuilder = new SubjectAlternativeNameBuilder();
 
                     sanBuilder.AddDnsName(certSubject); // Some legacy clients will not recognize the cert serial-number.
-                    sanBuilder.AddEmailAddress("SpaceWizards@gmail.com");
+
+                    sanBuilder.AddEmailAddress(certificate_email);
+
                     sanBuilder.AddIpAddress(serverIp);
 
                     if (wildcard)
@@ -395,9 +399,7 @@ namespace MultiServerLibrary.SSL
                 // Generate a new RSA key pair
                 using (RSA rsa = RSA.Create())
                 {
-                    IPAddress Loopback = IPAddress.Loopback;
-                    IPAddress PublicServerIP = IPAddress.Parse(InternetProtocolUtils.GetPublicIPAddress());
-                    IPAddress LocalServerIP = InternetProtocolUtils.GetLocalIPAddresses().First();
+                    InternetProtocolUtils.TryGetServerIP(out string ServerIPStr);
 
                     // Add a Subject Alternative Name (SAN) extension with a wildcard DNS entry
                     SubjectAlternativeNameBuilder sanBuilder = new SubjectAlternativeNameBuilder();
@@ -405,9 +407,14 @@ namespace MultiServerLibrary.SSL
                     // Create a certificate request with the RSA key pair
                     CertificateRequest request = new CertificateRequest($"CN={CN} [{GetRandomInt64(100, 999)}], OU={OU}, O=\"{O}\", L={L}, S={S}, C={C}", rsa, Hashing, RSASignaturePadding.Pkcs1);
 
+                    sanBuilder.AddIpAddress(IPAddress.Parse(ServerIPStr));
+
+                    sanBuilder.AddEmailAddress(certificate_email);
+
                     DnsList?.Select(str => str) // Some clients do not allow wildcard domains, so we use SAN attributes as a fallback.
                         .ToList()
                         .ForEach(sanBuilder.AddDnsName);
+
                     if (Wildcard)
                     {
                         sanBuilder.AddDnsName("*.*");
@@ -415,20 +422,6 @@ namespace MultiServerLibrary.SSL
                         .ToList()
                         .ForEach(sanBuilder.AddDnsName);
                     }
-
-                    sanBuilder.AddDnsName("localhost");
-                    sanBuilder.AddDnsName(Loopback.ToString());
-                    sanBuilder.AddIpAddress(Loopback);
-                    sanBuilder.AddDnsName(PublicServerIP.ToString());
-                    sanBuilder.AddIpAddress(PublicServerIP);
-
-                    if (PublicServerIP != LocalServerIP)
-                    {
-                        sanBuilder.AddDnsName(LocalServerIP.ToString());
-                        sanBuilder.AddIpAddress(LocalServerIP);
-                    }
-
-                    sanBuilder.AddEmailAddress("MultiServer@gmail.com");
 
                     request.CertificateExtensions.Add(sanBuilder.Build());
 
@@ -487,7 +480,7 @@ namespace MultiServerLibrary.SSL
                 return;
             }
 
-                const string rootCaCertName = "MultiServer";
+            const string rootCaCertName = "MultiServer";
             string directoryPath = Path.GetDirectoryName(certPath) ?? Directory.GetCurrentDirectory() + "/static/SSL";
 
             Directory.CreateDirectory(directoryPath);
@@ -497,7 +490,7 @@ namespace MultiServerLibrary.SSL
             if (File.Exists(directoryPath + "/lock.txt"))
                 WaitForFileDeletionAsync(directoryPath + "/lock.txt").Wait();
 
-            RootCACertificate = LoadCertificate(directoryPath + $"/{rootCaCertName}_rootca", directoryPath + $"/{rootCaCertName}_rootca_privkey");
+            RootCACertificate = LoadCertificate(directoryPath + $"/{rootCaCertName}_rootca.pem", directoryPath + $"/{rootCaCertName}_rootca_privkey.pem");
 
             if (RootCACertificate == null)
                 RootCACertificate = CreateRootCertificateAuthority(directoryPath + $"/{rootCaCertName}_rootca.pfx", HashAlgorithmName.SHA256);

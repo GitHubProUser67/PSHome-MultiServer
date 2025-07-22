@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net;
 using WatsonWebserver.Core;
+using WebAPIService.GameServices.OHS;
 
 namespace ApacheNet.Extensions.Lockwood
 {
@@ -45,7 +46,7 @@ namespace ApacheNet.Extensions.Lockwood
 #else
                         bool debug = false;
 #endif
-                        await ctx.Response.Send(WebAPIService.OHS.LUA2XmlProcessor.TransformLuaTableToXml($@"
+                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml($@"
                             local TableFromInput = {{
                                 REGION = {{
                                     sodium_debug = {{
@@ -60,7 +61,7 @@ namespace ApacheNet.Extensions.Lockwood
                     case "lang":
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                         ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(WebAPIService.OHS.LUA2XmlProcessor.TransformLuaTableToXml($@"
+                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml($@"
                             local TableFromInput = {{
                                 LOCALIZATION = {{
                                     sodium_1 = {{
@@ -551,7 +552,7 @@ namespace ApacheNet.Extensions.Lockwood
                     case "ObjectiveOrder.xml":
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                         ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(WebAPIService.OHS.LUA2XmlProcessor.TransformLuaTableToXml(@"
+                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
                             local TableFromInput = {
                                 ORDER = {
                                     ""sodium_44"", ""sodium_14"", ""sodium_45"", ""sodium_46"", ""sodium_66"", ""sodium_1"", 
@@ -573,7 +574,7 @@ namespace ApacheNet.Extensions.Lockwood
                     case "ObjectiveDefs.xml":
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                         ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(WebAPIService.OHS.LUA2XmlProcessor.TransformLuaTableToXml($@"local TableFromInput = {{
+                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml($@"local TableFromInput = {{
                               OBJECTIVES = {{
                                   sodium_1 = {{
                                       credits = 10,

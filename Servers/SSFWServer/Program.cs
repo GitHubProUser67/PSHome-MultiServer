@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using HomeTools.Crypto;
 using MultiServerLibrary.Extension;
 using System.Diagnostics;
+using WebAPIService.WebServices.WebCrypto;
 
 public static class SSFWServerConfiguration
 {
@@ -21,7 +22,7 @@ public static class SSFWServerConfiguration
     public static bool EnableKeepAlive { get; set; } = false;
     public static string SSFWMinibase { get; set; } = "[]";
     public static string SSFWLegacyKey { get; set; } = "**NoNoNoYouCantHaxThis****69";
-    public static string SSFWSessionIdKey { get; set; } = WebAPIService.WebCrypto.WebCryptoClass.GenerateRandomBase64KeyAsync().Result;
+    public static string SSFWSessionIdKey { get; set; } = WebCryptoClass.GenerateRandomBase64KeyAsync().Result;
     public static string SSFWStaticFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/wwwssfwroot";
     public static string HTTPSCertificateFile { get; set; } = $"{Directory.GetCurrentDirectory()}/static/SSL/SSFW.pfx";
     public static string HTTPSCertificatePassword { get; set; } = "qwerty";

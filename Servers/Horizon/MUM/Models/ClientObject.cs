@@ -9,7 +9,6 @@ using System.Collections.Concurrent;
 using System.Net;
 using Horizon.SERVER.Extension.PlayStationHome;
 using MultiServerLibrary.Extension;
-using WebAPIService.VEEMEE;
 
 namespace Horizon.MUM.Models
 {

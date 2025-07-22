@@ -6,7 +6,7 @@ using System.Net;
 using System.Text;
 using Horizon.MUM.Models;
 using NetHasher.CRC;
-using WebAPIService.WebCrypto;
+using WebAPIService.WebServices.WebCrypto;
 
 namespace Horizon.MUM
 {

@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using System.Net;
 using WatsonWebserver.Core;
+using WebAPIService.GameServices.OHS;
 
 namespace ApacheNet.Extensions.Lockwood
 {
@@ -27,7 +28,7 @@ namespace ApacheNet.Extensions.Lockwood
 
                 LoggerAccessor.LogDebug($"[PostAuthParameters] - setDressing data was not found for the Venue, falling back to server file.");
 
-                await ctx.Response.Send(WebAPIService.OHS.LUA2XmlProcessor.TransformLuaTableToXml(@"
+                await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
                     local maps = {
 	                    'colourMap', 'normalMap', 'specularMap', 'envMap', 'emissiveMap', 'colour2Map', 'normal2Map', 'specular2Map'
                     }
@@ -937,7 +938,7 @@ namespace ApacheNet.Extensions.Lockwood
 
                 LoggerAccessor.LogDebug($"[PostAuthParameters] - features data was not found for the Venue, falling back to server file.");
 
-                await ctx.Response.Send(WebAPIService.OHS.LUA2XmlProcessor.TransformLuaTableToXml(@"
+                await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
                             local TableFromInput = {
                                 ['commercePoints'] = {
                                     default = true
@@ -1010,7 +1011,7 @@ namespace ApacheNet.Extensions.Lockwood
 
                 LoggerAccessor.LogDebug($"[PostAuthParameters] - camPath data was not found for the Venue, falling back to server file.");
 
-                await ctx.Response.Send(WebAPIService.OHS.LUA2XmlProcessor.TransformLuaTableToXml(@"
+                await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
                             local TableFromInput = {
                                 origin = {
                                     name = 'origin',

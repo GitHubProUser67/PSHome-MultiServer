@@ -14,6 +14,7 @@ using MultiServerLibrary.SNMP;
 using MultiServerLibrary;
 using Microsoft.Extensions.Logging;
 using Prometheus;
+using WebAPIService.WebServices.WebCrypto;
 
 public static class HorizonServerConfiguration
 {
@@ -37,7 +38,7 @@ public static class HorizonServerConfiguration
     public static string? MUISConfig { get; set; } = $"{Directory.GetCurrentDirectory()}/static/muis.json";
     public static string? BWPSConfig { get; set; } = $"{Directory.GetCurrentDirectory()}/static/bwps.json";
     public static string? NATConfig { get; set; } = $"{Directory.GetCurrentDirectory()}/static/nat.json";
-    public static string MediusAPIKey { get; set; } = WebAPIService.WebCrypto.WebCryptoClass.GenerateRandomBase64KeyAsync().Result;
+    public static string MediusAPIKey { get; set; } = WebCryptoClass.GenerateRandomBase64KeyAsync().Result;
     public static string SSFWUrl { get; set; } = $"http://{(InternetProtocolUtils.TryGetServerIP(out _).Result ? InternetProtocolUtils.GetPublicIPAddress() : InternetProtocolUtils.GetLocalIPAddresses().First().ToString())}:8080";
     public static string[]? HTTPSDNSList { get; set; }
 

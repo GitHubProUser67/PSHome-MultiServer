@@ -9,6 +9,7 @@ using WatsonWebserver.Core;
 using MultiServerLibrary.HTTP;
 using MultiServerLibrary.Extension;
 using MultiServerLibrary.Upscalers;
+using WebAPIService.WebServices.AdobeFlash.binaries.JwPlayer;
 
 namespace ApacheNet
 {
@@ -174,10 +175,10 @@ namespace ApacheNet
                                    {(flashPlayer7 ? @$"function playerReady() {{
                                     {(debug ? "alert(\"DEBUG: Media player loaded.\");" : string.Empty)}
                                   }}
-                                  {WebAPIService.AdobeFlash.binaries.JwPlayer.swfObject43Js.Content}" : @$"function printTrace() {{
+                                  {swfObject43Js.Content}" : @$"function printTrace() {{
                                     {(debug ? "alert(\"DEBUG: Media player loaded.\");" : string.Empty)}
                                   }}
-                                  {WebAPIService.AdobeFlash.binaries.JwPlayer.jwPlayer53Js.Content}")}
+                                  {jwPlayer53Js.Content}")}
                                 </script>
                                 <body>
                                   <h1>Media Player</h1>

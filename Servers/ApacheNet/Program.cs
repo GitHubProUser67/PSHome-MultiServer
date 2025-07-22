@@ -17,6 +17,7 @@ using System.Diagnostics;
 using MultiServerLibrary.SNMP;
 using MultiServerLibrary;
 using Microsoft.Extensions.Logging;
+using WebAPIService.WebServices.WebArchive;
 
 public static class ApacheNetServerConfiguration
 {
@@ -393,7 +394,7 @@ class Program
         if (ApacheNetServerConfiguration.EnableDanPollockHosts)
             _ = ApacheNetProcessor.danChecker.DownloadAndParseFilterListAsync();
 
-        WebAPIService.WebArchive.WebArchiveRequest.ArchiveDateLimit = ApacheNetServerConfiguration.NotFoundWebArchiveDateLimit;
+        WebArchiveRequest.ArchiveDateLimit = ApacheNetServerConfiguration.NotFoundWebArchiveDateLimit;
 
         MultiServerLibrary.SSL.CertificateHelper.InitializeSSLChainSignedCertificates(ApacheNetServerConfiguration.HTTPSCertificateFile, ApacheNetServerConfiguration.HTTPSCertificatePassword,
             ApacheNetServerConfiguration.HTTPSDNSList, ApacheNetServerConfiguration.HTTPSCertificateHashingAlgorithm);

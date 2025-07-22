@@ -1,19 +1,21 @@
 using MultiServerLibrary.HTTP;
 using System.Collections.Generic;
 using System.Net;
-using WebAPIService.THQ;
-using WebAPIService.RCHOME;
+using WebAPIService.GameServices.RCHOME;
 using WatsonWebserver.Core;
-using WebAPIService.HOMELEADERBOARDS;
-using WebAPIService.CODEGLUE;
+using WebAPIService.GameServices.CODEGLUE;
 using System;
 using CustomLogger;
 using System.Threading.Tasks;
 using System.Globalization;
 using MultiServerLibrary.Extension;
 using System.Text.Json;
-using WebAPIService.COGS;
-using WebAPIService.AdobeFlash.binaries.JwPlayer;
+using WebAPIService.GameServices.COGS;
+using WebAPIService.WebServices.AdobeFlash.binaries.JwPlayer;
+using WebAPIService.GameServices.HOMELEADERBOARDS;
+using WebAPIService.GameServices.THQ;
+using WebAPIService.GameServices.UBISOFT.MatchMakingConfig;
+using WebAPIService.GameServices.UBISOFT.OnlineConfigService;
 
 namespace ApacheNet.RouteHandlers
 {
@@ -146,7 +148,7 @@ namespace ApacheNet.RouteHandlers
                         {
                             ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                             ctx.Response.ContentType = "application/json; charset=utf-8";
-                            return ctx.Response.Send(WebAPIService.UBISOFT.OnlineConfigService.JsonData.GetOnlineConfigPSN(ctx.Request.RetrieveQueryValue("onlineConfigID"))).Result;
+                            return ctx.Response.Send(JsonData.GetOnlineConfigPSN(ctx.Request.RetrieveQueryValue("onlineConfigID"))).Result;
                         }
                         return false;
                      }
@@ -180,7 +182,7 @@ namespace ApacheNet.RouteHandlers
                                                         {
                                                             ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                                                             ctx.Response.ContentType = "text/html; charset=utf-8"; // Not an error, packet shows this content type...
-                                                            return ctx.Response.Send(WebAPIService.UBISOFT.MatchMakingConfig.XMLData.DFS_PS3_NTSC_EN_XMLPayload).Result;
+                                                            return ctx.Response.Send(XMLData.DFS_PS3_NTSC_EN_XMLPayload).Result;
                                                         }
                                                         break;
                                                 }
@@ -193,7 +195,7 @@ namespace ApacheNet.RouteHandlers
                                                         {
                                                             ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                                                             ctx.Response.ContentType = "text/html; charset=utf-8"; // Not an error, packet shows this content type...
-                                                            return ctx.Response.Send(WebAPIService.UBISOFT.MatchMakingConfig.XMLData.DFS_PC_EN_XMLPayload).Result;
+                                                            return ctx.Response.Send(XMLData.DFS_PC_EN_XMLPayload).Result;
                                                         }
                                                         break;
                                                 }
@@ -206,7 +208,7 @@ namespace ApacheNet.RouteHandlers
                                                         {
                                                             ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                                                             ctx.Response.ContentType = "text/html; charset=utf-8"; // Not an error, packet shows this content type...
-                                                            return ctx.Response.Send(WebAPIService.UBISOFT.MatchMakingConfig.XMLData.PB_PS3_EN_XMLPayload).Result;
+                                                            return ctx.Response.Send(XMLData.PB_PS3_EN_XMLPayload).Result;
                                                         }
                                                         break;
                                                 }

@@ -9,8 +9,8 @@ using System.Collections.Generic;
 using System.IO.Compression;
 using PDFtoImage;
 using SkiaSharp;
-using WebAPIService.Utils;
 using ApacheNet.PluginManager;
+using WebAPIService;
 
 namespace PdfToJpeg
 {
