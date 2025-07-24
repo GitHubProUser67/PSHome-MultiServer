@@ -977,19 +977,10 @@ namespace Horizon.MUIS
         #region TimeZone
         public Task<MediusTimeZone> GetTimeZone(DateTime time)
         {
-
             var tz = TimeZoneInfo.Local;
             var tzInt = Convert.ToInt32(tz.Id);
 
-
             var tzStanName = tz.StandardName;
-
-            /*
-            if (tzTime. == 7200)
-            {
-
-            }
-            */
 
             if (tzStanName == "CEST")
                 return Task.FromResult(MediusTimeZone.MediusTimeZone_CEST);

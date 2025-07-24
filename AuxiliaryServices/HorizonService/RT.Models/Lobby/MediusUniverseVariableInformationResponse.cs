@@ -1,4 +1,3 @@
-using System.IO;
 using CustomLogger;
 using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
@@ -75,8 +74,12 @@ namespace Horizon.RT.Models
             if (InfoFilter.IsSet(MediusUniverseVariableInformationInfoFilter.INFO_EXTRAINFO))
                 ExtendedInfo = reader.ReadString(Constants.UNIVERSE_EXTENDED_INFO_MAXLEN);
 
-            //if (InfoFilter.IsSet(MediusUniverseVariableInformationInfoFilter.INFO_SVO_URL))
-            //    SvoURL = reader.ReadString(Constants.UNIVERSE_SVO_URL_MAXLEN);
+            // TODO: make it safe to extract this info.
+            /*if (approvedList.Contains(reader.AppId))
+            {
+                if (InfoFilter.IsSet(MediusUniverseVariableInformationInfoFilter.INFO_SVO_URL))
+                    SvoURL = reader.ReadString(Constants.UNIVERSE_SVO_URL_MAXLEN);
+            }*/
 
             EndOfList = reader.ReadBoolean();
 
@@ -87,8 +90,6 @@ namespace Horizon.RT.Models
             base.Serialize(writer);
 
             writer.Write(MessageID ?? MessageId.Empty);
-
-            //writer.Write(new byte[3]);
 
             writer.Write(StatusCode);
             writer.Write(InfoFilter);
@@ -215,7 +216,6 @@ namespace Horizon.RT.Models
                 LoggerAccessor.LogInfo("[MediusUniverseVariableInformationResponse] - Not writing SVOURL");
 
             writer.Write(EndOfList);
-            //writer.Write(new byte[3]);
         }
 
         public override string ToString()

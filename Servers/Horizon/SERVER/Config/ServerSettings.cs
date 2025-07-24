@@ -153,7 +153,7 @@ namespace Horizon.SERVER.Config
         /// Provide the IP of the SCE-RT NAT Service
         /// Default is: natservice.pdonline.scea.com:10070
         /// </summary>
-        public string? NATIp { get; set; } = null;
+        public string? NATIp { get; set; } = InternetProtocolUtils.TryGetServerIP(out _).Result ? InternetProtocolUtils.GetPublicIPAddress() : InternetProtocolUtils.GetLocalIPAddresses().First().ToString();
 
         /// <summary>
         /// Port of the NAT server.

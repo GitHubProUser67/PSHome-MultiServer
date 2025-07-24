@@ -256,8 +256,14 @@ namespace Horizon.MUM.Models
 
         public static Channel GetDefaultChannel(int ApplicationId, int mediusVersion)
         {
-            return new Channel(1, ApplicationId, mediusVersion) { Name = "Default", Type = ChannelType.Lobby,
-                LobbyFilterMaskLevelType = MediusLobbyFilterMaskLevelType.MediusLobbyFilterMaskLevel1, GenericField1 = 1000 };
+            //Eyetoy Chat
+            if (ApplicationId == 10550)
+                return new Channel(1, ApplicationId, mediusVersion) { Name = "Default", Type = ChannelType.Lobby, LobbyFilterMaskLevelType = MediusLobbyFilterMaskLevelType.MediusLobbyFilterMaskLevel1, GenericField1 = 1000 };
+            //PS Home
+            else if (ApplicationId == 20371 || ApplicationId == 20374)
+                return new Channel(1, ApplicationId, mediusVersion) { Name = "Default", Type = ChannelType.Lobby, GenericField2 = 32, GenericField3 = 1, GenericFieldLevel = MediusWorldGenericFieldLevelType.MediusWorldGenericFieldLevel23 };
+            else
+                return new Channel(1, ApplicationId, mediusVersion) { Name = "Default", Type = ChannelType.Lobby };
         }
 
         public virtual Task Tick()

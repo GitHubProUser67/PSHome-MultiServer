@@ -523,7 +523,7 @@ namespace MultiServerLibrary.SSL
         {
             // Find first existing certificate file
             string certificatePath = Path.HasExtension(certificatePathInput)
-                ? certificatePathInput
+                ? File.Exists(certificatePathInput) ? certificatePathInput : null
                 : certExtensions
                 .Select(ext => certificatePathInput + ext)
                 .FirstOrDefault(File.Exists);
@@ -536,7 +536,7 @@ namespace MultiServerLibrary.SSL
 
             // Find first existing private key file
             string privateKeyPath = Path.HasExtension(privateKeyPathInput)
-                ? privateKeyPathInput
+                ? File.Exists(privateKeyPathInput) ? privateKeyPathInput : null
                 : keyExtensions
                 .Select(ext => privateKeyPathInput + ext)
                 .FirstOrDefault(File.Exists);
