@@ -141,6 +141,8 @@ namespace Horizon.MUM.Models
                 intList[idToRemove] = false;
         }
 
+        public Channel() { }
+
         public Channel(int ApplicationId, int mediusVersion)
         {
             if (!TryGetNextAvailableId(ApplicationId, mediusVersion <= 108, out int Id))
