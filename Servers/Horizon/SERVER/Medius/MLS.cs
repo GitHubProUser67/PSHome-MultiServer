@@ -13,7 +13,6 @@ using System.Net;
 using Horizon.PluginManager;
 using Horizon.HTTPSERVICE;
 using Horizon.MUM;
-using Horizon.RT.Cryptography.RSA;
 using System.Text;
 using EndianTools;
 using Horizon.LIBRARY.Pipeline.Attribute;
@@ -7076,95 +7075,33 @@ namespace Horizon.SERVER.Medius
                             break;
                         }
 
+                        Game? game = MediusClass.Manager.GetGameByGameId(getWorldSecurityLevelRequest.MediusWorldID);
+
+                        if (game == null)
+                        {
+                            data.ClientObject.Queue(new MediusGetWorldSecurityLevelResponse()
+                            {
+                                MessageID = getWorldSecurityLevelRequest.MessageID,
+                                StatusCode = MediusCallbackStatus.MediusGameNotFound,
+                                MediusWorldID = getWorldSecurityLevelRequest.MediusWorldID,
+                                AppType = getWorldSecurityLevelRequest.AppType,
+                                SecurityLevel = MediusWorldSecurityLevelType.WORLD_SECURITY_NONE,
+                            });
+                            break;
+                        }
+
+                        MediusWorldSecurityLevelType securityLevel = MediusWorldSecurityLevelType.WORLD_SECURITY_NONE;
+                        if (!string.IsNullOrEmpty(game.GamePassword))
+                            securityLevel = MediusWorldSecurityLevelType.WORLD_SECURITY_PLAYER_PASSWORD;
+
                         data.ClientObject.Queue(new MediusGetWorldSecurityLevelResponse()
                         {
                             MessageID = getWorldSecurityLevelRequest.MessageID,
                             StatusCode = MediusCallbackStatus.MediusSuccess,
                             MediusWorldID = getWorldSecurityLevelRequest.MediusWorldID,
-                            AppType = MediusApplicationType.MediusAppTypeGame,
-                            SecurityLevel = MediusWorldSecurityLevelType.WORLD_SECURITY_NONE,
+                            AppType = getWorldSecurityLevelRequest.AppType,
+                            SecurityLevel = securityLevel,
                         });
-
-                        /*
-                        //Fetch Channel by MediusID and AppID
-                        var channel = MediusClass.Manager.GetChannelByChannelId(getWorldSecurityLevelRequest.MediusWorldID, data.ClientObject.ApplicationId);
-
-                        Logger.Warn($"MediusWorldID: {getWorldSecurityLevelRequest.MediusWorldID}\nAppType: {channel.AppType}\nSecurityLevel: {channel.SecurityLevel}");
-
-                        if(getWorldSecurityLevelRequest.AppType != MediusApplicationType.LobbyChatChannel ||
-                           getWorldSecurityLevelRequest.AppType != MediusApplicationType.MediusAppTypeGame)
-                        {
-                            #region IncorrectAppType
-                            data.ClientObject.Queue(new MediusGetWorldSecurityLevelResponse()
-                            {
-                                MessageID = getWorldSecurityLevelRequest.MessageID,
-                                StatusCode = MediusCallbackStatus.MediusInvalidRequestMsg,
-                                MediusWorldID = getWorldSecurityLevelRequest.MediusWorldID,
-                                AppType = MediusApplicationType.ExtraMediusApplicationType,
-                                SecurityLevel = channel.SecurityLevel
-                            });
-                            #endregion
-                        }
-                        else {
-
-                            if (getWorldSecurityLevelRequest.AppType == MediusApplicationType.LobbyChatChannel)
-                            {
-                                #region LobbyChatChannel
-                                if (channel != null)
-                                {
-                                    //Send back Successful SecurityLevel and AppType for the correct Channel
-                                    data.ClientObject.Queue(new MediusGetWorldSecurityLevelResponse()
-                                    {
-                                        MessageID = getWorldSecurityLevelRequest.MessageID,
-                                        StatusCode = MediusCallbackStatus.MediusSuccess,
-                                        MediusWorldID = getWorldSecurityLevelRequest.MediusWorldID,
-                                        AppType = MediusApplicationType.LobbyChatChannel,
-                                        SecurityLevel = channel.SecurityLevel
-                                    });
-                                } else
-                                {
-                                    //Send back Successful SecurityLevel and AppType for the correct Channel
-                                    data.ClientObject.Queue(new MediusGetWorldSecurityLevelResponse()
-                                    {
-                                        MessageID = getWorldSecurityLevelRequest.MessageID,
-                                        StatusCode = MediusCallbackStatus.MediusWMError,
-                                        MediusWorldID = getWorldSecurityLevelRequest.MediusWorldID,
-                                        AppType = MediusApplicationType.LobbyChatChannel,
-                                        SecurityLevel = MediusWorldSecurityLevelType.WORLD_SECURITY_NONE,
-                                    });
-                                }
-                                #endregion
-                            }
-                            else {
-                                #region MediusAppTypeGame
-                                if (channel != null)
-                                {
-                                    //Send back Successful SecurityLevel and AppType for the correct Channel
-                                    data.ClientObject.Queue(new MediusGetWorldSecurityLevelResponse()
-                                    {
-                                        MessageID = getWorldSecurityLevelRequest.MessageID,
-                                        StatusCode = MediusCallbackStatus.MediusSuccess,
-                                        MediusWorldID = getWorldSecurityLevelRequest.MediusWorldID,
-                                        AppType = MediusApplicationType.MediusAppTypeGame,
-                                        SecurityLevel = channel.SecurityLevel
-                                    });
-                                }
-                                else
-                                {
-                                    //Send back Successful SecurityLevel and AppType for the correct Channel
-                                    data.ClientObject.Queue(new MediusGetWorldSecurityLevelResponse()
-                                    {
-                                        MessageID = getWorldSecurityLevelRequest.MessageID,
-                                        StatusCode = MediusCallbackStatus.MediusWMError,
-                                        MediusWorldID = getWorldSecurityLevelRequest.MediusWorldID,
-                                        AppType = MediusApplicationType.MediusAppTypeGame,
-                                        SecurityLevel = MediusWorldSecurityLevelType.WORLD_SECURITY_NONE,
-                                    });
-                                }
-                                #endregion
-                            }
-                        }
-                        */
                         break;
                     }
 
@@ -7398,13 +7335,7 @@ namespace Horizon.SERVER.Medius
                                 LoggerAccessor.LogInfo($"SFO_HACK:Overriding Clan Lobby {createChannelRequest1.LobbyName} MaxPlayers from {createChannelRequest1.MaxPlayers} to {MediusClass.Settings.SFOOverrideClanLobbyMaxPlayers}");
                                 createChannelRequest1.MaxPlayers = MediusClass.Settings.SFOOverrideClanLobbyMaxPlayers;
                             }
-                            /*
-                            if(data.ClientObject.CharacterEncoding == MediusCharacterEncodingType.MediusCharacterEncoding_UTF8)
-                            {
-                                UTF8Encoding utf8 = new UTF8Encoding();
-                                byte[] encodedBytes = utf8.GetBytes(channel.Name);
-                            }
-                            */
+
                             // Add
                             await MediusClass.Manager.AddChannel(channel);
 

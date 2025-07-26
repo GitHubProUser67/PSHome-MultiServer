@@ -655,7 +655,13 @@ namespace Horizon.DME
                                 ClientCountAtConnect = (ushort?)data.DMEObject?.DmeWorld?.Clients.Length ?? 0x0001,
                             }, clientChannel);
 
-                            if (scertClient.MediusVersion > 108)
+                            // Some clients doesn't expect TypeServerVersion.
+                            if (scertClient.MediusVersion > 108 
+                            && scertClient.ApplicationID != 20371 
+                            && scertClient.ApplicationID != 20374 
+                            && scertClient.ApplicationID != 20364
+                            && scertClient.ApplicationID != 20764
+                            && scertClient.ApplicationID != 21624)
                             {
                                 Queue(new RT_MSG_SERVER_APP()
                                 {

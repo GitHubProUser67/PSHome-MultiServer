@@ -407,6 +407,17 @@ namespace Horizon.SERVER.Config
         public bool PokePatchOn { get; set; } = false;
 
         #region PSHOME Internal Plugin
+
+        /// <summary>
+        /// Enables the closed beta auto-create plugin.
+        /// </summary>
+        public bool PlaystationHomeClosedBetaAutoCreatePlugin { get; set; } = false;
+
+        /// <summary>
+        /// Needed for the closed beta auto-create plugin.
+        /// </summary>
+        public string PlaystationHomeClosedBetaSceneListPath { get; set; } = Program.configDir + "SCENELIST.XML";
+
         /// <summary>
         /// Enables the use of non-validated home eboots.
         /// </summary>

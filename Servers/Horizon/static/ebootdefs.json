@@ -1,4 +1,30 @@
 {
+  "72E4F33882937CEF749D20D8B85CE4DA740239E4": {
+    "Version": "0.4.1",
+    "Type": "HDK Online Only",
+    "Offsets": {
+      "TitleIdOffset": "0x0",
+      "TitleIdOffset2": "0x0",
+      "AppIdOffset": "0x0",
+      "ServiceIdOffset": "0x0",
+      "MuisVersionOffset1": "0x0",
+      "OfflineNameOffset": "0x0",
+      "PSplusOffset": "0x0",
+      "CMDConsoleOffset": "0x0",
+      "ProfFilterOffset": "0x0",
+      "MlaaOffset": "0x0",
+      "EulaOffset": "0x0",
+      "DrawDistOffset": "0x0",
+      "DrawDistOffset2": "0x0",
+      "DrawDistOffset3": "0x0",
+      "DrawDistOffset4": "0x0",
+      "DrawDistOffset5": "0x0",
+      "DrawDistOffset6": "0x0",
+      "DrawDistOffset7": "0x0",
+      "DrawDistOffset8": "0x0",
+      "NPMatchingTTYSpamOffset": "0x0"
+    }
+  },
   "FC87328C7488E98B43B4E9B97C4BB6D7E8EB551F": {
     "Version": "0.8.9.",
     "Type": "HDK with Offline",

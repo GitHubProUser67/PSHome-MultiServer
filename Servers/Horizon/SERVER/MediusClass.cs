@@ -189,6 +189,15 @@ namespace Horizon.SERVER
                     await AntiCheatPlugin.AntiCheatInit(LM_SEVERITY_LEVEL.LM_INFO, Settings.AntiCheatOn);
                 #endregion
 
+                #region Home Closed Beta Plugin
+                if (Settings.PlaystationHomeClosedBetaAutoCreatePlugin)
+                {
+                    HomeClosedBetaChannelManager.InitiateBetaChannelsId(Settings.PlaystationHomeClosedBetaSceneListPath);
+                    await HomeClosedBetaChannelManager.GenerateOrUpdateChatChannels(20371).ConfigureAwait(false);
+                    await HomeClosedBetaChannelManager.GenerateOrUpdateChatChannels(20374).ConfigureAwait(false);
+                }
+                #endregion
+
                 #region MediusGetVersion
                 if (Settings.MediusServerVersionOverride)
                 {

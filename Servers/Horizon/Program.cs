@@ -182,7 +182,7 @@ public static class HorizonServerConfiguration
 
 class Program
 {
-    private static string configDir = Directory.GetCurrentDirectory() + "/static/";
+    public static string configDir = Directory.GetCurrentDirectory() + "/static/";
     private static string configPath = configDir + "horizon.json";
     private static string configMultiServerLibraryPath = configDir + "MultiServerLibrary.json";
     private static SnmpTrapSender? trapSender = null;
