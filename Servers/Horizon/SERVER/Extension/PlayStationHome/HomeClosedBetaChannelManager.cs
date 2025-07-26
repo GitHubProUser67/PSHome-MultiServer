@@ -59,7 +59,7 @@ namespace Horizon.SERVER.Extension.PlayStationHome
                 if (currentChannel == null)
                 {
                     await MediusClass.Manager.AddChannel(new Channel(channelId, ApplicationId, 113) { Name = "HomeLobby", Type = ChannelType.Lobby,
-                        GenericField2 = 32,
+                        GenericField2 = (ulong)channelId,
                         GenericField3 = 1,
                         MinPlayers = 0,
                         MaxPlayers = 32,
