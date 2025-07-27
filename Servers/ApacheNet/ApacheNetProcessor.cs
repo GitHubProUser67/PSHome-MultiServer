@@ -19,7 +19,6 @@ using WebAPIService.GameServices.I_Love_Sony;
 using WebAPIService.GameServices.DIGITAL_LEISURE;
 using WebAPIService.GameServices.HEAVYWATER;
 using WebAPIService.GameServices.UBISOFT.BuildAPI;
-using WebAPIService.GameServices.CCPGames;
 using CustomLogger;
 using HttpMultipartParser;
 using Newtonsoft.Json;
@@ -628,29 +627,8 @@ namespace ApacheNet
                         }
                         else if (ApacheNetServerConfiguration.EnableBuiltInPlugins)
                         {
-                            #region Dust 514 dcrest
-                            if (ServerPort == 26004 //Check for Dust514 specific Port!!
-                            && request.RetrieveHeaderValue("X-CCP-User-Agent").Contains("CCPGamesCrestClient"))
-                            {
-                                LoggerAccessor.LogInfo($"[{loggerprefix}] - {clientip}:{clientport} Identified a Dust514 method : {absolutepath}");
-
-                                string? res = new Dust514Class(request.Method.ToString(), absolutepath, ApacheNetServerConfiguration.APIStaticFolder).ProcessRequest(request.DataAsBytes, request.ContentType, request.Headers, secure);
-                                if (string.IsNullOrEmpty(res))
-                                    statusCode = HttpStatusCode.InternalServerError;
-                                else
-                                    statusCode = HttpStatusCode.OK;
-
-                                response.StatusCode = (int)statusCode;
-                                if (response.ChunkedTransfer)
-                                    sent = await response.SendChunk(!string.IsNullOrEmpty(res) ? Encoding.UTF8.GetBytes(res) : null, true);
-                                else
-                                    sent = await response.Send(res);
-                            }
-
-                            #endregion
-
                             #region EA Demangler
-                            else if (Host.Contains("demangler.ea.com"))
+                            if (Host.Contains("demangler.ea.com"))
                             {
                                 response.ChunkedTransfer = false;
                                 response.ProtocolVersion = "1.0";
