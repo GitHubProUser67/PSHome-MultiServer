@@ -362,7 +362,7 @@ namespace ApacheNet
                                         {
                                             apacheContext.StatusCode = HttpStatusCode.NotFound;
 
-                                            if (!string.IsNullOrEmpty(Accept) && Accept.Contains("html"))
+                                            if (isHtmlCompatible)
                                             {
                                                 string hostToDisplay = string.IsNullOrEmpty(Host) ? (apacheContext.ServerIP.Length > 15 ? "[" + apacheContext.ServerIP + "]" : apacheContext.ServerIP) : Host;
                                                 string htmlPage = await DefaultHTMLPages.GenerateErrorPageAsync(apacheContext.StatusCode, absolutepath, $"{(apacheContext.Secure ? "https" : "http")}://{hostToDisplay}",
@@ -541,7 +541,7 @@ namespace ApacheNet
                                                 {
                                                     apacheContext.StatusCode = HttpStatusCode.NotFound;
 
-                                                    if (!string.IsNullOrEmpty(Accept) && Accept.Contains("html"))
+                                                    if (isHtmlCompatible)
                                                     {
                                                         string hostToDisplay = string.IsNullOrEmpty(Host) ? (apacheContext.ServerIP.Length > 15 ? "[" + apacheContext.ServerIP + "]" : apacheContext.ServerIP) : Host;
                                                         string htmlPage = await DefaultHTMLPages.GenerateErrorPageAsync(apacheContext.StatusCode, absolutepath, $"{(apacheContext.Secure ? "https" : "http")}://{hostToDisplay}",
