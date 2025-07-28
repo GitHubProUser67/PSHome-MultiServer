@@ -6,7 +6,7 @@ using NLua;
 using WatsonWebserver.Core;
 using WebAPIService.GameServices.OHS;
 
-namespace ApacheNet.Extensions
+namespace ApacheNet.BuildIn.Extensions
 {
     public class LUA
     {

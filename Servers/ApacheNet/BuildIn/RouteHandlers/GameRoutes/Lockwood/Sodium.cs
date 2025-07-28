@@ -4,7 +4,7 @@ using System.Net;
 using WatsonWebserver.Core;
 using WebAPIService.GameServices.OHS;
 
-namespace ApacheNet.Extensions.Lockwood
+namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 {
     internal static class Sodium
     {
@@ -21,7 +21,7 @@ namespace ApacheNet.Extensions.Lockwood
                     return;
                 }
                 string xmlPath = $"/webassets/Sodium/{project}/{ctx.Request.Url.Parameters["version"]}/HoloTip_Data.xml";
-                string filePath = !ApacheNetServerConfiguration.DomainFolder ? ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath : ApacheNetServerConfiguration.HTTPStaticFolder + $"/{ctx.Request.RetrieveHeaderValue("Host")}" + xmlPath;
+                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
                 if (File.Exists(filePath))
                 {
@@ -1017,7 +1017,7 @@ namespace ApacheNet.Extensions.Lockwood
                 string xmldef = ctx.Request.Url.Parameters["xmldef"] ?? "en-US";
 
                 string xmlPath = $"/webassets/Sodium/sodium_blimp/{version}/{xmldef}";
-                string filePath = !ApacheNetServerConfiguration.DomainFolder ? ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath : ApacheNetServerConfiguration.HTTPStaticFolder + $"/{ctx.Request.RetrieveHeaderValue("Host")}" + xmlPath;
+                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
                 if (File.Exists(filePath))
                 {
@@ -1041,7 +1041,7 @@ namespace ApacheNet.Extensions.Lockwood
                     return;
                 }
                 string xmlPath = $"/static/SodiumBlimp/{ctx.Request.Url.Parameters["version"]}/defs/{defs}";
-                string filePath = !ApacheNetServerConfiguration.DomainFolder ? ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath : ApacheNetServerConfiguration.HTTPStaticFolder + $"/{ctx.Request.RetrieveHeaderValue("Host")}" + xmlPath;
+                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
                 if (File.Exists(filePath))
                 {
@@ -1312,7 +1312,7 @@ namespace ApacheNet.Extensions.Lockwood
 
                         return Encode(TableFromInput, 4, 4)
                         "));
-                                        return;
+                        return;
                     case "burner_defs.xml":
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                         ctx.Response.ContentType = "text/xml";
@@ -1667,7 +1667,7 @@ namespace ApacheNet.Extensions.Lockwood
                 ctx.Response.ContentType = "text/xml";
 
                 string xmlPath = $"/webassets/Sodium/sodium2/scores/{ctx.Request.Url.Parameters["version"]}/{ctx.Request.Url.Parameters["lang"]}";
-                string filePath = !ApacheNetServerConfiguration.DomainFolder ? ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath : ApacheNetServerConfiguration.HTTPStaticFolder + $"/{ctx.Request.RetrieveHeaderValue("Host")}" + xmlPath;
+                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
                 if (File.Exists(filePath))
                 {
@@ -2314,7 +2314,7 @@ namespace ApacheNet.Extensions.Lockwood
                 ctx.Response.ContentType = "text/xml";
 
                 string xmlPath = $"/webassets/Sodium/sodium2_shop/{ctx.Request.Url.Parameters["version"]}/{project}/{ctx.Request.Url.Parameters["lang"]}";
-                string filePath = !ApacheNetServerConfiguration.DomainFolder ? ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath : ApacheNetServerConfiguration.HTTPStaticFolder + $"/{ctx.Request.RetrieveHeaderValue("Host")}" + xmlPath;
+                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
                 if (File.Exists(filePath))
                 {

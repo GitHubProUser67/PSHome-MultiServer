@@ -13,13 +13,11 @@ namespace WebAPIService.GameServices.UBISOFT.BuildAPI
 
     public class SoapBuildAPIClass
     {
-        string workpath;
         string absolutepath;
         string method;
 
-        public SoapBuildAPIClass(string method, string absolutepath, string workpath)
+        public SoapBuildAPIClass(string method, string absolutepath)
         {
-            this.workpath = workpath;
             this.absolutepath = absolutepath;
             this.method = method;
         }
@@ -39,14 +37,18 @@ namespace WebAPIService.GameServices.UBISOFT.BuildAPI
                             return BuildDBPullServiceHandler.buildDBRequestParser(PostData, ContentType);
                         default:
                             {
-                                LoggerAccessor.LogError($"[BuildDBPullService] - Unhandled server request discovered: {absolutepath} | DETAILS: \n{Encoding.UTF8.GetString(PostData)}");
+#if DEBUG
+                                LoggerAccessor.LogWarn($"[BuildDBPullService] - Unhandled server request discovered: {absolutepath} | DETAILS: \n{Encoding.UTF8.GetString(PostData)}");
+#else
+                                LoggerAccessor.LogWarn($"[BuildDBPullService] - Unhandled server request discovered: {absolutepath}");
+#endif
                             }
                             break;
                     }
                     break;
                 default:
                     {
-                        LoggerAccessor.LogError($"[BuildDBPullService] - Method unhandled {method}");
+                        LoggerAccessor.LogWarn($"[BuildDBPullService] - Method unhandled {method}");
                     }
                     break;
             }

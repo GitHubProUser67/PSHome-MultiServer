@@ -1,6 +1,9 @@
 using CustomLogger;
+using EndianTools;
+using MultiServerLibrary.Extension.LinqSQL;
 using MultiServerLibrary.GeoLocalization;
 using MultiSpyService.Data;
+using MultiSpyService.Utils;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;
@@ -8,10 +11,18 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using MultiServerLibrary.Extension.LinqSQL;
 
 namespace MultiSpy.Servers
 {
+	internal enum ServerListMasterMsg
+	{
+        CHALLENGE_RESPONSE = 0x01,
+	    HEARTBEAT = 0x03,
+	    KEEPALIVE = 0x08,
+	    AVAILABLE = 0x09,
+	    RESPONSE_CORRECT = 0x0A
+    }
+
     internal class ServerListReport
 	{
 		public readonly ConcurrentDictionary<string, GameServer> Servers;
@@ -186,7 +197,7 @@ namespace MultiSpy.Servers
 
                 // there by a bunch of different message formats...
 
-                if (receivedBytes.Length == 5 && receivedBytes[0] == 0x08)
+                if (receivedBytes.Length == 5 && receivedBytes[0] == (byte)ServerListMasterMsg.KEEPALIVE)
                 {
                     // this is a server ping, it starts with 0x08, it happens every 20 seconds or so
 
@@ -195,7 +206,7 @@ namespace MultiSpy.Servers
 
                     RefreshServerPing(remote);
                 }
-                else if (receivedBytes.Length >= 5 && receivedBytes[0] == 0x09)
+                else if (receivedBytes.Length >= 5 && receivedBytes[0] == (byte)ServerListMasterMsg.AVAILABLE)
                 {
                     // the initial message is basically the gamename, 0x09 0x00 0x00 0x00 0x00 battlefield2
                     // reply back a good response
@@ -204,7 +215,7 @@ namespace MultiSpy.Servers
                     // _socket.SendTo(new byte[] { 0xfe, 0xfd, 0x09, 0x00, 0x00, 0x00, 0x01 }, remote); // UNAVAILABLE_RESPONSE
                     // _socket.SendTo(new byte[] { 0xfe, 0xfd, 0x09, 0x00, 0x00, 0x00, 0x02 }, remote); // TEMP_UNAVAILABLE_RESPONSE
                 }
-                else if (receivedBytes.Length > 5 && receivedBytes[0] == 0x03)
+                else if (receivedBytes.Length > 5 && receivedBytes[0] == (byte)ServerListMasterMsg.HEARTBEAT)
                 {
                     // this is where server details come in, it starts with 0x03, it happens every 60 seconds or so
 
@@ -213,31 +224,46 @@ namespace MultiSpy.Servers
 
                     if (!ParseServerDetails(remote, receivedBytes.Skip(5).ToArray()))
                     {
-                        // this should be some sort of proper encrypted challenge, but for now i'm just going to hard code it because I don't know how the encryption works...
-                        byte[] response = new byte[] { 0xfe, 0xfd, 0x01, uniqueId[0], uniqueId[1], uniqueId[2], uniqueId[3], 0x44, 0x3d, 0x73, 0x7e, 0x6a, 0x59, 0x30, 0x30, 0x37, 0x43, 0x39, 0x35, 0x41, 0x42, 0x42, 0x35, 0x37, 0x34, 0x43, 0x43, 0x00 };
-                        _socket.SendTo(response, remote);
+						List<byte> response = new List<byte>();
+
+						response.AddRange(new byte[] { 0xfe, 0xfd, (byte)ServerListMasterMsg.CHALLENGE_RESPONSE, uniqueId[0], uniqueId[1], uniqueId[2], uniqueId[3] });
+
+                        response.AddRange(Encoding.ASCII.GetBytes(new HeartbeatCipher().Salt));
+
+                        byte[] ipBytes = remote.Address.GetAddressBytes(); // 4 bytes
+                        byte[] portBytes = new byte[2]; // 2 bytes, big-endian
+
+						EndianAwareConverter.WriteUInt16(portBytes, Endianness.BigEndian, 0, (ushort)remote.Port);
+
+                        var ipPortBlock = new byte[1 + ipBytes.Length + portBytes.Length];
+                        ipPortBlock[0] = 0x00;
+                        Array.Copy(ipBytes, 0, ipPortBlock, 1, ipBytes.Length);
+                        Array.Copy(portBytes, 0, ipPortBlock, 1 + ipBytes.Length, portBytes.Length);
+
+                        // 6. Base16 encode the block (uppercase ASCII hex)
+                        response.AddRange(Encoding.ASCII.GetBytes(BitConverter.ToString(ipPortBlock).Replace("-", string.Empty).ToUpper()));
+
+                        response.Add(0x00);
+
+                        _socket.SendTo(response.ToArray(), remote);
                     }
                 }
-                else if (receivedBytes.Length > 5 && receivedBytes[0] == 0x01)
+                else if (receivedBytes.Length > 5 && receivedBytes[0] == (byte)ServerListMasterMsg.CHALLENGE_RESPONSE)
                 {
                     // this is a challenge response, it starts with 0x01
 
                     byte[] uniqueId = new byte[4];
                     Array.Copy(receivedBytes, 1, uniqueId, 0, 4);
 
-                    // confirm against the hardcoded challenge
-                    byte[] validate = new byte[] { 0x72, 0x62, 0x75, 0x67, 0x4a, 0x34, 0x34, 0x64, 0x34, 0x7a, 0x2b, 0x66, 0x61, 0x78, 0x30, 0x2f, 0x74, 0x74, 0x56, 0x56, 0x46, 0x64, 0x47, 0x62, 0x4d, 0x7a, 0x38, 0x41, 0x00 };
-                    byte[] clientResponse = new byte[validate.Length];
+                    // confirm against the challenge (UNIMPLEMENTED)
+                    byte[] clientResponse = new byte[29];
                     Array.Copy(receivedBytes, 5, clientResponse, 0, clientResponse.Length);
 
-                    // if we validate, reply back a good response
-                    if (clientResponse.SequenceEqual(validate))
-                    {
-                        byte[] response = new byte[] { 0xfe, 0xfd, 0x0a, uniqueId[0], uniqueId[1], uniqueId[2], uniqueId[3] };
-                        _socket.SendTo(response, remote);
+                    // Reply back a good response all the time for now
+                    byte[] response = new byte[] { 0xfe, 0xfd, (byte)ServerListMasterMsg.RESPONSE_CORRECT, uniqueId[0], uniqueId[1], uniqueId[2], uniqueId[3] };
+                    _socket.SendTo(response, remote);
 
-                        AddValidServer(remote);
-                    }
+                    AddValidServer(remote);
                 }
             } catch (Exception ex) {
                 LoggerAccessor.LogError("[ServerListReport] - " + ex.ToString());
@@ -290,7 +316,8 @@ namespace MultiSpy.Servers
 				server.country = "??";
 			} else {
 				try {
-					server.country = GeoIP.GetISOCodeFromIP(IPAddress.Parse(server.IPAddress)).ToUpperInvariant();
+                    var isoCode = GeoIP.GetISOCodeFromIP(IPAddress.Parse(server.IPAddress));
+                    server.country = string.IsNullOrEmpty(isoCode) ? "??" : isoCode.ToUpperInvariant();
 				} catch (Exception e) {
                     LoggerAccessor.LogError("[ServerListReport] - " + e.ToString());
 					server.country = "??";
@@ -302,7 +329,9 @@ namespace MultiSpy.Servers
 
 				if (property == null)
 					continue;
-
+#if DEBUG
+				LoggerAccessor.LogInfo($"[ServerListReport] - property with name:{property.Name} was requested.");
+#endif
 				if (property.Name == "hostname") {
 					// strip consecutive whitespace from hostname
 					property.SetValue(server, Regex.Replace(serverVarsSplit[i + 1], @"\s+", " ").Trim(), null);
@@ -342,7 +371,7 @@ namespace MultiSpy.Servers
 				}
 			}
 
-			if (String.IsNullOrWhiteSpace(server.gamevariant) || !ModWhitelist.ToList().Any(x => SQLMethods.EvaluateIsLike(server.gamevariant, x))) {
+			if (!String.IsNullOrWhiteSpace(server.gamevariant) && !ModWhitelist.ToList().Any(x => SQLMethods.EvaluateIsLike(server.gamevariant, x))) {
 				// only allow servers with a gamevariant of those listed in modwhitelist.txt, or (pr || pr_*) by default
 				return true; // true means we don't send back a response
 			}

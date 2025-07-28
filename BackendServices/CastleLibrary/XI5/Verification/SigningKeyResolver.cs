@@ -12,8 +12,15 @@ namespace XI5.Verification
         {
             // game title ID, signing key, e.x
             // { "NPUAXXXXX", new List<ITicketSigningKey> { new ExempleSigningKey() } },
-            { "BLUS30536", new List<ITicketSigningKey> { new DriverSFNtscDiscSigningKey() } },
+
+            // PSHome
+            { "NPEA00013", new List<ITicketSigningKey> { new HomeClosedBetaSigningKey(), new DefaultSigningKey() } },
+
+            // PSHome APIs
             { "NPUR00071", new List<ITicketSigningKey> { new HellfirePALSigningKey(), new HellfireNTSCSigningKey(), new NovusPrimeNTSC_JSigningKey() } },
+
+            // Driver SF
+            { "BLUS30536", new List<ITicketSigningKey> { new DriverSFNtscDiscSigningKey() } },
         };
 
         /// <summary>
@@ -26,8 +33,11 @@ namespace XI5.Verification
                 return new List<ITicketSigningKey> { RpcnSigningKey.Instance };
 
             // psn game signing key
-            if (!string.IsNullOrWhiteSpace(titleId) && PsnKeys.TryGetValue(titleId, out List<ITicketSigningKey> psnKeys))
-                return psnKeys;
+            lock (PsnKeys)
+            {
+                if (!string.IsNullOrWhiteSpace(titleId) && PsnKeys.TryGetValue(titleId, out List<ITicketSigningKey> psnKeys))
+                    return new List<ITicketSigningKey>(psnKeys);
+            }
 
             // default signing key
             return new List<ITicketSigningKey> { new DefaultSigningKey() };

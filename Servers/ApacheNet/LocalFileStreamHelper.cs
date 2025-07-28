@@ -5,11 +5,11 @@ using System.IO;
 using System;
 using System.Threading.Tasks;
 using System.Globalization;
-using WatsonWebserver.Core;
 using MultiServerLibrary.HTTP;
 using MultiServerLibrary.Extension;
 using MultiServerLibrary.Upscalers;
 using WebAPIService.WebServices.AdobeFlash.binaries.JwPlayer;
+using ApacheNet.Models;
 
 namespace ApacheNet
 {
@@ -19,7 +19,7 @@ namespace ApacheNet
 
         public const long compressionSizeLimit = 800L * 1024 * 1024; // 800MB in bytes
 
-        public static async Task<bool> HandleRequest(HttpContextBase ctx, string encoding, string absolutepath, string filePath
+        public static async Task<bool> HandleRequest(ApacheContext ctx, string encoding, string absolutepath, string filePath
             , string ContentType, string UserAgent, bool isVideoOrAudio, bool isHtmlCompatible, bool noCompressCacheControl)
         {
             bool isNoneMatchValid = false;
@@ -39,14 +39,12 @@ namespace ApacheNet
                 (isNoneMatchValid && string.IsNullOrEmpty(ifModifiedSince)) ||
                 (isModifiedSinceValid && string.IsNullOrEmpty(NoneMatch)))
             {
-                ctx.Response.ChunkedTransfer = false;
                 ctx.Response.ContentType = "text/plain";
-                ctx.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                return await ctx.Response.Send().ConfigureAwait(false);
+                ctx.StatusCode = HttpStatusCode.NotModified;
+                return await ctx.SendImmediate().ConfigureAwait(false);
             }
 
             bool compressionSettingEnabled = ApacheNetServerConfiguration.EnableHTTPCompression;
-            bool sent = false;
             string extension = Path.GetExtension(filePath);
             Stream? st;
 
@@ -56,7 +54,7 @@ namespace ApacheNet
 
                 try
                 {
-                    st = ImageOptimizer.OptimizeImage(ApacheNetServerConfiguration.ConvertersFolder, filePath, extension, ImageOptimizer.defaultOptimizerParams);
+                    st = ImageOptimizer.OptimizeImage(ApacheNetServerConfiguration.ImageMagickPath, filePath, extension, ImageOptimizer.defaultOptimizerParams);
 
                     if (compressionSettingEnabled && !noCompressCacheControl && !string.IsNullOrEmpty(encoding) && st.Length <= compressionSizeLimit)
                     {
@@ -91,7 +89,7 @@ namespace ApacheNet
             {
                 string htmlContent;
                 // Generate an HTML page with the video element
-                if (!string.IsNullOrEmpty(UserAgent) && (UserAgent.Contains("PLAYSTATION 3") || UserAgent.Contains("PSP (PlayStation Portable)")))
+                if (!string.IsNullOrEmpty(UserAgent) && UserAgent.Contains("PLAYSTATION 3"))
                 {
                     switch (ctx.Request.RetrieveQueryValue("PS3"))
                     {
@@ -313,54 +311,28 @@ namespace ApacheNet
 sendImmediate:
             if (st == null)
             {
-                ctx.Response.ChunkedTransfer = false;
                 ctx.Response.Headers.Clear();
-                ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                ctx.StatusCode = HttpStatusCode.InternalServerError;
                 ctx.Response.ContentType = "text/plain";
-                return await ctx.Response.Send().ConfigureAwait(false);
+                return await ctx.SendImmediate().ConfigureAwait(false);
             }
+
+            bool chunked = ctx.AcceptChunked;
 
             using (st)
             {
-                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                // Hotfix PSHome videos not being displayed in HTTP using chunck encoding (game bug).
+                if (!string.IsNullOrEmpty(ctx.Request.Useragent) && ctx.Request.Useragent.Contains("CellOS") && isVideoOrAudio)
+                    chunked = false;
+
+                ctx.StatusCode = HttpStatusCode.OK;
                 ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
                 ctx.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(filePath).ToString("r"));
-                if (ctx.Response.ChunkedTransfer)
-                {
-                    long bytesLeft = st.Length;
-
-                    if (bytesLeft == 0)
-                        sent = await ctx.Response.SendChunk(Array.Empty<byte>(), true).ConfigureAwait(false);
-                    else
-                    {
-                        const int buffersize = 16 * 1024;
-
-                        bool isNotlastChunk;
-                        byte[] buffer;
-
-                        while (bytesLeft > 0)
-                        {
-                            isNotlastChunk = bytesLeft > buffersize;
-                            buffer = new byte[isNotlastChunk ? buffersize : bytesLeft];
-                            int n = await st.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
-
-                            if (isNotlastChunk)
-                                await ctx.Response.SendChunk(buffer, false).ConfigureAwait(false);
-                            else
-                                sent = await ctx.Response.SendChunk(buffer, true).ConfigureAwait(false);
-
-                            bytesLeft -= n;
-                        }
-                    }
-                }
-                else
-                    sent = await ctx.Response.Send(st.Length, st).ConfigureAwait(false);
+                return await ctx.SendImmediate(st, chunked).ConfigureAwait(false);
             }
-
-            return sent;
         }
 
-        public static async Task<bool> HandlePartialRangeRequest(HttpContextBase ctx, string filePath, string ContentType,
+        public static async Task<bool> HandlePartialRangeRequest(ApacheContext ctx, string filePath, string ContentType,
             bool noCompressCacheControl, string boundary = "multiserver_separator")
         {
             // This method directly communicate with the wire to handle, normally, imposible transfers.
@@ -368,9 +340,8 @@ sendImmediate:
 
             if (HTTPProcessor.CheckLastWriteTime(filePath, ctx.Request.RetrieveHeaderValue("If-Unmodified-Since"), true))
             {
-                ctx.Response.ChunkedTransfer = false;
-                ctx.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed;
-                return await ctx.Response.Send().ConfigureAwait(false);
+                ctx.StatusCode = HttpStatusCode.PreconditionFailed;
+                return await ctx.SendImmediate().ConfigureAwait(false);
             }
             else
             {
@@ -440,7 +411,7 @@ sendImmediate:
                                         fs.Flush();
                                         fs.Close();
                                         ctx.Response.Headers.Add("Content-Range", string.Format("bytes */{0}", filesize));
-                                        ctx.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
+                                        ctx.StatusCode = HttpStatusCode.RequestedRangeNotSatisfiable;
                                         ctx.Response.ContentType = "text/html; charset=UTF-8";
                                         if (ApacheNetServerConfiguration.EnableHTTPCompression && !noCompressCacheControl && !string.IsNullOrEmpty(acceptencoding))
                                         {
@@ -470,10 +441,7 @@ sendImmediate:
                                         else
                                             payloadBytes = Encoding.UTF8.GetBytes(payload);
 
-                                        if (ctx.Response.ChunkedTransfer)
-                                            return await ctx.Response.SendChunk(payloadBytes, true).ConfigureAwait(false);
-                                        else
-                                            return await ctx.Response.Send(payloadBytes).ConfigureAwait(false);
+                                        return await ctx.SendImmediate(payloadBytes, ctx.AcceptChunked).ConfigureAwait(false);
                                     }
                                     else if ((startByte >= endByte) || startByte < 0 || endByte <= 0) // Curl test showed this behaviour.
                                     {
@@ -484,37 +452,9 @@ sendImmediate:
                                         ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
                                         ctx.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(filePath).ToString("r"));
                                         ctx.Response.Headers.Add("Accept-Ranges", "bytes");
-                                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                                        ctx.StatusCode = HttpStatusCode.OK;
                                         ctx.Response.ContentType = ContentType;
-
-                                        if (ctx.Response.ChunkedTransfer)
-                                        {
-                                            long bytesLeft = new FileInfo(filePath).Length;
-
-                                            if (bytesLeft == 0)
-                                                return await ctx.Response.SendChunk(Array.Empty<byte>(), true).ConfigureAwait(false);
-
-                                            const int buffersize = 16 * 1024;
-
-                                            bool isNotlastChunk;
-                                            byte[] buffer;
-
-                                            while (bytesLeft > 0)
-                                            {
-                                                isNotlastChunk = bytesLeft > buffersize;
-                                                buffer = new byte[isNotlastChunk ? buffersize : bytesLeft];
-                                                int n = await fs.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
-
-                                                if (isNotlastChunk)
-                                                    await ctx.Response.SendChunk(buffer, false).ConfigureAwait(false);
-                                                else
-                                                    return await ctx.Response.SendChunk(buffer, true).ConfigureAwait(false);
-
-                                                bytesLeft -= n;
-                                            }
-                                        }
-                                        else
-                                            return await ctx.Response.Send(new FileInfo(filePath).Length, fs);
+                                        return await ctx.SendImmediate(fs, ctx.AcceptChunked).ConfigureAwait(false);
                                     }
                                     else
                                     {
@@ -544,39 +484,12 @@ sendImmediate:
                                 ctx.Response.Headers.Add("Content-Length", ms.Length.ToString());
                                 ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
                                 ctx.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(filePath).ToString("r"));
-                                ctx.Response.StatusCode = (int)HttpStatusCode.PartialContent;
+                                ctx.StatusCode = HttpStatusCode.PartialContent;
 
                                 fs.Flush();
                                 fs.Close();
 
-                                if (ctx.Response.ChunkedTransfer)
-                                {
-                                    long bytesLeft = ms.Length;
-
-                                    if (bytesLeft == 0)
-                                        return await ctx.Response.SendChunk(Array.Empty<byte>(), true).ConfigureAwait(false);
-
-                                    const int buffersize = 16 * 1024;
-
-                                    bool isNotlastChunk;
-                                    byte[] buffer;
-
-                                    while (bytesLeft > 0)
-                                    {
-                                        isNotlastChunk = bytesLeft > buffersize;
-                                        buffer = new byte[isNotlastChunk ? buffersize : bytesLeft];
-                                        int n = await ms.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
-
-                                        if (isNotlastChunk)
-                                            await ctx.Response.SendChunk(buffer, false).ConfigureAwait(false);
-                                        else
-                                            return await ctx.Response.SendChunk(buffer, true).ConfigureAwait(false);
-
-                                        bytesLeft -= n;
-                                    }
-                                }
-                                else
-                                    return await ctx.Response.Send(ms.Length, ms).ConfigureAwait(false);
+                                return await ctx.SendImmediate(ms, ctx.AcceptChunked).ConfigureAwait(false);
                             }
                             else
                             {
@@ -611,7 +524,7 @@ sendImmediate:
                                 fs.Flush();
                                 fs.Close();
                                 ctx.Response.Headers.Add("Content-Range", string.Format("bytes */{0}", filesize));
-                                ctx.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
+                                ctx.StatusCode = HttpStatusCode.RequestedRangeNotSatisfiable;
                                 ctx.Response.ContentType = "text/html; charset=UTF-8";
                                 if (ApacheNetServerConfiguration.EnableHTTPCompression && !noCompressCacheControl && !string.IsNullOrEmpty(acceptencoding))
                                 {
@@ -641,10 +554,7 @@ sendImmediate:
                                 else
                                     payloadBytes = Encoding.UTF8.GetBytes(payload);
 
-                                if (ctx.Response.ChunkedTransfer)
-                                    return await ctx.Response.SendChunk(payloadBytes, true).ConfigureAwait(false);
-                                else
-                                    return await ctx.Response.Send(payloadBytes).ConfigureAwait(false);
+                                return await ctx.SendImmediate(payloadBytes, ctx.AcceptChunked).ConfigureAwait(false);
                             }
                             else if ((startByte >= endByte) || startByte < 0 || endByte <= 0) // Curl test showed this behaviour.
                             {
@@ -653,40 +563,15 @@ sendImmediate:
                                 ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
                                 ctx.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(filePath).ToString("r"));
                                 ctx.Response.Headers.Add("Accept-Ranges", "bytes");
-                                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                                ctx.StatusCode = HttpStatusCode.OK;
                                 ctx.Response.ContentType = ContentType;
 
-                                if (ctx.Response.ChunkedTransfer)
-                                {
-                                    long bytesLeft = new FileInfo(filePath).Length;
-
-                                    if (bytesLeft == 0)
-                                        return await ctx.Response.SendChunk(Array.Empty<byte>(), true).ConfigureAwait(false);
-
-                                    const int buffersize = 16 * 1024;
-
-                                    bool isNotlastChunk;
-                                    byte[] buffer;
-
-                                    while (bytesLeft > 0)
-                                    {
-                                        isNotlastChunk = bytesLeft > buffersize;
-                                        buffer = new byte[isNotlastChunk ? buffersize : bytesLeft];
-                                        int n = await fs.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
-
-                                        if (isNotlastChunk)
-                                            await ctx.Response.SendChunk(buffer, false).ConfigureAwait(false);
-                                        else
-                                            return await ctx.Response.SendChunk(buffer, true).ConfigureAwait(false);
-
-                                        bytesLeft -= n;
-                                    }
-                                }
-                                else
-                                    return await ctx.Response.Send(new FileInfo(filePath).Length, fs).ConfigureAwait(false);
+                                return await ctx.SendImmediate(fs, ctx.AcceptChunked).ConfigureAwait(false);
                             }
                             else
                             {
+                                ctx.Response.ChunkedTransfer = ctx.AcceptChunked;
+
                                 long TotalBytes = endByte - startByte;
                                 fs.Position = startByte;
                                 ctx.Response.ContentType = ContentType;
@@ -731,10 +616,8 @@ sendImmediate:
                 {
                 }
 
-                ctx.Response.ChunkedTransfer = false;
-                ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                ctx.Response.ContentType = "text/plain";
-                return await ctx.Response.Send().ConfigureAwait(false);
+                ctx.StatusCode = HttpStatusCode.InternalServerError;
+                return await ctx.SendImmediate().ConfigureAwait(false);
             }
         }
 

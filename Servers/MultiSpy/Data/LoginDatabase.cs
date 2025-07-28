@@ -299,8 +299,9 @@ namespace MultiSpy.Data
 			if (GeoIP.Instance != null && GeoIP.Instance.Reader != null) {
 				try
 				{
-					country = GeoIP.GetISOCodeFromIP(address).ToUpperInvariant();
-				}
+                    var isoCode = GeoIP.GetISOCodeFromIP(address);
+                    country = string.IsNullOrEmpty(isoCode) ? "??" : isoCode.ToUpperInvariant();
+                }
 				catch
 				{
 

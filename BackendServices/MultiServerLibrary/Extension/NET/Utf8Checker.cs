@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace MultiServerLibrary.HTTP
+namespace System.Text
 {
     /// https://stackoverflow.com/questions/54309810/how-to-detect-any-non-utf8-character-in-a-file-in-c
     ///

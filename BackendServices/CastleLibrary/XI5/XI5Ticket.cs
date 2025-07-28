@@ -65,10 +65,10 @@ namespace XI5
                 return ReadFromStream(ms);
         }
 
-        private static XI5Ticket ReadFromStream(Stream ticketStream)
+        public static XI5Ticket ReadFromStream(Stream ticketStream)
         {
             // ticket version (2 bytes), header (4 bytes), ticket length (2 bytes) = 8 bytes
-            const int headerLength = sizeof(byte) + sizeof(byte) + sizeof(uint) + sizeof(ushort);
+            const int headerLength = 8;
 
             byte[] ticketData;
             if (ticketStream is MemoryStream ms && ms.TryGetBuffer(out ArraySegment<byte> buffer))

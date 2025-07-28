@@ -18,6 +18,7 @@ using MultiServerLibrary.SNMP;
 using MultiServerLibrary;
 using Microsoft.Extensions.Logging;
 using WebAPIService.WebServices.WebArchive;
+using System.Collections.Concurrent;
 
 public static class ApacheNetServerConfiguration
 {
@@ -35,7 +36,7 @@ public static class ApacheNetServerConfiguration
     public static string APIStaticFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/wwwapiroot";
     public static string HTTPStaticFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/wwwroot";
     public static string HTTPSPutFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/wwwtemp";
-    public static string ConvertersFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/converters";
+    public static string ImageMagickPath { get; set; } = $"{Directory.GetCurrentDirectory()}/static/ImageMagick";
     public static string ASPNETRedirectUrl { get; set; } = string.Empty;
     public static string PHPRedirectUrl { get; set; } = string.Empty;
     public static string PHPVersion { get; set; } = "8.4.6";
@@ -48,16 +49,12 @@ public static class ApacheNetServerConfiguration
     public static bool PreferNativeHttpListenerEngine { get; set; } = false;
     public static bool RangeHandling { get; set; } = false;
     public static bool ChunkedTransfers { get; set; } = false;
-    public static bool DomainFolder { get; set; } = false;
     public static bool NestedDirectoryReporting { get; set; } = false;
-    public static bool NotFoundSuggestions { get; set; } = false;
     public static bool NotFoundWebArchive { get; set; } = false;
     public static int NotFoundWebArchiveDateLimit { get; set; } = 0;
     public static bool EnableHTTPCompression { get; set; } = false;
-    public static bool EnablePUTMethod { get; set; } = false;
     public static bool EnableImageUpscale { get; set; } = false;
     public static Dictionary<string, string>? MimeTypes { get; set; } = HTTPProcessor._mimeTypes;
-    public static Dictionary<string, int>? DateTimeOffset { get; set; }
     public static string[]? HTTPSDNSList { get; set; } = {
             "www.outso-srv1.com",
             "www.ndreamshs.com",
@@ -126,7 +123,7 @@ public static class ApacheNetServerConfiguration
     public static List<string>? RedirectRules { get; set; }
     public static List<string>? AllowedManagementIPs { get; set; }
 
-    public static Dictionary<string, HTTPPlugin> plugins = PluginLoader.LoadPluginsFromFolder(PluginsFolder);
+    public static ConcurrentDictionary<string, HTTPPlugin> plugins = PluginLoader.LoadPluginsFromFolder(PluginsFolder).ToConcurrentDictionary();
 
     /// <summary>
     /// Tries to load the specified configuration file.
@@ -145,7 +142,7 @@ public static class ApacheNetServerConfiguration
 
             // Write the JObject to a file
             File.WriteAllText(configPath, new JObject(
-                new JProperty("config_version", (ushort)2),
+                new JProperty("config_version", (ushort)3),
                 new JProperty("doh_enabled", DNSOverEthernetEnabled),
                 new JProperty("online_routes_config", DNSOnlineConfig),
                 new JProperty("routes_config", DNSConfig),
@@ -166,9 +163,8 @@ public static class ApacheNetServerConfiguration
                 new JProperty("https_put_folder", HTTPSPutFolder),
                 new JProperty("http_version", HttpVersion),
                 SerializeMimeTypes(),
-                SerializeDateTimeOffset(),
                 new JProperty("https_dns_list", HTTPSDNSList ?? Array.Empty<string>()),
-                new JProperty("converters_folder", ConvertersFolder),
+                new JProperty("image_magick_path", ImageMagickPath),
                 new JProperty("buffer_size", BufferSize),
                 new JProperty("certificate_file", HTTPSCertificateFile),
                 new JProperty("certificate_password", HTTPSCertificatePassword),
@@ -176,15 +172,12 @@ public static class ApacheNetServerConfiguration
                 new JProperty("default_plugins_port", DefaultPluginsPort),
                 new JProperty("plugins_folder", PluginsFolder),
                 new JProperty("nested_directory_reporting", NestedDirectoryReporting),
-                new JProperty("404_not_found_suggestions", NotFoundSuggestions),
                 new JProperty("404_not_found_web_archive", NotFoundWebArchive),
                 new JProperty("404_not_found_web_archive_date_limit", NotFoundWebArchiveDateLimit),
                 new JProperty("prefer_native_httplistener_engine", PreferNativeHttpListenerEngine),
                 new JProperty("enable_range_handling", RangeHandling),
                 new JProperty("enable_chunked_transfers", ChunkedTransfers),
-                new JProperty("enable_domain_folder", DomainFolder),
                 new JProperty("enable_http_compression", EnableHTTPCompression),
-                new JProperty("enable_put_method", EnablePUTMethod),
                 new JProperty("enable_image_upscale", EnableImageUpscale),
                 new JProperty("Ports", new JArray(Ports ?? new List<ushort> { })),
                 new JProperty("RedirectRules", new JArray(RedirectRules ?? new List<string> { })),
@@ -221,25 +214,24 @@ public static class ApacheNetServerConfiguration
                 HTTPSPutFolder = GetValueOrDefault(config, "https_put_folder", HTTPSPutFolder);
                 BufferSize = GetValueOrDefault(config, "buffer_size", BufferSize);
                 HttpVersion = GetValueOrDefault(config, "http_version", HttpVersion);
-                ConvertersFolder = GetValueOrDefault(config, "converters_folder", ConvertersFolder);
+                if (config_version < 3)
+                    ImageMagickPath = GetValueOrDefault(config, "converters_folder", ImageMagickPath);
+                else
+                    ImageMagickPath = GetValueOrDefault(config, "image_magick_path", ImageMagickPath);
                 HTTPSCertificateFile = GetValueOrDefault(config, "certificate_file", HTTPSCertificateFile);
                 HTTPSCertificatePassword = GetValueOrDefault(config, "certificate_password", HTTPSCertificatePassword);
                 HTTPSCertificateHashingAlgorithm = new HashAlgorithmName(GetValueOrDefault(config, "certificate_hashing_algorithm", HTTPSCertificateHashingAlgorithm.Name));
                 PluginsFolder = GetValueOrDefault(config, "plugins_folder", PluginsFolder);
                 NestedDirectoryReporting = GetValueOrDefault(config, "nested_directory_reporting", NestedDirectoryReporting);
                 DefaultPluginsPort = GetValueOrDefault(config, "default_plugins_port", DefaultPluginsPort);
-                NotFoundSuggestions = GetValueOrDefault(config, "404_not_found_suggestions", NotFoundSuggestions);
                 NotFoundWebArchive = GetValueOrDefault(config, "404_not_found_web_archive", NotFoundWebArchive);
                 NotFoundWebArchiveDateLimit = GetValueOrDefault(config, "404_not_found_web_archive_date_limit", NotFoundWebArchiveDateLimit);
                 PreferNativeHttpListenerEngine = GetValueOrDefault(config, "prefer_native_httplistener_engine", PreferNativeHttpListenerEngine);
                 RangeHandling = GetValueOrDefault(config, "enable_range_handling", RangeHandling);
                 ChunkedTransfers = GetValueOrDefault(config, "enable_chunked_transfers", ChunkedTransfers);
-                DomainFolder = GetValueOrDefault(config, "enable_domain_folder", DomainFolder);
                 EnableHTTPCompression = GetValueOrDefault(config, "enable_http_compression", EnableHTTPCompression);
-                EnablePUTMethod = GetValueOrDefault(config, "enable_put_method", EnablePUTMethod);
                 EnableImageUpscale = GetValueOrDefault(config, "enable_image_upscale", EnableImageUpscale);
                 MimeTypes = GetValueOrDefault(config, "mime_types", MimeTypes);
-                DateTimeOffset = GetValueOrDefault(config, "datetime_offset", DateTimeOffset);
                 HTTPSDNSList = GetValueOrDefault(config, "https_dns_list", HTTPSDNSList);
                 // Deserialize Ports if it exists
                 try
@@ -305,17 +297,6 @@ public static class ApacheNetServerConfiguration
         return defaultValue;
     }
 
-    // Helper method for the DateTimeOffset config serialization.
-    private static JProperty SerializeDateTimeOffset()
-    {
-        JObject jObject = new();
-        foreach (var kvp in DateTimeOffset ?? new Dictionary<string, int>())
-        {
-            jObject.Add(kvp.Key, kvp.Value);
-        }
-        return new JProperty("datetime_offset", jObject);
-    }
-
     // Helper method for the MimeTypes config serialization.
     private static JProperty SerializeMimeTypes()
     {
@@ -336,7 +317,6 @@ class Program
     public static string configPath = configDir + "ApacheNet.json";
     private static string configMultiServerLibraryPath = configDir + "MultiServerLibrary.json";
     private static string DNSconfigMD5 = string.Empty;
-    private static Timer? FilesystemTree = null;
     private static Task? DNSThread = null;
     private static Task? DNSRefreshThread = null;
     private static SnmpTrapSender? trapSender = null;
@@ -377,6 +357,18 @@ class Program
 
     public static void StartOrUpdateServer()
     {
+        lock (ApacheNetProcessor.Routes)
+        {
+            ApacheNetProcessor.Routes.Clear();
+            ApacheNetProcessor.Routes.AddRange(ApacheNet.BuildIn.RouteHandlers.Main.index);
+            if (ApacheNetServerConfiguration.EnableBuiltInPlugins)
+            {
+                ApacheNetProcessor.Routes.AddRange(ApacheNet.BuildIn.RouteHandlers.GameRoutes.WebAPIRoutes.frontend);
+                ApacheNetProcessor.Routes.AddRange(ApacheNet.BuildIn.RouteHandlers.GameRoutes.WebAPIRoutes.backend);
+            }
+        }
+
+
         if (HTTPBag != null)
         {
             foreach (ApacheNetProcessor httpsBag in HTTPBag)
@@ -390,9 +382,9 @@ class Program
         GC.Collect();
 
         if (ApacheNetServerConfiguration.EnableAdguardFiltering)
-            _ = ApacheNetProcessor.adChecker.DownloadAndParseFilterListAsync();
+            _ = DOHRequestHandler.adChecker.DownloadAndParseFilterListAsync();
         if (ApacheNetServerConfiguration.EnableDanPollockHosts)
-            _ = ApacheNetProcessor.danChecker.DownloadAndParseFilterListAsync();
+            _ = DOHRequestHandler.danChecker.DownloadAndParseFilterListAsync();
 
         WebArchiveRequest.ArchiveDateLimit = ApacheNetServerConfiguration.NotFoundWebArchiveDateLimit;
 
@@ -427,11 +419,6 @@ class Program
         }
         else if (dnswatcher.EnableRaisingEvents)
             dnswatcher.EnableRaisingEvents = false;
-
-        if (ApacheNetServerConfiguration.NotFoundSuggestions && FilesystemTree == null)
-            FilesystemTree = new Timer(UrlAnalyzer.ScheduledfileSystemUpdate, ApacheNetServerConfiguration.HTTPStaticFolder, TimeSpan.Zero, TimeSpan.FromMinutes(1440));
-        else if (!ApacheNetServerConfiguration.NotFoundSuggestions && FilesystemTree != null)
-            _ = FilesystemTree.DisposeAsync();
 
         if (ApacheNetServerConfiguration.plugins.Count > 0)
         {
@@ -581,8 +568,6 @@ class Program
             if (MultiServerLibrary.Extension.Microsoft.Win32API.StartAsAdmin(Process.GetCurrentProcess().MainModule?.FileName))
                 Environment.Exit(0);
         }
-
-        ApacheNetProcessor.Routes.AddRange(ApacheNet.RouteHandlers.Main.index);
 
         StartOrUpdateServer();
 

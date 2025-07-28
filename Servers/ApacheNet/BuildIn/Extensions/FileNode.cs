@@ -1,15 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using MultiServerLibrary.Extension;
 using System.Threading.Tasks;
 using System.Text;
 using System.Web;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using MultiServerLibrary.HTTP;
+using MultiServerLibrary.Extension;
 
-namespace MultiServerLibrary.HTTP
+namespace ApacheNet.BuildIn.Extensions
 {
     public static class FileStructureFormater
     {
@@ -593,17 +594,6 @@ namespace MultiServerLibrary.HTTP
                     sb.AppendLine($"<source src='{HttpUtility.HtmlEncode(node.Link)}' type='{node.Type}'>");
                     sb.AppendLine("Your browser does not support the video tag.");
                     sb.AppendLine("</video>");
-                }
-                else
-                {
-                    string mediaInfoResult = HTTPProcessor.RequestURLGET($"http://localhost:{ServerPort}/media/info?item={Uri.EscapeDataString(new Uri(node.Link).AbsolutePath)}");
-                    if (!string.IsNullOrEmpty(mediaInfoResult))
-                    {
-                        double? vBitrate = PlayerData.GetVBitRate(mediaInfoResult);
-                        double? vFrameRate = PlayerData.GetVFrameRate(mediaInfoResult);
-                        sb.AppendLine("<p style='color: red;'>This video format is not supported for direct streaming. To watch it using your browser, Please use this link instead :</p>");
-                        sb.AppendLine($"<a href='{HttpUtility.HtmlEncode(node.Link)}?offset=&vbitrate={(vBitrate == null ? "NaN" : vBitrate.ToString().Replace(",", "."))}&vtranscode=true&vframerate={(vFrameRate == null ? string.Empty : vFrameRate.ToString().Replace(",", "."))}&format={fileFormat}' download>Download Transcoded Video</a>");
-                    }
                 }
                 sb.AppendLine("</div>");
             }

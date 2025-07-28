@@ -181,14 +181,12 @@ namespace MultiServerLibrary.Extension
 
         public static string RemoveInvalidPathChars(string input)
         {
-            string allowedChars = $"-_.{ASCIIChars}/\\";
+            string allowedChars = $"-_.+{ASCIIChars}/\\ ";
             StringBuilder empty = new StringBuilder();
             foreach (char ch in input)
             {
                 if (allowedChars.Contains(ch.ToString()))
                     empty.Append(ch);
-                else if (ch == ' ')
-                    empty.Append('_');
             }
             return empty.ToString();
         }

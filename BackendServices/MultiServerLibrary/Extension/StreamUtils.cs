@@ -129,7 +129,7 @@ namespace MultiServerLibrary.Extension
 
             int bytesRead;
             byte[] buffer = new byte[BufferSize];
-            while ((bytesRead = await input.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false)) > 0)
+            while ((bytesRead = await input.ReadAsync(buffer, token).ConfigureAwait(false)) > 0)
             {
                 if (ignore_errors)
                 {
@@ -140,7 +140,7 @@ namespace MultiServerLibrary.Extension
                     catch { }
                 }
                 else
-                    await output.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
+                    await output.WriteAsync(buffer.AsMemory(0, bytesRead), token).ConfigureAwait(false);
             }
         }
 
@@ -164,19 +164,19 @@ namespace MultiServerLibrary.Extension
             int bytesRead;
             long bytesCopied = 0;
             byte[] buffer = new byte[BufferSize];
-            while (bytesCopied < numOfBytes && (bytesRead = await input.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false)) > 0)
+            while (bytesCopied < numOfBytes && (bytesRead = await input.ReadAsync(buffer, token).ConfigureAwait(false)) > 0)
             {
                 int bytesToWrite = (int)Math.Min(bytesRead, numOfBytes - bytesCopied);
                 if (ignore_errors)
                 {
                     try
                     {
-                        await output.WriteAsync(buffer, 0, bytesToWrite, token).ConfigureAwait(false);
+                        await output.WriteAsync(buffer.AsMemory(0, bytesToWrite), token).ConfigureAwait(false);
                     }
                     catch { }
                 }
                 else
-                    await output.WriteAsync(buffer, 0, bytesToWrite, token).ConfigureAwait(false);
+                    await output.WriteAsync(buffer.AsMemory(0, bytesToWrite), token).ConfigureAwait(false);
                 bytesCopied += bytesToWrite;
             }
         }

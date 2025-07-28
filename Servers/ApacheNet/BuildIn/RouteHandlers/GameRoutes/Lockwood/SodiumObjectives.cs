@@ -4,7 +4,7 @@ using System.Net;
 using WatsonWebserver.Core;
 using WebAPIService.GameServices.OHS;
 
-namespace ApacheNet.Extensions.Lockwood
+namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 {
     internal static class SodiumObjectives
     {
@@ -24,7 +24,7 @@ namespace ApacheNet.Extensions.Lockwood
                 string xmldef = ctx.Request.Url.Parameters["xmldef"] ?? "SCEA";
 
                 string xmlPath = $"/webassets/Sodium/objectives/data/{version}/{project}/{ctx.Request.Url.Parameters["xmldef"]}";
-                string filePath = !ApacheNetServerConfiguration.DomainFolder ? ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath : ApacheNetServerConfiguration.HTTPStaticFolder + $"/{ctx.Request.RetrieveHeaderValue("Host")}" + xmlPath;
+                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
                 if (File.Exists(filePath))
                 {
@@ -535,7 +535,7 @@ namespace ApacheNet.Extensions.Lockwood
                 string version = ctx.Request.Url.Parameters["version"] ?? "7";
 
                 string xmlPath = $"/webassets/Sodium/objectives/data/{version}/{project}";
-                string filePath = !ApacheNetServerConfiguration.DomainFolder ? ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath : ApacheNetServerConfiguration.HTTPStaticFolder + $"/{ctx.Request.RetrieveHeaderValue("Host")}" + xmlPath;
+                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
                 if (File.Exists(filePath))
                 {

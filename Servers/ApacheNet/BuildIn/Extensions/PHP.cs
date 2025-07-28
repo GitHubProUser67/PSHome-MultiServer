@@ -6,7 +6,7 @@ using System;
 using System.Text;
 using System.Linq;
 
-namespace ApacheNet.Extensions
+namespace ApacheNet.BuildIn.Extensions
 {
     public class PHP
     {

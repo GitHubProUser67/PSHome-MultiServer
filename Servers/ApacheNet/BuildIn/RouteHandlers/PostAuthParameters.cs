@@ -1,8 +1,8 @@
-﻿using ApacheNet.Extensions.Lockwood;
+﻿using ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood;
 using System.Net;
 using WatsonWebserver.Core;
 
-namespace ApacheNet
+namespace ApacheNet.BuildIn.RouteHandlers
 {
     internal static class PostAuthParameters
     {

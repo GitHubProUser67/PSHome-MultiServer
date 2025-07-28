@@ -20,9 +20,9 @@ namespace WebAPIService.GameServices.CDM
             this.method = method;
         }
 
-        public string ProcessRequest(byte[] PostData, string ContentType, string directoryPath)
+        public string ProcessRequest(byte[] PostData, string ContentType)
         {
-            if (string.IsNullOrEmpty(absolutePath) || string.IsNullOrEmpty(directoryPath))
+            if (string.IsNullOrEmpty(absolutePath))
                 return null;
 
             string res = string.Empty;

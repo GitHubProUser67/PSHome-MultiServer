@@ -16,6 +16,7 @@ namespace MultiSocks.Aries.Messages
             string? USERPARAMS = GetInputCacheValue("USERPARAMS");
             string? USERFLAGS = GetInputCacheValue("USERFLAGS");
             string? FORCE_LEAVE = GetInputCacheValue("FORCE_LEAVE");
+            string? GPS = GetInputCacheValue("GPS");
 
             if (!string.IsNullOrEmpty(USERPARAMS))
                 user.SetParametersFromString(USERPARAMS);
@@ -43,9 +44,41 @@ namespace MultiSocks.Aries.Messages
                 user.SendPlusWho(user, context.Project);
 
                 game.BroadcastPopulation(mc);
+
+                return;
             }
-            else
-                client.SendMessage(new MissOut(_Name));
+            else if (!string.IsNullOrEmpty(GPS) && GPS == "1") // VIP Mode.
+            {
+                // Create a game based on server parameters, I suspect EA master server had a VIP config for each titles.
+                if (!string.IsNullOrEmpty(user.Connection?.Context.Project) && user.Connection.Context.Project.Contains("BURNOUT5"))
+                {
+                    // Start a BP Freeburn session ranked.
+                    game = mc.Games.AddGame(9, 2, "413017344", "d003f3c04400408847f18ca81800b80,774a70,656e555347f18ca8", user.Username, false, "10", "262208", null, user.CurrentRoom?.ID ?? 0);
+
+                    if (game != null)
+                    {
+                        if (game.MinSize > 1 && game.Users.GetUserByName("brobot24") == null)
+                            game.AddHost(mc.Users.GetUserByName("brobot24"));
+
+                        if (game.Users.GetUserByName(user.Username) == null)
+                            game.AddGPSHost(user);
+
+                        user.CurrentGame = game;
+
+                        client.SendMessage(game.GetGameDetails(_Name));
+
+                        user.SendPlusWho(user, context.Project);
+
+                        game.BroadcastPopulation(mc);
+
+                        return;
+                    }
+                }
+                else
+                    CustomLogger.LoggerAccessor.LogWarn("[Gqwk] - VIP mode required an extra entry in the server code, responding with miss error code, please report to GITHUB!");
+            }
+
+            client.SendMessage(new MissOut(_Name));
         }
     }
 }

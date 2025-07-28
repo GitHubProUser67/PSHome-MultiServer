@@ -26,7 +26,142 @@ namespace SVO.Games.PS3
                     switch (request.Url.AbsolutePath)
                     {
                         #region HOME
-                        case "/HUBPS3_SVML/unity/beta_start.jsp": // Home 0.41 must not take this beta path, EULA check was not implemented yet.
+                        case "/HUBPS3_SVML/unity/closed_beta_start.jsp": // Home 0.41 path.
+
+                            switch (method)
+                            {
+                                case "GET":
+
+                                    string? clientMac = request.Headers.Get("X-SVOMac");
+
+                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+
+                                    if (string.IsNullOrEmpty(serverMac))
+                                    {
+                                        response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        response.Headers.Set("Content-Type", "text/svml; charset=UTF-8");
+                                        response.Headers.Set("X-SVOMac", serverMac);
+
+                                        string regionNoptions = string.Empty;
+
+                                        try
+                                        {
+                                            regionNoptions = request.Url.Query.Substring(8);
+                                        }
+                                        catch (Exception)
+                                        {
+                                            regionNoptions = "en-US";
+                                        }
+
+                                        regionNoptions = regionNoptions.Replace("&", "&amp;");
+
+                                        byte[]? uriStore = null;
+
+                                        if (SVOServerConfiguration.SVOHTTPSBypass)
+                                            uriStore = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                            "<SVML>\r\n" +
+                                           $"    <BROWSER_INIT name=\"init\" />\r\n\t" +
+                                            "    \r\n    <SET name=\"nohistory\" neverBackOnto=\"true\"/>\r\n" +
+                                            "    \r\n    <DATA dataType=\"URI\" name=\"SvfsUpload\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/fileservices/UploadFileServlet\"/>\r\n" +
+                                            "    \r\n    <DATA dataType=\"URI\" name=\"SvfsDownload\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/fileservices/Download.jsp\"/>\r\n" +
+                                            "    <DATA dataType=\"URI\" name=\"SvfsDeleteSubmit\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/fileservices/Delete.jsp\"/>\r\n    \r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpArcadeMachines\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=arcade\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpBowling\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=bowling\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpCharacterCreation\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=characterCustomisation\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpChess\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=chess\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpConversations\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=conversations\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpDoors\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=relocation\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpDraughts\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=draughts\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpEmotes\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=emotes\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpFirstTimeUser\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=firstTimeUsing\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpGameLaunchingCreate\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingCreate\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpGameLaunchingJoin\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingJoin\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpGamesRoom\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamespace\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpHomeApartment\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=homespace\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpPool\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=pool\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpSafetyInHome\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=stayingsafe\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpSeats\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=seats\"/>\r\n\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityNews\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityLatestUpdate\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityHandyLinks\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityMotd\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=messageoftheday\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityUsagePolicy\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=eula\"/>\r\n\r\n    " +
+                                           $"    <DATA dataType=\"URI\" name=\"GriefReportStart\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/griefreporting/GriefReportWelcome.jsp?region={regionNoptions}\"/>\r\n" +
+                                            "    <DATA dataType=\"URI\" name=\"ViralProvisioningStart\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/viralprovisioning/HomeInviteWelcome.jsp\"/>\r\n" +
+                                            "    <DATA dataType=\"URI\" name=\"UserActivityLogUploadServlet\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/tracking/StatTrackingServlet\"/>\r\n    \r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityNewsSummary\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityNewsDetailed\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityBetaTrialRoadmap\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n    \r\n" +
+                                            "    <DATA dataType=\"DATA\" name=\"gameFinishURL\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n\t\r\n" +
+                                            "    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n\t\r\n\t" +
+                                           $"     \r\n    \r\n\t<REDIRECT href=\"eulaCheck.jsp?region={regionNoptions}\" name=\"redirect\"/>\r\n" +
+                                            "      \r\n" +
+                                            "</SVML>");
+                                        else
+                                            uriStore = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                            "<SVML>\r\n" +
+                                            $"   <BROWSER_INIT name=\"init\" />\r\n\t" +
+                                            "    \r\n    <SET name=\"nohistory\" neverBackOnto=\"true\"/>\r\n" +
+                                            "    \r\n    <DATA dataType=\"URI\" name=\"SvfsUpload\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/fileservices/UploadFileServlet\"/>\r\n" +
+                                            "    \r\n    <DATA dataType=\"URI\" name=\"SvfsDownload\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/fileservices/Download.jsp\"/>\r\n" +
+                                            "    <DATA dataType=\"URI\" name=\"SvfsDeleteSubmit\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/fileservices/Delete.jsp\"/>\r\n    \r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpArcadeMachines\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=arcade\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpBowling\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=bowling\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpCharacterCreation\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=characterCustomisation\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpChess\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=chess\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpConversations\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=conversations\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpDoors\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=relocation\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpDraughts\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=draughts\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpEmotes\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=emotes\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpFirstTimeUser\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=firstTimeUsing\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpGameLaunchingCreate\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingCreate\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpGameLaunchingJoin\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingJoin\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpGamesRoom\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamespace\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpHomeApartment\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=homespace\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpPool\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=pool\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpSafetyInHome\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=stayingsafe\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpSeats\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=seats\"/>\r\n\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityNews\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityLatestUpdate\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityHandyLinks\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityMotd\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=messageoftheday\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityUsagePolicy\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=eula\"/>\r\n\r\n    " +
+                                            $"   <DATA dataType=\"URI\" name=\"GriefReportStart\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/griefreporting/GriefReportWelcome.jsp?region={regionNoptions}\"/>\r\n" +
+                                            "    <DATA dataType=\"URI\" name=\"ViralProvisioningStart\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/viralprovisioning/HomeInviteWelcome.jsp\"/>\r\n" +
+                                            "    <DATA dataType=\"URI\" name=\"UserActivityLogUploadServlet\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/tracking/StatTrackingServlet\"/>\r\n    \r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityNewsSummary\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityNewsDetailed\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityBetaTrialRoadmap\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n" +
+                                            "    <DATA dataType=\"DATA\" name=\"gameFinishURL\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n\t\r\n" +
+                                            "    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"https://homeps3.svo.online.scee.com:10061/HUBPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n       " +
+                                            $"     \r\n    \r\n\t<REDIRECT href=\"eulaCheck.jsp?region={regionNoptions}\" name=\"redirect\"/>\r\n" +
+                                            "      \r\n" +
+                                            "</SVML>");
+
+                                        response.StatusCode = (int)System.Net.HttpStatusCode.OK;
+
+                                        if (response.OutputStream.CanWrite)
+                                        {
+                                            try
+                                            {
+                                                response.ContentLength64 = uriStore.Length;
+                                                response.OutputStream.Write(uriStore, 0, uriStore.Length);
+                                            }
+                                            catch (Exception)
+                                            {
+                                                // Not Important;
+                                            }
+                                        }
+                                    }
+                                    break;
+                            }
+                            break;
+
+                        case "/HUBPS3_SVML/unity/beta_start.jsp":
 
                             switch (method)
                             {
@@ -231,7 +366,7 @@ namespace SVO.Games.PS3
                                            $"    <DATA dataType=\"URI\" name=\"CommunityBetaTrialRoadmap\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n    \r\n" +
                                             "    <DATA dataType=\"DATA\" name=\"gameFinishURL\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n\t\r\n" +
                                             "    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n\t\r\n\t" +
-                                           $"     \r\n    \r\n\t<REDIRECT href=\"eulaCheck.jsp?region={regionNoptions}\" name=\"redirect\"/>\r\n" +
+                                           $"     \r\n    \r\n\t<REDIRECT href=\"eulaCheck.jsp?region={regionNoptions}&autologin=1\" name=\"redirect\"/>\r\n" +
                                             "      \r\n" +
                                             "</SVML>");
                                         else
@@ -271,7 +406,7 @@ namespace SVO.Games.PS3
                                             $"   <DATA dataType=\"URI\" name=\"CommunityBetaTrialRoadmap\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n" +
                                             "    <DATA dataType=\"DATA\" name=\"gameFinishURL\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n\t\r\n" +
                                             "    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"https://homeps3.svo.online.scee.com:10061/HUBPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n       " +
-                                            $"     \r\n    \r\n\t<REDIRECT href=\"eulaCheck.jsp?region={regionNoptions}\" name=\"redirect\"/>\r\n" +
+                                            $"     \r\n    \r\n\t<REDIRECT href=\"eulaCheck.jsp?region={regionNoptions}&autologin=1\" name=\"redirect\"/>\r\n" +
                                             "      \r\n" +
                                             "</SVML>");
 
@@ -443,16 +578,18 @@ namespace SVO.Games.PS3
                                                 region = "en-US";
                                             }
 
-                                            byte[] unityNpLogin = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \r\n" +
-                                                "<SVML>\r\n" +
-                                                "        <EULA name=\"eula\" mode=\"save\" />\r\n" +
-                                                $"        <UNITY name=\"login\" type=\"command\" success_href=\"../announcement/Medius_Announcement_Read.jsp?region={region}\" success_linkoption=\"NORMAL\"/>\r\n" +
-                                                $" \r\n\t\t<HOMEACTION name=\"FrontEndAction\">" +
-                                                $"\r\n\t\t\t<OnEnterPage event=\"FrontEndEvent\" param1=\"SigningIntoSvo\" param2=\"\" />" +
-                                                $"\r\n\t\t</HOMEACTION>\r\n" +
-                                                $"  \r\n" +
-                                                $"        <SET name=\"nohistory\" neverBackOnto=\"true\"/>\r\n" +
-                                                $"</SVML>");
+                                            byte[] eulaMesg = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<SVML>\r\n" +
+                                                "    <RECTANGLE class=\"CHIP_FACE\" name=\"backPanel\" x=\"292\" y=\"140\" width=\"708\" height=\"440\"/>\r\n" +
+                                                "    <RECTANGLE class=\"CHIP_RECESS\" name=\"backPanel\" x=\"300\" y=\"148\" width=\"692\" height=\"384\" fillColor=\"#FFFFFFFF\"/>\r\n\r\n" +
+                                                "    <TEXT name=\"text\" x=\"640\" y=\"171\" width=\"636\" height=\"26\" fontSize=\"26\" align=\"center\" textColor=\"#cc000000\">Usage Policy</TEXT>\r\n\r\n" +
+                                                "    <TEXTAREA class=\"TEXTAREA1\" name=\"message\" x=\"308\" y=\"204\" width=\"664\" height=\"320\"\r\n\t\tfontSize=\"22\" lineSpacing=\"22\" linesVisible=\"14\"\r\n\t\t" +
+                                                "readonly=\"true\" selectable=\"false\" blinkCursor=\"false\"\r\n\t\t" +
+                                                "textColor=\"#CC000000\" highlightTextColor=\"#FF000000\"\r\n\t\t" +
+                                                "leftPadValue=\"8\" topPadValue=\"8\" \r\n" +
+                                                "        defaultTextEntry=\"1\" defaultTextScroll=\"1\">Participation in the Home Beta Trial is subject to the terms of the Home Beta Trial Agreement available at http://homebetatrial.com/eula.html and the PLAYSTATION®Network Terms of Service and User Agreement.</TEXTAREA>\r\n    \r\n" +
+                                                "    <TEXT name=\"legend\" x=\"824\" y=\"548\" width=\"652\" height=\"18\" fontSize=\"18\" align=\"left\" textColor=\"#CCFFFFFF\">[CROSS] Accept | [CIRCLE] Decline</TEXT>\r\n" +
+                                                "    <QUICKLINK name=\"accept\" button=\"SV_PAD_X\" linkOption=\"NORMAL\" href=\"../unity/unityNpLogin.jsp?beta=true\"/>\r\n" +
+                                                "</SVML>");
 
                                             response.StatusCode = (int)System.Net.HttpStatusCode.OK;
 
@@ -460,8 +597,8 @@ namespace SVO.Games.PS3
                                             {
                                                 try
                                                 {
-                                                    response.ContentLength64 = unityNpLogin.Length;
-                                                    response.OutputStream.Write(unityNpLogin, 0, unityNpLogin.Length);
+                                                    response.ContentLength64 = eulaMesg.Length;
+                                                    response.OutputStream.Write(eulaMesg, 0, eulaMesg.Length);
                                                 }
                                                 catch (Exception)
                                                 {
@@ -557,6 +694,8 @@ namespace SVO.Games.PS3
                                     }
                                     else
                                     {
+                                        bool isClosedBeta = request.Url.PathAndQuery.Contains("beta=true");
+
                                         response.Headers.Set("Content-Type", "text/svml; charset=UTF-8");
                                         response.Headers.Set("X-SVOMac", serverMac);
 
@@ -573,8 +712,8 @@ namespace SVO.Games.PS3
 
                                         byte[] unityNpLogin = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \r\n" +
                                             "<SVML>\r\n" +
-                                            "        <EULA name=\"eula\" mode=\"save\" />\r\n" +
-                                            $"        <UNITY name=\"login\" type=\"command\" success_href=\"../announcement/Medius_Announcement_Read.jsp?region={region}\" success_linkoption=\"NORMAL\"/>\r\n" +
+                                            $"{(isClosedBeta ? string.Empty : "        <EULA name=\"eula\" mode=\"save\" />\r\n")}" +
+                                            $"        <UNITY name=\"login\" type=\"command\" success_href=\"../announcement/Medius_Announcement_Read.jsp?region={region}{(isClosedBeta ? "&beta=true" : string.Empty)}\" success_linkoption=\"NORMAL\"/>\r\n" +
                                             $" \r\n\t\t<HOMEACTION name=\"FrontEndAction\">" +
                                             $"\r\n\t\t\t<OnEnterPage event=\"FrontEndEvent\" param1=\"SigningIntoSvo\" param2=\"\" />" +
                                             $"\r\n\t\t</HOMEACTION>\r\n" +

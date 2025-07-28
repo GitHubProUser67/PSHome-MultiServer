@@ -1,7 +1,8 @@
 using CustomLogger;
+using Lextm.SharpSnmpLib;
 using MultiServerLibrary.GeoLocalization;
-using System.Data.SQLite;
 using System.Data;
+using System.Data.SQLite;
 using System.Net;
 
 namespace EdenServer.Database
@@ -275,7 +276,8 @@ namespace EdenServer.Database
             {
                 try
                 {
-                    country = GeoIP.GetISOCodeFromIP(address).ToUpperInvariant();
+                    var isoCode = GeoIP.GetISOCodeFromIP(address);
+                    country = string.IsNullOrEmpty(isoCode) ? "??" : isoCode.ToUpperInvariant();
                 }
                 catch
                 {

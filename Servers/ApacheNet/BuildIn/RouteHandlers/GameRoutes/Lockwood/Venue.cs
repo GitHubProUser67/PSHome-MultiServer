@@ -5,7 +5,7 @@ using System.Net;
 using WatsonWebserver.Core;
 using WebAPIService.GameServices.OHS;
 
-namespace ApacheNet.Extensions.Lockwood
+namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 {
     internal static class Venue
     {
@@ -18,7 +18,7 @@ namespace ApacheNet.Extensions.Lockwood
                 ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                 ctx.Response.ContentType = "text/xml";
                 string xmlPath = $"/static/Lockwood/Features/Venue/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/setDressing.xml";
-                string filePath = !ApacheNetServerConfiguration.DomainFolder ? ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath : ApacheNetServerConfiguration.HTTPStaticFolder + $"/{ctx.Request.RetrieveHeaderValue("Host")}" + xmlPath;
+                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
                 if (File.Exists(filePath))
                 {
@@ -928,7 +928,7 @@ namespace ApacheNet.Extensions.Lockwood
                 ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                 ctx.Response.ContentType = "text/xml";
                 string xmlPath = $"/static/Lockwood/Features/Venue/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/features.xml";
-                string filePath = !ApacheNetServerConfiguration.DomainFolder ? ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath : ApacheNetServerConfiguration.HTTPStaticFolder + $"/{ctx.Request.RetrieveHeaderValue("Host")}" + xmlPath;
+                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
                 if (File.Exists(filePath))
                 {
@@ -1001,7 +1001,7 @@ namespace ApacheNet.Extensions.Lockwood
                 ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                 ctx.Response.ContentType = "text/xml";
                 string xmlPath = $"/static/Lockwood/Features/Venue/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/camPath.xml";
-                string filePath = !ApacheNetServerConfiguration.DomainFolder ? ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath : ApacheNetServerConfiguration.HTTPStaticFolder + $"/{ctx.Request.RetrieveHeaderValue("Host")}" + xmlPath;
+                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
                 if (File.Exists(filePath))
                 {
@@ -1091,7 +1091,7 @@ namespace ApacheNet.Extensions.Lockwood
                 }
                 ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                 ctx.Response.ContentType = "text/xml";
-                string filePath = !ApacheNetServerConfiguration.DomainFolder ? ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath : ApacheNetServerConfiguration.HTTPStaticFolder + $"/{ctx.Request.RetrieveHeaderValue("Host")}" + xmlPath;
+                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
                 if (File.Exists(filePath))
                 {
