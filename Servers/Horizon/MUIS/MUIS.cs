@@ -498,9 +498,7 @@ namespace Horizon.MUIS
                                     StatusCode = MediusCallbackStatus.MediusSuccess,
                                 }
                             }, clientChannel);
-
                         }
-
 
                         break;
                     }
@@ -516,8 +514,6 @@ namespace Horizon.MUIS
                             {
                                 if (getUniverse_ExtraInfoRequest.InfoType == 0)
                                 {
-                                    LoggerAccessor.LogWarn("InfoType not specified to return anything.");
-
                                     Queue(new RT_MSG_SERVER_APP()
                                     {
                                         Message = new MediusUniverseStatusList_ExtraInfoResponse()
@@ -592,13 +588,13 @@ namespace Horizon.MUIS
                                         #endregion
                                     }
 
-                                    LoggerAccessor.LogInfo($"MUIS: send univ info (ctr=):  [{MuisClass.Settings.Universes.ToArray().Length}]");
+                                    LoggerAccessor.LogInfo($"[MUIS] - send univ info (ctr=): [{MuisClass.Settings.Universes.ToArray().Length}]");
                                 }
                                 #endregion
                             }
                             else
                             {
-                                LoggerAccessor.LogWarn($"MUIS: No universes out there.");
+                                LoggerAccessor.LogWarn($"[MUIS] - No universes out there.");
 
                                 Queue(new RT_MSG_SERVER_APP()
                                 {
@@ -614,7 +610,7 @@ namespace Horizon.MUIS
                         }
                         else
                         {
-                            LoggerAccessor.LogWarn($"ApplicationID not compatible [{data.ApplicationId}]");
+                            LoggerAccessor.LogWarn($"[MUIS] - ApplicationID not compatible [{data.ApplicationId}]");
 
                             Queue(new RT_MSG_SERVER_APP()
                             {
@@ -651,8 +647,6 @@ namespace Horizon.MUIS
                                     {
                                         if (getUniverseInfo.InfoType == 0)
                                         {
-                                            LoggerAccessor.LogWarn("InfoType not specified to return anything.");
-
                                             Queue(new RT_MSG_SERVER_APP()
                                             {
                                                 Message = new MediusUniverseStatusListResponse()
@@ -685,8 +679,6 @@ namespace Horizon.MUIS
                                         #region News
                                         if (getUniverseInfo.InfoType.HasFlag(MediusUniverseVariableInformationInfoFilter.INFO_NEWS))
                                         {
-                                            LoggerAccessor.LogInfo("MUIS: News bit set in request");
-
                                             Queue(new RT_MSG_SERVER_APP()
                                             {
                                                 Message = new MediusUniverseNewsResponse()
@@ -705,8 +697,6 @@ namespace Horizon.MUIS
                                         #region InfoFilter = Null
                                         if (getUniverseInfo.InfoType == 0)
                                         {
-                                            LoggerAccessor.LogWarn("InfoType not specified to return anything.");
-
                                             Queue(new RT_MSG_SERVER_APP()
                                             {
                                                 Message = new MediusUniverseVariableInformationResponse()
@@ -738,6 +728,14 @@ namespace Horizon.MUIS
                                         if (getUniverseInfo.InfoType.HasFlag(MediusUniverseVariableInformationInfoFilter.INFO_DNS) ||
                                             getUniverseInfo.InfoType.HasFlag(MediusUniverseVariableInformationInfoFilter.INFO_EXTRAINFO))
                                         {
+                                            var universeExtendedInfo = info.ExtendedInfo;
+
+                                            // Special hotfix for the wildcard support in pre 0.8 Home clients.
+                                            if (data.ClientObject != null && (data.ClientObject.ApplicationId == 20371 || data.ClientObject.ApplicationId == 20374)
+                                                && data.ClientObject.ClientHomeData != null && data.ClientObject.ClientHomeData.VersionAsDouble < 0.8
+                                                && !string.IsNullOrEmpty(universeExtendedInfo) && universeExtendedInfo.StartsWith("*"))
+                                                universeExtendedInfo = null;
+
                                             Queue(new RT_MSG_SERVER_APP()
                                             {
                                                 Message = new MediusUniverseVariableInformationResponse()
@@ -746,7 +744,7 @@ namespace Horizon.MUIS
                                                     StatusCode = MediusCallbackStatus.MediusSuccess,
                                                     InfoFilter = getUniverseInfo.InfoType,
                                                     UniverseID = info.UniverseId,
-                                                    ExtendedInfo = info.ExtendedInfo,
+                                                    ExtendedInfo = universeExtendedInfo,
                                                     UniverseName = info.Name,
                                                     UniverseDescription = info.Description,
                                                     SvoURL = info.SvoURL,
@@ -781,7 +779,7 @@ namespace Horizon.MUIS
                                         #endregion
                                     }
 
-                                    LoggerAccessor.LogInfo($"[MUIS] - send univ info:  [{MuisClass.Settings.Universes.ToArray().Length}]");
+                                    LoggerAccessor.LogInfo($"[MUIS] - send univ info: [{MuisClass.Settings.Universes.ToArray().Length}]");
                                 }
                             }
                             else

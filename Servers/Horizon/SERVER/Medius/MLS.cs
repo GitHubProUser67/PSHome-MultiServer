@@ -5736,6 +5736,12 @@ namespace Horizon.SERVER.Medius
 
                         List<int> FilteredGameLists = new() { 21924, 10994, 11203, 11204, 21564, 21574, 21584, 21594, 22274, 22284, 22294, 22304, 20040, 20041, 20042, 20043, 20044 };
 
+                        if ((data.ClientObject.ApplicationId == 20371 || data.ClientObject.ApplicationId == 20374)
+                        && data.ClientObject.ClientHomeData != null && data.ClientObject.ClientHomeData.VersionAsDouble < 0.5)
+                        {
+                            FilteredGameLists.Add(20371);
+                            FilteredGameLists.Add(20374);
+                        }
 #if DEBUG
                         foreach (GameListFilter filter in data.ClientObject.GameListFilters)
                         {
