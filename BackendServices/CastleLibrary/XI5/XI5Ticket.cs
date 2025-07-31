@@ -170,9 +170,14 @@ namespace XI5
             DateTimeOffset validityCheckTime = DateTimeOffset.UtcNow;
             bool isValidTimestamp = ticket.IssuedDate <= validityCheckTime && ticket.ExpiryDate > validityCheckTime;
 
-            // verify ticket signature
-            ticket.Valid = SigningKeyResolver.GetSigningKeys(ticket.SignatureIdentifier, ticket.TitleId).Any(key =>
-               new TicketVerifier(ticketData, ticket, key).IsTicketValid()) && isValidTimestamp;
+            var signingKeys = SigningKeyResolver.GetSigningKeys(ticket.SignatureIdentifier, ticket.TitleId);
+
+            // verify ticket signature or skip them depending the compiler options
+            if (signingKeys == null)
+                ticket.Valid = isValidTimestamp;
+            else
+                ticket.Valid = signingKeys.Any(key =>
+                   new TicketVerifier(ticketData, ticket, key).IsTicketValid()) && isValidTimestamp;
 
             if (!isValidTimestamp)
             {

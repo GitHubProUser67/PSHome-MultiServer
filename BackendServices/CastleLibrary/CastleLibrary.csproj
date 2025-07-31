@@ -30,5 +30,10 @@
     <ProjectReference Include="..\CustomLogger\CustomLogger.csproj" />
     <ProjectReference Include="..\EndianTools\EndianTools.csproj" />
   </ItemGroup>
+  
+  <PropertyGroup>
+    <!--For now disable the PSN ticket verification as many keys are still undocumented -->
+    <DefineConstants>$(DefineConstants);DISABLE_PSN_XI5_VERIFICATION</DefineConstants>
+  </PropertyGroup>
 
 </Project>

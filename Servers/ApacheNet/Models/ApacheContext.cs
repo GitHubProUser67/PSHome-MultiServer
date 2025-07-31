@@ -48,7 +48,7 @@ namespace ApacheNet.Models
             Response.ChunkedTransfer = chunked;
             Response.StatusCode = (int)StatusCode;
             if (Response.ChunkedTransfer)
-                return Response.SendChunk(Encoding.ASCII.GetBytes(content), true);
+                return Response.SendChunk(Encoding.UTF8.GetBytes(content), true);
             return Response.Send(content);
         }
 

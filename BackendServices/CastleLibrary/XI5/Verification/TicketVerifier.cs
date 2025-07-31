@@ -19,17 +19,17 @@ namespace XI5.Verification
 
         public TicketVerifier(byte[] ticketData, XI5Ticket ticket, ITicketSigningKey key)
         {
-            this._messageType = key.MessageType;
-            this._ticketData = ticketData;
-            this._ticket = ticket;
+            _messageType = key.MessageType;
+            _ticketData = ticketData;
+            _ticket = ticket;
 
             X9ECParameters xParams = ECNamedCurveTable.GetByName(key.CurveTable);
             ECDomainParameters domainParams = new ECDomainParameters(xParams.Curve, xParams.G, xParams.N, xParams.H, xParams.GetSeed());
             Org.BouncyCastle.Math.EC.ECPoint ecPoint = domainParams.Curve.CreatePoint(new Org.BouncyCastle.Math.BigInteger(key.PublicKeyX, 16), new Org.BouncyCastle.Math.BigInteger(key.PublicKeyY, 16));
 
             ECPublicKeyParameters publicKey = new ECPublicKeyParameters(ecPoint, domainParams);
-            this._signer = SignerUtilities.GetSigner(key.HashAlgorithm + "withECDSA");
-            this._signer.Init(false, publicKey);
+            _signer = SignerUtilities.GetSigner(key.HashAlgorithm + "withECDSA");
+            _signer.Init(false, publicKey);
         }
 
         // https://github.com/LBPUnion/ProjectLighthouse/blob/80cfb24d6f72ecdf45c8389b29a89fd1c13d0a96/ProjectLighthouse/Tickets/Signature/TicketSignatureVerifier.cs#L30
@@ -62,23 +62,23 @@ namespace XI5.Verification
             int inOff;
             int inLen;
 
-            switch (this._messageType)
+            switch (_messageType)
             {
                 case TicketSignatureMessageType.Body:
-                    inOff = this._ticket.BodySection.Position;
-                    inLen = this._ticket.BodySection.Length + 4;
+                    inOff = _ticket.BodySection.Position;
+                    inLen = _ticket.BodySection.Length + 4;
                     break;
                 case TicketSignatureMessageType.Ticket:
                     inOff = 0;
-                    inLen = this._ticketData.Length - this._ticket.SignatureData.Length;
+                    inLen = _ticketData.Length - _ticket.SignatureData.Length;
                     break;
                 default:
-                    throw new NotImplementedException(this._messageType.ToString());
+                    throw new NotImplementedException(_messageType.ToString());
             }
 
-            this._signer.BlockUpdate(this._ticketData, inOff, inLen);
+            _signer.BlockUpdate(_ticketData, inOff, inLen);
 
-            return this._signer.VerifySignature(TrimSignature(this._ticket.SignatureData));
+            return _signer.VerifySignature(TrimSignature(_ticket.SignatureData));
         }
     }
 }
