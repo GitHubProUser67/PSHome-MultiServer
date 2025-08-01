@@ -301,7 +301,7 @@ public static class ApacheNetServerConfiguration
     private static JProperty SerializeMimeTypes()
     {
         JObject jObject = new();
-        foreach (var kvp in MimeTypes ?? new Dictionary<string, string>())
+        foreach (var kvp in MimeTypes ?? new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase))
         {
             jObject.Add(kvp.Key, kvp.Value);
         }

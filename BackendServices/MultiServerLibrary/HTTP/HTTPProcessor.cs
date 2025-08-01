@@ -834,6 +834,8 @@ namespace MultiServerLibrary.HTTP
                 return "application/octet-stream";
             else
             {
+                extension = extension.ToLower();
+
                 if (!extension.StartsWith("."))
                     extension = "." + extension;
 
@@ -847,6 +849,8 @@ namespace MultiServerLibrary.HTTP
                 return "application/octet-stream";
             else
             {
+                extension = extension.ToLower();
+
                 if (!extension.StartsWith("."))
                     extension = "." + extension;
 
