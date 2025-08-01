@@ -325,6 +325,8 @@ namespace MultiServerLibrary.SSL
                 // If not found, initialize private key generator & set up a certificate creation request.
                 using (RSA rsa = RSA.Create())
                 {
+                    IPAddress localhost = IPAddress.Loopback;
+
                     // Generate an unique serial number.
                     byte[] certSerialNumber = new byte[16];
                     new Random().NextBytes(certSerialNumber);
@@ -341,6 +343,9 @@ namespace MultiServerLibrary.SSL
                     sanBuilder.AddEmailAddress(certificate_email);
 
                     sanBuilder.AddIpAddress(serverIp);
+                    sanBuilder.AddIpAddress(localhost);
+                    sanBuilder.AddDnsName(serverIp.ToString());
+                    sanBuilder.AddDnsName(localhost.ToString());
 
                     if (wildcard)
                     {
@@ -399,6 +404,8 @@ namespace MultiServerLibrary.SSL
                 // Generate a new RSA key pair
                 using (RSA rsa = RSA.Create())
                 {
+                    IPAddress localhost = IPAddress.Loopback;
+
                     InternetProtocolUtils.TryGetServerIP(out string ServerIPStr);
 
                     // Add a Subject Alternative Name (SAN) extension with a wildcard DNS entry
@@ -408,6 +415,9 @@ namespace MultiServerLibrary.SSL
                     CertificateRequest request = new CertificateRequest($"CN={CN} [{GetRandomInt64(100, 999)}], OU={OU}, O=\"{O}\", L={L}, S={S}, C={C}", rsa, Hashing, RSASignaturePadding.Pkcs1);
 
                     sanBuilder.AddIpAddress(IPAddress.Parse(ServerIPStr));
+                    sanBuilder.AddIpAddress(localhost);
+                    sanBuilder.AddDnsName(ServerIPStr);
+                    sanBuilder.AddDnsName(localhost.ToString());
 
                     sanBuilder.AddEmailAddress(certificate_email);
 
