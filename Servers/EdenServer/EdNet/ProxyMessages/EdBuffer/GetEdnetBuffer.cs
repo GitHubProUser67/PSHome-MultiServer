@@ -6,7 +6,7 @@ namespace EdenServer.EdNet.ProxyMessages.EdBuffer
 {
     public class GetEdnetBuffer : AbstractProxyMessage
     {
-        private const ushort chunkSize = 512;
+        private const ushort chunkSize = 1200; // Each buffer can only be 6 * 1200 so 7200 max size.
 
         private static readonly byte[] defaultDriverProfile = GenerateDefaultDriverProfile();
 
@@ -14,6 +14,7 @@ namespace EdenServer.EdNet.ProxyMessages.EdBuffer
         {
             EdStore request = task.Request;
 
+            uint profileSize;
             uint bufferid = request.ExtractUInt32();
             uint offset = request.ExtractUInt32();
 
@@ -22,24 +23,31 @@ namespace EdenServer.EdNet.ProxyMessages.EdBuffer
             response.InsertStart(edStoreBank.CRC_A_GET_EDNETBUFFER);
             response.InsertUInt32(bufferid);
 
-            uint profileSize = (uint)defaultDriverProfile.Length;
-
-            if (offset > profileSize || !GetChunkChecksum(offset, bufferid))
-                response.InsertUInt8(0); // Failure
-            else
+            switch (bufferid)
             {
-                byte[] payload = new byte[Math.Min(chunkSize, profileSize - offset)];
-                Array.Copy(defaultDriverProfile, (int)offset, payload, 0, payload.Length);
+                case 0: // Garage
+                    profileSize = (uint)defaultDriverProfile.Length;
+                    if (offset > profileSize)
+                    {
+                        response.InsertUInt8(2); // Failure
+                        response.InsertUInt32(offset);
+                    }
+                    else
+                    {
+                        byte[] payload = new byte[Math.Min(chunkSize, profileSize - offset)];
+                        Array.Copy(defaultDriverProfile, (int)offset, payload, 0, payload.Length);
 
-                response.InsertUInt8(1); // Success
-                response.InsertUInt32(offset);
-                response.InsertUInt32(profileSize);
-                /* The CRC must be equal to the bufferid:
-                   sVar4 = ProcessBufferCRC(iVar2 + offset,iVar9);
-                   sStack12 = (short)buffer_id;
-                   if (sVar4 == sStack12) {*/
-                response.InsertUInt16((ushort)bufferid);
-                response.InsertByteArray(payload, (ushort)payload.Length);
+                        response.InsertUInt8(1); // Success
+                        response.InsertUInt32(offset);
+                        response.InsertUInt32(profileSize);
+                        response.InsertUInt16(Utils.GetCRCFromBuffer(payload));
+                        response.InsertByteArray(payload, (ushort)payload.Length);
+                    }
+                    break;
+                default:
+                    response.InsertUInt8(0); // Buffer not found.
+                    response.InsertUInt32(offset);
+                    break;
             }
 
             response.InsertEnd();
@@ -51,26 +59,10 @@ namespace EdenServer.EdNet.ProxyMessages.EdBuffer
             return null;
         }
 
-        private static bool GetChunkChecksum(uint offset, uint bufferid)
-        {
-            byte[] securityCheckBytes = new byte[offset];
-            Array.Copy(defaultDriverProfile, 0, securityCheckBytes, 0, securityCheckBytes.Length);
-            return Utils.GetCRCFromBuffer(securityCheckBytes) == bufferid;
-        }
-
         private static byte[] GenerateDefaultDriverProfile()
         {
-            EdStore driverStore = new EdStore(null, 1400);
-            driverStore.InsertStart(edStoreBank.NetBufferGarage);
-            driverStore.InsertUInt32(0);
-            driverStore.InsertString("testgarage");
-            driverStore.InsertUInt32(0);
-            driverStore.InsertUInt64(0);
-
-            byte[] output = new byte[driverStore.CurrentSize];
-            Array.Copy(driverStore.Data, 0, output, 0, output.Length);
-
-            return output;
+            // This seems to be empty and expected to be empty...
+            return new byte[0];
         }
     }
 }
