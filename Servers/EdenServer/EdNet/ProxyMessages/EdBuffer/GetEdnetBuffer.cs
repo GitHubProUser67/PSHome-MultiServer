@@ -2,7 +2,7 @@
 using EdNetService.Models;
 using System.Net;
 
-namespace EdenServer.EdNet.ProxyMessages.Database.EdBuffer
+namespace EdenServer.EdNet.ProxyMessages.EdBuffer
 {
     public class GetEdnetBuffer : AbstractProxyMessage
     {

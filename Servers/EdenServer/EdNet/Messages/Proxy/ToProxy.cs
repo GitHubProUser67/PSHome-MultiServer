@@ -1,8 +1,8 @@
 using CustomLogger;
 using EdenServer.ClientChallengeService;
 using EdenServer.EdNet.ProxyMessages;
-using EdenServer.EdNet.ProxyMessages.Database.EdBuffer;
 using EdenServer.EdNet.ProxyMessages.Database.Login;
+using EdenServer.EdNet.ProxyMessages.EdBuffer;
 using EdenServer.EdNet.ProxyMessages.ORB;
 using EdenServer.EdNet.ProxyMessages.ORB.File;
 using EdNetService.CRC;
