@@ -7,8 +7,8 @@ using System.Net;
 using Horizon.HTTPSERVICE;
 using Horizon.LIBRARY.Database.Models;
 using Horizon.MUM;
-using Horizon.SERVER.Extension.PlayStationHome;
 using MultiServerLibrary.Extension;
+using Horizon.Extension.PlayStationHome.Models;
 
 namespace Horizon.MUIS
 {

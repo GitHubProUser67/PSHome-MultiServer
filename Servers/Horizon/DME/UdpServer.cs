@@ -3,16 +3,17 @@ using DotNetty.Handlers.Logging;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
-using Horizon.RT.Common;
-using Horizon.RT.Models;
-using Horizon.LIBRARY.Pipeline.Udp;
 using Horizon.DME.Models;
+using Horizon.DME.PluginArgs;
+using Horizon.Extension.PlayStationHome;
+using Horizon.LIBRARY.Pipeline.Attribute;
+using Horizon.LIBRARY.Pipeline.Udp;
+using Horizon.PluginManager;
+using Horizon.RT.Common;
+using Horizon.RT.Cryptography;
+using Horizon.RT.Models;
 using System.Collections.Concurrent;
 using System.Net;
-using Horizon.DME.PluginArgs;
-using Horizon.LIBRARY.Pipeline.Attribute;
-using Horizon.PluginManager;
-using Horizon.RT.Cryptography;
 
 namespace Horizon.DME
 {
@@ -202,7 +203,19 @@ namespace Horizon.DME
                         if (AuthenticatedEndPoint == null || !AuthenticatedEndPoint.Equals(packet.Source))
                             break;
 
-                        ClientObject?.DmeWorld?.BroadcastUdp(ClientObject, clientAppBroadcast.Payload);
+                        if (ClientObject != null)
+                        {
+                            Action<RT_MSG_CLIENT_APP_SINGLE, DMEObject>? modifyMessagePerClient = null;
+                            byte[] MessagePayload = clientAppBroadcast.Payload;
+
+                            bool InvalidatedRequest = false;
+
+                            if (ClientObject.ApplicationId == 20371 || ClientObject.ApplicationId == 20374)
+                                InvalidatedRequest = HomeHubProxy.ProcessDMEProxyTunneling(MessagePayload, ClientObject, ref modifyMessagePerClient);
+
+                            if (!InvalidatedRequest)
+                                ClientObject?.DmeWorld?.BroadcastUdp(ClientObject, MessagePayload ?? Array.Empty<byte>(), modifyMessagePerClient);
+                        }
                         break;
                     }
                 case RT_MSG_CLIENT_APP_LIST clientAppList:
@@ -210,7 +223,19 @@ namespace Horizon.DME
                         if (AuthenticatedEndPoint == null || !AuthenticatedEndPoint.Equals(packet.Source))
                             break;
 
-                        ClientObject?.DmeWorld?.SendUdpAppList(ClientObject, clientAppList.Targets, clientAppList.Payload ?? Array.Empty<byte>());
+                        if (ClientObject != null)
+                        {
+                            Action<RT_MSG_CLIENT_APP_SINGLE, DMEObject>? modifyMessagePerClient = null;
+                            byte[] MessagePayload = clientAppList.Payload;
+
+                            bool InvalidatedRequest = false;
+
+                            if (ClientObject.ApplicationId == 20371 || ClientObject.ApplicationId == 20374)
+                                InvalidatedRequest = HomeHubProxy.ProcessDMEProxyTunneling(MessagePayload, ClientObject, ref modifyMessagePerClient);
+
+                            if (!InvalidatedRequest)
+                                ClientObject?.DmeWorld?.SendUdpAppList(ClientObject, clientAppList.Targets, MessagePayload ?? Array.Empty<byte>(), modifyMessagePerClient);
+                        }
                         break;
                     }
                 case RT_MSG_CLIENT_APP_SINGLE clientAppSingle:
@@ -218,7 +243,19 @@ namespace Horizon.DME
                         if (AuthenticatedEndPoint == null || !AuthenticatedEndPoint.Equals(packet.Source))
                             break;
 
-                        ClientObject?.DmeWorld?.SendUdpAppSingle(ClientObject, clientAppSingle.TargetOrSource, clientAppSingle.Payload ?? Array.Empty<byte>());
+                        if (ClientObject != null)
+                        {
+                            Action<RT_MSG_CLIENT_APP_SINGLE, DMEObject>? modifyMessagePerClient = null;
+                            byte[] MessagePayload = clientAppSingle.Payload;
+
+                            bool InvalidatedRequest = false;
+
+                            if (ClientObject.ApplicationId == 20371 || ClientObject.ApplicationId == 20374)
+                                InvalidatedRequest = HomeHubProxy.ProcessDMEProxyTunneling(MessagePayload, ClientObject, ref modifyMessagePerClient);
+
+                            if (!InvalidatedRequest)
+                                ClientObject?.DmeWorld?.SendUdpAppSingle(ClientObject, clientAppSingle.TargetOrSource, MessagePayload ?? Array.Empty<byte>());
+                        }
                         break;
                     }
                 case RT_MSG_CLIENT_APP_TOSERVER clientAppToServer:

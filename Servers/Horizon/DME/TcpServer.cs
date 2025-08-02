@@ -1,24 +1,24 @@
-using CustomLogger;
 using DotNetty.Handlers.Logging;
+using DotNetty.Handlers.Timeout;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
+using CustomLogger;
+using MultiServerLibrary.Extension;
+using Horizon.DME.Models;
+using Horizon.DME.PluginArgs;
+using Horizon.LIBRARY.Pipeline.Tcp;
+using Horizon.MUM.Models;
+using Horizon.PluginManager;
 using Horizon.RT.Common;
 using Horizon.RT.Cryptography;
 using Horizon.RT.Models;
-using Horizon.LIBRARY.Pipeline.Tcp;
-using Horizon.DME.Models;
+using Horizon.SERVER;
+using Horizon.SERVER.Extension.PlayStationHome;
+using Horizon.SERVER.Medius;
 using System.Collections.Concurrent;
 using System.Net;
-using DotNetty.Handlers.Timeout;
-using Horizon.DME.PluginArgs;
-using Horizon.PluginManager;
-using EndianTools;
-using MultiServerLibrary.Extension;
-using Horizon.SERVER;
-using Horizon.MUM.Models;
-using Horizon.SERVER.Medius;
-using Horizon.SERVER.Extension.PlayStationHome;
+using Horizon.Extension.PlayStationHome;
 
 namespace Horizon.DME
 {
@@ -745,105 +745,53 @@ namespace Horizon.DME
                     }
                 case RT_MSG_CLIENT_APP_BROADCAST clientAppBroadcast:
                     {
-                        data.DMEObject?.DmeWorld?.BroadcastTcp(data.DMEObject, clientAppBroadcast.Payload);
+                        if (data.DMEObject != null)
+                        {
+                            Action<RT_MSG_CLIENT_APP_SINGLE, DMEObject>? modifyMessagePerClient = null;
+                            byte[] MessagePayload = clientAppBroadcast.Payload;
+
+                            bool InvalidatedRequest = false;
+
+                            if (data.DMEObject.ApplicationId == 20371 || data.DMEObject.ApplicationId == 20374)
+                                InvalidatedRequest = HomeHubProxy.ProcessDMEProxyTunneling(MessagePayload, data.DMEObject, ref modifyMessagePerClient);
+
+                            if (!InvalidatedRequest)
+                                data.DMEObject?.DmeWorld?.BroadcastTcp(data.DMEObject, MessagePayload ?? Array.Empty<byte>(), modifyMessagePerClient);
+                        }
                         break;
                     }
                 case RT_MSG_CLIENT_APP_LIST clientAppList:
                     {
-                        data.DMEObject?.DmeWorld?.SendTcpAppList(data.DMEObject, clientAppList.Targets, clientAppList.Payload ?? Array.Empty<byte>());
+                        if (data.DMEObject != null)
+                        {
+                            Action<RT_MSG_CLIENT_APP_SINGLE, DMEObject>? modifyMessagePerClient = null;
+                            byte[] MessagePayload = clientAppList.Payload;
+
+                            bool InvalidatedRequest = false;
+
+                            if (data.DMEObject.ApplicationId == 20371 || data.DMEObject.ApplicationId == 20374)
+                                InvalidatedRequest = HomeHubProxy.ProcessDMEProxyTunneling(MessagePayload, data.DMEObject, ref modifyMessagePerClient);
+
+                            if (!InvalidatedRequest)
+                                data.DMEObject.DmeWorld?.SendTcpAppList(data.DMEObject, clientAppList.Targets, MessagePayload ?? Array.Empty<byte>(), modifyMessagePerClient);
+                        }
+
                         break;
                     }
                 case RT_MSG_CLIENT_APP_SINGLE clientAppSingle:
                     {
                         if (data.DMEObject != null)
                         {
+                            Action<RT_MSG_CLIENT_APP_SINGLE, DMEObject>? modifyMessagePerClient = null;
+                            byte[] MessagePayload = clientAppSingle.Payload;
+
                             bool InvalidatedRequest = false;
 
                             if (data.DMEObject.ApplicationId == 20371 || data.DMEObject.ApplicationId == 20374)
-                            {
-                                string? HomeUserEntry = null;
-                                ClientObject? mumClient = MediusClass.Manager.GetClientBySessionKey(data.DMEObject.SessionKey, data.DMEObject.ApplicationId);
-
-                                if (mumClient != null)
-                                    HomeUserEntry = mumClient.AccountName + ":" + mumClient.IP;
-
-                                if (clientAppSingle.Payload.Length > 8)
-                                {
-                                    byte[] HubMessagePayload = clientAppSingle.Payload;
-                                    int HubPathernOffset = ByteUtils.FindBytePattern(HubMessagePayload, new byte[] { 0x64, 0x00 });
-
-                                    if (HubPathernOffset != -1 && HubMessagePayload.Length >= HubPathernOffset + 8) // Hub command.
-                                    {
-                                        string? value;
-
-                                        switch (BitConverter.IsLittleEndian ? EndianUtils.ReverseInt(BitConverter.ToInt32(HubMessagePayload, HubPathernOffset + 4)) : BitConverter.ToInt32(HubMessagePayload, HubPathernOffset + 4))
-                                        {
-                                            case -85: // IGA
-                                                if (!string.IsNullOrEmpty(HomeUserEntry) && MediusClass.Settings.PlaystationHomeUsersServersAccessList.TryGetValue(HomeUserEntry, out value) && !string.IsNullOrEmpty(value))
-                                                {
-                                                    switch (value)
-                                                    {
-                                                        case "ADMIN":
-                                                        case "IGA":
-                                                            break;
-                                                        default:
-                                                            InvalidatedRequest = true;
-
-                                                            LoggerAccessor.LogError($"[DME] - TcpServer - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED IGA COMMAND) - DmeId:{data.DMEObject.DmeId}");
-
-                                                            await clientChannel.CloseAsync();
-                                                            break;
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    InvalidatedRequest = true;
-                                                    string SupplementalMessage = "Unknown";
-
-                                                    switch (HubMessagePayload[HubPathernOffset + 3]) // TODO, add all the other codes.
-                                                    {
-                                                        case 0x0B:
-                                                            SupplementalMessage = "Kick";
-                                                            break;
-                                                    }
-
-                                                    LoggerAccessor.LogError($"[DME] - TcpServer - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED IGA COMMAND - {SupplementalMessage}) - DmeId:{data.DMEObject.DmeId}");
-
-                                                    await clientChannel.CloseAsync();
-                                                }
-                                                break;
-                                            case -27: // REXEC
-                                                if (!string.IsNullOrEmpty(HomeUserEntry) && MediusClass.Settings.PlaystationHomeUsersServersAccessList.TryGetValue(HomeUserEntry, out value) && !string.IsNullOrEmpty(value))
-                                                {
-                                                    switch (value)
-                                                    {
-                                                        case "ADMIN":
-                                                            break;
-                                                        default:
-                                                            InvalidatedRequest = true;
-
-                                                            LoggerAccessor.LogError($"[DME] - TcpServer - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED REXEC COMMAND) - DmeId:{data.DMEObject.DmeId}");
-
-                                                            await clientChannel.CloseAsync();
-                                                            break;
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    InvalidatedRequest = true;
-
-                                                    LoggerAccessor.LogError($"[DME] - TcpServer - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED REXEC COMMAND) - DmeId:{data.DMEObject.DmeId}");
-
-                                                    await clientChannel.CloseAsync();
-                                                }
-                                                break;
-                                        }
-                                    }
-                                }
-                            }
+                                InvalidatedRequest = HomeHubProxy.ProcessDMEProxyTunneling(MessagePayload, data.DMEObject, ref modifyMessagePerClient);
 
                             if (!InvalidatedRequest)
-                                data.DMEObject.DmeWorld?.SendTcpAppSingle(data.DMEObject, clientAppSingle.TargetOrSource, clientAppSingle.Payload ?? Array.Empty<byte>());
+                                data.DMEObject.DmeWorld?.SendTcpAppSingle(data.DMEObject, clientAppSingle.TargetOrSource, MessagePayload ?? Array.Empty<byte>(), modifyMessagePerClient);
                         }
                         break;
                     }

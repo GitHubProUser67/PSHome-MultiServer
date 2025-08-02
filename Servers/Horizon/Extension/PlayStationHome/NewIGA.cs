@@ -1,6 +1,7 @@
+using Horizon.DME;
 using Horizon.DME.Models;
 
-namespace Horizon.DME.Extension.PlayStationHome
+namespace Horizon.Extension.Extension.PlayStationHome
 {
     public class NewIGA
     {
@@ -17,10 +18,17 @@ namespace Horizon.DME.Extension.PlayStationHome
             if (homeDmeServer != null && homeDmeServer.DmeWorld != null)
             {
                 World? worldToSearchIn = homeDmeServer.DmeWorld.GetWorldById(WorldId, DmeWorldId);
-                if (worldToSearchIn != null && worldToSearchIn.Clients.Any(client => client.DmeId == DmeId))
+                var client = worldToSearchIn?.Clients.FirstOrDefault(c => c.DmeId == DmeId);
+                if (client != null)
                 {
-                    _ = Task.Run(() => { worldToSearchIn.SendTcpAppSingle(homeDmeServer, DmeId, KickCMD); });
-                    return $"{DmeId} was kicked successfully in world: {worldToSearchIn.WorldId}!";
+                    _ = Task.Run(() =>
+                    {
+                        byte[] payload = new byte[KickCMD.Length];
+                        Array.Copy(KickCMD, 0, payload, 0, payload.Length);
+                        payload[6] = client.mumClient.ProtocolVersion;
+                        worldToSearchIn!.SendTcpAppSingle(homeDmeServer, DmeId, payload);
+                    });
+                    return $"{DmeId} was kicked successfully in world: {worldToSearchIn!.WorldId}!";
                 }
 
                 return $"{DmeId} was not found in a valid World!";
@@ -35,10 +43,17 @@ namespace Horizon.DME.Extension.PlayStationHome
             if (homeDmeServer != null && homeDmeServer.DmeWorld != null)
             {
                 World? worldToSearchIn = homeDmeServer.DmeWorld.GetWorldById(WorldId, DmeWorldId);
-                if (worldToSearchIn != null && worldToSearchIn.Clients.Any(client => client.DmeId == DmeId))
+                var client = worldToSearchIn?.Clients.FirstOrDefault(c => c.DmeId == DmeId);
+                if (client != null)
                 {
-                    _ = Task.Run(() => { worldToSearchIn.SendTcpAppSingle(homeDmeServer, DmeId, ReleaseCMD); });
-                    return $"{DmeId} was released successfully in world: {worldToSearchIn.WorldId}!";
+                    _ = Task.Run(() => 
+                    {
+                        byte[] payload = new byte[ReleaseCMD.Length];
+                        Array.Copy(ReleaseCMD, 0, payload, 0, payload.Length);
+                        payload[6] = client.mumClient.ProtocolVersion;
+                        worldToSearchIn!.SendTcpAppSingle(homeDmeServer, DmeId, payload);
+                    });
+                    return $"{DmeId} was released successfully in world: {worldToSearchIn!.WorldId}!";
                 }
 
                 return $"{DmeId} was not found in a valid World!";
@@ -53,10 +68,17 @@ namespace Horizon.DME.Extension.PlayStationHome
             if (homeDmeServer != null && homeDmeServer.DmeWorld != null)
             {
                 World? worldToSearchIn = homeDmeServer.DmeWorld.GetWorldById(WorldId, DmeWorldId);
-                if (worldToSearchIn != null && worldToSearchIn.Clients.Any(client => client.DmeId == DmeId))
+                var client = worldToSearchIn?.Clients.FirstOrDefault(c => c.DmeId == DmeId);
+                if (client != null)
                 {
-                    _ = Task.Run(() => { worldToSearchIn.SendTcpAppSingle(homeDmeServer, DmeId, MuteCMD); });
-                    return $"{DmeId} was muted successfully in world: {worldToSearchIn.WorldId}!";
+                    _ = Task.Run(() => 
+                    {
+                        byte[] payload = new byte[MuteCMD.Length];
+                        Array.Copy(MuteCMD, 0, payload, 0, payload.Length);
+                        payload[6] = client.mumClient.ProtocolVersion;
+                        worldToSearchIn!.SendTcpAppSingle(homeDmeServer, DmeId, payload);
+                    });
+                    return $"{DmeId} was muted successfully in world: {worldToSearchIn!.WorldId}!";
                 }
 
                 return $"{DmeId} was not found in a valid World!";
@@ -71,10 +93,17 @@ namespace Horizon.DME.Extension.PlayStationHome
             if (homeDmeServer != null && homeDmeServer.DmeWorld != null)
             {
                 World? worldToSearchIn = homeDmeServer.DmeWorld.GetWorldById(WorldId, DmeWorldId);
-                if (worldToSearchIn != null && worldToSearchIn.Clients.Any(client => client.DmeId == DmeId))
+                var client = worldToSearchIn?.Clients.FirstOrDefault(c => c.DmeId == DmeId);
+                if (client != null)
                 {
-                    _ = Task.Run(() => { worldToSearchIn.SendTcpAppSingle(homeDmeServer, DmeId, MuteNFreezeCMD); });
-                    return $"{DmeId} was muted and frozen successfully in world: {worldToSearchIn.WorldId}!";
+                    _ = Task.Run(() => 
+                    {
+                        byte[] payload = new byte[MuteNFreezeCMD.Length];
+                        Array.Copy(MuteNFreezeCMD, 0, payload, 0, payload.Length);
+                        payload[6] = client.mumClient.ProtocolVersion;
+                        worldToSearchIn!.SendTcpAppSingle(homeDmeServer, DmeId, payload);
+                    });
+                    return $"{DmeId} was muted and frozen successfully in world: {worldToSearchIn!.WorldId}!";
                 }
 
                 return $"{DmeId} was not found in a valid World!";
@@ -89,10 +118,17 @@ namespace Horizon.DME.Extension.PlayStationHome
             if (homeDmeServer != null && homeDmeServer.DmeWorld != null)
             {
                 World? worldToSearchIn = homeDmeServer.DmeWorld.GetWorldById(WorldId, DmeWorldId);
-                if (worldToSearchIn != null && worldToSearchIn.Clients.Any(client => client.DmeId == DmeId))
+                var client = worldToSearchIn?.Clients.FirstOrDefault(c => c.DmeId == DmeId);
+                if (client != null)
                 {
-                    _ = Task.Run(() => { worldToSearchIn.SendTcpAppSingle(homeDmeServer, DmeId, FreezeCMD); });
-                    return $"{DmeId} was frozen successfully in world: {worldToSearchIn.WorldId}!";
+                    _ = Task.Run(() =>
+                    {
+                        byte[] payload = new byte[FreezeCMD.Length];
+                        Array.Copy(FreezeCMD, 0, payload, 0, payload.Length);
+                        payload[6] = client.mumClient.ProtocolVersion;
+                        worldToSearchIn!.SendTcpAppSingle(homeDmeServer, DmeId, payload);
+                    });
+                    return $"{DmeId} was frozen successfully in world: {worldToSearchIn!.WorldId}!";
                 }
 
                 return $"{DmeId} was not found in a valid World!";

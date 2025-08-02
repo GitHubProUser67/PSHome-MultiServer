@@ -1,7 +1,6 @@
 using CustomLogger;
 using MultiServerLibrary.GeoLocalization;
 using MultiServerLibrary.HTTP;
-using Horizon.DME.Extension.PlayStationHome;
 using Horizon.SERVER;
 using Horizon.SERVER.Extension.PlayStationHome;
 using System.Net;
@@ -11,6 +10,7 @@ using WatsonWebserver.Core;
 using Horizon.MUM.Models;
 using Newtonsoft.Json;
 using Prometheus;
+using Horizon.Extension.Extension.PlayStationHome;
 
 namespace Horizon.HTTPSERVICE
 {

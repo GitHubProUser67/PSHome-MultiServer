@@ -7,8 +7,8 @@ using Horizon.RT.Common;
 using Horizon.RT.Models;
 using System.Collections.Concurrent;
 using System.Net;
-using Horizon.SERVER.Extension.PlayStationHome;
 using MultiServerLibrary.Extension;
+using Horizon.Extension.PlayStationHome.Models;
 
 namespace Horizon.MUM.Models
 {
@@ -61,6 +61,11 @@ namespace Horizon.MUM.Models
         /// 
         /// </summary>
         public int CurrentSpaceType = 0;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public byte ProtocolVersion = 0x64;
 
         /// <summary>
         /// 
@@ -596,6 +601,7 @@ namespace Horizon.MUM.Models
 
             // Release home pointer
             Hub_LocalPerson_ms_pInstance = 0;
+            WorldCorePointer = 0;
 
             // Logout
             _logoutTime = DateTimeUtils.GetHighPrecisionUtcTime();

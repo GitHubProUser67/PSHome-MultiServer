@@ -323,6 +323,11 @@ namespace Horizon.SERVER.Medius
                                                             if (clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 4)
                                                                 data.ClientObject.SetWorldCorePointer(BitConverter.ToUInt32(BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(QueryData) : QueryData));
                                                             break;
+                                                        case 0x0001193F:
+                                                            // Sets ProtocolVersion.
+                                                            if (clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 1)
+                                                                data.ClientObject.ProtocolVersion = QueryData[0];
+                                                            break;
                                                         case 0x001709e0:
                                                             // Patches out the forceInvite command.
                                                             if (MediusClass.Settings.PlaystationHomeForceInviteExploitPatch && MediusClass.Settings.PokePatchOn && clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 4 && QueryData.EqualsTo(new byte[] { 0x2f, 0x80, 0x00, 0x00 }))
@@ -345,6 +350,11 @@ namespace Horizon.SERVER.Medius
                                                             // Sets WorldCorePointer.
                                                             if (clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 4)
                                                                 data.ClientObject.SetWorldCorePointer(BitConverter.ToUInt32(BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(QueryData) : QueryData));
+                                                            break;
+                                                        case 0x0001193F:
+                                                            // Sets ProtocolVersion.
+                                                            if (clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 1)
+                                                                data.ClientObject.ProtocolVersion = QueryData[0];
                                                             break;
                                                         case 0x0016dac0:
                                                             // Patches out the forceInvite command.
@@ -371,6 +381,11 @@ namespace Horizon.SERVER.Medius
                                                                 PokeAddress(0x006f59b8, liPatch, clientChannel);
                                                                 PokeAddress(0x0073bdb0, liPatch, clientChannel);
                                                             }
+                                                            break;
+                                                        case 0x0017A8DF:
+                                                            // Sets ProtocolVersion.
+                                                            if (clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 1)
+                                                                data.ClientObject.ProtocolVersion = QueryData[0];
                                                             break;
                                                         case 0x002aa960:
                                                             // Disable SSFW Reward check for 1.86 retail.
@@ -471,16 +486,13 @@ namespace Horizon.SERVER.Medius
 
                                                         LoggerAccessor.LogError(anticheatMsg);
 
-                                                        await HorizonServerConfiguration.Database.BanIp(data.ClientObject.IP).ContinueWith((r) =>
-                                                        {
-                                                            if (r.IsCompletedSuccessfully && r.Result)
-                                                            {
-                                                                // Banned
-                                                                QueueBanMessage(data);
-                                                            }
-                                                            data.ClientObject.ForceDisconnect();
-                                                            _ = data.ClientObject.Logout();
-                                                        });
+                                                        await HorizonServerConfiguration.Database.BanIp(data.ClientObject.IP).ConfigureAwait(false);
+
+                                                        // Banned
+                                                        await QueueBanMessage(data).ConfigureAwait(false);
+
+                                                        data.ClientObject.ForceDisconnect();
+                                                        _ = data.ClientObject.Logout();
                                                     }
                                                 }
                                                 break;
@@ -1957,19 +1969,16 @@ namespace Horizon.SERVER.Medius
                         {
                             LoggerAccessor.LogError($"[MAS] - MediusTicketLoginRequest : User {username} was caught using a RPCN suffix while not on it!");
 
-                            await HorizonServerConfiguration.Database.BanIp(data.ClientObject.IP).ContinueWith((r) =>
+                            await HorizonServerConfiguration.Database.BanIp(data.ClientObject.IP).ConfigureAwait(false);
+
+                            // Banned
+                            await QueueBanMessage(data).ConfigureAwait(false);
+
+                            // Account is banned
+                            data.ClientObject.Queue(new MediusTicketLoginResponse()
                             {
-                                if (r.IsCompletedSuccessfully && r.Result)
-                                {
-                                    // Banned
-                                    QueueBanMessage(data);
-                                }
-                                // Account is banned
-                                data.ClientObject.Queue(new MediusTicketLoginResponse()
-                                {
-                                    MessageID = ticketLoginRequest.MessageID,
-                                    StatusCodeTicketLogin = MediusCallbackStatus.MediusMachineBanned
-                                });
+                                MessageID = ticketLoginRequest.MessageID,
+                                StatusCodeTicketLogin = MediusCallbackStatus.MediusMachineBanned
                             });
 
                             break;
@@ -2792,20 +2801,13 @@ namespace Horizon.SERVER.Medius
 
             if ((data.ApplicationId == 20371 || data.ApplicationId == 20374) && data.ClientObject.ClientHomeData != null)
             {
-                if (data.ClientObject.IsOnRPCN && data.ClientObject.ClientHomeData.VersionAsDouble >= 01.83)
+                if (data.ClientObject.IsOnRPCN && data.ClientObject.ClientHomeData.VersionAsDouble >= 01.82)
                 {
                     if (!string.IsNullOrEmpty(data.ClientObject.ClientHomeData.Type) && (data.ClientObject.ClientHomeData.Type.Contains("HDK") || data.ClientObject.ClientHomeData.Type == "Online Debug"))
-                        _ = HomeRTMTools.SendRemoteCommand(data.ClientObject, "lc Debug.System( 'mlaaenable 0' )");
+                        _ = Task.Delay(4000).ContinueWith(r => HomeRTMTools.SendRemoteCommand(data.ClientObject, "lc Debug.System( 'mlaaenable 0' )"));
                     else
-                        _ = HomeRTMTools.SendRemoteCommand(data.ClientObject, "mlaaenable 0");
+                        _ = Task.Delay(4000).ContinueWith(r => HomeRTMTools.SendRemoteCommand(data.ClientObject, "mlaaenable 0"));
                 }
-                /*else if (data.ClientObject.ClientHomeData.VersionAsDouble >= 01.83) // MSAA PS3 Only for now: https://github.com/RPCS3/rpcs3/issues/15719
-                {
-                    if (!string.IsNullOrEmpty(data.ClientObject.ClientHomeData?.Type) && (data.ClientObject.ClientHomeData.Type.Contains("HDK") || data.ClientObject.ClientHomeData.Type == "Online Debug"))
-                        _ = HomeRTMTools.SendRemoteCommand(data.ClientObject, "lc Debug.System( 'msaaenable 1' )");
-                    else
-                        _ = HomeRTMTools.SendRemoteCommand(data.ClientObject, "msaaenable 1");
-                }*/
 
                 switch (data.ClientObject.ClientHomeData.Type)
                 {
@@ -2862,6 +2864,7 @@ namespace Horizon.SERVER.Medius
                                 }
 
                                 CheatQuery(0x1054e1c0, 4, clientChannel);
+                                CheatQuery(0x0001193F, 1, clientChannel);
                                 break;
                             case "01.86.09":
                                 if (MediusClass.Settings.PokePatchOn)
@@ -2872,6 +2875,7 @@ namespace Horizon.SERVER.Medius
                                 }
 
                                 CheatQuery(0x1054e358, 4, clientChannel);
+                                CheatQuery(0x0001193F, 1, clientChannel);
                                 break;
                             default:
                                 break;
@@ -2888,6 +2892,7 @@ namespace Horizon.SERVER.Medius
                                 }
 
                                 CheatQuery(0x105c24c8, 4, clientChannel);
+                                CheatQuery(0x0017A8DF, 1, clientChannel);
                                 break;
                             default:
                                 break;

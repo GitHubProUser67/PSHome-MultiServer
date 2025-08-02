@@ -1,14 +1,15 @@
 using CustomLogger;
+using Horizon.DME.PluginArgs;
+using Horizon.MUM.Models;
+using Horizon.PluginManager;
 using Horizon.RT.Common;
 using Horizon.RT.Models;
-using Horizon.DME.PluginArgs;
+using Horizon.SERVER;
+using MultiServerLibrary.Extension;
+using Org.BouncyCastle.Asn1.X509;
+using Prometheus;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using Horizon.PluginManager;
-using MultiServerLibrary.Extension;
-using Horizon.SERVER;
-using Horizon.MUM.Models;
-using Prometheus;
 
 namespace Horizon.DME.Models
 {
@@ -316,23 +317,6 @@ namespace Horizon.DME.Models
 
         #region Send
 
-        public void BroadcastTcp(DMEObject source, byte[] Payload)
-        {
-            RT_MSG_CLIENT_APP_SINGLE msg = new()
-            {
-                TargetOrSource = (short)source.DmeId,
-                Payload = Payload
-            };
-
-            foreach (var client in _clients)
-            {
-                if (client.Value == source || !client.Value.IsAuthenticated || !client.Value.IsConnected || !client.Value.HasRecvFlag(RT_RECV_FLAG.RECV_BROADCAST))
-                    continue;
-
-                client.Value.EnqueueTcp(msg);
-            }
-        }
-
         public void BroadcastTcpScertMessage(BaseScertMessage msg)
         {
             foreach (var client in _clients)
@@ -344,70 +328,103 @@ namespace Horizon.DME.Models
             }
         }
 
-        public void BroadcastUdp(DMEObject source, byte[] Payload)
+        public void BroadcastTcp(DMEObject source, byte[] Payload, Action<RT_MSG_CLIENT_APP_SINGLE, DMEObject>? modifyMessagePerClient = null)
         {
-            RT_MSG_CLIENT_APP_SINGLE msg = new()
+            foreach (var target in _clients.Values)
             {
-                TargetOrSource = (short)source.DmeId,
-                Payload = Payload
-            };
-
-            foreach (var client in _clients)
-            {
-                if (client.Value == source || !client.Value.IsAuthenticated || !client.Value.IsConnected || !client.Value.HasRecvFlag(RT_RECV_FLAG.RECV_BROADCAST))
+                if (target == source || !target.IsAuthenticated || !target.IsConnected || !target.HasRecvFlag(RT_RECV_FLAG.RECV_BROADCAST))
                     continue;
 
-                client.Value.EnqueueUdp(msg);
+                var message = new RT_MSG_CLIENT_APP_SINGLE()
+                {
+                    TargetOrSource = (short)source.DmeId,
+                    Payload = Payload
+                };
+
+                modifyMessagePerClient?.Invoke(message, target);
+
+                target.EnqueueTcp(message);
             }
         }
 
-        public void SendTcpAppList(DMEObject source, List<int> targetDmeIds, byte[] Payload)
+        public void BroadcastUdp(DMEObject source, byte[] Payload, Action<RT_MSG_CLIENT_APP_SINGLE, DMEObject>? modifyMessagePerClient = null)
+        {
+            foreach (var target in _clients.Values)
+            {
+                if (target == source || !target.IsAuthenticated || !target.IsConnected || !target.HasRecvFlag(RT_RECV_FLAG.RECV_BROADCAST))
+                    continue;
+
+                var message = new RT_MSG_CLIENT_APP_SINGLE()
+                {
+                    TargetOrSource = (short)source.DmeId,
+                    Payload = Payload
+                };
+
+                modifyMessagePerClient?.Invoke(message, target);
+
+                target.EnqueueUdp(message);
+            }
+        }
+
+        public void SendTcpAppList(DMEObject source, List<int> targetDmeIds, byte[] Payload, Action<RT_MSG_CLIENT_APP_SINGLE, DMEObject>? modifyMessagePerClient = null)
         {
             foreach (int targetId in targetDmeIds)
             {
-                if (_clients.TryGetValue(targetId, out DMEObject? client))
+                if (_clients.TryGetValue(targetId, out DMEObject? target))
                 {
-                    if (client == null || !client.IsAuthenticated || !client.IsConnected || !client.HasRecvFlag(RT_RECV_FLAG.RECV_LIST))
+                    if (target == null || !target.IsAuthenticated || !target.IsConnected || !target.HasRecvFlag(RT_RECV_FLAG.RECV_LIST))
                         continue;
 
-                    client.EnqueueTcp(new RT_MSG_CLIENT_APP_SINGLE()
+                    var message = new RT_MSG_CLIENT_APP_SINGLE()
                     {
                         TargetOrSource = (short)source.DmeId,
                         Payload = Payload
-                    });
+                    };
+
+                    modifyMessagePerClient?.Invoke(message, target);
+
+                    target.EnqueueTcp(message);
                 }
             }
         }
 
-        public void SendUdpAppList(DMEObject source, List<int> targetDmeIds, byte[] Payload)
+        public void SendUdpAppList(DMEObject source, List<int> targetDmeIds, byte[] Payload, Action<RT_MSG_CLIENT_APP_SINGLE, DMEObject>? modifyMessagePerClient = null)
         {
             foreach (int targetId in targetDmeIds)
             {
-                if (_clients.TryGetValue(targetId, out DMEObject? client))
+                if (_clients.TryGetValue(targetId, out DMEObject? target))
                 {
-                    if (client == null || !client.IsAuthenticated || !client.IsConnected || !client.HasRecvFlag(RT_RECV_FLAG.RECV_LIST))
+                    if (target == null || !target.IsAuthenticated || !target.IsConnected || !target.HasRecvFlag(RT_RECV_FLAG.RECV_LIST))
                         continue;
 
-                    client.EnqueueUdp(new RT_MSG_CLIENT_APP_SINGLE()
+                    var message = new RT_MSG_CLIENT_APP_SINGLE()
                     {
                         TargetOrSource = (short)source.DmeId,
                         Payload = Payload
-                    });
+                    };
+
+                    modifyMessagePerClient?.Invoke(message, target);
+
+                    target.EnqueueUdp(message);
                 }
             }
         }
 
-        public void SendTcpAppSingle(DMEObject source, short targetDmeId, byte[] Payload)
+        public void SendTcpAppSingle(DMEObject source, short targetDmeId, byte[] Payload, Action<RT_MSG_CLIENT_APP_SINGLE, DMEObject>? modifyMessagePerClient = null)
         {
             DMEObject? target = _clients.FirstOrDefault(x => x.Value.DmeId == targetDmeId).Value;
 
             if (target != null && target.IsAuthenticated && target.IsConnected && target.HasRecvFlag(RT_RECV_FLAG.RECV_SINGLE))
             {
-                target.EnqueueTcp(new RT_MSG_CLIENT_APP_SINGLE()
+                var message = new RT_MSG_CLIENT_APP_SINGLE()
                 {
                     TargetOrSource = (short)source.DmeId,
                     Payload = Payload
-                });
+                };
+
+                modifyMessagePerClient?.Invoke(message, target);
+
+                target.EnqueueTcp(message);
             }
         }
 

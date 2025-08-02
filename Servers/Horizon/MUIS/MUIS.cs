@@ -338,16 +338,13 @@ namespace Horizon.MUIS
 
                                                             LoggerAccessor.LogError(anticheatMsg);
 
-                                                            await HorizonServerConfiguration.Database.BanIp(data.ClientObject.IP).ContinueWith((r) =>
-                                                            {
-                                                                if (r.IsCompletedSuccessfully && r.Result)
-                                                                {
-                                                                    // Banned
-                                                                    QueueBanMessage(data);
-                                                                }
-                                                                data.ClientObject.ForceDisconnect();
-                                                                _ = data.ClientObject.Logout();
-                                                            });
+                                                            await HorizonServerConfiguration.Database.BanIp(data.ClientObject.IP).ConfigureAwait(false);
+
+                                                            // Banned
+                                                            await QueueBanMessage(data).ConfigureAwait(false);
+
+                                                            data.ClientObject.ForceDisconnect();
+                                                            _ = data.ClientObject.Logout();
                                                         }
                                                     }
                                                     break;

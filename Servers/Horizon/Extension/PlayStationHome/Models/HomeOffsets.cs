@@ -1,4 +1,4 @@
-namespace Horizon.SERVER.Extension.PlayStationHome
+namespace Horizon.Extension.PlayStationHome.Models
 {
     public class HomeOffsets
     {

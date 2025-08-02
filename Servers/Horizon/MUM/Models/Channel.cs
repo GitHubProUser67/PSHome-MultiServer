@@ -1,10 +1,11 @@
+using CustomLogger;
 using Horizon.RT.Common;
 using Horizon.RT.Models;
 using Horizon.SERVER;
-using Newtonsoft.Json;
-using System.Collections.Concurrent;
-using CustomLogger;
 using MultiServerLibrary.Extension;
+using Newtonsoft.Json;
+using Org.BouncyCastle.Asn1.X509;
+using System.Collections.Concurrent;
 
 namespace Horizon.MUM.Models
 {
@@ -450,10 +451,12 @@ namespace Horizon.MUM.Models
             return Task.CompletedTask;
         }
 
-        public Task BroadcastDirectBinaryMessage(MediusBinaryFwdMessage1 msg)
+        public Task BroadcastDirectBinaryMessage(MediusBinaryFwdMessage1 msg, Action<MediusBinaryFwdMessage1, ClientObject>? modifyMessagePerClient = null)
         {
             foreach (var client in LocalClients)
             {
+                modifyMessagePerClient?.Invoke(msg, client);
+
                 client?.Queue(msg);
             }
 

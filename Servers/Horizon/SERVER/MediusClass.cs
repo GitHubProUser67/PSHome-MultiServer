@@ -15,6 +15,7 @@ using Horizon.MUM;
 using Horizon.MUM.Models;
 using Horizon.SERVER.Extension.PlayStationHome;
 using MultiServerLibrary.Extension;
+using Horizon.Extension.PlayStationHome.Models;
 
 namespace Horizon.SERVER
 {
