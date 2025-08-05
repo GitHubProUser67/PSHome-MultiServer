@@ -36,9 +36,8 @@ namespace ApacheNet.Models
             Context = context;
         }
 
-        public Task<bool> SendImmediate(bool chunked = false)
+        public Task<bool> SendImmediate()
         {
-            Response.ChunkedTransfer = chunked;
             Response.StatusCode = (int)StatusCode;
             return Response.Send();
         }
