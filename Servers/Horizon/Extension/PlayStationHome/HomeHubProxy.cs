@@ -25,7 +25,7 @@ namespace Horizon.Extension.PlayStationHome
             {
                 int HubPathernOffset = -1;
 
-                foreach (ProtVersion version in Enum.GetValues(typeof(ProtVersion)))
+                foreach (ProtocolVersion version in Enum.GetValues(typeof(ProtocolVersion)))
                 {
                     // Only grab the first match.
                     byte versionByte = (byte)version;
@@ -115,7 +115,7 @@ namespace Horizon.Extension.PlayStationHome
                 byte[] HubMessagePayload = binaryMessage.Message;
                 int HubPathernOffset = -1;
 
-                foreach (ProtVersion version in Enum.GetValues(typeof(ProtVersion)))
+                foreach (ProtocolVersion version in Enum.GetValues(typeof(ProtocolVersion)))
                 {
                     // Only grab the first match.
                     byte versionByte = (byte)version;

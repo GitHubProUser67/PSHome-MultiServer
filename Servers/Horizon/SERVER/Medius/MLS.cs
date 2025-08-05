@@ -12,7 +12,7 @@ using Horizon.LIBRARY.Pipeline.Attribute;
 using Horizon.SERVER.Config;
 using Horizon.SERVER.PluginArgs;
 using Horizon.SERVER.Extension.PlayStationHome;
-using static Horizon.Extension.PlayStationHome.Models.m_Presence;
+using Horizon.Extension.PlayStationHome;
 using Horizon.PluginManager;
 using Horizon.HTTPSERVICE;
 using Horizon.MUM;
@@ -21,7 +21,6 @@ using EndianTools;
 using CustomLogger;
 using MultiServerLibrary.Extension;
 using NetHasher.CRC;
-using Horizon.Extension.PlayStationHome;
 
 namespace Horizon.SERVER.Medius
 {
@@ -278,6 +277,11 @@ namespace Horizon.SERVER.Medius
                                                             if (clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 4)
                                                                 data.ClientObject.SetWorldCorePointer(BitConverter.ToUInt32(BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(QueryData) : QueryData));
                                                             break;
+                                                        case 0x0001191B:
+                                                            // Sets ProtocolVersion.
+                                                            if (clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 1)
+                                                                data.ClientObject.ProtocolVersion = QueryData[0];
+                                                            break;
                                                         case 0x0016b4d0:
                                                             // Patches out the forceInvite command.
                                                             if (MediusClass.Settings.PlaystationHomeForceInviteExploitPatch && MediusClass.Settings.PokePatchOn && clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 4 && QueryData.EqualsTo(new byte[] { 0x2f, 0x80, 0x00, 0x00 }))
@@ -472,6 +476,7 @@ namespace Horizon.SERVER.Medius
                                                                         }                                                                            
 
                                                                         CheatQuery(0x1053e160, 4, clientChannel);
+                                                                        CheatQuery(0x0001191B, 1, clientChannel);
                                                                         break;
                                                                     default:
                                                                         break;

@@ -4,23 +4,22 @@ using Horizon.RT.Common;
 using Horizon.RT.Cryptography;
 using Horizon.RT.Cryptography.RSA;
 using Horizon.RT.Models;
-using Horizon.LIBRARY.Common;
+using Horizon.HTTPSERVICE;
 using Horizon.SERVER.Config;
 using Horizon.SERVER.PluginArgs;
+using Horizon.SERVER.Extension.PlayStationHome;
 using Horizon.PluginManager;
-using System.Net;
 using Horizon.LIBRARY.Database.Models;
 using Newtonsoft.Json.Linq;
-using System.Globalization;
-using System.Text;
-using Horizon.HTTPSERVICE;
-using System.Buffers;
 using MultiServerLibrary.Extension;
 using XI5;
 using EndianTools;
 using Horizon.MUM.Models;
-using Horizon.SERVER.Extension.PlayStationHome;
 using System.Text.RegularExpressions;
+using System.Net;
+using System.Globalization;
+using System.Text;
+using System.Buffers;
 
 namespace Horizon.SERVER.Medius
 {
@@ -292,6 +291,11 @@ namespace Horizon.SERVER.Medius
                                                             // Sets WorldCorePointer.
                                                             if (clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 4)
                                                                 data.ClientObject.SetWorldCorePointer(BitConverter.ToUInt32(BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(QueryData) : QueryData));
+                                                            break;
+                                                        case 0x0001191B:
+                                                            // Sets ProtocolVersion.
+                                                            if (clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 1)
+                                                                data.ClientObject.ProtocolVersion = QueryData[0];
                                                             break;
                                                         case 0x0016b4d0:
                                                             // Patches out the forceInvite command.
@@ -2847,6 +2851,7 @@ namespace Horizon.SERVER.Medius
                                 }
 
                                 CheatQuery(0x1053e160, 4, clientChannel);
+                                CheatQuery(0x0001191B, 1, clientChannel);
                                 break;
                             default:
                                 break;
