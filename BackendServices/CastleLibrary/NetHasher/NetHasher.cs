@@ -69,9 +69,9 @@ namespace NetHasher
             return BitConverter.ToString(ComputeSHA1(input, HMACKey)).Replace("-", string.Empty);
         }
 
-        public static byte[] ComputeSHA224(object input)
+        public static byte[] ComputeSHA224(object input, byte[] HMACKey = null)
         {
-            byte[] result = HashCompute.ComputeObject(input, Sha224Const);
+            byte[] result = HashCompute.ComputeObject(input, Sha224Const, HMACKey);
 
             if (result.Length != 28)
                 throw new InvalidOperationException("[DotNetHasher] - ComputeSHA224 - The computed SHA224 hash is not 28 bytes long.");
@@ -79,9 +79,9 @@ namespace NetHasher
             return result;
         }
 
-        public static string ComputeSHA224String(object input)
+        public static string ComputeSHA224String(object input, byte[] HMACKey = null)
         {
-            return BitConverter.ToString(ComputeSHA224(input)).Replace("-", string.Empty);
+            return BitConverter.ToString(ComputeSHA224(input, HMACKey)).Replace("-", string.Empty);
         }
 
         public static byte[] ComputeSHA256(object input, byte[] HMACKey = null)

@@ -1,9 +1,11 @@
-﻿using System;
+﻿using EndianTools;
+using Org.BouncyCastle.Crypto.Digests;
+using Org.BouncyCastle.Crypto.Macs;
+using Org.BouncyCastle.Crypto.Parameters;
+using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using EndianTools;
-using Org.BouncyCastle.Crypto.Digests;
 
 namespace NetHasher
 {
@@ -73,18 +75,23 @@ namespace NetHasher
         {
             if (HMACKey != null && HMACKey.Length > 0)
             {
-                HMAC hmac = hashName.ToUpper() switch
+                if (hashName == "SHA224")
+                    return ComputeHmacSha224Hash(data, HMACKey);
+                else
                 {
-                    "MD5" => new HMACMD5(HMACKey),
-                    "SHA1" => new HMACSHA1(HMACKey),
-                    "SHA256" => new HMACSHA256(HMACKey),
-                    "SHA384" => new HMACSHA384(HMACKey),
-                    "SHA512" => new HMACSHA512(HMACKey),
-                    _ => throw new ArgumentException($"[HashCompute] - ComputeHash - Unknown HMAC algorithm: {hashName}")
-                };
+                    HMAC hmac = hashName switch
+                    {
+                        "MD5" => new HMACMD5(HMACKey),
+                        "SHA1" => new HMACSHA1(HMACKey),
+                        "SHA256" => new HMACSHA256(HMACKey),
+                        "SHA384" => new HMACSHA384(HMACKey),
+                        "SHA512" => new HMACSHA512(HMACKey),
+                        _ => throw new ArgumentException($"[HashCompute] - ComputeHash - Unknown HMAC algorithm: {hashName}")
+                    };
 
-                using (hmac)
-                    return hmac.ComputeHash(data);
+                    using (hmac)
+                        return hmac.ComputeHash(data);
+                }
             }
             else
             {
@@ -96,7 +103,7 @@ namespace NetHasher
                     "SHA256" => ComputeSha256Hash(data),
                     "SHA384" => ComputeSha384Hash(data),
                     "SHA512" => ComputeSha512Hash(data),
-                    _ => ComputeWithHashAlgorithm(data, hashName, HMACKey)
+                    _ => ComputeWithHashAlgorithm(data, hashName)
                 };
             }
         }
@@ -114,13 +121,12 @@ namespace NetHasher
             }
         }
 
-        private static byte[] ComputeWithHashAlgorithm(byte[] data, string hashName, byte[] HMACKey)
+        private static byte[] ComputeWithHashAlgorithm(byte[] data, string hashName)
         {
             using (var algorithm = HashAlgorithm.Create(hashName))
             {
                 if (algorithm == null)
                     throw new ArgumentException($"[HashCompute] - ComputeWithHashAlgorithm - Unknown hash algorithm: {hashName}");
-
                 return algorithm.ComputeHash(data);
             }
         }
@@ -149,6 +155,16 @@ namespace NetHasher
             digest.BlockUpdate(data, 0, data.Length);
             byte[] hashBuf = new byte[digest.GetDigestSize()];
             digest.DoFinal(hashBuf, 0);
+            return hashBuf;
+        }
+
+        private static byte[] ComputeHmacSha224Hash(byte[] data, byte[] key)
+        {
+            HMac hmac = new HMac(new Sha224Digest());
+            hmac.Init(new KeyParameter(key));
+            hmac.BlockUpdate(data, 0, data.Length);
+            byte[] hashBuf = new byte[hmac.GetMacSize()];
+            hmac.DoFinal(hashBuf, 0);
             return hashBuf;
         }
 
