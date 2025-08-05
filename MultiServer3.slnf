@@ -25,6 +25,7 @@
       "Plugins\\HTTP\\EdNetCRCCalculator\\EdNetCRCCalculator.csproj",
       "Plugins\\HTTP\\HomeWebTools\\HomeWebTools.csproj",
       "Plugins\\HTTP\\PdfToJpeg\\PdfToJpeg.csproj",
+      "Plugins\\HTTP\\SceProfanityFilterService\\SceProfanityFilterService.csproj",
       "Plugins\\HTTP\\SonyCdnReroute\\SonyCdnReroute.csproj",
       "Servers\\ApacheNet\\ApacheNet.csproj",
       "Servers\\EdenServer\\EdenServer.csproj",

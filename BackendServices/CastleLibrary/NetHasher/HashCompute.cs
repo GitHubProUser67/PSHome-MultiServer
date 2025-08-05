@@ -11,34 +11,34 @@ namespace NetHasher
     {
         private static readonly bool isLittleEndianSystem = BitConverter.IsLittleEndian;
 
-        public static byte[] ComputeObject(object inData, string hashName)
+        public static byte[] ComputeObject(object inData, string hashName, byte[] HMACKey = null)
         {
             if (inData is byte[] bytes)
-                return ComputeHash(bytes, hashName);
+                return ComputeHash(bytes, hashName, HMACKey);
             else if (inData is string str)
-                return ComputeHash(Encoding.Unicode.GetBytes(str), hashName);
+                return ComputeHash(Encoding.Unicode.GetBytes(str), hashName, HMACKey);
             else if (inData is Stream stream)
-                return ComputeStreamWithHashAlgorithm(stream, hashName);
+                return ComputeStreamHash(stream, hashName, HMACKey);
             else if (inData is byte b)
-                return ComputeHash(new[] { b }, hashName);
+                return ComputeHash(new[] { b }, hashName, HMACKey);
             else if (inData is short s)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseShort(s) : s), hashName);
+                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseShort(s) : s), hashName, HMACKey);
             else if (inData is ushort us)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseUshort(us) : us), hashName);
+                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseUshort(us) : us), hashName, HMACKey);
             else if (inData is char c)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseChar(c) : c), hashName);
+                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseChar(c) : c), hashName, HMACKey);
             else if (inData is int i)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseInt(i) : i), hashName);
+                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseInt(i) : i), hashName, HMACKey);
             else if (inData is uint ui)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseUint(ui) : ui), hashName);
+                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseUint(ui) : ui), hashName, HMACKey);
             else if (inData is long l)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseLong(l) : l), hashName);
+                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseLong(l) : l), hashName, HMACKey);
             else if (inData is ulong ul)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseUlong(ul) : ul), hashName);
+                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseUlong(ul) : ul), hashName, HMACKey);
             else if (inData is float f)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseFloat(f) : f), hashName);
+                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseFloat(f) : f), hashName, HMACKey);
             else if (inData is double d)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseDouble(d) : d), hashName);
+                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseDouble(d) : d), hashName, HMACKey);
 
             var t = inData.GetType();
 
@@ -47,59 +47,81 @@ namespace NetHasher
                 var elemType = t.GetElementType();
 
                 if (elemType == typeof(short))
-                    return ComputeHash(ToByteArray((short[])inData), hashName);
+                    return ComputeHash(ToByteArray((short[])inData), hashName, HMACKey);
                 else if (elemType == typeof(ushort))
-                    return ComputeHash(ToByteArray((ushort[])inData), hashName);
+                    return ComputeHash(ToByteArray((ushort[])inData), hashName, HMACKey);
                 else if (elemType == typeof(char))
-                    return ComputeHash(ToByteArray((char[])inData), hashName);
+                    return ComputeHash(ToByteArray((char[])inData), hashName, HMACKey);
                 else if (elemType == typeof(int))
-                    return ComputeHash(ToByteArray((int[])inData), hashName);
+                    return ComputeHash(ToByteArray((int[])inData), hashName, HMACKey);
                 else if (elemType == typeof(uint))
-                    return ComputeHash(ToByteArray((uint[])inData), hashName);
+                    return ComputeHash(ToByteArray((uint[])inData), hashName, HMACKey);
                 else if (elemType == typeof(long))
-                    return ComputeHash(ToByteArray((long[])inData), hashName);
+                    return ComputeHash(ToByteArray((long[])inData), hashName, HMACKey);
                 else if (elemType == typeof(ulong))
-                    return ComputeHash(ToByteArray((ulong[])inData), hashName);
+                    return ComputeHash(ToByteArray((ulong[])inData), hashName, HMACKey);
                 else if (elemType == typeof(float))
-                    return ComputeHash(ToByteArray((float[])inData), hashName);
+                    return ComputeHash(ToByteArray((float[])inData), hashName, HMACKey);
                 else if (elemType == typeof(double))
-                    return ComputeHash(ToByteArray((double[])inData), hashName);
+                    return ComputeHash(ToByteArray((double[])inData), hashName, HMACKey);
             }
 
             throw new ArgumentException($"[HashCompute] - ComputeObject - Unsupported data type: {inData.GetType()}", nameof(inData));
         }
 
-        private static byte[] ComputeHash(byte[] data, string hashName)
+        private static byte[] ComputeHash(byte[] data, string hashName, byte[] HMACKey)
         {
-            return hashName switch
+            if (HMACKey != null && HMACKey.Length > 0)
             {
-                "MD5" => ComputeMD5Hash(data),
-                "SHA1" => ComputeSha1Hash(data),
-                "SHA224" => ComputeSha224Hash(data),
-                "SHA256" => ComputeSha256Hash(data),
-                "SHA384" => ComputeSha384Hash(data),
-                "SHA512" => ComputeSha512Hash(data),
-                _ => ComputeWithHashAlgorithm(data, hashName)
-            };
-        }
+                HMAC hmac = hashName.ToUpper() switch
+                {
+                    "MD5" => new HMACMD5(HMACKey),
+                    "SHA1" => new HMACSHA1(HMACKey),
+                    "SHA256" => new HMACSHA256(HMACKey),
+                    "SHA384" => new HMACSHA384(HMACKey),
+                    "SHA512" => new HMACSHA512(HMACKey),
+                    _ => throw new ArgumentException($"[HashCompute] - ComputeHash - Unknown HMAC algorithm: {hashName}")
+                };
 
-        private static byte[] ComputeWithHashAlgorithm(byte[] data, string hashName)
-        {
-            using (var algorithm = HashAlgorithm.Create(hashName))
+                using (hmac)
+                    return hmac.ComputeHash(data);
+            }
+            else
             {
-                if (algorithm == null)
-                    throw new ArgumentException($"[HashCompute] - ComputeWithHashAlgorithm - Unknown hash algorithm: {hashName}");
-                return algorithm.ComputeHash(data);
+                return hashName switch
+                {
+                    "MD5" => ComputeMD5Hash(data),
+                    "SHA1" => ComputeSha1Hash(data),
+                    "SHA224" => ComputeSha224Hash(data),
+                    "SHA256" => ComputeSha256Hash(data),
+                    "SHA384" => ComputeSha384Hash(data),
+                    "SHA512" => ComputeSha512Hash(data),
+                    _ => ComputeWithHashAlgorithm(data, hashName, HMACKey)
+                };
             }
         }
 
-        private static byte[] ComputeStreamWithHashAlgorithm(Stream stream, string hashName)
+        private static byte[] ComputeStreamHash(Stream stream, string hashName, byte[] HMACKey)
         {
+            if (HMACKey != null && HMACKey.Length > 0)
+                throw new NotSupportedException($"[HashCompute] - ComputeStreamHash - HMAC algorithms not supported while using streams.");
+
             using (var algorithm = HashAlgorithm.Create(hashName))
             {
                 if (algorithm == null)
                     throw new ArgumentException($"[HashCompute] - ComputeStreamHash - Unknown hash algorithm: {hashName}");
                 return algorithm.ComputeHash(stream);
+            }
+        }
+
+        private static byte[] ComputeWithHashAlgorithm(byte[] data, string hashName, byte[] HMACKey)
+        {
+            using (var algorithm = HashAlgorithm.Create(hashName))
+            {
+                if (algorithm == null)
+                    throw new ArgumentException($"[HashCompute] - ComputeWithHashAlgorithm - Unknown hash algorithm: {hashName}");
+
+                return algorithm.ComputeHash(data);
             }
         }
 

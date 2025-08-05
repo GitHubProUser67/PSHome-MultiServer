@@ -18,6 +18,8 @@ dotnet build "Plugins/HTTP/EdNetCRCCalculator/EdNetCRCCalculator.csproj" --confi
 dotnet build "Plugins/HTTP/EdNetCRCCalculator/EdNetCRCCalculator.csproj" --configuration Release --property WarningLevel=0
 dotnet build "Plugins/HTTP/PdfToJpeg/PdfToJpeg.csproj" --configuration Debug --property WarningLevel=0
 dotnet build "Plugins/HTTP/PdfToJpeg/PdfToJpeg.csproj" --configuration Release --property WarningLevel=0
+dotnet build "Plugins/HTTP/SceProfanityFilterService/SceProfanityFilterService.csproj" --configuration Debug --property WarningLevel=0
+dotnet build "Plugins/HTTP/SceProfanityFilterService/SceProfanityFilterService.csproj" --configuration Release --property WarningLevel=0
 
 @echo off
 
@@ -76,6 +78,18 @@ for %%r in (%RIDs%) do (
 	)
 	if exist "Plugins/HTTP/PdfToJpeg/bin/Release/net6.0/runtimes" (
 		xcopy /E /Y /I "Plugins/HTTP/PdfToJpeg/bin/Release/net6.0/runtimes" "~PublishOutput/%%r/Release/runtimes"
+	)
+	if exist "Plugins/HTTP/SceProfanityFilterService/bin/Debug/net6.0/static" (
+		xcopy /E /Y /I "Plugins/HTTP/SceProfanityFilterService/bin/Debug/net6.0/static" "~PublishOutput/%%r/Debug/static"
+	)
+	if exist "Plugins/HTTP/SceProfanityFilterService/bin/Release/net6.0/static" (
+		xcopy /E /Y /I "Plugins/HTTP/SceProfanityFilterService/bin/Release/net6.0/static" "~PublishOutput/%%r/Release/static"
+	)
+	if exist "Plugins/HTTP/SceProfanityFilterService/bin/Debug/net6.0/runtimes" (
+		xcopy /E /Y /I "Plugins/HTTP/SceProfanityFilterService/bin/Debug/net6.0/runtimes" "~PublishOutput/%%r/Debug/runtimes"
+	)
+	if exist "Plugins/HTTP/SceProfanityFilterService/bin/Release/net6.0/runtimes" (
+		xcopy /E /Y /I "Plugins/HTTP/SceProfanityFilterService/bin/Release/net6.0/runtimes" "~PublishOutput/%%r/Release/runtimes"
 	)
 	if "%%r"=="win-x64" (
 		xcopy /E /Y /I "Win32GUI/RemoteControl/bin/Debug/net6.0-windows/%%r/publish" "~PublishOutput/%%r/Debug"

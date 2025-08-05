@@ -1,5 +1,5 @@
 @echo off
-@echo MultiServer build script 22/07/2025
+@echo MultiServer build script 05/08/2025
 @echo.
 
 @echo Cleaning up directories:
@@ -50,6 +50,18 @@ if exist "Plugins/HTTP/PdfToJpeg/bin/Debug/net6.0/runtimes" (
 )
 if exist "Plugins/HTTP/PdfToJpeg/bin/Release/net6.0/runtimes" (
     xcopy /E /Y /I "Plugins/HTTP/PdfToJpeg/bin/Release/net6.0/runtimes" "~BuildOutput/Release/net6.0/runtimes"
+)
+if exist "Plugins/HTTP/SceProfanityFilterService/bin/Debug/net6.0/static" (
+    xcopy /E /Y /I "Plugins/HTTP/SceProfanityFilterService/bin/Debug/net6.0/static" "~BuildOutput/Debug/net6.0/static"
+)
+if exist "Plugins/HTTP/SceProfanityFilterService/bin/Release/net6.0/static" (
+    xcopy /E /Y /I "Plugins/HTTP/SceProfanityFilterService/bin/Release/net6.0/static" "~BuildOutput/Release/net6.0/static"
+)
+if exist "Plugins/HTTP/SceProfanityFilterService/bin/Debug/net6.0/runtimes" (
+    xcopy /E /Y /I "Plugins/HTTP/SceProfanityFilterService/bin/Debug/net6.0/runtimes" "~BuildOutput/Debug/net6.0/runtimes"
+)
+if exist "Plugins/HTTP/SceProfanityFilterService/bin/Release/net6.0/runtimes" (
+    xcopy /E /Y /I "Plugins/HTTP/SceProfanityFilterService/bin/Release/net6.0/runtimes" "~BuildOutput/Release/net6.0/runtimes"
 )
 
 @echo Crafting final output:
