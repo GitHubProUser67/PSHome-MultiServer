@@ -41,7 +41,7 @@ namespace SonyCdnReroute
             {
                 var isBase64 = StringUtils.IsBase64(privKeyStr);
                 if (isBase64.Item1)
-                    _privateKey = StringUtils.IsBase64(privKeyStr).Item2;
+                    _privateKey = isBase64.Item2;
                 else
                 {
                     LoggerAccessor.LogError($"[SceProfanityFilterService] - The private key at path: {privKeyPath} is not a base64 string, falling back to default key...");
@@ -132,8 +132,9 @@ namespace SonyCdnReroute
             aesAlg.Mode = CipherMode.CBC;
             aesAlg.Padding = PaddingMode.Zeros;
 
-            using ICryptoTransform decryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
-            return decryptor.TransformFinalBlock(cipherText, 0, cipherText.Length);
+            using ICryptoTransform encryptor = aesAlg.CreateEncryptor();
+
+            return encryptor.TransformFinalBlock(cipherText, 0, cipherText.Length);
         }
 
         private static byte[] EncryptAES(FileStream plainTextStream, byte[] key, byte[] iv)
