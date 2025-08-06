@@ -16,7 +16,7 @@ namespace MultiSocks.Aries.Messages
             string? USERPARAMS = GetInputCacheValue("USERPARAMS");
             string? USERFLAGS = GetInputCacheValue("USERFLAGS");
             string? FORCE_LEAVE = GetInputCacheValue("FORCE_LEAVE");
-            string? GPS = GetInputCacheValue("GPS");
+            string? MODE = GetInputCacheValue("MODE");
 
             if (!string.IsNullOrEmpty(USERPARAMS))
                 user.SetParametersFromString(USERPARAMS);
@@ -31,54 +31,74 @@ namespace MultiSocks.Aries.Messages
                     mc.Games.RemoveGame(prevGame);
             }
 
-            AriesGame? game = mc.Games.GamesSessions.Values.Where(game => !game.Started && !game.Priv && string.IsNullOrEmpty(game.pass) && (game.Users?.Count() + 1) <= game.MaxSize).FirstOrDefault();
-
-            if (game != null)
+            if (string.IsNullOrEmpty(MODE) || MODE == "2")
             {
-                game.AddUser(user);
+                client.QuickJoinTaskTokenSource = new CancellationTokenSource();
+                var token = client.QuickJoinTaskTokenSource.Token;
 
-                user.CurrentGame = game;
+                client.QuickJoinTask = Task.Run(() => {
 
-                client.SendMessage(game.GetGameDetails(_Name));
+                    byte retry = 4;
+                    AriesGame? game;
 
-                user.SendPlusWho(user, context.Project);
-
-                game.BroadcastPopulation(mc);
-
-                return;
-            }
-            else if (!string.IsNullOrEmpty(GPS) && GPS == "1") // VIP Mode.
-            {
-                // Create a game based on server parameters, I suspect EA master server had a VIP config for each titles.
-                if (!string.IsNullOrEmpty(user.Connection?.Context.Project) && user.Connection.Context.Project.Contains("BURNOUT5"))
-                {
-                    // Start a BP Freeburn session ranked.
-                    game = mc.Games.AddGame(9, 2, "413017344", "d003f3c04400408847f18ca81800b80,774a70,656e555347f18ca8", user.Username, false, "10", "262208", null, user.CurrentRoom?.ID ?? 0);
-
-                    if (game != null)
+                    while (!token.IsCancellationRequested && !client.Disconnected && retry > 0)
                     {
-                        if (game.MinSize > 1 && game.Users.GetUserByName("brobot24") == null)
-                            game.AddHost(mc.Users.GetUserByName("brobot24"));
+                        game = mc.Games.GamesSessions.Values.Where(game => !game.Started && !game.Priv && string.IsNullOrEmpty(game.pass) && (game.Users?.Count() + 1) <= game.MaxSize).FirstOrDefault();
 
-                        if (game.Users.GetUserByName(user.Username) == null)
-                            game.AddGPSHost(user);
+                        if (game != null)
+                        {
+                            game.AddUser(user);
 
-                        user.CurrentGame = game;
+                            user.CurrentGame = game;
 
-                        client.SendMessage(game.GetGameDetails(_Name));
+                            client.SendMessage(game.GetGameDetails(_Name));
 
-                        user.SendPlusWho(user, context.Project);
+                            user.SendPlusWho(user, context.Project);
 
-                        game.BroadcastPopulation(mc);
+                            game.BroadcastPopulation(mc);
 
-                        return;
+                            return;
+                        }
+						
+					    if (retry == 1)
+						{
+							// Create a game based on server parameters, I suspect EA master server had a VIP config for each titles.
+							if (!string.IsNullOrEmpty(user.Connection?.Context.Project) && user.Connection.Context.Project.Contains("BURNOUT5"))
+							{
+								// Start a BP Freeburn session ranked.
+								game = mc.Games.AddGame(9, 2, "413017344", "d003f3c04400408847f18ca81800b80,774a70,656e555347f18ca8", user.Username, false, "10", "262208", null, user.CurrentRoom?.ID ?? 0);
+
+								if (game != null)
+								{
+									if (game.MinSize > 1 && game.Users.GetUserByName("brobot24") == null)
+										game.AddHost(mc.Users.GetUserByName("brobot24"));
+
+									if (game.Users.GetUserByName(user.Username) == null)
+										game.AddGPSHost(user);
+
+									user.CurrentGame = game;
+
+									client.SendMessage(game.GetGameDetails(_Name));
+
+									user.SendPlusWho(user, context.Project);
+
+									game.BroadcastPopulation(mc);
+
+									return;
+								}
+							}
+							
+							client.SendMessage(new MissOut(_Name));
+						}
+
+                        retry--;
+
+                        Thread.Sleep(2000);
                     }
-                }
-                else
-                    CustomLogger.LoggerAccessor.LogWarn("[Gqwk] - VIP mode required an extra entry in the server code, responding with miss error code, please report to GITHUB!");
+                }, token);
             }
-
-            client.SendMessage(new MissOut(_Name));
+            else if (MODE == "3")
+                client.StopGameQuickSearch();
         }
     }
 }

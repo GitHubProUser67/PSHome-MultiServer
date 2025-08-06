@@ -1,4 +1,5 @@
 using MultiSocks.Aries.Messages.Burnout3Plugin.MultiSocks.Aries.Messages;
+using MultiSocks.Aries.Messages.PersonaService;
 using MultiSocks.Aries.Model;
 
 namespace MultiSocks.Aries.Messages

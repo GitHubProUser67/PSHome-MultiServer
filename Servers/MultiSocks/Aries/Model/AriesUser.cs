@@ -1,4 +1,5 @@
 using MultiSocks.Aries.Messages;
+using MultiSocks.Aries.Messages.PersonaService;
 using System.Text;
 
 namespace MultiSocks.Aries.Model

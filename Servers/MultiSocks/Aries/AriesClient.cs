@@ -16,6 +16,8 @@ namespace MultiSocks.Aries
     {
         public AbstractAriesServer Context;
         public AriesUser? User;
+        public CancellationTokenSource? QuickJoinTaskTokenSource;
+        public Task? QuickJoinTask;
         public string ADDR = "127.0.0.1";
         public string LADDR = "127.0.0.1";
         public string VERS = string.Empty;
@@ -25,6 +27,7 @@ namespace MultiSocks.Aries
         public int SessionID;
         public bool CanAsyncGameSearch = false;
         public bool CanAsync = true;
+        public bool Disconnected = false;
 
         private readonly bool secure;
         private readonly SemaphoreSlim dequeueSemaphore = new(1, 1);
@@ -84,6 +87,7 @@ namespace MultiSocks.Aries
 
                     ClientStream?.Dispose();
                     tcpClient.Dispose();
+					Disconnected = true;
                     LoggerAccessor.LogWarn($"[AriesClient] - User {ADDR} forced disconnected.");
                     Context.RemoveClient(this);
 
@@ -163,6 +167,7 @@ namespace MultiSocks.Aries
 
             ClientStream?.Dispose();
             tcpClient.Dispose();
+            Disconnected = true;
             LoggerAccessor.LogWarn($"[AriesClient] - User {ADDR} disconnected.");
             Context.RemoveClient(this);
         }
@@ -197,6 +202,11 @@ namespace MultiSocks.Aries
             }
 
             return Task.CompletedTask;
+        }
+
+        public void StopGameQuickSearch()
+        {
+            QuickJoinTaskTokenSource?.Cancel();
         }
 
         public bool SendImmediateMessage(byte[] data)

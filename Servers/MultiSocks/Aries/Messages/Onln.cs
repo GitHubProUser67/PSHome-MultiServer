@@ -1,3 +1,5 @@
+using MultiSocks.Aries.Messages.PersonaService;
+
 namespace MultiSocks.Aries.Messages
 {
     public class Onln : AbstractMessage

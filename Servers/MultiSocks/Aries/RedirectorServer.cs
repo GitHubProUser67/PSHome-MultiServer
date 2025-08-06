@@ -1,4 +1,4 @@
-using MultiSocks.Aries.Messages;
+using MultiSocks.Aries.Messages.AuthService;
 
 namespace MultiSocks.Aries
 {

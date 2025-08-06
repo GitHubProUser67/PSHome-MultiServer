@@ -1,5 +1,6 @@
 using MultiSocks.Aries.DataStore;
 using MultiSocks.Aries.Messages;
+using MultiSocks.Aries.Messages.AccountService.ErrorCodes;
 using MultiSocks.Aries.Model;
 using MultiSocks.Utils;
 

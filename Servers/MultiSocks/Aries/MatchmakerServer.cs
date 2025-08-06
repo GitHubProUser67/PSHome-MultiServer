@@ -1,5 +1,10 @@
 using MultiSocks.Aries.DataStore;
 using MultiSocks.Aries.Messages;
+using MultiSocks.Aries.Messages.AccountService;
+using MultiSocks.Aries.Messages.AccountService.ErrorCodes;
+using MultiSocks.Aries.Messages.AuthService;
+using MultiSocks.Aries.Messages.AuthService.News;
+using MultiSocks.Aries.Messages.PersonaService;
 using MultiSocks.Aries.Model;
 using MultiSocks.Utils;
 using NetHasher.CRC;
