@@ -61,35 +61,7 @@ namespace MultiSocks.Aries.Messages
                         }
 						
 					    if (retry == 1)
-						{
-							// Create a game based on server parameters, I suspect EA master server had a VIP config for each titles.
-							if (!string.IsNullOrEmpty(user.Connection?.Context.Project) && user.Connection.Context.Project.Contains("BURNOUT5"))
-							{
-								// Start a BP Freeburn session ranked.
-								game = mc.Games.AddGame(9, 2, "413017344", "d003f3c04400408847f18ca81800b80,774a70,656e555347f18ca8", user.Username, false, "10", "262208", null, user.CurrentRoom?.ID ?? 0);
-
-								if (game != null)
-								{
-									if (game.MinSize > 1 && game.Users.GetUserByName("brobot24") == null)
-										game.AddHost(mc.Users.GetUserByName("brobot24"));
-
-									if (game.Users.GetUserByName(user.Username) == null)
-										game.AddGPSHost(user);
-
-									user.CurrentGame = game;
-
-									client.SendMessage(game.GetGameDetails(_Name));
-
-									user.SendPlusWho(user, context.Project);
-
-									game.BroadcastPopulation(mc);
-
-									return;
-								}
-							}
-							
-							client.SendMessage(new MissOut(_Name));
-						}
+                            client.SendMessage(new MissOut(_Name));
 
                         retry--;
 

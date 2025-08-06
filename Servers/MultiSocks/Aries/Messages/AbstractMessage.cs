@@ -1,3 +1,4 @@
+using EndianTools;
 using System.Reflection;
 using System.Text;
 
@@ -6,7 +7,6 @@ namespace MultiSocks.Aries.Messages
     public abstract class AbstractMessage
     {
         public abstract string _Name { get; }
-        public string PlaintextData = string.Empty;
         public uint ErrorCode { get; set; }
         public Dictionary<string, string?> OutputCache = new();
         private Dictionary<string, string?> InputCache = new();
@@ -123,17 +123,26 @@ namespace MultiSocks.Aries.Messages
 
         public byte[] GetData()
         {
-            bool plaintext = _Name.Length == 8;
-            if (plaintext && string.IsNullOrEmpty(PlaintextData))
-                PlaintextData = Write();
-            string body = (plaintext ? PlaintextData : Write()) + "\0";
+            int packetIdentLength = _Name.Length;
+            if (packetIdentLength < 4 || packetIdentLength > 8)
+                throw new InvalidDataException($"[AbstractMessage] - Invalide Name:{_Name} choosen for the packet! Please follow the guidelines on the naming convention.");
+
+            bool hasStatusCode = packetIdentLength == 8;
+            byte[] header = new byte[hasStatusCode ? 4 : 8];
+            string body = Write() + "\0";
             int size = body.Length + 12;
 
             MemoryStream mem = new();
             BinaryWriter io = new(mem);
             io.Write(Encoding.ASCII.GetBytes(_Name));
-            io.Write(new byte[] { (byte)(ErrorCode >> 24), (byte)(ErrorCode >> 16), (byte)(ErrorCode >> 8), (byte)ErrorCode });
-            io.Write(new byte[] { (byte)(size >> 24), (byte)(size >> 16), (byte)(size >> 8), (byte)size });
+            if (hasStatusCode)
+                EndianAwareConverter.WriteUInt32(header, Endianness.BigEndian, 0, (uint)size);
+            else
+            {
+                EndianAwareConverter.WriteUInt32(header, Endianness.BigEndian, 0, ErrorCode);
+                EndianAwareConverter.WriteUInt32(header, Endianness.BigEndian, 4, (uint)size);
+            }
+            io.Write(header);
             io.Write(Encoding.ASCII.GetBytes(body));
 
             byte[] bytes = mem.ToArray();
