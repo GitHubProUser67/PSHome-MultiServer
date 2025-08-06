@@ -37,10 +37,17 @@ namespace EdenServer.EdNet.ProxyMessages.EdBuffer
                         byte[] payload = new byte[Math.Min(chunkSize, profileSize - offset)];
                         Array.Copy(defaultDriverProfile, (int)offset, payload, 0, payload.Length);
 
+                        // Compute CRC from the *previous* chunk
+                        int crcStart = (offset >= chunkSize) ? (int)(offset - chunkSize) : 0;
+                        int crcLength = (int)Math.Min(chunkSize, offset - crcStart);
+
+                        byte[] crcChunk = new byte[crcLength];
+                        Array.Copy(defaultDriverProfile, crcStart, crcChunk, 0, crcLength);
+
                         response.InsertUInt8(1); // Success
                         response.InsertUInt32(offset);
                         response.InsertUInt32(profileSize);
-                        response.InsertUInt16(Utils.GetCRCFromBuffer(payload));
+                        response.InsertUInt16(Utils.GetCRCFromBuffer(crcChunk));
                         response.InsertByteArray(payload, (ushort)payload.Length);
                     }
                     break;
@@ -61,8 +68,17 @@ namespace EdenServer.EdNet.ProxyMessages.EdBuffer
 
         private static byte[] GenerateDefaultDriverProfile()
         {
-            // This seems to be empty and expected to be empty...
-            return new byte[0];
+            EdStore driverStore = new EdStore(null, 48);
+            driverStore.InsertStart(edStoreBank.NetBufferGarage);
+            driverStore.InsertUInt32(0);
+            driverStore.InsertString("testgarage");
+            driverStore.InsertUInt32(0);
+            driverStore.InsertUInt64(0);
+
+            byte[] output = new byte[driverStore.MaxSize];
+            Array.Copy(driverStore.Data, 0, output, 0, output.Length);
+
+            return output;
         }
     }
 }
