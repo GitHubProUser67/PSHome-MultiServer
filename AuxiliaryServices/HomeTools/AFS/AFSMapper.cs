@@ -739,11 +739,11 @@ namespace HomeTools.AFS
                 streamReader.Close();
             }
             // Process Environment.ProcessorCount patherns at a time, removing the limit is not tolerable as CPU usage goes way too high.
-            Parallel.ForEach(regexPatternsList, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, regexPatterns =>
+            Parallel.ForEach(regexPatternsList, new ParallelOptions { MaxDegreeOfParallelism = Utils.ThreadLimiter.NumOfThreadsAvailable }, regexPatterns =>
             {
                 if (!string.IsNullOrEmpty(regexPatterns.pattern))
                 {
-                    Parallel.ForEach(Regex.Matches(input, regexPatterns.pattern).OfType<Match>(), match =>
+                    foreach (Match match in Regex.Matches(input, regexPatterns.pattern))
                     {
                         MappedList mappedList = new MappedList()
                         {
@@ -752,7 +752,7 @@ namespace HomeTools.AFS
                         };
                         if (!mappedListList.Contains(mappedList))
                             mappedListList.Add(mappedList);
-                    });
+                    };
                 }
             });
             return mappedListList;

@@ -1,20 +1,20 @@
+using EndianTools;
 using HomeTools.AFS;
 using HomeTools.BARFramework;
+using HomeTools.CDS;
 using HomeTools.ChannelID;
 using HomeTools.Crypto;
 using HomeTools.UnBAR;
-using MultiServerLibrary.HTTP;
-using HomeTools.CDS;
 using HttpMultipartParser;
-using System.IO.Compression;
-using System.IO;
-using System.Collections.Generic;
-using System;
-using System.Threading.Tasks;
-using System.Linq;
-using SonyEdge;
 using MultiServerLibrary.Extension;
-using EndianTools;
+using MultiServerLibrary.HTTP;
+using SonyEdge;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Threading.Tasks;
 using WebAPIService;
 
 namespace HomeWebTools
@@ -887,7 +887,7 @@ namespace HomeWebTools
                                 byte[] DecompressedData = LZMA.SegmentsDecompress(buffer);
 
                                 if (DecompressedData != null)
-                                    TasksResult.Add((DecompressedData, $"{filename}_Unpacked.sql"));
+                                    TasksResult.Add((DecompressedData, $"{Path.GetFileNameWithoutExtension(filename)}.sql"));
 
                                 i++;
                                 filedata.Flush();

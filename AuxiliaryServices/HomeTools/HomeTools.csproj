@@ -13,5 +13,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\BackendServices\MultiServerLibrary\MultiServerLibrary.csproj" />
   </ItemGroup>
+  
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);SERVER_MODE;HCDB_BRUTEFORCE_FAST_APPROXIMATE</DefineConstants>
+  </PropertyGroup>
 
 </Project>

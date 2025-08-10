@@ -16,7 +16,7 @@ namespace SonyEdge
         /// </summary>
         /// <param name="InBuffer">The byte array to decompress.</param>
         /// <returns>A byte array.</returns>
-        public static byte[] SegmentsDecompress(byte[] InBuffer)
+        public static byte[] SegmentsDecompress(byte[] InBuffer, bool PrintErrors = true)
         {
             bool LittleEndian = BitConverter.IsLittleEndian;
 
@@ -109,7 +109,8 @@ namespace SonyEdge
 
                             if (SegmentOriginalSize != 0 && sizeOfSegment != SegmentOriginalSize)
                             {
-                                LoggerAccessor.LogError($"[SonyEdge] - LZMA - Segs: Segment at position:{SegmentIndex} has a size that is different than the one indicated in TOC! (Got:{sizeOfSegment}, Expected:{SegmentOriginalSize}).");
+                                if (PrintErrors)
+                                    LoggerAccessor.LogError($"[SonyEdge] - LZMA - Segs: Segment at position:{SegmentIndex} has a size that is different than the one indicated in TOC! (Got:{sizeOfSegment}, Expected:{SegmentOriginalSize}).");
                                 return null;
                             }
 
@@ -129,17 +130,19 @@ namespace SonyEdge
                                 return memoryStream.ToArray();
                         }
 
-                        LoggerAccessor.LogError("[SonyEdge] - LZMA - Segs: File size is different than the one indicated in TOC!.");
+                        if (PrintErrors)
+                            LoggerAccessor.LogError("[SonyEdge] - LZMA - Segs: File size is different than the one indicated in TOC!.");
                     }
-                    else
+                    else if (PrintErrors)
                         LoggerAccessor.LogError("[SonyEdge] - LZMA - Segs: The byte array length is not evenly divisible by 8!");
                 }
-                else
+                else if (PrintErrors)
                     LoggerAccessor.LogError("[SonyEdge] - LZMA - Segs: File is not a valid segment based EdgeLzma compressed file!");
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[SonyEdge] - LZMA - Segs: SegmentsDecompress thrown an assertion : {ex}");
+                if (PrintErrors)
+                    LoggerAccessor.LogError($"[SonyEdge] - LZMA - Segs: SegmentsDecompress thrown an assertion : {ex}");
             }
 
             return null;
@@ -213,8 +216,7 @@ namespace SonyEdge
             long outSize = 0;
             for (int i = 0; i < 8; i++)
             {
-                int v = inStream.ReadByte();
-                outSize |= (long)(byte)v << 8 * i;
+                outSize |= (long)(byte)inStream.ReadByte() << 8 * i;
             }
             decoder.Code(inStream, outStream, inStream.Length - inStream.Position, outSize, null);
             outStream.Position = 0;

@@ -271,7 +271,7 @@ namespace HomeTools.UnBAR
 #if NET6_0_OR_GREATER
                         await Parallel.ForEachAsync(
                         archive.TableOfContents.Cast<TOCEntry>(),
-                        new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                        new ParallelOptions { MaxDegreeOfParallelism = Utils.ThreadLimiter.NumOfThreadsAvailable },
                         async (tableOfContent, cancellationToken) =>
                         {
                             byte[] FileData = tableOfContent.GetData(archive.GetHeader().Flags);
@@ -295,7 +295,7 @@ namespace HomeTools.UnBAR
                         }).ConfigureAwait(false);
 #elif NETCOREAPP || NETSTANDARD1_0_OR_GREATER || NET40_OR_GREATER
                         // Process Environment.ProcessorCount patherns at a time, removing the limit is not tolerable as CPU usage can go high.
-                        Parallel.ForEach(archive.TableOfContents.Cast<TOCEntry>(), new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, async tableOfContent =>
+                        Parallel.ForEach(archive.TableOfContents.Cast<TOCEntry>(), new ParallelOptions { MaxDegreeOfParallelism = Utils.ThreadLimiter.NumOfThreadsAvailable }, async tableOfContent =>
                         {
                             byte[] FileData = tableOfContent.GetData(archive.GetHeader().Flags);
 
