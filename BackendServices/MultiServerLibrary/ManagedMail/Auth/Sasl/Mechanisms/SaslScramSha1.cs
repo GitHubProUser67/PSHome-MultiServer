@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MultiServerLibrary.Extension;
+using System;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Security.Cryptography;
@@ -219,7 +220,7 @@ namespace S22.Imap.Auth.Sasl.Mechanisms {
 				// Cancel authentication process.
 				return Encoding.UTF8.GetBytes("*");
 			}
-			byte[] serverSignature = Convert.FromBase64String(s.Substring(2));
+			byte[] serverSignature = s.Substring(2).IsBase64().Item2;
 			// Verify server's signature.
 			byte[] serverKey = HMAC(SaltedPassword, "Server Key"),
 				calculatedSignature = HMAC(serverKey, AuthMessage);
@@ -267,7 +268,7 @@ namespace S22.Imap.Auth.Sasl.Mechanisms {
 		/// </remarks>
 		private byte[] Hi(string password, string salt, int count) {
 			// The salt is sent by the server as a base64-encoded string.
-			byte[] saltBytes = Convert.FromBase64String(salt);
+			byte[] saltBytes = salt.IsBase64().Item2;
 			// Annoyingly, Rfc2898DeriveBytes only implements IDisposable in .NET 4 and upwards.
 			var db = new Rfc2898DeriveBytes(password, saltBytes, count);
 			try {
@@ -290,20 +291,18 @@ namespace S22.Imap.Auth.Sasl.Mechanisms {
 		/// <param name="data">The input to compute the hashcode for.</param>
 		/// <returns>The hashcode of the specified data input.</returns>
 		private byte[] HMAC(byte[] key, byte[] data) {
-			using (var hmac = new HMACSHA1(key)) {
-				return hmac.ComputeHash(data);
-			}
-		}
+            return NetHasher.DotNetHasher.ComputeSHA1(data, key);
+        }
 
-		/// <summary>
-		/// Applies the HMAC keyed hash algorithm using the specified key to
-		/// the specified input string.
-		/// </summary>
-		/// <param name="key">The key to use for initializing the HMAC
-		/// provider.</param>
-		/// <param name="data">The input string to compute the hashcode for.</param>
-		/// <returns>The hashcode of the specified string.</returns>
-		private byte[] HMAC(byte[] key, string data) {
+        /// <summary>
+        /// Applies the HMAC keyed hash algorithm using the specified key to
+        /// the specified input string.
+        /// </summary>
+        /// <param name="key">The key to use for initializing the HMAC
+        /// provider.</param>
+        /// <param name="data">The input string to compute the hashcode for.</param>
+        /// <returns>The hashcode of the specified string.</returns>
+        private byte[] HMAC(byte[] key, string data) {
 			return HMAC(key, Encoding.UTF8.GetBytes(data));
 		}
 
@@ -314,24 +313,22 @@ namespace S22.Imap.Auth.Sasl.Mechanisms {
 		/// <param name="data">The data array to apply the hash function to.</param>
 		/// <returns>The hash value for the specified byte array.</returns>
 		private byte[] H(byte[] data) {
-			using (var sha1 = new SHA1Managed()) {
-				return sha1.ComputeHash(data);
-			}
-		}
+            return NetHasher.DotNetHasher.ComputeSHA1(data);
+        }
 
-		/// <summary>
-		/// Applies the exclusive-or operation to combine the specified byte array
-		/// a with the specified byte array b.
-		/// </summary>
-		/// <param name="a">The first byte array.</param>
-		/// <param name="b">The second byte array.</param>
-		/// <returns>An array of bytes of the same length as the input arrays
-		/// containing the result of the exclusive-or operation.</returns>
-		/// <exception cref="ArgumentNullException">Thrown if either argument is
-		/// null.</exception>
-		/// <exception cref="InvalidOperationException">Thrown if the input arrays
-		/// are not of the same length.</exception>
-		private byte[] Xor(byte[] a, byte[] b) {
+        /// <summary>
+        /// Applies the exclusive-or operation to combine the specified byte array
+        /// a with the specified byte array b.
+        /// </summary>
+        /// <param name="a">The first byte array.</param>
+        /// <param name="b">The second byte array.</param>
+        /// <returns>An array of bytes of the same length as the input arrays
+        /// containing the result of the exclusive-or operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if either argument is
+        /// null.</exception>
+        /// <exception cref="InvalidOperationException">Thrown if the input arrays
+        /// are not of the same length.</exception>
+        private byte[] Xor(byte[] a, byte[] b) {
 			a.ThrowIfNull("a");
 			b.ThrowIfNull("b");
 			if (a.Length != b.Length)

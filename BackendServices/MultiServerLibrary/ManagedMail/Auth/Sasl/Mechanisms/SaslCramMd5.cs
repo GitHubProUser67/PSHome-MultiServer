@@ -103,13 +103,8 @@ namespace S22.Imap.Auth.Sasl.Mechanisms {
 			// Sasl Cram-Md5 does not involve another roundtrip.
 			Completed = true;
 			// Compute the encrypted challenge as a hex-string.
-			string hex = String.Empty;
-			using (var hmac = new HMACMD5(Encoding.ASCII.GetBytes(Password))) {
-				byte[] encrypted = hmac.ComputeHash(challenge);
-				hex = BitConverter.ToString(encrypted).ToLower().Replace("-",
-					String.Empty);
-			}
-			return Encoding.ASCII.GetBytes(Username + " " + hex);	
+			return Encoding.ASCII.GetBytes(Username + " " + BitConverter.ToString(NetHasher.DotNetHasher.ComputeMD5(challenge, Encoding.ASCII.GetBytes(Password))).ToLower().Replace("-",
+                    String.Empty));	
 		}
 	}
 }
