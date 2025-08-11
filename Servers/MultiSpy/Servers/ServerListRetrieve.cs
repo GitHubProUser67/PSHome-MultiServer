@@ -401,7 +401,13 @@ namespace MultiSpy.Servers
 				data.Add(255);
 
 				for (int i = 0; i < fields.Length; i++) {
-					data.AddRange(DataFunctions.StringToBytes(GetField(server, fields[i])));
+                    if (server.GetType().GetProperty(fields[i]) == null)
+                    {
+                       LoggerAccessor.LogWarn(string.Format("[ServerListRetreive] - Unknown server property '{0}' requested in server list", fields[i]));
+                        data.AddRange(DataFunctions.StringToBytes(string.Empty));
+                    }
+                    else
+                        data.AddRange(DataFunctions.StringToBytes(GetField(server, fields[i])));
 
 					if (i < fields.Length - 1)
 						data.AddRange(new byte[] { 0, 255 });

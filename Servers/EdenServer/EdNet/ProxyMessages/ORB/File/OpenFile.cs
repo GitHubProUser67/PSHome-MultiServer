@@ -19,7 +19,7 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
 
             byte facility = request.ExtractUInt8();
             uint userId = request.ExtractUInt32();
-            task.Client.StorageUserId = userId;
+            task.Client.PendingFileUserId = userId;
             string filename = request.ExtractString();
             bool bupdload_wanted = request.ExtractUInt8() == 0x01;
             uint uploadtotalsize = request.ExtractUInt32();
@@ -28,7 +28,7 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
 
             response.InsertStart(edStoreBank.CRC_A_ORB_OPENFILE);
 
-            string staticUserHostedDir = Directory.GetCurrentDirectory() + $"/static/Eden/StaticUserHostedFiles/{task.Client.StorageUserId}";
+            string staticUserHostedDir = Directory.GetCurrentDirectory() + $"/static/Eden/StaticUserHostedFiles/{task.Client.PendingFileUserId}";
 
             if (!bupdload_wanted && !Directory.Exists(staticUserHostedDir))
             {
@@ -74,8 +74,8 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
                     DriveInfo drive = new DriveInfo(Path.GetPathRoot(Assembly.GetExecutingAssembly().Location));
                     if (drive.IsReady && uploadtotalsize <= drive.AvailableFreeSpace)
                     {
-                        if (!fileExists) // Create the file buffer in the user folder, waiting for the PUT data to be pushed.
-                            System.IO.File.WriteAllBytes($"{staticUserHostedDir + suffix}/{filename}", Array.Empty<byte>());
+                        // Create the file buffer in the user folder, waiting for the PUT data to be pushed.
+                        System.IO.File.WriteAllBytes($"{staticUserHostedDir + suffix}/{filename}", new byte[uploadtotalsize]);
 
                         response.InsertUInt8(0); // Success.
                         response.InsertUInt32(fileId);

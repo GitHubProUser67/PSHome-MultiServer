@@ -1,3 +1,4 @@
+using MultiServerLibrary.Extension;
 using MultiSpy.Data;
 using MultiSpyService.Utils;
 using System.Net;
@@ -64,7 +65,7 @@ namespace MultiSpy.Servers
 						clientData["userid"],
 						clientData["profileid"],
 						state.Name,
-						_random.GetString(22, "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ][") + "__");
+						_random.GetString(22, FileSystemUtils.ASCIIChars + "][") + "__");
 
 					/*state.Session = session.ToString();
 					Dictionary<string, object> updateClientData = new Dictionary<string, object>() {
@@ -200,7 +201,7 @@ namespace MultiSpy.Servers
 
 		public static byte[] SendHeartbeat()
 		{
-			return DataFunctions.StringToBytes(String.Format(@"\lt\{0}\final\", _random.GetString(22, "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ][") + "__"));
+			return DataFunctions.StringToBytes(String.Format(@"\lt\{0}\final\", _random.GetString(22, FileSystemUtils.ASCIIChars + "][") + "__"));
 		}
 
 		internal static byte[] SendNicks(ref LoginSocketState state, Dictionary<string, string> keyValues)

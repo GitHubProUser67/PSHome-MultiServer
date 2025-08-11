@@ -161,9 +161,10 @@ namespace MultiServerLibrary.Extension
                 return (false, null);
 
 #if NETCOREAPP2_1_OR_GREATER
+            const char equalSign = '=';
             Span<byte> buffer = new byte[((base64String.Length * 3) + 3) / 4 -
-                (base64String.Length > 0 && base64String[^1] == '=' ?
-                    base64String.Length > 1 && base64String[^2] == '=' ?
+                (base64String.Length > 0 && base64String[^1] == equalSign ?
+                    base64String.Length > 1 && base64String[^2] == equalSign ?
                         2 : 1 : 0)];
 
             if (Convert.TryFromBase64String(base64String, buffer, out int bytesWritten))
@@ -188,7 +189,7 @@ namespace MultiServerLibrary.Extension
                 bool hasDecoded = managedDecodeResult.success;
                 if (!hasDecoded)
                 {
-                    managedDecodeResult = ManagedBase64.Decode(base64CharArray, !hasDecoded);
+                    managedDecodeResult = ManagedBase64.Decode(base64CharArray, true);
                     hasDecoded = managedDecodeResult.success;
                     return (hasDecoded, hasDecoded ?
                         ManagedBase64.NumberArrayToString(managedDecodeResult.data)
@@ -222,7 +223,7 @@ namespace MultiServerLibrary.Extension
             return (false, null);
         }
 
-        public static Stream ToStream(this string str, Encoding encoding = null)
+        public static MemoryStream ToStream(this string str, Encoding encoding = null)
         {
             if (encoding == null)
                 encoding = Encoding.UTF8;

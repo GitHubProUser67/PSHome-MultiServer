@@ -375,10 +375,7 @@ namespace MultiServerLibrary.Extension
             if (string.IsNullOrEmpty(ipAddress))
                 throw new ArgumentException(nameof(ipAddress));
 
-            byte[] bytes = IPAddress.Parse(ipAddress).GetAddressBytes();
-            if (BitConverter.IsLittleEndian)
-                Array.Reverse(bytes);
-            return BitConverter.ToUInt32(bytes, 0);
+            return GetIPAddressAsUInt(IPAddress.Parse(ipAddress));
         }
 
         public static uint GetIPAddressAsUInt(IPAddress ipAddress)

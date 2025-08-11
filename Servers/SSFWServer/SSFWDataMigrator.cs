@@ -25,6 +25,8 @@ namespace SSFWServer
                             Directory.CreateDirectory(directoryPath);
 
                         File.Copy(item.FullName, newPath);
+
+                        FileSystemUtils.SetFileReadWrite(newPath);
                     }
                     else if ((item is DirectoryInfo directoryInfo) && !Directory.Exists(newPath))
                         CopyDirectory(directoryInfo.FullName, newPath);
@@ -48,6 +50,8 @@ namespace SSFWServer
                         Directory.CreateDirectory(directoryPath);
 
                     File.Copy(file, destinationFile);
+
+                    FileSystemUtils.SetFileReadWrite(destinationFile);
                 }
             }
 
@@ -55,9 +59,7 @@ namespace SSFWServer
             {
                 string destinationDirectory = Path.Combine(target, Path.GetFileName(directory));
                 if (!Directory.Exists(destinationDirectory))
-                {
                     CopyDirectory(directory, destinationDirectory);
-                }
             }
         }
     }

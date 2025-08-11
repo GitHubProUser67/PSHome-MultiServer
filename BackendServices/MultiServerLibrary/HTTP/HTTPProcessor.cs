@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -1092,7 +1091,7 @@ namespace MultiServerLibrary.HTTP
                 return null;
 
             using (MemoryStream output = new MemoryStream())
-            using (BrotliStream brStream = new BrotliStream(output, System.IO.Compression.CompressionLevel.Fastest))
+            using (var brStream = new System.IO.Compression.BrotliStream(output, System.IO.Compression.CompressionLevel.Fastest))
             {
                 brStream.Write(input, 0, input.Length);
                 brStream.Flush();
@@ -1171,7 +1170,7 @@ namespace MultiServerLibrary.HTTP
                         outMemoryStream = new HugeMemoryStream();
                     else
                         outMemoryStream = new MemoryStream();
-                    using (BrotliStream outBStream = new BrotliStream(outMemoryStream, System.IO.Compression.CompressionLevel.Fastest, true))
+                    using (var outBStream = new System.IO.Compression.BrotliStream(outMemoryStream, System.IO.Compression.CompressionLevel.Fastest, true))
                     {
                         StreamUtils.CopyStream(input, outBStream);
                         outBStream.Flush();

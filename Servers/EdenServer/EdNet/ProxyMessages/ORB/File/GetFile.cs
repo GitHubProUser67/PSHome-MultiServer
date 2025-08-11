@@ -25,7 +25,7 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
 
             response.InsertStart(edStoreBank.CRC_A_ORB_GETFILE);
 
-            string staticUserHostedDir = Directory.GetCurrentDirectory() + $"/static/Eden/StaticUserHostedFiles/{task.Client.StorageUserId}";
+            string staticUserHostedDir = Directory.GetCurrentDirectory() + $"/static/Eden/StaticUserHostedFiles/{task.Client.PendingFileUserId}";
 
             if (!Directory.Exists(staticUserHostedDir))
             {
@@ -52,7 +52,7 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
                 }
                 else
                 {
-                    LoggerAccessor.LogWarn($"[GetFile] - File with Id:{fileid} was not found for userId:{task.Client.StorageUserId}, sending error response...");
+                    LoggerAccessor.LogWarn($"[GetFile] - File with Id:{fileid} was not found for userId:{task.Client.PendingFileUserId}, sending error response...");
                     SetFailure(response);
                 }
             }

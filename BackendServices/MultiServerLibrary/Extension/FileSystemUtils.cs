@@ -10,7 +10,7 @@ namespace MultiServerLibrary.Extension
 {
     public static class FileSystemUtils
     {
-        public const string ASCIIChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        public const string ASCIIChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
         public enum FileShareMode
         {
@@ -69,10 +69,12 @@ namespace MultiServerLibrary.Extension
             }
         }
 
-        public static IEnumerable<FileSystemInfo> AllFilesAndFoldersLinq(this DirectoryInfo dir)
+        public static IEnumerable<FileSystemInfo> AllFilesAndFoldersLinq(this DirectoryInfo dir, bool multiThread = false)
         {
-            return dir.EnumerateFileSystemInfos("*", SearchOption.AllDirectories).AsParallel().WithDegreeOfParallelism(Environment.ProcessorCount)
+            if (multiThread)
+                return dir.EnumerateFileSystemInfos("*", SearchOption.AllDirectories).AsParallel().WithDegreeOfParallelism(Environment.ProcessorCount)
                 .AsUnordered().Where(info => !info.IsHidden());
+            return dir.EnumerateFileSystemInfos("*", SearchOption.AllDirectories).Where(info => !info.IsHidden());
         }
 
         public static IEnumerable<string> GetMediaFilesList(string directoryPath)
@@ -166,22 +168,24 @@ namespace MultiServerLibrary.Extension
             return null;
         }
 
-        public static long GetLength(this DirectoryInfo dir)
+        public static long GetLength(this DirectoryInfo dir, bool multiThread = false)
         {
-            return Directory.GetFiles(dir.FullName, "*", SearchOption.AllDirectories).AsParallel().WithDegreeOfParallelism(Environment.ProcessorCount)
-                .AsUnordered().Sum(t => new FileInfo(t).Length);
+            if (multiThread)
+                return Directory.GetFiles(dir.FullName, "*", SearchOption.AllDirectories).AsParallel().WithDegreeOfParallelism(Environment.ProcessorCount)
+                     .AsUnordered().Sum(t => new FileInfo(t).Length);
+            return Directory.GetFiles(dir.FullName, "*", SearchOption.AllDirectories).Sum(t => new FileInfo(t).Length);
         }
 
-        private static void SetFileReadWrite(string filePath)
+        public static void SetFileReadWrite(string filePath)
         {
-            if ((File.GetAttributes(filePath) & FileAttributes.ReadOnly) != FileAttributes.ReadOnly)
+            if (!File.Exists(filePath) || (File.GetAttributes(filePath) & FileAttributes.ReadOnly) != FileAttributes.ReadOnly)
                 return;
             File.SetAttributes(filePath, File.GetAttributes(filePath) ^ FileAttributes.ReadOnly);
         }
 
         public static string RemoveInvalidPathChars(string input)
         {
-            string allowedChars = $"-_.+{ASCIIChars}/\\ ";
+            string allowedChars = $"[]-_.+{ASCIIChars}/\\ ";
             StringBuilder empty = new StringBuilder();
             foreach (char ch in input)
             {
@@ -202,6 +206,24 @@ namespace MultiServerLibrary.Extension
             try
             {
                 return NetHasher.DotNetHasher.ComputeMD5String(File.OpenRead(filePath));
+            }
+            catch
+            {
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Compute the SHA256 checksum of a file.
+        /// <para>Calcul la somme des contr�les en SHA256 d'un fichier.</para>
+        /// </summary>
+        /// <param name="filePath">The input file path.</param>
+        /// <returns>A nullable string.</returns>
+        public static string ComputeSHA256FromFile(string filePath)
+        {
+            try
+            {
+                return NetHasher.DotNetHasher.ComputeSHA256String(File.OpenRead(filePath));
             }
             catch
             {
