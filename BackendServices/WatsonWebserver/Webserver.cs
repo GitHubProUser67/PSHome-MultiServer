@@ -675,8 +675,6 @@
                                         {
                                             ctx.RouteType = RouteTypeEnum.Default;
                                             await Routes.Default(ctx).ConfigureAwait(false);
-                                            if (!ctx.Response.ResponseSent)
-                                                throw new InvalidOperationException("Default route for " + ctx.Request.Method.ToString() + " " + ctx.Request.Url.RawWithoutQuery + " did not send a response to the HTTP request.");
                                             return;
                                         }
                                         else
@@ -718,16 +716,6 @@
 
                                         if (ctx != null)
                                         {
-                                            if (!ctx.Response.ResponseSent)
-                                            {
-                                                ctx.Response.StatusCode = 500;
-                                                ctx.Response.ContentType = DefaultPages.Pages[500].ContentType;
-                                                if (ctx.Response.ChunkedTransfer)
-                                                    await ctx.Response.SendChunk(Encoding.UTF8.GetBytes(DefaultPages.Pages[500].Content), true).ConfigureAwait(false);
-                                                else
-                                                    await ctx.Response.Send(DefaultPages.Pages[500].Content).ConfigureAwait(false);
-                                            }
-
                                             ctx.Timestamp.End = DateTime.UtcNow;
 
                                             Events.HandleResponseSent(this, new ResponseEventArgs(ctx, ctx.Timestamp.TotalMs.Value));
