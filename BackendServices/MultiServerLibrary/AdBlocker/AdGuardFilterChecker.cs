@@ -3,9 +3,6 @@ using MultiServerLibrary.Extension;
 using System;
 using System.Linq;
 using System.Net;
-#if NET7_0_OR_GREATER
-using System.Net.Http;
-#endif
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -31,17 +28,11 @@ namespace MultiServerLibrary.AdBlocker
 
             try
             {
-#if NET7_0_OR_GREATER
-            using (HttpClient client = new HttpClient())
-            {
-                foreach (string line in (await client.GetStringAsync(adGuardFilterUrl).ConfigureAwait(false)).Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
-#else
 #pragma warning disable
-                using (GZipWebClient client = new GZipWebClient())
+                using (FixedWebClient client = new FixedWebClient())
 #pragma warning restore
                 {
                     foreach (string line in (await client.DownloadStringTaskAsync(adGuardFilterUrl).ConfigureAwait(false)).Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
-#endif
                     {
                         // If the line starts with "||" or "://", it is an excluded URL
                         if (line.StartsWith("||"))

@@ -2,9 +2,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
-#if NET7_0_OR_GREATER
-using System.Net.Http;
-#endif
 using System.Threading.Tasks;
 
 namespace MultiServerLibrary.AdBlocker
@@ -27,17 +24,11 @@ namespace MultiServerLibrary.AdBlocker
 
             try
             {
-#if NET7_0_OR_GREATER
-            using (HttpClient client = new HttpClient())
-            {
-                string content = await client.GetStringAsync(danpollockFilterUrl).ConfigureAwait(false);
-#else
 #pragma warning disable
-                using (GZipWebClient client = new GZipWebClient())
+                using (FixedWebClient client = new FixedWebClient())
 #pragma warning restore
                 {
                     string content = await client.DownloadStringTaskAsync(danpollockFilterUrl).ConfigureAwait(false);
-#endif
                     Parallel.ForEach(content.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries), line =>
                     {
                         // Exclude invalid lines on the webpage.

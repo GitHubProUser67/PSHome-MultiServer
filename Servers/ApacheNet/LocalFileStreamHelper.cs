@@ -172,8 +172,7 @@ namespace ApacheNet
                                 <script type=""text/javascript"">
                                    {(flashPlayer7 ? @$"function playerReady() {{
                                     {(debug ? "alert(\"DEBUG: Media player loaded.\");" : string.Empty)}
-                                  }}
-                                  {swfObject43Js.Content}" : @$"function printTrace() {{
+                                  }}" : @$"function printTrace() {{
                                     {(debug ? "alert(\"DEBUG: Media player loaded.\");" : string.Empty)}
                                   }}
                                   {jwPlayer53Js.Content}")}
@@ -183,15 +182,14 @@ namespace ApacheNet
                                   <a class='button' href='{absolutepath}?PS3=play' target='_blank'>{(isSupported ? "▶ Download Video" : "Backup Video to external storage")}</a>
                                   <p>Media {(isSupported ? string.Empty : "not ")}compatible with the PlayStation 3 System</p>
                                   {(flashPlayer7 ? $@"{(IsJWPlayerCompatibleFormat(ContentType) ? $@"<br />
-                                    <div id=""player"">Loading player...</div>
-                                    <script type=""text/javascript"">
-                                    var so = new SWFObject('/jwplayer/player43.swf','mpl','860','580','6');
-                                    so.addParam('allowscriptaccess','always');
-                                    so.addParam('allowfullscreen','true');
-                                    so.addVariable('controlbar', 'bottom');
-                                    so.addParam('flashvars','&file={absolutepath}?PS3=play');
-                                    so.write('player');
-                                    </script>" : string.Empty)}" : $@"{(IsJWPlayerCompatibleFormat(ContentType) ? $@"<br />
+                                    <object
+                                        type=""application/x-shockwave-flash""
+                                        data=""/jwplayer/player43.swf""
+                                        width=""860""
+                                        height=""580"">
+                                        <param name=""allowfullscreen"" value=""true"" />
+                                        <param name=""flashvars"" value=""controlbar=bottom&file={absolutepath}?PS3=play"" />
+                                    </object>" : string.Empty)}" : $@"{(IsJWPlayerCompatibleFormat(ContentType) ? $@"<br />
                                     <div id=""player"">Loading player...</div>
                                     <script type=""text/javascript"">
                                       jwplayer(""player"").setup({{

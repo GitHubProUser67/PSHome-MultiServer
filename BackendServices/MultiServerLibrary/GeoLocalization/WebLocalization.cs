@@ -3,9 +3,6 @@ using System.Globalization;
 using System;
 using System.Net;
 using System.Text.Json;
-#if NET7_0_OR_GREATER
-using System.Net.Http;
-#endif
 using System.Threading.Tasks;
 
 namespace MultiServerLibrary.GeoLocalization
@@ -14,21 +11,8 @@ namespace MultiServerLibrary.GeoLocalization
     {
         private static async Task<IPInfo> GetIPInfoFromIP(string ip)
         {
-#if NET7_0_OR_GREATER
-            using (HttpClient client = new HttpClient())
-            {
-                try
-                {
-                    return JsonSerializer.Deserialize<IPInfo>(await client.GetStringAsync($"https://ipinfo.io/{ip}/json").ConfigureAwait(false));
-                }
-                catch (Exception e)
-                {
-                    CustomLogger.LoggerAccessor.LogError($"[WebLocalization] - GetIPInfoFromIP: Error fetching IPInfo data from the web API. (Exception: {e})");
-                }
-            }
-#else
 #pragma warning disable
-            using (GZipWebClient client = new GZipWebClient())
+            using (FixedWebClient client = new FixedWebClient())
 #pragma warning restore
             {
                 try
@@ -40,7 +24,6 @@ namespace MultiServerLibrary.GeoLocalization
                     CustomLogger.LoggerAccessor.LogError($"[WebLocalization] - GetIPInfoFromIP: Error fetching IPInfo data from the web API. (Exception: {e})");
                 }
             }
-#endif
 
             return null;
         }
@@ -50,7 +33,7 @@ namespace MultiServerLibrary.GeoLocalization
             Dictionary<GeoData, double[]> geoDataDic = new Dictionary<GeoData, double[]>();
 
 #pragma warning disable
-            using (GZipWebClient client = new GZipWebClient())
+            using (FixedWebClient client = new FixedWebClient())
 #pragma warning restore
             {
                 client.UseDefaultCredentials = false;

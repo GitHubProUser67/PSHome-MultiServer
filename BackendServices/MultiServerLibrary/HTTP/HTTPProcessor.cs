@@ -12,11 +12,7 @@ using System.Text.RegularExpressions;
 using System.Web;
 using System.Text.Json;
 using Org.BouncyCastle.Utilities.Zlib;
-#if NET7_0_OR_GREATER
-using System.Net.Http;
-#else
 using System.Net;
-#endif
 
 namespace MultiServerLibrary.HTTP
 {
@@ -663,25 +659,10 @@ namespace MultiServerLibrary.HTTP
 
         public static string RequestURLGET(string url)
         {
-#if NET7_0_OR_GREATER
-            try
-            {
-                using (HttpClient client = new HttpClient())
-                {
-                    HttpResponseMessage response = client.GetAsync(url).Result;
-                    response.EnsureSuccessStatusCode();
-                    return response.Content.ReadAsStringAsync().Result;
-                }
-            }
-            catch
-            {
-                // Not Important.
-            }
-#else
             try
             {
 #pragma warning disable // NET 6.0 and lower has a bug where GetAsync() is EXTREMLY slow to operate (https://github.com/dotnet/runtime/issues/65375).
-                using (GZipWebClient client = new GZipWebClient())
+                using (FixedWebClient client = new FixedWebClient())
                     return client.DownloadString(url);
 #pragma warning restore
             }
@@ -689,45 +670,16 @@ namespace MultiServerLibrary.HTTP
             {
                 // Not Important.
             }
-#endif
 
             return null;
         }
 
         public static (byte[] data, Dictionary<string, string> headers) RequestFullURLGET(string url)
         {
-#if NET7_0_OR_GREATER
-            try
-            {
-                using (HttpClient client = new HttpClient())
-                {
-                    HttpResponseMessage response = client.GetAsync(url).Result;
-                    response.EnsureSuccessStatusCode();
-
-                    byte[] data = response.Content.ReadAsByteArrayAsync().Result;
-
-                    var headers = new Dictionary<string, string>();
-                    foreach (var header in response.Headers)
-                    {
-                        headers[header.Key] = string.Join(", ", header.Value);
-                    }
-                    foreach (var header in response.Content.Headers)
-                    {
-                        headers[header.Key] = string.Join(", ", header.Value);
-                    }
-
-                    return (data, headers);
-                }
-            }
-            catch
-            {
-                // Not Important.
-            }
-#else
             try
             {
 #pragma warning disable
-                using (GZipWebClient client = new GZipWebClient())
+                using (FixedWebClient client = new FixedWebClient())
                 {
                     byte[] data = client.DownloadData(url);
                     var headers = new Dictionary<string, string>();
@@ -749,7 +701,6 @@ namespace MultiServerLibrary.HTTP
             {
                 // Not Important.
             }
-#endif
 
             return (null, null);
         }
@@ -757,37 +708,10 @@ namespace MultiServerLibrary.HTTP
 
         public static string RequestURLPOST(string url, Dictionary<string, string> headers, string postData, string ContentType)
         {
-#if NET7_0_OR_GREATER
-            try
-            {
-                using (HttpClient client = new HttpClient())
-                {
-                    // Add headers to the request
-                    if (headers != null)
-                    {
-                        foreach (var header in headers)
-                        {
-                            client.DefaultRequestHeaders.Add(header.Key, header.Value);
-                        }
-                    }
-
-                    // Create the content for the POST request
-                    var content = new StringContent(postData, System.Text.Encoding.UTF8, ContentType);
-
-                    HttpResponseMessage response = client.PostAsync(url, content).Result;
-                    response.EnsureSuccessStatusCode();
-                    return response.Content.ReadAsStringAsync().Result;
-                }
-            }
-            catch
-            {
-                // Not Important.
-            }
-#else
             try
             {
 #pragma warning disable // NET 6.0 and lower has a bug where GetAsync() is EXTREMELY slow to operate (https://github.com/dotnet/runtime/issues/65375).
-                using (GZipWebClient client = new GZipWebClient())
+                using (FixedWebClient client = new FixedWebClient())
                 {
                     // Add headers to the request
                     if (headers != null)
@@ -808,7 +732,6 @@ namespace MultiServerLibrary.HTTP
             {
                 // Not Important.
             }
-#endif
 
             return null;
         }

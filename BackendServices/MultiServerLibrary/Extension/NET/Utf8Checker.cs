@@ -332,8 +332,8 @@ namespace System.Text
             }
             catch
             {
-                return base.ToString();
             }
+            return base.ToString();
         }
     }
 }

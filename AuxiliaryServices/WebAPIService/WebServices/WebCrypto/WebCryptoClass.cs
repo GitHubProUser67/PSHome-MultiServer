@@ -19,7 +19,7 @@ namespace WebAPIService.WebServices.WebCrypto
         public static async Task<string> GenerateRandomBase64KeyAsync()
 #else
 #pragma warning disable
-        public class GZipWebClientWithTimeout : System.Net.GZipWebClient
+        public class FixedWebClientWithTimeout : System.Net.FixedWebClient
         {
             public int Timeout { get; set; } = 5000; // milliseconds
 
@@ -31,7 +31,7 @@ namespace WebAPIService.WebServices.WebCrypto
             }
         }
 #pragma warning restore
-        public static Task<string> GenerateRandomBase64KeyAsync()
+        public static async Task<string> GenerateRandomBase64KeyAsync()
 #endif
         {
             const string url = "https://www.digitalsanctuary.com/aes-key-generator-free";
@@ -41,20 +41,11 @@ namespace WebAPIService.WebServices.WebCrypto
 
             try
             {
-#if NET7_0_OR_GREATER
-                using (System.Net.Http.HttpClient client = new System.Net.Http.HttpClient())
-                {
-                    // Fetch the webpage content using HttpClient
-                    client.Timeout = TimeSpan.FromSeconds(5);
-                    content = await client.GetStringAsync(url).ConfigureAwait(false);
-                }
-#else
-                using (GZipWebClientWithTimeout client = new GZipWebClientWithTimeout())
+                using (FixedWebClientWithTimeout client = new FixedWebClientWithTimeout())
                 {
                     // Fetch the webpage content using GZipWebClient
-                    content = client.DownloadString(url);
+                    content = await client.DownloadStringTaskAsync(url).ConfigureAwait(false);
                 }
-#endif
 
                 // Locate the target text and extract the key
                 int startIndex = content.IndexOf(startText);
@@ -71,11 +62,7 @@ namespace WebAPIService.WebServices.WebCrypto
                             .Match(content.Substring(startIndex, endIndex - startIndex).Trim());
 
                         if (match.Success)
-#if NET7_0_OR_GREATER
                             return match.Groups[1].Value.Trim();
-#else
-                            return Task.FromResult(match.Groups[1].Value.Trim());
-#endif
                     }
                 }
 
@@ -85,11 +72,8 @@ namespace WebAPIService.WebServices.WebCrypto
             {
                 CustomLogger.LoggerAccessor.LogDebug($"[WebCrypto] - GenerateRandomBase64KeyAsync - an exception was thrown while fetching the key:{ex}, switching to built-in engine...");
             }
-#if NET7_0_OR_GREATER
+
             return Convert.ToBase64String(ByteUtils.GenerateRandomBytes(32));
-#else
-            return Task.FromResult(Convert.ToBase64String(ByteUtils.GenerateRandomBytes(32)));
-#endif
         }
 
         public static string EncryptCBC(object ObjectToEncrypt, string AccessKey, byte[] IV, bool xmlsecuretags = false, bool xmlbody = false)

@@ -9,9 +9,6 @@ using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
-#if NET7_0_OR_GREATER
-using System.Net.Http;
-#endif
 
 namespace MultiServerLibrary.Extension
 {
@@ -120,36 +117,12 @@ namespace MultiServerLibrary.Extension
                     allowipv6 ? fallbackUrl : fallbackIpv4Url
                 };
 
-#if NET7_0_OR_GREATER
-                foreach (string url in urlList)
-                {
-                    try
-                    {
-                        using (HttpClient client = new HttpClient())
-                        {
-                            HttpResponseMessage response = client.GetAsync(url).Result;
-                            response.EnsureSuccessStatusCode();
-                            result = response.Content.ReadAsStringAsync().Result
-                                .Replace("\r\n", string.Empty).Replace("\n", string.Empty).Trim();
-
-                            if (ipv6urlformat && allowipv6 && result.Length > 15)
-                                result = $"[{result}]";
-
-                            break; // Successful response
-                        }
-                    }
-                    catch
-                    {
-                        continue;
-                    }
-                }
-#else
                 foreach (string url in urlList)
                 {
                     try
                     {
 #pragma warning disable
-                        using (GZipWebClient client = new GZipWebClient())
+                        using (FixedWebClient client = new FixedWebClient())
                         {
                             result = client.DownloadString(url)
                                 .Replace("\r\n", string.Empty).Replace("\n", string.Empty).Trim();
@@ -166,7 +139,6 @@ namespace MultiServerLibrary.Extension
                         continue;
                     }
                 }
-#endif
 
                 if (!string.IsNullOrEmpty(result))
                     _InternalIpCache.Set(cacheKey, (true, result), 60000);

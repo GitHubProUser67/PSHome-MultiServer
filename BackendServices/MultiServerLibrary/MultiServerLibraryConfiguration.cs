@@ -13,6 +13,10 @@ namespace MultiServerLibrary
         public static bool EnableServerIpAutoNegotiation { get; set; } = true;
         public static bool UsePublicIp { get; set; } = false; // Safer approach to default to local network.
         public static bool EnableSNMPReports { get; set; } = false;
+        public static string ProxyUserName { get; set; } = string.Empty;
+        public static string ProxyPassword { get; set; } = string.Empty;
+        public static string ProxyHost { get; set; } = string.Empty;
+        public static ushort ProxyPort { get; set; } = 0;
         public static string FallbackServerIp { get; set; } = IPAddress.Any.ToString();
         public static string SNMPTrapHost { get; set; } = IPAddress.Loopback.ToString();
         public static string SNMPEnterpriseOid { get; set; } = "12345";
@@ -66,6 +70,13 @@ namespace MultiServerLibrary
                             auth_password = SNMPAuthPassword,
                             private_password = SNMPPrivatePassword,
                         },
+                        proxy = new
+                        {
+                            user_name = ProxyUserName,
+                            password = ProxyPassword,
+                            host = ProxyHost,
+                            port = ProxyPort,
+                        },
                         BannedIPs
                     };
 
@@ -118,6 +129,13 @@ namespace MultiServerLibrary
                         SNMPUserName = snmpElement.GetProperty("username").GetString();
                         SNMPAuthPassword = snmpElement.GetProperty("auth_password").GetString();
                         SNMPPrivatePassword = snmpElement.GetProperty("private_password").GetString();
+                    }
+                    if (config.TryGetProperty("proxy", out JsonElement proxyElement))
+                    {
+                        ProxyUserName = proxyElement.GetProperty("user_name").GetString();
+                        ProxyPassword = proxyElement.GetProperty("password").GetString();
+                        ProxyHost = proxyElement.GetProperty("host").GetString();
+                        ProxyPort = proxyElement.GetProperty("port").GetUInt16();
                     }
                 }
             }

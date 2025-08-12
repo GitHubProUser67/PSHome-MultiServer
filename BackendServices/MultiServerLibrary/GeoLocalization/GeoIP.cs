@@ -74,6 +74,9 @@ namespace MultiServerLibrary.GeoLocalization
         {
             const string GeoLite2UpdaterUrl = "https://geolite2.edtunnel.best/download";
             string dbUrl = null;
+
+            CustomLogger.LoggerAccessor.LogWarn($"[GeoIP] - Initialize() - Started Initialization at: {DateTime.Now}.");
+
             string UpdaterPageContent = HTTPProcessor.RequestURLGET(GeoLite2UpdaterUrl);
 
             if (!string.IsNullOrEmpty(UpdaterPageContent))
@@ -112,7 +115,7 @@ namespace MultiServerLibrary.GeoLocalization
                     {
                         byte[] dbData = HTTPProcessor.RequestFullURLGET(dbUrl).data;
 
-                        if (dbData != null && NetHasher.DotNetHasher.ComputeSHA256String(dbData) != FileSystemUtils.ComputeSHA256FromFile(liteDbOath))
+                        if (dbData != null && NetHasher.DotNetHasher.ComputeSHA256String(dbData) != NetHasher.DotNetHasher.ComputeSHA256String(File.ReadAllBytes(liteDbOath)))
                         {
                             File.WriteAllBytes(liteDbOath, dbData);
 #if DEBUG

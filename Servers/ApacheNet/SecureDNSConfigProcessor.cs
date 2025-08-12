@@ -6,9 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-#if NET7_0_OR_GREATER
-using System.Net.Http;
-#endif
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
@@ -36,15 +33,9 @@ namespace ApacheNet
                 if (MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows) ServicePointManager.ServerCertificateValidationCallback = MyRemoteCertificateValidationCallback;
                 try
                 {
-#if NET7_0_OR_GREATER
-                    HttpResponseMessage response = new HttpClient().GetAsync(ApacheNetServerConfiguration.DNSOnlineConfig).Result;
-                    response.EnsureSuccessStatusCode();
-                    ParseRules(response.Content.ReadAsStringAsync().Result, false);
-#else
 #pragma warning disable // NET 6.0 and lower has a bug where GetAsync() is EXTREMLY slow to operate (https://github.com/dotnet/runtime/issues/65375).
-                    ParseRules(new GZipWebClient().DownloadStringTaskAsync(ApacheNetServerConfiguration.DNSOnlineConfig).Result, false);
+                    ParseRules(new FixedWebClient().DownloadStringTaskAsync(ApacheNetServerConfiguration.DNSOnlineConfig).Result, false);
 #pragma warning restore
-#endif
                 }
                 catch (Exception ex)
                 {

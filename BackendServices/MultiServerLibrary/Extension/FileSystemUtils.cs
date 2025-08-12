@@ -196,42 +196,6 @@ namespace MultiServerLibrary.Extension
         }
 
         /// <summary>
-        /// Compute the MD5 checksum of a file.
-        /// <para>Calcul la somme des contr�les en MD5 d'un fichier.</para>
-        /// </summary>
-        /// <param name="filePath">The input file path.</param>
-        /// <returns>A nullable string.</returns>
-        public static string ComputeMD5FromFile(string filePath)
-        {
-            try
-            {
-                return NetHasher.DotNetHasher.ComputeMD5String(File.OpenRead(filePath));
-            }
-            catch
-            {
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Compute the SHA256 checksum of a file.
-        /// <para>Calcul la somme des contr�les en SHA256 d'un fichier.</para>
-        /// </summary>
-        /// <param name="filePath">The input file path.</param>
-        /// <returns>A nullable string.</returns>
-        public static string ComputeSHA256FromFile(string filePath)
-        {
-            try
-            {
-                return NetHasher.DotNetHasher.ComputeSHA256String(File.OpenRead(filePath));
-            }
-            catch
-            {
-            }
-            return null;
-        }
-
-        /// <summary>
         /// Reads a fragment of a file with a given indicator.
         /// <para>Lire un fragment de fichier avec un indicateur explicite.</para>
         /// </summary>
