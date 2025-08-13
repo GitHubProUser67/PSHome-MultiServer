@@ -144,35 +144,26 @@ namespace HomeTools.Crypto
             }
         }
 
-        public static byte[] ProcessCrypt_Decrypt(byte[] inData, byte[] KeyBytes, byte[] IV, byte mode, bool fastApproximate = false)
+        public static byte[] ProcessCrypt_Decrypt(byte[] inData, byte[] KeyBytes, byte[] IV, byte mode)
         {
             byte BlockSize;
+            int chunkIndex = 0;
+            int inputLength = inData.Length;
+            List<KeyValuePair<(int, int), byte[]>> libsecureResults = new List<KeyValuePair<(int, int), byte[]>>();
 
             switch (mode)
             {
                 case 0: // Xtea
-                    if (fastApproximate)
-                        return LIBSECURE.InitiateXTEABuffer(inData, KeyBytes, IV, "CTR", false, true);
-                    BlockSize = 8;
-                    break;
                 case 1: // Blowfish
-                    if (fastApproximate)
-                        return LIBSECURE.InitiateBlowfishBuffer(inData, KeyBytes, IV, "CTR", false, true);
                     BlockSize = 8;
                     break;
                 case 2: // AES
-                    if (fastApproximate)
-                        return LIBSECURE.InitiateAESBuffer(inData, KeyBytes, IV, "CTR", false, true);
                     BlockSize = 16;
                     break;
                 default:
                     CustomLogger.LoggerAccessor.LogError($"[ToolsImplementation] - ProcessCrypt_Decrypt: unknown crypto mode selected:{mode}.");
                     return null;
             }
-
-            int chunkIndex = 0;
-            int inputLength = inData.Length;
-            List<KeyValuePair<(int, int), byte[]>> libsecureResults = new List<KeyValuePair<(int, int), byte[]>>();
 
             using (MemoryStream memoryStream = new MemoryStream(inData))
             {
