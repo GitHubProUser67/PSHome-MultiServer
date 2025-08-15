@@ -12,8 +12,23 @@ namespace Horizon.SERVER.Medius
 {
     public class MAPS : BaseMediusComponent
     {
-        public override int TCPPort => MediusClass.Settings.MAPSTCPPort;
-        public override int UDPPort => MediusClass.Settings.MAPSUDPPort;
+        public override int TCPPort
+        {
+            get => MediusClass.Settings.MAPSTCPPort;
+            set
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "[MAPS] - TCP Port can't be assigned.");
+            }
+        }
+
+        public override int UDPPort
+        {
+            get => MediusClass.Settings.MAPSUDPPort;
+            set
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "[MAPS] - UDP Port can't be assigned.");
+            }
+        }
 
         public static FactionManager factionManager = new FactionManager(0x7);
 
@@ -197,7 +212,7 @@ namespace Horizon.SERVER.Medius
                         //MAG BCET70016 v1.3 = 7002
                         data.ClientObject?.Queue(new NetMessageProtocolInfo()
                         {
-                            protocolInfo = 7002,
+                            protocolInfo = 1725,
                             buildNumber = 0
                         });
                         break;

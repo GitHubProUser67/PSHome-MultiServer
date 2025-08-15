@@ -25,8 +25,27 @@ namespace Horizon.SERVER.Medius
 {
     public class MAS : BaseMediusComponent
     {
-        public override int TCPPort => MediusClass.Settings.MASPort;
-        public override int UDPPort => 00000;
+        int _tcpPort = 0;
+
+        public override int TCPPort
+        {
+            get => _tcpPort;
+            set
+            {
+                if (value < 0 || value > 65535)
+                    throw new ArgumentOutOfRangeException(nameof(value), "[MAS] - Port must be between 0 and 65535.");
+                _tcpPort = value;
+            }
+        }
+
+        public override int UDPPort
+        {
+            get => 0;
+            set
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "[MAS] - UDP Port can't be assigned.");
+            }
+        }
 
         public static ServerSettings Settings = new();
 

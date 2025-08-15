@@ -540,7 +540,7 @@ namespace MultiServerLibrary.SSL
 
             if (certificatePath == null)
             {
-                LoggerAccessor.LogWarn($"[CertificateHelper] - LoadCertificate: Certificate file not found for: {certificatePathInput} with extensions {string.Join(", ", certExtensions)}");
+                LoggerAccessor.LogWarn($"[CertificateHelper] - LoadCertificate: Certificate file not found for: {certificatePathInput} with {(Path.HasExtension(certificatePathInput) ? $"extension {Path.GetExtension(certificatePathInput)}" : $"extensions {string.Join(", ", certExtensions)}")}");
                 return null;
             }
 
@@ -553,7 +553,7 @@ namespace MultiServerLibrary.SSL
 
             if (privateKeyPath == null)
             {
-                LoggerAccessor.LogWarn($"[CertificateHelper] - LoadCertificate: Private key file not found for: {privateKeyPathInput} with extensions {string.Join(", ", keyExtensions)}");
+                LoggerAccessor.LogWarn($"[CertificateHelper] - LoadCertificate: Private key file not found for: {privateKeyPathInput} with {(Path.HasExtension(privateKeyPathInput) ? $"extension {Path.GetExtension(privateKeyPathInput)}" : $"extensions {string.Join(", ", keyExtensions)}")}");
                 return null;
             }
 #if DEBUG

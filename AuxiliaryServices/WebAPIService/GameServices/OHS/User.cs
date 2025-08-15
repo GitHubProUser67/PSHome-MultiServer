@@ -639,7 +639,7 @@ namespace WebAPIService.GameServices.OHS
                                             output = $"\"{GlobalConstants.DragonStatueMax}\"";
                                         break;
                                     case "maxSceaPlazaReward":
-										output = "{ [\"maxSceaPlazaReward\"] = 5 }";
+										output = GlobalConstants.MaxSceaPlazaReward;
                                         break;
                                     case "DreamApartmentEntitlements":
                                         output = "{" + string.Join(",", LkwdConstants.LockwoodDreamApartmentEntitlements.ConvertAll(e => $"\"{e}\"")) + "}";

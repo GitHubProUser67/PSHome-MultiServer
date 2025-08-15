@@ -26,8 +26,23 @@ namespace Horizon.SERVER.Medius
 {
     public class MLS : BaseMediusComponent
     {
-        public override int TCPPort => MediusClass.Settings.MLSPort;
-        public override int UDPPort => 0;
+        public override int TCPPort
+        {
+            get => MediusClass.Settings.MLSPort;
+            set
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "[MLS] - TCP Port can't be assigned.");
+            }
+        }
+
+        public override int UDPPort
+        {
+            get => 0;
+            set
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "[MLS] - UDP Port can't be assigned.");
+            }
+        }
 
         #region Internal Anticheat Plugins
 

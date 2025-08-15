@@ -18,8 +18,23 @@ namespace Horizon.SERVER.Medius
 {
     public class MPS : BaseMediusComponent
     {
-        public override int TCPPort => MediusClass.Settings.MPSPort;
-        public override int UDPPort => 00000;
+        public override int TCPPort
+        {
+            get => MediusClass.Settings.MPSPort;
+            set
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "[MPS] - TCP Port can't be assigned.");
+            }
+        }
+
+        public override int UDPPort
+        {
+            get => 0;
+            set
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "[MPS] - UDP Port can't be assigned.");
+            }
+        }
 
         private static DateTime lastSend = DateTimeUtils.GetHighPrecisionUtcTime();
 

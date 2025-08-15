@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace MultiServerLibrary.GeoLocalization
 {
@@ -70,7 +71,7 @@ namespace MultiServerLibrary.GeoLocalization
             Dispose(false);
         }
 
-        public static void Initialize()
+        public static Task Initialize()
         {
             const string GeoLite2UpdaterUrl = "https://geolite2.edtunnel.best/download";
             string dbUrl = null;
@@ -88,42 +89,44 @@ namespace MultiServerLibrary.GeoLocalization
             }
 
             InitializeInstance(dbUrl);
+
+            return Task.CompletedTask;
         }
 
         private static void InitializeInstance(string dbUrl)
         {
             DatabaseReader reader;
             string directoryPath = $"{Directory.GetCurrentDirectory()}/static";
-            string DbOath = $"{directoryPath}/GeoIP2-Country.mmdb";
-            string liteDbOath = $"{directoryPath}/GeoLite2-Country.mmdb";
+            string DbPath = $"{directoryPath}/GeoIP2-Country.mmdb";
+            string liteDbPath = $"{directoryPath}/GeoLite2-Country.mmdb";
 
             try
             {
                 Directory.CreateDirectory(directoryPath);
 
                 // We favor premium/paid databases (not has the same update procedure as the lite variant so no auto-update for this one).
-                if (File.Exists(DbOath))
+                if (File.Exists(DbPath))
                 {
-                    reader = new DatabaseReader(DbOath);
+                    reader = new DatabaseReader(DbPath);
 #if DEBUG
                     CustomLogger.LoggerAccessor.LogInfo("[GeoIP] - InitializeInstance() - Loaded GeoIP2-Country.mmdb Database...");
 #endif
                 }
-                else if (File.Exists(liteDbOath))
+                else if (File.Exists(liteDbPath))
                 {
                     if (!string.IsNullOrEmpty(dbUrl))
                     {
                         byte[] dbData = HTTPProcessor.RequestFullURLGET(dbUrl).data;
 
-                        if (dbData != null && NetHasher.DotNetHasher.ComputeSHA256String(dbData) != NetHasher.DotNetHasher.ComputeSHA256String(File.ReadAllBytes(liteDbOath)))
+                        if (dbData != null && NetHasher.DotNetHasher.ComputeSHA256String(dbData) != NetHasher.DotNetHasher.ComputeSHA256String(File.ReadAllBytes(liteDbPath)))
                         {
-                            File.WriteAllBytes(liteDbOath, dbData);
+                            File.WriteAllBytes(liteDbPath, dbData);
 #if DEBUG
                             CustomLogger.LoggerAccessor.LogInfo($"[GeoIP] - InitializeInstance() - Updated GeoLite2-Country.mmdb Database as of: {DateTime.Now}.");
 #endif
                         }
                     }
-                    reader = new DatabaseReader(liteDbOath);
+                    reader = new DatabaseReader(liteDbPath);
 #if DEBUG
                     CustomLogger.LoggerAccessor.LogInfo("[GeoIP] - InitializeInstance() - Loaded GeoLite2-Country.mmdb Database...");
 #endif
@@ -134,8 +137,8 @@ namespace MultiServerLibrary.GeoLocalization
 
                     if (dbData != null)
                     {
-                        File.WriteAllBytes(liteDbOath, dbData);
-                        reader = new DatabaseReader(liteDbOath);
+                        File.WriteAllBytes(liteDbPath, dbData);
+                        reader = new DatabaseReader(liteDbPath);
 #if DEBUG
                         CustomLogger.LoggerAccessor.LogInfo("[GeoIP] - InitializeInstance() - Loaded GeoLite2-Country.mmdb Database...");
 #endif

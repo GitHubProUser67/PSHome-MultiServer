@@ -19,8 +19,25 @@ namespace Horizon.SERVER.Medius
     public class MMS : BaseMediusComponent
     {
         public static Random RNG = new();
-        public override int TCPPort => MediusClass.Settings.MMSTCPPort;
-        public override int UDPPort => 0;
+
+        public override int TCPPort
+        {
+            get => MediusClass.Settings.MMSTCPPort;
+            set
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "[MMS] - TCP Port can't be assigned.");
+            }
+        }
+
+        public override int UDPPort
+        {
+            get => 0;
+            set
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "[MMS] - UDP Port can't be assigned.");
+            }
+        }
+
         public IPAddress IPAddress => MediusClass.SERVER_IP;
 
         protected IEventLoopGroup? _bossGroup = null;

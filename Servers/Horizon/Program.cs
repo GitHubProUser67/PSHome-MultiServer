@@ -298,7 +298,7 @@ class Program
         };
 #endif
 
-        GeoIP.Initialize();
+        _ = GeoIP.Initialize();
 
         MultiServerLibraryConfiguration.RefreshVariables(configMultiServerLibraryPath);
 

@@ -95,12 +95,12 @@ namespace Horizon.SERVER.Config
         /// <summary>
         /// TCP Port of the MAPS server.
         /// </summary>
-        public int MAPSTCPPort { get; set; } = 10373;
+        public int MAPSTCPPort { get; set; } = 10471;
 
         /// <summary>
         /// UDP Port of the MAPS server.
         /// </summary>
-        public int MAPSUDPPort { get; set; } = 10372;
+        public int MAPSUDPPort { get; set; } = 10472;
 
         public int MMSTCPPort { get; set; } = 10079;
 
@@ -108,8 +108,7 @@ namespace Horizon.SERVER.Config
         /// <summary>
         /// Port of the MAS server.
         /// </summary>
-        public int MASPort { get; set; } = 10075;
-        //public int[] MASPorts { get; set; } = new int[] { 10075, 10080 };
+        public int[] MASPorts { get; set; } = new int[] { 10075, 10475 };
         /// <summary>
         /// Port of the MLS server.
         /// </summary>

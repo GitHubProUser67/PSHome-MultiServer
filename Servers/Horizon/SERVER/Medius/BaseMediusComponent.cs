@@ -31,8 +31,8 @@ namespace Horizon.SERVER.Medius
             AUTHENTICATED
         }
 
-        public abstract int TCPPort { get; }
-        public abstract int UDPPort { get; }
+        public abstract int TCPPort { get; set; }
+        public abstract int UDPPort { get; set; }
 
         public IPAddress IPAddress => MediusClass.SERVER_IP;
 

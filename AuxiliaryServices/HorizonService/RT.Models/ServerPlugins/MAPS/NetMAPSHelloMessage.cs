@@ -42,6 +42,9 @@ namespace HorizonService.RT.Models.ServerPlugins.MAPS
             BufferImpl.WritePrimitive(statusBuffer, m_success ? (byte)1 : (byte)0, ref statusBitIndex, debug);
             BufferImpl.WritePrimitive(statusBuffer, m_isOnline ? (byte)1 : (byte)0, ref statusBitIndex, debug);
 
+            BufferImpl.WritePrimitive(buffer, EndianAwareConverter.ToInt32(statusBuffer, Endianness.LittleEndian, 0), ref BitIndex, debug);
+            BufferImpl.WritePrimitive(buffer, m_availableFactions.m_bitArray, ref BitIndex, debug);
+
             // serialize rsa modulus
             // this is sent in server hello at offset 0x194
             // we're going to overwrite the cert at that offset to store the rsa modulus
@@ -56,9 +59,6 @@ namespace HorizonService.RT.Models.ServerPlugins.MAPS
             {
                 BufferImpl.WritePrimitive(buffer, val, ref BitIndex, debug);
             }
-
-            BufferImpl.WritePrimitive(buffer, EndianAwareConverter.ToInt32(statusBuffer, Endianness.LittleEndian, 0), ref BitIndex, debug);
-            BufferImpl.WritePrimitive(buffer, m_availableFactions.m_bitArray, ref BitIndex, debug);
 
             writer.Write(buffer, buffer.Length);
         }

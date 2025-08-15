@@ -36,7 +36,7 @@ namespace Horizon.SERVER
 
         public static MAPS ProfileServer = new();
         public static MMS MatchmakingServer = new();
-        public static MAS AuthenticationServer = new();
+        public static ConcurrentList<MAS> AuthenticationServers = new();
         public static MLS LobbyServer = new();
         public static MPS ProxyServer = new();
 
@@ -93,7 +93,7 @@ namespace Horizon.SERVER
 
                 // Tick
                 await Task.WhenAll(
-                    AuthenticationServer.Tick(),
+                    Task.WhenAll(AuthenticationServers.Select(server => server.Tick())),
                     LobbyServer.Tick(),
                     ProxyServer.Tick(),
                     ProfileServer.Tick(),
@@ -107,7 +107,10 @@ namespace Horizon.SERVER
 
                 if ((DateTimeUtils.GetHighPrecisionUtcTime() - _lastComponentLog).TotalSeconds > 15f)
                 {
-                    AuthenticationServer.Log();
+                    foreach (var authServer in AuthenticationServers)
+                    {
+                        authServer.Log();
+                    }
                     LobbyServer.Log();
                     ProxyServer.Log();
                     ProfileServer.Log();
@@ -144,7 +147,10 @@ namespace Horizon.SERVER
         {
             started = false;
 
-            await AuthenticationServer.Stop();
+            foreach (var authServer in AuthenticationServers)
+            {
+                await authServer.Stop();
+            }
             await LobbyServer.Stop();
             await ProxyServer.Stop();
             await ProfileServer.Stop();
@@ -155,20 +161,10 @@ namespace Horizon.SERVER
         {
             try
             {
-                string? AppIdArray = null; //string.Join(", ", Settings.ApplicationIds);
-
                 LoggerAccessor.LogInfo("Initializing medius components...");
-                // Program
                 LoggerAccessor.LogInfo("**************************************************");
-
-                string datetime = DateTime.Now.ToString("MMMM/dd/yyyy hh:mm:ss tt");
-                LoggerAccessor.LogInfo($"* Launched on {datetime}");
-
-                // Get the current process.
-                Process currentProcess = Process.GetCurrentProcess();
-
-                //Parent ProcessId
-                LoggerAccessor.LogInfo($"* Process ID: {currentProcess.Id}");
+                LoggerAccessor.LogInfo($"* Launched on {DateTime.Now:MMMM/dd/yyyy hh:mm:ss tt}");
+                LoggerAccessor.LogInfo($"* Process ID: {Environment.ProcessId}");
 
                 if (HorizonServerConfiguration.Database._settings.SimulatedMode == true)
                     LoggerAccessor.LogInfo("* Database Disabled Medius Stack");
@@ -203,76 +199,80 @@ namespace Horizon.SERVER
                 if (Settings.MediusServerVersionOverride)
                 {
                     #region MAPS - Zipper Interactive MAG/Socom 4
-                    if (Settings.EnableMAPS == true)
+                    if (Settings.EnableMAPS)
                     {
                         LoggerAccessor.LogInfo($"MAPS Version: {Settings.MAPSVersion}");
                         LoggerAccessor.LogInfo($"Enabling MAPS on Server IP = {SERVER_IP} TCP Port = {ProfileServer.TCPPort} UDP Port = {ProfileServer.UDPPort}.");
 
                         ProfileServer.Start();
+
                         LoggerAccessor.LogInfo("Medius Profile Server Intialized and Now Accepting Clients");
                     }
                     #endregion
 
                     #region MMS Enabled?
-                    if (Settings.EnableMMS == true)
+                    if (Settings.EnableMMS)
                     {
                         #region MAS 
                         LoggerAccessor.LogInfo($"MMS Version: {Settings.MMSVersion}");
                         LoggerAccessor.LogInfo($"Enabling MMS on Server IP = {SERVER_IP} TCP Port = {MatchmakingServer.TCPPort} UDP Port = {MatchmakingServer.UDPPort}.");
-                        //LoggerAccessor.LogInfo($"Medius Matchmaking Server running under ApplicationID {AppIdArray}");
 
                         //Connecting to Medius Universe Manager 127.0.0.1 10076 1
                         //Connected to Universe Manager server
 
                         MatchmakingServer.Start();
-                        LoggerAccessor.LogInfo("Medius Matchmaking Server Initialized");
+
+                        LoggerAccessor.LogInfo("Medius Matchmaking Server Initialized and Now Accepting Clients");
                         #endregion
 
                     }
                     #endregion
 
                     #region MAS Enabled?
-                    if (Settings.EnableMAS == true)
+                    if (Settings.EnableMAS)
                     {
                         #region MAS 
                         LoggerAccessor.LogInfo($"MAS Version: {Settings.MASVersion}");
-                        LoggerAccessor.LogInfo($"Enabling MAS on Server IP = {SERVER_IP} TCP Port = {AuthenticationServer.TCPPort} UDP Port = {AuthenticationServer.UDPPort}.");
-                        //LoggerAccessor.LogInfo($"Medius Authentication Server running under ApplicationID {AppIdArray}");
+                        LoggerAccessor.LogInfo($"Enabling MAS on Server IP = {SERVER_IP} TCP Ports = {string.Join(", ", AuthenticationServers.Select(server => server.TCPPort))} UDP Ports = {string.Join(", ", AuthenticationServers.Select(server => server.UDPPort))}.");
 
                         //Connecting to Medius Universe Manager 127.0.0.1 10076 1
                         //Connected to Universe Manager server
 
-                        AuthenticationServer.Start();
-                        LoggerAccessor.LogInfo("Medius Authentication Server Initialized");
+                        foreach (var authServer in AuthenticationServers)
+                        {
+                            authServer.Start();
+                        }
+
+                        LoggerAccessor.LogInfo("Medius Authentication Server Initialized and Now Accepting Clients");
                         #endregion
 
                     }
                     #endregion
 
                     #region MLS Enabled?
-                    if (Settings.EnableMLS == true)
+                    if (Settings.EnableMLS)
                     {
                         LoggerAccessor.LogInfo($"MLS Version: {Settings.MLSVersion}");
                         LoggerAccessor.LogInfo($"Enabling MLS on Server IP = {SERVER_IP} TCP Port = {LobbyServer.TCPPort} UDP Port = {LobbyServer.UDPPort}.");
-                        LoggerAccessor.LogInfo($"Medius Lobby Server running under ApplicationID {AppIdArray}");
 
                         LobbyServer.Start();
+
                         LoggerAccessor.LogInfo("Medius Lobby Server Initialized and Now Accepting Clients");
                     }
                     #endregion
 
                     #region MPS Enabled?
-                    if (Settings.EnableMPS == true)
+                    if (Settings.EnableMPS)
                     {
                         LoggerAccessor.LogInfo($"MPS Version: {Settings.MPSVersion}");
                         LoggerAccessor.LogInfo($"Enabling MPS on Server IP = {SERVER_IP} TCP Port = {ProxyServer.TCPPort}.");
-                        //LoggerAccessor.LogInfo($"Medius Proxy Server running under ApplicationID {AppIdArray}");
-
-                        ProxyServer.Start();
-                        LoggerAccessor.LogInfo("Medius Proxy Server Initialized and Now Accepting Clients");
 
                         //Connecting to Medius Universe Manager 127.0.0.1 10076 1
                         //Connected to Universe Manager server after 1 attempts
+
+                        ProxyServer.Start();
+
+                        LoggerAccessor.LogInfo("Medius Proxy Server Initialized and Now Accepting Clients");
                     }
                     #endregion
                 }
@@ -280,76 +280,75 @@ namespace Horizon.SERVER
                 {
 
                     #region MAPS - Zipper Interactive MAG/Socom 4
-                    if (Settings.EnableMAPS == true)
+                    if (Settings.EnableMAPS)
                     {
                         LoggerAccessor.LogInfo($"Enabling MAPS on Server IP = {SERVER_IP} TCP Port = {ProfileServer.TCPPort} UDP Port = {ProfileServer.UDPPort}.");
-                        //LoggerAccessor.LogInfo($"Medius Profile Server running under ApplicationID {AppIdArray}");
 
                         ProfileServer.Start();
+
                         LoggerAccessor.LogInfo("Medius Profile Server Intialized and Now Accepting Clients");
                     }
                     #endregion
 
                     #region MMS Enabled?
-                    if (Settings.EnableMMS == true)
+                    if (Settings.EnableMMS)
                     {
                         #region MAS 
-                        LoggerAccessor.LogInfo($"MMS Version: {Settings.MMSVersion}");
                         LoggerAccessor.LogInfo($"Enabling MMS on Server IP = {SERVER_IP} TCP Port = {MatchmakingServer.TCPPort} UDP Port = {MatchmakingServer.UDPPort}.");
-                        //LoggerAccessor.LogInfo($"Medius Matchmaking Server running under ApplicationID {AppIdArray}");
 
                         //Connecting to Medius Universe Manager 127.0.0.1 10076 1
                         //Connected to Universe Manager server
 
                         MatchmakingServer.Start();
-                        LoggerAccessor.LogInfo("Medius Matchmaking Server Initialized");
+
+                        LoggerAccessor.LogInfo("Medius Matchmaking Server Initialized and Now Accepting Clients");
                         #endregion
 
                     }
                     #endregion
 
                     #region MAS
-                    if (Settings.EnableMAS == true)
+                    if (Settings.EnableMAS)
                     {
-                        LoggerAccessor.LogInfo($"MAS Version: {Settings.MASVersion}");
-                        LoggerAccessor.LogInfo($"Enabling MAS on Server IP = {SERVER_IP} TCP Port = {AuthenticationServer.TCPPort} UDP Port = {AuthenticationServer.UDPPort}.");
-                        //LoggerAccessor.LogInfo($"Medius Authentication Server running under ApplicationID {AppIdArray}");
+                        LoggerAccessor.LogInfo($"Enabling MAS on Server IP = {SERVER_IP} TCP Port = {string.Join(", ", AuthenticationServers.Select(server => server.TCPPort))} UDP Port = {string.Join(", ", AuthenticationServers.Select(server => server.UDPPort))}.");
 
                         //Connecting to Medius Universe Manager 127.0.0.1 10076 1
                         //Connected to Universe Manager server
 
-                        AuthenticationServer.Start();
-                        LoggerAccessor.LogInfo("Medius Authentication Server Initialized");
+                        foreach (var authServer in AuthenticationServers)
+                        {
+                            authServer.Start();
+                        }
+
+                        LoggerAccessor.LogInfo("Medius Authentication Server Initialized and Now Accepting Clients");
 
                     }
                     #endregion
 
                     #region MLS Enabled?
-                    if (Settings.EnableMAS == true)
+                    if (Settings.EnableMAS)
                     {
-                        LoggerAccessor.LogInfo($"MLS Version: {Settings.MLSVersion}");
                         LoggerAccessor.LogInfo($"Enabling MLS on Server IP = {SERVER_IP} TCP Port = {LobbyServer.TCPPort} UDP Port = {LobbyServer.UDPPort}.");
-                        //LoggerAccessor.LogInfo($"Medius Lobby Server running under ApplicationID {AppIdArray}");
 
                         //DMEServerResetMetrics();
 
                         LobbyServer.Start();
+
                         LoggerAccessor.LogInfo("Medius Lobby Server Initialized and Now Accepting Clients");
                     }
                     #endregion
 
                     #region MPS Enabled?
-                    if (Settings.EnableMPS == true)
+                    if (Settings.EnableMPS)
                     {
-                        LoggerAccessor.LogInfo($"MPS Version: {Settings.MPSVersion}");
                         LoggerAccessor.LogInfo($"Enabling MPS on Server IP = {SERVER_IP} TCP Port = {ProxyServer.TCPPort}.");
-                        //LoggerAccessor.LogInfo($"Medius Proxy Server running under ApplicationID {AppIdArray}");
-
-                        ProxyServer.Start();
-                        LoggerAccessor.LogInfo("Medius Proxy Server Initialized and Now Accepting Clients");
 
                         //Connecting to Medius Universe Manager 127.0.0.1 10076 1
                         //Connected to Universe Manager server after 1 attempts
+
+                        ProxyServer.Start();
+
+                        LoggerAccessor.LogInfo("Medius Proxy Server Initialized and Now Accepting Clients");
                     }
                     #endregion
 
@@ -360,7 +359,7 @@ namespace Horizon.SERVER
                 #region NAT
                 //Get NATIp
                 if (string.IsNullOrEmpty(Settings.NATIp))
-                    LoggerAccessor.LogError("[MEDIUS] - No NAT ip found! Fallback to Sony's one.");
+                    LoggerAccessor.LogWarn("[MEDIUS] - No NAT ip found! Fallback to Sony's one.");
                 #endregion
 
                 //* Diagnostic Profiling Enabled: %d Counts
@@ -487,7 +486,7 @@ namespace Horizon.SERVER
 
                 #endregion
 
-                LoggerAccessor.LogInfo("Medius Initialized.");
+                LoggerAccessor.LogInfo("[Medius] - Initialized all servers.");
 
                 started = true;
 
@@ -535,6 +534,18 @@ namespace Horizon.SERVER
 
             if (string.IsNullOrEmpty(Settings.NATIp)) // Update NAT Ip with server ip if null
                 Settings.NATIp = "natservice.pdonline.scea.com";
+
+            foreach (int masPort in Settings.MASPorts)
+            {
+                if (!AuthenticationServers.Any(x => x.TCPPort == masPort))
+                    AuthenticationServers.Add(new MAS() { TCPPort = masPort });
+            }
+
+            foreach (var server in AuthenticationServers
+                .Where(x => !Settings.MASPorts.Contains(x.TCPPort)))
+            {
+                server.Stop().ContinueWith(_ => AuthenticationServers.Remove(server));
+            }
 
             // Update default rsa key
             LIBRARY.Pipeline.Attribute.ScertClientAttribute.DefaultRsaAuthKey = Settings.DefaultKey;

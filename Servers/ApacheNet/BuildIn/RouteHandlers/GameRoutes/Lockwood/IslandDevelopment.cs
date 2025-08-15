@@ -1062,6 +1062,37 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                     </lua>");
                                     return;
                                 }
+                                else if (sceneIdent == "Lounge")
+                                {
+                                    await ctx.Response.Send($@"<lua>
+	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+                                        <applet>
+		                                    <Posertrons_V2></Posertrons_V2>
+	                                    </applet>
+	                                    <feature_root>
+		                                    <root>
+			                                    <rot type='vec'>0,15,0,15</rot>
+                                                <scale type='vec'>1,1,1,1</scale>
+                                                <pos type='vec'>6.910,-0.2,22.800,0</pos>
+                                                <applet>
+			                                        <name>Posertrons_V2</name>
+                                                    <override>
+                                                        <appletId>Posertron_Applet</appletId>
+                                                        <register>AppletRegister_posertron.lua</register>
+                                                        <params>
+                                                            <model>
+                                                                <mdl>lock.mdl</mdl>
+                                                                <skn>lock.skn</skn>
+                                                                <ani>lock.ani</ani>
+                                                            </model>
+                                                        </params>
+                                                    </override>
+		                                        </applet>
+		                                    </root>
+	                                    </feature_root>
+                                    </lua>");
+                                    return;
+                                }
                                 break;
                             case "Gate":
                                 if (sceneIdent == "Lounge")
@@ -1071,9 +1102,6 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                         <applet>
 		                                    <UUIDGate_def></UUIDGate_def>
 	                                    </applet>
-                                        <entityGroup>
-		                                    <EntityGroup_def></EntityGroup_def>
-	                                    </entityGroup>
                                         <detectors>
 		                                    <detectorsGate_def></detectorsGate_def>
 	                                    </detectors>
@@ -1105,23 +1133,6 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                                     </override>
 		                                        </detectors>
 		                                    </root>
-                                            <root_gate>
-			                                    <rot type='vec'>0,15,0,15</rot>
-                                                <scale type='vec'>1,1,1,1</scale>
-                                                <pos type='vec'>6.910,-0.2,22.800,0</pos>
-                                                <entityGroup>
-			                                        <name>EntityGroup_def</name>
-                                                    <override>
-                                                        <entities>
-                                                            <_>
-                                                                <mdl>lock.mdl</mdl>
-                                                                <skn>lock.skn</skn>
-                                                                <ani>lock.ani</ani>
-                                                            </_>
-                                                        </entities>
-                                                    </override>
-		                                        </entityGroup>
-		                                    </root_gate>
                                             <gate_dest>
 			                                    <rot type='vec'>0,0,0,0</rot>
                                                 <scale type='vec'>0,0,0,0</scale>
