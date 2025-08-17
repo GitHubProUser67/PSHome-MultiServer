@@ -18,6 +18,8 @@ namespace HomeWebTools
         {
             APIStaticFolder = param + "/!HomeTools";
 
+            //HomeTools.CDS.CTRExploitProcess.UseHCDBBruteforceShortcut = true;
+
             return Task.CompletedTask;
         }
 

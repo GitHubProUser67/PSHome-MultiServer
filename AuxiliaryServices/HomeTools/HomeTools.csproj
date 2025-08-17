@@ -15,7 +15,7 @@
   </ItemGroup>
   
   <PropertyGroup>
-    <DefineConstants>$(DefineConstants);SERVER_MODE;HCDB_BRUTEFORCE_FAST_APPROXIMATE</DefineConstants>
+    <DefineConstants>$(DefineConstants);SERVER_MODE</DefineConstants>
   </PropertyGroup>
 
 </Project>
