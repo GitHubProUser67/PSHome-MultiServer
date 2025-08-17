@@ -87,7 +87,7 @@ namespace WebAPIService.GameServices.CODEGLUE
 
             XElement xmlScoreboard = new XElement(gameName);
 
-            foreach (var entry in scoreboard.OrderByDescending(score => score))
+            foreach (var entry in scoreboard.OrderByDescending(entry => entry.score))
             {
                 XElement xmlEntry = new XElement("ENTRY",
                     new XElement("RANK", i),
