@@ -99,10 +99,14 @@ namespace MultiServerLibrary.GeoLocalization
             string directoryPath = $"{Directory.GetCurrentDirectory()}/static";
             string DbPath = $"{directoryPath}/GeoIP2-Country.mmdb";
             string liteDbPath = $"{directoryPath}/GeoLite2-Country.mmdb";
+            string lockFilePath = directoryPath + $"/{nameof(GeoIP)}.lock";
 
             try
             {
                 Directory.CreateDirectory(directoryPath);
+
+                if (File.Exists(lockFilePath))
+                    FileSystemUtils.WaitForFileDeletionAsync(lockFilePath).Wait();
 
                 // We favor premium/paid databases (not has the same update procedure as the lite variant so no auto-update for this one).
                 if (File.Exists(DbPath))
@@ -118,6 +122,8 @@ namespace MultiServerLibrary.GeoLocalization
                     {
                         byte[] dbData = HTTPProcessor.RequestFullURLGET(dbUrl).data;
 
+                        File.WriteAllText(lockFilePath, "DO NOT MODIFY OR REMOVE THIS FILE");
+
                         if (dbData != null && NetHasher.DotNetHasher.ComputeSHA256String(dbData) != NetHasher.DotNetHasher.ComputeSHA256String(File.ReadAllBytes(liteDbPath)))
                         {
                             File.WriteAllBytes(liteDbPath, dbData);
@@ -125,6 +131,8 @@ namespace MultiServerLibrary.GeoLocalization
                             CustomLogger.LoggerAccessor.LogInfo($"[GeoIP] - InitializeInstance() - Updated GeoLite2-Country.mmdb Database as of: {DateTime.Now}.");
 #endif
                         }
+
+                        File.Delete(lockFilePath);
                     }
                     reader = new DatabaseReader(liteDbPath);
 #if DEBUG
@@ -134,6 +142,8 @@ namespace MultiServerLibrary.GeoLocalization
                 else if (!string.IsNullOrEmpty(dbUrl))
                 {
                     byte[] dbData = HTTPProcessor.RequestFullURLGET(dbUrl).data;
+
+                    File.WriteAllText(lockFilePath, "DO NOT MODIFY OR REMOVE THIS FILE");
 
                     if (dbData != null)
                     {
@@ -145,15 +155,13 @@ namespace MultiServerLibrary.GeoLocalization
                     }
                     else
                         reader = null;
+
+                    File.Delete(lockFilePath);
                 }
                 else
                     reader = null;
 
                 _instance = new GeoIP(reader);
-            }
-            catch (IOException)
-            {
-                InitializeInstance(dbUrl); // Try again...
             }
             catch (Exception e)
             {

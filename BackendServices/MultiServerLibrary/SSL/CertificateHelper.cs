@@ -228,8 +228,9 @@ namespace MultiServerLibrary.SSL
         public static X509Certificate2 CreateRootCertificateAuthority(string OutputCertificatePath, HashAlgorithmName Hashing, string CN = "MultiServer Certificate Authority", string OU = "Scientists Department", string O = "MultiServer Corp", string L = "New York", string S = "Northeastern United", string C = "US")
         {
             string certDirectoryPath = Path.GetDirectoryName(OutputCertificatePath);
+            string lockFilePath = certDirectoryPath + $"/{nameof(CertificateHelper)}.lock";
 
-            File.WriteAllText(certDirectoryPath + "/lock.txt", string.Empty);
+            File.WriteAllText(lockFilePath, "DO NOT MODIFY OR REMOVE THIS FILE");
 
             byte[] certSerialNumber = new byte[16];
 
@@ -284,7 +285,7 @@ namespace MultiServerLibrary.SSL
                 else
                     File.WriteAllBytes(OutputCertificatePath, RootCACertificate.Export(X509ContentType.Pfx, string.Empty));
 
-                File.Delete(certDirectoryPath + "/lock.txt");
+                File.Delete(lockFilePath);
 
                 return RootCACertificate;
             }
@@ -496,9 +497,10 @@ namespace MultiServerLibrary.SSL
             Directory.CreateDirectory(directoryPath);
 
             X509Certificate2 RootCACertificate = null;
+            string lockFilePath = directoryPath + $"/{nameof(CertificateHelper)}.lock";
 
-            if (File.Exists(directoryPath + "/lock.txt"))
-                WaitForFileDeletionAsync(directoryPath + "/lock.txt").Wait();
+            if (File.Exists(lockFilePath))
+                FileSystemUtils.WaitForFileDeletionAsync(lockFilePath).Wait();
 
             RootCACertificate = LoadCertificate(directoryPath + $"/{rootCaCertName}_rootca.pem", directoryPath + $"/{rootCaCertName}_rootca_privkey.pem");
 
@@ -804,33 +806,6 @@ namespace MultiServerLibrary.SSL
         private static void CreateCertificatesTextFile(string rootcaSubject, string FileName)
         {
             File.WriteAllText(FileName, rootcaSubject + ENTRUST_NET_CA + CLOUDFLARE_NET_CA + LETSENCRYPT_ISRG1_NET_CA + LETSENCRYPT_ISRG2_NET_CA);
-        }
-
-        private static async Task WaitForFileDeletionAsync(string filePath)
-        {
-            string directoryPath = Path.GetDirectoryName(filePath);
-
-            if (!string.IsNullOrEmpty(directoryPath))
-            {
-                using (FileSystemWatcher fileSystemWatcher = new FileSystemWatcher(directoryPath))
-                {
-                    TaskCompletionSource<bool> deletionCompletionSource = new TaskCompletionSource<bool>();
-
-                    // Watch for file deletion
-                    fileSystemWatcher.Deleted += (sender, e) =>
-                    {
-                        if (e.Name == Path.GetFileName(filePath))
-                            // Signal that the file has been deleted
-                            deletionCompletionSource.SetResult(true);
-                    };
-
-                    // Enable watching
-                    fileSystemWatcher.EnableRaisingEvents = true;
-
-                    // Wait for the file to be deleted or for cancellation
-                    await deletionCompletionSource.Task.ConfigureAwait(false);
-                }
-            }
         }
 #if !NET5_0_OR_GREATER
         private static byte[] ExportRSAPrivateKey(this RSA rsa)
