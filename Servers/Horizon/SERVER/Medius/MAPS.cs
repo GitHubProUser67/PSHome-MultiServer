@@ -7,6 +7,7 @@ using Horizon.MUM.Models;
 using Horizon.LIBRARY.Pipeline.Attribute;
 using HorizonService.RT.Models.ServerPlugins.MAPS;
 using HorizonService.ZipperPlugin.Models;
+using HorizonService.ZipperPlugin;
 
 namespace Horizon.SERVER.Medius
 {
@@ -74,7 +75,7 @@ namespace Horizon.SERVER.Medius
                         #region Check if AppId from Client matches Server
                         if (!MediusClass.Manager.IsAppIdSupported(clientConnectTcp.AppId))
                         {
-                            LoggerAccessor.LogError($"Client {clientChannel.RemoteAddress} attempting to authenticate with incompatible app id {clientConnectTcp.AppId}");
+LoggerAccessor.LogError($"[MAPS] - Client {clientChannel.RemoteAddress} attempting to authenticate with incompatible app id {clientConnectTcp.AppId}");
                             await clientChannel.CloseAsync();
                             return;
                         }
@@ -187,7 +188,7 @@ namespace Horizon.SERVER.Medius
                     }
                 default:
                     {
-                        LoggerAccessor.LogWarn($"UNHANDLED RT MESSAGE: {message}");
+LoggerAccessor.LogWarn($"[MAPS] - UNHANDLED RT MESSAGE: {message}");
 
                         break;
                     }
@@ -248,7 +249,7 @@ namespace Horizon.SERVER.Medius
 
                 default:
                     {
-                        LoggerAccessor.LogWarn($"Unhandled Medius Plugin Message: {message}");
+LoggerAccessor.LogWarn($"[MAPS] - Unhandled Medius Plugin Message: {message}");
                         break;
                     }
             }

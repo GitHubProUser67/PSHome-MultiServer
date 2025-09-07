@@ -1,15 +1,17 @@
 ﻿using CustomLogger;
 using HttpMultipartParser;
+using Microsoft.EntityFrameworkCore;
 using MultiServerLibrary.HTTP;
 using System;
 using System.Globalization;
 using System.IO;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.COGS
 {
     public class COGSClass
     {
-        private static COGSScoreBoardData _leaderboard = new COGSScoreBoardData();
+        private static COGSScoreBoardData _leaderboard = null;
 
         private string workpath;
         private string method;
@@ -22,6 +24,15 @@ namespace WebAPIService.GameServices.COGS
 
         public string ProcessRequest(byte[] PostData = null, string ContentType = null)
         {
+            if (_leaderboard == null)
+            {
+                var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                retCtx.Database.Migrate();
+
+                _leaderboard = new COGSScoreBoardData(retCtx);
+            }
+
             switch (method)
             {
                 case "POST":
@@ -35,11 +46,8 @@ namespace WebAPIService.GameServices.COGS
                             {
                                 var data = MultipartFormDataParser.Parse(copyStream, boundary);
 
-                                lock (_leaderboard)
-                                {
-                                    _leaderboard.UpdateScoreBoard(data.GetParameterValue("Name"), float.Parse(data.GetParameterValue("Points"), CultureInfo.InvariantCulture));
-                                    return _leaderboard.UpdateScoreboardXml(workpath);
-                                }
+                                _ = _leaderboard.UpdateScoreAsync(data.GetParameterValue("Name"), float.Parse(data.GetParameterValue("Points"), CultureInfo.InvariantCulture));
+                                return _leaderboard.SerializeToString("xml").Result;
                             }
                         }
                         catch (Exception ex)
@@ -49,7 +57,7 @@ namespace WebAPIService.GameServices.COGS
                     }
                     break;
                 case "GET":
-                    return _leaderboard.UpdateScoreboardXml(workpath);
+                    return _leaderboard.SerializeToString("xml").Result;
             }
 
             return null;

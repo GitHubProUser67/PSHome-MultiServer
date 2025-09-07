@@ -33,7 +33,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -118,7 +118,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -132,7 +132,7 @@ namespace SVO.Games.PS3
 
                                         byte[] unityNpLogin = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \r\n" +
                                             "<SVML>\r\n" +
-                                            $"        <UNITY name=\"login\" type=\"command\" success_href=\"/SINGSTARPS3_SVML/singstar/home.jsp\" success_linkoption=\"NORMAL\"/>\r\n" +
+                                            $"        <UNITY name=\"login\" type=\"command\" success_href=\"/SINGSTARPS3_SVML/singstar/init_online.jsp\" success_linkoption=\"NORMAL\"/>\r\n" +
                                             $"        <SET name=\"nohistory\" neverBackOnto=\"true\"/>\r\n" +
                                             $"</SVML>");
 
@@ -164,7 +164,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -274,14 +274,14 @@ namespace SVO.Games.PS3
 
                             break;
 
-                        case "/SINGSTARPS3_SVML/singstar/home.jsp":
+                        case "/SINGSTARPS3_SVML/singstar/init_online.jsp":
                             switch (request.HttpMethod)
                             {
                                 case "GET":
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -293,52 +293,13 @@ namespace SVO.Games.PS3
                                         response.Headers.Set("Content-Type", "text/svml; charset=UTF-8");
                                         response.Headers.Set("X-SVOMac", serverMac);
 
-                                        byte[] homeResponse = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n\r\n" +
-                                            "<SVML>\r\n" +
-                                            " <SS:SCREEN name=\"page\">\r\n" +
-                                            "   <SS:TEXT name=\"title\" x=\"0\" y=\"40\">My SingStar Online</SS:TEXT>\r\n\r\n" +
-                                            "   <SS:TEXT name=\"subTitle\" x=\"0\" y=\"60\">sélectionner le serveur</SS:TEXT>\r\n\r\n" +
-                                            "   <SINGBUTTON name=\"offline\" linkOption=\"NORMAL\" href=\"offline/store/viewSongs.svml\"\r\n" +
-                                            "     fillColor=\"#FF027ABB\" highlightFillColor=\"#FF13DEEA\"\r\n" +
-                                            "     textColor=\"#FFFFFFFF\" highlightTextColor=\"#FFFFFFFF\"\r\n" +
-                                            "     x=\"0\" y=\"70\" width=\"250\" height=\"100\" label=\"Shop Static\"> </SINGBUTTON>\r\n\r\n" +
-                                            "   <SINGBUTTON name=\"unity\" linkOption=\"NORMAL\" href=\"netInit.svml\"\r\n" +
-                                            "     fillColor=\"#FF027ABB\" highlightFillColor=\"#FF13DEEA\"\r\n" +
-                                            "     textColor=\"#FFFFFFFF\" highlightTextColor=\"#FFFFFFFF\"\r\n" +
-                                            "     x=\"300\" y=\"70\" width=\"250\" height=\"100\" label=\"unity\"></SINGBUTTON>\r\n\r\n" +
-                                            "   <SINGBUTTON name=\"stable\" linkOption=\"NORMAL\" href=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/start.jsp\"\r\n" +
-                                            "     fillColor=\"#FF027ABB\" highlightFillColor=\"#FF13DEEA\"\r\n     textColor=\"#FFFFFFFF\" highlightTextColor=\"#FFFFFFFF\"\r\n" +
-                                            "     x=\"600\" y=\"70\" width=\"250\" height=\"100\" label=\"stable\"></SINGBUTTON>\r\n\r\n" +
-                                            "   <SINGBUTTON name=\"hotbox\" linkOption=\"NORMAL\" href=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/singstar/home.jsp\"\r\n" +
-                                            "     fillColor=\"#FF027ABB\" highlightFillColor=\"#FF13DEEA\"\r\n" +
-                                            "     textColor=\"#FFFFFFFF\" highlightTextColor=\"#FFFFFFFF\"\r\n" +
-                                            "     x=\"900\" y=\"70\" width=\"250\" height=\"100\" label=\"hotbox\"></SINGBUTTON>\r\n\r\n" +
-                                            "   <SINGBUTTON name=\"nchingpc\" linkOption=\"NORMAL\" href=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/singstar/home.jsp\"\r\n" +
-                                            "     fillColor=\"#FF027ABB\" highlightFillColor=\"#FF13DEEA\"\r\n" +
-                                            "     textColor=\"#FFFFFFFF\" highlightTextColor=\"#FFFFFFFF\"\r\n" +
-                                            "     x=\"0\" y=\"300\" width=\"200\" height=\"100\" label=\"nchingpc\"></SINGBUTTON>\r\n\r\n" +
-                                            "   <SINGBUTTON name=\"vpatelpc\"linkOption=\"NORMAL\" href=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/singstar/home.jsp\"\r\n" +
-                                            "     fillColor=\"#FF027ABB\" highlightFillColor=\"#FF13DEEA\"\r\n" +
-                                            "     textColor=\"#FFFFFFFF\" highlightTextColor=\"#FFFFFFFF\"\r\n" +
-                                            "     x=\"250\" y=\"300\" width=\"200\" height=\"100\" label=\"vpatelpc\"></SINGBUTTON>\r\n\r\n" +
-                                            "   <SINGBUTTON class=\"BUTTON1\" name=\"Test\" linkOption=\"NORMAL\" href=\"other.svml\"\r\n" +
-                                            "     fillColor=\"#FF027ABB\" highlightFillColor=\"#FF13DEEA\"\r\n" +
-                                            "     textColor=\"#FFFFFFFF\" highlightTextColor=\"#FFFFFFFF\"\r\n" +
-                                            "     x=\"500\" y=\"300\" width=\"200\" height=\"100\" label=\"offline\"></SINGBUTTON>\r\n\r\n" +
-                                            "  <SINGBUTTON name=\"data\" linkOption=\"NORMAL\" href=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/singstar/test/testData.jsp\"\r\n" +
-                                            "     fillColor=\"#FF027ABB\" highlightFillColor=\"#FF13DEEA\"\r\n" +
-                                            "     textColor=\"#FFFFFFFF\" highlightTextColor=\"#FFFFFFFF\"\r\n" +
-                                            "     x=\"750\" y=\"300\" width=\"200\" height=\"100\" label=\"data\"></SINGBUTTON>\r\n\r\n" +
-                                            "  <SINGBUTTON name=\"jpg\" linkOption=\"NORMAL\" href=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/singstar/test/testJpg.jsp\"\r\n" +
-                                            "     fillColor=\"#FF027ABB\" highlightFillColor=\"#FF13DEEA\"\r\n" +
-                                            "     textColor=\"#FFFFFFFF\" highlightTextColor=\"#FFFFFFFF\"\r\n" +
-                                            "     x=\"1000\" y=\"300\" width=\"200\" height=\"100\" label=\"jpg\"></SINGBUTTON>\r\n\r\n" +
-                                            "  <SINGBUTTON name=\"commerce\" linkOption=\"NORMAL\" href=\"commerce/started.svml\"\r\n" +
-                                            "     fillColor=\"#FF027ABB\" highlightFillColor=\"#FF13DEEA\"\r\n" +
-                                            "     textColor=\"#FFFFFFFF\" highlightTextColor=\"#FFFFFFFF\"\r\n" +
-                                            "     x=\"500\" y=\"600\" width=\"200\" height=\"100\" label=\"commerce\"></SINGBUTTON>\r\n\r\n" +
-                                            " </SS:SCREEN>\r\n\r\n" +
-                                            " <ACTIONLINK name=\"link\" button=\"SV_ACTION_BACK\" href=\"hide.svml\"/>\r\n</SVML>");
+                                        byte[] singOnlnInit = Encoding.UTF8.GetBytes(@"<?xml version=""1.0"" encoding=""UTF-8""?> 
+                                        <SVML>
+	                                        <UNITY name=""unityinit"" type=""CHANGEMODE"" forwardmode=""online"" backmode=""offline"" href=""started.jsp"" linkOption=""CLIENT_REDIRECT"" />
+
+	                                        <UNITY name=""safepoint"" type=""SAFEPOINT"" variety=""game"" href=""init_online.jsp"" />
+	                                        <UNITY name=""safepoint"" type=""SAFEPOINT"" variety=""session"" href=""init_online.jsp"" />
+                                        </SVML>");
 
                                         response.StatusCode = (int)System.Net.HttpStatusCode.OK;
 
@@ -346,8 +307,358 @@ namespace SVO.Games.PS3
                                         {
                                             try
                                             {
-                                                response.ContentLength64 = homeResponse.Length;
-                                                response.OutputStream.Write(homeResponse, 0, homeResponse.Length);
+                                                response.ContentLength64 = singOnlnInit.Length;
+                                                response.OutputStream.Write(singOnlnInit, 0, singOnlnInit.Length);
+                                            }
+                                            catch (Exception)
+                                            {
+                                                // Not Important;
+                                            }
+                                        }
+                                    }
+
+                                    break;
+                            }
+
+                            break;
+
+                        case "/SINGSTARPS3_SVML/singstar/started.jsp":
+                            switch (request.HttpMethod)
+                            {
+                                case "GET":
+
+                                    string? clientMac = request.Headers.Get("X-SVOMac");
+
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+
+                                    if (string.IsNullOrEmpty(serverMac))
+                                    {
+                                        response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        response.Headers.Set("Content-Type", "text/svml; charset=UTF-8");
+                                        response.Headers.Set("X-SVOMac", serverMac);
+
+                                        const bool enableNpCommerce = false; // RPCS3 will soft-freeze on that check.
+
+                                        string npRetreiveCommand = $@"<UNITY 
+		                                        name=""retrieveRootCategory"" 
+		                                        type=""PRODUCTCATEGORY_COMMAND"" 
+		                                        categoryId=""UX0002-SSTT00001_01""
+		                                        bcategoryId=""UX0002-NPXX00102_00""
+		                                        xcategoryId=""SCERT-SCEA00003_01"" 
+		                                        ycategoryId=""IV0002-NPXS00004_00"" 
+		                                        languageId=""{request.Cookies["LangID"]?.Value ?? "0"}"" 
+	                                        />";
+
+                                        byte[] startedInit = Encoding.UTF8.GetBytes($@"<?xml version=""1.0"" encoding=""UTF-8""?>
+                                        <SVML>
+	                                        {(enableNpCommerce ? npRetreiveCommand : string.Empty)}
+
+	                                        <SS:SCREEN name=""screen"" x=""0"" y=""0"" transition=""invisiblePage"">
+                                            </SS:SCREEN>
+
+                                            <REDIRECT name=""OnlineComplete"" href=""static://LoginComplete"" linkOption=""NORMAL"" />
+
+	                                        <SET name=""notinhist"" neverBackOnto=""true"" />
+                                        </SVML>");
+
+                                        response.StatusCode = (int)System.Net.HttpStatusCode.OK;
+
+                                        if (response.OutputStream.CanWrite)
+                                        {
+                                            try
+                                            {
+                                                response.ContentLength64 = startedInit.Length;
+                                                response.OutputStream.Write(startedInit, 0, startedInit.Length);
+                                            }
+                                            catch (Exception)
+                                            {
+                                                // Not Important;
+                                            }
+                                        }
+                                    }
+
+                                    break;
+                            }
+
+                            break;
+
+                        case "/SINGSTARPS3_SVML/singstar/OnlineRoot":
+                            switch (request.HttpMethod)
+                            {
+                                case "GET":
+
+                                    string? clientMac = request.Headers.Get("X-SVOMac");
+
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+
+                                    if (string.IsNullOrEmpty(serverMac))
+                                    {
+                                        response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        response.Headers.Set("Content-Type", "text/svml; charset=UTF-8");
+                                        response.Headers.Set("X-SVOMac", serverMac);
+
+                                        byte[] onlnRoot = Encoding.UTF8.GetBytes(@"<?xml version=""1.0"" encoding=""UTF-8""?>
+
+                                        <SVML xmlns:SS=""www.singstar.com/svoTag"">
+
+                                        <!--<CREATEPROFILE name=""1002_PROFILE_METADATA.txt""
+	                                        uploadUrl=""http://sing2.online.scee.com:10060/SINGSTARPS3_SVML/fileservices/UploadFileServlet?fileNameBeginsWith=1002_PROFILE_METADATA.txt&filePermission=2&fileTypeID=5""
+	                                        successHref=""profile_create_success.jsp""
+	                                        failHref=""profile_create_fail.jsp""
+	                                        />-->
+
+                                          <SET name=""nohistory"" neverBackOnto=""true"" />
+
+                                          <ACTIONLINK name=""link"" button=""SV_ACTION_BACK"" href=""hide.jsp""/>
+
+                                          <ACTIONLINK name=""linkSquare"" linkOption=""NORMAL"" button=""SV_PAD_SQUARE"" href=""/SingStore/categories.jsp"" />
+
+                                          <SS:SCREEN name=""screen"" transition=""default"" mirrorPos=""570.5"" mirrorHeight=""57.5"">
+
+                                            <SS:DIV name=""titleDiv"" x=""188"" y=""141"">
+
+                                              <SS:RICHTEXT name=""title"" y=""-33"" alignY=""baseline"" font=""ID_FONT_TITLE"" colour=""TitleText"" shadow=""false"">Singstar Online</SS:RICHTEXT>
+
+                                              <SS:RICHTEXT name=""subtitle"" y=""1"" width=""500"" alignY=""baseline"" font=""ID_FONT_SUBTITLE"" colour=""HighlightText"">Powered by MultiServer 4</SS:RICHTEXT>
+
+                                            </SS:DIV>
+
+                                            <SS:PANEL name=""MyPannel"" x=""188"" y=""155"" width=""907"" height=""396"" visual=""SingStore-Panel"">
+
+                                              <SS:DIV name=""MyVideo"" x=""0"" y=""0"" width=""907"" height=""396"">
+
+                                                <SS:MOVIES name=""preview"" width=""907"" height=""396"" loop=""true"" spectrumEnabled=""false"" src=""http://sing2.online.scee.com:10010/singstarps3/prevclips/singstore.mp4"" />
+
+                                              </SS:DIV>
+
+                                            </SS:PANEL>
+
+                                            <SS:LEGEND name=""legendCancel"" type=""legendcancel"" text=""BACK"" />
+
+                                            <SS:LEGEND name=""legendSquare"" type=""legendsquare"" text=""Enter the SingStore"" />
+                                          </SS:SCREEN>
+
+                                        </SVML>");
+
+                                        response.StatusCode = (int)System.Net.HttpStatusCode.OK;
+
+                                        if (response.OutputStream.CanWrite)
+                                        {
+                                            try
+                                            {
+                                                response.ContentLength64 = onlnRoot.Length;
+                                                response.OutputStream.Write(onlnRoot, 0, onlnRoot.Length);
+                                            }
+                                            catch (Exception)
+                                            {
+                                                // Not Important;
+                                            }
+                                        }
+                                    }
+
+                                    break;
+                            }
+
+                            break;
+
+                        case "/SINGSTARPS3_SVML/singstar/Video":
+                        case "/SINGSTARPS3_SVML/singstar/SnapShots":
+                        case "/SINGSTARPS3_SVML/singstar/Audio":
+                            switch (request.HttpMethod)
+                            {
+                                case "GET":
+
+                                    string? clientMac = request.Headers.Get("X-SVOMac");
+
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+
+                                    if (string.IsNullOrEmpty(serverMac))
+                                    {
+                                        response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        // The game wants to check again for online connectivity, it is designed to use internal SVML files for these services.
+
+                                        response.Headers.Set("Content-Type", "text/svml; charset=UTF-8");
+                                        response.Headers.Set("X-SVOMac", serverMac);
+                                        byte[] VideoInit = Encoding.UTF8.GetBytes($@"<?xml version=""1.0"" encoding=""UTF-8""?>
+                                        <SVML>
+	                                        <REDIRECT href=""init_online.jsp"" name=""redirect""/>
+                                        </SVML>");
+
+                                        response.StatusCode = (int)System.Net.HttpStatusCode.OK;
+
+                                        if (response.OutputStream.CanWrite)
+                                        {
+                                            try
+                                            {
+                                                response.ContentLength64 = VideoInit.Length;
+                                                response.OutputStream.Write(VideoInit, 0, VideoInit.Length);
+                                            }
+                                            catch (Exception)
+                                            {
+                                                // Not Important;
+                                            }
+                                        }
+                                    }
+
+                                    break;
+                            }
+
+                            break;
+
+                        case "/SINGSTARPS3_SVML/singstar/hide.jsp":
+                            switch (request.HttpMethod)
+                            {
+                                case "GET":
+
+                                    string? clientMac = request.Headers.Get("X-SVOMac");
+
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+
+                                    if (string.IsNullOrEmpty(serverMac))
+                                    {
+                                        response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        response.Headers.Set("Content-Type", "text/svml; charset=UTF-8");
+                                        response.Headers.Set("X-SVOMac", serverMac);
+
+                                        byte[] onlnRoot = Encoding.UTF8.GetBytes(@"
+
+                                        <?xml version=""1.0"" encoding=""UTF-8""?>
+
+                                        <SVML>
+                                          <SS:SCREEN name=""screen"" x=""0"" y=""0"" transition=""invisiblePage"">
+                                          </SS:SCREEN>
+
+                                         <HUB type=""HideSvo"" name=""hide""/>
+                                         <SET name=""nohistory"" neverBackOnto=""true""/>
+                                        </SVML>
+                                        ");
+
+                                        response.StatusCode = (int)System.Net.HttpStatusCode.OK;
+
+                                        if (response.OutputStream.CanWrite)
+                                        {
+                                            try
+                                            {
+                                                response.ContentLength64 = onlnRoot.Length;
+                                                response.OutputStream.Write(onlnRoot, 0, onlnRoot.Length);
+                                            }
+                                            catch (Exception)
+                                            {
+                                                // Not Important;
+                                            }
+                                        }
+                                    }
+
+                                    break;
+                            }
+
+                            break;
+                        
+                        case "/SINGSTARPS3_SVML/singstar/profile_create_success.jsp":
+                            switch (request.HttpMethod)
+                            {
+                                case "GET":
+
+                                    string? clientMac = request.Headers.Get("X-SVOMac");
+
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+
+                                    if (string.IsNullOrEmpty(serverMac))
+                                    {
+                                        response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        response.Headers.Set("Content-Type", "text/svml; charset=UTF-8");
+                                        response.Headers.Set("X-SVOMac", serverMac);
+
+                                        byte[] successRoot = Encoding.UTF8.GetBytes(@"
+
+                                        <?xml version=""1.0"" encoding=""UTF-8""?>
+
+                                        <SVML>
+                                        </SVML>
+                                        ");
+
+                                        response.StatusCode = (int)System.Net.HttpStatusCode.OK;
+
+                                        if (response.OutputStream.CanWrite)
+                                        {
+                                            try
+                                            {
+                                                response.ContentLength64 = successRoot.Length;
+                                                response.OutputStream.Write(successRoot, 0, successRoot.Length);
+                                            }
+                                            catch (Exception)
+                                            {
+                                                // Not Important;
+                                            }
+                                        }
+                                    }
+
+                                    break;
+                            }
+
+                            break;
+
+                        case "/SINGSTARPS3_SVML/singstar/profile_create_fail.jsp":
+                            switch (request.HttpMethod)
+                            {
+                                case "GET":
+
+                                    string? clientMac = request.Headers.Get("X-SVOMac");
+
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+
+                                    if (string.IsNullOrEmpty(serverMac))
+                                    {
+                                        response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        response.Headers.Set("Content-Type", "text/svml; charset=UTF-8");
+                                        response.Headers.Set("X-SVOMac", serverMac);
+
+                                        byte[] failRoot = Encoding.UTF8.GetBytes(@"
+
+                                        <?xml version=""1.0"" encoding=""UTF-8""?>
+
+                                        <SVML>
+                                            <SS:SCREEN name=""screen"" x=""0"" y=""0"" transition=""invisiblePage"">
+                                            </SS:SCREEN>
+
+                                            <REDIRECT name=""OnlineFail"" href=""static://LoginFailed"" linkOption=""NORMAL"" />
+
+	                                        <SET name=""notinhist"" neverBackOnto=""true"" />
+                                        </SVML>
+                                        ");
+
+                                        response.StatusCode = (int)System.Net.HttpStatusCode.OK;
+
+                                        if (response.OutputStream.CanWrite)
+                                        {
+                                            try
+                                            {
+                                                response.ContentLength64 = failRoot.Length;
+                                                response.OutputStream.Write(failRoot, 0, failRoot.Length);
                                             }
                                             catch (Exception)
                                             {

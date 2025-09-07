@@ -1,5 +1,7 @@
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using WebAPIService.LeaderboardService;
 namespace WebAPIService.GameServices.JUGGERNAUT.clearasil
 {
     public class pushtime
@@ -11,18 +13,18 @@ namespace WebAPIService.GameServices.JUGGERNAUT.clearasil
                 string user = QueryParameters["user"];
                 string time = QueryParameters["time"];
 
+                if (pushscore.Leaderboard == null)
+                {
+                    var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                    retCtx.Database.Migrate();
+
+                    pushscore.Leaderboard = new ClearasilScoreBoardData(retCtx);
+                }
+
                 if (!string.IsNullOrEmpty(user) && !string.IsNullOrEmpty(time))
                 {
-                    ScoreBoardData.UpdateTime(user, time);
-
-                    try
-                    {
-                        ScoreBoardData.UpdateScoreboardXml(apiPath); // We finalized edit, so we issue a write.
-                    }
-                    catch (Exception)
-                    {
-                        // Not Important
-                    }
+                    _ = pushscore.Leaderboard.AddTimeAsync(user, time);
 
                     return string.Empty;
                 }

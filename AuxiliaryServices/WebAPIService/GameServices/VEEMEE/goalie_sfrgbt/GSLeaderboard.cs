@@ -1,12 +1,30 @@
-using System;
-using System.IO;
-using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using MultiServerLibrary.HTTP;
+using System.Collections.Generic;
+using System.Linq;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.VEEMEE.goalie_sfrgbt
 {
-    public class GSLeaderboard
+    internal static class GSLeaderboard
     {
+        public static Dictionary<string, GSScoreBoardData> Leaderboards = new Dictionary<string, GSScoreBoardData>();
+
+        public static void InitializeLeaderboard(string gameName)
+        {
+            lock (Leaderboards)
+            {
+                if (!Leaderboards.ContainsKey(gameName))
+                {
+                    var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                    retCtx.Database.Migrate();
+
+                    Leaderboards.Add(gameName, new GSScoreBoardData(retCtx, gameName));
+                }
+            }
+        }
+
         public static string GetLeaderboardPOST(byte[] PostData, string ContentType, bool global, string apiPath)
         {
             string key = string.Empty;
@@ -25,29 +43,24 @@ namespace WebAPIService.GameServices.VEEMEE.goalie_sfrgbt
                 psnid = data["psnid"].First();
                 type = data["type"].First();
 
-                string directoryPath = string.Empty;
+                string gameName = "sfrgbt";
 
                 if (global)
-                    directoryPath = $"{apiPath}/VEEMEE/goalie";
-                else
-                    directoryPath = $"{apiPath}/VEEMEE/sfrgbt";
+                    gameName = "goalie";
 
-                DateTime refdate = DateTime.Now; // We avoid race conditions by calculating it one time.
+                InitializeLeaderboard(gameName);
 
                 switch (type)
                 {
                     case "Today":
-                        if (File.Exists($"{directoryPath}/leaderboard_{refdate:yyyy_MM_dd}.xml"))
-                            return File.ReadAllText($"{directoryPath}/leaderboard_{refdate:yyyy_MM_dd}.xml");
-                        break;
+                        lock (Leaderboards)
+                            return Leaderboards[gameName].SerializeToDailyString("leaderboard").Result;
                     case "Yesterday":
-                        if (File.Exists($"{directoryPath}/leaderboard_{refdate.AddDays(-1):yyyy_MM_dd}.xml"))
-                            return File.ReadAllText($"{directoryPath}/leaderboard_{refdate.AddDays(-1):yyyy_MM_dd}.xml");
-                        break;
+                        lock (Leaderboards)
+                            return Leaderboards[gameName].SerializeToYesterdayString("leaderboard").Result;
                     case "All Time":
-                        if (File.Exists($"{directoryPath}/leaderboard_alltime.xml"))
-                            return File.ReadAllText($"{directoryPath}/leaderboard_alltime.xml");
-                        break;
+                        lock (Leaderboards)
+                            return Leaderboards[gameName].SerializeToString("leaderboard").Result;
                 }
             }
 

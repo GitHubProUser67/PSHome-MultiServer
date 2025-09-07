@@ -75,7 +75,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.State > ClientState.HELLO)
                         {
-                            LoggerAccessor.LogError($"Unexpected RT_MSG_CLIENT_HELLO from {clientChannel.RemoteAddress}: {clientHello}");
+LoggerAccessor.LogError($"[MPS] - Unexpected RT_MSG_CLIENT_HELLO from {clientChannel.RemoteAddress}: {clientHello}");
                             break;
                         }
 
@@ -87,7 +87,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.State > ClientState.HANDSHAKE)
                         {
-                            LoggerAccessor.LogError($"Unexpected RT_MSG_CLIENT_CRYPTKEY_PUBLIC from {clientChannel.RemoteAddress}: {clientCryptKeyPublic}");
+LoggerAccessor.LogError($"[MPS] - Unexpected RT_MSG_CLIENT_CRYPTKEY_PUBLIC from {clientChannel.RemoteAddress}: {clientCryptKeyPublic}");
                             break;
                         }
 
@@ -104,7 +104,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.State > ClientState.CONNECT_1)
                         {
-                            LoggerAccessor.LogError($"Unexpected RT_MSG_CLIENT_CONNECT_TCP from {clientChannel.RemoteAddress}: {clientConnectTcp}");
+LoggerAccessor.LogError($"[MPS] - Unexpected RT_MSG_CLIENT_CONNECT_TCP from {clientChannel.RemoteAddress}: {clientConnectTcp}");
                             break;
                         }
 
@@ -243,7 +243,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.State != ClientState.AUTHENTICATED)
                         {
-                            LoggerAccessor.LogError($"Unexpected RT_MSG_CLIENT_APP_TOSERVER from {clientChannel.RemoteAddress}: {clientAppToServer}");
+LoggerAccessor.LogError($"[MPS] - Unexpected RT_MSG_CLIENT_APP_TOSERVER from {clientChannel.RemoteAddress}: {clientAppToServer}");
                             break;
                         }
 
@@ -274,7 +274,7 @@ namespace Horizon.SERVER.Medius
                     }
                 default:
                     {
-                        LoggerAccessor.LogWarn($"UNHANDLED RT MESSAGE: {message}");
+LoggerAccessor.LogWarn($"[MPS] - UNHANDLED RT MESSAGE: {message}");
                         break;
                     }
             }
@@ -731,7 +731,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} is trying to MediusServerCreateGameOnSelfRequest without a Client Object");
+LoggerAccessor.LogError($"[MPS] - INVALID OPERATION: {clientChannel} is trying to MediusServerCreateGameOnSelfRequest without a Client Object");
                             break;
                         }
 
@@ -775,7 +775,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} is trying to MediusServerCreateGameOnSelfRequest0 without a Client Object");
+LoggerAccessor.LogError($"[MPS] - INVALID OPERATION: {clientChannel} is trying to MediusServerCreateGameOnSelfRequest0 without a Client Object");
                             break;
                         }
 
@@ -819,7 +819,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} is trying to MediusServerCreateGameOnMeRequest without a Client Object");
+LoggerAccessor.LogError($"[MPS] - INVALID OPERATION: {clientChannel} is trying to MediusServerCreateGameOnMeRequest without a Client Object");
                             break;
                         }
 
@@ -1006,13 +1006,7 @@ namespace Horizon.SERVER.Medius
 
                         //MediusServerConnectNotification -  sent Notify msg to MUM
                         //DmeServerGetConnectKeys
-                        /*
-                        if (data.ClientObject.SessionKey == null)
-                        {
-                            LoggerAccessor.LogWarn($"ServerConnectNotificationHandler - DmeServerGetConnectKeys error = {data.ClientObject.SessionKey} is null");
-                            return;
-                        }
-                        */
+
                         break;
                     }
                 #endregion
@@ -1030,7 +1024,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} is trying to MediusServerEndGameRequest without a Client Object");
+LoggerAccessor.LogError($"[MPS] - INVALID OPERATION: {clientChannel} is trying to MediusServerEndGameRequest without a Client Object");
                             break;
                         }
 
@@ -1080,7 +1074,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} is trying to end server session without a Client Object");
+LoggerAccessor.LogError($"[MPS] - INVALID OPERATION: {clientChannel} is trying to end server session without a Client Object");
                             break;
                         }
 
@@ -1098,7 +1092,7 @@ namespace Horizon.SERVER.Medius
 
                 default:
                     {
-                        LoggerAccessor.LogWarn($"Unhandled Medius Message: {message}");
+LoggerAccessor.LogWarn($"[MPS] - Unhandled Medius Message: {message}");
                         break;
                     }
             }

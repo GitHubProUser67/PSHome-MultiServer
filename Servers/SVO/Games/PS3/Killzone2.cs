@@ -30,7 +30,7 @@ namespace SVO.Games.PS3
                                         resp.Headers.Set("Content-Type", "text/svml");
 
                                         string clientMac = req.Headers.Get("X-SVOMac");
-                                        string serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                        string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
                                         if (string.IsNullOrEmpty(serverMac))
                                         {
                                             response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -191,7 +191,7 @@ namespace SVO.Games.PS3
                                         resp.Headers.Set("Content-Type", "text/svml");
 
                                         string clientMac = req.Headers.Get("X-SVOMac");
-                                        string serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                        string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
                                         if (string.IsNullOrEmpty(serverMac))
                                         {
                                             response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -238,7 +238,7 @@ namespace SVO.Games.PS3
                                         resp.Headers.Set("Content-Type", "text/svml");
 
                                         string clientMac = req.Headers.Get("X-SVOMac");
-                                        string serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                        string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
                                         if (string.IsNullOrEmpty(serverMac))
                                         {
                                             response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -402,7 +402,7 @@ namespace SVO.Games.PS3
                                     string clientMac = req.Headers.Get("X-SVOMac");
 
                                     string sig = HttpUtility.ParseQueryString(req.Url.Query).Get("sig");
-                                    string serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     resp.Headers.Set("X-SVOMac", serverMac);
                                     if (string.IsNullOrEmpty(serverMac))
@@ -505,7 +505,7 @@ namespace SVO.Games.PS3
                                         resp.Headers.Set("Content-Type", "text/svml");
 
                                         string clientMac = req.Headers.Get("X-SVOMac");
-                                        string serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                        string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
                                         if (string.IsNullOrEmpty(serverMac))
                                         {
                                             response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -556,7 +556,7 @@ namespace SVO.Games.PS3
                                         resp.Headers.Set("Content-Type", "text/svml");
 
                                         string clientMac = req.Headers.Get("X-SVOMac");
-                                        string serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                        string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
                                         if (serverMac == null)
                                         {
                                             string forbidden = "500 Forbidden";

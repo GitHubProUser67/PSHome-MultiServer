@@ -3,8 +3,6 @@ using HttpMultipartParser;
 using System.Text;
 using System.IO;
 using System;
-using MultiServerLibrary.Extension;
-using NetHasher;
 using XI5;
 
 namespace WebAPIService.GameServices.HTS.Helpers
@@ -49,7 +47,7 @@ namespace WebAPIService.GameServices.HTS.Helpers
                 }
             }
 
-            if (ticketData != null)
+            if (ticketData != null && ticketData.Length > 188)
             {
                 const string RPCNSigner = "RPCN";
 
@@ -89,7 +87,7 @@ namespace WebAPIService.GameServices.HTS.Helpers
                 return $@"<xml>
                         <npID>{username}</npID>
                         <Environment></Environment>
-                        <issuerID></issuerID>
+                        <issuerID>{ticket.IssuerId}</issuerID>
                         <Issued></Issued>
                         <Expires></Expires>
                         <ServiceID>{ticket.ServiceId}</ServiceID>

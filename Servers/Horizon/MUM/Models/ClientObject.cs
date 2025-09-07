@@ -636,7 +636,7 @@ namespace Horizon.MUM.Models
             MumManager.playersJoined.Inc();
         }
 
-        public async Task Login(AccountDTO account)
+        public async Task Login(AccountDTO account, bool anonymous)
         {
             if (!IsLoggedIn)
             {
@@ -659,11 +659,14 @@ namespace Horizon.MUM.Models
                 TimeoutSeconds = MediusClass.GetAppSettingsOrDefault(ApplicationId).ClientTimeoutSeconds;
                 LongTimeoutSeconds = MediusClass.GetAppSettingsOrDefault(ApplicationId).ClientLongTimeoutSeconds;
 
-                // Update last sign in date
-                _ = HorizonServerConfiguration.Database.PostAccountSignInDate(AccountId, DateTimeUtils.GetHighPrecisionUtcTime());
+                // Update last sign in date and database if not anonymous
+                if (!anonymous)
+                {
+                    _ = HorizonServerConfiguration.Database.PostAccountSignInDate(AccountId, DateTimeUtils.GetHighPrecisionUtcTime());
 
-                // Update database status
-                PostStatus();
+                    // Update database status
+                    PostStatus();
+                }
 
                 MumManager.playersJoined.Inc();
             }

@@ -20,22 +20,6 @@ namespace MultiServerLibrary.Extension
         private static readonly TimedDictionary<byte, (bool, string)> _InternalIpCache = new TimedDictionary<byte, (bool, string)>();
 
         /// <summary>
-        /// Check if IP is inside LAN (behind router)
-        /// </summary>
-        /// <param name="address">The IP Address to check</param>
-        /// <returns><c>True</c> if it's local address or <c>False</c> if it's from Internet</returns>
-        public static bool IsLanIP(this IPAddress address)
-        {
-            Ping ping = new Ping();
-            var rep = ping.Send(address, 100, new byte[] { 1 }, new PingOptions()
-            {
-                DontFragment = true,
-                Ttl = 1
-            });
-            return rep.Status != IPStatus.TtlExpired && rep.Status != IPStatus.TimedOut && rep.Status != IPStatus.TimeExceeded;
-        }
-
-        /// <summary>
         /// Returns true if the IP address is in a private range.<br/>
         /// IPv4: Loopback, link local ("169.254.x.x"), class A ("10.x.x.x"), class B ("172.16.x.x" to "172.31.x.x") and class C ("192.168.x.x").<br/>
         /// IPv6: Loopback, link local, site local, unique local and private IPv4 mapped to IPv6.<br/>
@@ -136,13 +120,11 @@ namespace MultiServerLibrary.Extension
                     }
                     catch
                     {
-                        continue;
                     }
                 }
 
                 if (!string.IsNullOrEmpty(result))
                     _InternalIpCache.Set(cacheKey, (true, result), 60000);
-
             }
 
             return result;

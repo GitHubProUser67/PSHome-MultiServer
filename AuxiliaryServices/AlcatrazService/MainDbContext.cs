@@ -2,40 +2,31 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations.Internal;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations.Internal;
+using MultiServerLibrary.Extension.LinqSQL;
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
 
 namespace Alcatraz.Context
 {
-	public enum DBType
-	{
-		SQLite = 0,
-		MySQL = 1,
-	}
-
     // TO run migrations:
     // EntityFrameworkCore\Add-Migration NAME -Project AlcatrazService -StartupProject MultiServerWebServices -Context MainDbContext
 
     public class MainDbContext : DbContext
 	{
-		public static DbContextOptionsBuilder OnContextBuilding(DbContextOptionsBuilder opt, DBType type, string connectionString)
+        public static DbContextOptionsBuilder OnContextBuilding(DbContextOptionsBuilder opt, DBType type, string connectionString)
 		{
 			opt.ReplaceService<IMigrationsAssembly, ContextAwareMigrationsAssembly>();
 
-			if (type == DBType.SQLite)
-			{
-				return opt.UseSqlite(connectionString);
-			}
+            if (type == DBType.SQLite)
+                return opt.UseSqlite(connectionString);
 
-			if (type == DBType.MySQL)
-			{
-				var serverVersion = new MySqlServerVersion(new Version(8, 0, 25));
-				return opt.UseMySql(connectionString, serverVersion, conf => conf.CommandTimeout(60));
-			}
-			return opt;
+            else if (type == DBType.MySQL)
+                return opt.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 25)), conf => conf.CommandTimeout(60));
+
+            return opt;
 		}
 		public MainDbContext()
 			: base()
@@ -47,9 +38,9 @@ namespace Alcatraz.Context
 		{
 		}
 
-        public async Task EnsureSeedData()
+        public Task EnsureSeedData()
 		{
-		
+			return Task.CompletedTask;
 		}
 
 		//------------------------------------------------------------------------------------------

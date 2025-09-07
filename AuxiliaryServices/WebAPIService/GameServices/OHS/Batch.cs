@@ -104,22 +104,22 @@ namespace WebAPIService.GameServices.OHS
                                         resultfromcommand = User.User_GetWritekey(PostData, ContentType, data, game);
                                         break;
                                     case "leaderboard/requestbyusers/":
-                                        resultfromcommand = Leaderboard.Leaderboard_RequestByUsers(PostData, ContentType, directorypath + $"/{project}/", data, game);
+                                        resultfromcommand = Leaderboard.Leaderboard_RequestByUsers(PostData, ContentType, project, data, game);
                                         break;
                                     case "leaderboard/requestbyrank/":
-                                        resultfromcommand = Leaderboard.Leaderboard_RequestByRank(PostData, ContentType, directorypath + $"/{project}/", data, game);
+                                        resultfromcommand = Leaderboard.Leaderboard_RequestByRank(PostData, ContentType, project, data, game);
                                         break;
                                     case "leaderboard/update/":
-                                        resultfromcommand = Leaderboard.Leaderboard_Update(PostData, ContentType, directorypath + $"/{project}/", data, game, false);
+                                        resultfromcommand = Leaderboard.Leaderboard_Update(PostData, ContentType, project, data, game, false);
                                         break;
                                     case "leaderboard/updatessameentry/":
-                                        resultfromcommand = Leaderboard.Leaderboard_UpdatesSameEntry(PostData, ContentType, directorypath + $"/{project}/", data, game);
+                                        resultfromcommand = Leaderboard.Leaderboard_UpdatesSameEntry(PostData, ContentType, project, data, game, false);
                                         break;
                                     case "levelboard/getall/":
-                                        resultfromcommand = Leaderboard.Levelboard_GetAll(directorypath + $"/{project}/", game, true);
+                                        resultfromcommand = Leaderboard.Levelboard_GetAll(project, game, true);
                                         break;
                                     case "levelboard/update/":
-                                        resultfromcommand = Leaderboard.Leaderboard_Update(PostData, ContentType, directorypath + $"/{project}/", data, game, true);
+                                        resultfromcommand = Leaderboard.Leaderboard_Update(PostData, ContentType, project, data, game, true);
                                         break;
                                     case "usercounter/set/":
                                         resultfromcommand = UserCounter.Set(PostData, ContentType, directorypath + $"/{project}/", data, game);

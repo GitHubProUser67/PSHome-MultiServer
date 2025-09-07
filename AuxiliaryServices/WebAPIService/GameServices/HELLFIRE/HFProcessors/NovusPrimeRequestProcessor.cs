@@ -1,12 +1,13 @@
 ﻿using CustomLogger;
 using HttpMultipartParser;
+using Microsoft.EntityFrameworkCore;
 using MultiServerLibrary.HTTP;
 using System;
-using System.Globalization;
 using System.IO;
 using System.Text;
-using System.Text.RegularExpressions;
 using WebAPIService.GameServices.HELLFIRE.Helpers;
+using WebAPIService.GameServices.HELLFIRE.Helpers.NovusPrime;
+using WebAPIService.LeaderboardService;
 using XI5;
 
 namespace WebAPIService.GameServices.HELLFIRE.HFProcessors
@@ -60,36 +61,46 @@ namespace WebAPIService.GameServices.HELLFIRE.HFProcessors
                         }
                     }
 
-                    if (ticketData != null && ticketData.Length > 188)
+                    if (ticketData != null)
                     {
-                        const string RPCNSigner = "RPCN";
-
-                        // get ticket
-                        XI5Ticket ticket = XI5Ticket.ReadFromBytes(ticketData);
-
-                        // setup username
-                        string username = ticket.Username;
-
-                        // invalid ticket
-                        if (!ticket.Valid)
+                        if (ticketData.Length > 188)
                         {
-                            // log to console
-                            LoggerAccessor.LogWarn($"[HFGames] - NovusPrime : User {username} tried to alter their ticket data");
+                            const string RPCNSigner = "RPCN";
 
-                            return null;
-                        }
+                            // get ticket
+                            XI5Ticket ticket = XI5Ticket.ReadFromBytes(ticketData);
 
-                        // RPCN
-                        if (ticket.SignatureIdentifier == RPCNSigner)
-                            LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on RPCN");
-                        else if (username.EndsWith($"@{RPCNSigner}"))
-                        {
-                            LoggerAccessor.LogError($"[HFGames] - NovusPrime : User {username} was caught using a RPCN suffix while not on it!");
+                            // setup username
+                            string username = ticket.Username;
 
-                            return null;
+                            // invalid ticket
+                            if (!ticket.Valid)
+                            {
+                                // log to console
+                                LoggerAccessor.LogWarn($"[HFGames] - NovusPrime : User {username} tried to alter their ticket data");
+
+                                return null;
+                            }
+
+                            // RPCN
+                            if (ticket.SignatureIdentifier == RPCNSigner)
+                                LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on RPCN");
+                            else if (username.EndsWith($"@{RPCNSigner}"))
+                            {
+                                LoggerAccessor.LogError($"[HFGames] - NovusPrime : User {username} was caught using a RPCN suffix while not on it!");
+
+                                return null;
+                            }
+                            else
+                                LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on PSN");
                         }
                         else
-                            LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on PSN");
+                        {
+                            // log to console
+                            LoggerAccessor.LogWarn($"[HFGames] - NovusPrime : Invalid ticket data length");
+
+                            return null;
+                        }
                     }
 
                     Command = data.GetParameterValue("Command");
@@ -149,7 +160,6 @@ namespace WebAPIService.GameServices.HELLFIRE.HFProcessors
                 {
                     Directory.CreateDirectory($"{WorkPath}/SlimJim/User_Data");
                     Directory.CreateDirectory($"{WorkPath}/NovusPrime/User_Data");
-                    Directory.CreateDirectory($"{WorkPath}/NovusPrime/galactic_scores");
 
                     switch (Command)
                     {
@@ -164,43 +174,28 @@ namespace WebAPIService.GameServices.HELLFIRE.HFProcessors
                         case "RequestSpecificLeaderboard":
                             DateTime refdate = DateTime.Now; // We avoid race conditions by calculating it one time.
 
+                            if (Leaderboards.NovusLeaderboard == null)
+                            {
+                                var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                                retCtx.Database.Migrate();
+
+                                Leaderboards.NovusLeaderboard = new InterGalacticScoreBoardData(retCtx);
+                            }
+
                             switch (Type)
                             {
                                 case "Day":
-                                    if (File.Exists($"{WorkPath}/NovusPrime/galactic_scores/leaderboard_{refdate:yyyy_MM_dd}.xml"))
-                                        return File.ReadAllText($"{WorkPath}/NovusPrime/galactic_scores/leaderboard_{refdate:yyyy_MM_dd}.xml");
+                                    if (Leaderboards.NovusLeaderboard != null)
+                                        return Leaderboards.NovusLeaderboard.SerializeToDailyString("Response", 100).Result;
                                     break;
                                 case "Week":
-                                    if (Directory.Exists($"{WorkPath}/NovusPrime/galactic_scores"))
-                                    {
-                                        // Get all XML files in the scoreboard folder
-                                        foreach (string file in Directory.GetFiles($"{WorkPath}/NovusPrime/galactic_scores", "leaderboard_weekly_*.xml"))
-                                        {
-                                            // Extract date from the filename
-                                            Match match = Regex.Match(file, @"leaderboard_weekly_(\d{4}_\d{2}_\d{2}).xml");
-                                            if (match.Success)
-                                            {
-                                                string fileDate = match.Groups[1].Value;
-                                                // Parse the file date
-                                                if (DateTime.TryParseExact(fileDate, "yyyy_MM_dd",
-                                                    CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime fileDateTime))
-                                                {
-                                                    // Check if the file is newer than 7 days
-                                                    double diff = (refdate - fileDateTime).TotalDays;
-                                                    if (diff <= 7)
-                                                    {
-                                                        string weekScoreBoardPath = $"{WorkPath}/NovusPrime/galactic_scores/leaderboard_weekly_{refdate.AddDays(-diff):yyyy_MM_dd}.xml";
-                                                        if (File.Exists(weekScoreBoardPath))
-                                                            return File.ReadAllText(weekScoreBoardPath);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
+                                    if (Leaderboards.NovusLeaderboard != null)
+                                        return Leaderboards.NovusLeaderboard.SerializeToWeeklyString("Response", 100).Result;
                                     break;
                                 case "Month":
-                                    if (File.Exists($"{WorkPath}/NovusPrime/galactic_scores/leaderboard_monthly_{refdate:yyyy_MM}.xml"))
-                                        return File.ReadAllText($"{WorkPath}/NovusPrime/galactic_scores/leaderboard_monthly_{refdate:yyyy_MM}.xml");
+                                    if (Leaderboards.NovusLeaderboard != null)
+                                        return Leaderboards.NovusLeaderboard.SerializeToMonthlyString("Response", 100).Result;
                                     break;
                             }
                             return "<Response></Response>";

@@ -1,3 +1,12 @@
+using ApacheNet.BuildIn.Extensions;
+using ApacheNet.BuildIn.RouteHandlers;
+using ApacheNet.Models;
+using CustomLogger;
+using MultiServerLibrary;
+using MultiServerLibrary.Extension;
+using MultiServerLibrary.GeoLocalization;
+using MultiServerLibrary.HTTP;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,14 +18,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using ApacheNet.BuildIn.Extensions;
-using ApacheNet.BuildIn.RouteHandlers;
-using ApacheNet.Models;
-using CustomLogger;
-using MultiServerLibrary.Extension;
-using MultiServerLibrary.GeoLocalization;
-using MultiServerLibrary.HTTP;
-using Newtonsoft.Json;
 using WatsonWebserver;
 using WatsonWebserver.Core;
 using WatsonWebserver.Native;
@@ -106,7 +107,8 @@ namespace ApacheNet
             string IpToBan = ctx.Request.Source.IpAddress;
             if (!"::1".Equals(IpToBan) && !"127.0.0.1".Equals(IpToBan) && !"localhost".Equals(IpToBan, StringComparison.InvariantCultureIgnoreCase))
             {
-                if (!string.IsNullOrEmpty(IpToBan) && MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs.Contains(IpToBan))
+                if (!string.IsNullOrEmpty(IpToBan) && ((MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibraryConfiguration.BannedIPs.Contains(IpToBan))
+                    || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(IpToBan))))
                 {
                     LoggerAccessor.LogError($"[SECURITY] - Client - {ctx.Request.Source.IpAddress}:{ctx.Request.Source.Port} Requested the HTTPS server while being banned!");
                     ctx.Response.StatusCode = 403;

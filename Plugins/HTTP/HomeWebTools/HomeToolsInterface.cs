@@ -1078,7 +1078,7 @@ namespace HomeWebTools
                                     byte[] encryptedfilebytes = LIBSECURE.Crypt_Decrypt(buffer, ToolsImplementation.MetaDataV1IVA, 8);
 
                                     if (encryptedfilebytes != null)
-                                        TasksResult.Add((ToolsImplementation.ApplyLittleEndianPaddingPrefix(encryptedfilebytes), $"{filename}_Encrypted.bin"));
+                                        TasksResult.Add((ToolsImplementation.ApplyPaddingPrefix(encryptedfilebytes, false), $"{filename}_Encrypted.bin"));
                                 }
 
                                 i++;

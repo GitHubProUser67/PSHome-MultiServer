@@ -5,7 +5,6 @@ namespace WebAPIService.GameServices.CDM
 {
     public class Leaderboards
     {
-
         public static string handleLeaderboards(byte[] PostData, string ContentType, string workpath, string absolutePath)
         {
             string pubListPath = $"{workpath}/CDM/Leaderboards/";
@@ -20,13 +19,9 @@ namespace WebAPIService.GameServices.CDM
                 return $"{res}";
             }
             else
-            {
-                LoggerAccessor.LogError($"[CDM] - Failed to find Leaderboard with expected path {filePath}! (TEMP  IMPLEMENTATION)");
-
-            }
+                LoggerAccessor.LogWarn($"[CDM] - Failed to find Leaderboard with expected path {filePath}! (TEMP IMPLEMENTATION)");
 
             return "<xml><Leaderboard NAME=\"Player 1\" COINS=\"99999\" /></xml>";
         }
-
     }
 }

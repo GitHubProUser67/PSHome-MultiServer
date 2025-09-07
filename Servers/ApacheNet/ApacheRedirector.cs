@@ -36,6 +36,8 @@ namespace ApacheNet
                                     if (extractedStatusCode == HttpStatusCode.OK)
                                     {
                                         absolutepath = match.Groups[3].Value;
+                                        if (!absolutepath.StartsWith("/"))
+                                            absolutepath = "/" + absolutepath;
                                         fullurl = absolutepath + HTTPProcessor.ProcessQueryString(fullurl, true);
                                     }
                                     else
@@ -79,6 +81,8 @@ namespace ApacheNet
                                         if (extractedStatusCode == HttpStatusCode.OK)
                                         {
                                             absolutepath = match.Groups[3].Value;
+                                            if (!absolutepath.StartsWith("/"))
+                                                absolutepath = "/" + absolutepath;
                                             fullurl = absolutepath + HTTPProcessor.ProcessQueryString(fullurl, true);
                                         }
                                         else

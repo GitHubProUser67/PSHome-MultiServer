@@ -92,7 +92,7 @@ namespace Horizon.SERVER.Medius
 
                 // Log if id is set
                 if (message.CanLog())
-                    LoggerAccessor.LogInfo($"MMS RECV {channel}: {message}");
+LoggerAccessor.LogInfo($"[MMS] - MMS RECV {channel}: {message}");
             };
 
             var bootstrap = new ServerBootstrap();
@@ -225,7 +225,7 @@ namespace Horizon.SERVER.Medius
                         #region Compatible AppId
                         if (!MediusClass.Manager.IsAppIdSupported(clientConnectTcp.AppId))
                         {
-                            LoggerAccessor.LogError($"Client {clientChannel.RemoteAddress} attempting to authenticate with incompatible app id {clientConnectTcp.AppId}");
+LoggerAccessor.LogError($"[MMS] - Client {clientChannel.RemoteAddress} attempting to authenticate with incompatible app id {clientConnectTcp.AppId}");
                             await clientChannel.CloseAsync();
                             return;
                         }
@@ -365,15 +365,15 @@ namespace Horizon.SERVER.Medius
                             data.State = ClientState.DISCONNECTED;
                         await clientChannel.CloseAsync();
 
-                        LoggerAccessor.LogInfo($"Client id = {data.ClientObject?.AccountId} disconnected by request with no specific reason\n");
+LoggerAccessor.LogInfo($"[MMS] - Client id = {data.ClientObject?.AccountId} disconnected by request with no specific reason\n");
                         break;
                     }
                 case RT_MSG_CLIENT_DISCONNECT_WITH_REASON clientDisconnectWithReason:
                     {
                         if (clientDisconnectWithReason.Reason <= RT_MSG_CLIENT_DISCONNECT_REASON.RT_MSG_CLIENT_DISCONNECT_LENGTH_MISMATCH)
-                            LoggerAccessor.LogInfo($"disconnected by request with reason of {clientDisconnectWithReason.Reason}\n");
+LoggerAccessor.LogInfo($"[MMS] - disconnected by request with reason of {clientDisconnectWithReason.Reason}\n");
                         else
-                            LoggerAccessor.LogInfo($"disconnected by request with (application specified) reason of {clientDisconnectWithReason.Reason}\n");
+LoggerAccessor.LogInfo($"[MMS] - disconnected by request with (application specified) reason of {clientDisconnectWithReason.Reason}\n");
 
                         data.State = ClientState.DISCONNECTED;
                         await clientChannel.CloseAsync();
@@ -382,7 +382,7 @@ namespace Horizon.SERVER.Medius
 
                 default:
                     {
-                        LoggerAccessor.LogWarn($"UNHANDLED RT MESSAGE: {message}");
+LoggerAccessor.LogWarn($"[MMS] - UNHANDLED RT MESSAGE: {message}");
 
                         break;
                     }
@@ -400,7 +400,7 @@ namespace Horizon.SERVER.Medius
             {
                 default:
                     {
-                        LoggerAccessor.LogWarn($"UNHANDLED MEDIUS MESSAGE: {message}");
+LoggerAccessor.LogWarn($"[MMS] - UNHANDLED MEDIUS MESSAGE: {message}");
                         break;
                     }
             }

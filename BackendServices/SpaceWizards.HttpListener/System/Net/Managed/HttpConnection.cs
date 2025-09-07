@@ -30,6 +30,8 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+using CustomLogger;
+using FixedSsl;
 using MultiServerLibrary.SSL;
 using System;
 using System.Diagnostics.CodeAnalysis;
@@ -47,6 +49,8 @@ namespace SpaceWizards.HttpListener
 {
     internal sealed class HttpConnection
     {
+        public bool Initialized = false;
+
         private static readonly Action<Task<int>, object> s_onreadCallback = OnRead;
         private const int BufferSize = 8192;
         private Socket _socket;
@@ -71,7 +75,6 @@ namespace SpaceWizards.HttpListener
         private int[] _clientCertErrors;
         private X509Certificate2 _clientCert;
         private string _sniDomain;
-        private SslStream _sslStream;
         private InputState _inputState = InputState.RequestLine;
         private LineState _lineState = LineState.None;
         private int _position;
@@ -81,7 +84,7 @@ namespace SpaceWizards.HttpListener
             get
             {
 #pragma warning disable
-                SslProtocols protocols = SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
+                SslProtocols protocols = SslProtocols.Ssl2 | SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
 #pragma warning restore
 
 #if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
@@ -99,38 +102,8 @@ namespace SpaceWizards.HttpListener
             _epl = epl;
             _secure = secure;
             _cert = cert;
-            if (secure == false)
-            {
-                _stream = new NetworkStream(sock, false);
-            }
-            else
-            {
-#pragma warning disable CA5359
-                _sslStream = epl.Listener.CreateSslStream(new NetworkStream(sock, false), false, (t, c, ch, e) =>
-                {
-                    if (c == null)
-                    {
-                        return true;
-                    }
-
-                    X509Certificate2 c2 = c as X509Certificate2;
-                    if (c2 == null)
-                    {
-                        c2 = new X509Certificate2(c.GetRawCertData());
-                    }
-
-                    _clientCert = c2;
-                    _clientCertErrors = new int[] { (int)e };
-                    return true;
-                });
-#pragma warning restore CA5359
-
-                _stream = _sslStream;
-            }
-
             _timer = new Timer(OnTimeout, null, Timeout.Infinite, Timeout.Infinite);
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-            _sslStream?.AuthenticateAsServer(new SslServerAuthenticationOptions
+            SslSocket.BeginAuthenticateAsServer(sock, secure ? new SslServerAuthenticationOptions
             {
                 ClientCertificateRequired = false,
                 EnabledSslProtocols = GetSslProtocol,
@@ -140,14 +113,9 @@ namespace SpaceWizards.HttpListener
                     IPEndPoint localEndpoint = (IPEndPoint)sock.LocalEndPoint;
 
                     if (string.IsNullOrEmpty(actualHostName))
-                    {
                         _sniDomain = localEndpoint.Address.ToString() ?? "127.0.0.1";
-                    }
                     else
-                    {
                         _sniDomain = actualHostName;
-                    }
-
 #if NET5_0_OR_GREATER
                     // Actually load the certificate
                     try
@@ -178,16 +146,33 @@ namespace SpaceWizards.HttpListener
                         // ignore errors
                     }
 #endif
-
                     return CertificateHelper.IsCertificateAuthority(_cert) ? CertificateHelper.MakeChainSignedCert(_sniDomain, _cert, epl.Listener.GetPreferedHashAlgorithm(),
                     ((IPEndPoint)sock.RemoteEndPoint).Address ?? IPAddress.Any, DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now.AddDays(7),
                     epl.Listener.wildcardCertificates) : _cert;
                 }
-            });
-#else
-            _sslStream?.AuthenticateAsServer(_cert, false, GetSslProtocol, false);
-#endif
-            Init();
+            } : null, false, false, AuthenticateAsServerCallback, null, out _clientCert, out _clientCertErrors);
+        }
+
+        public void AuthenticateAsServerCallback(IAsyncResult result)
+        {
+            try
+            {
+                _stream = SslSocket.EndAuthenticateAsServer(result);
+
+                if (_stream == null)
+                    LoggerAccessor.LogError($"[HttpConnection] - Failed to authenticate as server.");
+            }
+            catch (Exception ex)
+            {
+                _stream = null;
+
+                LoggerAccessor.LogError($"[HttpConnection] - Failed to authenticate as server. (Exception: {ex}).");
+            }
+
+            if (_stream != null)
+                Init();
+
+            Initialized = true;
         }
 
         internal int[] ClientCertificateErrors
@@ -200,9 +185,15 @@ namespace SpaceWizards.HttpListener
             get { return _clientCert; }
         }
 
-        internal SslStream SslStream
+        internal Stream SslStream
         {
-            get { return _sslStream; }
+            get 
+            {
+                if (_stream is SslStream sslStream)
+                    return sslStream;
+                else
+                    throw new Exception($"[HttpConnection] - Connection stream is not of type:{typeof(SslStream)}.");
+            }
         }
 #if NET5_0_OR_GREATER
         [MemberNotNull(nameof(_memoryStream))]

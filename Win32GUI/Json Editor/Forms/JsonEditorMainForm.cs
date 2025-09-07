@@ -1,15 +1,17 @@
-﻿using System.Drawing;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
+using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace ZTn.Json.Editor.Forms
 {
     public sealed partial class JsonEditorMainForm : Form
     {
+        private const string jsonSlashEscapePattern = @"(?<!\\)\\(?![\\\""bfnrt/])";
         private const string DefaultFileFilters = @"json files (*.json)|*.json";
 
         #region >> Delegates
@@ -302,14 +304,24 @@ namespace ZTn.Json.Editor.Forms
         {
             try
             {
-                jTokenTree.UpdateSelected(jsonValueTextBox.Text);
+                // Hotfix: Replace single backslashes not already escaped
+#if NET7_0_OR_GREATER
+                string fixedText = JsonSlashEscape().Replace(jsonValueTextBox.Text, @"\\");
+#else
+                string fixedText = Regex.Replace(
+                    jsonValueTextBox.Text,
+                    jsonSlashEscapePattern, // matches a single '\' not followed by valid escape
+                    @"\\"
+                );
+#endif
+                jTokenTree.UpdateSelected(fixedText);
 
                 // Save the current cursor position
                 int selectionStart = jsonValueTextBox.SelectionStart;
 
                 // Reformat JSON text
                 string formattedJson = JsonConvert.SerializeObject(
-                    JsonConvert.DeserializeObject(jsonValueTextBox.Text),
+                    JsonConvert.DeserializeObject(fixedText),
                     Formatting.Indented);
 
                 jsonValueTextBox.Text = formattedJson;
@@ -335,7 +347,6 @@ namespace ZTn.Json.Editor.Forms
             }
         }
 
-
         private void jsonValueTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             //remove styles from richtextbox
@@ -345,5 +356,9 @@ namespace ZTn.Json.Editor.Forms
                 e.Handled = true;
             }
         }
+#if NET7_0_OR_GREATER
+        [GeneratedRegex(jsonSlashEscapePattern)]
+        private static partial Regex JsonSlashEscape();
+#endif
     }
 }

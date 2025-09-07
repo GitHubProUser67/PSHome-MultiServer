@@ -1,182 +1,94 @@
-using System.IO;
-using System.Xml.Linq;
-using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Xml.Linq;
+using WebAPIService.GameServices.VEEMEE.gofish.Entities;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.VEEMEE.gofish
 {
-    public class GFScoreBoardData
+    internal class GFScoreBoardData
+    : ScoreboardService<GFScoreboardEntry>
     {
-        private static DateTime _lastDailyResetTime = DateTime.MinValue;
-
-        private static bool _initiated = false;
-
-        private static object _Lock = new object();
-        private static bool _initiatedDaily = false;
-
-        public class ScoreboardEntry
+        public GFScoreBoardData(LeaderboardDbContext dbContext, object obj = null)
+            : base(dbContext)
         {
-            public string psnid { get; set; }
-            public float score { get; set; }
-            public string fishcount { get; set; }
-            public string biggestfishweight { get; set; }
-            public string totalfishweight { get; set; }
         }
 
-        private static List<ScoreboardEntry> scoreboard = new List<ScoreboardEntry>();
-        private static List<ScoreboardEntry> scoreboardDaily = new List<ScoreboardEntry>();
-
-        public static void LoadScoreboardFromXml(string path)
+        public async Task<List<GFScoreboardEntry>> GetYesterdayScoresAsync(int max = 20)
         {
-            if (!File.Exists(path))
-            {
-                _initiated = true;
+            DateTime today = DateTime.UtcNow.Date.AddDays(-1);
+            return await _dbContext.Set<GFScoreboardEntry>()
+                .Where(e => e.UpdatedAt >= today)
+                .OrderByDescending(e => e.Score)
+                .Take(max)
+                .ToListAsync()
+                .ConfigureAwait(false);
+        }
+
+        public GFScoreboardEntry GetEntryForUser(string userName)
+        {
+            return _dbContext.Set<GFScoreboardEntry>()
+                 .Where(x => x.PlayerId == userName)
+                 .FirstOrDefault();
+        }
+
+        public override async Task UpdateScoreAsync(string playerId, float newScore, List<object> extraData = null)
+        {
+            if (string.IsNullOrEmpty(playerId))
                 return;
-            }
 
-            scoreboard.Clear();
+            string fishcount = (string)extraData[0];
+            string biggestfishweight = (string)extraData[1];
+            string totalfishweight = (string)extraData[2];
 
-            foreach (var playerElement in XDocument.Parse(File.ReadAllText(path)).Descendants("player"))
+            var set = _dbContext.Set<GFScoreboardEntry>();
+            DateTime now = DateTime.UtcNow; // use UTC for consistency
+
+            var existing = await set
+                .FirstOrDefaultAsync(e =>
+                e.PlayerId != null &&
+                e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
+
+            if (existing != null)
             {
-                string psnid = playerElement.Element("psnid")?.Value;
-                string scoreStr = playerElement.Element("score")?.Value;
-                string fishcount = playerElement.Element("fishcount")?.Value;
-                string biggestfishweight = playerElement.Element("biggestfishweight")?.Value;
-                string totalfishweight = playerElement.Element("totalfishweight")?.Value;
+                if (newScore > existing.Score)
+                    existing.Score = newScore;
 
-                float.TryParse(scoreStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float score);
+                existing.fishcount = fishcount;
+                existing.biggestfishweight = biggestfishweight;
+                existing.totalfishweight = totalfishweight;
+                existing.UpdatedAt = now; // update timestamp
 
-                scoreboard.Add(new ScoreboardEntry
-                {
-                    psnid = psnid,
-                    score = score,
-                    fishcount = fishcount,
-                    biggestfishweight = biggestfishweight,
-                    totalfishweight = totalfishweight
-                });
-            }
-
-            scoreboard.Sort((a, b) => b.score.CompareTo(a.score));
-
-            if (scoreboard.Count > 20)
-                scoreboard.RemoveRange(20, scoreboard.Count - 20);
-
-            _initiated = true;
-        }
-
-        public static void LoadScoreboardDailyFromXml(string path)
-        {
-            if (!File.Exists(path))
-            {
-                _initiatedDaily = true;
-                return;
-            }
-
-            scoreboardDaily.Clear();
-
-            foreach (var playerElement in XDocument.Parse(File.ReadAllText(path)).Descendants("player"))
-            {
-                string psnid = playerElement.Element("psnid")?.Value;
-                string scoreStr = playerElement.Element("score")?.Value;
-                string fishcount = playerElement.Element("fishcount")?.Value;
-                string biggestfishweight = playerElement.Element("biggestfishweight")?.Value;
-                string totalfishweight = playerElement.Element("totalfishweight")?.Value;
-
-                float score = 0;
-                float.TryParse(scoreStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out score);
-
-                scoreboardDaily.Add(new ScoreboardEntry
-                {
-                    psnid = psnid,
-                    score = score,
-                    fishcount = fishcount,
-                    biggestfishweight = biggestfishweight,
-                    totalfishweight = totalfishweight
-                });
-            }
-
-            scoreboardDaily.Sort((a, b) => b.score.CompareTo(a.score));
-
-            if (scoreboardDaily.Count > 20)
-                scoreboardDaily.RemoveRange(20, scoreboardDaily.Count - 20);
-
-            _initiatedDaily = true;
-        }
-
-        public static void UpdateScoreBoard(string psnid, string newFishcount, string newBiggestfishweight, string newTotalfishweight, float newScore)
-        {
-            // Check if the player already exists in the scoreboard
-            var existingEntry = scoreboard.Find(e => e.psnid != null && e.psnid.Equals(psnid, StringComparison.OrdinalIgnoreCase));
-
-            if (existingEntry != null)
-            {
-                existingEntry.fishcount = newFishcount;
-                existingEntry.biggestfishweight = newBiggestfishweight;
-                existingEntry.totalfishweight = newTotalfishweight;
-
-                // If the new score is higher, update the existing entry
-                if (newScore > existingEntry.score)
-                    existingEntry.score = newScore;
+                _dbContext.Update(existing);
+                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
             }
             else
             {
-                // If the player is not in the scoreboard, add a new entry
-                if (scoreboard.Count < 20)
-                    scoreboard.Add(new ScoreboardEntry { psnid = psnid, score = newScore, fishcount = newFishcount, biggestfishweight = newBiggestfishweight, totalfishweight = newTotalfishweight });
+                await set.AddAsync(new GFScoreboardEntry
+                {
+                    fishcount = fishcount,
+                    biggestfishweight = biggestfishweight,
+                    totalfishweight = totalfishweight,
+                    PlayerId = playerId,
+                    Score = newScore,
+                    UpdatedAt = now // set timestamp for new entry
+                }).ConfigureAwait(false);
+                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
             }
-
-            // Sort the scoreboard by score in descending order
-            scoreboard.Sort((a, b) => b.score.CompareTo(a.score));
-
-            // Trim the scoreboard to the top 20 entries
-            if (scoreboard.Count > 20)
-                scoreboard.RemoveRange(20, scoreboard.Count - 20);
-
-            UpdateDailyScoreBoard(psnid, newFishcount, newBiggestfishweight, newTotalfishweight, newScore);
         }
 
-        public static void UpdateDailyScoreBoard(string psnid, string newFishcount, string newBiggestfishweight, string newTotalfishweight, float newScore)
+        public override async Task<string> SerializeToString(string gameName, int max = 20)
         {
-            // Check if the player already exists in the scoreboard
-            var existingEntry = scoreboardDaily.Find(e => e.psnid != null && e.psnid.Equals(psnid, StringComparison.OrdinalIgnoreCase));
+            XElement xmlScoreboard = new XElement(gameName);
 
-            if (existingEntry != null)
-            {
-                existingEntry.fishcount = newFishcount;
-                existingEntry.biggestfishweight = newBiggestfishweight;
-                existingEntry.totalfishweight = newTotalfishweight;
-
-                // If the new score is higher, update the existing entry
-                if (newScore > existingEntry.score)
-                    existingEntry.score = newScore;
-            }
-            else
-            {
-                // If the player is not in the scoreboard, add a new entry
-                if (scoreboardDaily.Count < 20)
-                    scoreboardDaily.Add(new ScoreboardEntry { psnid = psnid, score = newScore, fishcount = newFishcount, biggestfishweight = newBiggestfishweight, totalfishweight = newTotalfishweight });
-            }
-
-            // Sort the scoreboard by score in descending order
-            scoreboardDaily.Sort((a, b) => b.score.CompareTo(a.score));
-
-            // Trim the scoreboard to the top 20 entries
-            if (scoreboardDaily.Count > 20)
-                scoreboardDaily.RemoveRange(20, scoreboardDaily.Count - 20);
-        }
-
-        public static string ConvertScoreboardToXml(string path)
-        {
-            if (!_initiated)
-                LoadScoreboardFromXml(path);
-
-            XElement xmlScoreboard = new XElement("leaderboard");
-
-            foreach (var entry in scoreboard)
+            foreach (var entry in await GetTopScoresAsync(max))
             {
                 XElement xmlEntry = new XElement("player",
-                    new XElement("psnid", entry.psnid ?? "Voodooperson05"),
-                    new XElement("score", entry.score.ToString().Replace(",", ".")),
+                    new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
+                    new XElement("score", entry.Score.ToString().Replace(",", ".")),
                     new XElement("fishcount", entry.fishcount ?? "0"),
                     new XElement("biggestfishweight", entry.biggestfishweight ?? "0"),
                     new XElement("totalfishweight", entry.totalfishweight ?? "0"));
@@ -186,11 +98,11 @@ namespace WebAPIService.GameServices.VEEMEE.gofish
 
             XElement xmlGameboard = new XElement("games");
 
-            foreach (var entry in scoreboard)
+            foreach (var entry in await GetTopScoresAsync(max))
             {
                 XElement xmlEntry = new XElement("game",
-                    new XElement("psnid", entry.psnid ?? "Voodooperson05"),
-                    new XElement("score", entry.score.ToString().Replace(",", ".")),
+                    new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
+                    new XElement("score", entry.Score.ToString().Replace(",", ".")),
                     new XElement("fishcount", entry.fishcount ?? "0"),
                     new XElement("biggestfishweight", entry.biggestfishweight ?? "0"),
                     new XElement("totalfishweight", entry.totalfishweight ?? "0"));
@@ -203,18 +115,15 @@ namespace WebAPIService.GameServices.VEEMEE.gofish
             return xmlScoreboard.ToString();
         }
 
-        public static string ConvertDailyScoreboardToXml(string path)
+        public override async Task<string> SerializeToDailyString(string gameName, int max = 20)
         {
-            if (!_initiatedDaily)
-                LoadScoreboardDailyFromXml(path);
+            XElement xmlScoreboard = new XElement(gameName);
 
-            XElement xmlScoreboard = new XElement("leaderboard");
-
-            foreach (var entry in scoreboardDaily)
+            foreach (var entry in await GetTodayScoresAsync(max))
             {
                 XElement xmlEntry = new XElement("player",
-                    new XElement("psnid", entry.psnid ?? "Voodooperson05"),
-                    new XElement("score", entry.score.ToString().Replace(",", ".")),
+                    new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
+                    new XElement("score", entry.Score.ToString().Replace(",", ".")),
                     new XElement("fishcount", entry.fishcount ?? "0"),
                     new XElement("biggestfishweight", entry.biggestfishweight ?? "0"),
                     new XElement("totalfishweight", entry.totalfishweight ?? "0"));
@@ -224,11 +133,11 @@ namespace WebAPIService.GameServices.VEEMEE.gofish
 
             XElement xmlGameboard = new XElement("games");
 
-            foreach (var entry in scoreboardDaily)
+            foreach (var entry in await GetTodayScoresAsync(max))
             {
                 XElement xmlEntry = new XElement("game",
-                    new XElement("psnid", entry.psnid ?? "Voodooperson05"),
-                    new XElement("score", entry.score.ToString().Replace(",", ".")),
+                    new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
+                    new XElement("score", entry.Score.ToString().Replace(",", ".")),
                     new XElement("fishcount", entry.fishcount ?? "0"),
                     new XElement("biggestfishweight", entry.biggestfishweight ?? "0"),
                     new XElement("totalfishweight", entry.totalfishweight ?? "0"));
@@ -241,39 +150,39 @@ namespace WebAPIService.GameServices.VEEMEE.gofish
             return xmlScoreboard.ToString();
         }
 
-        public static void UpdateAllTimeScoreboardXml(string apiPath)
+        public async Task<string> SerializeToYesterdayString(string gameName, int max = 20)
         {
-            lock (_Lock)
-            {
-                string filePath = $"{apiPath}/VEEMEE/gofish/leaderboard_alltime.xml";
-                Directory.CreateDirectory($"{apiPath}/VEEMEE/gofish");
-                File.WriteAllText(filePath, ConvertScoreboardToXml(filePath));
-                CustomLogger.LoggerAccessor.LogDebug($"[VEEMEE] - gofish - scoreboard alltime XML updated.");
-            }
-        }
+            XElement xmlScoreboard = new XElement(gameName);
 
-        private static void CheckAndResetDailyScoreboard()
-        {
-            DateTime now = DateTime.Now.Date;
-
-            if (_lastDailyResetTime.Date != now)
+            foreach (var entry in await GetYesterdayScoresAsync(max))
             {
-                scoreboardDaily.Clear();
-                _lastDailyResetTime = now;
-                CustomLogger.LoggerAccessor.LogDebug($"[VEEMEE] - gofish - Daily scoreboard reset at {DateTime.Now}.");
-            }
-        }
+                XElement xmlEntry = new XElement("player",
+                    new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
+                    new XElement("score", entry.Score.ToString().Replace(",", ".")),
+                    new XElement("fishcount", entry.fishcount ?? "0"),
+                    new XElement("biggestfishweight", entry.biggestfishweight ?? "0"),
+                    new XElement("totalfishweight", entry.totalfishweight ?? "0"));
 
-        public static void UpdateTodayScoreboardXml(string apiPath, string date)
-        {
-            lock (_Lock)
-            {
-                CheckAndResetDailyScoreboard();
-                string filePath = $"{apiPath}/VEEMEE/gofish/leaderboard_{date}.xml";
-                Directory.CreateDirectory($"{apiPath}/VEEMEE/gofish");
-                File.WriteAllText(filePath, ConvertDailyScoreboardToXml(filePath));
-                CustomLogger.LoggerAccessor.LogDebug($"[VEEMEE] - gofish - scoreboard {date} XML updated.");
+                xmlScoreboard.Add(xmlEntry);
             }
+
+            XElement xmlGameboard = new XElement("games");
+
+            foreach (var entry in await GetYesterdayScoresAsync(max))
+            {
+                XElement xmlEntry = new XElement("game",
+                    new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
+                    new XElement("score", entry.Score.ToString().Replace(",", ".")),
+                    new XElement("fishcount", entry.fishcount ?? "0"),
+                    new XElement("biggestfishweight", entry.biggestfishweight ?? "0"),
+                    new XElement("totalfishweight", entry.totalfishweight ?? "0"));
+
+                xmlGameboard.Add(xmlEntry);
+            }
+
+            xmlScoreboard.Add(xmlGameboard.Elements());
+
+            return xmlScoreboard.ToString();
         }
     }
 }

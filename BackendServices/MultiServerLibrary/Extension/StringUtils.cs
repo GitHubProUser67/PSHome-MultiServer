@@ -84,14 +84,7 @@ namespace MultiServerLibrary.Extension
 
         public static string HexStringToString(this string hex)
         {
-            byte[] bytes = new byte[hex.Length / 2];
-
-            for (int i = 0; i < bytes.Length; i++)
-            {
-                bytes[i] = Convert.ToByte(hex.Substring(i * 2, 2), 16);
-            }
-
-            return Encoding.UTF8.GetString(bytes);
+            return Encoding.UTF8.GetString(hex.HexStringToByteArray());
         }
 
         /// <summary>
@@ -102,51 +95,22 @@ namespace MultiServerLibrary.Extension
         /// <returns>A byte array.</returns>
         public static byte[] HexStringToByteArray(this string hex)
         {
-            string cleanedRequest = hex.Replace(" ", string.Empty).Replace("\n", string.Empty);
+            string cleanedRequest = hex.Replace(" ", string.Empty)
+                    .Replace("\t", string.Empty).Replace("\r", string.Empty)
+                    .Replace("\n", string.Empty);
 
             if (cleanedRequest.Length % 2 == 1)
-                throw new Exception("[StringUtils] - HexStringToByteArray - The binary key cannot have an odd number of digits");
+                throw new ArgumentException("[StringUtils] - HexStringToByteArray - The binary key cannot have an odd number of digits");
 
-            byte optMode = 0;
-            if (IsLowerCaseHexOnly(cleanedRequest))
-                optMode = 2;
-            else if (IsUpperCaseHexOnly(cleanedRequest))
-                optMode = 1;
-
-            byte[] arr = new byte[cleanedRequest.Length >> 1];
-
-            for (int i = 0; i < cleanedRequest.Length >> 1; ++i)
-            {
-                arr[i] = (byte)((cleanedRequest[i << 1].GetHexVal(optMode) << 4) + cleanedRequest[(i << 1) + 1].GetHexVal(optMode));
-            }
-
-            return arr;
+            return Enumerable.Range(0, cleanedRequest.Length)
+                     .Where(x => x % 2 == 0)
+                     .Select(x => Convert.ToByte(cleanedRequest.Substring(x, 2), 16))
+                     .ToArray();
         }
 
         public static double Eval(this string expression, string filter = null)
         {
             return Convert.ToDouble(new DataTable().Compute(expression, filter));
-        }
-
-        /// <summary>
-        /// Converts a Ghidra string report into a byte array.
-        /// Extracts hex bytes from each line and places them at the correct index.
-        /// </summary>
-        /// <param name="report">The Ghidra report as a string</param>
-        /// <returns>Byte array constructed from the report</returns>
-        public static byte[] GhidraStrReportToBytes(string report, int sizeOfOutput = -1)
-        {
-            string[] lines = report.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-            byte[] byteArray = new byte[sizeOfOutput <= -1 ? lines.Length : sizeOfOutput];
-
-            foreach (string line in lines)
-            {
-                Match match = Regex.Match(line, @"\b([0-9a-fA-F]+)\s+([0-9a-fA-F]{2})\s+.*?\[(\d+)\]");
-                if (match.Success)
-                    byteArray[int.Parse(match.Groups[3].Value)] = Convert.ToByte(match.Groups[2].Value, 16);
-            }
-
-            return byteArray;
         }
 
         /// <summary>
@@ -229,25 +193,6 @@ namespace MultiServerLibrary.Extension
                 encoding = Encoding.UTF8;
 
             return new MemoryStream(encoding.GetBytes(str));
-        }
-
-        /// <summary>
-        /// Adds an element to a double string array.
-        /// <para>Ajoute un élément à une liste double de strings.</para>
-        /// </summary>
-        /// <param name="original">The original double array.</param>
-        /// <param name="bytesToRead">The new array to add.</param>
-        /// <returns>A double array of strings.</returns>
-        public static string[][] AddArray(this string[][] original, string[] newElement)
-        {
-            int newSize = original.Length + 1;
-            string[][] newArray = new string[newSize][];
-            Parallel.For(0, original.Length, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, (i, stateInner) =>
-            {
-                newArray[i] = original[i];
-            });
-            newArray[newSize - 1] = newElement;
-            return newArray;
         }
 
         public unsafe static List<string> ParseJsonStringProperty(this string jsonText, string property)
@@ -378,26 +323,6 @@ namespace MultiServerLibrary.Extension
                     FindPropertyValuesNested(nestedArrayItem, output, property);
                 }
             }
-        }
-
-        private static bool IsLowerCaseHexOnly(string str)
-        {
-            foreach (char c in str)
-            {
-                if (char.IsDigit(c)) continue;
-                if (!char.IsLower(c)) return false;
-            }
-            return true;
-        }
-
-        private static bool IsUpperCaseHexOnly(string str)
-        {
-            foreach (char c in str)
-            {
-                if (char.IsDigit(c)) continue;
-                if (!char.IsUpper(c)) return false;
-            }
-            return true;
         }
     }
 }

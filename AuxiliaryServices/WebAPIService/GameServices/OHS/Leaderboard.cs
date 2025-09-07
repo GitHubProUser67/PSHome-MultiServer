@@ -1,22 +1,26 @@
-using System.IO;
-using System.Collections.Generic;
-using MultiServerLibrary.HTTP;
 using CustomLogger;
 using HttpMultipartParser;
+using Microsoft.EntityFrameworkCore;
+using MultiServerLibrary.HTTP;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.OHS
 {
     public class Leaderboard
     {
-        public static string Levelboard_GetAll(string directorypath, int game, bool levelboard)
+        private static ConcurrentDictionary<string, OHSScoreBoardData> _leaderboards = new ConcurrentDictionary<string, OHSScoreBoardData>();
+
+        public static string Levelboard_GetAll(string project, int game, bool levelboard)
         {
-            string dataforohs = GetAllLeaderboards(directorypath, levelboard);
+            string dataforohs = GetAllBetterScores(project, levelboard);
 
             if (string.IsNullOrEmpty(dataforohs))
                 return null;
@@ -24,7 +28,7 @@ namespace WebAPIService.GameServices.OHS
             return dataforohs;
         }
 
-        public static string Leaderboard_RequestByUsers(byte[] PostData, string ContentType, string directorypath, string batchparams, int game)
+        public static string Leaderboard_RequestByUsers(byte[] PostData, string ContentType, string project, string batchparams, int game)
         {
             string dataforohs = null;
 
@@ -38,13 +42,13 @@ namespace WebAPIService.GameServices.OHS
                     {
                         var data = MultipartFormDataParser.Parse(ms, boundary);
                         LoggerAccessor.LogInfo($"[OHS] : Client Version - {data.GetParameterValue("version")}");
-                        dataforohs = RequestByUsers(JaminProcessor.JaminDeFormat(data.GetParameterValue("data"), true, game), directorypath);
+                        dataforohs = RequestByUsers(JaminProcessor.JaminDeFormat(data.GetParameterValue("data"), true, game), project, false);
                         ms.Flush();
                     }
                 }
             }
             else
-                dataforohs = RequestByUsers(batchparams, directorypath);
+                dataforohs = RequestByUsers(batchparams, project, false);
 
             if (!string.IsNullOrEmpty(batchparams))
             {
@@ -64,7 +68,7 @@ namespace WebAPIService.GameServices.OHS
             return dataforohs;
         }
 
-        public static string Leaderboard_RequestByRank(byte[] PostData, string ContentType, string directorypath, string batchparams, int game)
+        public static string Leaderboard_RequestByRank(byte[] PostData, string ContentType, string project, string batchparams, int game)
         {
             string dataforohs = null;
 
@@ -78,13 +82,13 @@ namespace WebAPIService.GameServices.OHS
                     {
                         var data = MultipartFormDataParser.Parse(ms, boundary);
                         LoggerAccessor.LogInfo($"[OHS] : Client Version - {data.GetParameterValue("version")}");
-                        dataforohs = RequestByRank(JaminProcessor.JaminDeFormat(data.GetParameterValue("data"), true, game), directorypath);
+                        dataforohs = RequestByRank(JaminProcessor.JaminDeFormat(data.GetParameterValue("data"), true, game), project, false);
                         ms.Flush();
                     }
                 }
             }
             else
-                dataforohs = RequestByRank(batchparams, directorypath);
+                dataforohs = RequestByRank(batchparams, project, false);
 
             if (!string.IsNullOrEmpty(batchparams))
             {
@@ -104,7 +108,7 @@ namespace WebAPIService.GameServices.OHS
             return dataforohs;
         }
 
-        public static string Leaderboard_Update(byte[] PostData, string ContentType, string directorypath, string batchparams, int game, bool levelboard)
+        public static string Leaderboard_Update(byte[] PostData, string ContentType, string project, string batchparams, int game, bool levelboard)
         {
             string dataforohs = null;
             string writekey = "11111111";
@@ -130,7 +134,7 @@ namespace WebAPIService.GameServices.OHS
                 dataforohs = batchparams;
             // TODO! writekey must be somewhere.
 
-            string value = null;
+            string extraData = null;
 
             try
             {
@@ -151,42 +155,14 @@ namespace WebAPIService.GameServices.OHS
 
                         if (rootObject.value != null && rootObject.value.Length > 0 && rootObject.value[0] is string v)
                         {
-                            value = JaminProcessor.JaminDeFormat(v, false, 0, false);
-
-                            if (!string.IsNullOrEmpty(value))
-                                LoggerAccessor.LogInfo($"[OHS] : {(levelboard ? "Levelboard" : "Leaderboard")} has extra data: {value}");
+                            extraData = JaminProcessor.JaminDeFormat(v, false, 0, false);
+#if DEBUG
+                            if (!string.IsNullOrEmpty(extraData))
+                                LoggerAccessor.LogInfo($"[OHS] : {(levelboard ? "Levelboard" : "Leaderboard")} has extra data: {extraData}");
+#endif
                         }
 
-                        string scoreboardfile = directorypath + $"/{(levelboard ? $"Levelboard_Data/levelboard_{key}.json" : $"Leaderboard_Data/scoreboard_{key}.json")}";
-
-                        if (!string.IsNullOrEmpty(user))
-                        {
-                            if (File.Exists(scoreboardfile))
-                            {
-                                string tempreader = File.ReadAllText(scoreboardfile);
-                                if (tempreader != null)
-                                    dataforohs = UpdateScoreboard(tempreader, user, score, scoreboardfile);
-                            }
-                            else // Apparently update can be used to generate the scoreboard.
-                            {
-                                string boardDirectoryPath = Path.GetDirectoryName(scoreboardfile);
-
-                                if (!string.IsNullOrEmpty(boardDirectoryPath))
-                                {
-                                    string JsonSerializedData = JsonConvert.SerializeObject(GenerateSampleScoreboard(10 /* Just because it is most common value */), Formatting.Indented);
-
-                                    Directory.CreateDirectory(boardDirectoryPath);
-
-                                    File.WriteAllText(scoreboardfile, JsonSerializedData);
-
-                                    dataforohs = UpdateScoreboard(JsonSerializedData, user, score, scoreboardfile);
-                                }
-                                else
-                                    dataforohs = null;
-                            }
-                        }
-                        else
-                            dataforohs = null;
+                        dataforohs = UpdateScoreboard(user, score, project, key, levelboard, extraData);
                     }
                     else
                         dataforohs = null;
@@ -215,7 +191,7 @@ namespace WebAPIService.GameServices.OHS
             return dataforohs;
         }
 
-        public static string Leaderboard_UpdatesSameEntry(byte[] PostData, string ContentType, string directorypath, string batchparams, int game)
+        public static string Leaderboard_UpdatesSameEntry(byte[] PostData, string ContentType, string project, string batchparams, int game, bool levelboard)
         {
             string dataforohs = null;
             string writekey = "11111111";
@@ -243,7 +219,7 @@ namespace WebAPIService.GameServices.OHS
 
             StringBuilder resultBuilder = new StringBuilder();
 
-            string value = null;
+            string extraData = null;
 
             try
             {
@@ -264,30 +240,21 @@ namespace WebAPIService.GameServices.OHS
 
                         if (rootObject.value != null && rootObject.value.Length > 0 && rootObject.value[0] is string v)
                         {
-                            value = JaminProcessor.JaminDeFormat(v, false, 0, false);
-
-                            if (!string.IsNullOrEmpty(value))
-                                LoggerAccessor.LogInfo($"[OHS] : Leaderboard has extra data: {value}");
+                            extraData = JaminProcessor.JaminDeFormat(v, false, 0, false);
+#if DEBUG
+                            if (!string.IsNullOrEmpty(extraData))
+                                LoggerAccessor.LogInfo($"[OHS] : {(levelboard ? "Levelboard" : "Leaderboard")} has extra data: {extraData}");
+#endif
                         }
 
                         if (keys != null)
                         {
                             foreach (string key in keys)
                             {
-                                string scoreboardfile = directorypath + $"/Leaderboard_Data/scoreboard_{key}.json";
-
-                                if (File.Exists(scoreboardfile))
-                                {
-                                    string tempreader = File.ReadAllText(scoreboardfile);
-
-                                    if (tempreader != null && user != null)
-                                    {
-                                        if (resultBuilder.Length == 0)
-                                            resultBuilder.Append(UpdateScoreboard(tempreader, user, score, scoreboardfile));
-                                        else
-                                            resultBuilder.Append(", " + UpdateScoreboard(tempreader, user, score, scoreboardfile));
-                                    }
-                                }
+                                if (resultBuilder.Length == 0)
+                                    resultBuilder.Append(UpdateScoreboard(user, score, project, key, levelboard, extraData));
+                                else
+                                    resultBuilder.Append(", " + UpdateScoreboard(user, score, project, key, levelboard, extraData));
                             }
                         }
                     }
@@ -320,132 +287,54 @@ namespace WebAPIService.GameServices.OHS
             return dataforohs;
         }
 
-        public static string UpdateScoreboard(string json, string nameToUpdate, int newScore, string scoreboardfile)
+        public static void InitializeLeaderboard(string tablekey)
         {
-            bool noedits = false;
-            int newIndex = -1;
-            string scoreboarddata = string.Empty;
-
-            try
+            if (!_leaderboards.ContainsKey(tablekey))
             {
-                // Step 1: Deserialize JSON string into a C# object
-                Scoreboard scoreboard = JsonConvert.DeserializeObject<Scoreboard>(json);
+                var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
-                if (scoreboard != null && scoreboard.Entries != null)
+                retCtx.Database.Migrate();
+
+                if (_leaderboards.TryAdd(tablekey, new OHSScoreBoardData(retCtx, tablekey)))
                 {
-                    for (int i = 0; i < scoreboard.Entries.Count; i++)
+                    for (int j = 1; j < 11; j++)
                     {
-                        ScoreboardEntry entry = scoreboard.Entries[i];
-
-                        if (newScore > entry.Score)
-                        {
-                            newIndex = i;
-                            break;
-                        }
-                    }
-
-                    // Step 2: Add the new entry at the appropriate position
-                    if (newIndex >= 0)
-                        scoreboard.Entries[newIndex] = new ScoreboardEntry
-                        {
-                            Name = nameToUpdate,
-                            Score = newScore
-                        };
-                    else
-                        noedits = true;
-
-                    if (!noedits)
-                    {
-                        // Step 3: Sort the entries based on the new scores
-                        scoreboard.Entries.Sort((a, b) => b.Score.CompareTo(a.Score));
-
-                        // Step 4: Adjust the ranks accordingly
-                        for (int i = 0; i < scoreboard.Entries.Count; i++)
-                        {
-                            scoreboard.Entries[i].Rank = i + 1;
-                        }
-
-                        // Step 5: Serialize the updated object back to a JSON string
-                        string updatedscoreboard = JsonConvert.SerializeObject(scoreboard, Formatting.Indented);
-
-                        if (!string.IsNullOrEmpty(updatedscoreboard))
-                            File.WriteAllText(scoreboardfile, updatedscoreboard);
+                        _ = _leaderboards[tablekey].UpdateScoreAsync(FrenchNameGenerator.GetRandomWord(), 1000 - (j * 50));
                     }
                 }
-
-                if (noedits)
-                    scoreboarddata = json;
-                else
-                    scoreboarddata = File.ReadAllText(scoreboardfile);
-
-                // Step 1: Parse JSON to C# objects
-                List<ScoreboardEntry> entries = JsonConvert.DeserializeObject<JObject>(scoreboarddata)?["Entries"]?.ToObject<List<ScoreboardEntry>>();
-
-                if (entries != null)
-                {
-                    // Step 2: Convert to Lua table structure
-                    Dictionary<int, Dictionary<string, object>> luaTable = new Dictionary<int, Dictionary<string, object>>();
-
-                    foreach (ScoreboardEntry entry in entries)
-                    {
-                        if (!string.IsNullOrEmpty(entry.Name))
-                            luaTable.Add(entry.Rank, new Dictionary<string, object>
-                                    {
-                                        { "[\"user\"]", $"\"{entry.Name}\"" }, // Enclose string in double quotes and put it inside the brackets
-                                        { "[\"score\"]", $"{entry.Score}" } // For numbers, no need to enclose in quotes and put it inside the brackets
-                                    });
-                    }
-
-                    // Step 3: Format the Lua table as a string using regex
-                    return FormatScoreBoardLuaTable(luaTable);
-                }
             }
-            catch (Exception ex)
-            {
-                LoggerAccessor.LogError($"[Leaderboard] - UpdateScoreboard failed - {ex}");
-            }
-
-            return "{ }";
         }
 
-        public static string GetAllLeaderboards(string scoreboardpath, bool levelboard)
+        public static string UpdateScoreboard(string playerId, int newScore, string project, string key, bool levelboard, string extraData = null)
+        {
+            string scoreboarddata = string.Empty;
+            string tablekey = levelboard ? project + $"|{key}" + "|levelboard" : project + $"|{key}";
+
+            InitializeLeaderboard(tablekey);
+
+            _ = _leaderboards[tablekey].UpdateScoreAsync(playerId, newScore);
+            if (!string.IsNullOrEmpty(extraData))
+                _ = _leaderboards[tablekey].SetJaminExtraData(playerId, extraData);
+            return _leaderboards[tablekey].SerializeToStringEx(null, playerId).Result ?? "{ }";
+        }
+
+        public static string GetAllBetterScores(string project, bool levelboard)
         {
             string returnvalue = string.Empty;
 
-            scoreboardpath += $"/{(levelboard ? "Levelboard_Data/" : "Leaderboard_Data/")}";
-
-            try
+            foreach (var leaderboard in _leaderboards.Where(x => x.Key.Contains(project) && (!levelboard || x.Key.Contains("|levelboard"))))
             {
-                if (Directory.Exists(scoreboardpath))
+                var scoreEntries = _leaderboards[leaderboard.Key].GetTopScoresAsync(1).Result;
+
+                if (scoreEntries.Any())
                 {
-                    foreach (string scoreboardfile in Directory.GetFiles(scoreboardpath, "*.json"))
-                    {
-                        // Split the filename by '_'
-                        string[] parts = scoreboardfile.Substring(scoreboardfile.LastIndexOf('/') + 1).Split('_');
+                    var scoreEntry = scoreEntries.First();
 
-                        // Check if there are enough parts to get the second one
-                        if (parts.Length > 1)
-                        {
-                            string boardName = RemoveAfterDot(parts[1]);
-
-                            // Find the entry with the highest score
-                            ScoreboardEntry highestScoreEntry = JsonConvert.DeserializeObject<JObject>(File.ReadAllText(scoreboardfile))?["Entries"]?
-                                .ToObject<List<ScoreboardEntry>>()?.OrderByDescending(e => e.Score).FirstOrDefault();
-
-                            if (highestScoreEntry != null)
-                            {
-                                if (returnvalue.Length != 0)
-                                    returnvalue += $", [\"{boardName}\"] = {{ [\"score\"] = {highestScoreEntry.Score}, [\"user\"] = \"{highestScoreEntry.Name}\" }}";
-                                else
-                                    returnvalue = $"{{ [\"{boardName}\"] = {{ [\"score\"] = {highestScoreEntry.Score}, [\"user\"] = \"{highestScoreEntry.Name}\" }}";
-                            }
-                        }
-                    }
+                    if (returnvalue.Length != 0)
+                        returnvalue += $", [\"{leaderboard.Key.Split('|')[1]}\"] = {{ [\"score\"] = {scoreEntry.Score}, [\"user\"] = \"{scoreEntry.PsnId}\" }}";
+                    else
+                        returnvalue = $"{{ [\"{leaderboard.Key.Split('|')[1]}\"] = {{ [\"score\"] = {scoreEntry.Score}, [\"user\"] = \"{scoreEntry.PsnId}\" }}";
                 }
-            }
-            catch (Exception ex)
-            {
-                LoggerAccessor.LogError($"[Leaderboard] - GetAllLeaderboards failed - {ex}");
             }
 
             if (returnvalue.Length != 0)
@@ -456,84 +345,67 @@ namespace WebAPIService.GameServices.OHS
             return returnvalue;
         }
 
-        public static string RequestByUsers(string jsontable, string scoreboardpath)
+        public static string RequestByUsers(string jsontable, string project, bool levelboard)
         {
             string returnvalue = "{ [\"entries\"] = { }, [\"user\"] = { [\"score\"] = 0 } }";
 
             try
             {
-                string scoreboardfile = string.Empty;
+                ScoreBoardUsersRequest data = JsonConvert.DeserializeObject<ScoreBoardUsersRequest>(jsontable);
 
-                if (Directory.Exists(scoreboardpath))
+                if (data != null)
                 {
-                    if (!string.IsNullOrEmpty(jsontable))
+                    string key = data.Key;
+                    string tablekey = levelboard ? project + $"|{key}" + "|levelboard" : project + $"|{key}";
+
+                    InitializeLeaderboard(tablekey);
+
+                    if (_leaderboards.ContainsKey(tablekey))
                     {
-                        ScoreBoardUsersRequest data = JsonConvert.DeserializeObject<ScoreBoardUsersRequest>(jsontable);
+                        List<Entities.OHSScoreboardEntry> scoreEntries;
 
-                        if (data != null && data.Users != null)
+                        if (key.Contains("daily"))
+                            scoreEntries = _leaderboards[tablekey].GetTodayScoresAsync(-1).Result;
+                        else
+                            scoreEntries = _leaderboards[tablekey].GetAllScoresAsync().Result;
+
+                        if (scoreEntries.Any())
                         {
-                            scoreboardfile = scoreboardpath + $"/Leaderboard_Data/scoreboard_{data.Key}.json";
+                            StringBuilder resultBuilder = new StringBuilder();
 
-                            if (File.Exists(scoreboardfile))
+                            foreach (string user in data.Users)
                             {
-                                List<ScoreboardEntry> entries = JsonConvert.DeserializeObject<JObject>(File.ReadAllText(scoreboardfile))?["Entries"]?.ToObject<List<ScoreboardEntry>>();
-
-                                if (entries != null)
+                                foreach (var entry in scoreEntries)
                                 {
-                                    StringBuilder resultBuilder = new StringBuilder();
-
-                                    foreach (string user in data.Users.Where(user => !string.IsNullOrEmpty(user)))
+                                    if (entry.PsnId == user)
                                     {
-                                        foreach (ScoreboardEntry entry in entries)
-                                        {
-                                            if (!string.IsNullOrEmpty(entry.Name) && entry.Name.Equals(user))
-                                            {
-                                                if (entry.Score != 0)
-                                                {
-                                                    if (resultBuilder.Length == 0)
-                                                        resultBuilder.Append($"[\"user\"] = {{ [\"score\"] = {entry.Score.ToString()} }}");
-                                                    else
-                                                        resultBuilder.Append($", [\"user\"] = {{ [\"score\"] = {entry.Score.ToString()} }}");
-                                                }
-                                                else
-                                                {
-                                                    if (resultBuilder.Length == 0)
-                                                        resultBuilder.Append($"[\"user\"] = {{ [\"score\"] = 0 }}");
-                                                    else
-                                                        resultBuilder.Append($", [\"user\"] = {{ [\"score\"] = 0 }}");
-                                                }
-                                            }
-                                        }
+                                        if (resultBuilder.Length == 0)
+                                            resultBuilder.Append($"[\"user\"] = {{ [\"score\"] = {entry.Score} }}");
+                                        else
+                                            resultBuilder.Append($", [\"user\"] = {{ [\"score\"] = {entry.Score} }}");
                                     }
-
-                                    if (resultBuilder.Length == 0)
-                                        resultBuilder.Append($"[\"user\"] = {{ [\"score\"] = 0 }}");
-
-                                    // Step 2: Convert to Lua table structure
-                                    Dictionary<int, Dictionary<string, object>> luaTable = new Dictionary<int, Dictionary<string, object>>();
-
-                                    int i = 1;
-
-                                    foreach (ScoreboardEntry entry in entries)
-                                    {
-                                        if (i >= 1 && !string.IsNullOrEmpty(entry.Name))
-                                        {
-                                            Dictionary<string, object> rankData = new Dictionary<string, object>
-                                                        {
-                                                            { "[\"user\"]", $"\"{entry.Name}\"" },
-                                                            { "[\"score\"]", $"{entry.Score}" }
-                                                        };
-
-                                            luaTable.Add(entry.Rank, rankData);
-                                        }
-                                    }
-
-                                    // Step 3: Format the Lua table as a string using regex
-                                    returnvalue = "{ [\"entries\"] = " + FormatScoreBoardLuaTable(luaTable) + ", " + resultBuilder.ToString() + " }";
-
-                                    resultBuilder = null;
                                 }
                             }
+
+                            if (resultBuilder.Length == 0)
+                                resultBuilder.Append($"[\"user\"] = {{ [\"score\"] = 0 }}");
+
+                            Dictionary<int, Dictionary<string, object>> luaTable = new Dictionary<int, Dictionary<string, object>>();
+
+                            int i = 1;
+
+                            foreach (var entry in scoreEntries)
+                            {
+                                luaTable.Add(i, new Dictionary<string, object>
+                                                        {
+                                                            { "[\"user\"]", $"\"{entry.PsnId}\"" },
+                                                            { "[\"score\"]", $"{entry.Score}" }
+                                                        });
+
+                                i++;
+                            }
+
+                            returnvalue = "{ [\"entries\"] = " + OHSScoreBoardData.FormatScoreBoardLuaTable(luaTable) + ", " + resultBuilder.ToString() + " }";
                         }
                     }
                 }
@@ -546,10 +418,8 @@ namespace WebAPIService.GameServices.OHS
             return returnvalue;
         }
 
-        public static string RequestByRank(string jsontable, string scoreboardpath)
+        public static string RequestByRank(string jsontable, string project, bool levelboard)
         {
-            // Sometimes requestbyrank was used to create the scoreboard.
-
             try
             {
                 int numEntries = 0;
@@ -581,52 +451,29 @@ namespace WebAPIService.GameServices.OHS
                     if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(key))
                         return null;
 
-                    Directory.CreateDirectory(scoreboardpath + "/Leaderboard_Data");
+                    string tablekey = levelboard ? project + $"|{key}" + "|levelboard" : project + $"|{key}";
 
-                    string scoreboardfile = scoreboardpath + $"/Leaderboard_Data/scoreboard_{key}.json";
+                    InitializeLeaderboard(tablekey);
 
-                    // Step 1: Parse JSON to C# objects
-                    List<ScoreboardEntry> entries = null;
-
-                    if (!File.Exists(scoreboardfile))
+                    if (!_leaderboards.ContainsKey(tablekey))
                     {
-                        string JsonSerializedData = JsonConvert.SerializeObject(GenerateSampleScoreboard(numEntries), Formatting.Indented);
+                        var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
-                        File.WriteAllText(scoreboardfile, JsonSerializedData);
+                        retCtx.Database.Migrate();
 
-                        entries = JsonConvert.DeserializeObject<JObject>(JsonSerializedData)?["Entries"]?.ToObject<List<ScoreboardEntry>>();
-                    }
-                    else
-                        entries = JsonConvert.DeserializeObject<JObject>(File.ReadAllText(scoreboardfile))?["Entries"]?.ToObject<List<ScoreboardEntry>>();
-
-                    if (entries != null)
-                    {
-                        int scoreforuser = 0;
-                        int i = 1;
-
-                        // Step 2: Convert to Lua table structure
-                        Dictionary<int, Dictionary<string, object>> luaTable = new Dictionary<int, Dictionary<string, object>>();
-
-                        foreach (ScoreboardEntry entry in entries)
+                        if (_leaderboards.TryAdd(tablekey, new OHSScoreBoardData(retCtx, tablekey)))
                         {
-                            if (i >= start && !string.IsNullOrEmpty(entry.Name))
+                            for (int j = 1; j < 11; j++)
                             {
-                                Dictionary<string, object> rankData = new Dictionary<string, object>
-                                            {
-                                                { "[\"user\"]", $"\"{entry.Name}\"" }, // Enclose string in double quotes and put it inside the brackets
-                                                { "[\"score\"]", $"{entry.Score}" } // For numbers, no need to enclose in quotes and put it inside the brackets
-                                            };
-
-                                luaTable.Add(entry.Rank, rankData);
-
-                                if (entry.Name == user)
-                                    scoreforuser = entry.Score;
+                                _ = _leaderboards[tablekey].UpdateScoreAsync(FrenchNameGenerator.GetRandomWord(), 1000 - (j * 50));
                             }
                         }
-
-                        // Step 3: Format the Lua table as a string using regex
-                        return $"{{ [\"user\"] = {{ [\"score\"] = {scoreforuser} }}, [\"entries\"] = {FormatScoreBoardLuaTable(luaTable)} }}";
                     }
+
+                    if (key.Contains("daily"))
+                        return _leaderboards[tablekey].SerializeToStringDailyEx(null, user, start, numEntries).Result;
+                    else
+                        return _leaderboards[tablekey].SerializeToStringEx(null, user, start, numEntries).Result;
                 }
             }
             catch (Exception ex)
@@ -635,63 +482,6 @@ namespace WebAPIService.GameServices.OHS
             }
 
             return $"{{ [\"user\"] = {{ [\"score\"] = 0 }}, [\"entries\"] = {{ }} }}";
-        }
-
-        private static Scoreboard GenerateSampleScoreboard(int numEntries)
-        {
-            Scoreboard scoreboard = new Scoreboard();
-
-            scoreboard.Entries = new List<ScoreboardEntry>(numEntries);
-
-            for (int i = 0; i < numEntries; i++)
-            {
-                scoreboard.Entries.Add(new ScoreboardEntry { Name = string.Empty, Score = 0 });
-            }
-
-            // Sort the entries by score in descending order
-            scoreboard.Entries.Sort((entry1, entry2) => entry2.Score.CompareTo(entry1.Score));
-
-            // Assign ranks based on the sorted order
-            for (int i = 0; i < scoreboard.Entries.Count; i++)
-            {
-                scoreboard.Entries[i].Rank = i + 1;
-            }
-
-            return scoreboard;
-        }
-
-        // Helper method to format the Lua table as a string
-        private static string FormatScoreBoardLuaTable(Dictionary<int, Dictionary<string, object>> luaTable)
-        {
-            string luaString = "{ ";
-            foreach (var rankData in luaTable)
-            {
-                luaString += $"[{rankData.Key}] = {{ ";
-                foreach (var kvp in rankData.Value)
-                {
-                    luaString += $"{kvp.Key} = {kvp.Value}, "; // We already formatted the keys and values accordingly
-                }
-                luaString = RemoveTrailingComma(luaString); // Remove the trailing comma for the last element in each number category
-                luaString += " }, ";
-            }
-            luaString += " }";
-
-            // Remove trailing commas
-            return RemoveTrailingComma(luaString);
-        }
-
-        // Helper method to remove the trailing comma from the Lua table string
-        private static string RemoveTrailingComma(string input)
-        {
-            return Regex.Replace(input, @",(\s*})|(\s*]\s*})", "$1$2");
-        }
-
-        private static string RemoveAfterDot(string input)
-        {
-            int dotIndex = input.IndexOf('.');
-            if (dotIndex != -1)
-                return input.Substring(0, dotIndex);
-            return input; // Return the original string if there's no dot
         }
 
         public class Scoreboard
@@ -703,7 +493,7 @@ namespace WebAPIService.GameServices.OHS
         {
             public string Name { get; set; }
             public int Score { get; set; }
-            public int Rank { get; set; } // Add this property to hold the rank
+            public int Rank { get; set; }
         }
 
         public class ScoreBoardUpdateSameEntry

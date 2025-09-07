@@ -1,9 +1,6 @@
-using System;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Xml;
 using MultiServerLibrary.HTTP;
+using System.Globalization;
+using System.Linq;
 
 namespace WebAPIService.GameServices.VEEMEE.gofish
 {
@@ -33,71 +30,11 @@ namespace WebAPIService.GameServices.VEEMEE.gofish
                 biggestfishweight = data["biggestfishweight"].First();
                 totalfishweight = data["totalfishweight"].First();
 
-                Directory.CreateDirectory($"{apiPath}/VEEMEE/gofish/User_Data");
+                GFLeaderboard.InitializeLeaderboard();
 
-                if (File.Exists($"{apiPath}/VEEMEE/gofish/User_Data/{psnid}.xml"))
-                {
-                    try
-                    {
-                        GFScoreBoardData.UpdateScoreBoard(psnid, fishcount, biggestfishweight, totalfishweight, (float)double.Parse(score, CultureInfo.InvariantCulture));
-                        GFScoreBoardData.UpdateAllTimeScoreboardXml(apiPath); // We finalized edit, so we issue a write.
-                        GFScoreBoardData.UpdateTodayScoreboardXml(apiPath, DateTime.Now.ToString("yyyy_MM_dd")); // We finalized edit, so we issue a write.
-                    }
-                    catch (Exception)
-                    {
-                        // Not Important
-                    }
+                _ = GFLeaderboard.Leaderboard.UpdateScoreAsync(psnid, float.Parse(score, CultureInfo.InvariantCulture), new System.Collections.Generic.List<object> { fishcount, biggestfishweight, totalfishweight });
 
-                    // Load the XML string into an XmlDocument
-                    XmlDocument xmlDoc = new XmlDocument();
-                    xmlDoc.LoadXml($"<xml>{File.ReadAllText($"{apiPath}/VEEMEE/gofish/User_Data/{psnid}.xml")}</xml>");
-
-                    // Find the <score> element
-                    XmlElement scoreElement = xmlDoc.SelectSingleNode("/xml/score") as XmlElement;
-
-                    if (scoreElement != null)
-                    {
-                        // Replace the value of <score> with a new value
-                        scoreElement.InnerText = score;
-
-                        // Find the <fishcount> element
-                        XmlElement fishcountElement = xmlDoc.SelectSingleNode("/xml/fishcount") as XmlElement;
-
-                        if (fishcountElement != null)
-                        {
-                            // Replace the value of <fishcount> with a new value
-                            fishcountElement.InnerText = fishcount;
-
-                            // Find the <biggestfishweight> element
-                            XmlElement biggestfishweightElement = xmlDoc.SelectSingleNode("/xml/biggestfishweight") as XmlElement;
-
-                            if (biggestfishweightElement != null)
-                            {
-                                // Replace the value of <biggestfishweight> with a new value
-                                biggestfishweightElement.InnerText = biggestfishweight;
-
-                                // Find the <totalfishweight> element
-                                XmlElement totalfishweightElement = xmlDoc.SelectSingleNode("/xml/totalfishweight") as XmlElement;
-
-                                if (totalfishweightElement != null)
-                                {
-                                    // Replace the value of <totalfishweight> with a new value
-                                    totalfishweightElement.InnerText = totalfishweight;
-
-                                    string XmlResult = xmlDoc.OuterXml.Replace("<xml>", string.Empty).Replace("</xml>", string.Empty);
-                                    File.WriteAllText($"{apiPath}/VEEMEE/gofish/User_Data/{psnid}.xml", XmlResult);
-                                    return XmlResult;
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    string XmlData = $"<psnid>{psnid}</psnid><score>{score}</score><fishcount>{fishcount}</fishcount><psnid>{psnid}</psnid><biggestfishweight>{biggestfishweight}</biggestfishweight><totalfishweight>{totalfishweight}</totalfishweight>";
-                    File.WriteAllText($"{apiPath}/VEEMEE/gofish/User_Data/{psnid}.xml", XmlData);
-                    return XmlData;
-                }
+                return $"<psnid>{psnid}</psnid><score>{score}</score><fishcount>{fishcount}</fishcount><psnid>{psnid}</psnid><biggestfishweight>{biggestfishweight}</biggestfishweight><totalfishweight>{totalfishweight}</totalfishweight>";
             }
 
             return null;
@@ -119,8 +56,12 @@ namespace WebAPIService.GameServices.VEEMEE.gofish
                 }
                 psnid = data["psnid"].First();
 
-                if (File.Exists($"{apiPath}/VEEMEE/gofish/User_Data/{psnid}.xml"))
-                    return File.ReadAllText($"{apiPath}/VEEMEE/gofish/User_Data/{psnid}.xml");
+                GFLeaderboard.InitializeLeaderboard();
+
+                var scoreData = GFLeaderboard.Leaderboard.GetEntryForUser(psnid);
+
+                if (scoreData != null)
+                    return $"<psnid>{psnid}</psnid><score>{scoreData.Score.ToString().Replace(",", ".")}</score><fishcount>{scoreData.fishcount}</fishcount><psnid>{psnid}</psnid><biggestfishweight>{scoreData.biggestfishweight}</biggestfishweight><totalfishweight>{scoreData.totalfishweight}</totalfishweight>";
             }
 
             return $"<psnid>{psnid}</psnid><score>0</score><fishcount>0</fishcount><psnid>{psnid}</psnid><biggestfishweight>0</biggestfishweight><totalfishweight>0</totalfishweight>";

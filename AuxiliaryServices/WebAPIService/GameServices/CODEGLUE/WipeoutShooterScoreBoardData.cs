@@ -1,120 +1,90 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Xml.Linq;
+using WebAPIService.GameServices.CODEGLUE.Entities;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.CODEGLUE
 {
     internal class WipeoutShooterScoreBoardData
+    : ScoreboardService<WipeoutShooterScoreboardEntry>
     {
-        private static bool _initiated = false;
+        private string _gametype;
 
-        private object _Lock = new object();
-
-        public class WipeoutShooterScoreboardEntry
+        public WipeoutShooterScoreBoardData(LeaderboardDbContext dbContext, object obj = null)
+            : base(dbContext)
         {
-            public string psnid { get; set; }
-            public float score { get; set; }
+            _gametype = (string)obj;
         }
 
-        private List<WipeoutShooterScoreboardEntry> scoreboard = new List<WipeoutShooterScoreboardEntry>();
-
-        public void LoadScoreboardFromXml(string path)
+        public override async Task<List<WipeoutShooterScoreboardEntry>> GetTopScoresAsync(int max = 10)
         {
-            if (!File.Exists(path))
-            {
-                _initiated = true;
+            return await _dbContext.Set<WipeoutShooterScoreboardEntry>()
+                .Where(x => x.ExtraData1 == _gametype)
+                .OrderByDescending(e => e.Score)
+                .Take(max)
+                .ToListAsync().ConfigureAwait(false);
+        }
+
+        public override async Task UpdateScoreAsync(string playerId, float newScore, List<object> extraData = null)
+        {
+            if (string.IsNullOrEmpty(playerId))
                 return;
-            }
 
-            scoreboard.Clear();
+            var set = _dbContext.Set<WipeoutShooterScoreboardEntry>();
+            DateTime now = DateTime.UtcNow; // use UTC for consistency
 
-            foreach (var playerElement in XDocument.Parse(File.ReadAllText(path)).Descendants("ENTRY"))
+            var existing = await set
+                .Where(x => x.ExtraData1 == _gametype)
+                .FirstOrDefaultAsync(e =>
+                e.PlayerId != null &&
+                e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
+
+            if (existing != null)
             {
-                string psnid = playerElement.Element("NAME")?.Value;
-                string scoreStr = playerElement.Element("SCORE")?.Value;
-
-                float.TryParse(scoreStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float score);
-
-                scoreboard.Add(new WipeoutShooterScoreboardEntry
+                if (newScore > existing.Score)
                 {
-                    psnid = psnid,
-                    score = score
-                });
-            }
-
-            scoreboard.Sort((a, b) => b.score.CompareTo(a.score));
-
-            if (scoreboard.Count > 10)
-                scoreboard.RemoveRange(10, scoreboard.Count - 10);
-
-            _initiated = true;
-        }
-
-        public void UpdateScoreBoard(string psnid, float newScore)
-        {
-            // Check if the player already exists in the scoreboard
-            var existingEntry = scoreboard.Find(e => e.psnid != null && e.psnid.Equals(psnid, StringComparison.OrdinalIgnoreCase));
-
-            if (existingEntry != null)
-            {
-                // If the new score is higher, update the existing entry
-                if (newScore > existingEntry.score)
-                    existingEntry.score = newScore;
+                    existing.Score = newScore;
+                    existing.UpdatedAt = now; // update timestamp
+                    _dbContext.Update(existing);
+                    await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                }
             }
             else
             {
-                // If the player is not in the scoreboard, add a new entry
-                if (scoreboard.Count < 10)
-                    scoreboard.Add(new WipeoutShooterScoreboardEntry { psnid = psnid, score = newScore });
+                await set.AddAsync(new WipeoutShooterScoreboardEntry
+                {
+                    ExtraData1 = _gametype,
+                    PlayerId = playerId,
+                    Score = newScore,
+                    UpdatedAt = now // set timestamp for new entry
+                }).ConfigureAwait(false);
+                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
             }
-
-            // Sort the scoreboard by score in descending order
-            scoreboard.Sort((a, b) => b.score.CompareTo(a.score));
-
-            // Trim the scoreboard to the top 10 entries
-            if (scoreboard.Count > 10)
-                scoreboard.RemoveRange(10, scoreboard.Count - 10);
         }
 
-        private string ConvertScoreboardToXml(string path, string gameName)
+        public override async Task<string> SerializeToString(string gameName, int max = 10)
         {
-            if (!_initiated)
-                LoadScoreboardFromXml(path);
+            var entries = await GetTopScoresAsync(max).ConfigureAwait(false);
 
             byte i = 1;
 
             XElement xmlScoreboard = new XElement(gameName);
 
-            foreach (var entry in scoreboard.OrderByDescending(entry => entry.score))
+            foreach (var entry in await GetTopScoresAsync(max).ConfigureAwait(false))
             {
-                XElement xmlEntry = new XElement("ENTRY",
+                xmlScoreboard.Add(new XElement("ENTRY",
                     new XElement("RANK", i),
-                    new XElement("NAME", entry.psnid ?? "Voodooperson05"),
-                    new XElement("SCORE", entry.score.ToString()));
-
-                xmlScoreboard.Add(xmlEntry);
+                    new XElement("NAME", entry.PsnId),
+                    new XElement("SCORE", entry.Score.ToString())));
 
                 i++;
             }
 
             return xmlScoreboard.ToString();
-        }
-
-        public string UpdateScoreboardXml(string apiPath, string gameName)
-        {
-            string directoryPath = $"{apiPath}/WipeoutShooter/{gameName}";
-            string filePath = $"{apiPath}/WipeoutShooter/{gameName}/leaderboard.xml";
-
-            lock (_Lock)
-            {
-                Directory.CreateDirectory(directoryPath);
-                string xmlData = ConvertScoreboardToXml(filePath, gameName);
-                File.WriteAllText(filePath, xmlData);
-                CustomLogger.LoggerAccessor.LogDebug($"[WipeoutShooter] - {gameName} - scoreboard XML updated.");
-                return xmlData;
-            }
         }
     }
 }

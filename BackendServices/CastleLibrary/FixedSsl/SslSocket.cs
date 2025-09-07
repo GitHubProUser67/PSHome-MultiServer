@@ -1,7 +1,7 @@
-using Org.Mentalis.Security.Certificates;
-using Org.Mentalis.Security.Ssl;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -17,107 +17,240 @@ namespace FixedSsl
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
         }
 
-        private const int SSLv3 = 0x0300;
-        private const int TLSv1 = 0x0301;
-        private static SecureProtocol legacyProtocols = SecureProtocol.Ssl3 | SecureProtocol.Tls1;
-        public static async Task<Stream> AuthenticateAsServerAsync(Socket socket, X509Certificate2 certificate, bool forceSsl)
+        private const int SSLv3 = 0x0300;  // SSL 3.0
+        private const int TLSv1 = 0x0301;  // TLS 1.0
+
+        private static readonly Org.Mentalis.Security.Ssl.SecureProtocol legacyProtocols = Org.Mentalis.Security.Ssl.SecureProtocol.Ssl3 | Org.Mentalis.Security.Ssl.SecureProtocol.Tls1;
+
+        public static async Task<Stream> AuthenticateAsServerAsync(Socket socket, X509Certificate2 certificate, bool forceSsl, bool ownSocket)
         {
-            //no certificate, no ssl
+            // no certificate, no ssl
             if (certificate == null)
                 return new NetworkStream(socket, true);
 
-            //content type - 1 byte
-            //version - 2 bytes
-            //length - 2 bytes
-            //handshake type - 1 byte
-            //length - 3 bytes
-            //max version - 2 bytes (this is the actual ssl version we want to check)
+            // content type - 1 byte
+            // version - 2 bytes
+            // length - 2 bytes
 
-            //total 11 bytes
+            // total 5 bytes
 
-            //read first 11 bytes, but do not consume them.
-            byte[] buffer = new byte[11];
+            byte[] header = new byte[5];
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
-            int received = await socket.ReceiveAsync(buffer, SocketFlags.Peek).ConfigureAwait(false);
+            int received = await socket.ReceiveAsync(header, SocketFlags.Peek).ConfigureAwait(false);
 #else
-            int received = socket.Receive(buffer, SocketFlags.Peek);
+            int received = socket.Receive(header, SocketFlags.Peek);
 #endif
-            if (received != buffer.Length)
+            if (received != 5)
                 return null;
 
-            //content type needs to be handshake (0x16) and handshake type needs to be client hello (0x01)
-            bool ssl = buffer[0] == 0x16 && buffer[5] == 0x01;
+            bool ssl = header[0] == 0x16; // content type needs to be handshake (0x16)
+            bool sslV2 = (header[0] & 0x80) != 0 || header[0] == 0x80; // SSLv2 Client Hello indicator
 
-            if (!ssl)
+            if (!ssl && !sslV2)
             {
                 if (forceSsl)
                     return null;
-                return new NetworkStream(socket, true);
+                return new NetworkStream(socket, ownSocket);
             }
 
-            int maxSslVersion = buffer[9] << 8 | buffer[10];
+            int totalLength = 0;
+
+            if (ssl)
+            {
+                // TLS: header[3..4] = record length
+                if (received < 5)
+                    return null;
+
+                int recordLength = (header[3] << 8) | header[4];
+                totalLength = 5 + recordLength;
+            }
+            else if (sslV2)
+            {
+                // SSLv2 header: first 2 bytes = 15-bit length
+                int v2Length = ((header[0] & 0x7F) << 8) | header[1];
+                totalLength = v2Length + 2; // SSLv2 header length
+            }
+
+            byte[] clientHello = new byte[totalLength];
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
+            received = await socket.ReceiveAsync(clientHello, SocketFlags.Peek).ConfigureAwait(false);
+#else
+            received = socket.Receive(clientHello, SocketFlags.Peek);
+#endif
+            if (received < totalLength)
+                return null;
+            // handshake type needs to be client hello (0x01)
+            else if (clientHello[5] != 0x01)
+            {
+                if (forceSsl)
+                    return null;
+                return new NetworkStream(socket, ownSocket);
+            }
+
+            int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out List<int> versions);
+
+            int maxSslVersion = clientHello[9] << 8 | clientHello[10];
 
             // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
-            if (!certificate.Verify() || maxSslVersion == SSLv3 || maxSslVersion == TLSv1)
+            if (maxSslVersion == SSLv3 || maxSslVersion == TLSv1 || (!certificate.Verify() && versions.Any(v => v == SSLv3 || v == TLSv1)))
             {
-                SecurityOptions options = new SecurityOptions(legacyProtocols, new Certificate(certificate), ConnectionEnd.Server);
-                SecureSocket ss = new SecureSocket(socket, options);
-                return new SecureNetworkStream(ss, true);
+                Org.Mentalis.Security.Ssl.SecurityOptions options = new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server);
+                Org.Mentalis.Security.Ssl.SecureSocket ss = new Org.Mentalis.Security.Ssl.SecureSocket(socket, options);
+                return new Org.Mentalis.Security.Ssl.SecureNetworkStream(ss, true);
             }
-            SslStream sslStream = new SslStream(new NetworkStream(socket, true), false);
+
+            SslStream sslStream = new SslStream(new NetworkStream(socket, ownSocket), false);
+
             await sslStream.AuthenticateAsServerAsync(certificate).ConfigureAwait(false);
             return sslStream;
         }
 
-        public static Stream AuthenticateAsServer(Socket socket, X509Certificate2 certificate, bool forceSsl)
+        public static Stream AuthenticateAsServer(
+             Socket socket,
+             SslServerAuthenticationOptions authOptions,
+             bool forceSsl,
+             bool ownSocket,
+             out X509Certificate2 clientCertificate,
+             out int[] clientCertificateErrors
+             )
         {
-            //no certificate, no ssl
-            if (certificate == null)
-                return new NetworkStream(socket, true);
+            clientCertificate = null;
+            clientCertificateErrors = null;
 
-            //content type - 1 byte
-            //version - 2 bytes
-            //length - 2 bytes
-            //handshake type - 1 byte
-            //length - 3 bytes
-            //max version - 2 bytes (this is the actual ssl version we want to check)
+            // no certificate, no ssl
+            if (authOptions == null)
+                return new NetworkStream(socket, ownSocket);
 
-            //total 11 bytes
+            // content type - 1 byte
+            // version - 2 bytes
+            // length - 2 bytes
 
-            //read first 11 bytes, but do not consume them.
-            byte[] buffer = new byte[11];
-            int received = socket.Receive(buffer, SocketFlags.Peek);
-            if (received != buffer.Length)
+            // total 5 bytes
+
+            byte[] header = new byte[5];
+            int received = socket.Receive(header, SocketFlags.Peek);
+            if (received != 5)
                 return null;
 
-            //content type needs to be handshake (0x16) and handshake type needs to be client hello (0x01)
-            bool ssl = buffer[0] == 0x16 && buffer[5] == 0x01;
+            bool ssl = header[0] == 0x16; // content type needs to be handshake (0x16)
+            bool sslV2 = (header[0] & 0x80) != 0 || header[0] == 0x80; // SSLv2 Client Hello indicator
 
-            if (!ssl)
+            if (!ssl && !sslV2)
             {
                 if (forceSsl)
                     return null;
-                return new NetworkStream(socket, true);
+                return new NetworkStream(socket, ownSocket);
             }
 
-            int maxSslVersion = buffer[9] << 8 | buffer[10];
+            int totalLength = 0;
+
+            if (ssl)
+            {
+                // TLS: header[3..4] = record length
+                if (received < 5)
+                    return null;
+
+                int recordLength = (header[3] << 8) | header[4];
+                totalLength = 5 + recordLength;
+            }
+            else if (sslV2)
+            {
+                // SSLv2 header: first 2 bytes = 15-bit length
+                int v2Length = ((header[0] & 0x7F) << 8) | header[1];
+                totalLength = v2Length + 2; // SSLv2 header length
+            }
+
+            byte[] clientHello = new byte[totalLength];
+            received = socket.Receive(clientHello, SocketFlags.Peek);
+            if (received < totalLength)
+                return null;
+            // handshake type needs to be client hello (0x01)
+            else if (clientHello[5] != 0x01)
+            {
+                if (forceSsl)
+                    return null;
+                return new NetworkStream(socket, ownSocket);
+            }
+
+            int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out List<int> versions);
+
+            X509Certificate2 certificate = (X509Certificate2)authOptions.ServerCertificateSelectionCallback?.Invoke(socket, hostname);
+            if (certificate == null)
+            {
+                if (forceSsl)
+                    return null;
+                return new NetworkStream(socket, ownSocket);
+            }
+
+            int maxSslVersion = clientHello[9] << 8 | clientHello[10];
 
             // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
-            if (!certificate.Verify() || maxSslVersion == SSLv3 || maxSslVersion == TLSv1)
+            if (maxSslVersion == SSLv3 || maxSslVersion == TLSv1 || (!certificate.Verify() && versions.Any(v => v == SSLv3 || v == TLSv1)))
             {
-                SecurityOptions options = new SecurityOptions(legacyProtocols, new Certificate(certificate), ConnectionEnd.Server);
-                SecureSocket ss = new SecureSocket(socket, options);
-                return new SecureNetworkStream(ss, true);
+                Org.Mentalis.Security.Ssl.SecurityOptions options = new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server);
+                Org.Mentalis.Security.Ssl.SecureSocket ss = new Org.Mentalis.Security.Ssl.SecureSocket(socket, options);
+                return new Org.Mentalis.Security.Ssl.SecureNetworkStream(ss, true);
             }
 
-            SslStream sslStream = new SslStream(new NetworkStream(socket, true), false);
-            sslStream.AuthenticateAsServer(certificate);
+            X509Certificate2 clientCert = null;
+            int[] clientCertErr = null;
+
+            var sslStream = new SslStream(new NetworkStream(socket, ownSocket), false, (t, c, ch, e) =>
+            {
+                if (c == null)
+                    return true;
+
+                X509Certificate2 c2 = c as X509Certificate2;
+                c2 ??= new X509Certificate2(c.GetRawCertData());
+
+                clientCert = c2;
+                clientCertErr = new int[] { (int)e };
+                return true;
+            });
+
+            // Shortcut
+            authOptions.ServerCertificateSelectionCallback = (sender, host) => certificate;
+
+            clientCertificate = clientCert;
+            clientCertificateErrors = clientCertErr;
+
+            sslStream.AuthenticateAsServer(authOptions);
             return sslStream;
         }
 
-        public static IAsyncResult BeginAuthenticateAsServer(Socket socket, X509Certificate2 certificate, bool forceSsl, AsyncCallback callback, object state)
+        public static IAsyncResult BeginAuthenticateAsServer(Socket socket, X509Certificate2 certificate, bool forceSsl, bool ownSocket, AsyncCallback callback, object state)
         {
-            return AuthenticateAsServerAsync(socket, certificate, forceSsl).AsApm(callback, state);
+            return AuthenticateAsServerAsync(socket, certificate, forceSsl, ownSocket).AsApm(callback, state);
+        }
+
+        public static IAsyncResult BeginAuthenticateAsServer(
+            Socket socket,
+            SslServerAuthenticationOptions authOptions,
+            bool forceSsl,
+            bool ownSocket,
+            AsyncCallback callback,
+            object state,
+            out X509Certificate2 clientCertificate,
+            out int[] clientCertificateErrors)
+        {
+            X509Certificate2 localClientCert = null;
+            int[] localCertErrors = null;
+
+            var task = Task.Run(() =>
+            {
+                return AuthenticateAsServer(
+                    socket,
+                    authOptions,
+                    forceSsl,
+                    ownSocket,
+                    out localClientCert,
+                    out localCertErrors);
+            });
+
+            clientCertificate = localClientCert;
+            clientCertificateErrors = localCertErrors;
+
+            return task.AsApm(callback, state);
         }
 
         public static Stream EndAuthenticateAsServer(IAsyncResult result)
@@ -148,6 +281,7 @@ namespace FixedSsl
             }, TaskScheduler.Default);
             return tcs.Task;
         }
+
         #endregion
     }
 }

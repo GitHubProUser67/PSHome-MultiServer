@@ -1,8 +1,5 @@
-using System;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Xml;
 using MultiServerLibrary.HTTP;
 
 namespace WebAPIService.GameServices.VEEMEE.goalie_sfrgbt
@@ -31,77 +28,17 @@ namespace WebAPIService.GameServices.VEEMEE.goalie_sfrgbt
                 goals = data["goals"].First();
                 duration = data["duration"].First();
 
-                string directoryPath = string.Empty;
-                string filePath = string.Empty;
+                string gameName = "sfrgbt";
 
                 if (global)
-                {
-                    directoryPath = $"{apiPath}/VEEMEE/goalie/User_Data";
-                    filePath = $"{apiPath}/VEEMEE/goalie/User_Data/{psnid}.xml";
-                }
-                else
-                {
-                    directoryPath = $"{apiPath}/VEEMEE/sfrgbt/User_Data";
-                    filePath = $"{apiPath}/VEEMEE/sfrgbt/User_Data/{psnid}.xml";
-                }
+                    gameName = "goalie";
 
-                Directory.CreateDirectory(directoryPath);
+                GSLeaderboard.InitializeLeaderboard(gameName);
 
-                if (File.Exists(filePath))
-                {
-                    try
-                    {
-                        GSScoreBoardData.UpdateScoreBoard(psnid, duration, (float)double.Parse(goals, CultureInfo.InvariantCulture));
-                        GSScoreBoardData.UpdateAllTimeScoreboardXml(apiPath, global); // We finalized edit, so we issue a write.
-                        GSScoreBoardData.UpdateTodayScoreboardXml(apiPath, global, DateTime.Now.ToString("yyyy_MM_dd")); // We finalized edit, so we issue a write.
-                    }
-                    catch (Exception)
-                    {
-                        // Not Important
-                    }
+                lock (GSLeaderboard.Leaderboards)
+                    _ = GSLeaderboard.Leaderboards[gameName].UpdateScoreAsync(psnid, float.Parse(goals, CultureInfo.InvariantCulture), new System.Collections.Generic.List<object> { duration, guest });
 
-                    string XmlData = File.ReadAllText(filePath);
-
-                    // Check for invalid profiles.
-                    if (XmlData.StartsWith("<scores></scores>"))
-                    {
-                        XmlData = $"<scores><entry><psnid>{psnid}</psnid><goals>{goals}</goals><duration>{duration}</duration><paid_goals></paid_goals></entry></scores>";
-                        File.WriteAllText(filePath, XmlData);
-                        return XmlData;
-                    }
-
-                    // Load the XML string into an XmlDocument
-                    XmlDocument xmlDoc = new XmlDocument();
-                    xmlDoc.LoadXml($"<xml>{File.ReadAllText(filePath)}</xml>");
-
-                    // Find the <goals> element
-                    XmlElement goalsElement = xmlDoc.SelectSingleNode("/xml/scores/entry/goals") as XmlElement;
-
-                    if (goalsElement != null)
-                    {
-                        // Replace the value of <goals> with a new value
-                        goalsElement.InnerText = goals;
-
-                        // Find the <duration> element
-                        XmlElement durationElement = xmlDoc.SelectSingleNode("/xml/scores/entry/duration") as XmlElement;
-
-                        if (durationElement != null)
-                        {
-                            // Replace the value of <duration> with a new value
-                            durationElement.InnerText = duration;
-
-                            string XmlResult = xmlDoc.OuterXml.Replace("<xml>", string.Empty).Replace("</xml>", string.Empty);
-                            File.WriteAllText(filePath, XmlResult);
-                            return XmlResult;
-                        }
-                    }
-                }
-                else
-                {
-                    string XmlData = $"<scores><entry><psnid>{psnid}</psnid><goals>{goals}</goals><duration>{duration}</duration><paid_goals></paid_goals></entry></scores>";
-                    File.WriteAllText(filePath, XmlData);
-                    return XmlData;
-                }
+                return $"<scores><entry><psnid>{psnid}</psnid><goals>{goals}</goals><duration>{duration}</duration><paid_goals></paid_goals></entry></scores>";
             }
 
             return null;
@@ -123,27 +60,19 @@ namespace WebAPIService.GameServices.VEEMEE.goalie_sfrgbt
                 }
                 psnid = data["psnid"].First();
 
-                string directoryPath = string.Empty;
-                string filePath = string.Empty;
+                string gameName = "sfrgbt";
 
                 if (global)
-                {
-                    directoryPath = $"{apiPath}/VEEMEE/goalie/User_Data";
-                    filePath = $"{apiPath}/VEEMEE/goalie/User_Data/{psnid}.xml";
-                }
-                else
-                {
-                    directoryPath = $"{apiPath}/VEEMEE/sfrgbt/User_Data";
-                    filePath = $"{apiPath}/VEEMEE/sfrgbt/User_Data/{psnid}.xml";
-                }
+                    gameName = "goalie";
 
-                if (File.Exists(filePath))
-                {
-                    string XmlData = File.ReadAllText(filePath);
+                GSLeaderboard.InitializeLeaderboard(gameName);
 
-                    // Check for invalid profiles.
-                    if (!XmlData.StartsWith("<scores></scores>"))
-                        return XmlData;
+                lock (GSLeaderboard.Leaderboards)
+                {
+                    var scoreData = GSLeaderboard.Leaderboards[gameName].GetEntryForUser(psnid);
+
+                    if (scoreData != null)
+                        return $"<scores><entry><psnid>{psnid}</psnid><goals>{scoreData.Score.ToString().Replace(",", ".")}</goals><duration>{scoreData.duration}</duration><paid_goals></paid_goals></entry></scores>";
                 }
             }
 

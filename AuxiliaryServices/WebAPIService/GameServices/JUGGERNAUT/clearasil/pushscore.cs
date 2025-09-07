@@ -1,12 +1,16 @@
+using Microsoft.EntityFrameworkCore;
 using System;
-using System.IO;
 using System.Collections.Generic;
+using System.IO;
 using System.Xml;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.JUGGERNAUT.clearasil
 {
     public class pushscore
     {
+        public static ClearasilScoreBoardData Leaderboard = null;
+
         public static string ProcessPushScore(IDictionary<string, string> QueryParameters, string apiPath)
         {
             if (QueryParameters != null)
@@ -16,14 +20,16 @@ namespace WebAPIService.GameServices.JUGGERNAUT.clearasil
 
                 if (!string.IsNullOrEmpty(user) && !string.IsNullOrEmpty(score))
                 {
-                    try
+                    if (Leaderboard == null)
                     {
-                        ScoreBoardData.UpdateScore(user, int.Parse(score));
+                        var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                        retCtx.Database.Migrate();
+
+                        Leaderboard = new ClearasilScoreBoardData(retCtx);
                     }
-                    catch (Exception)
-                    {
-                        // Not Important
-                    }
+
+                    _ = Leaderboard.UpdateScoreAsync(user, int.Parse(score));
 
                     Directory.CreateDirectory($"{apiPath}/juggernaut/clearasil/space_access");
 

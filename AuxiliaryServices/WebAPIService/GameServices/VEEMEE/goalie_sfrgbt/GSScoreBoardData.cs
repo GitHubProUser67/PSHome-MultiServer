@@ -1,167 +1,146 @@
-using System.IO;
-using System.Xml.Linq;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Xml.Linq;
+using WebAPIService.GameServices.VEEMEE.goalie_sfrgbt.Entities;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.VEEMEE.goalie_sfrgbt
 {
-    public class GSScoreBoardData
+    internal class GSScoreBoardData
+    : ScoreboardService<GSScoreboardEntry>
     {
-        private static DateTime _lastDailyResetTime = DateTime.MinValue;
+        private string _gameproject;
 
-        private static bool _initiated = false;
-
-        private static object _Lock = new object();
-        private static bool _initiatedDaily = false;
-
-        public class ScoreboardEntry
+        public GSScoreBoardData(LeaderboardDbContext dbContext, object obj = null)
+            : base(dbContext)
         {
-            public string psnid { get; set; }
-            public float score { get; set; }
-            public string duration { get; set; }
+            _gameproject = (string)obj;
         }
 
-        private static List<ScoreboardEntry> scoreboard = new List<ScoreboardEntry>();
-        private static List<ScoreboardEntry> scoreboardDaily = new List<ScoreboardEntry>();
-
-        public static void LoadScoreboardFromXml(string path)
+        public override async Task<List<GSScoreboardEntry>> GetTopScoresAsync(int max = 10)
         {
-            if (!File.Exists(path))
-            {
-                _initiated = true;
+            return await _dbContext.Set<GSScoreboardEntry>()
+                .Where(x => x.ExtraData1 == _gameproject)
+                .OrderByDescending(e => e.Score)
+                .Take(max)
+                .ToListAsync().ConfigureAwait(false);
+        }
+
+        public override async Task<List<GSScoreboardEntry>> GetTodayScoresAsync(int max = 10)
+        {
+            DateTime today = DateTime.UtcNow.Date;
+            return await _dbContext.Set<GSScoreboardEntry>()
+                .Where(x => x.ExtraData1 == _gameproject)
+                .Where(e => e.UpdatedAt >= today)
+                .OrderByDescending(e => e.Score)
+                .Take(max)
+                .ToListAsync()
+                .ConfigureAwait(false);
+        }
+
+        public async Task<List<GSScoreboardEntry>> GetYesterdayScoresAsync(int max = 10)
+        {
+            DateTime today = DateTime.UtcNow.Date.AddDays(-1);
+            return await _dbContext.Set<GSScoreboardEntry>()
+                .Where(x => x.ExtraData1 == _gameproject)
+                .Where(e => e.UpdatedAt >= today)
+                .OrderByDescending(e => e.Score)
+                .Take(max)
+                .ToListAsync()
+                .ConfigureAwait(false);
+        }
+
+        public override async Task<List<GSScoreboardEntry>> GetCurrentWeekScoresAsync(int max = 10)
+        {
+            DateTime today = DateTime.UtcNow.Date;
+            int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
+            DateTime weekStart = today.AddDays(-1 * diff); // Monday
+            return await _dbContext.Set<GSScoreboardEntry>()
+                .Where(x => x.ExtraData1 == _gameproject)
+                .Where(e => e.UpdatedAt >= weekStart)
+                .OrderByDescending(e => e.Score)
+                .Take(max)
+                .ToListAsync()
+                .ConfigureAwait(false);
+        }
+
+        public override async Task<List<GSScoreboardEntry>> GetCurrentMonthScoresAsync(int max = 10)
+        {
+            DateTime today = DateTime.UtcNow.Date;
+            DateTime monthStart = new DateTime(today.Year, today.Month, 1);
+            return await _dbContext.Set<GSScoreboardEntry>()
+                .Where(x => x.ExtraData1 == _gameproject)
+                .Where(e => e.UpdatedAt >= monthStart)
+                .OrderByDescending(e => e.Score)
+                .Take(max)
+                .ToListAsync()
+                .ConfigureAwait(false);
+        }
+
+        public GSScoreboardEntry GetEntryForUser(string userName)
+        {
+            return _dbContext.Set<GSScoreboardEntry>()
+                 .Where(x => x.ExtraData1 == _gameproject)
+                 .Where(x => x.PlayerId == userName)
+                 .FirstOrDefault();
+        }
+
+        public override async Task UpdateScoreAsync(string playerId, float newScore, List<object> extraData = null)
+        {
+            if (string.IsNullOrEmpty(playerId))
                 return;
-            }
 
-            scoreboard.Clear();
+            string duration = (string)extraData[0];
+            string guest = (string)extraData[1];
 
-            foreach (var playerElement in XDocument.Parse(File.ReadAllText(path)).Descendants("player"))
+            var set = _dbContext.Set<GSScoreboardEntry>();
+            DateTime now = DateTime.UtcNow; // use UTC for consistency
+
+            var existing = await set
+                .Where(x => x.ExtraData1 == _gameproject)
+                .FirstOrDefaultAsync(e =>
+                e.PlayerId != null &&
+                e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
+
+            if (existing != null)
             {
-                string psnid = playerElement.Element("psnid")?.Value;
-                string scoreStr = playerElement.Element("score")?.Value;
-                string duration = playerElement.Element("duration")?.Value;
+                if (newScore > existing.Score)
+                    existing.Score = newScore;
 
-                float.TryParse(scoreStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float score);
+                existing.duration = duration;
+                existing.guest = guest;
+                existing.UpdatedAt = now; // update timestamp
 
-                scoreboard.Add(new ScoreboardEntry
-                {
-                    psnid = psnid,
-                    score = score,
-                    duration = duration
-                });
-            }
-
-            scoreboard.Sort((a, b) => b.score.CompareTo(a.score));
-
-            if (scoreboard.Count > 20)
-                scoreboard.RemoveRange(20, scoreboard.Count - 20);
-
-            _initiated = true;
-        }
-
-        public static void LoadScoreboardDailyFromXml(string path)
-        {
-            if (!File.Exists(path))
-            {
-                _initiatedDaily = true;
-                return;
-            }
-
-            scoreboardDaily.Clear();
-
-            foreach (var playerElement in XDocument.Parse(File.ReadAllText(path)).Descendants("player"))
-            {
-                string psnid = playerElement.Element("psnid")?.Value;
-                string scoreStr = playerElement.Element("score")?.Value;
-                string duration = playerElement.Element("duration")?.Value;
-
-                float.TryParse(scoreStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float score);
-
-                scoreboardDaily.Add(new ScoreboardEntry
-                {
-                    psnid = psnid,
-                    score = score,
-                    duration = duration
-                });
-            }
-
-            scoreboardDaily.Sort((a, b) => b.score.CompareTo(a.score));
-
-            if (scoreboardDaily.Count > 20)
-                scoreboardDaily.RemoveRange(20, scoreboardDaily.Count - 20);
-
-            _initiatedDaily = true;
-        }
-
-        public static void UpdateScoreBoard(string psnid, string newDuration, float newScore)
-        {
-            // Check if the player already exists in the scoreboard
-            var existingEntry = scoreboard.Find(e => e.psnid != null && e.psnid.Equals(psnid, StringComparison.OrdinalIgnoreCase));
-
-            if (existingEntry != null)
-            {
-                existingEntry.duration = newDuration;
-
-                // If the new score is higher, update the existing entry
-                if (newScore > existingEntry.score)
-                    existingEntry.score = newScore;
+                _dbContext.Update(existing);
+                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
             }
             else
             {
-                // If the player is not in the scoreboard, add a new entry
-                if (scoreboard.Count < 20)
-                    scoreboard.Add(new ScoreboardEntry { psnid = psnid, score = newScore, duration = newDuration });
+                await set.AddAsync(new GSScoreboardEntry
+                {
+                    ExtraData1 = _gameproject,
+                    duration = duration,
+                    guest = guest,
+                    PlayerId = playerId,
+                    Score = newScore,
+                    UpdatedAt = now // set timestamp for new entry
+                }).ConfigureAwait(false);
+                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
             }
-
-            // Sort the scoreboard by score in descending order
-            scoreboard.Sort((a, b) => b.score.CompareTo(a.score));
-
-            // Trim the scoreboard to the top 20 entries
-            if (scoreboard.Count > 20)
-                scoreboard.RemoveRange(20, scoreboard.Count - 20);
-
-            UpdateDailyScoreBoard(psnid, newDuration, newScore);
         }
 
-        public static void UpdateDailyScoreBoard(string psnid, string newDuration, float newScore)
+        public override async Task<string> SerializeToString(string gameName, int max = 10)
         {
-            // Check if the player already exists in the scoreboard
-            var existingEntry = scoreboardDaily.Find(e => e.psnid != null && e.psnid.Equals(psnid, StringComparison.OrdinalIgnoreCase));
+            XElement xmlScoreboard = new XElement(gameName);
 
-            if (existingEntry != null)
-            {
-                existingEntry.duration = newDuration;
-
-                // If the new score is higher, update the existing entry
-                if (newScore > existingEntry.score)
-                    existingEntry.score = newScore;
-            }
-            else
-            {
-                // If the player is not in the scoreboard, add a new entry
-                if (scoreboardDaily.Count < 20)
-                    scoreboardDaily.Add(new ScoreboardEntry { psnid = psnid, score = newScore, duration = newDuration });
-            }
-
-            // Sort the scoreboard by score in descending order
-            scoreboardDaily.Sort((a, b) => b.score.CompareTo(a.score));
-
-            // Trim the scoreboard to the top 20 entries
-            if (scoreboardDaily.Count > 20)
-                scoreboardDaily.RemoveRange(20, scoreboardDaily.Count - 20);
-        }
-
-        public static string ConvertScoreboardToXml(string path)
-        {
-            if (!_initiated)
-                LoadScoreboardFromXml(path);
-
-            XElement xmlScoreboard = new XElement("leaderboard");
-
-            foreach (var entry in scoreboard)
+            foreach (var entry in await GetTopScoresAsync(max))
             {
                 XElement xmlEntry = new XElement("player",
-                    new XElement("psnid", entry.psnid ?? "Voodooperson05"),
-                    new XElement("score", entry.score.ToString().Replace(",",".")),
+                    new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
+                    new XElement("score", entry.Score.ToString().Replace(",", ".")),
                     new XElement("duration", entry.duration ?? "0"));
 
                 xmlScoreboard.Add(xmlEntry);
@@ -170,18 +149,15 @@ namespace WebAPIService.GameServices.VEEMEE.goalie_sfrgbt
             return xmlScoreboard.ToString();
         }
 
-        public static string ConvertScoreboardDailyToXml(string path)
+        public override async Task<string> SerializeToDailyString(string gameName, int max = 10)
         {
-            if (!_initiatedDaily)
-                LoadScoreboardDailyFromXml(path);
+            XElement xmlScoreboard = new XElement(gameName);
 
-            XElement xmlScoreboard = new XElement("leaderboard");
-
-            foreach (var entry in scoreboardDaily)
+            foreach (var entry in await GetTodayScoresAsync(max))
             {
                 XElement xmlEntry = new XElement("player",
-                    new XElement("psnid", entry.psnid ?? "Voodooperson05"),
-                    new XElement("score", entry.score.ToString().Replace(",", ".")),
+                    new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
+                    new XElement("score", entry.Score.ToString().Replace(",", ".")),
                     new XElement("duration", entry.duration ?? "0"));
 
                 xmlScoreboard.Add(xmlEntry);
@@ -190,65 +166,55 @@ namespace WebAPIService.GameServices.VEEMEE.goalie_sfrgbt
             return xmlScoreboard.ToString();
         }
 
-        public static void UpdateAllTimeScoreboardXml(string apiPath, bool global)
+        public async Task<string> SerializeToYesterdayString(string gameName, int max = 10)
         {
-            string directoryPath = string.Empty;
-            string filePath = string.Empty;
+            XElement xmlScoreboard = new XElement(gameName);
 
-            if (global)
+            foreach (var entry in await GetYesterdayScoresAsync(max))
             {
-                directoryPath = $"{apiPath}/VEEMEE/goalie";
-                filePath = $"{apiPath}/VEEMEE/goalie/leaderboard_alltime.xml";
-            }
-            else
-            {
-                directoryPath = $"{apiPath}/VEEMEE/sfrgbt";
-                filePath = $"{apiPath}/VEEMEE/sfrgbt/leaderboard_alltime.xml";
+                XElement xmlEntry = new XElement("player",
+                    new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
+                    new XElement("score", entry.Score.ToString().Replace(",", ".")),
+                    new XElement("duration", entry.duration ?? "0"));
+
+                xmlScoreboard.Add(xmlEntry);
             }
 
-            lock (_Lock)
-            {
-                Directory.CreateDirectory(directoryPath);
-                File.WriteAllText(filePath, ConvertScoreboardToXml(filePath));
-                CustomLogger.LoggerAccessor.LogDebug($"[VEEMEE] - goalie_sfrgbt - scoreboard alltime XML updated.");
-            }
+            return xmlScoreboard.ToString();
         }
 
-        private static void CheckAndResetDailyScoreboard()
+        public override async Task<string> SerializeToWeeklyString(string gameName, int max = 10)
         {
-            DateTime now = DateTime.Now.Date;
+            XElement xmlScoreboard = new XElement(gameName);
 
-            if (_lastDailyResetTime.Date != now)
+            foreach (var entry in await GetCurrentWeekScoresAsync(max))
             {
-                scoreboardDaily.Clear();
-                _lastDailyResetTime = now;
-                CustomLogger.LoggerAccessor.LogDebug($"[VEEMEE] - gofish - Daily scoreboard reset at {DateTime.Now}.");
+                XElement xmlEntry = new XElement("player",
+                    new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
+                    new XElement("score", entry.Score.ToString().Replace(",", ".")),
+                    new XElement("duration", entry.duration ?? "0"));
+
+                xmlScoreboard.Add(xmlEntry);
             }
+
+            return xmlScoreboard.ToString();
         }
 
-        public static void UpdateTodayScoreboardXml(string apiPath, bool global, string date)
+        public override async Task<string> SerializeToMonthlyString(string gameName, int max = 10)
         {
-            string directoryPath = string.Empty;
-            string filePath = string.Empty;
+            XElement xmlScoreboard = new XElement(gameName);
 
-            if (global)
+            foreach (var entry in await GetCurrentMonthScoresAsync(max))
             {
-                directoryPath = $"{apiPath}/VEEMEE/goalie";
-                filePath = $"{apiPath}/VEEMEE/goalie/leaderboard_{date}.xml";
-            }
-            else
-            {
-                directoryPath = $"{apiPath}/VEEMEE/sfrgbt";
-                filePath = $"{apiPath}/VEEMEE/sfrgbt/leaderboard_{date}.xml";
+                XElement xmlEntry = new XElement("player",
+                    new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
+                    new XElement("score", entry.Score.ToString().Replace(",", ".")),
+                    new XElement("duration", entry.duration ?? "0"));
+
+                xmlScoreboard.Add(xmlEntry);
             }
 
-            lock (_Lock)
-            {
-                CheckAndResetDailyScoreboard();
-                Directory.CreateDirectory(directoryPath);
-                File.WriteAllText(filePath, ConvertScoreboardDailyToXml(filePath));
-                CustomLogger.LoggerAccessor.LogDebug($"[VEEMEE] - goalie_sfrgbt - scoreboard {date} XML updated.");
-            }
+            return xmlScoreboard.ToString();
         }
     }
 }

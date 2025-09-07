@@ -1,5 +1,7 @@
 using Alcatraz.Context;
 using Microsoft.EntityFrameworkCore;
+using MultiServerLibrary.Extension.LinqSQL;
+using WebAPIService.LeaderboardService;
 
 namespace MultiServerWebServices
 {
@@ -19,7 +21,11 @@ namespace MultiServerWebServices
 
             services.AddDbContext<MainDbContext>(opt =>
             {
-                MainDbContext.OnContextBuilding(opt, (DBType)secOpts.DbType, secOpts.QuazalDbConnectionString);
+                MainDbContext.OnContextBuilding(opt, (DBType)secOpts!.DbType, secOpts.QuazalDbConnectionString);
+            });
+            services.AddDbContext<LeaderboardDbContext>(opt =>
+            {
+                LeaderboardDbContext.OnContextBuilding(opt, (DBType)secOpts!.DbType, secOpts.WebAPILeaderboardDbConnectionString);
             });
         }
 

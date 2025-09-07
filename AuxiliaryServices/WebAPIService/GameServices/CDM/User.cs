@@ -3,10 +3,7 @@ using MultiServerLibrary.HTTP;
 using HttpMultipartParser;
 using System;
 using System.IO;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace WebAPIService.GameServices.CDM
 {
@@ -20,7 +17,6 @@ namespace WebAPIService.GameServices.CDM
             string filePath = $"{pubListPath}/game.xml";
             if (File.Exists(filePath))
             {
-                LoggerAccessor.LogInfo($"[CDM] User Game - found and sent!");
                 string res = File.ReadAllText(filePath);
 
                 string resourceXML = "<xml>\r\n\t" +
@@ -32,7 +28,8 @@ namespace WebAPIService.GameServices.CDM
             }
             else
             {
-                LoggerAccessor.LogError($"[CDM] - Publisher Game failed with expected path {filePath}!");
+                LoggerAccessor.LogWarn($"[CDM] - Publisher Game failed with expected path {filePath}!");
+
                 string resourceXML = "<xml>\r\n\t" +
                     "<status>success</status>\r\n" +
                     $"<publisher_game>\r\n" +
@@ -81,10 +78,6 @@ namespace WebAPIService.GameServices.CDM
 
                 return resourceXML;
             }
-
-            return "<xml>" +
-                "<status>fail</status>" +
-                "</xml>";
         }
 
         public static string handleSpace(byte[] PostData, string ContentType, string workpath, string absolutePath)
@@ -95,7 +88,6 @@ namespace WebAPIService.GameServices.CDM
             string filePath = $"{pubListPath}/space.xml";
             if (File.Exists(filePath))
             {
-                LoggerAccessor.LogInfo($"[CDM] User Space - found and sent!");
                 string res = File.ReadAllText(filePath);
 
                 string resourceXML = "<xml>\r\n\t" +
@@ -106,9 +98,7 @@ namespace WebAPIService.GameServices.CDM
                 return resourceXML;
             }
             else
-            {
-                LoggerAccessor.LogError($"[CDM] - User Space failed with expected path {filePath}!");
-            }
+                LoggerAccessor.LogWarn($"[CDM] - User Space failed with expected path {filePath}!");
 
             return "<xml>" +
                 "<status>fail</status>" +
@@ -129,21 +119,21 @@ namespace WebAPIService.GameServices.CDM
 
                 ms.Flush();
             }
-
+#if DEBUG
             LoggerAccessor.LogInfo($"[CDM] User Sync - Received: \n{userSync}");
-
+#endif
             string pubListPath = $"{workpath}/CDM/{absolutePath}";
             Directory.CreateDirectory(pubListPath);
             string filePath = $"{pubListPath}/UserSyncData.json";
 
             try
             {
-                File.WriteAllBytes(filePath, Encoding.UTF8.GetBytes(userSync));
+                File.WriteAllText(filePath, userSync);
                 status = "<xml>\r\n\t" +
                     "<status>success</status>\r\n" +
                     "</xml>";
             } catch (Exception e) {
-                LoggerAccessor.LogError($"[CDM] User Sync JSON write failed with exception {e}");
+                LoggerAccessor.LogWarn($"[CDM] User Sync JSON write failed with exception {e}");
 
                 status = "<xml>\r\n\t" +
                     "<status>fail</status>\r\n" +

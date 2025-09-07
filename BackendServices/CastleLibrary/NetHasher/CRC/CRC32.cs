@@ -106,19 +106,18 @@ namespace NetHasher.CRC
 
             // X86 SIMD uses the Castagnoli method only, ARM supports booth this and the IEEE compilant one.
 #if NETCOREAPP3_0_OR_GREATER
+            if (Crc32.Arm64.IsSupported)
+            {
+                while (length >= 8)
+                {
+                    // ARM64 is always little-endian, no need to check for that info while using the BitConverter.
+                    crc = Crc32.Arm64.ComputeCrc32C(crc, BitConverter.ToUInt64(data, offset));
+                    offset += 8;
+                    length -= 8;
+                }
+            }
             if (Crc32.IsSupported)
             {
-                if (Crc32.Arm64.IsSupported)
-                {
-                    while (length >= 8)
-                    {
-                        // ARM64 is always little-endian, no need to check for that info while using the BitConverter.
-                        crc = Crc32.Arm64.ComputeCrc32C(crc, BitConverter.ToUInt64(data, offset));
-                        offset += 8;
-                        length -= 8;
-                    }
-                }
-
                 while (length >= 4)
                 {
                     crc = Crc32.ComputeCrc32C(crc, BitConverter.ToUInt32(!BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(data) : data, offset));
@@ -142,19 +141,18 @@ namespace NetHasher.CRC
 
                 return ~crc;
             }
-            else if (Sse42.IsSupported)
+            if (Sse42.X64.IsSupported)
             {
-                if (Sse42.X64.IsSupported)
+                while (length >= 8)
                 {
-                    while (length >= 8)
-                    {
-                        // X86_64 is always little-endian, no need to check for that info while using the BitConverter.
-                        crc = (uint)Sse42.X64.Crc32(crc, BitConverter.ToUInt64(data, offset));
-                        offset += 8;
-                        length -= 8;
-                    }
+                    // X86_64 is always little-endian, no need to check for that info while using the BitConverter.
+                    crc = (uint)Sse42.X64.Crc32(crc, BitConverter.ToUInt64(data, offset));
+                    offset += 8;
+                    length -= 8;
                 }
-
+            }
+            if (Sse42.IsSupported)
+            {
                 while (length >= 4)
                 {
                     // X86 is always little-endian, no need to check for that info while using the BitConverter.

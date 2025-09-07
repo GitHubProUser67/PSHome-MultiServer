@@ -435,7 +435,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
                     Name = "ndreams objs",
                     UrlRegex = "objs.txt",
                     Method = "GET",
-                    Hosts = new string[] { "s3.amazonaws.com" },
+                    HostCriteria = "s3.amazonaws.com",
                     Callable = (ctx) => {
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                             ctx.Response.ContentType = "text/plain";

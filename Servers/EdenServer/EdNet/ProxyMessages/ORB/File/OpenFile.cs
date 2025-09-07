@@ -1,10 +1,9 @@
 ﻿using CustomLogger;
 using EdNetService.CRC;
 using EdNetService.Models;
-using NetHasher.CRC;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Reflection;
-using System.Text;
 
 namespace EdenServer.EdNet.ProxyMessages.ORB.File
 {
@@ -13,13 +12,16 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
         private const uint maxFsRetry = 10;
         private const uint timeout = 2000;
 
+        UniqueIDGenerator _fileSystemIdCounter = new UniqueIDGenerator();
+
+        public static readonly ConcurrentDictionary<uint, (string, byte[], bool)> fileSystemCache = new ConcurrentDictionary<uint, (string, byte[], bool)>();
+
         public override byte[]? Process(IPEndPoint endpoint, IPEndPoint target, ClientTask task, ushort PacketMagic)
         {
             EdStore request = task.Request;
 
             byte facility = request.ExtractUInt8();
             uint userId = request.ExtractUInt32();
-            task.Client.PendingFileUserId = userId;
             string filename = request.ExtractString();
             bool bupdload_wanted = request.ExtractUInt8() == 0x01;
             uint uploadtotalsize = request.ExtractUInt32();
@@ -28,7 +30,7 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
 
             response.InsertStart(edStoreBank.CRC_A_ORB_OPENFILE);
 
-            string staticUserHostedDir = Directory.GetCurrentDirectory() + $"/static/Eden/StaticUserHostedFiles/{task.Client.PendingFileUserId}";
+            string staticUserHostedDir = Directory.GetCurrentDirectory() + $"/static/Eden/StaticUserHostedFiles/{userId}";
 
             if (!bupdload_wanted && !Directory.Exists(staticUserHostedDir))
             {
@@ -42,7 +44,7 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
                 switch (facility)
                 {
                     case 2: // Core files.
-                        suffix = "/Core";
+                        suffix = "/Core/";
                         break;
                     default:
                         LoggerAccessor.LogWarn($"[OpenFile] - Unknown facility:{facility} requested, please report to GITHUB.");
@@ -57,26 +59,17 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
                         return null;
                 }
 
-                Directory.CreateDirectory(staticUserHostedDir + suffix);
+                uint fileId = _fileSystemIdCounter.CreateUniqueID();
+                string directoryPath = staticUserHostedDir + suffix;
+                string filePath = directoryPath + filename;
 
-                uint fileId = CRC32.CreateCastagnoli(Encoding.UTF8.GetBytes(filename));
-                Dictionary<uint, string> filePaths = new Dictionary<uint, string>();
-
-                foreach (string filePath in Directory.GetFiles(staticUserHostedDir + suffix, "*.*"))
-                {
-                    filePaths[CRC32.CreateCastagnoli(Encoding.UTF8.GetBytes(Path.GetFileName(filePath)))] = filePath;
-                }
-
-                bool fileExists = filePaths.ContainsKey(fileId);
+                Directory.CreateDirectory(directoryPath);
 
                 if (bupdload_wanted)
                 {
                     DriveInfo drive = new DriveInfo(Path.GetPathRoot(Assembly.GetExecutingAssembly().Location));
-                    if (drive.IsReady && uploadtotalsize <= drive.AvailableFreeSpace)
+                    if (drive.IsReady && uploadtotalsize <= drive.AvailableFreeSpace && fileSystemCache.TryAdd(fileId, (filePath, new byte[uploadtotalsize], true)))
                     {
-                        // Create the file buffer in the user folder, waiting for the PUT data to be pushed.
-                        System.IO.File.WriteAllBytes($"{staticUserHostedDir + suffix}/{filename}", new byte[uploadtotalsize]);
-
                         response.InsertUInt8(0); // Success.
                         response.InsertUInt32(fileId);
                         response.InsertUInt32(uploadtotalsize);
@@ -86,13 +79,20 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
                     else
                         SetFailure(response);
                 }
-                else if (fileExists)
+                else if (System.IO.File.Exists(filePath))
                 {
-                    response.InsertUInt8(0); // Success.
-                    response.InsertUInt32(fileId);
-                    response.InsertUInt32((uint)new FileInfo(filePaths[fileId]).Length);
-                    response.InsertUInt32(maxFsRetry);
-                    response.InsertUInt32(timeout);
+                    uint fileSize = (uint)new FileInfo(filePath).Length;
+
+                    if (fileSystemCache.TryAdd(fileId, (filePath, System.IO.File.ReadAllBytes(filePath), false)))
+                    {
+                        response.InsertUInt8(0); // Success.
+                        response.InsertUInt32(fileId);
+                        response.InsertUInt32(fileSize);
+                        response.InsertUInt32(maxFsRetry);
+                        response.InsertUInt32(timeout);
+                    }
+                    else
+                        SetFailure(response);
                 }
                 else
                 {

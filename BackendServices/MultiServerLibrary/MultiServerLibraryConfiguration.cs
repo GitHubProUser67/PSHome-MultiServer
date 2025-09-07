@@ -1,4 +1,5 @@
 using CustomLogger;
+using MultiServerLibrary.GeoLocalization;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -27,6 +28,8 @@ namespace MultiServerLibrary
 
         // To use only with known problematic providers since this is a static list! Each servers should have it's own live/dynamic ban list on top.
         public static List<string> BannedIPs { get; set; }
+
+        public static VpnChecker VpnCheck = null;
 
         /// <summary>
         /// Tries to load the specified configuration file.
@@ -76,6 +79,11 @@ namespace MultiServerLibrary
                             password = ProxyPassword,
                             host = ProxyHost,
                             port = ProxyPort,
+                        },
+                        vpnban = new
+                        {
+                            enable = false,
+                            ipqs_api_key = "PUT_IPQS_APIKEY_HERE (Register at: https://www.ipqualityscore.com/)",
                         },
                         BannedIPs
                     };
@@ -136,6 +144,13 @@ namespace MultiServerLibrary
                         ProxyPassword = proxyElement.GetProperty("password").GetString();
                         ProxyHost = proxyElement.GetProperty("host").GetString();
                         ProxyPort = proxyElement.GetProperty("port").GetUInt16();
+                    }
+                    if (config.TryGetProperty("vpnban", out JsonElement vpnbanElement))
+                    {
+                        if (vpnbanElement.GetProperty("enable").GetBoolean())
+                            VpnCheck = new VpnChecker(vpnbanElement.GetProperty("ipqs_api_key").GetString());
+                        else
+                            VpnCheck = null;
                     }
                 }
             }

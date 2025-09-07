@@ -47,11 +47,7 @@ namespace Horizon.RT.Cryptography.RSA
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
             JObject jsonObject = JObject.Load(reader);
-
-            var sN = (string)jsonObject["n"];
-            var sE = (string)jsonObject["e"];
-            var sD = (string)jsonObject["d"];
-            return new RsaKeyPair(new BigInteger(sN, 10), new BigInteger(sE, 10), new BigInteger(sD, 10));
+            return new RsaKeyPair(new BigInteger((string)jsonObject["n"], 10), new BigInteger((string)jsonObject["e"], 10), new BigInteger((string)jsonObject["d"], 10));
         }
 
         public override bool CanConvert(Type objectType)

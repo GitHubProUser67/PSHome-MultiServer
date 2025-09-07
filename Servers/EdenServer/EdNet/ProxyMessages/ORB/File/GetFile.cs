@@ -1,18 +1,13 @@
-﻿using CustomLogger;
-using EdNetService.CRC;
+﻿using EdNetService.CRC;
 using EdNetService.Models;
-using MultiServerLibrary.Extension;
-using NetHasher.CRC;
 using System.Net;
-using System.Text;
 
 namespace EdenServer.EdNet.ProxyMessages.ORB.File
 {
     public class GetFile : AbstractProxyMessage
     {
-        private const int FileLockAwaitMs = 500;
         private const ushort nexttimewait = 5;
-        private const ushort chunkSize = 1024;
+        private const ushort chunkSize = 512;
 
         public override byte[]? Process(IPEndPoint endpoint, IPEndPoint target, ClientTask task, ushort PacketMagic)
         {
@@ -25,37 +20,20 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
 
             response.InsertStart(edStoreBank.CRC_A_ORB_GETFILE);
 
-            string staticUserHostedDir = Directory.GetCurrentDirectory() + $"/static/Eden/StaticUserHostedFiles/{task.Client.PendingFileUserId}";
-
-            if (!Directory.Exists(staticUserHostedDir))
+            if (OpenFile.fileSystemCache.TryRemove(fileid, out var fileSystemEntry))
             {
-                LoggerAccessor.LogWarn($"[GetFile] - Static User file repository expected at path:{staticUserHostedDir}, sending error response...");
-                SetFailure(response);
+                byte[] responseBytes = new byte[(int)Math.Min(chunkSize, fileSystemEntry.Item2.Length - offset)];
+
+                Array.Copy(fileSystemEntry.Item2, offset, responseBytes, 0, responseBytes.Length);
+
+                response.InsertUInt8(0); // Success.
+                response.InsertUInt32(fileid);
+                response.InsertUInt32(offset);
+                response.InsertUInt16(nexttimewait);
+                response.InsertByteArray(responseBytes, (ushort)responseBytes.Length);
             }
             else
-            {
-                Dictionary<uint, string> filePaths = new Dictionary<uint, string>();
-
-                foreach (string filePath in Directory.GetFiles(staticUserHostedDir, "*.*", SearchOption.AllDirectories))
-                {
-                    filePaths[CRC32.CreateCastagnoli(Encoding.UTF8.GetBytes(Path.GetFileName(filePath)))] = filePath;
-                }
-
-                if (filePaths.ContainsKey(fileid))
-                {
-                    response.InsertUInt8(0); // Success.
-                    response.InsertUInt32(fileid);
-                    response.InsertUInt32(offset);
-                    response.InsertUInt16(nexttimewait);
-                    byte[] payload = FileSystemUtils.TryReadFileChunck(filePaths[fileid], (int)Math.Min(chunkSize, new FileInfo(filePaths[fileid]).Length - offset), FileSystemUtils.FileShareMode.ReadWrite, FileLockAwaitMs);
-                    response.InsertByteArray(payload, (ushort)payload.Length);
-                }
-                else
-                {
-                    LoggerAccessor.LogWarn($"[GetFile] - File with Id:{fileid} was not found for userId:{task.Client.PendingFileUserId}, sending error response...");
-                    SetFailure(response);
-                }
-            }
+                SetFailure(response);
 
             response.InsertEnd();
 

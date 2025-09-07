@@ -1,20 +1,26 @@
+using EndianTools;
+using MultiServerLibrary.Extension;
+using MultiServerLibrary.SSL;
+using NetHasher;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.Security;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using MultiServerLibrary.Extension;
-using Org.BouncyCastle.Crypto.Parameters;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Security;
-using EndianTools;
-using NetHasher;
-using MultiServerLibrary.SSL;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace HomeTools.Crypto
 {
     public static class ToolsImplementation
     {
+        public const byte sizeOfVersionHeader = 4;
+
+        public const int CryptoVersion = 1;
+
         public static readonly string base64DefaultSharcKey = "L1ztpjqaZywDTBLh5CX6gRYWrhzmbeuVt+a/IUBHAtw=";
 
         public static readonly string base64CDNKey1 = "8243a3b10f1f1660a7fc934aac263c9c5161092dc25=";
@@ -125,6 +131,8 @@ namespace HomeTools.Crypto
 
         public static readonly byte[] MetaDataV1IVA = InitiateMetaDataV1IVA();
 
+        public static readonly byte[] CryptoVersionBytesBE = BitConverter.GetBytes(BitConverter.IsLittleEndian ? CryptoVersion : EndianUtils.ReverseInt(CryptoVersion));
+
         public static readonly bool ClientsCertificatesWrittenToDisk = InitiateDecryptedClientsCertificates();
 
         public static ulong BuildSignatureIv(int fileSize, int compressedSize, int dataStart, int userData)
@@ -146,72 +154,74 @@ namespace HomeTools.Crypto
 
         public static byte[] ProcessCrypt_Decrypt(byte[] inData, byte[] KeyBytes, byte[] IV, byte mode)
         {
-            byte BlockSize;
-            int chunkIndex = 0;
-            int inputLength = inData.Length;
-            List<KeyValuePair<(int, int), byte[]>> libsecureResults = new List<KeyValuePair<(int, int), byte[]>>();
+            return Task.Run(async() => {
+                byte BlockSize;
+                int chunkIndex = 0;
+                int inputLength = inData.Length;
+                List<KeyValuePair<(int, int), Task<byte[]>>> libsecureResults = new List<KeyValuePair<(int, int), Task<byte[]>>>();
 
-            switch (mode)
-            {
-                case 0: // Xtea
-                case 1: // Blowfish
-                    BlockSize = 8;
-                    break;
-                case 2: // AES
-                    BlockSize = 16;
-                    break;
-                default:
-                    CustomLogger.LoggerAccessor.LogError($"[ToolsImplementation] - ProcessCrypt_Decrypt: unknown crypto mode selected:{mode}.");
-                    return null;
-            }
-
-            using (MemoryStream memoryStream = new MemoryStream(inData))
-            {
-                while (memoryStream.Position < memoryStream.Length)
+                switch (mode)
                 {
-                    byte[] libsecureResult;
-                    byte[] block = new byte[BlockSize];
-                    byte[] blockIV = (byte[])IV.Clone();
-                    int currentBlockSize = Math.Min(BlockSize, inputLength - chunkIndex);
-                    if (currentBlockSize < BlockSize)
-                    {
-                        int difference = BlockSize - currentBlockSize;
-                        Buffer.BlockCopy(new byte[difference], 0, block, block.Length - difference, difference);
-                    }
-                    memoryStream.Read(block, 0, currentBlockSize);
-                    switch (mode)
-                    {
-                        case 0: // Xtea
-                            libsecureResult = LIBSECURE.InitiateXTEABuffer(block, KeyBytes, blockIV, "CTR");
-                            break;
-                        case 1: // Blowfish
-                            libsecureResult = LIBSECURE.InitiateBlowfishBuffer(block, KeyBytes, blockIV, "CTR");
-                            break;
-                        default: // AES
-                            libsecureResult = LIBSECURE.InitiateAESBuffer(block, KeyBytes, blockIV, "CTR");
-                            break;
-                    }
-                    libsecureResults.Add(new KeyValuePair<(int, int), byte[]>((chunkIndex, currentBlockSize), libsecureResult));
-                    IncrementIVBytes(IV, 1);
-                    chunkIndex += currentBlockSize;
-                }
-            }
-
-            using (MemoryStream memoryStream = new MemoryStream(inData.Length))
-            {
-                foreach (var result in libsecureResults.OrderBy(kv => kv.Key.Item1))
-                {
-                    byte[] decryptedChunk = result.Value;
-                    if (decryptedChunk == null) // We failed.
+                    case 0: // Xtea
+                    case 1: // Blowfish
+                        BlockSize = 8;
+                        break;
+                    case 2: // AES
+                        BlockSize = 16;
+                        break;
+                    default:
+                        CustomLogger.LoggerAccessor.LogError($"[ToolsImplementation] - ProcessCrypt_Decrypt: unknown crypto mode selected:{mode}.");
                         return null;
-                    if (decryptedChunk.Length < result.Key.Item2)
-                        memoryStream.Write(decryptedChunk, 0, decryptedChunk.Length);
-                    else
-                        memoryStream.Write(decryptedChunk, 0, result.Key.Item2);
                 }
 
-                return memoryStream.ToArray();
-            }
+                using (MemoryStream memoryStream = new MemoryStream(inData))
+                {
+                    while (memoryStream.Position < memoryStream.Length)
+                    {
+                        Task<byte[]> libsecureResult;
+                        byte[] block = new byte[BlockSize];
+                        byte[] blockIV = IV.ShadowCopy();
+                        int currentBlockSize = Math.Min(BlockSize, inputLength - chunkIndex);
+                        if (currentBlockSize < BlockSize)
+                        {
+                            int difference = BlockSize - currentBlockSize;
+                            Buffer.BlockCopy(new byte[difference], 0, block, block.Length - difference, difference);
+                        }
+                        memoryStream.Read(block, 0, currentBlockSize);
+                        switch (mode)
+                        {
+                            case 0: // Xtea
+                                libsecureResult = LIBSECURE.InitiateXTEABuffer(block, KeyBytes, blockIV, "CTR");
+                                break;
+                            case 1: // Blowfish
+                                libsecureResult = LIBSECURE.InitiateBlowfishBuffer(block, KeyBytes, blockIV, "CTR");
+                                break;
+                            default: // AES
+                                libsecureResult = LIBSECURE.InitiateAESBuffer(block, KeyBytes, blockIV, "CTR");
+                                break;
+                        }
+                        libsecureResults.Add(new KeyValuePair<(int, int), Task<byte[]>>((chunkIndex, currentBlockSize), libsecureResult));
+                        IncrementIVBytes(IV, 1);
+                        chunkIndex += currentBlockSize;
+                    }
+                }
+
+                using (MemoryStream memoryStream = new MemoryStream(inData.Length))
+                {
+                    foreach (var result in libsecureResults.OrderBy(kv => kv.Key.Item1))
+                    {
+                        byte[] decryptedChunk = await result.Value.ConfigureAwait(false);
+                        if (decryptedChunk == null) // We failed.
+                            return null;
+                        if (decryptedChunk.Length < result.Key.Item2)
+                            memoryStream.Write(decryptedChunk, 0, decryptedChunk.Length);
+                        else
+                            memoryStream.Write(decryptedChunk, 0, result.Key.Item2);
+                    }
+
+                    return memoryStream.ToArray();
+                }
+            }).Result;
         }
 
         public static ulong Sha1toNonce(byte[] digest)
@@ -222,27 +232,27 @@ namespace HomeTools.Crypto
             return BitConverter.ToUInt64(!BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(digest) : digest, 0);
         }
 
-        public static byte[] ApplyBigEndianPaddingPrefix(byte[] filebytes) // Before you say anything, this is an actual Home Feature...
+        public static byte[] ApplyPaddingPrefix(byte[] filebytes, bool bigEndian) // Before you say anything, this is an actual Home Feature...
         {
-            return ByteUtils.CombineByteArray(new byte[] { 0x01, 0x00, 0x00, 0x00 }, filebytes);
-        }
-
-        public static byte[] ApplyLittleEndianPaddingPrefix(byte[] filebytes) // Before you say anything, this is an actual Home Feature...
-        {
-            return ByteUtils.CombineByteArray(new byte[] { 0x00, 0x00, 0x00, 0x01 }, filebytes);
+            return ByteUtils.CombineByteArray(bigEndian ? CryptoVersionBytesBE : EndianUtils.EndianSwap(CryptoVersionBytesBE), filebytes);
         }
 
         public static byte[] RemovePaddingPrefix(byte[] fileBytes) // For Encryption Proxy, TicketList and INF files.
         {
-            if (fileBytes.Length > 4 && ((fileBytes[0] == 0x00 && fileBytes[1] == 0x00 && fileBytes[2] == 0x00 && fileBytes[3] == 0x01)
-               || (fileBytes[0] == 0x01 && fileBytes[1] == 0x00 && fileBytes[2] == 0x00 && fileBytes[3] == 0x00)))
+            if (fileBytes.Length > sizeOfVersionHeader)
             {
-                byte[] destinationArray = new byte[fileBytes.Length - 4]; // New array size after removing 4 elements
+                byte[] cryptoVersion = new byte[sizeOfVersionHeader];
 
-                // Copy the portion of the source array starting from index 4 to the destination array
-                Array.Copy(fileBytes, 4, destinationArray, 0, destinationArray.Length);
+                Array.Copy(fileBytes, 0, cryptoVersion, 0, cryptoVersion.Length);
 
-                return destinationArray;
+                if (cryptoVersion.EqualsTo(CryptoVersionBytesBE) || cryptoVersion.EqualsTo(EndianUtils.EndianSwap(CryptoVersionBytesBE)))
+                {
+                    byte[] destinationArray = new byte[fileBytes.Length - sizeOfVersionHeader];
+
+                    Array.Copy(fileBytes, sizeOfVersionHeader, destinationArray, 0, destinationArray.Length);
+
+                    return destinationArray;
+                }
             }
 
             return fileBytes;
@@ -2424,7 +2434,7 @@ namespace HomeTools.Crypto
            10233e88 64              undefine  64h                     [2144]
            10233e89 07              undefine  07h                     [2145]";
 
-            byte[] encryptedHDKCertData = StringUtils.GhidraStrReportToBytes(ghidraHDKCertData, HDKCertSize);
+            byte[] encryptedHDKCertData = GhidraStrReportToBytes(ghidraHDKCertData, HDKCertSize);
 
             Buffer.BlockCopy(encryptedHDKCertData, HDKCertSize - 20, certificateSha1, 0, certificateSha1.Length);
 
@@ -2554,6 +2564,27 @@ namespace HomeTools.Crypto
             #endregion
 
             return true;
+        }
+
+        /// <summary>
+        /// Converts a Ghidra string report into a byte array.
+        /// Extracts hex bytes from each line and places them at the correct index.
+        /// </summary>
+        /// <param name="report">The Ghidra report as a string</param>
+        /// <returns>Byte array constructed from the report</returns>
+        public static byte[] GhidraStrReportToBytes(string report, int sizeOfOutput = -1)
+        {
+            string[] lines = report.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            byte[] byteArray = new byte[sizeOfOutput <= -1 ? lines.Length : sizeOfOutput];
+
+            foreach (string line in lines)
+            {
+                Match match = Regex.Match(line, @"\b([0-9a-fA-F]+)\s+([0-9a-fA-F]{2})\s+.*?\[(\d+)\]");
+                if (match.Success)
+                    byteArray[int.Parse(match.Groups[3].Value)] = Convert.ToByte(match.Groups[2].Value, 16);
+            }
+
+            return byteArray;
         }
     }
 }

@@ -20,6 +20,7 @@ using System.Net;
 using System.Globalization;
 using System.Text;
 using System.Buffers;
+using MultiServerLibrary;
 
 namespace Horizon.SERVER.Medius
 {
@@ -92,7 +93,7 @@ namespace Horizon.SERVER.Medius
                         #region Check if AppId from Client matches Server
                         if (!MediusClass.Manager.IsAppIdSupported(clientConnectTcp.AppId))
                         {
-                            LoggerAccessor.LogError($"Client {clientChannel.RemoteAddress} attempting to authenticate with incompatible app id {clientConnectTcp.AppId}");
+LoggerAccessor.LogError($"[MAS] - Client {clientChannel.RemoteAddress} attempting to authenticate with incompatible app id {clientConnectTcp.AppId}");
                             await clientChannel.CloseAsync();
                             return;
                         }
@@ -509,8 +510,6 @@ namespace Horizon.SERVER.Medius
 
                                                         LoggerAccessor.LogError(anticheatMsg);
 
-                                                        await HorizonServerConfiguration.Database.BanIp(data.ClientObject.IP).ConfigureAwait(false);
-
                                                         // Banned
                                                         await QueueBanMessage(data).ConfigureAwait(false);
 
@@ -597,7 +596,7 @@ namespace Horizon.SERVER.Medius
 
                 default:
                     {
-                        LoggerAccessor.LogWarn($"UNHANDLED RT MESSAGE: {message}");
+LoggerAccessor.LogWarn($"[MAS] - UNHANDLED RT MESSAGE: {message}");
                         break;
                     }
             }
@@ -889,7 +888,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} is trying to end server session without an Client Object");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} is trying to end server session without an Client Object");
                             break;
                         }
 
@@ -956,7 +955,7 @@ namespace Horizon.SERVER.Medius
                         {
                             data.ClientObject.MediusConnectionType = sessionBeginRequest.ConnectionClass;
 
-                            LoggerAccessor.LogInfo($"Retrieved ApplicationID {data.ClientObject.ApplicationId} from client connection");
+LoggerAccessor.LogInfo($"[MAS] - Retrieved ApplicationID {data.ClientObject.ApplicationId} from client connection");
 
                             await HorizonServerConfiguration.Database.GetServerFlags().ContinueWith((r) =>
                             {
@@ -998,7 +997,7 @@ namespace Horizon.SERVER.Medius
                         {
                             data.ClientObject.MediusConnectionType = sessionBeginRequest1.ConnectionClass;
 
-                            LoggerAccessor.LogInfo($"Retrieved ApplicationID {data.ClientObject.ApplicationId} from client connection");
+LoggerAccessor.LogInfo($"[MAS] - Retrieved ApplicationID {data.ClientObject.ApplicationId} from client connection");
 
                             #region SystemMessageSingleTest Disabled?
                             if (MediusClass.Settings.SystemMessageSingleTest)
@@ -1077,7 +1076,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {setLocalizationParamsRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {setLocalizationParamsRequest} without a session.");
                             break;
                         }
 
@@ -1098,7 +1097,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {setLocalizationParamsRequest1} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {setLocalizationParamsRequest1} without a session.");
                             break;
                         }
 
@@ -1120,7 +1119,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {setLocalizationParamsRequest2} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {setLocalizationParamsRequest2} without a session.");
                             break;
                         }
 
@@ -1147,14 +1146,14 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getTotalGamesRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {getTotalGamesRequest} without a session.");
                             break;
                         }
 
                         // ERROR -- Need to be logged in
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getTotalGamesRequest} without being logged in.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {getTotalGamesRequest} without being logged in.");
                             break;
                         }
 
@@ -1176,14 +1175,14 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getTotalChannelsRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {getTotalChannelsRequest} without a session.");
                             break;
                         }
 
                         // ERROR -- Need to be logged in
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getTotalChannelsRequest} without being logged in.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {getTotalChannelsRequest} without being logged in.");
                             break;
                         }
 
@@ -1198,24 +1197,6 @@ namespace Horizon.SERVER.Medius
 
                 case MediusSetLobbyWorldFilterRequest setLobbyWorldFilterRequest:
                     {
-                        //WRC 4 Sets LobbyWorldFilter Prior to making a session.
-                        // ERROR - Need a session
-                        /*
-                        if (data.ClientObject == null)
-                            throw new InvalidOperationException($"INVALID OPERATION: {clientChannel} sent {setLobbyWorldFilterRequest} without a session.");
-                        */
-                        // ERROR -- Need to be logged in
-                        /*
-                        if (!data.ClientObject.IsLoggedIn)
-                            throw new InvalidOperationException($"INVALID OPERATION: {clientChannel} sent {setLobbyWorldFilterRequest} without being logged in.");
-                        */
-                        /*
-                        data.ClientObject.Queue(new MediusSetLobbyWorldFilterResponse()
-                        {
-                            MessageID = setLobbyWorldFilterRequest.MessageID,
-                            StatusCode = MediusCallbackStatus.MediusRequestDenied,
-                        });
-                        */
                         Queue(new RT_MSG_SERVER_APP()
                         {
                             Message = new MediusSetLobbyWorldFilterResponse()
@@ -1238,7 +1219,7 @@ namespace Horizon.SERVER.Medius
                             //Sets the CachedPlayer's MachineId
                             data.MachineId = BitConverter.ToString(machineSignaturePost.MachineSignature);
 
-                            LoggerAccessor.LogInfo($"Session Key {machineSignaturePost.SessionKey} | Posting Machine signatures");
+LoggerAccessor.LogDebug($"[MAS] - Session Key {machineSignaturePost.SessionKey} | Posting Machine signatures");
 
                             // Then post to the Database if logged in
                             if (data.ClientObject?.IsLoggedIn ?? false)
@@ -1254,25 +1235,25 @@ namespace Horizon.SERVER.Medius
 
                 case MediusDnasSignaturePost dnasSignaturePost:
                     {
-                        if (Settings.DnasEnablePost == true)
+                        if (Settings.DnasEnablePost)
                         {
                             //If DNAS Signature Post is the PS2/PSP/PS3 Console ID then continue
                             if (dnasSignaturePost.DnasSignatureType == MediusDnasCategory.DnasConsoleID)
                             {
                                 data.MachineId = BitConverter.ToString(dnasSignaturePost.DnasSignature);
 
-                                LoggerAccessor.LogInfo($"Posting ConsoleID - ConsoleSigSize={dnasSignaturePost.DnasSignatureLength}");
+LoggerAccessor.LogDebug($"[MAS] - Posting ConsoleID - ConsoleSigSize={dnasSignaturePost.DnasSignatureLength}");
 
                                 // Then post to the Database if logged in
                                 if (data.ClientObject?.IsLoggedIn ?? false)
                                     await HorizonServerConfiguration.Database.PostMachineId(data.ClientObject.AccountId, data.MachineId);
                             }
 
-                            if (dnasSignaturePost.DnasSignatureType == MediusDnasCategory.DnasTitleID)
-                                LoggerAccessor.LogInfo($"DnasSignaturePost Error - Invalid SignatureType");
+                            else if (dnasSignaturePost.DnasSignatureType == MediusDnasCategory.DnasTitleID)
+LoggerAccessor.LogError($"[MAS] - DnasSignaturePost Error - Invalid SignatureType");
 
-                            if (dnasSignaturePost.DnasSignatureType == MediusDnasCategory.DnasDiskID)
-                                LoggerAccessor.LogInfo($"Posting DiskID - DiskSigSize={dnasSignaturePost.DnasSignatureLength}");
+                            else if (dnasSignaturePost.DnasSignatureType == MediusDnasCategory.DnasDiskID)
+LoggerAccessor.LogDebug($"[MAS] - Posting DiskID - DiskSigSize={dnasSignaturePost.DnasSignatureLength}");
                         }
                         else
                         {
@@ -1289,14 +1270,14 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getAccessLevelInfoRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {getAccessLevelInfoRequest} without a session.");
                             break;
                         }
 
                         // ERROR -- Need to be logged in
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getAccessLevelInfoRequest} without being logged in.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {getAccessLevelInfoRequest} without being logged in.");
                             break;
                         }
 
@@ -1321,7 +1302,7 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session
                         if (data.ClientObject == null && !appIdBeforeSession.Contains(data.ApplicationId)) // KILLZONE PS2 GET VERSION SERVER INFO BEFORE SESSION
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {mediusVersionServerRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {mediusVersionServerRequest} without a session.");
                             break;
                         }
 
@@ -1432,11 +1413,10 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session but doesn't need to be logged in
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getLocationsRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {getLocationsRequest} without a session.");
                             break;
                         }
 
-                        LoggerAccessor.LogInfo($"Get Locations Request Received Sessionkey: {getLocationsRequest.SessionKey}");
                         await HorizonServerConfiguration.Database.GetLocations(data.ClientObject.ApplicationId).ContinueWith(r =>
                         {
                             LocationDTO[]? locations = r.Result;
@@ -1445,8 +1425,6 @@ namespace Horizon.SERVER.Medius
                             {
                                 if (locations?.Length == 0)
                                 {
-                                    LoggerAccessor.LogInfo("No Locations found.");
-
                                     data.ClientObject.Queue(new MediusGetLocationsResponse()
                                     {
                                         MessageID = getLocationsRequest.MessageID,
@@ -1466,9 +1444,6 @@ namespace Horizon.SERVER.Medius
 
                                     if (responses != null)
                                     {
-                                        LoggerAccessor.LogInfo("GetLocationsRequest  success");
-                                        LoggerAccessor.LogInfo($"NumLocations returned[{responses.Count}]");
-
                                         responses[responses.Count - 1].EndOfList = true;
                                         data.ClientObject.Queue(responses);
                                     }
@@ -1476,7 +1451,7 @@ namespace Horizon.SERVER.Medius
                             }
                             else
                             {
-                                LoggerAccessor.LogError($"GetLocationsRequest failed [{r.Exception}]");
+LoggerAccessor.LogError($"[MAS] - GetLocationsRequest failed [{r.Exception}]");
 
                                 data.ClientObject.Queue(new MediusGetLocationsResponse()
                                 {
@@ -1496,7 +1471,7 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {pickLocationRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {pickLocationRequest} without a session.");
                             break;
                         }
 
@@ -1518,7 +1493,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountRegRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {accountRegRequest} without a session.");
                             break;
                         }
 
@@ -1581,7 +1556,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountGetIdRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {accountGetIdRequest} without a session.");
                             break;
                         }
 
@@ -1616,14 +1591,14 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountDeleteRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {accountDeleteRequest} without a session.");
                             break;
                         }
 
                         // ERROR -- Need to be logged in
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountDeleteRequest} without being logged in.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {accountDeleteRequest} without being logged in.");
                             break;
                         }
 
@@ -1633,7 +1608,7 @@ namespace Horizon.SERVER.Medius
                             {
                                 if (r.IsCompletedSuccessfully && r.Result)
                                 {
-                                    LoggerAccessor.LogInfo($"Logging out {data?.ClientObject?.AccountName}'s account\nDeleting from Medius Server");
+LoggerAccessor.LogInfo($"[MAS] - Logging out {data?.ClientObject?.AccountName}'s account\nDeleting from Medius Server");
 
                                     data?.ClientObject?.Logout();
 
@@ -1645,7 +1620,7 @@ namespace Horizon.SERVER.Medius
                                 }
                                 else
                                 {
-                                    LoggerAccessor.LogWarn($"Logout FAILED for {data?.ClientObject?.AccountName}'s account\nData still persistent on Medius Server");
+LoggerAccessor.LogWarn($"[MAS] - Logout FAILED for {data?.ClientObject?.AccountName}'s account\nData still persistent on Medius Server");
 
                                     data?.ClientObject?.Queue(new MediusAccountDeleteResponse()
                                     {
@@ -1661,7 +1636,44 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {anonymousLoginRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {anonymousLoginRequest} without a session.");
+                            break;
+                        }
+
+                        // get client ip
+                        string clientIp = Regex.Match(clientChannel.RemoteAddress.ToString(), @"\[(?:.*?:)?(?<ip>\d+\.\d+\.\d+\.\d+)\]").Groups["ip"].Value;
+
+                        // ip is banned
+                        if (await HorizonServerConfiguration.Database.GetIsIpBanned(IPAddress.Parse(clientIp)) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientIp)))
+                        {
+                            LoggerAccessor.LogWarn($"[MAS] - MediusAnonymousLoginRequest: Anonymous User tried to login with banned IP {clientIp}");
+
+                            data?.ClientObject?.Queue(new MediusAnonymousLoginResponse()
+                            {
+                                MessageID = anonymousLoginRequest.MessageID,
+                                StatusCode = MediusCallbackStatus.MediusAccountBanned
+                            });
+
+                            // Then queue send ban message
+                            await QueueBanMessage(data, "Your IP has been banned");
+
+                            break;
+                        }
+
+                        // cid is banned
+                        else if (await HorizonServerConfiguration.Database.GetIsMacBanned(data.MachineId ?? string.Empty))
+                        {
+                            LoggerAccessor.LogWarn($"[MAS] - MediusAnonymousLoginRequest: Anonymous User tried to login with banned CID {data.MachineId}");
+
+                            data?.ClientObject?.Queue(new MediusAnonymousLoginResponse()
+                            {
+                                MessageID = anonymousLoginRequest.MessageID,
+                                StatusCode = MediusCallbackStatus.MediusAccountBanned
+                            });
+
+                            // Then queue send ban message
+                            await QueueBanMessage(data, "Your CID has been banned");
+
                             break;
                         }
 
@@ -1673,7 +1685,7 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountLoginRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {accountLoginRequest} without a session.");
                             break;
                         }
 
@@ -1694,8 +1706,45 @@ namespace Horizon.SERVER.Medius
                         }
                         else
                         {
+                            // get client ip
+                            string clientIp = Regex.Match(clientChannel.RemoteAddress.ToString(), @"\[(?:.*?:)?(?<ip>\d+\.\d+\.\d+\.\d+)\]").Groups["ip"].Value;
+
+                            // ip is banned
+                            if (await HorizonServerConfiguration.Database.GetIsIpBanned(IPAddress.Parse(clientIp)) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientIp)))
+                            {
+                                LoggerAccessor.LogWarn($"[MAS] - MediusAccountLoginRequest: User {accountLoginRequest.Username} tried to login with banned IP {clientIp}");
+
+                                data?.ClientObject?.Queue(new MediusAccountLoginResponse()
+                                {
+                                    MessageID = accountLoginRequest.MessageID,
+                                    StatusCode = MediusCallbackStatus.MediusAccountBanned
+                                });
+
+                                // Then queue send ban message
+                                await QueueBanMessage(data, "Your IP has been banned");
+
+                                break;
+                            }
+
+                            // cid is banned
+                            else if (await HorizonServerConfiguration.Database.GetIsMacBanned(data.MachineId ?? string.Empty))
+                            {
+                                LoggerAccessor.LogWarn($"[MAS] - MediusAccountLoginRequest: User {accountLoginRequest.Username} tried to login with banned CID {data.MachineId}");
+
+                                data?.ClientObject?.Queue(new MediusAccountLoginResponse()
+                                {
+                                    MessageID = accountLoginRequest.MessageID,
+                                    StatusCode = MediusCallbackStatus.MediusAccountBanned
+                                });
+
+                                // Then queue send ban message
+                                await QueueBanMessage(data, "Your CID has been banned");
+
+                                break;
+                            }
+
                             #region SystemMessageSingleTest Disabled?
-                            if (MediusClass.Settings.SystemMessageSingleTest != false)
+                            if (MediusClass.Settings.SystemMessageSingleTest)
                             {
                                 await QueueBanMessage(data, "MAS.Notification Test:\nYou have been banned from this server.");
 
@@ -1840,14 +1889,14 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountUpdatePasswordRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {accountUpdatePasswordRequest} without a session.");
                             break;
                         }
 
                         // ERROR -- Need to be logged in
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountUpdatePasswordRequest} without being logged in.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {accountUpdatePasswordRequest} without being logged in.");
                             break;
                         }
 
@@ -1882,7 +1931,7 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountLogoutRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {accountLogoutRequest} without a session.");
                             break;
                         }
 
@@ -1910,14 +1959,14 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountUpdateStatsRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {accountUpdateStatsRequest} without a session.");
                             break;
                         }
 
                         // ERROR -- Need to be logged in
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountUpdateStatsRequest} without being logged in.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {accountUpdateStatsRequest} without being logged in.");
                             break;
                         }
 
@@ -1951,7 +2000,7 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session and XI5 Ticket
                         if (data.ClientObject == null || ticketLoginRequest.TicketData == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {ticketLoginRequest} without a session or XI5 Ticket.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {ticketLoginRequest} without a session or XI5 Ticket.");
                             break;
                         }
 
@@ -2028,7 +2077,7 @@ namespace Horizon.SERVER.Medius
                         string clientIp = Regex.Match(clientChannel.RemoteAddress.ToString(), @"\[(?:.*?:)?(?<ip>\d+\.\d+\.\d+\.\d+)\]").Groups["ip"].Value;
 
                         // ip is banned
-                        if (await HorizonServerConfiguration.Database.GetIsIpBanned(IPAddress.Parse(clientIp)))
+                        if (await HorizonServerConfiguration.Database.GetIsIpBanned(IPAddress.Parse(clientIp)) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientIp)))
                         {
                             LoggerAccessor.LogWarn($"[MAS] - MediusTicketLoginRequest: User {username} tried to login with banned IP {clientIp}");
 
@@ -2045,7 +2094,7 @@ namespace Horizon.SERVER.Medius
                         }
 
                         // cid is banned
-                        if (await HorizonServerConfiguration.Database.GetIsMacBanned(data.MachineId ?? string.Empty))
+                        else if (await HorizonServerConfiguration.Database.GetIsMacBanned(data.MachineId ?? string.Empty))
                         {
                             LoggerAccessor.LogWarn($"[MAS] - MediusTicketLoginRequest: User {username} tried to login with banned CID {data.MachineId}");
 
@@ -2282,7 +2331,7 @@ namespace Horizon.SERVER.Medius
                                                     txt = r.Result.EulaTitle + "\n" + txt;
                                                 else
                                                     txt = string.Empty;
-                                                LoggerAccessor.LogInfo($"GetPolicy Succeeded:{getPolicyRequest.MessageID}");
+LoggerAccessor.LogDebug($"[MAS] - GetPolicy Succeeded:{getPolicyRequest.MessageID}");
                                                 data.ClientObject.Queue(MediusClass.GetPolicyFromText(getPolicyRequest.MessageID, txt));
                                             }
                                             else if (r.IsCompletedSuccessfully && r.Result == null)
@@ -2292,7 +2341,7 @@ namespace Horizon.SERVER.Medius
                                             }
                                             else
                                             {
-                                                LoggerAccessor.LogError($"GetPolicy Failed = [{r.Exception}]");
+LoggerAccessor.LogError($"[MAS] - GetPolicy Failed = [{r.Exception}]");
                                                 data.ClientObject.Queue(new MediusGetPolicyResponse() { MessageID = getPolicyRequest.MessageID, StatusCode = MediusCallbackStatus.MediusSuccess, Policy = "NONE", EndOfText = true });
                                             }
                                         });
@@ -2315,7 +2364,7 @@ namespace Horizon.SERVER.Medius
                                                     txt = r.Result.EulaTitle + "\n" + txt;
                                                 else
                                                     txt = string.Empty;
-                                                LoggerAccessor.LogInfo($"GetPolicy Succeeded:{getPolicyRequest.MessageID}");
+LoggerAccessor.LogDebug($"[MAS] - GetPolicy Succeeded:{getPolicyRequest.MessageID}");
                                                 data.ClientObject.Queue(MediusClass.GetPolicyFromText(getPolicyRequest.MessageID, txt));
                                             }
                                             else if (r.IsCompletedSuccessfully && r.Result == null)
@@ -2325,7 +2374,7 @@ namespace Horizon.SERVER.Medius
                                             }
                                             else
                                             {
-                                                LoggerAccessor.LogError($"GetPolicy Failed = [{r.Exception}]");
+LoggerAccessor.LogError($"[MAS] - GetPolicy Failed = [{r.Exception}]");
                                                 data.ClientObject.Queue(new MediusGetPolicyResponse() { MessageID = getPolicyRequest.MessageID, StatusCode = MediusCallbackStatus.MediusSuccess, Policy = "NONE", EndOfText = true });
                                             }
                                         });
@@ -2345,14 +2394,14 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getLadderStatsRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {getLadderStatsRequest} without a session.");
                             break;
                         }
 
                         // ERROR -- Need to be logged in
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getLadderStatsRequest} without being logged in.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {getLadderStatsRequest} without being logged in.");
                             break;
                         }
 
@@ -2416,7 +2465,7 @@ namespace Horizon.SERVER.Medius
                                 }
                             default:
                                 {
-                                    LoggerAccessor.LogWarn($"Unhandled MediusGetLadderStatsRequest {getLadderStatsRequest}");
+LoggerAccessor.LogWarn($"[MAS] - Unhandled MediusGetLadderStatsRequest {getLadderStatsRequest}");
                                     break;
                                 }
                         }
@@ -2428,14 +2477,14 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getLadderStatsWideRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {getLadderStatsWideRequest} without a session.");
                             break;
                         }
 
                         // ERROR -- Need to be logged in
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getLadderStatsWideRequest} without being logged in.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {getLadderStatsWideRequest} without being logged in.");
                             break;
                         }
 
@@ -2501,7 +2550,7 @@ namespace Horizon.SERVER.Medius
                                 }
                             default:
                                 {
-                                    LoggerAccessor.LogWarn($"Unhandled MediusGetLadderStatsWideRequest {getLadderStatsWideRequest}");
+LoggerAccessor.LogWarn($"[MAS] - Unhandled MediusGetLadderStatsWideRequest {getLadderStatsWideRequest}");
                                     break;
                                 }
                         }
@@ -2517,14 +2566,14 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {channelListRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {channelListRequest} without a session.");
                             break;
                         }
 
                         // ERROR -- Need to be logged in
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {channelListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {channelListRequest} without being logged in.");
                             break;
                         }
 
@@ -2627,7 +2676,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {textFilterRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {textFilterRequest} without a session.");
                             break;
                         }
 
@@ -2681,7 +2730,7 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getServerTimeRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {getServerTimeRequest} without a session.");
                             break;
                         }
 
@@ -2724,7 +2773,7 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getMyIpRequest} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {getMyIpRequest} without a session.");
                             break;
                         }
 
@@ -2732,7 +2781,7 @@ namespace Horizon.SERVER.Medius
 
                         if (ClientIP == null)
                         {
-                            LoggerAccessor.LogInfo($"Error: Retrieving Client IP address {clientChannel.RemoteAddress} = [{ClientIP}]");
+LoggerAccessor.LogInfo($"[MAS] - Error: Retrieving Client IP address {clientChannel.RemoteAddress} = [{ClientIP}]");
                             data.ClientObject.Queue(new MediusGetMyIPResponse()
                             {
                                 MessageID = getMyIpRequest.MessageID,
@@ -2761,7 +2810,7 @@ namespace Horizon.SERVER.Medius
                         // ERROR - Need a session
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {updateUserState} without a session.");
+LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {updateUserState} without a session.");
                             break;
                         }
 
@@ -2804,7 +2853,7 @@ namespace Horizon.SERVER.Medius
 
                 default:
                     {
-                        LoggerAccessor.LogWarn($"Unhandled Medius Message: {message}");
+LoggerAccessor.LogWarn($"[MAS] - Unhandled Medius Message: {message}");
                         break;
                     }
             }
@@ -2925,7 +2974,7 @@ namespace Horizon.SERVER.Medius
                 }
             }
 
-            await data.ClientObject.Login(accountDto);
+            await data.ClientObject.Login(accountDto, false);
 
             #region Update DB IP and CID
             await HorizonServerConfiguration.Database.PostAccountIp(accountDto.AccountId, ((IPEndPoint)clientChannel.RemoteAddress).Address.MapToIPv4().ToString());
@@ -2939,7 +2988,7 @@ namespace Horizon.SERVER.Medius
             // Add to logged in clients
             MediusClass.Manager.AddOrUpdateLoggedInClient(data.ClientObject);
 
-            LoggerAccessor.LogInfo($"LOGGING IN AS {data.ClientObject.AccountName} with access token {data.ClientObject.AccessToken}");
+LoggerAccessor.LogInfo($"[MAS] - LOGGING IN AS {data.ClientObject.AccountName} with access token {data.ClientObject.AccessToken}");
 
             // Tell client
             if (ticket)
@@ -3080,8 +3129,9 @@ namespace Horizon.SERVER.Medius
             var rsa = fac.CreateNew(CipherContext.RSA_AUTH) as PS2_RSA;
 
             int iAccountID = MediusClass.Manager.AnonymousAccountIDGenerator(MediusClass.Settings.AnonymousIDRangeSeed);
-            LoggerAccessor.LogInfo($"AnonymousIDRangeSeedGenerator AccountID returned {iAccountID}");
-
+#if DEBUG
+LoggerAccessor.LogInfo($"[MAS] - AnonymousIDRangeSeedGenerator AccountID returned {iAccountID}");
+#endif
             if (data.ClientObject != null)
             {
                 char[] charsToRemove = { ':', 'f', '{', '}' };
@@ -3105,7 +3155,7 @@ namespace Horizon.SERVER.Medius
                 // Add to logged in clients
                 MediusClass.Manager.AddOrUpdateLoggedInClient(data.ClientObject);
 
-                LoggerAccessor.LogInfo($"LOGGING IN ANONYMOUSLY AS {data.ClientObject.AccountDisplayName} with access token {data.ClientObject.AccessToken}");
+LoggerAccessor.LogInfo($"[MAS] - LOGGING IN ANONYMOUSLY AS {data.ClientObject.AccountDisplayName} with access token {data.ClientObject.AccessToken}");
 
                 // Tell client
                 data.ClientObject.Queue(new MediusAnonymousLoginResponse()

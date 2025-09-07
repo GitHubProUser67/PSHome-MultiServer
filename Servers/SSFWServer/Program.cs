@@ -16,7 +16,7 @@ public static class SSFWServerConfiguration
 {
     public static bool SSFWCrossSave { get; set; } = true;
     public static bool EnableHTTPCompression { get; set; } = false;
-    public static int SSFWTTL { get; set; } = 60;
+    public static int SSFWTTL { get; set; } = 180;
     public static bool PreferNativeHttpListenerEngine { get; set; } = false;
     public static int BufferSize { get; set; } = 4096;
     public static bool EnableKeepAlive { get; set; } = false;

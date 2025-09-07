@@ -1,8 +1,4 @@
 using CustomLogger;
-using System;
-using System.Collections;
-using System.Linq;
-using System.Net;
 using System.Collections.Generic;
 
 namespace WebAPIService.GameServices.CDM
@@ -65,7 +61,7 @@ namespace WebAPIService.GameServices.CDM
                         case "/leaderboard/":
                             return Leaderboards.handleLeaderboards(PostData, ContentType, workPath, absolutePath);
                         default:
-                            LoggerAccessor.LogError($"Unhandled GET endpoint for {endPointURI}");
+                            LoggerAccessor.LogWarn($"[CDM] - Unhandled GET endpoint for {endPointURI}");
                             break;
                     }
                     break;
@@ -75,12 +71,12 @@ namespace WebAPIService.GameServices.CDM
                         case "/user/sync/":
                             return User.handleUserSync(PostData, ContentType, workPath, absolutePath);
                         default:
-                            LoggerAccessor.LogError($"Unhandled POST endpoint for {endPointURI}");
+                            LoggerAccessor.LogWarn($"[CDM] - Unhandled POST endpoint for {endPointURI}");
                             break;
                     }
                     break;
                 default:
-                    LoggerAccessor.LogError($"Unhandled {method} endpoint for {absolutePath}");
+                    LoggerAccessor.LogWarn($"[CDM] - Unhandled {method} endpoint for {absolutePath}");
                     break;
             }
 

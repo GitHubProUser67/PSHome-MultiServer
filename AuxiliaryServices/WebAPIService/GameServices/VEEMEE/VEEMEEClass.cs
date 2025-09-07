@@ -177,11 +177,11 @@ namespace WebAPIService.GameServices.VEEMEE
                             resultContentType = "text/xml";
                             break;
                         case "/olm/olmHSSetUserData.php":
-                            result = olmUserData.SetUserDataPOST(postData, contentType, apiPath);
+                            result = OLMUserData.SetUserDataPOST(postData, contentType, apiPath);
                             resultContentType = "text/xml";
                             break;
                         case "/olm/olmHSGetUserData.php":
-                            result = olmUserData.GetUserDataPOST(postData, contentType, apiPath);
+                            result = OLMUserData.GetUserDataPOST(postData, contentType, apiPath);
                             resultContentType = "text/xml";
                             break;
                         case "/olm/olmHSGetLeaderboard.php":

@@ -1,6 +1,6 @@
 using EndianTools;
+using MultiServerLibrary.Extension;
 using System;
-using System.Linq;
 
 namespace Horizon.RT.Cryptography.RC
 {
@@ -102,7 +102,7 @@ namespace Horizon.RT.Cryptography.RC
             RC_Pass(plain, ref seed, true, true);
 
             Hash(plain, out var checkHash);
-            return checkHash.SequenceEqual(hash);
+            return checkHash.EqualsTo(hash);
         }
 
         #region Hash
@@ -123,7 +123,7 @@ namespace Horizon.RT.Cryptography.RC
         public static byte[] Hash(byte[] input, CipherContext context)
         {
             uint r0 = 0x00000000;
-            uint r3 = 0x5B3AA654;
+            const uint r3 = 0x5B3AA654;
             uint r5 = 0x75970A4D;
             uint r6 = (uint)input.Length;
 
@@ -168,8 +168,9 @@ namespace Horizon.RT.Cryptography.RC
                 r19 ^= r0;
             }
 
-            uint hash = (uint)(((ulong)((r16 + r17 + r18 + r19) & 0x1FFFFFFF) | (ulong)context << 29));
-            return BitConverter.GetBytes(hash);
+            byte[] result = new byte[4];
+            EndianAwareConverter.WriteUInt32(result, Endianness.LittleEndian, 0, (uint)(((ulong)((r16 + r17 + r18 + r19) & 0x1FFFFFFF) | (ulong)context << 29)));
+            return result;
         }
 
         /// <summary>
@@ -192,11 +193,10 @@ namespace Horizon.RT.Cryptography.RC
         protected static void RC_Pass(byte[] input, ref uint[] iv, bool sign = false, bool decrypt = false)
         {
             uint r0 = 0x00000000;
-            uint r3 = 0x5B3AA654;
+            const uint r3 = 0x5B3AA654;
             uint r5 = 0x75970A4D;
             uint r6 = 0x00000000;
 
-            // 
             int newLength = (input.Length % 4 != 0) ? (input.Length + (4 - (input.Length % 4))) : input.Length;
             byte[] buffer = new byte[newLength];
             Array.Copy(input, 0, buffer, 0, input.Length);
@@ -236,6 +236,10 @@ namespace Horizon.RT.Cryptography.RC
                 if (sign)
                 {
                     byte[] r19_b = BitConverter.GetBytes(decrypt ? r0 : r19);
+
+                    if (!BitConverter.IsLittleEndian)
+                        Array.Reverse(r19_b);
+
                     buffer[i + 0] = r19_b[0];
                     buffer[i + 1] = r19_b[1];
                     buffer[i + 2] = r19_b[2];
@@ -269,16 +273,14 @@ namespace Horizon.RT.Cryptography.RC
 
         public bool Equals(PS3_RCQ b)
         {
-            return b.Context == Context && (b._key?.SequenceEqual(_key) ?? false);
+            return b.Context == Context && (b._key?.EqualsTo(_key) ?? false);
         }
 
         #endregion
 
         public byte[] GetPublicKey()
         {
-            var copy = new byte[_key.Length];
-            Array.Copy(_key, copy, copy.Length);
-            return copy;
+            return _key.ShadowCopy();
         }
 
         public override string ToString()

@@ -1,9 +1,10 @@
 using CustomLogger;
-using System.Threading.Tasks;
+using MultiServerLibrary;
 using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
-using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace MitmDNS
 {
@@ -137,7 +138,7 @@ namespace MitmDNS
             string clientip = resultVal.RemoteEndPoint?.Address.ToString();
             int? clientport = resultVal.RemoteEndPoint?.Port;
 
-            if (!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(clientip, clientport))
+            if (!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip)))
                 return false;
 
             byte[] ResultBuffer = await DNSResolver.ProcRequest(resultVal.Buffer);

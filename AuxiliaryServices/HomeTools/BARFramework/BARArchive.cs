@@ -742,20 +742,17 @@ namespace HomeTools.BARFramework
                     tocEntry.CompressedSize = (uint)array2.Length + 28;
                     tocEntry.Compression = CompressionMethod.Encrypted;
                     using (MemoryStream memoryStream = new MemoryStream(array))
-                    {
                         tocEntry.FileType = FileTypeAnalyser.Instance.Analyse(memoryStream);
-                        memoryStream.Close();
-                    }
                     int count = (int)m_toc.Count;
                     tocEntry.Index = count;
                     if (m_endian == Endianness.BigEndian)
-                        tocEntry.RawData = ByteUtils.CombineByteArrays(ToolsImplementation.ApplyBigEndianPaddingPrefix(new byte[20]), new byte[][]
+                        tocEntry.RawData = ByteUtils.CombineByteArrays(ToolsImplementation.ApplyPaddingPrefix(new byte[20], true), new byte[][]
                         {
                              EndianUtils.EndianSwap(BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseInt(array2.Length) : array2.Length)),
                              array2
                         });
                     else
-                        tocEntry.RawData = ByteUtils.CombineByteArrays(ToolsImplementation.ApplyLittleEndianPaddingPrefix(new byte[20]), new byte[][]
+                        tocEntry.RawData = ByteUtils.CombineByteArrays(ToolsImplementation.ApplyPaddingPrefix(new byte[20], false), new byte[][]
                         {
                              BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseInt(array2.Length) : array2.Length),
                              array2
@@ -767,10 +764,7 @@ namespace HomeTools.BARFramework
                     tocEntry.CompressedSize = (uint)array2.Length;
                     tocEntry.Compression = CompressionMethod.Uncompressed;
                     using (MemoryStream memoryStream = new MemoryStream(array))
-                    {
                         tocEntry.FileType = FileTypeAnalyser.Instance.Analyse(memoryStream);
-                        memoryStream.Close();
-                    }
                     int count = (int)m_toc.Count;
                     tocEntry.Index = count;
                     tocEntry.RawData = array2;

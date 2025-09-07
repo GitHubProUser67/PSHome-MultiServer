@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using QuazalServer.QNetZ.DDL;
 using QuazalServer.RDVServices.DDL.Models;
-using System.IO;
 
 namespace RDVServices
 {

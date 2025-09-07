@@ -71,7 +71,7 @@ namespace Tommunism.SoftFloat
             V.Deconstruct(v64: out v64, v0: out v0);
         }
 
-        public override bool Equals(object? obj) => obj is UInt128Extra extra && Equals(extra);
+        public override bool Equals(object obj) => obj is UInt128Extra extra && Equals(extra);
 
         public bool Equals(UInt128Extra other) => Extra == other.Extra && V.Equals(other.V);
 

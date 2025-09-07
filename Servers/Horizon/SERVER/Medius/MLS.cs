@@ -1,26 +1,28 @@
-using System.Net;
-using System.Text;
+using CustomLogger;
 using DotNetty.Transport.Channels;
-using Horizon.RT.Common;
-using Horizon.RT.Cryptography;
-using Horizon.RT.Models;
-using Horizon.RT.Models.Misc;
-using Horizon.RT.Models.Lobby;
+using EndianTools;
+using Horizon.Extension.PlayStationHome;
+using Horizon.HTTPSERVICE;
 using Horizon.LIBRARY.Database.Models;
 using Horizon.LIBRARY.libAntiCheat;
 using Horizon.LIBRARY.Pipeline.Attribute;
-using Horizon.SERVER.Config;
-using Horizon.SERVER.PluginArgs;
-using Horizon.SERVER.Extension.PlayStationHome;
-using Horizon.Extension.PlayStationHome;
-using Horizon.PluginManager;
-using Horizon.HTTPSERVICE;
 using Horizon.MUM;
 using Horizon.MUM.Models;
-using EndianTools;
-using CustomLogger;
+using Horizon.PluginManager;
+using Horizon.RT.Common;
+using Horizon.RT.Cryptography;
+using Horizon.RT.Models;
+using Horizon.RT.Models.Lobby;
+using Horizon.RT.Models.Misc;
+using Horizon.SERVER.Config;
+using Horizon.SERVER.Extension.PlayStationHome;
+using Horizon.SERVER.PluginArgs;
+using MultiServerLibrary;
 using MultiServerLibrary.Extension;
 using NetHasher.CRC;
+using System.Net;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Horizon.SERVER.Medius
 {
@@ -87,7 +89,7 @@ namespace Horizon.SERVER.Medius
                         #region Compatible AppId
                         if (!MediusClass.Manager.IsAppIdSupported(clientConnectTcp.AppId))
                         {
-                            LoggerAccessor.LogError($"Client {clientChannel.RemoteAddress} attempting to authenticate with incompatible app id {clientConnectTcp.AppId}");
+LoggerAccessor.LogError($"[MLS] - Client {clientChannel.RemoteAddress} attempting to authenticate with incompatible app id {clientConnectTcp.AppId}");
                             await clientChannel.CloseAsync();
                             return;
                         }
@@ -144,8 +146,26 @@ namespace Horizon.SERVER.Medius
                                     data.ClientObject.SetIp(clientIP);
                                 }
 
-                                if (await HorizonServerConfiguration.Database.GetIsMacBanned(data.MachineId)) // Would be too easy if the Client could bypass Ban with a Guest...
+                                // get client ip
+                                IPAddress clientIp = data.ClientObject.IP;
+
+                                // ip is banned
+                                if (await HorizonServerConfiguration.Database.GetIsIpBanned(clientIp) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientIp.ToString())))
                                 {
+                                    LoggerAccessor.LogWarn($"[MLS] - GuestLogin: User {data.ClientObject.AccountName} tried to login with banned IP {clientIp}");
+
+                                    // Then queue send ban message
+                                    await QueueBanMessage(data, "Your IP has been banned");
+
+                                    await data.ClientObject!.Logout();
+
+                                    break;
+                                }
+
+                                else if (await HorizonServerConfiguration.Database.GetIsMacBanned(data.MachineId)) // Would be too easy if the Client could bypass Ban with a Guest...
+                                {
+LoggerAccessor.LogWarn($"[MLS] - GuestLogin: User {data.ClientObject.AccountName} tried to login with banned CID {data.MachineId}");
+
                                     // Then queue send ban message
                                     await QueueBanMessage(data, "You have been banned from this server.");
 
@@ -154,7 +174,7 @@ namespace Horizon.SERVER.Medius
                                     break;
                                 }
 
-                                if (!data.ClientObject.IsLoggedIn && !await GuestLogin(clientChannel, data))
+                                if (!data.ClientObject.IsLoggedIn && !await GuestLogin(clientChannel, data, clientIp))
                                 {
                                     data.Ignore = true;
                                     LoggerAccessor.LogError($"[MLS] - Ignoring banned client for {clientChannel.RemoteAddress}: {clientConnectTcp}");
@@ -559,8 +579,6 @@ namespace Horizon.SERVER.Medius
 
                                                         LoggerAccessor.LogError(anticheatMsg);
 
-                                                        await HorizonServerConfiguration.Database.BanIp(data.ClientObject.IP).ConfigureAwait(false);
-
                                                         // Banned
                                                         await QueueBanMessage(data).ConfigureAwait(false);
 
@@ -655,7 +673,7 @@ namespace Horizon.SERVER.Medius
 
                 default:
                     {
-                        LoggerAccessor.LogWarn($"UNHANDLED RT MESSAGE: {message}");
+LoggerAccessor.LogWarn($"[MLS] - UNHANDLED RT MESSAGE: {message}");
                         break;
                     }
             }
@@ -704,14 +722,14 @@ namespace Horizon.SERVER.Medius
                 case MediusDnasSignaturePost dnasSignaturePost:
                     {
 
-                        if (Settings.DnasEnablePost == true)
+                        if (Settings.DnasEnablePost)
                         {
                             //If DNAS Signature Post is the PS2/PSP/PS3 Console ID then continue
                             if (dnasSignaturePost.DnasSignatureType == MediusDnasCategory.DnasConsoleID)
                             {
                                 data.MachineId = BitConverter.ToString(dnasSignaturePost.DnasSignature);
 
-                                LoggerAccessor.LogInfo($"Posting ConsoleID - ConsoleSigSize={dnasSignaturePost.DnasSignatureLength}");
+LoggerAccessor.LogDebug($"[MLS] - Posting ConsoleID - ConsoleSigSize={dnasSignaturePost.DnasSignatureLength}");
 
                                 // Then post to the Database if logged in
                                 if (data.ClientObject?.IsLoggedIn ?? false)
@@ -719,10 +737,10 @@ namespace Horizon.SERVER.Medius
                             }
 
                             if (dnasSignaturePost.DnasSignatureType == MediusDnasCategory.DnasTitleID)
-                                LoggerAccessor.LogInfo($"DnasSignaturePost Error - Invalid SignatureType");
+LoggerAccessor.LogError($"[MLS] - DnasSignaturePost Error - Invalid SignatureType");
 
                             if (dnasSignaturePost.DnasSignatureType == MediusDnasCategory.DnasDiskID)
-                                LoggerAccessor.LogInfo($"Posting DiskID - DiskSigSize={dnasSignaturePost.DnasSignatureLength}");
+LoggerAccessor.LogDebug($"[MLS] - Posting DiskID - DiskSigSize={dnasSignaturePost.DnasSignatureLength}");
                         }
                         else
                         {
@@ -739,13 +757,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountLogoutRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {accountLogoutRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountLogoutRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {accountLogoutRequest} without being logged in.");
                             break;
                         }
 
@@ -755,7 +773,7 @@ namespace Horizon.SERVER.Medius
                             // Logout
                             await data.ClientObject.Logout();
 
-                            LoggerAccessor.LogInfo($"Player {data.ClientObject?.IP + ":" + data.ClientObject?.AccountName} has logged out.\n");
+LoggerAccessor.LogWarn($"[MLS] - Player {data.ClientObject?.IP + ":" + data.ClientObject?.AccountName} has logged out.\n");
 
                             // Reply
                             data.ClientObject?.Queue(new MediusAccountLogoutResponse()
@@ -766,7 +784,7 @@ namespace Horizon.SERVER.Medius
                         }
                         else
                         {
-                            LoggerAccessor.LogWarn($"Failed to logout account {data.ClientObject.AccountName}.\n");
+LoggerAccessor.LogWarn($"[MLS] - Failed to logout account {data.ClientObject.AccountName}.\n");
 
                             // Reply
                             data.ClientObject?.Queue(new MediusAccountLogoutResponse()
@@ -787,29 +805,17 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getAccessLevelInfoRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getAccessLevelInfoRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getAccessLevelInfoRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getAccessLevelInfoRequest} without being logged in.");
                             break;
                         }
 
-                        /*
-                        //int adminAccessLevel = 4;
-
-                        if (data.ClientObject.ApplicationId == 21834)
-                        {
-                            Queue(new RT_MSG_SERVER_MEMORY_POKE()
-                            {
-                                start_Address = 0x00D0AF60,
-                                Payload = BitConverter.GetBytes(0x687474703A2F),
-                                SkipEncryption = true,
-                            }, clientChannel);
-                        }
-                        */
+						// TODO, make it dynamic.
 
                         data.ClientObject.Queue(new MediusGetAccessLevelInfoResponse()
                         {
@@ -828,7 +834,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getAllAnnouncementsRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getAllAnnouncementsRequest} without a session.");
                             break;
                         }
 
@@ -881,7 +887,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getAnnouncementsRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getAnnouncementsRequest} without a session.");
                             break;
                         }
 
@@ -928,7 +934,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getPolicyRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getPolicyRequest} without a session.");
                             break;
                         }
 
@@ -963,7 +969,7 @@ namespace Horizon.SERVER.Medius
                                         }
                                         else
                                         {
-                                            LoggerAccessor.LogError($"GetPolicy Failed = [{r.Exception}]");
+LoggerAccessor.LogError($"[MLS] - GetPolicy Failed = [{r.Exception}]");
                                             data.ClientObject.Queue(new MediusGetPolicyResponse() { MessageID = getPolicyRequest.MessageID, StatusCode = MediusCallbackStatus.MediusSuccess, Policy = "NONE", EndOfText = true });
                                         }
                                     });
@@ -981,7 +987,7 @@ namespace Horizon.SERVER.Medius
                                             string txt = r.Result.EulaBody;
                                             if (!string.IsNullOrEmpty(r.Result.EulaTitle))
                                                 txt = r.Result.EulaTitle + "\n" + txt;
-                                            LoggerAccessor.LogInfo($"GetPolicy Succeeded:{getPolicyRequest.MessageID}");
+LoggerAccessor.LogDebug($"[MLS] - GetPolicy Succeeded:{getPolicyRequest.MessageID}");
                                             data.ClientObject.Queue(MediusClass.GetPolicyFromText(getPolicyRequest.MessageID, txt));
                                         }
                                         else if (r.IsCompletedSuccessfully && r.Result == null)
@@ -991,7 +997,7 @@ namespace Horizon.SERVER.Medius
                                         }
                                         else
                                         {
-                                            LoggerAccessor.LogError($"GetPolicy Failed = [{r.Exception}]");
+LoggerAccessor.LogError($"[MLS] - GetPolicy Failed = [{r.Exception}]");
                                             data.ClientObject.Queue(new MediusGetPolicyResponse() { MessageID = getPolicyRequest.MessageID, StatusCode = MediusCallbackStatus.MediusSuccess, Policy = "NONE", EndOfText = true });
                                         }
                                     });
@@ -1010,13 +1016,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {NpIdPostRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {NpIdPostRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {NpIdPostRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {NpIdPostRequest} without being logged in.");
                             break;
                         }
 
@@ -1061,13 +1067,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getNpIdsGetByAccountNamesRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getNpIdsGetByAccountNamesRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getNpIdsGetByAccountNamesRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getNpIdsGetByAccountNamesRequest} without being logged in.");
                             break;
                         }
 
@@ -1145,92 +1151,15 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {matchGetSupersetListRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {matchGetSupersetListRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {matchGetSupersetListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {matchGetSupersetListRequest} without being logged in.");
                             break;
                         }
-
-                        /*
-                        if (data.ApplicationId == 22920) // Starhawk
-                        {
-                            byte[] payload = "http".IsBase64().Item2;
-
-                            Queue(new RT_MSG_SERVER_MEMORY_POKE()
-                            {
-                                start_Address = 0xd0016b80,
-                                MsgDataLen = payload.Length,
-                                Payload = payload
-                            }, clientChannel);
-                        }
-                        */
-
-
-                        /*
-                        data.ClientObject.Queue(new MediusMatchGetSupersetListResponse()
-                        {
-                            MessageID = matchGetSupersetListRequest.MessageID,
-                            StatusCode = MediusCallbackStatus.MediusSuccess,
-                            EndOfList = true,
-                            SupersetID = 1,
-                            SupersetName = "Casual",
-                            SupersetDescription = "M:PR Casual",
-                        });
-                        */
-                        /*
-                        await ServerConfiguration.Database.GetMatchmakingSupersets(data.ClientObject.ApplicationId).ContinueWith(r =>
-                        {
-                            List<MediusMatchGetSupersetListResponse> responses = new List<MediusMatchGetSupersetListResponse>();
-                            if (r.IsCompletedSuccessfully && r.Result != null)
-                            {
-                                responses.AddRange(r.Result.Where(x => x.SupersetID != 0)
-                                    .Select(x => new MediusMatchGetSupersetListResponse()
-                                    {
-                                        MessageID = matchGetSupersetListRequest.MessageID,
-                                        StatusCode = MediusCallbackStatus.MediusSuccess,
-                                        EndOfList = false,
-                                        SupersetID = x.SupersetID,
-                                        SupersetName = x.SupersetName,
-                                        SupersetDescription = x.SupersetDescription,
-                                        SupersetExtraInfo = x.SupersetExtraInfo,
-                                    }));
-                                foreach(var response in responses)
-                                {
-                                    LoggerAccessor.LogInfo($"{response.SupersetID}: {response.SupersetName}[x{responses.Count}]: {response.SupersetDescription}\n");
-                                }
-
-                            }
-
-                            if(responses.Count > 14 )
-                            {
-                                Logger.Warn($"too many supersets");
-                                responses.Add(new MediusMatchGetSupersetListResponse()
-                                {
-                                    MessageID = matchGetSupersetListRequest.MessageID,
-                                    StatusCode = MediusCallbackStatus.MediusTransactionTimedOut,
-                                    EndOfList = true
-                                });
-                            }
-
-                            if (responses.Count == 0)
-                            {
-                                LoggerAccessor.LogInfo("No supersets\n");
-                                responses.Add(new MediusMatchGetSupersetListResponse()
-                                {
-                                    MessageID = matchGetSupersetListRequest.MessageID,
-                                    StatusCode = MediusCallbackStatus.MediusNoResult,
-                                    EndOfList = true
-                                });
-                            }
-
-                            responses[responses.Count - 1].EndOfList = true;
-                            data.ClientObject.Queue(responses);
-                        });
-                        */
 
                         // Default - No Result
                         data.ClientObject.Queue(new MediusMatchGetSupersetListResponse()
@@ -1248,13 +1177,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {mediusMatchCreateGame} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {mediusMatchCreateGame} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {mediusMatchCreateGame} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {mediusMatchCreateGame} without being logged in.");
                             break;
                         }
 
@@ -1280,13 +1209,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {matchFindGameRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {matchFindGameRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {matchFindGameRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {matchFindGameRequest} without being logged in.");
                             break;
                         }
 
@@ -1306,83 +1235,24 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {mediusMatchPartyRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {mediusMatchPartyRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {mediusMatchPartyRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {mediusMatchPartyRequest} without being logged in.");
                             break;
                         }
 
+						// TODO:
+						// Types can be:
                         // 6 MediusJoinAssignedGame
-                        MediusMatchRosterInfo mediusMatchRosterInfo = new MediusMatchRosterInfo();
-
-                        //var matchRoster = MediusClass.Manager.CalculateSizeOfMatchRoster(mediusMatchRosterInfo);
-
-                        /*
-                        data.ClientObject.Queue(new MediusMatchPartyResponse()
-                        {
-                            MessageID = mediusMatchPartyRequest.MessageID,
-                            StatusCode = MediusCallbackStatus.MediusJoinAssignedGame,
-                            PluginSpecificStatusCode = 2,
-                            GameWorldID = 0,
-                            GamePassword = null,
-                            GameHostType = MediusGameHostType.MediusGameHostClientServerUDP,
-                            AddressList = new NetAddressList()
-                            {
-                                AddressList = new NetAddress[Constants.NET_ADDRESS_LIST_COUNT]
-                                {
-                                    new NetAddress() { Address = data.ClientObject.IP.ToString(), Port = 10079, AddressType = NetAddressType.NetAddressTypeExternal},
-                                    new NetAddress() { AddressType = NetAddressType.NetAddressNone},
-                                }
-                            },
-                            ApplicationDataSizeJAS = mediusMatchPartyRequest.ApplicationDataSize,
-                            ApplicationDataJAS = mediusMatchPartyRequest.ApplicationData,
-                            MatchRoster = matchRoster,
-
-                            NumParties = 0,
-                            Parties = 0,
-
-                            NumPlayers = 0,
-                            Players = 0
-                        });
-                        */
-                        //** match make failed (no match)\n
-
-                        /*
-                        data.ClientObject.Queue(new MediusMatchPartyResponse()
-                        {
-                            MessageID = mediusMatchPartyRequest.MessageID,
-                            StatusCode = MediusCallbackStatus.MediusJoinAssignedGame,
-                            PluginSpecificStatusCode = 0,
-
-                            GameWorldID = 0,
-                            //GamePassword = "",
-                            GameHostType = MediusGameHostType.MediusGameHostClientServerUDP,
-                            AddressList = new NetAddressList()
-                            {
-                                AddressList = new NetAddress[Constants.NET_ADDRESS_LIST_COUNT]
-                                        {
-                                            new NetAddress() { Address = MediusClass.LobbyServer.IPAddress.ToString(), Port = 10079, AddressType = NetAddressType.NetAddressTypeExternal},
-                                            new NetAddress() { AddressType = NetAddressType.NetAddressNone},
-                                        }
-                            },
-                            ApplicationDataSizeJAS = mediusMatchPartyRequest.ApplicationDataSize,
-                            ApplicationDataJAS = mediusMatchPartyRequest.ApplicationData,
-                            MatchRoster = matchRoster,
-
-                            NumParties = 0,
-                            Parties = 0,
-
-                            NumPlayers = 0,
-                            Players = 0
-                        });
-                        */
-
                         // 7 MediusMatchTypeHostGame7
-                        data.ClientObject.Queue(new MediusMatchPartyResponse()
+                        // 8 MediusMatchTypeReferral
+
+						// Default mocked response.
+						data.ClientObject.Queue(new MediusMatchPartyResponse()
                         {
                             MessageID = mediusMatchPartyRequest.MessageID,
                             StatusCode = MediusCallbackStatus.MediusMatchTypeHostGame,
@@ -1392,65 +1262,9 @@ namespace Horizon.SERVER.Medius
                             ApplicationDataHG = mediusMatchPartyRequest.ApplicationData,
                         });
 
-                        /*
-                        // 8 MediusMatchTypeReferral
-                        data.ClientObject.Queue(new MediusMatchPartyResponse()
-                        {
-                            MessageID = mediusMatchPartyRequest.MessageID,
-                            StatusCode = MediusCallbackStatus.MediusMatchTypeReferral,
-                            PluginSpecificStatusCode = 1,
-
-                            MatchingWorldUID = MediusClass.Manager.GetOrCreateDefaultLobbyChannel(data.ApplicationId).Id,
-                            ConnectInfo = new NetConnectionInfo()
-                            {
-                                AccessKey = data.ClientObject.Token,
-                                SessionKey = data.ClientObject.SessionKey,
-                                WorldID = MediusClass.Manager.GetOrCreateDefaultLobbyChannel(data.ApplicationId).Id,
-                                ServerKey = MediusClass.GlobalAuthPublic,
-                                AddressList = new NetAddressList()
-                                {
-                                    AddressList = new NetAddress[Constants.NET_ADDRESS_LIST_COUNT]
-                                        {
-                                            new NetAddress() { Address = MediusClass.LobbyServer.IPAddress.ToString(), Port = (uint)MediusClass.LobbyServer.TCPPort, AddressType = NetAddressType.NetAddressTypeExternal},
-                                            new NetAddress() { AddressType = NetAddressType.NetAddressNone},
-                                        }
-                                },
-                                Type = NetConnectionType.NetConnectionTypeClientServerTCP
-                            }
-                        });
-                        */
                         break;
                     }
-                /*
-            case MediusMatchSetGameStateRequest mediusMatchSetGameStateRequest:
-                {
-                        if (data.ClientObject == null)
-                        {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {mediusMatchSetGameStateRequest} without a session.");
-                            break;
-                        }
-
-                        if (!data.ClientObject.IsLoggedIn)
-                        {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {mediusMatchSetGameStateRequest} without being logged in.");
-                            break;
-                        }
-
-                    //Not sure how we handle this yet but we take this anyway!
-                    MediusMatchGameState matchGameState = mediusMatchSetGameStateRequest.MatchGameState;
-
-                    //MediusMatchSetGameStateResponse
-                    data.ClientObject.Queue(new MediusStatusResponse()
-                    {
-                        Type = 0x7A, 
-                        Class = mediusMatchSetGameStateRequest.PacketClass,
-                        MessageID = mediusMatchSetGameStateRequest.MessageID,
-                        StatusCode = MediusCallbackStatus.MediusSuccess
-                    });
-
-                    break;
-                }
-                */
+					
                 #endregion
 
                 #region Version Server
@@ -1459,7 +1273,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {mediusVersionServerRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {mediusVersionServerRequest} without a session.");
                             break;
                         }
 
@@ -1553,13 +1367,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountGetIdRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {accountGetIdRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountGetIdRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {accountGetIdRequest} without being logged in.");
                             break;
                         }
 
@@ -1593,13 +1407,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountUpdatePasswordRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {accountUpdatePasswordRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountUpdatePasswordRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {accountUpdatePasswordRequest} without being logged in.");
                             break;
                         }
 
@@ -1633,13 +1447,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountUpdateStatsRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {accountUpdateStatsRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {accountUpdateStatsRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {accountUpdateStatsRequest} without being logged in.");
                             break;
                         }
 
@@ -1676,13 +1490,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getBuddyListRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getBuddyListRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getBuddyListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getBuddyListRequest} without being logged in.");
                             break;
                         }
 
@@ -1849,13 +1663,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {buddySetListRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {buddySetListRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {buddySetListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {buddySetListRequest} without being logged in.");
                             break;
                         }
 
@@ -1912,13 +1726,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {ignoreSetListRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {ignoreSetListRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {ignoreSetListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {ignoreSetListRequest} without being logged in.");
                             break;
                         }
 
@@ -1975,13 +1789,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {addToBuddyListRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {addToBuddyListRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {addToBuddyListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {addToBuddyListRequest} without being logged in.");
                             break;
                         }
 
@@ -2024,13 +1838,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {addToBuddyListConfirmationRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {addToBuddyListConfirmationRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {addToBuddyListConfirmationRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {addToBuddyListConfirmationRequest} without being logged in.");
                             break;
                         }
 
@@ -2039,7 +1853,7 @@ namespace Horizon.SERVER.Medius
                             if (r.IsCompletedSuccessfully && r.Result != null)
                                 ProcessAddToBuddyListConfirmationRequest(data.ClientObject, r.Result, addToBuddyListConfirmationRequest);
                             else
-                                LoggerAccessor.LogWarn($"Failed to get TargetAccountId");
+LoggerAccessor.LogWarn($"[MLS] - MediusAddToBuddyListConfirmationRequest - Failed to get TargetAccountId");
                         });
 
                         break;
@@ -2050,13 +1864,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {addToBuddyListFwdConfirmationResponse} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {addToBuddyListFwdConfirmationResponse} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {addToBuddyListFwdConfirmationResponse} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {addToBuddyListFwdConfirmationResponse} without being logged in.");
                             break;
                         }
 
@@ -2065,7 +1879,7 @@ namespace Horizon.SERVER.Medius
                             if (r.IsCompletedSuccessfully && r.Result != null)
                                 ProcessAddToBuddyListConfirmationResponse(data.ClientObject, r.Result, addToBuddyListFwdConfirmationResponse);
                             else
-                                LoggerAccessor.LogWarn($"Failed to get OriginatorAccountId");
+LoggerAccessor.LogWarn($"[MLS] - MediusAddToBuddyListFwdConfirmationResponse - Failed to get OriginatorAccountId");
                         });
                         break;
                     }
@@ -2074,13 +1888,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getBuddyInvitationsRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getBuddyInvitationsRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getBuddyInvitationsRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getBuddyInvitationsRequest} without being logged in.");
                             break;
                         }
 
@@ -2095,8 +1909,6 @@ namespace Horizon.SERVER.Medius
                                 {
                                     foreach (var buddyInvitationPending in r.Result)
                                     {
-
-                                        LoggerAccessor.LogWarn($"BuddyAddType [{buddyInvitationPending.addType}]");
                                         if (buddyInvitationPending.addType == (int)MediusBuddyAddType.AddSingle)
                                         {
                                             buddyInvitationsResponses.Add(new MediusGetBuddyInvitationsResponse
@@ -2123,13 +1935,9 @@ namespace Horizon.SERVER.Medius
                                         }
                                     }
 
-                                    LoggerAccessor.LogWarn($"buddyInvitationsResponses [{buddyInvitationsResponses.Count}]");
-
                                     // If we have any responses then send them
                                     if (buddyInvitationsResponses.Count > 0)
                                     {
-                                        LoggerAccessor.LogWarn($"Sending Friend Invitations");
-
                                         // Ensure the last response is tagged as EndOfList
                                         buddyInvitationsResponses[buddyInvitationsResponses.Count - 1].EndOfList = true;
                                         // Send friends invitation 
@@ -2160,7 +1968,7 @@ namespace Horizon.SERVER.Medius
                         }
                         catch (Exception e)
                         {
-                            LoggerAccessor.LogWarn($"Exception at {e}");
+LoggerAccessor.LogWarn($"[MLS] - MediusGetBuddyInvitationsRequest - Exception at {e}");
                         }
                         break;
                     }
@@ -2169,13 +1977,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {removeFromBuddyListRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {removeFromBuddyListRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {removeFromBuddyListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {removeFromBuddyListRequest} without being logged in.");
                             break;
                         }
 
@@ -2215,13 +2023,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getBuddyList_ExtraInfoRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getBuddyList_ExtraInfoRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel},{data.ClientObject} sent {getBuddyList_ExtraInfoRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel},{data.ClientObject} sent {getBuddyList_ExtraInfoRequest} without being logged in.");
                             break;
                         }
 
@@ -2376,13 +2184,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getIgnoreListRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getIgnoreListRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getIgnoreListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getIgnoreListRequest} without being logged in.");
                             break;
                         }
 
@@ -2449,13 +2257,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {addToIgnoreList} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {addToIgnoreList} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {addToIgnoreList} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {addToIgnoreList} without being logged in.");
                             break;
                         }
 
@@ -2493,13 +2301,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {removeFromIgnoreListRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {removeFromIgnoreListRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {removeFromIgnoreListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {removeFromIgnoreListRequest} without being logged in.");
                             break;
                         }
 
@@ -2541,13 +2349,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {updateLadderStatsRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {updateLadderStatsRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {updateLadderStatsRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {updateLadderStatsRequest} without being logged in.");
                             break;
                         }
 
@@ -2639,7 +2447,7 @@ namespace Horizon.SERVER.Medius
                                 }
                             default:
                                 {
-                                    LoggerAccessor.LogWarn($"Unhandled MediusUpdateLadderStatsRequest {updateLadderStatsRequest}");
+LoggerAccessor.LogWarn($"[MLS] - Unhandled MediusUpdateLadderStatsRequest {updateLadderStatsRequest}");
                                     break;
                                 }
                         }
@@ -2650,13 +2458,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {updateLadderStatsWideRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {updateLadderStatsWideRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {updateLadderStatsWideRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {updateLadderStatsWideRequest} without being logged in.");
                             break;
                         }
 
@@ -2748,7 +2556,7 @@ namespace Horizon.SERVER.Medius
                                 }
                             default:
                                 {
-                                    LoggerAccessor.LogWarn($"Unhandled MediusUpdateLadderStatsWideRequest {updateLadderStatsWideRequest}");
+LoggerAccessor.LogWarn($"[MLS] - Unhandled MediusUpdateLadderStatsWideRequest {updateLadderStatsWideRequest}");
                                     break;
                                 }
                         }
@@ -2761,13 +2569,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getLadderStatsRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getLadderStatsRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getLadderStatsRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getLadderStatsRequest} without being logged in.");
                             break;
                         }
 
@@ -2831,7 +2639,7 @@ namespace Horizon.SERVER.Medius
                                 }
                             default:
                                 {
-                                    LoggerAccessor.LogWarn($"Unhandled MediusGetLadderStatsRequest {getLadderStatsRequest}");
+LoggerAccessor.LogWarn($"[MLS] - Unhandled MediusGetLadderStatsRequest {getLadderStatsRequest}");
                                     break;
                                 }
                         }
@@ -2843,13 +2651,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getLadderStatsWideRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getLadderStatsWideRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getLadderStatsWideRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getLadderStatsWideRequest} without being logged in.");
                             break;
                         }
 
@@ -2915,7 +2723,7 @@ namespace Horizon.SERVER.Medius
                                 }
                             default:
                                 {
-                                    LoggerAccessor.LogWarn($"Unhandled MediusGetLadderStatsWideRequest {getLadderStatsWideRequest}");
+LoggerAccessor.LogWarn($"[MLS] - Unhandled MediusGetLadderStatsWideRequest {getLadderStatsWideRequest}");
                                     break;
                                 }
                         }
@@ -2926,13 +2734,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {ladderListRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {ladderListRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {ladderListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {ladderListRequest} without being logged in.");
                             break;
                         }
 
@@ -2993,13 +2801,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {ladderList_ExtraInfoRequest0} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {ladderList_ExtraInfoRequest0} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {ladderList_ExtraInfoRequest0} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {ladderList_ExtraInfoRequest0} without being logged in.");
                             break;
                         }
 
@@ -3048,7 +2856,7 @@ namespace Horizon.SERVER.Medius
                                 }
                                 else
                                 {
-                                    LoggerAccessor.LogInfo("GetLadderListRequest_ExtraInfo - no result");
+                                    LoggerAccessor.LogInfo("[MLS] - GetLadderListRequest_ExtraInfo - no result");
                                     data.ClientObject.Queue(new MediusLadderList_ExtraInfoResponse()
                                     {
                                         MessageID = ladderList_ExtraInfoRequest0.MessageID,
@@ -3074,13 +2882,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {ladderList_ExtraInfoRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {ladderList_ExtraInfoRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {ladderList_ExtraInfoRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {ladderList_ExtraInfoRequest} without being logged in.");
                             break;
                         }
 
@@ -3128,7 +2936,7 @@ namespace Horizon.SERVER.Medius
                                 }
                                 else
                                 {
-                                    LoggerAccessor.LogInfo("GetLadderListRequest_ExtraInfo - no result");
+                                    LoggerAccessor.LogInfo("[MLS] - GetLadderListRequest_ExtraInfo - no result");
                                     data.ClientObject.Queue(new MediusLadderList_ExtraInfoResponse()
                                     {
                                         MessageID = ladderList_ExtraInfoRequest.MessageID,
@@ -3170,13 +2978,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getTotalUsersRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getTotalUsersRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getTotalUsersRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getTotalUsersRequest} without being logged in.");
                             break;
                         }
 
@@ -3213,13 +3021,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getTotalRankingsRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getTotalRankingsRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getTotalRankingsRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getTotalRankingsRequest} without being logged in.");
                             break;
                         }
 
@@ -3289,13 +3097,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {ladderPositionRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {ladderPositionRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {ladderPositionRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {ladderPositionRequest} without being logged in.");
                             break;
                         }
 
@@ -3329,13 +3137,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {ladderPosition_ExtraInfoRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {ladderPosition_ExtraInfoRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {ladderPosition_ExtraInfoRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {ladderPosition_ExtraInfoRequest} without being logged in.");
                             break;
                         }
 
@@ -3370,13 +3178,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {clanLadderListRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {clanLadderListRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {clanLadderListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {clanLadderListRequest} without being logged in.");
                             break;
                         }
 
@@ -3444,13 +3252,13 @@ namespace Horizon.SERVER.Medius
 
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {findPlayerRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {findPlayerRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {findPlayerRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {findPlayerRequest} without being logged in.");
                             break;
                         }
 
@@ -3494,43 +3302,6 @@ namespace Horizon.SERVER.Medius
                                 MediusWorldID = (foundPlayer.PlayerStatus == MediusPlayerStatus.MediusPlayerInGameWorld) ? foundPlayer.CurrentGame?.MediusWorldId ?? -1 : foundPlayer.CurrentChannel?.Id ?? -1,
                                 EndOfList = true
                             });
-
-                            /*
-                            
-                            List<MediusFindPlayerResponse> responses = new List<MediusFindPlayerResponse>();
-
-                            responses.Select(x => new MediusFindPlayerResponse()
-                            {
-                                MessageID = findPlayerRequest.MessageID,
-                                StatusCode = MediusCallbackStatus.MediusSuccess,
-                                ApplicationID = data.ApplicationId,
-                                AccountID = foundPlayer.AccountId,
-                                AccountName = foundPlayer.AccountName,
-                                ApplicationType = (foundPlayer.PlayerStatus == MediusPlayerStatus.MediusPlayerInGameWorld) ? MediusApplicationType.MediusAppTypeGame : MediusApplicationType.LobbyChatChannel,
-                                ApplicationName = appName,
-                                MediusWorldID = (foundPlayer.PlayerStatus == MediusPlayerStatus.MediusPlayerInGameWorld) ? foundPlayer.CurrentGame?.Id ?? 0 : foundPlayer.CurrentChannel?.Id ?? 0,
-                                EndOfList = false
-                            }).ToList();
-
-                            if (responses.Count > 0)
-                            {
-                                // Flag last item as EndOfList
-                                responses[responses.Count - 1].EndOfList = true;
-
-                                //
-                                data.ClientObject.Queue(responses);
-                            }
-                            else
-                            {
-                                data.ClientObject.Queue(new MediusFindPlayerResponse()
-                                {
-                                    MessageID = findPlayerRequest.MessageID,
-                                    StatusCode = MediusCallbackStatus.MediusNoResult,
-                                    ApplicationID = data.ClientObject.ApplicationId,
-                                    EndOfList = true
-                                });
-                            }
-                            */
                         }
                         break;
                     }
@@ -3539,20 +3310,19 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {playerInfoRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {playerInfoRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {playerInfoRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {playerInfoRequest} without being logged in.");
                             break;
                         }
 
+						// TODO, means self?
                         if (playerInfoRequest.AccountID == 0)
                         {
-                            LoggerAccessor.LogInfo($"playerInfo accountId is 0!!");
-
                             data.ClientObject.Queue(new MediusPlayerInfoResponse()
                             {
                                 MessageID = playerInfoRequest.MessageID,
@@ -3563,8 +3333,6 @@ namespace Horizon.SERVER.Medius
                                 ConnectionClass = MediusConnectionType.Modem,
                                 Stats = new byte[Constants.ACCOUNTSTATS_MAXLEN]
                             });
-
-                            LoggerAccessor.LogInfo($"playerInfo response sent");
                         }
                         else
                         {
@@ -3585,18 +3353,9 @@ namespace Horizon.SERVER.Medius
                                         ConnectionClass = data.ClientObject.MediusConnectionType,
                                         Stats = mediusStats
                                     });
-
-                                    LoggerAccessor.LogInfo($"[MAS] - playerInfo accountId:{playerInfoRequest.AccountID} found!");
                                 }
                                 else
                                 {
-
-                                    LoggerAccessor.LogWarn($"[MAS] - playerInfo accountId:{playerInfoRequest.AccountID} not found!");
-
-                                    // TODO! Found out why there is players not found very often.
-                                    // Same problem in SVO Database.
-                                    // I suspect the simulated DB not register them properly.
-
                                     data?.ClientObject?.Queue(new MediusPlayerInfoResponse()
                                     {
                                         MessageID = playerInfoRequest.MessageID,
@@ -3618,13 +3377,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {updateUserState} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {updateUserState} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {updateUserState} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {updateUserState} without being logged in.");
                             break;
                         }
 
@@ -3671,13 +3430,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {createClanRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {createClanRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {createClanRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {createClanRequest} without being logged in.");
                             break;
                         }
 
@@ -3735,20 +3494,20 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {clanRenameRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {clanRenameRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {clanRenameRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {clanRenameRequest} without being logged in.");
                             break;
                         }
 
                         // ERROR -- Need clan and EnableNonClanLeaderToGetTeamChallenges set to false (or true for all memebrs to view challenges!)
                         if (!data.ClientObject.ClanId.HasValue)
                         {
-                            LoggerAccessor.LogWarn("Not leader of clan. -  Only a clan leader can get Clan Team Challenges.");
+                            LoggerAccessor.LogWarn("[MLS] - MediusClanRenameRequest - Not leader of clan. - Only a clan leader can get Clan Team Challenges.");
                             data.ClientObject.Queue(new MediusStatusResponse()
                             {
                                 Class = clanRenameRequest.PacketClass,
@@ -3767,43 +3526,6 @@ namespace Horizon.SERVER.Medius
                             StatusCode = MediusCallbackStatus.MediusSuccess
                         });
 
-                        /*
-                        await ServerConfiguration.Database.EditClan(data.ClientObject.AccountId,
-                            data.ClientObject.ClanId.Value,
-                            0,
-                            1,
-                            data.ClientObject.ApplicationId)
-                        .ContinueWith((r) =>
-                        {
-                            List<MediusGetMyClanMessagesResponse> responses = new List<MediusGetMyClanMessagesResponse>();
-                            if (r.IsCompletedSuccessfully && r.Result != null)
-                            {
-                                responses.AddRange(r.Result
-                                    .Select(x => new MediusGetMyClanMessagesResponse()
-                                    {
-                                        MessageID = getMyClanMessagesRequest.MessageID,
-                                        StatusCode = MediusCallbackStatus.MediusSuccess,
-                                        Message = x.Message,
-                                        ClanID = data.ClientObject.ClanId.Value
-                                    }))
-                                    ;
-                            }
-
-                            if (responses.Count == 0)
-                            {
-                                responses.Add(new MediusGetMyClanMessagesResponse()
-                                {
-                                    MessageID = getMyClanMessagesRequest.MessageID,
-                                    StatusCode = MediusCallbackStatus.MediusNoResult,
-                                    ClanID = data.ClientObject.ClanId.Value,
-                                    EndOfList = true
-                                });
-                            }
-
-                            responses[responses.Count - 1].EndOfList = true;
-                            data.ClientObject.Queue(responses);
-                        });
-                        */
                         break;
                     }
 
@@ -3812,13 +3534,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {checkMyClanInvitationsRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {checkMyClanInvitationsRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {checkMyClanInvitationsRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {checkMyClanInvitationsRequest} without being logged in.");
                             break;
                         }
 
@@ -3867,13 +3589,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {removePlayerFromClanRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {removePlayerFromClanRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {removePlayerFromClanRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {removePlayerFromClanRequest} without being logged in.");
                             break;
                         }
 
@@ -3925,13 +3647,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getMyClansRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getMyClansRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getMyClansRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getMyClansRequest} without being logged in.");
                             break;
                         }
 
@@ -3949,9 +3671,9 @@ namespace Horizon.SERVER.Medius
                                     StatusCode = MediusCallbackStatus.MediusNoResult,
                                     ClanID = -1,
                                     ApplicationID = data.ApplicationId,
-                                    ClanName = "",
+                                    ClanName = string.Empty,
                                     LeaderAccountID = -1,
-                                    LeaderAccountName = "",
+                                    LeaderAccountName = string.Empty,
                                     Stats = Stats,
                                     Status = MediusClanStatus.ClanDisbanded,
                                     EndOfList = true
@@ -3986,26 +3708,6 @@ namespace Horizon.SERVER.Medius
                                                 EndOfList = false
                                             }));
                                         }
-
-                                        /*
-                                        responses.AddRange(r.Result.FirstOrDefault().ClanMemberAccounts
-                                            .Where(x => x.AccountId == data.ClientObject.AccountId)
-                                            .Skip((getMyClansRequest.Start - 1) * getMyClansRequest.PageSize)
-                                            .Take(getMyClansRequest.PageSize)
-                                            .Select(x => new MediusGetMyClansResponse()
-                                            {
-                                                MessageID = getMyClansRequest.MessageID,
-                                                StatusCode = MediusCallbackStatus.MediusSuccess,
-                                                ClanID = r.Result.FirstOrDefault().ClanId,
-                                                ApplicationID = r.Result.FirstOrDefault().AppId,
-                                                ClanName = r.Result.FirstOrDefault().ClanName,
-                                                LeaderAccountID = r.Result.FirstOrDefault().ClanLeaderAccount.AccountId,
-                                                LeaderAccountName = r.Result.FirstOrDefault().ClanLeaderAccount.AccountName,
-                                                Stats = r.Result.FirstOrDefault().ClanMediusStats,
-                                                Status = r.Result.FirstOrDefault().IsDisbanded ? MediusClanStatus.ClanDisbanded : MediusClanStatus.ClanActive,
-                                                EndOfList = false
-                                            }));
-                                        */
                                     }
 
                                     if (responses.Count == 0)
@@ -4031,13 +3733,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getClanMemberListRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getClanMemberListRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getClanMemberListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getClanMemberListRequest} without being logged in.");
                             break;
                         }
 
@@ -4083,13 +3785,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getClanMemberList_ExtraInfoRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getClanMemberList_ExtraInfoRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getClanMemberList_ExtraInfoRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getClanMemberList_ExtraInfoRequest} without being logged in.");
                             break;
                         }
 
@@ -4141,9 +3843,6 @@ namespace Horizon.SERVER.Medius
                                         };
                                     }));
 
-                                    if (HorizonServerConfiguration.Database._settings.SimulatedMode == true)
-                                        LoggerAccessor.LogInfo($"GetClanMemberListRequest_ExtraInfo (simulated) success --- {responses.Count} rows returned");
-
                                     if (responses.Count == 0)
                                     {
                                         responses.Add(new MediusGetClanMemberList_ExtraInfoResponse()
@@ -4182,20 +3881,20 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getClanInvitiationsSentRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getClanInvitiationsSentRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getClanInvitiationsSentRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getClanInvitiationsSentRequest} without being logged in.");
                             break;
                         }
 
                         // ERROR -- Need clan
                         if (!data.ClientObject.ClanId.HasValue)
                         {
-                            LoggerAccessor.LogWarn("Not leader of clan. -  Only a clan leader can get ClanInvitationsSent.");
+                            LoggerAccessor.LogWarn("[MLS] - Not leader of clan. -  Only a clan leader can get ClanInvitationsSent.");
                             data.ClientObject.Queue(new MediusGetClanInvitationsSentResponse()
                             {
                                 MessageID = getClanInvitiationsSentRequest.MessageID,
@@ -4269,13 +3968,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getClanByIdRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getClanByIdRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getClanByIdRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getClanByIdRequest} without being logged in.");
                             break;
                         }
 
@@ -4323,13 +4022,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getClanByNameRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getClanByNameRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getClanByNameRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getClanByNameRequest} without being logged in.");
                             break;
                         }
 
@@ -4364,20 +4063,20 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {requestClanTeamChallengeRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {requestClanTeamChallengeRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {requestClanTeamChallengeRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {requestClanTeamChallengeRequest} without being logged in.");
                             break;
                         }
 
                         // ERROR -- Need clan and EnableNonClanLeaderToGetTeamChallenges set to false (or true for all memebrs to view challenges!)
                         if (!data.ClientObject.ClanId.HasValue)
                         {
-                            LoggerAccessor.LogWarn("Not leader of clan. -  Only a clan leader can get Clan Team Challenges.");
+                            LoggerAccessor.LogWarn("[MLS] - Not leader of clan. -  Only a clan leader can get Clan Team Challenges.");
                             data.ClientObject.Queue(new MediusRequestClanTeamChallengeResponse()
                             {
                                 MessageID = requestClanTeamChallengeRequest.MessageID,
@@ -4422,20 +4121,20 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getClanTeamChallengesRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getClanTeamChallengesRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getClanTeamChallengesRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getClanTeamChallengesRequest} without being logged in.");
                             break;
                         }
 
                         // ERROR -- Need clan and EnableNonClanLeaderToGetTeamChallenges set to false (or true for all memebrs to view challenges!)
                         if (!MediusClass.Settings.EnableNonClanLeaderToGetTeamChallenges && !data.ClientObject.ClanId.HasValue)
                         {
-                            LoggerAccessor.LogWarn("Not leader of clan. -  Only a clan leader can get Clan Team Challenges.");
+                            LoggerAccessor.LogWarn("[MLS] - Not leader of clan. -  Only a clan leader can get Clan Team Challenges.");
                             data.ClientObject.Queue(new MediusGetClanTeamChallengesResponse()
                             {
                                 MessageID = getClanTeamChallengesRequest.MessageID,
@@ -4501,20 +4200,20 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {respondToClanTeamChallengeRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {respondToClanTeamChallengeRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {respondToClanTeamChallengeRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {respondToClanTeamChallengeRequest} without being logged in.");
                             break;
                         }
 
                         // ERROR -- Need clan and EnableNonClanLeaderToGetTeamChallenges set to false (or true for all memebrs to view challenges!)
                         if (!data.ClientObject.ClanId.HasValue)
                         {
-                            LoggerAccessor.LogWarn("Not leader of clan. -  Only a clan leader can respond to Clan Team Challenges.");
+                            LoggerAccessor.LogWarn("[MLS] - Not leader of clan. -  Only a clan leader can respond to Clan Team Challenges.");
                             data.ClientObject.Queue(new MediusRespondToClanInvitationResponse()
                             {
                                 MessageID = respondToClanTeamChallengeRequest.MessageID,
@@ -4561,19 +4260,19 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {revokeClanTeamChallengeRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {revokeClanTeamChallengeRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {revokeClanTeamChallengeRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {revokeClanTeamChallengeRequest} without being logged in.");
                             break;
                         }
 
                         if (!data.ClientObject.ClanId.HasValue)
                         {
-                            LoggerAccessor.LogWarn("Not leader of clan. -  Only a clan leader can respond to Clan Team Challenges.");
+                            LoggerAccessor.LogWarn("[MLS] - Not leader of clan. -  Only a clan leader can respond to Clan Team Challenges.");
                             data.ClientObject.Queue(new MediusRequestClanTeamChallengeResponse()
                             {
                                 MessageID = revokeClanTeamChallengeRequest.MessageID,
@@ -4618,19 +4317,19 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {updateClanLaddersStatsWideDeltaRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {updateClanLaddersStatsWideDeltaRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {updateClanLaddersStatsWideDeltaRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {updateClanLaddersStatsWideDeltaRequest} without being logged in.");
                             break;
                         }
 
-                        if (MediusClass.Settings.EnableClanLaddersDeltaOpenAccess == false)
+                        if (!MediusClass.Settings.EnableClanLaddersDeltaOpenAccess)
                         {
-                            LoggerAccessor.LogWarn("Update Clan Ladders Stats Wide Delta (Open Access) not enabled.");
+                            LoggerAccessor.LogWarn("[MLS] - Update Clan Ladders Stats Wide Delta (Open Access) not enabled.");
                             data.ClientObject.Queue(new MediusUpdateClanLadderStatsWide_DeltaResponse()
                             {
                                 MessageID = updateClanLaddersStatsWideDeltaRequest.MessageID,
@@ -4639,10 +4338,8 @@ namespace Horizon.SERVER.Medius
                         }
                         else
                         {
-                            LoggerAccessor.LogInfo($"Update Clan Ladder Stats Delta (Open Access)");
-                            if (HorizonServerConfiguration.Database._settings.SimulatedMode != false)
+                            if (HorizonServerConfiguration.Database._settings.SimulatedMode)
                             {
-                                LoggerAccessor.LogWarn("MediusUpdateClanLadderStatsWide_Delta Success (DB DISABLED)");
                                 data.ClientObject.Queue(new MediusUpdateClanLadderStatsWide_DeltaResponse()
                                 {
                                     MessageID = updateClanLaddersStatsWideDeltaRequest.MessageID,
@@ -4651,7 +4348,6 @@ namespace Horizon.SERVER.Medius
                             }
                             else
                             {
-
                                 // pass to plugins
                                 var pluginMessage = new OnPlayerWideStatsArgs()
                                 {
@@ -4685,7 +4381,8 @@ namespace Horizon.SERVER.Medius
 
                                         if (r.IsCompletedSuccessfully && r.Result != false)
                                         {
-                                            LoggerAccessor.LogInfo("Updated Clan Ladder stats (Delta)");
+                                            LoggerAccessor.LogDebug("[MLS] - Updated Clan Ladder stats (Delta)");
+											
                                             data.ClientObject.WideStats = pluginMessage.WideStats;
                                             data.ClientObject.Queue(new RT_MSG_SERVER_APP()
                                             {
@@ -4717,13 +4414,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getClanLadderPositionRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getClanLadderPositionRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getClanLadderPositionRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getClanLadderPositionRequest} without being logged in.");
                             break;
                         }
 
@@ -4758,13 +4455,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {updateClanStatsRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {updateClanStatsRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {updateClanStatsRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {updateClanStatsRequest} without being logged in.");
                             break;
                         }
 
@@ -4801,20 +4498,20 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {invitePlayerToClanRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {invitePlayerToClanRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {invitePlayerToClanRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {invitePlayerToClanRequest} without being logged in.");
                             break;
                         }
 
                         // ERROR -- Need clan
                         if (!data.ClientObject.ClanId.HasValue)
                         {
-                            LoggerAccessor.LogWarn("Not leader of clan.  Only a clan leader can invite a player to the clan");
+                            LoggerAccessor.LogWarn("[MLS] - Not leader of clan.  Only a clan leader can invite a player to the clan");
                             data.ClientObject.Queue(new MediusInvitePlayerToClanResponse()
                             {
                                 MessageID = invitePlayerToClanRequest.MessageID,
@@ -4851,13 +4548,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {respondToClanInvitationRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {respondToClanInvitationRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {respondToClanInvitationRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {respondToClanInvitationRequest} without being logged in.");
                             break;
                         }
 
@@ -4890,20 +4587,20 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {revokeClanInvitationRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {revokeClanInvitationRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {revokeClanInvitationRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {revokeClanInvitationRequest} without being logged in.");
                             break;
                         }
 
                         // ERROR -- Need clan
                         if (!data.ClientObject.ClanId.HasValue)
                         {
-                            LoggerAccessor.LogWarn("Not leader of clan.  Only the leader can revoke the invitation sent");
+                            LoggerAccessor.LogWarn("[MLS] - Not leader of clan.  Only the leader can revoke the invitation sent");
                             data.ClientObject.Queue(new MediusInvitePlayerToClanResponse()
                             {
                                 MessageID = revokeClanInvitationRequest.MessageID,
@@ -4941,13 +4638,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {disbandClanRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {disbandClanRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {disbandClanRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {disbandClanRequest} without being logged in.");
                             break;
                         }
 
@@ -4960,7 +4657,7 @@ namespace Horizon.SERVER.Medius
                                 MessageID = disbandClanRequest.MessageID,
                                 StatusCode = MediusCallbackStatus.MediusNotClanLeader
                             });
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {disbandClanRequest} without being the leader of clan to disband");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {disbandClanRequest} without being the leader of clan to disband");
                             break;
                         }
 
@@ -4997,20 +4694,20 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getMyClanMessagesRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getMyClanMessagesRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getMyClanMessagesRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getMyClanMessagesRequest} without being logged in.");
                             break;
                         }
 
                         // ERROR -- Need clan
                         if (data.ClientObject.ClanId != getMyClanMessagesRequest.ClanID)
                         {
-                            LoggerAccessor.LogWarn("Not leader of clan.  Only a clan leader can invite a player to the clan");
+                            LoggerAccessor.LogWarn("[MLS] - Not leader of clan.  Only a clan leader can invite a player to the clan");
                             // User was not the leader of the Clan they requested to disband.
                             data.ClientObject.Queue(new MediusGetMyClanMessagesResponse()
                             {
@@ -5030,15 +4727,6 @@ namespace Horizon.SERVER.Medius
                                 List<MediusGetMyClanMessagesResponse> responses = new List<MediusGetMyClanMessagesResponse>();
                                 if (r.IsCompletedSuccessfully && r.Result != null)
                                 {
-                                    /*
-                                    char[] ch = new char[r.Result.FirstOrDefault().Message.Length];
-
-                                    // Copy character by character into array 
-                                    for (int i = 0; i < r.Result.FirstOrDefault().Message.Length; i++)
-                                    {
-                                        ch[i] = r.Result.FirstOrDefault().Message[i];
-                                    }
-                                    */
                                     responses.AddRange(r.Result
                                         .Select(x => new MediusGetMyClanMessagesResponse()
                                         {
@@ -5073,20 +4761,20 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getAllClanMessagesRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getAllClanMessagesRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getAllClanMessagesRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getAllClanMessagesRequest} without being logged in.");
                             break;
                         }
 
                         // ERROR -- Need clan
                         if (!data.ClientObject.ClanId.HasValue)
                         {
-                            LoggerAccessor.LogWarn("Not leader of clan.  Only a clan leader can invite a player to the clan");
+                            LoggerAccessor.LogWarn("[MLS] - Not leader of clan.  Only a clan leader can invite a player to the clan");
                             data.ClientObject.Queue(new MediusGetAllClanMessagesResponse()
                             {
                                 MessageID = getAllClanMessagesRequest.MessageID,
@@ -5139,20 +4827,20 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {sendClanMessageRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {sendClanMessageRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {sendClanMessageRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {sendClanMessageRequest} without being logged in.");
                             break;
                         }
 
                         // ERROR -- Need clan
                         if (!data.ClientObject.ClanId.HasValue)
                         {
-                            LoggerAccessor.LogWarn("Not leader of clan.  Only a clan leader can invite a player to the clan");
+                            LoggerAccessor.LogWarn("[MLS] - Not leader of clan.  Only a clan leader can invite a player to the clan");
                             data.ClientObject.Queue(new MediusSendClanMessageResponse()
                             {
                                 MessageID = sendClanMessageRequest.MessageID,
@@ -5205,20 +4893,20 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {modifyClanMessageRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {modifyClanMessageRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {modifyClanMessageRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {modifyClanMessageRequest} without being logged in.");
                             break;
                         }
 
                         // ERROR -- Need clan
                         if (!data.ClientObject.ClanId.HasValue)
                         {
-                            LoggerAccessor.LogWarn("Not leader of clan.  Only a clan leader can invite a player to the clan");
+                            LoggerAccessor.LogWarn("[MLS] - Not leader of clan.  Only a clan leader can invite a player to the clan");
                             data.ClientObject.Queue(new MediusModifyClanMessageResponse()
                             {
                                 MessageID = modifyClanMessageRequest.MessageID,
@@ -5272,20 +4960,20 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {deleteClanMessageRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {deleteClanMessageRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {deleteClanMessageRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {deleteClanMessageRequest} without being logged in.");
                             break;
                         }
 
                         // ERROR -- Need clan
                         if (!data.ClientObject.ClanId.HasValue)
                         {
-                            LoggerAccessor.LogWarn("Not leader of clan.  Only a clan leader can invite a player to the clan");
+                            LoggerAccessor.LogWarn("[MLS] - Not leader of clan.  Only a clan leader can invite a player to the clan");
                             data.ClientObject.Queue(new MediusInvitePlayerToClanResponse()
                             {
                                 MessageID = deleteClanMessageRequest.MessageID,
@@ -5326,13 +5014,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {transferClanLeadershipRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {transferClanLeadershipRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {transferClanLeadershipRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {transferClanLeadershipRequest} without being logged in.");
                             break;
                         }
 
@@ -5346,7 +5034,7 @@ namespace Horizon.SERVER.Medius
                                 StatusCode = MediusCallbackStatus.MediusNotClanLeader
                             });
 
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {transferClanLeadershipRequest} without being the leader of clan to disband.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {transferClanLeadershipRequest} without being the leader of clan to disband.");
                         }
 
                         await HorizonServerConfiguration.Database.ClanTransferLeadership(data.ClientObject.AccountId,
@@ -5387,13 +5075,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {partyCreateRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {partyCreateRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {partyCreateRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {partyCreateRequest} without being logged in.");
                             break;
                         }
 
@@ -5419,13 +5107,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {partyPlayerReport} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {partyPlayerReport} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {partyPlayerReport} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {partyPlayerReport} without being logged in.");
                             break;
                         }
 
@@ -5440,13 +5128,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {partyJoinByIndex} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {partyJoinByIndex} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {partyJoinByIndex} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {partyJoinByIndex} without being logged in.");
                             break;
                         }
 
@@ -5462,19 +5150,19 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {reassignGameMediusWorldID} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {reassignGameMediusWorldID} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {reassignGameMediusWorldID} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {reassignGameMediusWorldID} without being logged in.");
                             break;
                         }
 
                         if (data.ClientObject.CurrentGame == null || !data.ClientObject.IsInGame)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {reassignGameMediusWorldID} without being in a game.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {reassignGameMediusWorldID} without being in a game.");
                             break;
                         }
 
@@ -5490,7 +5178,7 @@ namespace Horizon.SERVER.Medius
                                 NewMediusWorldID = iNewMediusWorldID,
                             });
 
-                            LoggerAccessor.LogInfo($"Sent new MediusWorldID[{iNewMediusWorldID}]");
+LoggerAccessor.LogInfo($"[MLS] - Sent new MediusWorldID[{iNewMediusWorldID}]");
                         }
                         break;
                     }
@@ -5502,13 +5190,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getTotalGamesRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getTotalGamesRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getTotalGamesRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getTotalGamesRequest} without being logged in.");
                             break;
                         }
 
@@ -5528,13 +5216,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {gameListRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {gameListRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {gameListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {gameListRequest} without being logged in.");
                             break;
                         }
 
@@ -5754,13 +5442,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {gameList_ExtraInfoRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {gameList_ExtraInfoRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {gameList_ExtraInfoRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {gameList_ExtraInfoRequest} without being logged in.");
                             break;
                         }
 
@@ -5890,13 +5578,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {gameList_ExtraInfoRequest0} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {gameList_ExtraInfoRequest0} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {gameList_ExtraInfoRequest0} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {gameList_ExtraInfoRequest0} without being logged in.");
                             break;
                         }
 
@@ -6044,13 +5732,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {gameInfoRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {gameInfoRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {gameInfoRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {gameInfoRequest} without being logged in.");
                             break;
                         }
 
@@ -6093,13 +5781,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {gameInfoRequest0} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {gameInfoRequest0} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {gameInfoRequest0} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {gameInfoRequest0} without being logged in.");
                             break;
                         }
 
@@ -6140,7 +5828,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {lobbyWorldPlayerListRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {lobbyWorldPlayerListRequest} without a session.");
                             break;
                         }
 
@@ -6153,7 +5841,7 @@ namespace Horizon.SERVER.Medius
                                 EndOfList = true
                             });
 
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {lobbyWorldPlayerListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {lobbyWorldPlayerListRequest} without being logged in.");
                             break;
                         }
 
@@ -6236,13 +5924,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {findWorldByNameRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {findWorldByNameRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {findWorldByNameRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {findWorldByNameRequest} without being logged in.");
                             break;
                         }
 
@@ -6252,8 +5940,6 @@ namespace Horizon.SERVER.Medius
 
                         if (channel == null)
                         {
-                            LoggerAccessor.LogWarn($"World name not found: {findWorldByNameRequest.Name}");
-
                             data.ClientObject.Queue(new MediusFindWorldByNameResponse()
                             {
                                 MessageID = findWorldByNameRequest.MessageID,
@@ -6263,8 +5949,6 @@ namespace Horizon.SERVER.Medius
                         }
                         else
                         {
-                            LoggerAccessor.LogWarn($"World Clients in {channel.Name} : {channel.LocalClients.Count}");
-
                             string findWorldType = "Find Game World";
                             if (findWorldByNameRequest.WorldType != MediusFindWorldType.FindGameWorld)
                             {
@@ -6277,8 +5961,6 @@ namespace Horizon.SERVER.Medius
                                         findWorldType = "Unknown find type";
                                 }
                             }
-
-                            LoggerAccessor.LogInfo($"WorldType: {findWorldByNameRequest.WorldType} ({findWorldType})");
 
                             Task<AppIdDTO[]?> appIds = HorizonServerConfiguration.Database.GetAppIds();
                             List<AppIdDTO>? appIdList = appIds.Result?.ToList();
@@ -6312,8 +5994,6 @@ namespace Horizon.SERVER.Medius
 
                                 if (gameWorldNameList.Length == 0)
                                 {
-                                    LoggerAccessor.LogWarn($"World list empty: {findWorldByNameRequest.Name}");
-
                                     data.ClientObject.Queue(new MediusFindWorldByNameResponse()
                                     {
                                         MessageID = findWorldByNameRequest.MessageID,
@@ -6325,8 +6005,6 @@ namespace Horizon.SERVER.Medius
                                 // Set last end of list
                                 if (gameWorldNameList.Length > 0)
                                     gameWorldNameList[gameWorldNameList.Length - 1].EndOfList = true;
-
-                                LoggerAccessor.LogInfo($"GetWorldByName - {gameWorldNameList.Length} results returned");
 
                                 data.ClientObject.Queue(gameWorldNameList);
                             }
@@ -6352,8 +6030,6 @@ namespace Horizon.SERVER.Medius
                                 // Set last end of list
                                 if (lobbyNameList.Length > 0)
                                     lobbyNameList[lobbyNameList.Length - 1].EndOfList = true;
-
-                                LoggerAccessor.LogInfo($"GetWorldByName - {lobbyNameList.Length} results returned");
 
                                 data.ClientObject.Queue(lobbyNameList);
                             }
@@ -6397,8 +6073,6 @@ namespace Horizon.SERVER.Medius
                                 if (combinedResponses.Length > 0)
                                     combinedResponses[combinedResponses.Length - 1].EndOfList = true;
 
-                                LoggerAccessor.LogInfo($"GetWorldByName - {combinedResponses.Length} results returned");
-
                                 data.ClientObject.Queue(combinedResponses);
                             }
                             #endregion
@@ -6410,13 +6084,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {gameWorldPlayerListRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {gameWorldPlayerListRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {gameWorldPlayerListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {gameWorldPlayerListRequest} without being logged in.");
                             break;
                         }
 
@@ -6431,8 +6105,6 @@ namespace Horizon.SERVER.Medius
                             });
                         else
                         {
-                            LoggerAccessor.LogWarn($"Game Clients in {game.GameName} : {game.LocalClients.Count()}");
-
                             var playerList = game.LocalClients.Where(x => x != null || x.InGame && x.Client.IsConnected).Select(x => new MediusGameWorldPlayerListResponse()
                             {
                                 MessageID = gameWorldPlayerListRequest.MessageID,
@@ -6447,11 +6119,12 @@ namespace Horizon.SERVER.Medius
                             // Set last end of list
                             if (playerList.Length > 0)
                             {
+#if DEBUG
                                 for (int i = 0; i < playerList.Length; i++)
                                 {
-                                    LoggerAccessor.LogInfo($"{game.ApplicationId} - {game.GameName} -> Slot {i.ToString()} - {playerList[i].AccountName}");
+LoggerAccessor.LogInfo($"[MLS] - {game.ApplicationId} - {game.GameName} -> Slot {i.ToString()} - {playerList[i].AccountName}");
                                 }
-
+#endif
                                 playerList[playerList.Length - 1].EndOfList = true;
                             }
 
@@ -6467,13 +6140,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getGameListFilterRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getGameListFilterRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getGameListFilterRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getGameListFilterRequest} without being logged in.");
                             break;
                         }
 
@@ -6550,13 +6223,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {setGameListFilterRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {setGameListFilterRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {setGameListFilterRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {setGameListFilterRequest} without being logged in.");
                             break;
                         }
 
@@ -6567,7 +6240,6 @@ namespace Horizon.SERVER.Medius
 
                             if (data.ClientObject.ApplicationId == 10782)
                             {
-
                                 // Give reply
                                 data.ClientObject.Queue(new MediusSetGameListFilterResponse()
                                 {
@@ -6575,15 +6247,6 @@ namespace Horizon.SERVER.Medius
                                     StatusCode = filter == null ? MediusCallbackStatus.MediusSetGameListFilterFailed : MediusCallbackStatus.MediusSuccess,
                                     FilterID = filter.FieldID
                                 });
-
-                                /*
-                                // Give reply
-                                data.ClientObject.Queue(new MediusSetGameListFilterResponse0()
-                                {
-                                    MessageID = setGameListFilterRequest.MessageID,
-                                    StatusCode = filter == null ? MediusCallbackStatus.MediusSetGameListFilterFailed : MediusCallbackStatus.MediusSuccess,
-                                });
-                                */
                             }
                             else
                             {
@@ -6595,7 +6258,6 @@ namespace Horizon.SERVER.Medius
                                     FilterID = filter?.FieldID ?? 0
                                 });
                             }
-
                         }
                         else
                         {
@@ -6615,13 +6277,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {setGameListFilterRequest0} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {setGameListFilterRequest0} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {setGameListFilterRequest0} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {setGameListFilterRequest0} without being logged in.");
                             break;
                         }
 
@@ -6643,13 +6305,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {clearGameListFilterRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {clearGameListFilterRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {clearGameListFilterRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {clearGameListFilterRequest} without being logged in.");
                             break;
                         }
 
@@ -6669,13 +6331,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {clearGameListFilterRequest0} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {clearGameListFilterRequest0} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {clearGameListFilterRequest0} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {clearGameListFilterRequest0} without being logged in.");
                             break;
                         }
 
@@ -6697,13 +6359,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {createGameRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {createGameRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {createGameRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {createGameRequest} without being logged in.");
                             break;
                         }
 
@@ -6740,13 +6402,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {createGameRequest0} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {createGameRequest0} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {createGameRequest0} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {createGameRequest0} without being logged in.");
                             break;
                         }
 
@@ -6772,13 +6434,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {createGameRequest1} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {createGameRequest1} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {createGameRequest1} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {createGameRequest1} without being logged in.");
                             break;
                         }
 
@@ -6806,13 +6468,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {joinGameRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {joinGameRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {joinGameRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {joinGameRequest} without being logged in.");
                             break;
                         }
 
@@ -6827,13 +6489,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {joinGameRequest0} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {joinGameRequest0} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {joinGameRequest0} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {joinGameRequest0} without being logged in.");
                             break;
                         }
 
@@ -6850,19 +6512,19 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {worldReport0} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {worldReport0} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {worldReport0} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {worldReport0} without being logged in.");
                             break;
                         }
 
                         if (string.IsNullOrEmpty(worldReport0.SessionKey))
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {worldReport0} without a SessionKey.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {worldReport0} without a SessionKey.");
                             break;
                         }
 
@@ -6870,7 +6532,7 @@ namespace Horizon.SERVER.Medius
 
                         if (client == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent SessionKey: {worldReport0.SessionKey} but no Client Object was returned.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent SessionKey: {worldReport0.SessionKey} but no Client Object was returned.");
                             break;
                         }
 
@@ -6883,13 +6545,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {worldReport} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {worldReport} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {worldReport} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {worldReport} without being logged in.");
                             break;
                         }
 
@@ -6938,20 +6600,20 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {playerReport} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {playerReport} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel},{data.ClientObject} sent {playerReport} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel},{data.ClientObject} sent {playerReport} without being logged in.");
                             break;
                         }
 
                         data.ClientObject.UtcLastPlayerReportReceived = DateTimeUtils.GetHighPrecisionUtcTime();
 
                         if (playerReport.Stats == data.ClientObject.AccountStats)
-                            LoggerAccessor.LogInfo($"Ignoring a player report with unchanged account stats (AccountID={data.ClientObject.AccountId} MediusWorldID={playerReport.MediusWorldID})");
+LoggerAccessor.LogWarn($"[MLS] - Ignoring a player report with unchanged account stats (AccountID={data.ClientObject.AccountId} MediusWorldID={playerReport.MediusWorldID})");
                         else
                         {
                             MediusClass.AntiCheatPlugin.mc_anticheat_event_msg_PLAYERREPORT(AnticheatEventCode.anticheatPLAYERREPORT, playerReport.MediusWorldID, data.ClientObject.AccountId, MediusClass.AntiCheatClient, playerReport.Stats, 256);
@@ -6959,7 +6621,7 @@ namespace Horizon.SERVER.Medius
                             if (data.ClientObject.SessionKey == playerReport.SessionKey)
                             {
                                 data.ClientObject.OnPlayerReport(playerReport);
-                                LoggerAccessor.LogInfo($"Player was updated on Game World:{playerReport.MediusWorldID} (AccountID={data.ClientObject.AccountId} MediusWorldID={playerReport.MediusWorldID})");
+LoggerAccessor.LogInfo($"[MLS] - Player was updated on Game World:{playerReport.MediusWorldID} (AccountID={data.ClientObject.AccountId} MediusWorldID={playerReport.MediusWorldID})");
                             }
                         }
 
@@ -6970,13 +6632,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {endGameReport} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {endGameReport} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {endGameReport} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {endGameReport} without being logged in.");
                             break;
                         }
 
@@ -6994,13 +6656,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getLobbyPlayerNames_ExtraInfoRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getLobbyPlayerNames_ExtraInfoRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getLobbyPlayerNames_ExtraInfoRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getLobbyPlayerNames_ExtraInfoRequest} without being logged in.");
                             break;
                         }
 
@@ -7057,13 +6719,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getLobbyPlayerNamesRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getLobbyPlayerNamesRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getLobbyPlayerNamesRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getLobbyPlayerNamesRequest} without being logged in.");
                             break;
                         }
 
@@ -7101,13 +6763,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getWorldSecurityLevelRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getWorldSecurityLevelRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getWorldSecurityLevelRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getWorldSecurityLevelRequest} without being logged in.");
                             break;
                         }
 
@@ -7145,13 +6807,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {setLobbyWorldFilterRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {setLobbyWorldFilterRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {setLobbyWorldFilterRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {setLobbyWorldFilterRequest} without being logged in.");
                             break;
                         }
 
@@ -7188,13 +6850,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {setLobbyWorldFilterRequest1} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {setLobbyWorldFilterRequest1} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {setLobbyWorldFilterRequest1} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {setLobbyWorldFilterRequest1} without being logged in.");
                             break;
                         }
 
@@ -7231,13 +6893,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {createChannelRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {createChannelRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {createChannelRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {createChannelRequest} without being logged in.");
                             break;
                         }
 
@@ -7280,13 +6942,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {createChannelRequest0} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {createChannelRequest0} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {createChannelRequest0} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {createChannelRequest0} without being logged in.");
                             break;
                         }
 
@@ -7330,13 +6992,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {createChannelRequest1} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {createChannelRequest1} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {createChannelRequest1} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {createChannelRequest1} without being logged in.");
                             break;
                         }
 
@@ -7368,7 +7030,7 @@ namespace Horizon.SERVER.Medius
                         {
                             if (createChannelRequest1.LobbyName.StartsWith("CLAN_"))
                             {
-                                LoggerAccessor.LogInfo($"SFO_HACK:Overriding Clan Lobby {createChannelRequest1.LobbyName} MaxPlayers from {createChannelRequest1.MaxPlayers} to {MediusClass.Settings.SFOOverrideClanLobbyMaxPlayers}");
+LoggerAccessor.LogInfo($"[MLS] - SFO_HACK:Overriding Clan Lobby {createChannelRequest1.LobbyName} MaxPlayers from {createChannelRequest1.MaxPlayers} to {MediusClass.Settings.SFOOverrideClanLobbyMaxPlayers}");
                                 createChannelRequest1.MaxPlayers = MediusClass.Settings.SFOOverrideClanLobbyMaxPlayers;
                             }
 
@@ -7391,13 +7053,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {joinChannelRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {joinChannelRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {joinChannelRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {joinChannelRequest} without being logged in.");
                             break;
                         }
 
@@ -7409,7 +7071,7 @@ namespace Horizon.SERVER.Medius
 
                         if (channel == null)
                         {
-                            LoggerAccessor.LogWarn($"{data.ClientObject.AccountName} attempting to join non-existent channel {joinChannelRequest}");
+LoggerAccessor.LogWarn($"[MLS] - {data.ClientObject.AccountName} attempting to join non-existent channel {joinChannelRequest}");
 
                             data.ClientObject.Queue(new MediusJoinChannelResponse()
                             {
@@ -7427,7 +7089,7 @@ namespace Horizon.SERVER.Medius
                         }
                         else
                         {
-                            LoggerAccessor.LogInfo($"Channel Joining: {channel.Name} Generic Fields: {channel.GenericField1} {channel.GenericField2} {channel.GenericField3} {channel.GenericField4} {channel.GenericFieldLevel} Type: {channel.Type}");
+LoggerAccessor.LogDebug($"[MLS] - Channel Joining: {channel.Name} Generic Fields: {channel.GenericField1} {channel.GenericField2} {channel.GenericField3} {channel.GenericField4} {channel.GenericFieldLevel} Type: {channel.Type}");
 
                             // Indicate the client is connecting to a different part of Medius
                             data.ClientObject.KeepAliveUntilNextConnection();
@@ -7489,13 +7151,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {joinLeastPopulatedChannelRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {joinLeastPopulatedChannelRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {joinLeastPopulatedChannelRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {joinLeastPopulatedChannelRequest} without being logged in.");
                             break;
                         }
 
@@ -7503,7 +7165,7 @@ namespace Horizon.SERVER.Medius
 
                         if (client == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} requested Client Object with SessionKey:{joinLeastPopulatedChannelRequest.SessionKey}, but it not exists in MUM cache.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} requested Client Object with SessionKey:{joinLeastPopulatedChannelRequest.SessionKey}, but it not exists in MUM cache.");
 
                             data.ClientObject.Queue(new MediusJoinLeastPopulatedChannelResponse()
                             {
@@ -7599,13 +7261,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {channelInfoRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {channelInfoRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {channelInfoRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {channelInfoRequest} without being logged in.");
                             break;
                         }
 
@@ -7633,7 +7295,7 @@ namespace Horizon.SERVER.Medius
                                 if (channel.PlayerCount >= MediusClass.Settings.SFOOverrideLobbyPlayerCountThreshold)
                                 {
                                     activePlayerCount = channel.MaxPlayers;
-                                    LoggerAccessor.LogInfo($"SFO_HACK:Overriding Lobby ActivePlayerCount from {channel.PlayerCount} to {activePlayerCount}");
+LoggerAccessor.LogInfo($"[MLS] - SFO_HACK:Overriding Lobby ActivePlayerCount from {channel.PlayerCount} to {activePlayerCount}");
                                 }
                             }
                             else
@@ -7655,13 +7317,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {channelListRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {channelListRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {channelListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {channelListRequest} without being logged in.");
                             break;
                         }
 
@@ -7773,13 +7435,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getTotalChannelsRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getTotalChannelsRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getTotalChannelsRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getTotalChannelsRequest} without being logged in.");
                             break;
                         }
 
@@ -7796,13 +7458,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {channelList_ExtraInfoRequest1} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {channelList_ExtraInfoRequest1} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {channelList_ExtraInfoRequest1} without a being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {channelList_ExtraInfoRequest1} without a being logged in.");
                             break;
                         }
 
@@ -7895,13 +7557,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {channelList_ExtraInfoRequest0} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {channelList_ExtraInfoRequest0} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {channelList_ExtraInfoRequest0} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {channelList_ExtraInfoRequest0} without being logged in.");
                             break;
                         }
 
@@ -7994,13 +7656,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {channelList_ExtraInfoRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {channelList_ExtraInfoRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {channelList_ExtraInfoRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {channelList_ExtraInfoRequest} without being logged in.");
                             break;
                         }
 
@@ -8174,17 +7836,16 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getLocationsRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getLocationsRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getLocationsRequest} without a being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getLocationsRequest} without a being logged in.");
                             break;
                         }
 
-                        LoggerAccessor.LogInfo($"Get Locations Request Received Sessionkey: {getLocationsRequest.SessionKey}");
                         await HorizonServerConfiguration.Database.GetLocations(data.ClientObject.ApplicationId).ContinueWith(r =>
                         {
                             var locations = r.Result;
@@ -8209,9 +7870,6 @@ namespace Horizon.SERVER.Medius
                                         LocationId = x.Id,
                                         LocationName = x.Name
                                     }).ToList();
-
-                                    LoggerAccessor.LogInfo("GetLocationsRequest  success");
-                                    LoggerAccessor.LogInfo($"NumLocations returned[{responses.Count}]");
 
                                     responses[responses.Count - 1].EndOfList = true;
                                     data.ClientObject.Queue(responses);
@@ -8240,13 +7898,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileListRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileListRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileListRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileListRequest} without being logged in.");
                             break;
                         }
 
@@ -8261,8 +7919,6 @@ namespace Horizon.SERVER.Medius
                                     var rootPath = MediusClass.GetFileAppIdPath(data.ClientObject.ApplicationId);
                                     foreach (var fileReturned in r.Result)
                                     {
-                                        LoggerAccessor.LogWarn($"Files returns: {r.Result.Count}");
-
                                         var filesListExt = MediusClass.Manager.GetFilesListExt(rootPath,
                                                 fileReturned.FileName,
                                                 fileListRequest.PageSize,
@@ -8345,13 +8001,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileListExtRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileListExtRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileListExtRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileListExtRequest} without being logged in.");
                             break;
                         }
 
@@ -8364,19 +8020,8 @@ namespace Horizon.SERVER.Medius
                             ).ContinueWith(r => {
                                 if (r.IsCompletedSuccessfully && r.Result != null && r.Result.Count > 0)
                                 {
-
-                                    //var rootPath = MediusClass.GetFileAppIdPath(data.ClientObject.ApplicationId);
                                     foreach (var fileReturned in r.Result)
                                     {
-                                        /*
-                                        var filesListExt = MediusClass.Manager.GetFilesListExt(rootPath,
-                                                fileReturned.FileName,
-                                                fileListExtRequest.PageSize,
-                                                fileListExtRequest.StartingEntryNumber,
-                                                data.ClientObject.ApplicationId);
-                                        */
-
-                                        LoggerAccessor.LogWarn($"Files returns Test2: {r.Result.Count} ");
                                         fileListExtResponses.Add(new MediusFileListExtResponse()
                                         {
                                             MessageID = fileListExtRequest.MessageID,
@@ -8398,19 +8043,18 @@ namespace Horizon.SERVER.Medius
                                             },
                                             EndOfList = false,
                                         });
-
                                     }
 
                                     switch (fileListExtRequest.sortBy)
                                     {
                                         case MediusFileSortBy.MFSortByNothing:
                                             {
-                                                LoggerAccessor.LogInfo("Not Sorting!");
+                                                LoggerAccessor.LogInfo("[MLS] - Not Sorting!");
                                                 return;
                                             }
                                         case MediusFileSortBy.MFSortByName:
                                             {
-                                                LoggerAccessor.LogInfo("Sorting By Name!");
+                                                LoggerAccessor.LogInfo("[MLS] - Sorting By Name!");
                                                 fileListExtResponses.Sort((x, y) => string.Compare(x.MediusFileInfo.FileName, y.MediusFileInfo.FileName));
                                                 return;
                                             }
@@ -8418,13 +8062,9 @@ namespace Horizon.SERVER.Medius
 
                                     // Sort by MEDIUS_ASCENDING
                                     if (fileListExtRequest.sortOrder == MediusSortOrder.MEDIUS_ASCENDING)
-                                    {
                                         fileListExtResponses.OrderBy(x => x);
-                                    }
                                     else // MEDIUS_DESCENDING
-                                    {
                                         fileListExtResponses.OrderByDescending(x => x);
-                                    }
 
                                     if (fileListExtResponses.Count == 0)
                                     {
@@ -8447,67 +8087,6 @@ namespace Horizon.SERVER.Medius
 
                                     // Add to responses
                                     data.ClientObject.Queue(fileListExtResponses);
-
-
-                                    /*
-                                    #region NBA 07 PS3
-                                    //If its NBA 07 PS3
-                                    if (data.ApplicationId == 20244)
-                                    {
-                                        string nba07Path = rootPath + @"\NBA07\";
-                                        if (nba07Path != null)
-                                        {
-                                            var filesList = MediusClass.Manager.GetFilesList(nba07Path,
-                                                fileListExtRequest.FileNameBeginsWith,
-                                                fileListExtRequest.PageSize,
-                                                fileListExtRequest.StartingEntryNumber);
-
-                                            foreach (var file in filesList)
-                                            {
-                                                fileListExtResponses.Add(new MediusFileListExtResponse()
-                                                {
-                                                    MessageID = fileListExtRequest.MessageID,
-                                                    MetaValue = "",
-                                                    StatusCode = MediusCallbackStatus.MediusSuccess,
-                                                    MediusFileToList = new MediusFile
-                                                    {
-                                                        Filename = file.Filename,
-                                                        ServerChecksum = file.ServerChecksum,
-                                                        FileID = file.FileID,
-                                                        FileSize = file.FileSize,
-                                                        CreationTimeStamp = file.CreationTimeStamp,
-                                                    },
-                                                    EndOfList = false,
-                                                });
-                                            }
-
-                                            if (fileListExtResponses.Count == 0)
-                                            {
-                                                // Return none
-                                                data.ClientObject.Queue(new MediusFileListResponse()
-                                                {
-                                                    MessageID = fileListExtRequest.MessageID,
-                                                    StatusCode = MediusCallbackStatus.MediusSuccess,
-                                                    MediusFileToList = new MediusFile
-                                                    {
-
-                                                    },
-                                                    EndOfList = true,
-                                                });
-                                            }
-                                            else
-                                            {
-                                                // Ensure the end of list flag is set
-                                                fileListExtResponses[fileListExtResponses.Count - 1].EndOfList = true;
-
-                                                // Add to responses
-                                                data.ClientObject.Queue(fileListExtResponses);
-                                            }
-                                        }
-                                    }
-                                    #endregion
-                                    */
-
                                 }
                                 else
                                 {
@@ -8538,13 +8117,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileGetAttributesRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileGetAttributesRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileGetAttributesRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileGetAttributesRequest} without being logged in.");
                             break;
                         }
 
@@ -8592,35 +8171,17 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileGetMetaDataRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileGetMetaDataRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileGetMetaDataRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileGetMetaDataRequest} without being logged in.");
                             break;
                         }
 
                         List<MediusFileGetMetaDataResponse> fileGetMetaDataResponses = new List<MediusFileGetMetaDataResponse>();
-
-                        /*
-                        var path = MediusClass.GetFileSystemPath(data.ClientObject.ApplicationId, fileGetMetaDataRequest.MediusFileInfo.FileName);
-                        if (path == null)
-                        {
-                            data.ClientObject.Queue(new MediusFileGetMetaDataResponse()
-                            {
-                                MessageID = fileGetMetaDataRequest.MessageID,
-                                StatusCode = MediusCallbackStatus.MediusNoResult,
-                            });
-                            break;
-                        }
-                        else
-                        {
-
-                        }
-                        */
-
 
                         FileDTO fileDTO = new FileDTO()
                         {
@@ -8733,13 +8294,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileUpdateMetaDataRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileUpdateMetaDataRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileUpdateMetaDataRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileUpdateMetaDataRequest} without being logged in.");
                             break;
                         }
 
@@ -8855,13 +8416,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileUpdateMetaDataRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileUpdateMetaDataRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileUpdateMetaDataRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileUpdateMetaDataRequest} without being logged in.");
                             break;
                         }
 
@@ -8973,13 +8534,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileCreateRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileCreateRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileCreateRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileCreateRequest} without being logged in.");
                             break;
                         }
 
@@ -9023,11 +8584,9 @@ namespace Horizon.SERVER.Medius
 
                             #region MediusFileGenerateChecksum
                             //Generate Checksum for it
-                            LoggerAccessor.LogInfo($"Generating file checksum for {path}");
                             using (var stream = File.OpenRead(path))
                             {
                                 string serverCheckSumGenerated = BitConverter.ToString(NetHasher.DotNetHasher.ComputeMD5(stream));
-                                LoggerAccessor.LogWarn($"{serverCheckSumGenerated} checksum CHECK");
                                 FileDTO fileDTO = new FileDTO()
                                 {
                                     AppId = data.ClientObject.ApplicationId,
@@ -9113,32 +8672,19 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileUploadRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileUploadRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileUploadRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileUploadRequest} without being logged in.");
                             break;
                         }
 
-                        //Task.Run(async () =>
-                        //{
-                        //    int j = 0;
-                        //    var totalSize = fileUploadRequest.MediusFileInfo.FileSize;
-                        //    for (int i = 0; i < totalSize; )
-                        //    {
-
-
-                        //        i += Constants.MEDIUS_FILE_MAX_DOWNLOAD_DATA_SIZE;
-                        //    }
-                        //});
-
-
                         if (HorizonServerConfiguration.Database._settings.SimulatedMode == true)
                         {
-                            LoggerAccessor.LogWarn($"DB is not enabled.. cannot service upload request");
+LoggerAccessor.LogWarn($"[MLS] - DB is not enabled.. cannot service upload request");
                             data.ClientObject.Queue(new MediusFileUploadServerRequest()
                             {
                                 MessageID = fileUploadRequest.MessageID,
@@ -9179,7 +8725,6 @@ namespace Horizon.SERVER.Medius
                             {
                                 FileId = fileUploadRequest.MediusFileInfo.FileID,
                                 Stream = stream,
-                                //TotalSize = fileUploadRequest.UiDataSize
                                 TotalSize = (int)fileUploadRequest.MediusFileInfo.FileSize
                             };
 
@@ -9201,13 +8746,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileUploadResponse} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileUploadResponse} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileUploadResponse} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileUploadResponse} without being logged in.");
                             break;
                         }
 
@@ -9221,19 +8766,18 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileCancelOperationRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileCancelOperationRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileCancelOperationRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileCancelOperationRequest} without being logged in.");
                             break;
                         }
 
                         if (data.ClientObject.mediusFileToUpload != null)
                         {
-
                             //If the player of this file is the owner continue, otherwise they don't have permissions.
                             if (data.ClientObject.mediusFileToUpload.OwnerID != fileCancelOperationRequest.MediusFileInfo.OwnerID)
                             {
@@ -9281,13 +8825,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileCloseRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileCloseRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileCloseRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileCloseRequest} without being logged in.");
                             break;
                         }
 
@@ -9321,13 +8865,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileDeleteRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileDeleteRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileDeleteRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileDeleteRequest} without being logged in.");
                             break;
                         }
 
@@ -9356,7 +8900,6 @@ namespace Horizon.SERVER.Medius
                                 if (r.IsCompletedSuccessfully && r.Result != false)
                                 {
                                     File.Delete(path);
-                                    LoggerAccessor.LogWarn($"file deleted {path}");
 
                                     data.ClientObject.Queue(new MediusFileDeleteResponse()
                                     {
@@ -9384,13 +8927,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileDownloadRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileDownloadRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {fileDownloadRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {fileDownloadRequest} without being logged in.");
                             break;
                         }
 
@@ -9447,67 +8990,6 @@ namespace Horizon.SERVER.Medius
 
                                 ++j;
                             }
-
-                            /*
-
-                            var bytes = File.ReadAllBytes(rootPath);
-                            int j = 0; // Packet #
-
-                            for (int i = 0; i < bytes.Length; i += Constants.MEDIUS_FILE_MAX_DOWNLOAD_DATA_SIZE)
-                            {
-                                var len = bytes.Length;
-                                if (len > Constants.MEDIUS_FILE_MAX_DOWNLOAD_DATA_SIZE)
-                                    len = Constants.MEDIUS_FILE_MAX_DOWNLOAD_DATA_SIZE;
-
-                                if ((len + i) >= bytes.Length)
-                                {
-
-                                    var msgLessThanTotal = new MediusFileDownloadResponse()
-                                    {
-                                        MessageID = fileDownloadRequest.MessageID,
-                                        Data = bytes,
-                                        iDataSize = len,
-                                        iPacketNumber = j,
-                                        iXferStatus = MediusFileXferStatus.End,
-                                        iStartByteIndex = i,
-                                        StatusCode = MediusCallbackStatus.MediusSuccess
-                                    };
-                                    
-                                    if (fileDownloadRequest.MediusFileInfo.FileName.StartsWith("stats_"))
-                                    {
-                                        LoggerAccessor.LogInfo($"[SF:DM] Saving File Stats to cached player");
-                                        data.ClientObject.OnFileDownloadResponse(msgLessThanTotal);
-                                    };
-                                    
-                                    data.ClientObject.Queue(msgLessThanTotal);
-
-                                    LoggerAccessor.LogInfo($"LAST FILE CONTENT SENT! {len}");
-
-                                    len = bytes.Length - i;
-                                } else
-                                {
-
-                                    var msg = new MediusFileDownloadResponse()
-                                    {
-                                        MessageID = fileDownloadRequest.MessageID,
-                                        Data = bytes,
-                                        iDataSize = len,
-                                        iPacketNumber = j,
-
-                                        iXferStatus = j == 0 ? MediusFileXferStatus.Initial : MediusFileXferStatus.Mid,
-                                        //iXferStatus = j == 0 ? MediusFileXferStatus.Initial : ((len + i) >= bytes.Length ? MediusFileXferStatus.End : MediusFileXferStatus.Mid),
-                                        iStartByteIndex = i,
-                                        StatusCode = MediusCallbackStatus.MediusSuccess
-                                    };
-
-                                    data.ClientObject.Queue(msg);
-                                    len = bytes.Length - i;
-                                }
-
-                                ++j;
-                            }
-                            */
-
                         }
                         else
                         {
@@ -9530,13 +9012,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {chatToggleRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {chatToggleRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {chatToggleRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {chatToggleRequest} without being logged in.");
                             break;
                         }
 
@@ -9553,13 +9035,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {genericChatSetFilterRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {genericChatSetFilterRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {genericChatSetFilterRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {genericChatSetFilterRequest} without being logged in.");
                             break;
                         }
 
@@ -9579,13 +9061,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {setAutoChatHistoryRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {setAutoChatHistoryRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {setAutoChatHistoryRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {setAutoChatHistoryRequest} without being logged in.");
                             break;
                         }
 
@@ -9601,21 +9083,19 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {genericChatMessage} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {genericChatMessage} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {genericChatMessage} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {genericChatMessage} without being logged in.");
                             break;
                         }
 
                         // validate message
                         if (!MediusClass.PassTextFilter(data.ClientObject.ApplicationId, TextFilterContext.CHAT, genericChatMessage.Message))
                             return;
-
-                        //MediusClass.AntiCheatPlugin.mc_anticheat_event_msg(AnticheatEventCode.anticheatCHATMESSAGE, data.ClientObject.WorldId, data.ClientObject.AccountId, MediusClass.AntiCheatClient, (IMediusRequest)genericChatMessage, 256);
 
                         await ProcessGenericChatMessage(clientChannel, data.ClientObject, genericChatMessage);
                         break;
@@ -9625,21 +9105,19 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {genericChatMessage} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {genericChatMessage} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {genericChatMessage} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {genericChatMessage} without being logged in.");
                             break;
                         }
 
                         // validate message
                         if (!MediusClass.PassTextFilter(data.ClientObject.ApplicationId, TextFilterContext.CHAT, genericChatMessage.Message))
                             return;
-
-                        //MediusClass.AntiCheatPlugin.mc_anticheat_event_msg(AnticheatEventCode.anticheatCHATMESSAGE, data.ClientObject.WorldId, data.ClientObject.AccountId, MediusClass.AntiCheatClient, (IMediusRequest)genericChatMessage, 256);
 
                         //log to syslog
 
@@ -9651,21 +9129,19 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {chatMessage} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {chatMessage} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {chatMessage} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {chatMessage} without being logged in.");
                             break;
                         }
 
                         // validate message
                         if (!MediusClass.PassTextFilter(data.ClientObject.ApplicationId, TextFilterContext.CHAT, chatMessage.Message))
                             return;
-
-                        //MediusClass.AntiCheatPlugin.mc_anticheat_event_msg(AnticheatEventCode.anticheatCHATMESSAGE, data.ClientObject.WorldId, data.ClientObject.AccountId, MediusClass.AntiCheatClient, chatMessage, 256);
 
                         await ProcessChatMessage(clientChannel, data.ClientObject, chatMessage.MessageID, chatMessage);
                         break;
@@ -9675,13 +9151,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {binaryMessage} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {binaryMessage} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {binaryMessage} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {binaryMessage} without being logged in.");
                             break;
                         }
 
@@ -9691,22 +9167,22 @@ namespace Horizon.SERVER.Medius
                                 {
                                     var iNumPlayersReturned = data.ClientObject.CurrentChannel.PlayerCount;
                                     if (iNumPlayersReturned > 256)
-                                        LoggerAccessor.LogWarn("iNumPlayersReturned <= 256");
+                                        LoggerAccessor.LogWarn("[MLS] - iNumPlayersReturned <= 256");
                                     else if (iNumPlayersReturned > 0)
                                         _ = data.ClientObject.CurrentChannel?.BroadcastBinaryMessage(data.ClientObject, binaryMessage);
                                     else
-                                        LoggerAccessor.LogWarn("No players found to send binary msg to.");
+                                        LoggerAccessor.LogWarn("[MLS] - No players found to send binary msg to.");
                                     break;
                                 }
                             case MediusBinaryMessageType.TargetBinaryMsg:
                                 {
-                                    LoggerAccessor.LogInfo($"Sending targeted binary message Target AccountID {binaryMessage.TargetAccountID}");
+LoggerAccessor.LogWarn($"[MLS] - Sending targeted binary message Target AccountID {binaryMessage.TargetAccountID}");
 
                                     var target = MediusClass.Manager.GetClientByAccountId(binaryMessage.TargetAccountID, data.ClientObject.ApplicationId);
 
                                     if (target == null)
                                     {
-                                        LoggerAccessor.LogInfo($"BinaryMsg target not found in cache for AccountID {binaryMessage.TargetAccountID}");
+LoggerAccessor.LogWarn($"[MLS] - BinaryMsg target not found in cache for AccountID {binaryMessage.TargetAccountID}");
                                     }
                                     else
                                     {
@@ -9721,7 +9197,7 @@ namespace Horizon.SERVER.Medius
                                 }
                             case MediusBinaryMessageType.BroadcastBinaryMsgAcrossEntireUniverse:
                                 {
-                                    LoggerAccessor.LogInfo($"Sending BroadcastBinaryMsgAcrossEntireUniverse({binaryMessage.Message}) binary message ");
+LoggerAccessor.LogWarn($"[MLS] - Sending BroadcastBinaryMsgAcrossEntireUniverse({binaryMessage.Message}) binary message ");
 
                                     var channels = MediusClass.Manager.GetChannelListUnfiltered(data.ClientObject.ApplicationId, 1, 50);
 
@@ -9731,12 +9207,11 @@ namespace Horizon.SERVER.Medius
                                     }
 
                                     //MUMBinaryFwdFromLobby() Error %d MID %s, Orig AID %d, Whisper Target AID %d
-                                    LoggerAccessor.LogInfo($"Sending BroadcastBinaryMsgAcrossEntireUniverse({data.ClientObject.AccountId}) binary message ({BitConverter.ToString(binaryMessage.Message)})");
                                     break;
                                 }
                             default:
                                 {
-                                    LoggerAccessor.LogWarn($"Unhandled binary message type {binaryMessage.MessageType}");
+LoggerAccessor.LogWarn($"[MLS] - Unhandled binary message type {binaryMessage.MessageType}");
                                     break;
                                 }
                         }
@@ -9747,13 +9222,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {binaryMessage} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {binaryMessage} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {binaryMessage} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {binaryMessage} without being logged in.");
                             break;
                         }
 
@@ -9800,7 +9275,7 @@ namespace Horizon.SERVER.Medius
                                     }
                                     else
                                     {
-                                        LoggerAccessor.LogInfo("No players found to send binary msg to");
+                                        LoggerAccessor.LogInfo("[MLS] - No players found to send binary msg to");
                                     }
 
                                     break;
@@ -9808,7 +9283,7 @@ namespace Horizon.SERVER.Medius
 
                             case MediusBinaryMessageType.BroadcastBinaryMsgAcrossEntireUniverse:
                                 {
-                                    LoggerAccessor.LogInfo($"Sending BroadcastBinaryMsgAcrossEntireUniverse({binaryMessage.Message}) binary message ");
+LoggerAccessor.LogWarn($"[MLS] - Sending BroadcastBinaryMsgAcrossEntireUniverse({binaryMessage.Message}) binary message ");
 
                                     var channels = MediusClass.Manager.GetChannelListUnfiltered(data.ClientObject.ApplicationId, 1, 50);
 
@@ -9818,12 +9293,11 @@ namespace Horizon.SERVER.Medius
                                     }
 
                                     //MUMBinaryFwdFromLobby() Error %d MID %s, Orig AID %d, Whisper Target AID %d
-                                    LoggerAccessor.LogInfo($"Sending BroadcastBinaryMsgAcrossEntireUniverse(%d) binary message (%d)");
                                     break;
                                 }
                             default:
                                 {
-                                    LoggerAccessor.LogWarn($"Unhandled binary message type {binaryMessage.MessageType}");
+LoggerAccessor.LogWarn($"[MLS] - Unhandled binary message type {binaryMessage.MessageType}");
                                     break;
                                 }
                         }
@@ -9834,13 +9308,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {crossChatMessage} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {crossChatMessage} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {crossChatMessage} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {crossChatMessage} without being logged in.");
                             break;
                         }
 
@@ -9860,7 +9334,7 @@ namespace Horizon.SERVER.Medius
                             });
                         }
                         else
-                            LoggerAccessor.LogWarn("No player found to send crossChat msg to");
+                            LoggerAccessor.LogWarn("[MLS] - No player found to send crossChat msg to");
 
                         break;
                     }
@@ -9873,13 +9347,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {textFilterRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {textFilterRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {textFilterRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {textFilterRequest} without being logged in.");
                             break;
                         }
 
@@ -9921,13 +9395,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {textFilterRequest1} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {textFilterRequest1} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {textFilterRequest1} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {textFilterRequest1} without being logged in.");
                             break;
                         }
 
@@ -9980,19 +9454,19 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {tokenRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {tokenRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {tokenRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {tokenRequest} without being logged in.");
                             break;
                         }
 
                         if (HorizonServerConfiguration.Database._settings.SimulatedMode == true)
                         {
-                            LoggerAccessor.LogInfo("TokenRequest DB Disabled Success");
+                            LoggerAccessor.LogInfo("[MLS] - TokenRequest DB Disabled Success");
                             data.ClientObject.Queue(new MediusStatusResponse()
                             {
                                 Class = tokenRequest.PacketClass,
@@ -10003,9 +9477,7 @@ namespace Horizon.SERVER.Medius
                         }
                         else
                         {
-
                             TokenRequestDTO tokenRequestDTO = new TokenRequestDTO();
-
                             tokenRequestDTO.TokenToReplace = "0";
                             tokenRequestDTO.TokenCategory = tokenRequest.TokenCategory;
                             tokenRequestDTO.EntityID = tokenRequest.EntityID;
@@ -10017,7 +9489,6 @@ namespace Horizon.SERVER.Medius
                                 case MediusTokenActionType.MediusAddToken:
                                     {
                                         //ServerConfiguration.Database.TokenAdd(tokenRequestDTO, data.ClientObject.ApplicationId).ContinueWith(r => { });
-
                                         return;
                                     }
                                 case MediusTokenActionType.MediusUpdateToken:
@@ -10033,7 +9504,7 @@ namespace Horizon.SERVER.Medius
                                     }
                                 default:
                                     {
-                                        LoggerAccessor.LogWarn($"MediusUniqueCallbackTokenRequestHandler: Error Unrecognized Token Action {tokenRequest.TokenAction}");
+LoggerAccessor.LogWarn($"[MLS] - MediusUniqueCallbackTokenRequestHandler: Error Unrecognized Token Action {tokenRequest.TokenAction}");
                                         data.ClientObject.Queue(new MediusStatusResponse()
                                         {
                                             Class = tokenRequest.PacketClass,
@@ -10056,19 +9527,19 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {postDebugInfoRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {postDebugInfoRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {postDebugInfoRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {postDebugInfoRequest} without being logged in.");
                             break;
                         }
 
-                        if (Settings.PostDebugInfoEnable == false)
+                        if (!Settings.PostDebugInfoEnable)
                         {
-                            LoggerAccessor.LogWarn("PostDebugInfo feature not enabled");
+                            LoggerAccessor.LogWarn("[MLS] - PostDebugInfo feature not enabled");
                             data.ClientObject.Queue(new MediusPostDebugInfoResponse
                             {
                                 MessageID = postDebugInfoRequest.MessageID,
@@ -10077,20 +9548,8 @@ namespace Horizon.SERVER.Medius
                         }
                         else
                         {
-                            /*
-                            if (data.ClientObject.SessionKey != null)
-                            {
-                                LoggerAccessor.LogWarn($"PostDebugInfo Unable to retrieve player from cache {data.ClientObject.AccountName}");
-                                data.ClientObject.Queue(new MediusPostDebugInfoResponse
-                                {
-                                    MessageID = postDebugInfoRequest.MessageID,
-                                    StatusCode = MediusCallbackStatus.MediusCacheFailure
-                                });
-                            }
-                            */
-
                             //PostDebugInfo Log
-                            LoggerAccessor.LogInfo($"POST_INFO: SKey[{data.ClientObject.SessionKey}] Message[{postDebugInfoRequest.Message}]");
+LoggerAccessor.LogInfo($"[MLS] - POST_INFO: SKey[{data.ClientObject.SessionKey}] Message[{postDebugInfoRequest.Message}]");
                             data.ClientObject.Queue(new MediusPostDebugInfoResponse
                             {
                                 MessageID = postDebugInfoRequest.MessageID,
@@ -10107,13 +9566,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {utilGetTotalGamesFilteredRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {utilGetTotalGamesFilteredRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {utilGetTotalGamesFilteredRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {utilGetTotalGamesFilteredRequest} without being logged in.");
                             break;
                         }
 
@@ -10134,13 +9593,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getMyIpRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getMyIpRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getMyIpRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getMyIpRequest} without being logged in.");
                             break;
                         }
 
@@ -10150,11 +9609,9 @@ namespace Horizon.SERVER.Medius
                         if (isMacBanned)
                         {
                             #region isMacBanned?
-                            LoggerAccessor.LogInfo($"getMyIp: Connected User MAC Banned: {isMacBanned}");
 
                             if (isMacBanned)
                             {
-
                                 // Account is banned
                                 // Tell the client you're no longer privileged
                                 data?.ClientObject?.Queue(new MediusGetMyIPResponse()
@@ -10163,8 +9620,6 @@ namespace Horizon.SERVER.Medius
                                     IP = null,
                                     StatusCode = MediusCallbackStatus.MediusPlayerNotPrivileged
                                 });
-
-                                LoggerAccessor.LogInfo($"Get My IP Request Handler Error: Player Not Privileged");
 
                                 // Send ban message
                                 await QueueBanMessage(data, "You have been MAC Banned");
@@ -10194,13 +9649,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getServerTimeRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getServerTimeRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {getServerTimeRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {getServerTimeRequest} without being logged in.");
                             break;
                         }
 
@@ -10221,13 +9676,13 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.ClientObject == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {setMessageAsReadRequest} without a session.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {setMessageAsReadRequest} without a session.");
                             break;
                         }
 
                         if (!data.ClientObject.IsLoggedIn)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {setMessageAsReadRequest} without being logged in.");
+LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {setMessageAsReadRequest} without being logged in.");
                             break;
                         }
 
@@ -10245,7 +9700,7 @@ namespace Horizon.SERVER.Medius
 
                 default:
                     {
-                        LoggerAccessor.LogWarn($"Unhandled Medius Message: {message}");
+LoggerAccessor.LogWarn($"[MLS] - Unhandled Medius Message: {message}");
                         break;
                     }
             }
@@ -10271,10 +9726,6 @@ namespace Horizon.SERVER.Medius
                     {
                         if (accountClientToAdd != null && clientObject.ApplicationId != 20214)
                         {
-                            LoggerAccessor.LogInfo($"AnswerAddToBuddyListConfirmationRequest: Target player found in cache. forwarding to ClientIndex [{clientObject.AccountId}] WorldID [{clientObject.MediusWorldID}]");
-                            LoggerAccessor.LogInfo($"accountToAdd [{accountClientToAdd.AccountName}] is online, forwarding request!");
-                            //channel.AddToBuddyListConfirmationSingleRequest(clientObject, accountClientToAdd, addToBuddyListConfirmation);
-
                             if (accountClientToAdd.IsLoggedIn == true)
                             {
                                 accountClientToAdd.Queue(new MediusAddToBuddyListFwdConfirmationRequest()
@@ -10288,7 +9739,6 @@ namespace Horizon.SERVER.Medius
                         }
                         else
                         {
-                            LoggerAccessor.LogWarn($"accountToAdd [{accountClientToAdd.AccountName}] is being added to list!");
                             AccountRelationInviteDTO buddy = new AccountRelationInviteDTO()
                             {
                                 AccountId = clientObject.AccountId,
@@ -10301,10 +9751,9 @@ namespace Horizon.SERVER.Medius
                             _ = HorizonServerConfiguration.Database.addBuddyInvitation(buddy).ContinueWith(r =>
                             {
                                 if (r.IsCompletedSuccessfully && r.Result != false)
-                                    LoggerAccessor.LogInfo($"accountToAdd added to DB successfully!");
+LoggerAccessor.LogInfo($"[MLS] - accountToAdd added to DB successfully!");
                                 else
-                                    LoggerAccessor.LogWarn($"accountToAdd Failed to add!");
-
+LoggerAccessor.LogWarn($"[MLS] - accountToAdd Failed to add!");
                             });
                         }
                         break;
@@ -10314,10 +9763,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (accountClientToAdd != null && clientObject.ApplicationId != 20214)
                         {
-                            LoggerAccessor.LogInfo($"AnswerAddToBuddyListConfirmationRequest: Target player found in cache. forwarding to ClientIndex [{clientObject.AccountId}] WorldID [{clientObject.MediusWorldID}]");
-                            LoggerAccessor.LogInfo($"accountToAdd [{accountClientToAdd.AccountName}] is online, forwarding request!");
-                            //channel.AddToBuddyListConfirmationSymmetricRequest(clientObject, accountClientToAdd, addToBuddyListConfirmation);
-                            if (accountClientToAdd.IsLoggedIn == true)
+                            if (accountClientToAdd.IsLoggedIn)
                             {
                                 accountClientToAdd.Queue(new MediusAddToBuddyListFwdConfirmationRequest()
                                 {
@@ -10330,8 +9776,6 @@ namespace Horizon.SERVER.Medius
                         }
                         else
                         {
-                            LoggerAccessor.LogWarn($"accountToAdd [{accountClientToAdd.AccountName}] is being added to list!");
-
                             AccountRelationInviteDTO buddy = new AccountRelationInviteDTO()
                             {
                                 AccountId = clientObject.AccountId,
@@ -10344,35 +9788,31 @@ namespace Horizon.SERVER.Medius
                             _ = HorizonServerConfiguration.Database.addBuddyInvitation(buddy).ContinueWith(r =>
                             {
                                 if (r.IsCompletedSuccessfully && r.Result != false)
-                                    LoggerAccessor.LogInfo($"accountToAdd added to DB successfully!");
+LoggerAccessor.LogInfo($"[MLS] - accountToAdd added to DB successfully!");
                                 else
-                                    LoggerAccessor.LogWarn($"accountToAdd Failed to add!");
+LoggerAccessor.LogWarn($"[MLS] - accountToAdd Failed to add!");
                             });
                         }
                         break;
                     }
                 default:
                     {
-                        LoggerAccessor.LogWarn($"Unhandled add to buddy list confirmation message type: {addToBuddyListConfirmation.AddType}");
+LoggerAccessor.LogWarn($"[MLS] - Unhandled add to buddy list confirmation message type: {addToBuddyListConfirmation.AddType}");
                         break;
                     }
             }
-
-
-            // Send to plugins
-            //await MediusClass.Plugins.OnEvent(PluginEvent.MEDIUS_PLAYER_ON_CHAT_MESSAGE, new OnPlayerChatMessageArgs() { Channel = channel, Player = clientObject, Message = chatMessage });
 
             return;
         }
 
         private void ProcessAddToBuddyListConfirmationResponse(ClientObject clientObject, AccountDTO accountToAdd, MediusAddToBuddyListFwdConfirmationResponse addToBuddyListConfirmationResponse)
         {
-            var channel = clientObject.CurrentChannel;
-            var accountClientToAdd = MediusClass.Manager.GetClientByAccountId(accountToAdd.AccountId, clientObject.ApplicationId);
-            //var accountClientToAdd = channel.Clients.Where(x => x.AccountName == accountToAdd.AccountName).First();
             // ERROR -- Need to be logged in
             if (!clientObject.IsLoggedIn)
                 return;
+			
+			var channel = clientObject.CurrentChannel;
+            var accountClientToAdd = MediusClass.Manager.GetClientByAccountId(accountToAdd.AccountId, clientObject.ApplicationId);
 
             if (addToBuddyListConfirmationResponse.StatusCode == MediusCallbackStatus.MediusRequestAccepted)
             {
@@ -10395,8 +9835,7 @@ namespace Horizon.SERVER.Medius
 
                                 if (ab.IsCompletedSuccessfully && ab.Result)
                                 {
-                                    LoggerAccessor.LogInfo($"AnswerAddToBuddyListConfirmationResponse: Originator player found in cache. adding [{accountToAdd.AccountId}] to [{clientObject.AccountId}] buddy list");
-                                    if (accountClientToAdd.IsLoggedIn == true)
+                                    if (accountClientToAdd.IsLoggedIn)
                                     {
                                         accountClientToAdd.Queue(new MediusAddToBuddyListConfirmationResponse()
                                         {
@@ -10406,11 +9845,9 @@ namespace Horizon.SERVER.Medius
                                             TargetAccountName = accountClientToAdd.AccountName
                                         });
                                     }
-
                                 }
                                 else
                                 {
-
                                     clientObject.Queue(new MediusAddToBuddyListConfirmationResponse()
                                     {
                                         MessageID = addToBuddyListConfirmationResponse.MessageID,
@@ -10419,7 +9856,6 @@ namespace Horizon.SERVER.Medius
                                 }
                             });
 
-                            //channel.AddToBuddyListConfirmationSingleResponse(clientObject, accountClientToAdd, addToBuddyListConfirmationResponse);
                             break;
 
                         }
@@ -10445,9 +9881,7 @@ namespace Horizon.SERVER.Medius
 
                                     if (ab.IsCompletedSuccessfully && ab.Result && abr.IsCompletedSuccessfully && abr.Result)
                                     {
-                                        LoggerAccessor.LogInfo($"AnswerAddToBuddyListConfirmationResponse: Originator player found in cache. adding [{accountToAdd.AccountId}] to [{clientObject.AccountId}] buddy list");
-
-                                        if (accountClientToAdd.IsLoggedIn == true)
+                                        if (accountClientToAdd.IsLoggedIn)
                                         {
                                             accountClientToAdd.Queue(new MediusAddToBuddyListConfirmationResponse()
                                             {
@@ -10470,17 +9904,14 @@ namespace Horizon.SERVER.Medius
                                 });
                             });
 
-                            //channel.AddToBuddyListConfirmationSymmetricResponse(clientObject, (ClientObject)accountClientToAdd, addToBuddyListConfirmationResponse);
                             break;
                         }
                     default:
                         {
-                            LoggerAccessor.LogWarn($"Unhandled add to buddy list confirmation message type: {addToBuddyListConfirmationResponse.AddType}");
+LoggerAccessor.LogWarn($"[MLS] - Unhandled add to buddy list confirmation message type: {addToBuddyListConfirmationResponse.AddType}");
                             break;
                         }
                 }
-
-
             }
             else if (addToBuddyListConfirmationResponse.StatusCode == MediusCallbackStatus.MediusRequestDenied)
             {
@@ -10517,9 +9948,6 @@ namespace Horizon.SERVER.Medius
                     }
                 });
             }
-
-            // Send to plugins
-            //await MediusClass.Plugins.OnEvent(PluginEvent.MEDIUS_PLAYER_ON_CHAT_MESSAGE, new OnPlayerChatMessageArgs() { Channel = channel, Player = clientObject, Message = chatMessage });
 
             return;
         }
@@ -10573,7 +10001,7 @@ namespace Horizon.SERVER.Medius
                                 }
                             }
                             else
-                                LoggerAccessor.LogWarn($"0 players found to send chat msg to");
+LoggerAccessor.LogWarn($"[MLS] - ProcessChatMessage - 0 players found to send chat msg to");
                             break;
                         }
                     case MediusChatMessageType.Whisper:
@@ -10607,14 +10035,14 @@ namespace Horizon.SERVER.Medius
                         }
                     default:
                         {
-                            LoggerAccessor.LogWarn($"Unhandled generic chat message type: {chatMessage.MessageType} {chatMessage}");
+LoggerAccessor.LogWarn($"[MLS] - ProcessChatMessage - Unhandled generic chat message type: {chatMessage.MessageType} {chatMessage}");
                             break;
                         }
                 }
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"Failed to get object reference: {ex}");
+LoggerAccessor.LogError($"[MLS] - ProcessChatMessage - Failed to get object reference: {ex}");
             }
         }
         #endregion
@@ -10664,7 +10092,7 @@ namespace Horizon.SERVER.Medius
                     }
                 default:
                     {
-                        LoggerAccessor.LogWarn($"Unhandled generic chat message type:{chatMessage.MessageType} {chatMessage}");
+LoggerAccessor.LogWarn($"[MLS] - ProcessGenericChatMessage - Unhandled generic chat message type:{chatMessage.MessageType} {chatMessage}");
                         break;
                     }
             }
@@ -10674,8 +10102,8 @@ namespace Horizon.SERVER.Medius
         public void AssignGameToJoin(ClientObject clientObject, MediusMatchFindGameRequest matchFindGameRequest)
         {
             //We Sleep for a bit so we return another packet for the matchmaked game we may have found!
-
             uint gameCount = MediusClass.Manager.GetGameCount(clientObject.ApplicationId);
+			
             if (gameCount == 0)
             {
                 clientObject.Queue(new MediusAssignedGameToJoinMessage()
@@ -10717,48 +10145,9 @@ namespace Horizon.SERVER.Medius
                     },
                     AppDataSize = 0,
                     AppData = string.Empty
-                    /*
-                        mediusAssignedGameToJoin = new MediusAssignedGameToJoin()
-                        {
-
-                            GameWorldID = 0, //TEMP
-                            TeamID = 0,
-                            PlayerCount = 0,
-                            GameName = "",
-                            GameStats = new byte[Constants.GAMESTATS_MAXLEN],
-                            MinPlayers = 0,
-                            MaxPlayers = 0,
-                            GameLevel = 0,
-                            PlayerSkillLevel = 0,
-                            GenericField1 = 0,
-                            GenericField2 = 0,
-                            GenericField3 = 0,
-                            GenericField4 = 0,
-                            GenericField5 = 0,
-                            GenericField6 = 0,
-                            GenericField7 = 0,
-                            GenericField8 = 0,
-                            WorldStatus = MediusWorldStatus.WorldInactive,
-                            JoinType = MediusJoinType.MediusJoinAsPlayer,
-                            GamePassword = "",
-                            GameHostType = MediusGameHostType.MediusGameHostClientServer,
-                            AddressList = new NetAddressList()
-                            {
-                                AddressList = new NetAddress[Constants.NET_ADDRESS_LIST_COUNT]
-                            {
-                                new NetAddress() { AddressType = NetAddressType.NetAddressNone },
-                                new NetAddress() { AddressType = NetAddressType.NetAddressNone }
-                             }
-                            },
-                            AppDataSize = 0,
-                            AppData = new byte[0]
-                        }
-                        */
-                        });
+                });
             }
-            else
-            {
-                if (matchFindGameRequest.MediusWorldID != 0)
+            else if (matchFindGameRequest.MediusWorldID != 0)
                 {
                     var gameInfo = MediusClass.Manager.GetGameByGameId(matchFindGameRequest.MediusWorldID);
 
@@ -10772,43 +10161,6 @@ namespace Horizon.SERVER.Medius
                         AssignedGameType = MediusAssignedGameType.AssignedGameTypeMMS,
                         StatusCode = MediusCallbackStatus.MediusJoinAssignedGame,
                         SystemSpecificStatusCode = 0,
-                        /*
-                        Unk1 = 0,
-                        GameWorldID = (uint)gameInfo.Id, //TEMP
-                        TeamID = 1,
-                        PlayerCount = 0,
-                        GameName = string.Empty,
-                        GameStats = new byte[Constants.GAMESTATS_MAXLEN],
-                        MinPlayers = 0,
-                        MaxPlayers = 0,
-                        GameLevel = 0,
-                        PlayerSkillLevel = 0,
-                        GenericField1 = 0,
-                        GenericField2 = 0,
-                        GenericField3 = 0,
-                        GenericField4 = 0,
-                        GenericField5 = 0,
-                        GenericField6 = 0,
-                        GenericField7 = 0,
-                        GenericField8 = 0,
-                        WorldStatus = gameInfo.WorldStatus,
-                        JoinType = MediusJoinType.MediusJoinAsPlayer,
-                        GamePassword = string.Empty,
-                        GameHostType = gameInfo.GameHostType,
-                        AddressList = new NetAddressList()
-                        {
-                            AddressList = new NetAddress[Constants.NET_ADDRESS_LIST_COUNT]
-                            {
-                                //new NetAddress() { Address = dmeServer.IP.MapToIPv4().ToString(), Port = dmeServer.Port, AddressType = NetAddressType.NetAddressTypeExternal},
-                                new NetAddress() { AddressType = NetAddressType.NetAddressNone },
-                                new NetAddress() { AddressType = NetAddressType.NetAddressNone } 
-                                //new NetAddress() { Address = MediusClass.Settings.NATIp, Port = MediusClass.Settings.NATPort, AddressType = NetAddressType.NetAddressTypeNATService },
-                            }
-                        },
-                        AppDataSize = 0,
-                        AppData = new char[0]
-                        */
-
                         GameWorldID = 0,//(uint)gameInfo.Id, //TEMP
                         TeamID = 0,
                         PlayerCount = gameInfo.PlayerCount,
@@ -10891,7 +10243,6 @@ namespace Horizon.SERVER.Medius
                         AppData = gameMatchFound.AppData
                     });
                 }
-            }
         }
 
         public Task<ONLINE_STATUS_TYPE> MediusChatStatusToOnlineStatus(MediusChatStatus status)
@@ -10990,20 +10341,20 @@ namespace Horizon.SERVER.Medius
         }
 
         #region GuestLogin
-        private async Task<bool> GuestLogin(IChannel clientChannel, ChannelData data)
+        private async Task<bool> GuestLogin(IChannel clientChannel, ChannelData data, IPAddress clientIp)
         {
             bool Anonymous = false;
 
-            AccountDTO? accountDto = await HorizonServerConfiguration.Database.GetAccountByFirstIp(data.ClientObject!.IP.ToString());
+            AccountDTO? accountDto = await HorizonServerConfiguration.Database.GetAccountByFirstIp(clientIp.ToString());
 
             if (accountDto == null)
             {
                 Anonymous = true;
 
                 int iAccountID = MediusClass.Manager.AnonymousAccountIDGenerator(MediusClass.Settings.AnonymousIDRangeSeed);
-
-                LoggerAccessor.LogInfo($"AnonymousIDRangeSeedGenerator AccountID returned {iAccountID}");
-
+#if DEBUG
+LoggerAccessor.LogInfo($"[MLS] - AnonymousIDRangeSeedGenerator AccountID returned {iAccountID}");
+#endif
                 accountDto = new()
                 {
                     AccountId = iAccountID,
@@ -11017,7 +10368,7 @@ namespace Horizon.SERVER.Medius
             else if (accountDto.IsBanned) // Would be too easy if the Client could bypass Ban with a Guest...
             {
                 // Then queue send ban message
-                await QueueBanMessage(data, "Your CID has been banned");
+                await QueueBanMessage(data, "Your Account has been banned");
 
                 await data.ClientObject!.Logout();
 
@@ -11027,12 +10378,12 @@ namespace Horizon.SERVER.Medius
             if (data.ClientObject!.ApplicationId == 20371 || data.ClientObject!.ApplicationId == 20374)
                 CheatQuery(0x00010000, 512000, clientChannel, CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH, unchecked((int)0xDEADBEEF));
 
-            await data.ClientObject!.Login(accountDto);
+            await data.ClientObject!.Login(accountDto, Anonymous);
 
             #region Update DB IP and CID
             if (!Anonymous)
             {
-                await HorizonServerConfiguration.Database.PostAccountIp(accountDto.AccountId, ((IPEndPoint)clientChannel.RemoteAddress).Address.MapToIPv4().ToString());
+                await HorizonServerConfiguration.Database.PostAccountIp(accountDto.AccountId, clientIp.ToString());
                 if (!string.IsNullOrEmpty(data.MachineId))
                     await HorizonServerConfiguration.Database.PostMachineId(data.ClientObject.AccountId, data.MachineId);
             }
@@ -11043,7 +10394,7 @@ namespace Horizon.SERVER.Medius
             // Add in clients list
             MediusClass.Manager.AddClient(data.ClientObject);
 
-            LoggerAccessor.LogInfo($"CREATING GUEST IN AS {data.ClientObject.AccountName} with access token {data.ClientObject.AccessToken}");
+LoggerAccessor.LogInfo($"[MLS] - CREATING GUEST IN AS {data.ClientObject.AccountName} with access token {data.ClientObject.AccessToken}");
 
             return true;
         }

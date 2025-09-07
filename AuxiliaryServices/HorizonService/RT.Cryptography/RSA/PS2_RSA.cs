@@ -36,7 +36,7 @@ namespace Horizon.RT.Cryptography.RSA
         public virtual bool Decrypt(byte[] input, byte[] hash, out byte[] plain)
         {
             plain = new byte[input.Length];
-            if (input.Length > this.N.BitLength / 8)
+            if (input.Length > N.BitLength / 8)
                 throw new NotImplementedException($"Unable to decrypt RSA cipher with length greater than key ({input.Length}).");
 
             // Check if empty hash
@@ -98,17 +98,17 @@ namespace Horizon.RT.Cryptography.RSA
 
         public bool Equals(PS2_RSA b)
         {
-            return b.Context == this.Context &&
-                b.N.CompareTo(this.N) == 0 &&
-                b.E.CompareTo(this.E) == 0 &&
-                b.D.CompareTo(this.D) == 0;
+            return b.Context == Context &&
+                b.N.CompareTo(N) == 0 &&
+                b.E.CompareTo(E) == 0 &&
+                b.D.CompareTo(D) == 0;
         }
 
         #endregion
 
         public byte[] GetPublicKey()
         {
-            return this.N.ToByteArrayUnsigned();
+            return N.ToByteArrayUnsigned();
         }
 
         public override string ToString()

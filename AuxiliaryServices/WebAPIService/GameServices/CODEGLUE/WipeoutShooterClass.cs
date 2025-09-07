@@ -1,11 +1,13 @@
 ﻿using CustomLogger;
 using HttpMultipartParser;
+using Microsoft.EntityFrameworkCore;
 using MultiServerLibrary.HTTP;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.CODEGLUE
 {
@@ -58,11 +60,17 @@ namespace WebAPIService.GameServices.CODEGLUE
 
                                     lock (_leaderboards)
                                     {
-                                        if (_leaderboards.ContainsKey(GAME_TYPE))
+                                        if (!_leaderboards.ContainsKey(GAME_TYPE))
                                         {
-                                            _leaderboards[GAME_TYPE].UpdateScoreBoard(data.GetParameterValue("NAME"), float.Parse(data.GetParameterValue("SCORE"), CultureInfo.InvariantCulture));
-                                            return _leaderboards[GAME_TYPE].UpdateScoreboardXml(workpath, GAME_TYPE);
+                                            var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                                            retCtx.Database.Migrate();
+
+                                            _leaderboards.Add(GAME_TYPE, new WipeoutShooterScoreBoardData(retCtx, GAME_TYPE));
                                         }
+
+                                        _ = _leaderboards[GAME_TYPE].UpdateScoreAsync(data.GetParameterValue("NAME"), float.Parse(data.GetParameterValue("SCORE"), CultureInfo.InvariantCulture));
+                                        return _leaderboards[GAME_TYPE].SerializeToString(GAME_TYPE).Result;
                                     }
                                 }
                             }
@@ -102,8 +110,14 @@ namespace WebAPIService.GameServices.CODEGLUE
                                 lock (_leaderboards)
                                 {
                                     if (!_leaderboards.ContainsKey(GAME_TYPE))
-                                        _leaderboards.Add(GAME_TYPE, new WipeoutShooterScoreBoardData());
-                                    st.Append(_leaderboards[GAME_TYPE].UpdateScoreboardXml(workpath, GAME_TYPE));
+                                    {
+                                        var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                                        retCtx.Database.Migrate();
+
+                                        _leaderboards.Add(GAME_TYPE, new WipeoutShooterScoreBoardData(retCtx, GAME_TYPE));
+                                    }
+                                    st.Append(_leaderboards[GAME_TYPE].SerializeToString(GAME_TYPE).Result);
                                 }
                             }
                         }

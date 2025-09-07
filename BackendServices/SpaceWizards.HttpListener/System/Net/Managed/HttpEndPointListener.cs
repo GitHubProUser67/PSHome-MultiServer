@@ -119,12 +119,14 @@ namespace SpaceWizards.HttpListener
                 return;
             }
 
-            HttpConnection conn;
-            try
+            HttpConnection conn = new HttpConnection(accepted, epl, epl._secure, epl._cert);
+
+            while (!conn.Initialized)
             {
-                conn = new HttpConnection(accepted, epl, epl._secure, epl._cert);
+                Thread.Sleep(1);
             }
-            catch
+
+            if (conn.ConnectedStream == null)
             {
                 accepted.Close();
                 return;

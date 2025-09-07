@@ -377,7 +377,6 @@ namespace EdNetService.Models
         public uint Question1;
         public uint Question2;
         public uint Question3;
-        public uint PendingFileUserId;
         public uint UserId;
         public ulong SessionId;
 

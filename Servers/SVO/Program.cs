@@ -149,7 +149,7 @@ class Program
     private static string configMultiServerLibraryPath = configDir + "MultiServerLibrary.json";
     private static SnmpTrapSender? trapSender = null;
     private static Task? MediusDatabaseLoop;
-    private static SVOServer? _SVOServer;
+    private static SVOProcessor? _SVOServer;
 
     private static void StartOrUpdateServer()
     {
@@ -165,7 +165,7 @@ class Program
         MediusDatabaseLoop ??= Task.Run(SVOManager.StartTickPooling);
 
         if (HttpListener.IsSupported)
-            _SVOServer = new SVOServer("*", new System.Security.Cryptography.X509Certificates.X509Certificate2(SVOServerConfiguration.HTTPSCertificateFile, SVOServerConfiguration.HTTPSCertificatePassword), Environment.ProcessorCount);
+            _SVOServer = new SVOProcessor("*", new System.Security.Cryptography.X509Certificates.X509Certificate2(SVOServerConfiguration.HTTPSCertificateFile, SVOServerConfiguration.HTTPSCertificatePassword), Environment.ProcessorCount);
         else
             LoggerAccessor.LogError("Windows XP SP2 or Server 2003 is required to use the HttpListener class, so SVO Server not started!");
     }

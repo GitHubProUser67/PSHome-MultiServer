@@ -16,6 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\AuxiliaryServices\AlcatrazService\AlcatrazService.csproj" />
     <ProjectReference Include="..\..\AuxiliaryServices\HorizonService\HorizonService.csproj" />
+    <ProjectReference Include="..\..\AuxiliaryServices\WebAPIService\WebAPIService.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,43 @@
+{
+  "solution": {
+    "path": "MultiServer4.sln",
+    "projects": [
+      "AuxiliaryServices\\AlcatrazService\\AlcatrazService.csproj",
+      "AuxiliaryServices\\EdNetService\\EdNetService.csproj",
+      "AuxiliaryServices\\HomeTools\\HomeTools.csproj",
+      "AuxiliaryServices\\HorizonService\\HorizonService.csproj",
+      "AuxiliaryServices\\MultiSpyService\\MultiSpyService.csproj",
+      "AuxiliaryServices\\WebAPIService\\WebAPIService.csproj",
+      "BackendServices\\CastleLibrary\\CastleLibrary.csproj",
+      "BackendServices\\CustomLogger\\CustomLogger.csproj",
+      "BackendServices\\DNSLibrary\\DNSLibrary.csproj",
+      "BackendServices\\EndianTools\\EndianTools.csproj",
+      "BackendServices\\MultiServerLibrary\\MultiServerLibrary.csproj",
+      "BackendServices\\PS2FloatLibrary\\PS2FloatLibrary.csproj",
+      "BackendServices\\Prometheus\\Prometheus.csproj",
+      "BackendServices\\SpaceWizards.HttpListener\\SpaceWizards.HttpListener.csproj",
+      "BackendServices\\TechnitiumLibrary.Net.Firewall\\TechnitiumLibrary.Net.Firewall.csproj",
+      "BackendServices\\WatsonWebserver\\WatsonWebserver.csproj",
+      "BlazeSDK\\Blaze2SDK\\Blaze2SDK.csproj",
+      "BlazeSDK\\Blaze3SDK\\Blaze3SDK.csproj",
+      "BlazeSDK\\BlazeCommon\\BlazeCommon.csproj",
+      "BlazeSDK\\Tdf\\Tdf.csproj",
+      "Plugins\\HTTP\\EdNetCRCCalculator\\EdNetCRCCalculator.csproj",
+      "Plugins\\HTTP\\HomeWebTools\\HomeWebTools.csproj",
+      "Plugins\\HTTP\\PdfToJpeg\\PdfToJpeg.csproj",
+      "Plugins\\HTTP\\SceProfanityFilterService\\SceProfanityFilterService.csproj",
+      "Plugins\\HTTP\\SonyCdnReroute\\SonyCdnReroute.csproj",
+      "Servers\\ApacheNet\\ApacheNet.csproj",
+      "Servers\\EdenServer\\EdenServer.csproj",
+      "Servers\\Horizon\\Horizon.csproj",
+      "Servers\\MitmDNS\\MitmDNS.csproj",
+      "Servers\\MultiServerWebServices\\MultiServerWebServices.csproj",
+      "Servers\\MultiSocks\\MultiSocks.csproj",
+      "Servers\\MultiSpy\\MultiSpy.csproj",
+      "Servers\\QuazalServer\\QuazalServer.csproj",
+      "Servers\\SSFWServer\\SSFWServer.csproj",
+      "Servers\\SVO\\SVO.csproj",
+      "docker-compose.dcproj"
+    ]
+  }
+}

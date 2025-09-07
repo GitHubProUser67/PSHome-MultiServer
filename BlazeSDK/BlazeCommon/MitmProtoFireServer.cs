@@ -468,7 +468,7 @@ namespace BlazeCommon
                 if (Secure)
                     LoggerAccessor.LogInfo($"[ProtoFireServer] - Authenticating as server for connection({connection.ID}).");
 
-                SslSocket.BeginAuthenticateAsServer(connection.Socket, Certificate, ForceSsl, AuthenticateAsServerCallback, connection);
+                SslSocket.BeginAuthenticateAsServer(connection.Socket, Certificate, ForceSsl, true, AuthenticateAsServerCallback, connection);
             }
         }
 

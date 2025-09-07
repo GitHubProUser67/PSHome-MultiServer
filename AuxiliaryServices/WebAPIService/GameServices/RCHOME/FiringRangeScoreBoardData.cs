@@ -1,118 +1,85 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Xml.Linq;
+using WebAPIService.GameServices.RCHOME.Entities;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.RCHOME
 {
     internal class FiringRangeScoreBoardData
+    : ScoreboardService<FiringRangeScoreBoardEntry>
     {
-        private static bool _initiated = false;
+        private string _gameproject;
 
-        private object _Lock = new object();
-
-        public class FiringRangeScoreboardEntry
+        public FiringRangeScoreBoardData(LeaderboardDbContext dbContext, object obj = null)
+            : base(dbContext)
         {
-            public string psnid { get; set; }
-            public int score { get; set; }
+            _gameproject = (string)obj;
         }
 
-        private List<FiringRangeScoreboardEntry> scoreboard = new List<FiringRangeScoreboardEntry>();
-
-        public void LoadScoreboardFromXml(string path)
+        public override async Task<List<FiringRangeScoreBoardEntry>> GetTopScoresAsync(int max = 10)
         {
-            if (!File.Exists(path))
-            {
-                _initiated = true;
+            return await _dbContext.Set<FiringRangeScoreBoardEntry>()
+                .Where(x => x.ExtraData1 == _gameproject)
+                .OrderByDescending(e => e.Score)
+                .Take(max)
+                .ToListAsync().ConfigureAwait(false);
+        }
+
+        public override async Task UpdateScoreAsync(string playerId, float newScore, List<object> extraData = null)
+        {
+            if (string.IsNullOrEmpty(playerId))
                 return;
-            }
 
-            scoreboard.Clear();
+            var set = _dbContext.Set<FiringRangeScoreBoardEntry>();
+            DateTime now = DateTime.UtcNow; // use UTC for consistency
 
-            foreach (var rowElement in XDocument.Parse(File.ReadAllText(path)).Descendants("row"))
+            var existing = await set
+                .Where(x => x.ExtraData1 == _gameproject)
+                .FirstOrDefaultAsync(e =>
+                e.PlayerId != null &&
+                e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
+
+            if (existing != null)
             {
-                var cells = rowElement.Elements("c").ToList();
-
-                if (cells.Count == 2)
+                if (newScore > existing.Score)
                 {
-                    string psnid = cells[0].Value;
-                    int.TryParse(cells[1].Value, out int score);
-
-                    scoreboard.Add(new FiringRangeScoreboardEntry
-                    {
-                        psnid = psnid,
-                        score = score
-                    });
+                    existing.Score = newScore;
+                    existing.UpdatedAt = now; // update timestamp
+                    _dbContext.Update(existing);
+                    await _dbContext.SaveChangesAsync().ConfigureAwait(false);
                 }
-            }
-
-            scoreboard.Sort((a, b) => b.score.CompareTo(a.score));
-
-            if (scoreboard.Count > 10)
-                scoreboard.RemoveRange(10, scoreboard.Count - 10);
-
-            _initiated = true;
-        }
-
-        public void UpdateScoreBoard(string psnid, int newScore)
-        {
-            // Check if the player already exists in the scoreboard
-            var existingEntry = scoreboard.Find(e => e.psnid != null && e.psnid.Equals(psnid, StringComparison.OrdinalIgnoreCase));
-
-            if (existingEntry != null)
-            {
-                // If the new score is higher, update the existing entry
-                if (newScore > existingEntry.score)
-                    existingEntry.score = newScore;
             }
             else
             {
-                // If the player is not in the scoreboard, add a new entry
-                if (scoreboard.Count < 10)
-                    scoreboard.Add(new FiringRangeScoreboardEntry { psnid = psnid, score = newScore });
+                await set.AddAsync(new FiringRangeScoreBoardEntry
+                {
+                    ExtraData1 = _gameproject,
+                    PlayerId = playerId,
+                    Score = newScore,
+                    UpdatedAt = now // set timestamp for new entry
+                }).ConfigureAwait(false);
+                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
             }
-
-            // Sort the scoreboard by score in descending order
-            scoreboard.Sort((a, b) => b.score.CompareTo(a.score));
-
-            // Trim the scoreboard to the top 10 entries
-            if (scoreboard.Count > 10)
-                scoreboard.RemoveRange(10, scoreboard.Count - 10);
         }
 
-        private string ConvertScoreboardToXml(string path)
+        public override async Task<string> SerializeToString(string gameName, int max = 10)
         {
-            if (!_initiated)
-                LoadScoreboardFromXml(path);
+            XElement xmlScoreboard = new XElement(gameName);
 
-            XElement xmlScoreboard = new XElement("data");
-
-            foreach (var entry in scoreboard)
+            foreach (var entry in await GetTopScoresAsync(max).ConfigureAwait(false))
             {
                 XElement xmlEntry = new XElement("row",
-                    new XElement("c", entry.psnid ?? "Voodooperson05"),
-                    new XElement("c", entry.score.ToString()));
+                    new XElement("c", entry.PsnId),
+                    new XElement("c", entry.Score.ToString()));
 
                 xmlScoreboard.Add(xmlEntry);
             }
 
             return xmlScoreboard.ToString();
-        }
-
-        public string UpdateScoreboardXml(string apiPath, string gameName)
-        {
-            string directoryPath = $"{apiPath}/RCHOME/{gameName}";
-            string filePath = $"{apiPath}/RCHOME/{gameName}/leaderboard.xml";
-
-            lock (_Lock)
-            {
-                Directory.CreateDirectory(directoryPath);
-                string xmlData = ConvertScoreboardToXml(filePath);
-                File.WriteAllText(filePath, xmlData);
-                CustomLogger.LoggerAccessor.LogDebug($"[RCHOME] - {gameName} - scoreboard XML updated.");
-                return xmlData;
-            }
         }
     }
 }

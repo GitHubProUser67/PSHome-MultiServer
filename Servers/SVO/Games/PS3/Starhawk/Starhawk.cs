@@ -33,7 +33,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -65,7 +65,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -191,7 +191,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -308,7 +308,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -437,7 +437,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -492,7 +492,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -537,7 +537,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -629,7 +629,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -689,7 +689,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -740,7 +740,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -979,7 +979,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -1067,7 +1067,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -1122,7 +1122,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -1180,7 +1180,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -1232,7 +1232,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -1285,7 +1285,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -1341,7 +1341,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -1394,7 +1394,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOProcessor.CalcuateSVOMac(clientMac);
+                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {

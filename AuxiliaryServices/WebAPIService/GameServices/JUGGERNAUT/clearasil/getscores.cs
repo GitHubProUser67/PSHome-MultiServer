@@ -1,5 +1,6 @@
-using System.IO;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using WebAPIService.LeaderboardService;
 namespace WebAPIService.GameServices.JUGGERNAUT.clearasil
 {
     public class getscores
@@ -8,20 +9,20 @@ namespace WebAPIService.GameServices.JUGGERNAUT.clearasil
         {
             if (QueryParameters != null)
             {
-                string phase = QueryParameters["phase"];
-
-                if (!string.IsNullOrEmpty(phase))
+                if (pushscore.Leaderboard == null)
                 {
-                    Directory.CreateDirectory($"{apiPath}/juggernaut/clearasil");
+                    var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
-                    if (File.Exists($"{apiPath}/juggernaut/clearasil/scoreboard.xml"))
-                        return File.ReadAllText($"{apiPath}/juggernaut/clearasil/scoreboard.xml");
-					
-                    return "<xml></xml>";
+                    retCtx.Database.Migrate();
+
+                    pushscore.Leaderboard = new ClearasilScoreBoardData(retCtx);
                 }
+
+                if (!string.IsNullOrEmpty(QueryParameters["phase"]))
+                    return pushscore.Leaderboard.SerializeToString("xml").Result;
             }
 
-            return null;
+            return "<xml></xml>";
         }
     }
 }

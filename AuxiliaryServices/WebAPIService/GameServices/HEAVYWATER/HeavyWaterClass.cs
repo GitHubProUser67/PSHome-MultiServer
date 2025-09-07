@@ -1,23 +1,28 @@
 ﻿using CustomLogger;
 using HttpMultipartParser;
+using Microsoft.EntityFrameworkCore;
 using MultiServerLibrary.Extension;
 using MultiServerLibrary.HTTP;
-using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Collections.Generic;
-using XI5;
+using WebAPIService.GameServices.HEAVYWATER.Entities;
 using WebAPIService.GameServices.SSFW;
+using WebAPIService.LeaderboardService;
+using XI5;
 
 namespace WebAPIService.GameServices.HEAVYWATER
 {
     public class HeavyWaterClass
     {
+        private static ScoreboardService<HexxScoreboardEntry> _hexx_leaderboard = null;
+
         private string absolutepath;
         private string method;
         private string apipath;
@@ -216,15 +221,15 @@ namespace WebAPIService.GameServices.HEAVYWATER
                                 int i = 1;
                                 StringBuilder scoreboardData = new StringBuilder("{\"Scores\":{");
 
-                                var scoreData = GetTopScores(apipath + $"/HEAVYWATER/Avalon_hexx/Scoreboard.json", limit);
+                                var scoreData = _hexx_leaderboard.GetTopScoresAsync(limit).Result;
                                 int scoreDataCount = scoreData.Count();
 
                                 foreach (var scoreKeyPair in scoreData)
                                 {
                                     if (i == scoreDataCount)
-                                        scoreboardData.Append($"\"{scoreKeyPair.Key}\":{scoreKeyPair.Value}");
+                                        scoreboardData.Append($"\"{scoreKeyPair.PsnId}\":{(int)scoreKeyPair.Score}");
                                     else
-                                        scoreboardData.Append($"\"{scoreKeyPair.Key}\":{scoreKeyPair.Value},");
+                                        scoreboardData.Append($"\"{scoreKeyPair.PsnId}\":{(int)scoreKeyPair.Score},");
 
                                     i++;
                                 }
@@ -517,7 +522,16 @@ namespace WebAPIService.GameServices.HEAVYWATER
 
                                     Directory.CreateDirectory(hexxDataPath);
 
-                                    SaveScore(hexxDataPath + "/Scoreboard.json", parts[parts.Length - 2], int.Parse(parts[parts.Length - 1]));
+                                    if (_hexx_leaderboard == null)
+                                    {
+                                        var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                                        retCtx.Database.Migrate();
+
+                                        _hexx_leaderboard = new ScoreboardService<HexxScoreboardEntry>(retCtx);
+                                    }
+
+                                    _ = _hexx_leaderboard.UpdateScoreAsync(parts[parts.Length - 2], int.Parse(parts[parts.Length - 1]));
 
                                     return @"{
                                         ""STATUS"": ""SUCCESS"",
@@ -554,34 +568,6 @@ namespace WebAPIService.GameServices.HEAVYWATER
             }
 
             return null;
-        }
-
-        private static Dictionary<string, List<int>> LoadScores(string scoreFilePath)
-        {
-            if (!File.Exists(scoreFilePath))
-                return new Dictionary<string, List<int>>();
-
-            return JsonConvert.DeserializeObject<Dictionary<string, List<int>>>(File.ReadAllText(scoreFilePath)) ?? new Dictionary<string, List<int>>();
-        }
-
-        private static void SaveScore(string scoreFilePath, string username, int score)
-        {
-            Dictionary<string, List<int>> scores = LoadScores(scoreFilePath);
-
-            if (!scores.ContainsKey(username))
-                scores[username] = new List<int>();
-
-            scores[username].Add(score);
-
-            File.WriteAllText(scoreFilePath, JsonConvert.SerializeObject(scores, Formatting.Indented));
-        }
-
-        private static IEnumerable<KeyValuePair<string, int>> GetTopScores(string scoreFilePath, int amount)
-        {
-            return LoadScores(scoreFilePath)
-                .SelectMany(user => user.Value.Select(score => new KeyValuePair<string, int>(user.Key, score)))
-                .OrderByDescending(entry => entry.Value)
-                .Take(amount);
         }
 
         private static string GenerateD2OGuid(string input)

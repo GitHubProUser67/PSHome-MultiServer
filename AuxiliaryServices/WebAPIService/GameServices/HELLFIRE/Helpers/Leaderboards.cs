@@ -1,12 +1,17 @@
 using CustomLogger;
 using HttpMultipartParser;
+using Microsoft.EntityFrameworkCore;
 using System.IO;
 using System.Xml;
+using WebAPIService.GameServices.HELLFIRE.Helpers.NovusPrime;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.HELLFIRE.Helpers
 {
     public class Leaderboards
     {
+        public static InterGalacticScoreBoardData NovusLeaderboard = null;
+
         public static string GetLeaderboardsClearasil(byte[] PostData, string boundary, string UserID, string WorkPath)
         {
             string path = $"{WorkPath}/ClearasilSkater/User_Data";
@@ -85,66 +90,22 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
 
         public static string GetLeaderboardsNovusPrime(byte[] PostData, string boundary, string UserID, string WorkPath)
         {
-            string LBPath = $"{WorkPath}/NovusPrime/User_Data/Leaderboards.xml";
-
-            #region Template LB to start with
-            /*string templateLB = @"<Root><GalaxyRider42>
-                                    <DisplayName>GalaxyRider42</DisplayName>
-                                    <Score>0</Score>
-                                </GalaxyRider42>
-                                <ShadowHunterX>
-                                    <DisplayName>ShadowHunterX</DisplayName>
-                                    <Score>0</Score>
-                                </ShadowHunterX>
-                                <NeonNova77>
-                                    <DisplayName>NeonNova77</DisplayName>
-                                    <Score>0</Score>
-                                </NeonNova77>
-                                <IronWraith89>
-                                    <DisplayName>IronWraith89</DisplayName>
-                                    <Score>0</Score>
-                                </IronWraith89>
-                                <PixelPhantom5>
-                                    <DisplayName>PixelPhantom5</DisplayName>
-                                    <Score>0</Score>
-                                </PixelPhantom5>
-                                <BlazeFalconer>
-                                    <DisplayName>BlazeFalconer</DisplayName>
-                                    <Score>0</Score>
-                                </BlazeFalconer>
-                                <QuantumLynx92>
-                                    <DisplayName>QuantumLynx92</DisplayName>
-                                    <Score>0</Score>
-                                </QuantumLynx92>
-                                <HyperBolt13>
-                                    <DisplayName>HyperBolt13</DisplayName>
-                                    <Score>0</Score>
-                                </HyperBolt13>
-                                <FrostEcho99>
-                                    <DisplayName>FrostEcho99</DisplayName>
-                                    <Score>0</Score>
-                                </FrostEcho99>
-                                <VoidTrekker11>
-                                    <DisplayName>VoidTrekker11</DisplayName>
-                                    <Score>0</Score>
-                                </VoidTrekker11></Root>";*/
-            #endregion
-
             using (MemoryStream ms = new MemoryStream(PostData))
             {
                 MultipartFormDataParser data = MultipartFormDataParser.Parse(ms, boundary);
 
                 string UserNovusPrimeID = data.GetParameterValue("UserID");
 
-                // Create an XmlDocument
-                XmlDocument doc = new XmlDocument();
+                if (NovusLeaderboard == null)
+                {
+                    var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
-                if (File.Exists(LBPath))
-                    doc.LoadXml($"<Response>{File.ReadAllText(LBPath)}</Response>");
-                else
-                    doc.LoadXml($"<Response></Response>");
+                    retCtx.Database.Migrate();
 
-                return doc.InnerXml;
+                    NovusLeaderboard = new InterGalacticScoreBoardData(retCtx);
+                }
+
+                return "<Response>" + NovusLeaderboard.SerializeToString("Root").Result ?? string.Empty + "</Response>";
             }
         }
 

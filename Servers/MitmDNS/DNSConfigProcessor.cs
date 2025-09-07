@@ -34,7 +34,8 @@ namespace MitmDNS
                 try
                 {
 #pragma warning disable // NET 6.0 and lower has a bug where GetAsync() is EXTREMLY slow to operate (https://github.com/dotnet/runtime/issues/65375).
-                    ParseRules(new FixedWebClient().DownloadStringTaskAsync(MitmDNSServerConfiguration.DNSOnlineConfig).Result, false);
+                    using (FixedWebClient client = new FixedWebClient())
+                        ParseRules(client.DownloadStringTaskAsync(MitmDNSServerConfiguration.DNSOnlineConfig).Result, false);
 #pragma warning restore
                 }
                 catch (Exception ex)

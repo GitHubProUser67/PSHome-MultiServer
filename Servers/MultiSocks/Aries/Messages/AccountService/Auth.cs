@@ -1,3 +1,4 @@
+using MultiServerLibrary;
 using MultiSocks.Aries.DataStore;
 using MultiSocks.Aries.Messages.AccountService.ErrorCodes;
 
@@ -23,7 +24,8 @@ namespace MultiSocks.Aries.Messages.AccountService
             client.VERS = VERS;
             client.SKU = SKU;
 
-            if (MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs.Contains(client.ADDR))
+            if ((MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibraryConfiguration.BannedIPs.Contains(client.ADDR))
+                || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(client.ADDR)))
             {
                 client.SendMessage(new AuthBlak());
                 return;

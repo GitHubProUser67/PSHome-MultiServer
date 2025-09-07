@@ -1,18 +1,22 @@
+using HttpMultipartParser;
+using Microsoft.EntityFrameworkCore;
+using MultiServerLibrary.Extension;
+using MultiServerLibrary.HTTP;
+using NetHasher;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using MultiServerLibrary.HTTP;
-using HttpMultipartParser;
-using Newtonsoft.Json.Linq;
+using System.Linq;
 using System.Text.RegularExpressions;
-using System;
-using MultiServerLibrary.Extension;
-using NetHasher;
-using WebAPIService.GameServices.NDREAMS;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.NDREAMS.Aurora
 {
     public static class AuroraDBManager
     {
+        private static OrbrunnerScoreBoardData _leaderboard = null;
+
         public static string ProcessVisitCounter2(DateTime CurrentDate, byte[] PostData, string ContentType, string apipath)
         {
             string func = string.Empty;
@@ -273,14 +277,28 @@ namespace WebAPIService.GameServices.NDREAMS.Aurora
 
                             if (int.TryParse(score, out int resscore))
                             {
-                                OrbrunnerScoreBoardData.CheckForInitiatedleaderboard(apipath);
-                                OrbrunnerScoreBoardData.UpdateScoreBoard(name, resscore);
-                                OrbrunnerScoreBoardData.UpdateScoreboardXml(apipath);
-                                HighestScore = OrbrunnerScoreBoardData.GetHighestScore();
-                                if (HighestScore != null && !string.IsNullOrEmpty(HighestScore.Value.Item1))
+                                if (_leaderboard == null)
                                 {
-                                    best = HighestScore.Value.Item2;
-                                    high = $"{HighestScore.Value.Item1},{best}";
+                                    var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                                    retCtx.Database.Migrate();
+
+                                    _leaderboard = new OrbrunnerScoreBoardData(retCtx);
+
+                                    _ = _leaderboard.UpdateScoreAsync("EatFlammingDeath", 50000);
+                                }
+
+                                _ = _leaderboard.UpdateScoreAsync(name, resscore);
+
+                                var scoreExtraction = _leaderboard.GetTopScoresAsync(1).Result;
+                                if (scoreExtraction.Any())
+                                {
+                                    HighestScore = (scoreExtraction.First().PsnId, (int)scoreExtraction.First().Score);
+                                    if (HighestScore != null && !string.IsNullOrEmpty(HighestScore.Value.Item1))
+                                    {
+                                        best = HighestScore.Value.Item2;
+                                        high = $"{HighestScore.Value.Item1},{best}";
+                                    }
                                 }
                             }
 
@@ -295,12 +313,17 @@ namespace WebAPIService.GameServices.NDREAMS.Aurora
                             return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessOrbrunnerScores</function></xml>";
                         }
                     case "high":
-                        OrbrunnerScoreBoardData.CheckForInitiatedleaderboard(apipath);
-                        HighestScore = OrbrunnerScoreBoardData.GetHighestScore();
-                        if (HighestScore != null && !string.IsNullOrEmpty(HighestScore.Value.Item1))
-                            high = $"{HighestScore.Value.Item1},{HighestScore.Value.Item2}";
+                        if (_leaderboard == null)
+                        {
+                            var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
-                        return $"<xml><success>true</success><result><high>{high}</high></result></xml>";
+                            retCtx.Database.Migrate();
+
+                            _leaderboard = new OrbrunnerScoreBoardData(retCtx);
+
+                            _ = _leaderboard.UpdateScoreAsync("EatFlammingDeath", 50000);
+                        }
+                        return $"<xml><success>true</success><result><high>{_leaderboard?.SerializeToString(null, 20).Result ?? string.Empty}</high></result></xml>";
                 }
             }
 

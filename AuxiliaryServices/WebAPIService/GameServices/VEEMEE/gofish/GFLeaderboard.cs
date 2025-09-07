@@ -1,12 +1,26 @@
-using System;
-using System.IO;
-using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using MultiServerLibrary.HTTP;
+using System.Linq;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.VEEMEE.gofish
 {
-    public class GFLeaderboard
+    internal static class GFLeaderboard
     {
+        public static GFScoreBoardData Leaderboard = null;
+
+        public static void InitializeLeaderboard()
+        {
+            if (Leaderboard == null)
+            {
+                var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                retCtx.Database.Migrate();
+
+                Leaderboard = new GFScoreBoardData(retCtx);
+            }
+        }
+
         public static string GetLeaderboardPOST(byte[] PostData, string ContentType, int mode, string apiPath)
         {
             string key = string.Empty;
@@ -23,22 +37,16 @@ namespace WebAPIService.GameServices.VEEMEE.gofish
                 }
                 psnid = data["psnid"].First();
 
-                DateTime refdate = DateTime.Now; // We avoid race conditions by calculating it one time.
+                InitializeLeaderboard();
 
                 switch (mode)
                 {
                     case 0:
-                        if (File.Exists($"{apiPath}/VEEMEE/gofish/leaderboard_{refdate:yyyy_MM_dd}.xml"))
-                            return File.ReadAllText($"{apiPath}/VEEMEE/gofish/leaderboard_{refdate:yyyy_MM_dd}.xml");
-                        break;
+                        return Leaderboard.SerializeToDailyString("leaderboard").Result;
                     case 1:
-                        if (File.Exists($"{apiPath}/VEEMEE/gofish/leaderboard_{refdate.AddDays(-1):yyyy_MM_dd}.xml"))
-                            return File.ReadAllText($"{apiPath}/VEEMEE/gofish/leaderboard_{refdate.AddDays(-1):yyyy_MM_dd}.xml");
-                        break;
+                        return Leaderboard.SerializeToYesterdayString("leaderboard").Result;
                     case 2:
-                        if (File.Exists($"{apiPath}/VEEMEE/gofish/leaderboard_alltime.xml"))
-                            return File.ReadAllText($"{apiPath}/VEEMEE/gofish/leaderboard_alltime.xml");
-                        break;
+                        return Leaderboard.SerializeToString("leaderboard").Result;
                 }
             }
 

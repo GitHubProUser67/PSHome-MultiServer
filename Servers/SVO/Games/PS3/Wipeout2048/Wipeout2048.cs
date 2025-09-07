@@ -1250,11 +1250,11 @@ namespace SVO.Games.PS3
                                             fileName += ".bin";
 
                                         if (File.Exists($"{SVOServerConfiguration.SVOStaticFolder}/wox_ws/rest/fileservices/{name}/{fileName}"))
-                                            fileData = Encoding.UTF8.GetBytes($"<BinaryDownload checksum=\"{SVOProcessor.CalcuateOTGSecuredHash("m4nT15")}\">\n" +
+                                            fileData = Encoding.UTF8.GetBytes($"<BinaryDownload checksum=\"{SVOSecurityUtils.CalcuateOTGSecuredHash("m4nT15")}\">\n" +
                                                     $"        <Data>{File.ReadAllText($"{SVOServerConfiguration.SVOStaticFolder}/wox_ws/rest/fileservices/{name}/{fileName}")}</Data>\n" +
                                                     $"    </BinaryDownload>");
                                         else
-                                            fileData = Encoding.UTF8.GetBytes($"<BinaryDownload checksum=\"{SVOProcessor.CalcuateOTGSecuredHash("m4nT15")}\">\n" +
+                                            fileData = Encoding.UTF8.GetBytes($"<BinaryDownload checksum=\"{SVOSecurityUtils.CalcuateOTGSecuredHash("m4nT15")}\">\n" +
                                                     "        <Data></Data>\n" +
                                                     $"    </BinaryDownload>");
 

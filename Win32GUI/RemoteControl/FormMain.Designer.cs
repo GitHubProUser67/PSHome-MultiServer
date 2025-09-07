@@ -106,6 +106,9 @@ namespace RemoteControl
             richTextBoxEdenserverLog = new RichTextBox();
             tabPageSettings = new TabPage();
             groupBoxAuxConfigFiles = new GroupBox();
+            buttonConfigureAriesDatabase = new Button();
+            textBoxAriesDatabaseJsonPath = new TextBox();
+            labelMultiSocksAux = new Label();
             buttonConfigureHorizonDatabase = new Button();
             textBoxHorizonDatabaseJsonPath = new TextBox();
             buttonConfigureEbootDefs = new Button();
@@ -180,9 +183,6 @@ namespace RemoteControl
             textBoxApacheNetPath = new TextBox();
             backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             backgroundWorker2 = new System.ComponentModel.BackgroundWorker();
-            labelMultiSocksAux = new Label();
-            textBoxAriesDatabaseJsonPath = new TextBox();
-            buttonConfigureAriesDatabase = new Button();
             tabControlMain.SuspendLayout();
             tabPageMain.SuspendLayout();
             groupBoxDisclaimer.SuspendLayout();
@@ -1084,6 +1084,35 @@ namespace RemoteControl
             groupBoxAuxConfigFiles.TabStop = false;
             groupBoxAuxConfigFiles.Text = "Auxiliary Configuration files";
             // 
+            // buttonConfigureAriesDatabase
+            // 
+            buttonConfigureAriesDatabase.Location = new Point(543, 332);
+            buttonConfigureAriesDatabase.Margin = new Padding(3, 4, 3, 4);
+            buttonConfigureAriesDatabase.Name = "buttonConfigureAriesDatabase";
+            buttonConfigureAriesDatabase.Size = new Size(139, 32);
+            buttonConfigureAriesDatabase.TabIndex = 59;
+            buttonConfigureAriesDatabase.Text = "Edit!";
+            buttonConfigureAriesDatabase.UseVisualStyleBackColor = true;
+            buttonConfigureAriesDatabase.Click += buttonConfigureAriesDatabase_Click;
+            // 
+            // textBoxAriesDatabaseJsonPath
+            // 
+            textBoxAriesDatabaseJsonPath.Location = new Point(6, 337);
+            textBoxAriesDatabaseJsonPath.Margin = new Padding(3, 4, 3, 4);
+            textBoxAriesDatabaseJsonPath.Name = "textBoxAriesDatabaseJsonPath";
+            textBoxAriesDatabaseJsonPath.ReadOnly = true;
+            textBoxAriesDatabaseJsonPath.Size = new Size(514, 27);
+            textBoxAriesDatabaseJsonPath.TabIndex = 58;
+            // 
+            // labelMultiSocksAux
+            // 
+            labelMultiSocksAux.AutoSize = true;
+            labelMultiSocksAux.Location = new Point(6, 313);
+            labelMultiSocksAux.Name = "labelMultiSocksAux";
+            labelMultiSocksAux.Size = new Size(80, 20);
+            labelMultiSocksAux.TabIndex = 57;
+            labelMultiSocksAux.Text = "MultiSocks";
+            // 
             // buttonConfigureHorizonDatabase
             // 
             buttonConfigureHorizonDatabase.Location = new Point(543, 263);
@@ -1828,35 +1857,6 @@ namespace RemoteControl
             textBoxApacheNetPath.Name = "textBoxApacheNetPath";
             textBoxApacheNetPath.Size = new Size(514, 27);
             textBoxApacheNetPath.TabIndex = 0;
-            // 
-            // labelMultiSocksAux
-            // 
-            labelMultiSocksAux.AutoSize = true;
-            labelMultiSocksAux.Location = new Point(6, 313);
-            labelMultiSocksAux.Name = "labelMultiSocksAux";
-            labelMultiSocksAux.Size = new Size(80, 20);
-            labelMultiSocksAux.TabIndex = 57;
-            labelMultiSocksAux.Text = "MultiSocks";
-            // 
-            // textBoxAriesDatabaseJsonPath
-            // 
-            textBoxAriesDatabaseJsonPath.Location = new Point(6, 337);
-            textBoxAriesDatabaseJsonPath.Margin = new Padding(3, 4, 3, 4);
-            textBoxAriesDatabaseJsonPath.Name = "textBoxAriesDatabaseJsonPath";
-            textBoxAriesDatabaseJsonPath.ReadOnly = true;
-            textBoxAriesDatabaseJsonPath.Size = new Size(514, 27);
-            textBoxAriesDatabaseJsonPath.TabIndex = 58;
-            // 
-            // buttonConfigureAriesDatabase
-            // 
-            buttonConfigureAriesDatabase.Location = new Point(543, 332);
-            buttonConfigureAriesDatabase.Margin = new Padding(3, 4, 3, 4);
-            buttonConfigureAriesDatabase.Name = "buttonConfigureAriesDatabase";
-            buttonConfigureAriesDatabase.Size = new Size(139, 32);
-            buttonConfigureAriesDatabase.TabIndex = 59;
-            buttonConfigureAriesDatabase.Text = "Edit!";
-            buttonConfigureAriesDatabase.UseVisualStyleBackColor = true;
-            buttonConfigureAriesDatabase.Click += buttonConfigureAriesDatabase_Click;
             // 
             // FormMain
             // 

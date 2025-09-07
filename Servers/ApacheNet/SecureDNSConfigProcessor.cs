@@ -34,7 +34,8 @@ namespace ApacheNet
                 try
                 {
 #pragma warning disable // NET 6.0 and lower has a bug where GetAsync() is EXTREMLY slow to operate (https://github.com/dotnet/runtime/issues/65375).
-                    ParseRules(new FixedWebClient().DownloadStringTaskAsync(ApacheNetServerConfiguration.DNSOnlineConfig).Result, false);
+                    using (FixedWebClient client  = new FixedWebClient())
+                        ParseRules(client.DownloadStringTaskAsync(ApacheNetServerConfiguration.DNSOnlineConfig).Result, false);
 #pragma warning restore
                 }
                 catch (Exception ex)

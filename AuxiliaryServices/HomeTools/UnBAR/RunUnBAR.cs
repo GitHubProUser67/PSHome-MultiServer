@@ -341,10 +341,10 @@ namespace HomeTools.UnBAR
 #endif
                         if (File.Exists(filePath + ".map"))
                             File.Move(filePath + ".map", barDirectoryPath + $"/{Path.GetFileName(filePath)}.map");
-                        else if (filePath.Length > 4 && File.Exists(filePath.Substring(0, filePath.Length - 4) + ".sharc.map"))
-                            File.Move(filePath.Substring(0, filePath.Length - 4) + ".sharc.map", barDirectoryPath + $"/{Path.GetFileName(filePath)}.map");
-                        else if (filePath.Length > 4 && File.Exists(filePath.Substring(0, filePath.Length - 4) + ".bar.map"))
-                            File.Move(filePath.Substring(0, filePath.Length - 4) + ".bar.map", barDirectoryPath + $"/{Path.GetFileName(filePath)}.map");
+                        else if (filePath.Length > 4 && File.Exists(string.Concat(filePath.AsSpan(0, filePath.Length - 4), ".sharc.map")))
+                            File.Move(string.Concat(filePath.AsSpan(0, filePath.Length - 4), ".sharc.map"), barDirectoryPath + $"/{Path.GetFileName(filePath)}.map");
+                        else if (filePath.Length > 4 && File.Exists(string.Concat(filePath.AsSpan(0, filePath.Length - 4), ".bar.map")))
+                            File.Move(string.Concat(filePath.AsSpan(0, filePath.Length - 4), ".bar.map"), barDirectoryPath + $"/{Path.GetFileName(filePath)}.map");
                     }
                     catch (Exception ex)
                     {
@@ -356,132 +356,75 @@ namespace HomeTools.UnBAR
             return;
         }
 
-        private static async Task ExtractToFileBarVersion1(byte[] RawBarData, byte[] data, BARArchive archive, HashedFileName FileName, string outDir, int cdnMode)
+        private static Task ExtractToFileBarVersion1(byte[] RawBarData, byte[] data, BARArchive archive, HashedFileName FileName, string outDir, int cdnMode)
         {
             TOCEntry tableOfContent = archive.TableOfContents[FileName];
             string path = null;
-            if (tableOfContent.Compression == CompressionMethod.Encrypted &&
-                data.Length > 4 && ((data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x00 && data[3] == 0x01) || (data[0] == 0x01 && data[1] == 0x00 && data[2] == 0x00 && data[3] == 0x00)))
+            if (tableOfContent.Compression == CompressionMethod.Encrypted)
             {
-                int dataStart = FindDataPositionInBinary(RawBarData, data);
-
-                if (dataStart != -1)
+                if (data.Length > ToolsImplementation.sizeOfVersionHeader)
                 {
-                    uint compressedSize = tableOfContent.CompressedSize;
-                    uint fileSize = tableOfContent.Size;
-                    int userData = archive.BARHeader.UserData;
-                    byte[] EncryptedSignatureHeader = new byte[24];
-#if DEBUG
-                    LoggerAccessor.LogInfo("[RunUnBAR] - Encrypted Content Detected!, Running Decryption.");
-                    LoggerAccessor.LogInfo($"CompressedSize - {compressedSize}");
-                    LoggerAccessor.LogInfo($"Size - {fileSize}");
-                    LoggerAccessor.LogInfo($"dataStart - 0x{dataStart:X}");
-                    LoggerAccessor.LogInfo($"UserData - 0x{userData:X}");
-#endif
-                    byte[] SignatureIV = BitConverter.GetBytes(ToolsImplementation.BuildSignatureIv((int)fileSize, (int)compressedSize, dataStart, userData));
+                    byte[] cryptoVersion = new byte[ToolsImplementation.sizeOfVersionHeader];
 
-                    if (BitConverter.IsLittleEndian)
-                        Array.Reverse(SignatureIV);
+                    Array.Copy(data, 0, cryptoVersion, 0, cryptoVersion.Length);
 
-                    // Copy the first 24 bytes from the source array to the destination array
-                    Buffer.BlockCopy(data, 4, EncryptedSignatureHeader, 0, EncryptedSignatureHeader.Length);
-
-                    byte[] DecryptedSignatureHeader;
-
-                    switch (cdnMode)
+                    if (cryptoVersion.EqualsTo(ToolsImplementation.CryptoVersionBytesBE) || cryptoVersion.EqualsTo(EndianUtils.EndianSwap(ToolsImplementation.CryptoVersionBytesBE)))
                     {
-                        case 2:
-                            DecryptedSignatureHeader = ToolsImplementation.ProcessCrypt_Decrypt(EncryptedSignatureHeader, ToolsImplementation.HDKSignatureKey, SignatureIV, 1);
-                            break;
-                        case 1:
-                            DecryptedSignatureHeader = ToolsImplementation.ProcessCrypt_Decrypt(EncryptedSignatureHeader, ToolsImplementation.BetaSignatureKey, SignatureIV, 1);
-                            break;
-                        default:
-                            DecryptedSignatureHeader = ToolsImplementation.ProcessCrypt_Decrypt(EncryptedSignatureHeader, ToolsImplementation.SignatureKey, SignatureIV, 1);
-                            break;
-                    }
+                        int dataStart = FindDataPositionInBinary(RawBarData, data);
 
-                    if (DecryptedSignatureHeader != null)
-                    {
-                        string SignatureHeaderHexString = DecryptedSignatureHeader.ToHexString();
-
-                        // Create a new byte array to store the remaining content
-                        byte[] FileBytes = new byte[data.Length - 28];
-
-                        // Copy the content after the first 28 bytes to the new array
-                        Array.Copy(data, 28, FileBytes, 0, FileBytes.Length);
-
-                        string SHA1HexString = NetHasher.DotNetHasher.ComputeSHA1String(FileBytes);
-
-                        if (string.Equals(SHA1HexString, SignatureHeaderHexString.Substring(0, SignatureHeaderHexString.Length - 8))) // We strip the original file Compression size.
+                        if (dataStart != -1)
                         {
-                            if (tableOfContent.Size == 0) // The original Encryption Proxy seemed to only check for "lua" or "scene" file types, regardless if empty or not.
-                            {
-                                path = string.Format("{0}{1}{2:X8}{3}", outDir, Path.DirectorySeparatorChar, FileName.Value, ".unknown").ToUpper();
-
-                                string outdirectory = Path.GetDirectoryName(path);
-                                if (!string.IsNullOrEmpty(outdirectory))
-                                {
-                                    Directory.CreateDirectory(outdirectory);
-
-                                    using (FileStream fileStream = File.Open(path, (FileMode)2))
-                                    {
-                                        fileStream.Write(FileBytes, 0, FileBytes.Length);
-                                        fileStream.Close();
-                                    }
-                                }
+                            uint compressedSize = tableOfContent.CompressedSize;
+                            uint fileSize = tableOfContent.Size;
+                            int userData = archive.BARHeader.UserData;
+                            byte[] EncryptedSignatureHeader = new byte[24];
 #if DEBUG
-                                LoggerAccessor.LogInfo("Extracted file {0}", new object[1]
-                                {
-                                    Path.GetFileName(path)
-                                });
+                            LoggerAccessor.LogInfo("[RunUnBAR] - Encrypted Content Detected!, Running Decryption.");
+                            LoggerAccessor.LogInfo($"CompressedSize - {compressedSize}");
+                            LoggerAccessor.LogInfo($"Size - {fileSize}");
+                            LoggerAccessor.LogInfo($"dataStart - 0x{dataStart:X}");
+                            LoggerAccessor.LogInfo($"UserData - 0x{userData:X}");
 #endif
-                                tableOfContent = null;
+                            byte[] SignatureIV = BitConverter.GetBytes(ToolsImplementation.BuildSignatureIv((int)fileSize, (int)compressedSize, dataStart, userData));
 
-                                return;
-                            }
-                            else
+                            if (BitConverter.IsLittleEndian)
+                                Array.Reverse(SignatureIV);
+
+                            // Copy the first 24 bytes from the source array to the destination array
+                            Buffer.BlockCopy(data, 4, EncryptedSignatureHeader, 0, EncryptedSignatureHeader.Length);
+
+                            byte[] DecryptedSignatureHeader;
+
+                            switch (cdnMode)
                             {
-                                switch (cdnMode)
+                                case 2:
+                                    DecryptedSignatureHeader = ToolsImplementation.ProcessCrypt_Decrypt(EncryptedSignatureHeader, ToolsImplementation.HDKSignatureKey, SignatureIV, 1);
+                                    break;
+                                case 1:
+                                    DecryptedSignatureHeader = ToolsImplementation.ProcessCrypt_Decrypt(EncryptedSignatureHeader, ToolsImplementation.BetaSignatureKey, SignatureIV, 1);
+                                    break;
+                                default:
+                                    DecryptedSignatureHeader = ToolsImplementation.ProcessCrypt_Decrypt(EncryptedSignatureHeader, ToolsImplementation.SignatureKey, SignatureIV, 1);
+                                    break;
+                            }
+
+                            if (DecryptedSignatureHeader != null)
+                            {
+                                string SignatureHeaderHexString = DecryptedSignatureHeader.ToHexString();
+
+                                // Create a new byte array to store the remaining content
+                                byte[] FileBytes = new byte[data.Length - 28];
+
+                                // Copy the content after the first 28 bytes to the new array
+                                Array.Copy(data, 28, FileBytes, 0, FileBytes.Length);
+
+                                string SHA1HexString = NetHasher.DotNetHasher.ComputeSHA1String(FileBytes);
+
+                                if (string.Equals(SHA1HexString, SignatureHeaderHexString.Substring(0, SignatureHeaderHexString.Length - 8))) // We strip the original file Compression size.
                                 {
-                                    case 2:
-                                        FileBytes = ToolsImplementation.ProcessCrypt_Decrypt(FileBytes, ToolsImplementation.HDKBlowfishKey, SignatureIV, 1);
-                                        break;
-                                    case 1:
-                                        FileBytes = ToolsImplementation.ProcessCrypt_Decrypt(FileBytes, ToolsImplementation.BetaBlowfishKey, SignatureIV, 1);
-                                        break;
-                                    default:
-                                        FileBytes = ToolsImplementation.ProcessCrypt_Decrypt(FileBytes, ToolsImplementation.BlowfishKey, SignatureIV, 1);
-                                        break;
-                                }
-
-                                if (FileBytes != null)
-                                {
-                                    try
+                                    if (tableOfContent.Size == 0) // The original Encryption Proxy seemed to only check for "lua" or "scene" file types, regardless if empty or not.
                                     {
-                                        FileBytes = Zlib.EdgeZlibDecompress(FileBytes);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        LoggerAccessor.LogError($"[RunUnBar] - Errored out when processing Encryption Proxy encrypted content - {ex}");
-
-                                        FileBytes = data;
-                                    }
-
-                                    using (MemoryStream memoryStream = new MemoryStream(FileBytes))
-                                    {
-                                        string registeredExtension = string.Empty;
-
-                                        try
-                                        {
-                                            registeredExtension = FileTypeAnalyser.Instance.GetRegisteredExtension(FileTypeAnalyser.Instance.Analyse(memoryStream));
-                                        }
-                                        catch
-                                        {
-                                            registeredExtension = ".unknown";
-                                        }
-
-                                        path = string.Format("{0}{1}{2:X8}{3}", outDir, Path.DirectorySeparatorChar, FileName.Value, registeredExtension).ToUpper();
+                                        path = string.Format("{0}{1}{2:X8}{3}", outDir, Path.DirectorySeparatorChar, FileName.Value, ".unknown").ToUpper();
 
                                         string outdirectory = Path.GetDirectoryName(path);
                                         if (!string.IsNullOrEmpty(outdirectory))
@@ -494,31 +437,101 @@ namespace HomeTools.UnBAR
                                                 fileStream.Close();
                                             }
                                         }
-
-                                        memoryStream.Flush();
-                                    }
 #if DEBUG
-                                    LoggerAccessor.LogInfo("Extracted file {0}", new object[1]
-                                    {
-                                        Path.GetFileName(path)
-                                    });
+                                        LoggerAccessor.LogInfo("Extracted file {0}", new object[1]
+                                        {
+                                    Path.GetFileName(path)
+                                        });
 #endif
-                                    tableOfContent = null;
+                                        tableOfContent = null;
 
-                                    return;
+                                        return Task.CompletedTask;
+                                    }
+                                    else
+                                    {
+                                        switch (cdnMode)
+                                        {
+                                            case 2:
+                                                FileBytes = ToolsImplementation.ProcessCrypt_Decrypt(FileBytes, ToolsImplementation.HDKBlowfishKey, SignatureIV, 1);
+                                                break;
+                                            case 1:
+                                                FileBytes = ToolsImplementation.ProcessCrypt_Decrypt(FileBytes, ToolsImplementation.BetaBlowfishKey, SignatureIV, 1);
+                                                break;
+                                            default:
+                                                FileBytes = ToolsImplementation.ProcessCrypt_Decrypt(FileBytes, ToolsImplementation.BlowfishKey, SignatureIV, 1);
+                                                break;
+                                        }
+
+                                        if (FileBytes != null)
+                                        {
+                                            try
+                                            {
+                                                FileBytes = Zlib.EdgeZlibDecompress(FileBytes);
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                LoggerAccessor.LogError($"[RunUnBar] - Errored out when processing Encryption Proxy encrypted content - {ex}");
+
+                                                FileBytes = data;
+                                            }
+
+                                            using (MemoryStream memoryStream = new MemoryStream(FileBytes))
+                                            {
+                                                string registeredExtension = string.Empty;
+
+                                                try
+                                                {
+                                                    registeredExtension = FileTypeAnalyser.Instance.GetRegisteredExtension(FileTypeAnalyser.Instance.Analyse(memoryStream));
+                                                }
+                                                catch
+                                                {
+                                                    registeredExtension = ".unknown";
+                                                }
+
+                                                path = string.Format("{0}{1}{2:X8}{3}", outDir, Path.DirectorySeparatorChar, FileName.Value, registeredExtension).ToUpper();
+
+                                                string outdirectory = Path.GetDirectoryName(path);
+                                                if (!string.IsNullOrEmpty(outdirectory))
+                                                {
+                                                    Directory.CreateDirectory(outdirectory);
+
+                                                    using (FileStream fileStream = File.Open(path, (FileMode)2))
+                                                    {
+                                                        fileStream.Write(FileBytes, 0, FileBytes.Length);
+                                                        fileStream.Close();
+                                                    }
+                                                }
+
+                                                memoryStream.Flush();
+                                            }
+#if DEBUG
+                                            LoggerAccessor.LogInfo("Extracted file {0}", new object[1]
+                                            {
+                                        Path.GetFileName(path)
+                                            });
+#endif
+                                            tableOfContent = null;
+
+                                            return Task.CompletedTask;
+                                        }
+                                        else
+                                            LoggerAccessor.LogError($"[RunUnBAR] - Encrypted file failed to decrypt, Writing original data.");
+                                    }
                                 }
                                 else
-                                    LoggerAccessor.LogError($"[RunUnBAR] - Encrypted file failed to decrypt, Writing original data.");
+                                    LoggerAccessor.LogError($"[RunUnBAR] - Encrypted file (SHA1 - {SHA1HexString}) has been tempered with! (Reference SHA1 - {SignatureHeaderHexString.Substring(0, SignatureHeaderHexString.Length - 8)}), Aborting decryption.");
                             }
+                            else
+                                LoggerAccessor.LogError("[RunUnBAR] - Encrypted data SignatureHeader Decryption has failed.");
                         }
                         else
-                            LoggerAccessor.LogError($"[RunUnBAR] - Encrypted file (SHA1 - {SHA1HexString}) has been tempered with! (Reference SHA1 - {SignatureHeaderHexString.Substring(0, SignatureHeaderHexString.Length - 8)}), Aborting decryption.");
+                            LoggerAccessor.LogError("[RunUnBAR] - Encrypted data not found in BAR or false positive! Decryption has failed.");
                     }
                     else
-                        LoggerAccessor.LogError("[RunUnBAR] - Encrypted data SignatureHeader Decryption has failed.");
+                        LoggerAccessor.LogWarn($"[RunUnBAR] - Unknown crypto version being used ({BitConverter.ToString(cryptoVersion)}). Decryption has failed.");
                 }
                 else
-                    LoggerAccessor.LogError("[RunUnBAR] - Encrypted data not found in BAR or false positive! Decryption has failed.");
+                    LoggerAccessor.LogError("[RunUnBAR] - Encrypted data is malformed! Decryption has failed.");
             }
 
             using (MemoryStream memoryStream = new MemoryStream(data))
@@ -557,9 +570,11 @@ namespace HomeTools.UnBAR
             });
 #endif
             tableOfContent = null;
+
+            return Task.CompletedTask;
         }
 
-        private static async Task ExtractToFileBarVersion2(byte[] Key, byte[] data, BARArchive archive, HashedFileName FileName, string outDir)
+        private static Task ExtractToFileBarVersion2(byte[] Key, byte[] data, BARArchive archive, HashedFileName FileName, string outDir)
         {
             TOCEntry tableOfContent = archive.TableOfContents[FileName];
             string path = null;
@@ -653,6 +668,8 @@ namespace HomeTools.UnBAR
             });
 #endif
             tableOfContent = null;
+
+            return Task.CompletedTask;
         }
 
 

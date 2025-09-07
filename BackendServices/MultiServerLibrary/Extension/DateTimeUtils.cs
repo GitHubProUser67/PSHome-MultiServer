@@ -53,6 +53,13 @@ namespace MultiServerLibrary.Extension
             return DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
         }
 
+        public static bool IsAprilFoolsDay()
+        {
+            const byte april = 4;
+            var today = DateTime.Now;
+            return today.Month == april && today.Day == april;
+        }
+
         #endregion
     }
 }

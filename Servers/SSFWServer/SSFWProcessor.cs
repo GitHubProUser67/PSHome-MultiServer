@@ -1,4 +1,5 @@
 ﻿using CustomLogger;
+using MultiServerLibrary;
 using MultiServerLibrary.Extension;
 using MultiServerLibrary.HTTP;
 using MultiServerLibrary.SSL;
@@ -110,7 +111,8 @@ namespace SSFWServer
             string IpToBan = ctx.Request.Source.IpAddress;
             if (!"::1".Equals(IpToBan) && !"127.0.0.1".Equals(IpToBan) && !"localhost".Equals(IpToBan, StringComparison.InvariantCultureIgnoreCase))
             {
-                if (!string.IsNullOrEmpty(IpToBan) && MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs.Contains(IpToBan))
+                if (!string.IsNullOrEmpty(IpToBan) && ((MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibraryConfiguration.BannedIPs.Contains(IpToBan))
+                    || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(IpToBan))))
                 {
                     LoggerAccessor.LogError($"[SECURITY] - Client - {ctx.Request.Source.IpAddress}:{ctx.Request.Source.Port} Requested the HTTPS server while being banned!");
                     ctx.Response.StatusCode = 403;

@@ -1,17 +1,30 @@
-using System;
-using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
 using MultiServerLibrary.HTTP;
+using System.Linq;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.VEEMEE.olm
 {
-    public class OLMLeaderboard
+    internal static class OLMLeaderboard
     {
+        public static OLMScoreBoardData Leaderboard = null;
+
+        public static void InitializeLeaderboard()
+        {
+            if (Leaderboard == null)
+            {
+                var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                retCtx.Database.Migrate();
+
+                Leaderboard = new OLMScoreBoardData(retCtx);
+            }
+        }
+
         public static string GetLeaderboardPOST(byte[] PostData, string ContentType, int mode, string apiPath)
         {
-            string key = string.Empty;
-            string psnid = string.Empty;
+            string key;
+            string psnid;
 
             if (ContentType == "application/x-www-form-urlencoded" && PostData != null)
             {
@@ -24,41 +37,16 @@ namespace WebAPIService.GameServices.VEEMEE.olm
                 }
                 psnid = data["psnid"].First();
 
-                DateTime refdate = DateTime.Now; // We avoid race conditions by calculating it one time.
+                InitializeLeaderboard();
 
                 switch (mode)
                 {
                     case 0:
-                        if (File.Exists($"{apiPath}/VEEMEE/olm/leaderboard_{refdate:yyyy_MM_dd}.xml"))
-                            return File.ReadAllText($"{apiPath}/VEEMEE/olm/leaderboard_{refdate:yyyy_MM_dd}.xml");
-                        break;
+                        return Leaderboard.SerializeToDailyString("leaderboard").Result;
                     case 1:
-                        if (Directory.Exists($"{apiPath}/VEEMEE/olm"))
-                        {
-                            // Get all XML files in the scoreboard folder
-                            foreach (string file in Directory.GetFiles($"{apiPath}/VEEMEE/olm", "leaderboard_*.xml"))
-                            {
-                                // Extract date from the filename
-                                Match match = Regex.Match(file, @"leaderboard_(\d{4}_\d{2}_\d{2}).xml");
-                                if (match.Success)
-                                {
-                                    string fileDate = match.Groups[1].Value;
-
-                                    // Parse the file date
-                                    if (DateTime.TryParse(fileDate, out DateTime fileDateTime))
-                                    {
-                                        // Check if the file is newer than 7 days
-                                        double diff = (refdate - fileDateTime).TotalDays;
-                                        if (diff <= 7)
-                                        {
-                                            string weekScoreBoardPath = $"{apiPath}/VEEMEE/olm/leaderboard_{refdate.AddDays(-diff):yyyy_MM_dd}.xml";
-                                            if (File.Exists(weekScoreBoardPath))
-                                                return File.ReadAllText(weekScoreBoardPath);
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        return Leaderboard.SerializeToWeeklyString("leaderboard").Result;
+                    default:
+                        CustomLogger.LoggerAccessor.LogWarn($"[OLMLeaderboard] - Unknown mode:{mode} requested, sending empty data...");
                         break;
                 }
             }

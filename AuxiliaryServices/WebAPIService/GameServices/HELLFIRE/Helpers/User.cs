@@ -1,5 +1,6 @@
 using CustomLogger;
 using HttpMultipartParser;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -7,6 +8,7 @@ using System.Globalization;
 using System.IO;
 using System.Xml;
 using WebAPIService.GameServices.HELLFIRE.Helpers.NovusPrime;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.HELLFIRE.Helpers
 {
@@ -652,7 +654,6 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
 
             string cooldownPath = $"{WorkPath}/NovusPrime/User_Data/{UserID}_cooldown.txt";
             string profilePath = $"{WorkPath}/NovusPrime/User_Data/{UserID}.xml";
-            string lbPath = $"{WorkPath}/NovusPrime/User_Data/Leaderboards.xml";
 
             if (File.Exists(profilePath))
                 xmlProfile = File.ReadAllText(profilePath);
@@ -694,16 +695,20 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
 
                                     #region Leaderboard entry update
 
-                                    if (File.Exists(lbPath))
-                                        lbDoc.LoadXml("<root>" + File.ReadAllText(lbPath) + "</root>");
-                                    else
+                                    if (Leaderboards.NovusLeaderboard == null)
                                     {
-                                        XmlElement rootElement = lbDoc.CreateElement("root");
-                                        lbDoc.AppendChild(rootElement);
+                                        var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                                        retCtx.Database.Migrate();
+
+                                        Leaderboards.NovusLeaderboard = new InterGalacticScoreBoardData(retCtx);
                                     }
 
-                                    XmlNode userNameExistEntry = lbDoc.SelectSingleNode($"//{UserID}");
                                     int totalNebulonEver = (int)double.Parse(data.GetParameterValue("TotalNebulonEver"), CultureInfo.InvariantCulture);
+
+                                    _ = Leaderboards.NovusLeaderboard.UpdateScoreAsync(UserID, totalNebulonEver);
+
+                                    XmlNode userNameExistEntry = lbDoc.SelectSingleNode($"//{UserID}");
 
                                     if (userNameExistEntry != null)
                                     {
@@ -729,24 +734,6 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
 
                                         lbDoc.DocumentElement.AppendChild(userNameElement);
                                     }
-
-                                    DateTime refdate = DateTime.Now; // We avoid race conditions by calculating it one time.
-
-                                    try
-                                    {
-                                        InterGalacticLeaderboardData.UpdateWeeklyScoreBoard(UserID, totalNebulonEver);
-                                        // We finalized edit, so we issue a write.
-                                        InterGalacticLeaderboardData.UpdateTodayScoreboardXml(WorkPath, refdate.ToString("yyyy_MM_dd"));
-                                        InterGalacticLeaderboardData.UpdateWeeklyScoreboardXml(WorkPath, refdate.ToString("yyyy_MM_dd"));
-                                        InterGalacticLeaderboardData.UpdateMonthlyScoreboardXml(WorkPath, refdate.ToString("yyyy_MM"));
-                                    }
-                                    catch (Exception)
-                                    {
-                                        // Not Important
-                                    }
-
-                                    File.WriteAllText(lbPath, lbDoc.DocumentElement.InnerXml);
-
                                     #endregion
                                 }
                                 break;

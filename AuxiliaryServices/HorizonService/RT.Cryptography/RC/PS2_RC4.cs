@@ -1,3 +1,4 @@
+using MultiServerLibrary.Extension;
 using System;
 using System.Linq;
 
@@ -41,10 +42,8 @@ namespace Horizon.RT.Cryptography.RC
 
         #region Initialization
 
-
-        private void SetKey(RC4State state, byte[] key, byte[] hash = null)
+        private static void SetKey(RC4State state, byte[] key, byte[] hash = null)
         {
-
             state.x = 0;
             state.y = 0;
 
@@ -53,11 +52,9 @@ namespace Horizon.RT.Cryptography.RC
             int cipherIndex = 0;
             int idIndex = 0;
 
-
             // Initialize engine state
             if (state.engineState == null)
                 state.engineState = new byte[STATE_LENGTH];
-
 
             // reset the state of the engine
             // Normally this initializes values 0,1..254,255 but UYA does this in reverse.
@@ -104,10 +101,8 @@ namespace Horizon.RT.Cryptography.RC
                 cipherByte += keyByte;
                 li = cipherByte & 0xFF;
 
-                byte t0 = state.engineState[li];
-                state.engineState[cipherIndex] = t0;
+                state.engineState[cipherIndex] = state.engineState[li];
                 state.engineState[li] = cipherValue;
-
 
                 cipherIndex += 3;
                 cipherIndex &= 0xFF;
@@ -118,7 +113,7 @@ namespace Horizon.RT.Cryptography.RC
 
         #region Decrypt
 
-        private void Decrypt(
+        private static void Decrypt(
                 RC4State state,
                 byte[] input,
                 int inOff,
@@ -138,8 +133,6 @@ namespace Horizon.RT.Cryptography.RC
                 v0 = state.engineState[state.x];
                 state.engineState[state.y] = (byte)(v0 & 0xFF);
                 state.engineState[state.x] = a2;
-
-
 
                 byte a0 = input[i + inOff];
 
@@ -174,7 +167,7 @@ namespace Horizon.RT.Cryptography.RC
 
             Decrypt(state, data, 0, data.Length, plain, 0);
             Hash(plain, out var checkHash);
-            return hash.SequenceEqual(checkHash);
+            return hash.EqualsTo(checkHash);
         }
 
         #endregion
@@ -192,8 +185,8 @@ namespace Horizon.RT.Cryptography.RC
 
             for (int i = 0; i < length; ++i)
             {
-                state.x = (state.x + 5) & 0xff;
-                state.y = (state.y + state.engineState[state.x]) & 0xff;
+                state.x = (state.x + 5) & 0xFF;
+                state.y = (state.y + state.engineState[state.x]) & 0xFF;
 
                 // Swap
                 byte temp = state.engineState[state.x];
@@ -204,10 +197,10 @@ namespace Horizon.RT.Cryptography.RC
                 output[i + outOff] = (byte)(
                     input[i + inOff]
                     ^
-                    state.engineState[(state.engineState[state.x] + state.engineState[state.y]) & 0xff]
+                    state.engineState[(state.engineState[state.x] + state.engineState[state.y]) & 0xFF]
                     );
 
-                state.y = (state.engineState[input[i + inOff]] + state.y) & 0xff;
+                state.y = (state.engineState[input[i + inOff]] + state.y) & 0xFF;
             }
         }
 
@@ -255,21 +248,19 @@ namespace Horizon.RT.Cryptography.RC
 
         public bool Equals(PS2_RC4 b)
         {
-            return b.Context == this.Context && (b.workingKey?.SequenceEqual(this.workingKey) ?? false);
+            return b.Context == Context && (b.workingKey?.EqualsTo(workingKey) ?? false);
         }
 
         #endregion
 
         public byte[] GetPublicKey()
         {
-            var copy = new byte[this.workingKey.Length];
-            Array.Copy(this.workingKey, copy, copy.Length);
-            return copy;
+            return workingKey.ShadowCopy();
         }
 
         public override string ToString()
         {
-            return $"PS2_RC4({Context}, {BitConverter.ToString(workingKey).Replace("-", "")})";
+            return $"PS2_RC4({Context}, {BitConverter.ToString(workingKey).Replace("-", string.Empty)})";
         }
 
     }

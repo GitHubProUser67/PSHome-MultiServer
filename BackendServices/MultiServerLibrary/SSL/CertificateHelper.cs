@@ -312,12 +312,12 @@ namespace MultiServerLibrary.SSL
                 X509Certificate2 CachedCertificate = FakeCertificates[certSubject];
                 //check that it hasn't expired
                 if (CachedCertificate.NotAfter > DateTime.Now && CachedCertificate.NotBefore < DateTime.Now)
-                    return CachedCertificate;
+                { return CachedCertificate; }
                 else
-#if !NET6_0_OR_GREATER
-                    FakeCertificates.TryRemove(certSubject, out _);
+#if NET6_0_OR_GREATER
+                { FakeCertificates.Remove(certSubject, out _); }
 #else
-                    FakeCertificates.Remove(certSubject, out _);
+                { FakeCertificates.TryRemove(certSubject, out _); }
 #endif
             }
 
@@ -326,8 +326,6 @@ namespace MultiServerLibrary.SSL
                 // If not found, initialize private key generator & set up a certificate creation request.
                 using (RSA rsa = RSA.Create())
                 {
-                    IPAddress localhost = IPAddress.Loopback;
-
                     // Generate an unique serial number.
                     byte[] certSerialNumber = new byte[16];
                     new Random().NextBytes(certSerialNumber);
@@ -340,13 +338,8 @@ namespace MultiServerLibrary.SSL
                     SubjectAlternativeNameBuilder sanBuilder = new SubjectAlternativeNameBuilder();
 
                     sanBuilder.AddDnsName(certSubject); // Some legacy clients will not recognize the cert serial-number.
-
-                    sanBuilder.AddEmailAddress(certificate_email);
-
+                    sanBuilder.AddEmailAddress("SpaceWizards@gmail.com");
                     sanBuilder.AddIpAddress(serverIp);
-                    sanBuilder.AddIpAddress(localhost);
-                    sanBuilder.AddDnsName(serverIp.ToString());
-                    sanBuilder.AddDnsName(localhost.ToString());
 
                     if (wildcard)
                     {
@@ -405,9 +398,9 @@ namespace MultiServerLibrary.SSL
                 // Generate a new RSA key pair
                 using (RSA rsa = RSA.Create())
                 {
-                    IPAddress localhost = IPAddress.Loopback;
-
-                    InternetProtocolUtils.TryGetServerIP(out string ServerIPStr);
+                    IPAddress Loopback = IPAddress.Loopback;
+                    IPAddress PublicServerIP = IPAddress.Parse(InternetProtocolUtils.GetPublicIPAddress());
+                    IPAddress LocalServerIP = InternetProtocolUtils.GetLocalIPAddresses().First();
 
                     // Add a Subject Alternative Name (SAN) extension with a wildcard DNS entry
                     SubjectAlternativeNameBuilder sanBuilder = new SubjectAlternativeNameBuilder();
@@ -415,17 +408,9 @@ namespace MultiServerLibrary.SSL
                     // Create a certificate request with the RSA key pair
                     CertificateRequest request = new CertificateRequest($"CN={CN} [{GetRandomInt64(100, 999)}], OU={OU}, O=\"{O}\", L={L}, S={S}, C={C}", rsa, Hashing, RSASignaturePadding.Pkcs1);
 
-                    sanBuilder.AddIpAddress(IPAddress.Parse(ServerIPStr));
-                    sanBuilder.AddIpAddress(localhost);
-                    sanBuilder.AddDnsName(ServerIPStr);
-                    sanBuilder.AddDnsName(localhost.ToString());
-
-                    sanBuilder.AddEmailAddress(certificate_email);
-
                     DnsList?.Select(str => str) // Some clients do not allow wildcard domains, so we use SAN attributes as a fallback.
                         .ToList()
                         .ForEach(sanBuilder.AddDnsName);
-
                     if (Wildcard)
                     {
                         sanBuilder.AddDnsName("*.*");
@@ -433,6 +418,20 @@ namespace MultiServerLibrary.SSL
                         .ToList()
                         .ForEach(sanBuilder.AddDnsName);
                     }
+
+                    sanBuilder.AddDnsName("localhost");
+                    sanBuilder.AddDnsName(Loopback.ToString());
+                    sanBuilder.AddIpAddress(Loopback);
+                    sanBuilder.AddDnsName(PublicServerIP.ToString());
+                    sanBuilder.AddIpAddress(PublicServerIP);
+
+                    if (PublicServerIP != LocalServerIP)
+                    {
+                        sanBuilder.AddDnsName(LocalServerIP.ToString());
+                        sanBuilder.AddIpAddress(LocalServerIP);
+                    }
+
+                    sanBuilder.AddEmailAddress("MultiServer@gmail.com");
 
                     request.CertificateExtensions.Add(sanBuilder.Build());
 
@@ -807,6 +806,7 @@ namespace MultiServerLibrary.SSL
         {
             File.WriteAllText(FileName, rootcaSubject + ENTRUST_NET_CA + CLOUDFLARE_NET_CA + LETSENCRYPT_ISRG1_NET_CA + LETSENCRYPT_ISRG2_NET_CA);
         }
+
 #if !NET5_0_OR_GREATER
         private static byte[] ExportRSAPrivateKey(this RSA rsa)
         {

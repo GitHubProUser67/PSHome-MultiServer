@@ -1,10 +1,5 @@
 using CustomLogger;
-using System;
 using System.IO;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WebAPIService.GameServices.CDM
 {
@@ -29,9 +24,7 @@ namespace WebAPIService.GameServices.CDM
                 return resourceXML;
             }
             else
-            {
                 LoggerAccessor.LogError($"[CDM] - Failed to find publisher list with expected path {filePath}!");
-            }
 
             return "<xml><status>fail</status></xml>";
         }

@@ -1,11 +1,13 @@
 ﻿using CustomLogger;
 using HttpMultipartParser;
-using NetHasher;
+using Microsoft.EntityFrameworkCore;
 using MultiServerLibrary.HTTP;
+using NetHasher;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.RCHOME
 {
@@ -52,8 +54,14 @@ namespace WebAPIService.GameServices.RCHOME
                                             lock (_leaderboards)
                                             {
                                                 if (!_leaderboards.ContainsKey(gameName))
-                                                    _leaderboards.Add(gameName, new FiringRangeScoreBoardData());
-                                                return _leaderboards[gameName].UpdateScoreboardXml(workpath, gameName);
+                                                {
+                                                    var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                                                    retCtx.Database.Migrate();
+
+                                                    _leaderboards.Add(gameName, new FiringRangeScoreBoardData(retCtx, gameName));
+                                                }
+                                                return _leaderboards[gameName].SerializeToString("data").Result;
                                             }
                                         }
                                     }
@@ -83,10 +91,19 @@ namespace WebAPIService.GameServices.RCHOME
                                         {
                                             lock (_leaderboards)
                                             {
-                                                if (!string.IsNullOrEmpty(gameName) && _leaderboards.ContainsKey(gameName))
+                                                if (!string.IsNullOrEmpty(gameName))
                                                 {
-                                                    _leaderboards[gameName].UpdateScoreBoard(player, (int)double.Parse(score, CultureInfo.InvariantCulture));
-                                                    return _leaderboards[gameName].UpdateScoreboardXml(workpath, gameName);
+                                                    if (!_leaderboards.ContainsKey(gameName))
+                                                    {
+                                                        var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                                                        retCtx.Database.Migrate();
+
+                                                        _leaderboards.Add(gameName, new FiringRangeScoreBoardData(retCtx, gameName));
+                                                    }
+
+                                                    _ = _leaderboards[gameName].UpdateScoreAsync(player, (int)float.Parse(score, CultureInfo.InvariantCulture));
+                                                    return _leaderboards[gameName].SerializeToString("data").Result;
                                                 }
                                             }
                                         }

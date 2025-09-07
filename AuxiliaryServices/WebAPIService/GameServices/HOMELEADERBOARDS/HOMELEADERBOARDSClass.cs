@@ -1,15 +1,17 @@
 ﻿using CustomLogger;
 using HttpMultipartParser;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.HOMELEADERBOARDS
 {
     public static class HOMELEADERBOARDSClass
     {
-        private static Dictionary<string, HomeLeaderboards> _leaderboards = new Dictionary<string, HomeLeaderboards>();
+        private static Dictionary<string, HomeScoreBoardData> _leaderboards = new Dictionary<string, HomeScoreBoardData>();
 
         public static string ProcessEntryBare(byte[] postdata, string boundary, string apiPath)
         {
@@ -32,21 +34,35 @@ namespace WebAPIService.GameServices.HOMELEADERBOARDS
                                     lock (_leaderboards)
                                     {
                                         if (!_leaderboards.ContainsKey(game))
-                                            _leaderboards.Add(game, new HomeLeaderboards());
-                                        return $"<MsRoot>{_leaderboards[game].UpdateScoreboardXml(apiPath, game)}</MsRoot>";
+                                        {
+                                            var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                                            retCtx.Database.Migrate();
+
+                                            _leaderboards.Add(game, new HomeScoreBoardData(retCtx, game));
+                                        }
+                                        return $"<MsRoot>{_leaderboards[game].SerializeToString("PAGE").Result}</MsRoot>";
                                     }
                                 }
                                 break;
                             case "postScore":
-                                double score = double.Parse(data.GetParameterValue("score"), CultureInfo.InvariantCulture);
+                                float score = float.Parse(data.GetParameterValue("score"), CultureInfo.InvariantCulture);
                                 string player = data.GetParameterValue("player");
 
                                 lock (_leaderboards)
                                 {
-                                    if (!string.IsNullOrEmpty(game) && _leaderboards.ContainsKey(game))
+                                    if (!string.IsNullOrEmpty(game))
                                     {
-                                        _leaderboards[game].UpdateScoreBoard(player, score);
-                                        return $"<MsRoot>{_leaderboards[game].UpdateScoreboardXml(apiPath, game)}</MsRoot>";
+                                        if (!_leaderboards.ContainsKey(game))
+                                        {
+                                            var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                                            retCtx.Database.Migrate();
+
+                                            _leaderboards.Add(game, new HomeScoreBoardData(retCtx, game));
+                                        }
+                                        _ = _leaderboards[game].UpdateScoreAsync(player, score);
+                                        return $"<MsRoot>{_leaderboards[game].SerializeToString("PAGE").Result}</MsRoot>";
                                     }
                                 }
                                 break;

@@ -64,7 +64,6 @@ namespace Horizon.RT.Cryptography
             var n = (BigInteger)keypair.Public.GetType().GetProperty("Modulus").GetValue(keypair.Public);
             var d = (BigInteger)keypair.Private.GetType().GetProperty("Exponent").GetValue(keypair.Private);
 
-            // 
             return new RSA.PS3_RSA(n, e, d);
         }
 
