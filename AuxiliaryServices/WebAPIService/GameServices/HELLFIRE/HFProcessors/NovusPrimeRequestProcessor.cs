@@ -61,46 +61,36 @@ namespace WebAPIService.GameServices.HELLFIRE.HFProcessors
                         }
                     }
 
-                    if (ticketData != null)
+                    if (ticketData != null && ticketData.Length > 188)
                     {
-                        if (ticketData.Length > 188)
-                        {
-                            const string RPCNSigner = "RPCN";
+                        const string RPCNSigner = "RPCN";
 
-                            // get ticket
-                            XI5Ticket ticket = XI5Ticket.ReadFromBytes(ticketData);
+                        // get ticket
+                        XI5Ticket ticket = XI5Ticket.ReadFromBytes(ticketData);
 
-                            // setup username
-                            string username = ticket.Username;
+                        // setup username
+                        string username = ticket.Username;
 
-                            // invalid ticket
-                            if (!ticket.Valid)
-                            {
-                                // log to console
-                                LoggerAccessor.LogWarn($"[HFGames] - NovusPrime : User {username} tried to alter their ticket data");
-
-                                return null;
-                            }
-
-                            // RPCN
-                            if (ticket.SignatureIdentifier == RPCNSigner)
-                                LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on RPCN");
-                            else if (username.EndsWith($"@{RPCNSigner}"))
-                            {
-                                LoggerAccessor.LogError($"[HFGames] - NovusPrime : User {username} was caught using a RPCN suffix while not on it!");
-
-                                return null;
-                            }
-                            else
-                                LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on PSN");
-                        }
-                        else
+                        // invalid ticket
+                        if (!ticket.Valid)
                         {
                             // log to console
-                            LoggerAccessor.LogWarn($"[HFGames] - NovusPrime : Invalid ticket data length");
+                            LoggerAccessor.LogWarn($"[HFGames] - NovusPrime : User {username} tried to alter their ticket data");
 
                             return null;
                         }
+
+                        // RPCN
+                        if (ticket.SignatureIdentifier == RPCNSigner)
+                            LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on RPCN");
+                        else if (username.EndsWith($"@{RPCNSigner}"))
+                        {
+                            LoggerAccessor.LogError($"[HFGames] - NovusPrime : User {username} was caught using a RPCN suffix while not on it!");
+
+                            return null;
+                        }
+                        else
+                            LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on PSN");
                     }
 
                     Command = data.GetParameterValue("Command");
