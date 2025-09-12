@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using MultiServerLibrary.HTTP;
 using MultiServerLibrary.Extension;
+using CastleLibrary.Sony.Edge;
 
 namespace ApacheNet.BuildIn.Extensions
 {
@@ -112,7 +113,7 @@ namespace ApacheNet.BuildIn.Extensions
                                         $"{Path.GetFileNameWithoutExtension(file.FullName)}_description.txt"), cancellationToken).ConfigureAwait(false);
                             else if (File.Exists(Path.Combine(Path.GetDirectoryName(file.FullName), $"{Path.GetFileNameWithoutExtension(file.FullName)}_description.EdgeZlib")))
                                 DescriptorText = Encoding.UTF8.GetString(
-                                    SonyEdge.Zlib.EdgeZlibDecompress(
+                                    Zlib.EdgeZlibDecompress(
                                         await File.ReadAllBytesAsync(
                                             Path.Combine(Path.GetDirectoryName(file.FullName),
                                                 $"{Path.GetFileNameWithoutExtension(file.FullName)}_description.EdgeZlib"), cancellationToken).ConfigureAwait(false)));
@@ -122,7 +123,7 @@ namespace ApacheNet.BuildIn.Extensions
                                         $"{Path.GetFileNameWithoutExtension(file.FullName)}_desc.txt"), cancellationToken).ConfigureAwait(false);
                             else if (File.Exists(Path.Combine(Path.GetDirectoryName(file.FullName), $"{Path.GetFileNameWithoutExtension(file.FullName)}_desc.EdgeZlib")))
                                 DescriptorText = Encoding.UTF8.GetString(
-                                    SonyEdge.Zlib.EdgeZlibDecompress(
+                                    Zlib.EdgeZlibDecompress(
                                         await File.ReadAllBytesAsync(
                                             Path.Combine(Path.GetDirectoryName(file.FullName),
                                                 $"{Path.GetFileNameWithoutExtension(file.FullName)}_desc.EdgeZlib"), cancellationToken).ConfigureAwait(false)));

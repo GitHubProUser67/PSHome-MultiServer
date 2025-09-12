@@ -8,7 +8,7 @@ using CustomLogger;
 using EndianTools;
 using SharpCompress.Compressors.LZMA;
 
-namespace SonyEdge
+namespace CastleLibrary.Sony.Edge
 {
     public class LZMA
     {
@@ -204,7 +204,7 @@ namespace SonyEdge
             using (MemoryStream result = new MemoryStream())
             {
                 int outSize = BitConverter.ToInt32(!BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(buffer) : buffer, 12);
-                int streamCount = (outSize + 0xFFFF) >> 16;
+                int streamCount = outSize + 0xFFFF >> 16;
                 int offset = 0x18 + streamCount * 2 + 5;
 
                 Decoder decoder = new Decoder();

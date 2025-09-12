@@ -1,5 +1,7 @@
 ﻿using CustomLogger;
 using Microsoft.Extensions.Logging;
+using MultiServerLibrary.Extension;
+using Org.BouncyCastle.Asn1.Ocsp;
 using SVO;
 using System.Net;
 using System.Text;
@@ -30,7 +32,7 @@ namespace SVO.Games.PS3
                                         resp.Headers.Set("Content-Type", "text/svml");
 
                                         string clientMac = req.Headers.Get("X-SVOMac");
-                                        string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                        string serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
                                         if (string.IsNullOrEmpty(serverMac))
                                         {
                                             response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -45,126 +47,130 @@ namespace SVO.Games.PS3
                                             }
                                             resp.Headers.Set("X-SVOMac", serverMac);
 
+                                            string domain = "killzoneps3.svo.online.scee.com";
+
+                                            if (!SVOServerConfiguration.PreferDNSUrls)
+                                                await InternetProtocolUtils.TryGetServerIP(out domain).ConfigureAwait(false);
 
                                             byte[] uriStore = null;
                                             if (SVOServerConfiguration.SVOHTTPSBypass)
                                             {
                                                 uriStore = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                                 "<SVML>\r\n" +
-                                                "    <SET name=\"IP\" IPAddress=\"127.0.0.1\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"entryURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/KILLZONEPS3_SVML/account/Account_Login.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"homeURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/home.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"menuURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"logoutURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/account/Logout.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"syncprofileURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/Sync_Profiles.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"clanCreateURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/Clan_Create.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mailboxURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/Mail_Box.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"clanTournamentURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/menu.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"leaderboardClanURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"leaderboardClanMembersURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/menu.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"personalStatsURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"friendsURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/menu.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"leaderboardURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/Stats_CareerLeaderboard.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"leaderboardFriendsURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/Stats_LeaderboardFriends.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"clanURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/clan.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"viewtimezonesURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/buildinfo.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"buildInfoURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"clanUniverseURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"loginEncryptedURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/KILLZONEPS3_SVML/account/Account_Encrypted_Login_Submit.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"personalStatsURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/stats/personalStats.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"gameCreateURL\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/game/tempgame.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"createGameURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/game/Game_Create.jsp?gameMode=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"createGameSubmitURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/game/Game_Create_Submit.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/game/Game_Finish_Submit.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"gamePostBinaryStatsURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/game/Game_PostBinaryStats_Submit.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"createGamePlayerURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusAccountLoginURL\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/medius/Medius_Account_Login.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusAccountCreateURL\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/medius/Medius_Account_Create.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusLobbyListURL\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/medius/Medius_Lobby_List.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusChatLobbyURL\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/medius/Medius_Chat_Lobby.jsp\" />   \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusChallengePopupURL\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/medius/Medius_Challenge_Popup.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusAcceptPopupURL\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/medius/Medius_Accept_Popup.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"tickerStrURL\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/ticker/TickerStr.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"rankingsURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/ranks/rankings.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"tourLaunchPopupURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/tourney/Tourney_AutoLaunch.jsp\" />  \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"tourDataURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/tourney/Tourney_CheckIn.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"teamTourneyMatchDataURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/teamtourney/TeamTourney_MatchData.jsp?teamTourID=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"teamTourneyForfeitURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/teamtourney/TeamTourney_ForfeitTeam_Submit.jsp?teamTourTeamID=%d&amp;teamTourBracketID=%d&amp;teamTourID=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"tourForfeitURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/tourney/Tourney_Forfeit_Submit.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"getLadderMatchDataURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/ladder/Ladder_GetMatchData.jsp?ladderMatchID=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"getForfeitLadderMatchURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/ladder/Ladder_Forfeit_Submit.jsp?ladderMatchID=%d&amp;clanID=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"downloadPatch\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/download/patchDownload.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"playerStatsURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/stats/Stats_GetPlayerStats.jsp?PlayerID=%d&amp;gameMode=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"playerProfileURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/profile/Profile_GetPlayerProfile.jsp?PlayerID=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"rankInfoURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/stats/Stats_CareerRankInfo.jsp?playerList=\"  />  \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"downloadVerificationURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/commerce/Commerce_VerifySubmit.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"purchaseListURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/KILLZONEPS3_SVML/commerce/Commerce_PurchaseList.jsp?categoryID=default\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"createVerifiedFileGameURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/KILLZONEPS3_SVML/commerce/Commerce_GameCreatorFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;spectatorPassword=$3\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"joinVerifiedFileGameURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/KILLZONEPS3_SVML/commerce/Commerce_GameJoinerFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;ticket=$3\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"spectateVerifiedFileGameURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/KILLZONEPS3_SVML/commerce/Commerce_GameSpectatorFileVerification.jsp?fileList=$1&amp;spectatorPassword=$2&amp;ticket=$3\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/account/SP_Login_Submit.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"SetIgnoreListURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/account/SP_UpdateIgnoreList_Submit.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"SetUniversePasswordURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/account/SP_SetPassword_Submit.jsp\" /> \r\n \r\n" +
+                                                $"    <SET name=\"IP\" IPAddress=\"{req.RemoteEndPoint.Address}\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"entryURI\" value=\"https://{domain}:10061/KILLZONEPS3_SVML/account/Account_Login.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"homeURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/home.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"menuURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"logoutURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/account/Logout.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"syncprofileURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/Sync_Profiles.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"clanCreateURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/Clan_Create.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mailboxURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/Mail_Box.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"clanTournamentURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/menu.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"leaderboardClanURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"leaderboardClanMembersURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/menu.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"personalStatsURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"friendsURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/menu.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"leaderboardURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/Stats_CareerLeaderboard.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"leaderboardFriendsURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/Stats_LeaderboardFriends.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"clanURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/clan.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"viewtimezonesURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/buildinfo.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"buildInfoURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"clanUniverseURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"loginEncryptedURI\" value=\"https://{domain}:10061/KILLZONEPS3_SVML/account/Account_Encrypted_Login_Submit.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"personalStatsURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/stats/personalStats.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"gameCreateURL\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/game/tempgame.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"createGameURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/game/Game_Create.jsp?gameMode=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"createGameSubmitURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/game/Game_Create_Submit.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/game/Game_Finish_Submit.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"gamePostBinaryStatsURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/game/Game_PostBinaryStats_Submit.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"createGamePlayerURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusAccountLoginURL\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/medius/Medius_Account_Login.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusAccountCreateURL\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/medius/Medius_Account_Create.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusLobbyListURL\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/medius/Medius_Lobby_List.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusChatLobbyURL\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/medius/Medius_Chat_Lobby.jsp\" />   \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusChallengePopupURL\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/medius/Medius_Challenge_Popup.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusAcceptPopupURL\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/medius/Medius_Accept_Popup.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"tickerStrURL\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/ticker/TickerStr.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"rankingsURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/ranks/rankings.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"tourLaunchPopupURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/tourney/Tourney_AutoLaunch.jsp\" />  \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"tourDataURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/tourney/Tourney_CheckIn.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"teamTourneyMatchDataURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/teamtourney/TeamTourney_MatchData.jsp?teamTourID=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"teamTourneyForfeitURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/teamtourney/TeamTourney_ForfeitTeam_Submit.jsp?teamTourTeamID=%d&amp;teamTourBracketID=%d&amp;teamTourID=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"tourForfeitURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/tourney/Tourney_Forfeit_Submit.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"getLadderMatchDataURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/ladder/Ladder_GetMatchData.jsp?ladderMatchID=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"getForfeitLadderMatchURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/ladder/Ladder_Forfeit_Submit.jsp?ladderMatchID=%d&amp;clanID=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"downloadPatch\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/download/patchDownload.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"playerStatsURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/stats/Stats_GetPlayerStats.jsp?PlayerID=%d&amp;gameMode=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"playerProfileURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/profile/Profile_GetPlayerProfile.jsp?PlayerID=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"rankInfoURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/stats/Stats_CareerRankInfo.jsp?playerList=\"  />  \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"downloadVerificationURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/commerce/Commerce_VerifySubmit.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"purchaseListURI\" value=\"https://{domain}:10061/KILLZONEPS3_SVML/commerce/Commerce_PurchaseList.jsp?categoryID=default\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"createVerifiedFileGameURI\" value=\"https://{domain}:10061/KILLZONEPS3_SVML/commerce/Commerce_GameCreatorFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;spectatorPassword=$3\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"joinVerifiedFileGameURI\" value=\"https://{domain}:10061/KILLZONEPS3_SVML/commerce/Commerce_GameJoinerFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;ticket=$3\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"spectateVerifiedFileGameURI\" value=\"https://{domain}:10061/KILLZONEPS3_SVML/commerce/Commerce_GameSpectatorFileVerification.jsp?fileList=$1&amp;spectatorPassword=$2&amp;ticket=$3\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/account/SP_Login_Submit.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"SetIgnoreListURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/account/SP_UpdateIgnoreList_Submit.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"SetUniversePasswordURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/account/SP_SetPassword_Submit.jsp\" /> \r\n \r\n" +
                                                 "    <BROWSER_INIT name=\"init\" /> \r\n" +
                                                 "</SVML>");
                                             } else
                                             {
                                                 uriStore = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                                 "<SVML>\r\n" +
-                                                "    <SET name=\"IP\" IPAddress=\"127.0.0.1\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"entryURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/KILLZONEPS3_SVML/account/Account_Login.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"homeURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/home.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"menuURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"logoutURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/account/Logout.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"syncprofileURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/Sync_Profiles.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"clanCreateURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/Clan_Create.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mailboxURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/Mail_Box.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"clanTournamentURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/menu.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"leaderboardClanURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"leaderboardClanMembersURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/menu.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"personalStatsURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"friendsURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/menu.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"leaderboardURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/Stats_CareerLeaderboard.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"leaderboardFriendsURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/Stats_LeaderboardFriends.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"clanURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/clan.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"viewtimezonesURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/buildinfo.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"buildInfoURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"clanUniverseURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"loginEncryptedURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/KILLZONEPS3_SVML/account/Account_Encrypted_Login_Submit.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"personalStatsURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/stats/personalStats.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"gameCreateURL\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/game/tempgame.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"createGameURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/game/Game_Create.jsp?gameMode=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"createGameSubmitURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/game/Game_Create_Submit.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/game/Game_Finish_Submit.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"gamePostBinaryStatsURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/game/Game_PostBinaryStats_Submit.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"createGamePlayerURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusAccountLoginURL\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/medius/Medius_Account_Login.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusAccountCreateURL\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/medius/Medius_Account_Create.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusLobbyListURL\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/medius/Medius_Lobby_List.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusChatLobbyURL\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/medius/Medius_Chat_Lobby.jsp\" />   \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusChallengePopupURL\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/medius/Medius_Challenge_Popup.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusAcceptPopupURL\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/medius/Medius_Accept_Popup.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"tickerStrURL\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/ticker/TickerStr.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"rankingsURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/ranks/rankings.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"tourLaunchPopupURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/tourney/Tourney_AutoLaunch.jsp\" />  \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"tourDataURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/tourney/Tourney_CheckIn.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"teamTourneyMatchDataURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/teamtourney/TeamTourney_MatchData.jsp?teamTourID=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"teamTourneyForfeitURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/teamtourney/TeamTourney_ForfeitTeam_Submit.jsp?teamTourTeamID=%d&amp;teamTourBracketID=%d&amp;teamTourID=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"tourForfeitURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/tourney/Tourney_Forfeit_Submit.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"getLadderMatchDataURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/ladder/Ladder_GetMatchData.jsp?ladderMatchID=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"getForfeitLadderMatchURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/ladder/Ladder_Forfeit_Submit.jsp?ladderMatchID=%d&amp;clanID=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"downloadPatch\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/download/patchDownload.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"playerStatsURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/stats/Stats_GetPlayerStats.jsp?PlayerID=%d&amp;gameMode=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"playerProfileURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/profile/Profile_GetPlayerProfile.jsp?PlayerID=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"rankInfoURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/stats/Stats_CareerRankInfo.jsp?playerList=\"  />  \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"downloadVerificationURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/KILLZONEPS3_SVML/commerce/Commerce_VerifySubmit.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"purchaseListURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/KILLZONEPS3_SVML/commerce/Commerce_PurchaseList.jsp?categoryID=default\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"createVerifiedFileGameURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/KILLZONEPS3_SVML/commerce/Commerce_GameCreatorFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;spectatorPassword=$3\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"joinVerifiedFileGameURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/KILLZONEPS3_SVML/commerce/Commerce_GameJoinerFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;ticket=$3\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"spectateVerifiedFileGameURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/KILLZONEPS3_SVML/commerce/Commerce_GameSpectatorFileVerification.jsp?fileList=$1&amp;spectatorPassword=$2&amp;ticket=$3\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/KILLZONEPS3_SVML/account/SP_Login_Submit.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"SetIgnoreListURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/KILLZONEPS3_SVML/account/SP_UpdateIgnoreList_Submit.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"SetUniversePasswordURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/KILLZONEPS3_SVML/account/SP_SetPassword_Submit.jsp\" /> \r\n \r\n" +
+                                                $"    <SET name=\"IP\" IPAddress=\"{req.RemoteEndPoint.Address}\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"entryURI\" value=\"https://{domain}:10061/KILLZONEPS3_SVML/account/Account_Login.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"homeURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/home.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"menuURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"logoutURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/account/Logout.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"syncprofileURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/Sync_Profiles.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"clanCreateURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/Clan_Create.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mailboxURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/Mail_Box.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"clanTournamentURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/menu.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"leaderboardClanURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"leaderboardClanMembersURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/menu.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"personalStatsURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"friendsURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/menu.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"leaderboardURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/Stats_CareerLeaderboard.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"leaderboardFriendsURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/Stats_LeaderboardFriends.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"clanURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/clan.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"viewtimezonesURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/buildinfo.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"buildInfoURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"clanUniverseURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/menu.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"loginEncryptedURI\" value=\"https://{domain}:10061/KILLZONEPS3_SVML/account/Account_Encrypted_Login_Submit.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"personalStatsURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/stats/personalStats.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"gameCreateURL\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/game/tempgame.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"createGameURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/game/Game_Create.jsp?gameMode=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"createGameSubmitURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/game/Game_Create_Submit.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/game/Game_Finish_Submit.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"gamePostBinaryStatsURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/game/Game_PostBinaryStats_Submit.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"createGamePlayerURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusAccountLoginURL\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/medius/Medius_Account_Login.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusAccountCreateURL\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/medius/Medius_Account_Create.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusLobbyListURL\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/medius/Medius_Lobby_List.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusChatLobbyURL\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/medius/Medius_Chat_Lobby.jsp\" />   \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusChallengePopupURL\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/medius/Medius_Challenge_Popup.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusAcceptPopupURL\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/medius/Medius_Accept_Popup.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"tickerStrURL\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/ticker/TickerStr.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"rankingsURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/ranks/rankings.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"tourLaunchPopupURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/tourney/Tourney_AutoLaunch.jsp\" />  \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"tourDataURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/tourney/Tourney_CheckIn.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"teamTourneyMatchDataURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/teamtourney/TeamTourney_MatchData.jsp?teamTourID=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"teamTourneyForfeitURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/teamtourney/TeamTourney_ForfeitTeam_Submit.jsp?teamTourTeamID=%d&amp;teamTourBracketID=%d&amp;teamTourID=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"tourForfeitURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/tourney/Tourney_Forfeit_Submit.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"getLadderMatchDataURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/ladder/Ladder_GetMatchData.jsp?ladderMatchID=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"getForfeitLadderMatchURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/ladder/Ladder_Forfeit_Submit.jsp?ladderMatchID=%d&amp;clanID=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"downloadPatch\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/download/patchDownload.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"playerStatsURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/stats/Stats_GetPlayerStats.jsp?PlayerID=%d&amp;gameMode=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"playerProfileURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/profile/Profile_GetPlayerProfile.jsp?PlayerID=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"rankInfoURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/stats/Stats_CareerRankInfo.jsp?playerList=\"  />  \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"downloadVerificationURI\" value=\"http://{domain}:10060/KILLZONEPS3_SVML/commerce/Commerce_VerifySubmit.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"purchaseListURI\" value=\"https://{domain}:10061/KILLZONEPS3_SVML/commerce/Commerce_PurchaseList.jsp?categoryID=default\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"createVerifiedFileGameURI\" value=\"https://{domain}:10061/KILLZONEPS3_SVML/commerce/Commerce_GameCreatorFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;spectatorPassword=$3\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"joinVerifiedFileGameURI\" value=\"https://{domain}:10061/KILLZONEPS3_SVML/commerce/Commerce_GameJoinerFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;ticket=$3\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"spectateVerifiedFileGameURI\" value=\"https://{domain}:10061/KILLZONEPS3_SVML/commerce/Commerce_GameSpectatorFileVerification.jsp?fileList=$1&amp;spectatorPassword=$2&amp;ticket=$3\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"https://{domain}:10061/KILLZONEPS3_SVML/account/SP_Login_Submit.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"SetIgnoreListURI\" value=\"https://{domain}:10061/KILLZONEPS3_SVML/account/SP_UpdateIgnoreList_Submit.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"SetUniversePasswordURI\" value=\"https://{domain}:10061/KILLZONEPS3_SVML/account/SP_SetPassword_Submit.jsp\" /> \r\n \r\n" +
                                                 "    <BROWSER_INIT name=\"init\" /> \r\n" +
                                                 "</SVML>");
                                             }
@@ -191,7 +197,7 @@ namespace SVO.Games.PS3
                                         resp.Headers.Set("Content-Type", "text/svml");
 
                                         string clientMac = req.Headers.Get("X-SVOMac");
-                                        string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                        string serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
                                         if (string.IsNullOrEmpty(serverMac))
                                         {
                                             response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -238,7 +244,7 @@ namespace SVO.Games.PS3
                                         resp.Headers.Set("Content-Type", "text/svml");
 
                                         string clientMac = req.Headers.Get("X-SVOMac");
-                                        string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                        string serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
                                         if (string.IsNullOrEmpty(serverMac))
                                         {
                                             response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -402,7 +408,7 @@ namespace SVO.Games.PS3
                                     string clientMac = req.Headers.Get("X-SVOMac");
 
                                     string sig = HttpUtility.ParseQueryString(req.Url.Query).Get("sig");
-                                    string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     resp.Headers.Set("X-SVOMac", serverMac);
                                     if (string.IsNullOrEmpty(serverMac))
@@ -505,7 +511,7 @@ namespace SVO.Games.PS3
                                         resp.Headers.Set("Content-Type", "text/svml");
 
                                         string clientMac = req.Headers.Get("X-SVOMac");
-                                        string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                        string serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
                                         if (string.IsNullOrEmpty(serverMac))
                                         {
                                             response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -556,7 +562,7 @@ namespace SVO.Games.PS3
                                         resp.Headers.Set("Content-Type", "text/svml");
 
                                         string clientMac = req.Headers.Get("X-SVOMac");
-                                        string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                        string serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
                                         if (serverMac == null)
                                         {
                                             string forbidden = "500 Forbidden";

@@ -1,4 +1,4 @@
-using SonyEdge;
+using CastleLibrary.Sony.Edge;
 
 namespace HomeTools.BARFramework
 {

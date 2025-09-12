@@ -106,7 +106,7 @@ namespace MultiServerLibrary.Extension
                     try
                     {
 #pragma warning disable
-                        using (FixedWebClient client = new FixedWebClient())
+                        using (FixedWebClientWithTimeout client = new FixedWebClientWithTimeout())
                         {
                             result = client.DownloadString(url)
                                 .Replace("\r\n", string.Empty).Replace("\n", string.Empty).Trim();

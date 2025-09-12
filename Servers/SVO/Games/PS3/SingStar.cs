@@ -1,4 +1,5 @@
 using CustomLogger;
+using MultiServerLibrary.Extension;
 using SpaceWizards.HttpListener;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -33,7 +34,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -45,27 +46,32 @@ namespace SVO.Games.PS3
                                         response.Headers.Set("Content-Type", "text/svml; charset=UTF-8");
                                         response.Headers.Set("X-SVOMac", serverMac);
 
+                                        string domain = "singstar.svo.online.com";
+
+                                        if (!SVOServerConfiguration.PreferDNSUrls)
+                                            await InternetProtocolUtils.TryGetServerIP(out domain).ConfigureAwait(false);
+
                                         byte[]? uriStore = null;
 
                                         if (SVOServerConfiguration.SVOHTTPSBypass)
                                             uriStore = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                                             "<SVML>\n" +
                                             $"    <SET name=\"IP\" IPAddress=\"{request.RemoteEndPoint.Address}\" />    \r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"createGameURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/game/Game_Create.jsp?gameMode=%d\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"gamePostBinaryStatsURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/game/Game_PostBinaryStats_Submit.jsp\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"SetUniversePasswordURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/account/SP_SetPassword_Submit.jsp\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"loginEncryptedURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/account/Account_Encrypted_Login_Submit.jsp\" />    \r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"SetBuddyListURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/buddy/Buddy_SetList_Submit.jsp\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"SetIgnoreListURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/account/SP_UpdateIgnoreList_Submit.jsp\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"drmSignatureURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/commerce/Commerce_BufferedSignature.jsp\"/>\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"spUpdateTicketURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/account/SP_UpdateTicket.jsp\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"createGamePlayerURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"createGameSubmitURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/game/Game_Create_Submit.jsp\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"gameBinaryStatsPostURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/game/Game_BinaryStatsPost_Submit.jsp\"/>\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"gameFinishURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/game/Game_Finish_Submit.jsp\"/>\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/game/Finish_Game_Submit.jsp\"/>\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"createGameURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/game/Game_Create.jsp?gameMode=%d\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"gamePostBinaryStatsURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/game/Game_PostBinaryStats_Submit.jsp\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"SetUniversePasswordURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/account/SP_SetPassword_Submit.jsp\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"loginEncryptedURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/account/Account_Encrypted_Login_Submit.jsp\" />    \r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"SetBuddyListURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/buddy/Buddy_SetList_Submit.jsp\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"SetIgnoreListURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/account/SP_UpdateIgnoreList_Submit.jsp\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"drmSignatureURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/commerce/Commerce_BufferedSignature.jsp\"/>\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"spUpdateTicketURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/account/SP_UpdateTicket.jsp\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"createGamePlayerURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"createGameSubmitURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/game/Game_Create_Submit.jsp\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"gameBinaryStatsPostURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/game/Game_BinaryStatsPost_Submit.jsp\"/>\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"gameFinishURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/game/Game_Finish_Submit.jsp\"/>\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/game/Finish_Game_Submit.jsp\"/>\r\n" +
                                             $"    <BROWSER_INIT name=\"init\" />\r\n" +
                                             $"     \r\n    \r\n\t<REDIRECT href=\"unityNpLogin.jsp\" name=\"redirect\"/>\r\n" +
                                             "</SVML>");
@@ -73,21 +79,21 @@ namespace SVO.Games.PS3
                                             uriStore = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                                             "<SVML>\n" +
                                             $"    <SET name=\"IP\" IPAddress=\"{request.RemoteEndPoint.Address}\" />    \r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"createGameURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/game/Game_Create.jsp?gameMode=%d\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"gamePostBinaryStatsURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/game/Game_PostBinaryStats_Submit.jsp\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"SetUniversePasswordURI\" value=\"https://singstar.svo.online.com:10061/SINGSTARPS3_SVML/account/SP_SetPassword_Submit.jsp\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"loginEncryptedURI\" value=\"https://singstar.svo.online.com:10061/SINGSTARPS3_SVML/account/Account_Encrypted_Login_Submit.jsp\" />    \r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"https://singstar.svo.online.com:10061/SINGSTARPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"SetBuddyListURI\" value=\"https://singstar.svo.online.com:10061/SINGSTARPS3_SVML/buddy/Buddy_SetList_Submit.jsp\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"SetIgnoreListURI\" value=\"https://singstar.svo.online.com:10061/SINGSTARPS3_SVML/account/SP_UpdateIgnoreList_Submit.jsp\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"drmSignatureURI\" value=\"https://singstar.svo.online.com:10061/SINGSTARPS3_SVML/commerce/Commerce_BufferedSignature.jsp\"/>\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"spUpdateTicketURI\" value=\"https://singstar.svo.online.com:10061/SINGSTARPS3_SVML/account/SP_UpdateTicket.jsp\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"createGamePlayerURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"createGameSubmitURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/game/Game_Create_Submit.jsp\" />\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"gameBinaryStatsPostURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/game/Game_BinaryStatsPost_Submit.jsp\"/>\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"gameFinishURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/game/Game_Finish_Submit.jsp\"/>\r\n" +
-                                            $"    <DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://singstar.svo.online.com:10060/SINGSTARPS3_SVML/game/Finish_Game_Submit.jsp\"/>\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"createGameURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/game/Game_Create.jsp?gameMode=%d\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"gamePostBinaryStatsURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/game/Game_PostBinaryStats_Submit.jsp\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"SetUniversePasswordURI\" value=\"https://{domain}:10061/SINGSTARPS3_SVML/account/SP_SetPassword_Submit.jsp\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"loginEncryptedURI\" value=\"https://{domain}:10061/SINGSTARPS3_SVML/account/Account_Encrypted_Login_Submit.jsp\" />    \r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"https://{domain}:10061/SINGSTARPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"SetBuddyListURI\" value=\"https://{domain}:10061/SINGSTARPS3_SVML/buddy/Buddy_SetList_Submit.jsp\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"SetIgnoreListURI\" value=\"https://{domain}:10061/SINGSTARPS3_SVML/account/SP_UpdateIgnoreList_Submit.jsp\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"drmSignatureURI\" value=\"https://{domain}:10061/SINGSTARPS3_SVML/commerce/Commerce_BufferedSignature.jsp\"/>\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"spUpdateTicketURI\" value=\"https://{domain}:10061/SINGSTARPS3_SVML/account/SP_UpdateTicket.jsp\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"createGamePlayerURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"createGameSubmitURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/game/Game_Create_Submit.jsp\" />\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"gameBinaryStatsPostURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/game/Game_BinaryStatsPost_Submit.jsp\"/>\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"gameFinishURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/game/Game_Finish_Submit.jsp\"/>\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://{domain}:10060/SINGSTARPS3_SVML/game/Finish_Game_Submit.jsp\"/>\r\n" +
                                             $"    <BROWSER_INIT name=\"init\" />\r\n" +
                                             $"     \r\n    \r\n\t<REDIRECT href=\"unityNpLogin.jsp\" name=\"redirect\"/>\r\n" +
                                             "</SVML>");
@@ -118,7 +124,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -164,7 +170,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -281,7 +287,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -329,7 +335,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -393,7 +399,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -478,7 +484,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -524,7 +530,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -577,7 +583,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -625,7 +631,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {

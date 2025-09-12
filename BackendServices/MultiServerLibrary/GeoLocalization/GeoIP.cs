@@ -79,7 +79,7 @@ namespace MultiServerLibrary.GeoLocalization
 
             CustomLogger.LoggerAccessor.LogWarn($"[GeoIP] - Initialize() - Started Initialization at: {DateTime.Now}.");
 
-            string UpdaterPageContent = HTTPProcessor.RequestURLGET(GeoLite2UpdaterUrl);
+            string UpdaterPageContent = HTTPProcessor.RequestURLGET(GeoLite2UpdaterUrl, true);
 
             if (!string.IsNullOrEmpty(UpdaterPageContent))
             {
@@ -121,7 +121,7 @@ namespace MultiServerLibrary.GeoLocalization
                     {
                         if (!string.IsNullOrEmpty(dbUrl))
                         {
-                            byte[] dbData = HTTPProcessor.RequestFullURLGET(dbUrl).data;
+                            byte[] dbData = HTTPProcessor.RequestFullURLGET(dbUrl, true).data;
 
                             if (dbData != null && NetHasher.DotNetHasher.ComputeSHA256String(dbData) != NetHasher.DotNetHasher.ComputeSHA256String(File.ReadAllBytes(liteDbPath)))
                             {
@@ -138,7 +138,7 @@ namespace MultiServerLibrary.GeoLocalization
                     }
                     else if (!string.IsNullOrEmpty(dbUrl))
                     {
-                        byte[] dbData = HTTPProcessor.RequestFullURLGET(dbUrl).data;
+                        byte[] dbData = HTTPProcessor.RequestFullURLGET(dbUrl, true).data;
 
                         if (dbData != null)
                         {

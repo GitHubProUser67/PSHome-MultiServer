@@ -1,8 +1,9 @@
 using CustomLogger;
+using MultiServerLibrary.Extension;
 using SpaceWizards.HttpListener;
 using System.Security;
-using System.Text.RegularExpressions;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Web;
 
 namespace SVO.Games.PS3
@@ -34,7 +35,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -59,6 +60,11 @@ namespace SVO.Games.PS3
 
                                         regionNoptions = regionNoptions.Replace("&", "&amp;");
 
+                                        string domain = "homeps3.svo.online.scee.com";
+
+                                        if (!SVOServerConfiguration.PreferDNSUrls)
+                                            await InternetProtocolUtils.TryGetServerIP(out domain).ConfigureAwait(false);
+
                                         byte[]? uriStore = null;
 
                                         if (SVOServerConfiguration.SVOHTTPSBypass)
@@ -66,38 +72,38 @@ namespace SVO.Games.PS3
                                             "<SVML>\r\n" +
                                            $"    <BROWSER_INIT name=\"init\" />\r\n\t" +
                                             "    \r\n    <SET name=\"nohistory\" neverBackOnto=\"true\"/>\r\n" +
-                                            "    \r\n    <DATA dataType=\"URI\" name=\"SvfsUpload\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/fileservices/UploadFileServlet\"/>\r\n" +
-                                            "    \r\n    <DATA dataType=\"URI\" name=\"SvfsDownload\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/fileservices/Download.jsp\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"SvfsDeleteSubmit\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/fileservices/Delete.jsp\"/>\r\n    \r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpArcadeMachines\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=arcade\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpBowling\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=bowling\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpCharacterCreation\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=characterCustomisation\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpChess\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=chess\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpConversations\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=conversations\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpDoors\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=relocation\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpDraughts\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=draughts\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpEmotes\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=emotes\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpFirstTimeUser\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=firstTimeUsing\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpGameLaunchingCreate\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingCreate\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpGameLaunchingJoin\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingJoin\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpGamesRoom\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamespace\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpHomeApartment\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=homespace\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpPool\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=pool\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpSafetyInHome\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=stayingsafe\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpSeats\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=seats\"/>\r\n\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityNews\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityLatestUpdate\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityHandyLinks\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityMotd\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=messageoftheday\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityUsagePolicy\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=eula\"/>\r\n\r\n    " +
-                                           $"    <DATA dataType=\"URI\" name=\"GriefReportStart\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/griefreporting/GriefReportWelcome.jsp?region={regionNoptions}\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"ViralProvisioningStart\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/viralprovisioning/HomeInviteWelcome.jsp\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"UserActivityLogUploadServlet\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/tracking/StatTrackingServlet\"/>\r\n    \r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityNewsSummary\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityNewsDetailed\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityBetaTrialRoadmap\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n    \r\n" +
-                                            "    <DATA dataType=\"DATA\" name=\"gameFinishURL\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n\t\r\n" +
-                                            "    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n\t\r\n\t" +
+                                           $"    \r\n    <DATA dataType=\"URI\" name=\"SvfsUpload\" value=\"http://{domain}:10060/HUBPS3_SVML/fileservices/UploadFileServlet\"/>\r\n" +
+                                           $"    \r\n    <DATA dataType=\"URI\" name=\"SvfsDownload\" value=\"http://{domain}:10060/HUBPS3_SVML/home/fileservices/Download.jsp\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"SvfsDeleteSubmit\" value=\"http://{domain}:10060/HUBPS3_SVML/home/fileservices/Delete.jsp\"/>\r\n    \r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpArcadeMachines\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=arcade\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpBowling\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=bowling\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpCharacterCreation\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=characterCustomisation\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpChess\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=chess\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpConversations\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=conversations\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpDoors\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=relocation\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpDraughts\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=draughts\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpEmotes\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=emotes\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpFirstTimeUser\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=firstTimeUsing\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpGameLaunchingCreate\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingCreate\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpGameLaunchingJoin\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingJoin\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpGamesRoom\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamespace\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpHomeApartment\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=homespace\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpPool\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=pool\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpSafetyInHome\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=stayingsafe\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpSeats\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=seats\"/>\r\n\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityNews\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityLatestUpdate\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityHandyLinks\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityMotd\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=messageoftheday\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityUsagePolicy\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=eula\"/>\r\n\r\n    " +
+                                           $"    <DATA dataType=\"URI\" name=\"GriefReportStart\" value=\"http://{domain}:10060/HUBPS3_SVML/home/griefreporting/GriefReportWelcome.jsp?region={regionNoptions}\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"ViralProvisioningStart\" value=\"http://{domain}:10060/HUBPS3_SVML/home/viralprovisioning/HomeInviteWelcome.jsp\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"UserActivityLogUploadServlet\" value=\"http://{domain}:10060/HUBPS3_SVML/tracking/StatTrackingServlet\"/>\r\n    \r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityNewsSummary\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityNewsDetailed\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityBetaTrialRoadmap\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n    \r\n" +
+                                           $"    <DATA dataType=\"DATA\" name=\"gameFinishURL\" value=\"http://{domain}:10060/HUBPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n\t\r\n" +
+                                           $"    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://{domain}:10060/HUBPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n\t\r\n\t" +
                                            $"     \r\n    \r\n\t<REDIRECT href=\"eulaCheck.jsp?region={regionNoptions}\" name=\"redirect\"/>\r\n" +
                                             "      \r\n" +
                                             "</SVML>");
@@ -106,38 +112,38 @@ namespace SVO.Games.PS3
                                             "<SVML>\r\n" +
                                             $"   <BROWSER_INIT name=\"init\" />\r\n\t" +
                                             "    \r\n    <SET name=\"nohistory\" neverBackOnto=\"true\"/>\r\n" +
-                                            "    \r\n    <DATA dataType=\"URI\" name=\"SvfsUpload\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/fileservices/UploadFileServlet\"/>\r\n" +
-                                            "    \r\n    <DATA dataType=\"URI\" name=\"SvfsDownload\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/fileservices/Download.jsp\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"SvfsDeleteSubmit\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/fileservices/Delete.jsp\"/>\r\n    \r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpArcadeMachines\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=arcade\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpBowling\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=bowling\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpCharacterCreation\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=characterCustomisation\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpChess\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=chess\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpConversations\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=conversations\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpDoors\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=relocation\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpDraughts\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=draughts\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpEmotes\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=emotes\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpFirstTimeUser\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=firstTimeUsing\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpGameLaunchingCreate\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingCreate\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpGameLaunchingJoin\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingJoin\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpGamesRoom\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamespace\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpHomeApartment\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=homespace\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpPool\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=pool\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpSafetyInHome\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=stayingsafe\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpSeats\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=seats\"/>\r\n\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityNews\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityLatestUpdate\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityHandyLinks\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityMotd\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=messageoftheday\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityUsagePolicy\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=eula\"/>\r\n\r\n    " +
-                                            $"   <DATA dataType=\"URI\" name=\"GriefReportStart\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/griefreporting/GriefReportWelcome.jsp?region={regionNoptions}\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"ViralProvisioningStart\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/viralprovisioning/HomeInviteWelcome.jsp\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"UserActivityLogUploadServlet\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/tracking/StatTrackingServlet\"/>\r\n    \r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityNewsSummary\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityNewsDetailed\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityBetaTrialRoadmap\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n" +
-                                            "    <DATA dataType=\"DATA\" name=\"gameFinishURL\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n\t\r\n" +
-                                            "    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"https://homeps3.svo.online.scee.com:10061/HUBPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n       " +
+                                            $"    \r\n    <DATA dataType=\"URI\" name=\"SvfsUpload\" value=\"http://{domain}:10060/HUBPS3_SVML/fileservices/UploadFileServlet\"/>\r\n" +
+                                            $"    \r\n    <DATA dataType=\"URI\" name=\"SvfsDownload\" value=\"http://{domain}:10060/HUBPS3_SVML/home/fileservices/Download.jsp\"/>\r\n" +
+                                            $"    <DATA dataType=\"URI\" name=\"SvfsDeleteSubmit\" value=\"http://{domain}:10060/HUBPS3_SVML/home/fileservices/Delete.jsp\"/>\r\n    \r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpArcadeMachines\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=arcade\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpBowling\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=bowling\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpCharacterCreation\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=characterCustomisation\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpChess\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=chess\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpConversations\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=conversations\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpDoors\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=relocation\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpDraughts\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=draughts\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpEmotes\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=emotes\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpFirstTimeUser\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=firstTimeUsing\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpGameLaunchingCreate\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingCreate\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpGameLaunchingJoin\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingJoin\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpGamesRoom\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamespace\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpHomeApartment\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=homespace\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpPool\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=pool\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpSafetyInHome\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=stayingsafe\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpSeats\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=seats\"/>\r\n\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityNews\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityLatestUpdate\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityHandyLinks\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityMotd\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=messageoftheday\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityUsagePolicy\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=eula\"/>\r\n\r\n    " +
+                                            $"   <DATA dataType=\"URI\" name=\"GriefReportStart\" value=\"http://{domain}:10060/HUBPS3_SVML/home/griefreporting/GriefReportWelcome.jsp?region={regionNoptions}\"/>\r\n" +
+                                            $"    <DATA dataType=\"URI\" name=\"ViralProvisioningStart\" value=\"http://{domain}:10060/HUBPS3_SVML/home/viralprovisioning/HomeInviteWelcome.jsp\"/>\r\n" +
+                                            $"    <DATA dataType=\"URI\" name=\"UserActivityLogUploadServlet\" value=\"http://{domain}:10060/HUBPS3_SVML/tracking/StatTrackingServlet\"/>\r\n    \r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityNewsSummary\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityNewsDetailed\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityBetaTrialRoadmap\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"gameFinishURL\" value=\"http://{domain}:10060/HUBPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n\t\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"https://{domain}:10061/HUBPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n       " +
                                             $"     \r\n    \r\n\t<REDIRECT href=\"eulaCheck.jsp?region={regionNoptions}\" name=\"redirect\"/>\r\n" +
                                             "      \r\n" +
                                             "</SVML>");
@@ -169,7 +175,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -192,6 +198,11 @@ namespace SVO.Games.PS3
                                             region = "en-US";
                                         }
 
+                                        string domain = "homeps3.svo.online.scee.com";
+
+                                        if (!SVOServerConfiguration.PreferDNSUrls)
+                                            await InternetProtocolUtils.TryGetServerIP(out domain).ConfigureAwait(false);
+
                                         byte[]? uriStore = null;
 
                                         if (SVOServerConfiguration.SVOHTTPSBypass)
@@ -199,38 +210,38 @@ namespace SVO.Games.PS3
                                             "<SVML>\r\n" +
                                            $"    <BROWSER_INIT name=\"init\" />\r\n\t" +
                                             "    \r\n    <SET name=\"nohistory\" neverBackOnto=\"true\"/>\r\n" +
-                                            "    \r\n    <DATA dataType=\"URI\" name=\"SvfsUpload\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/fileservices/UploadFileServlet\"/>\r\n" +
-                                            "    \r\n    <DATA dataType=\"URI\" name=\"SvfsDownload\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/fileservices/Download.jsp\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"SvfsDeleteSubmit\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/fileservices/Delete.jsp\"/>\r\n    \r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpArcadeMachines\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=arcade\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpBowling\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=bowling\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpCharacterCreation\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=characterCustomisation\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpChess\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=chess\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpConversations\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=conversations\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpDoors\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=relocation\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpDraughts\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=draughts\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpEmotes\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=emotes\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpFirstTimeUser\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=firstTimeUsing\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpGameLaunchingCreate\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=gamelaunchingCreate\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpGameLaunchingJoin\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=gamelaunchingJoin\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpGamesRoom\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=gamespace\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpHomeApartment\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=homespace\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpPool\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=pool\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpSafetyInHome\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=stayingsafe\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpSeats\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=seats\"/>\r\n\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityNews\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=news\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityLatestUpdate\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=latestUpdate\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityHandyLinks\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=handyLinks\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityMotd\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=messageoftheday\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityUsagePolicy\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=eula\"/>\r\n\r\n    " +
-                                           $"    <DATA dataType=\"URI\" name=\"GriefReportStart\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/griefreporting/GriefReportWelcome.jsp?region={region}\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"ViralProvisioningStart\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/viralprovisioning/HomeInviteWelcome.jsp\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"UserActivityLogUploadServlet\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/tracking/StatTrackingServlet\"/>\r\n    \r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityNewsSummary\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=news\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityNewsDetailed\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=latestUpdate\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityBetaTrialRoadmap\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=handyLinks\"/>\r\n    \r\n" +
-                                            "    <DATA dataType=\"DATA\" name=\"gameFinishURL\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n\t\r\n" +
-                                            "    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n\t\r\n\t" +
+                                           $"    \r\n    <DATA dataType=\"URI\" name=\"SvfsUpload\" value=\"http://{domain}:10060/HUBPS3_SVML/fileservices/UploadFileServlet\"/>\r\n" +
+                                           $"    \r\n    <DATA dataType=\"URI\" name=\"SvfsDownload\" value=\"http://{domain}:10060/HUBPS3_SVML/home/fileservices/Download.jsp\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"SvfsDeleteSubmit\" value=\"http://{domain}:10060/HUBPS3_SVML/home/fileservices/Delete.jsp\"/>\r\n    \r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpArcadeMachines\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=arcade\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpBowling\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=bowling\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpCharacterCreation\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=characterCustomisation\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpChess\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=chess\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpConversations\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=conversations\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpDoors\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=relocation\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpDraughts\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=draughts\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpEmotes\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=emotes\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpFirstTimeUser\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=firstTimeUsing\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpGameLaunchingCreate\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=gamelaunchingCreate\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpGameLaunchingJoin\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=gamelaunchingJoin\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpGamesRoom\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=gamespace\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpHomeApartment\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=homespace\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpPool\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=pool\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpSafetyInHome\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=stayingsafe\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpSeats\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=seats\"/>\r\n\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityNews\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=news\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityLatestUpdate\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=latestUpdate\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityHandyLinks\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=handyLinks\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityMotd\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=messageoftheday\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityUsagePolicy\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=eula\"/>\r\n\r\n    " +
+                                           $"    <DATA dataType=\"URI\" name=\"GriefReportStart\" value=\"http://{domain}:10060/HUBPS3_SVML/home/griefreporting/GriefReportWelcome.jsp?region={region}\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"ViralProvisioningStart\" value=\"http://{domain}:10060/HUBPS3_SVML/home/viralprovisioning/HomeInviteWelcome.jsp\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"UserActivityLogUploadServlet\" value=\"http://{domain}:10060/HUBPS3_SVML/tracking/StatTrackingServlet\"/>\r\n    \r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityNewsSummary\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=news\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityNewsDetailed\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=latestUpdate\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityBetaTrialRoadmap\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=handyLinks\"/>\r\n    \r\n" +
+                                           $"    <DATA dataType=\"DATA\" name=\"gameFinishURL\" value=\"http://{domain}:10060/HUBPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n\t\r\n" +
+                                           $"    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://{domain}:10060/HUBPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n\t\r\n\t" +
                                            $"     \r\n    \r\n\t<REDIRECT href=\"eulaCheck.jsp?region={region}&autologin=0\" name=\"redirect\"/>\r\n" +
                                             "      \r\n" +
                                             "</SVML>");
@@ -239,38 +250,38 @@ namespace SVO.Games.PS3
                                             "<SVML>\r\n" +
                                             $"   <BROWSER_INIT name=\"init\" />\r\n\t" +
                                             "    \r\n    <SET name=\"nohistory\" neverBackOnto=\"true\"/>\r\n" +
-                                            "    \r\n    <DATA dataType=\"URI\" name=\"SvfsUpload\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/fileservices/UploadFileServlet\"/>\r\n" +
-                                            "    \r\n    <DATA dataType=\"URI\" name=\"SvfsDownload\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/fileservices/Download.jsp\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"SvfsDeleteSubmit\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/fileservices/Delete.jsp\"/>\r\n    \r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpArcadeMachines\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=arcade\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpBowling\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=bowling\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpCharacterCreation\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=characterCustomisation\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpChess\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=chess\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpConversations\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=conversations\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpDoors\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=relocation\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpDraughts\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=draughts\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpEmotes\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=emotes\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpFirstTimeUser\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=firstTimeUsing\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpGameLaunchingCreate\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=gamelaunchingCreate\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpGameLaunchingJoin\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=gamelaunchingJoin\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpGamesRoom\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=gamespace\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpHomeApartment\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=homespace\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpPool\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=pool\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpSafetyInHome\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=stayingsafe\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpSeats\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=seats\"/>\r\n\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityNews\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=news\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityLatestUpdate\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=latestUpdate\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityHandyLinks\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=handyLinks\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityMotd\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=messageoftheday\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityUsagePolicy\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=eula\"/>\r\n\r\n    " +
-                                            $"   <DATA dataType=\"URI\" name=\"GriefReportStart\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/griefreporting/GriefReportWelcome.jsp?region={region}\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"ViralProvisioningStart\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/viralprovisioning/HomeInviteWelcome.jsp\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"UserActivityLogUploadServlet\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/tracking/StatTrackingServlet\"/>\r\n    \r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityNewsSummary\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=news\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityNewsDetailed\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=latestUpdate\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityBetaTrialRoadmap\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=handyLinks\"/>\r\n" +
-                                            "    <DATA dataType=\"DATA\" name=\"gameFinishURL\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n\t\r\n" +
-                                            "    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"https://homeps3.svo.online.scee.com:10061/HUBPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n       " +
+                                            $"    \r\n    <DATA dataType=\"URI\" name=\"SvfsUpload\" value=\"http://{domain}:10060/HUBPS3_SVML/fileservices/UploadFileServlet\"/>\r\n" +
+                                            $"    \r\n    <DATA dataType=\"URI\" name=\"SvfsDownload\" value=\"http://{domain}:10060/HUBPS3_SVML/home/fileservices/Download.jsp\"/>\r\n" +
+                                            $"    <DATA dataType=\"URI\" name=\"SvfsDeleteSubmit\" value=\"http://{domain}:10060/HUBPS3_SVML/home/fileservices/Delete.jsp\"/>\r\n    \r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpArcadeMachines\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=arcade\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpBowling\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=bowling\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpCharacterCreation\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=characterCustomisation\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpChess\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=chess\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpConversations\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=conversations\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpDoors\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=relocation\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpDraughts\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=draughts\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpEmotes\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=emotes\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpFirstTimeUser\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=firstTimeUsing\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpGameLaunchingCreate\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=gamelaunchingCreate\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpGameLaunchingJoin\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=gamelaunchingJoin\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpGamesRoom\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=gamespace\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpHomeApartment\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=homespace\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpPool\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=pool\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpSafetyInHome\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=stayingsafe\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpSeats\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=seats\"/>\r\n\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityNews\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=news\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityLatestUpdate\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=latestUpdate\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityHandyLinks\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=handyLinks\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityMotd\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=messageoftheday\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityUsagePolicy\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=eula\"/>\r\n\r\n    " +
+                                            $"   <DATA dataType=\"URI\" name=\"GriefReportStart\" value=\"http://{domain}:10060/HUBPS3_SVML/home/griefreporting/GriefReportWelcome.jsp?region={region}\"/>\r\n" +
+                                            $"    <DATA dataType=\"URI\" name=\"ViralProvisioningStart\" value=\"http://{domain}:10060/HUBPS3_SVML/home/viralprovisioning/HomeInviteWelcome.jsp\"/>\r\n" +
+                                            $"    <DATA dataType=\"URI\" name=\"UserActivityLogUploadServlet\" value=\"http://{domain}:10060/HUBPS3_SVML/tracking/StatTrackingServlet\"/>\r\n    \r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityNewsSummary\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=news\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityNewsDetailed\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=latestUpdate\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityBetaTrialRoadmap\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={region}&amp;pageName=handyLinks\"/>\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"gameFinishURL\" value=\"http://{domain}:10060/HUBPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n\t\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"https://{domain}:10061/HUBPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n       " +
                                             $"     \r\n    \r\n\t<REDIRECT href=\"eulaCheck.jsp?region={region}&autologin=0\" name=\"redirect\"/>\r\n" +
                                             "      \r\n" +
                                             "</SVML>");
@@ -302,7 +313,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -327,6 +338,11 @@ namespace SVO.Games.PS3
 
                                         regionNoptions = regionNoptions.Replace("&", "&amp;");
 
+                                        string domain = "homeps3.svo.online.scee.com";
+
+                                        if (!SVOServerConfiguration.PreferDNSUrls)
+                                            await InternetProtocolUtils.TryGetServerIP(out domain).ConfigureAwait(false);
+
                                         byte[]? uriStore = null;
 
                                         if (SVOServerConfiguration.SVOHTTPSBypass)
@@ -334,38 +350,38 @@ namespace SVO.Games.PS3
                                             "<SVML>\r\n" +
                                            $"    <BROWSER_INIT name=\"init\" />\r\n\t" +
                                             "    \r\n    <SET name=\"nohistory\" neverBackOnto=\"true\"/>\r\n" +
-                                            "    \r\n    <DATA dataType=\"URI\" name=\"SvfsUpload\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/fileservices/UploadFileServlet\"/>\r\n" +
-                                            "    \r\n    <DATA dataType=\"URI\" name=\"SvfsDownload\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/fileservices/Download.jsp\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"SvfsDeleteSubmit\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/fileservices/Delete.jsp\"/>\r\n    \r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpArcadeMachines\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=arcade\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpBowling\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=bowling\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpCharacterCreation\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=characterCustomisation\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpChess\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=chess\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpConversations\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=conversations\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpDoors\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=relocation\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpDraughts\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=draughts\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpEmotes\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=emotes\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpFirstTimeUser\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=firstTimeUsing\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpGameLaunchingCreate\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingCreate\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpGameLaunchingJoin\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingJoin\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpGamesRoom\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamespace\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpHomeApartment\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=homespace\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpPool\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=pool\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpSafetyInHome\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=stayingsafe\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"HelpSeats\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=seats\"/>\r\n\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityNews\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityLatestUpdate\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityHandyLinks\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityMotd\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=messageoftheday\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityUsagePolicy\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=eula\"/>\r\n\r\n    " +
-                                           $"    <DATA dataType=\"URI\" name=\"GriefReportStart\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/griefreporting/GriefReportWelcome.jsp?region={regionNoptions}\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"ViralProvisioningStart\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/viralprovisioning/HomeInviteWelcome.jsp\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"UserActivityLogUploadServlet\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/tracking/StatTrackingServlet\"/>\r\n    \r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityNewsSummary\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityNewsDetailed\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
-                                           $"    <DATA dataType=\"URI\" name=\"CommunityBetaTrialRoadmap\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n    \r\n" +
-                                            "    <DATA dataType=\"DATA\" name=\"gameFinishURL\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n\t\r\n" +
-                                            "    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n\t\r\n\t" +
+                                           $"    \r\n    <DATA dataType=\"URI\" name=\"SvfsUpload\" value=\"http://{domain}:10060/HUBPS3_SVML/fileservices/UploadFileServlet\"/>\r\n" +
+                                           $"    \r\n    <DATA dataType=\"URI\" name=\"SvfsDownload\" value=\"http://{domain}:10060/HUBPS3_SVML/home/fileservices/Download.jsp\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"SvfsDeleteSubmit\" value=\"http://{domain}:10060/HUBPS3_SVML/home/fileservices/Delete.jsp\"/>\r\n    \r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpArcadeMachines\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=arcade\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpBowling\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=bowling\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpCharacterCreation\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=characterCustomisation\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpChess\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=chess\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpConversations\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=conversations\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpDoors\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=relocation\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpDraughts\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=draughts\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpEmotes\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=emotes\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpFirstTimeUser\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=firstTimeUsing\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpGameLaunchingCreate\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingCreate\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpGameLaunchingJoin\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingJoin\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpGamesRoom\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamespace\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpHomeApartment\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=homespace\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpPool\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=pool\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpSafetyInHome\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=stayingsafe\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"HelpSeats\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=seats\"/>\r\n\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityNews\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityLatestUpdate\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityHandyLinks\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityMotd\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=messageoftheday\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityUsagePolicy\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=eula\"/>\r\n\r\n    " +
+                                           $"    <DATA dataType=\"URI\" name=\"GriefReportStart\" value=\"http://{domain}:10060/HUBPS3_SVML/home/griefreporting/GriefReportWelcome.jsp?region={regionNoptions}\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"ViralProvisioningStart\" value=\"http://{domain}:10060/HUBPS3_SVML/home/viralprovisioning/HomeInviteWelcome.jsp\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"UserActivityLogUploadServlet\" value=\"http://{domain}:10060/HUBPS3_SVML/tracking/StatTrackingServlet\"/>\r\n    \r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityNewsSummary\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityNewsDetailed\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
+                                           $"    <DATA dataType=\"URI\" name=\"CommunityBetaTrialRoadmap\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n    \r\n" +
+                                           $"    <DATA dataType=\"DATA\" name=\"gameFinishURL\" value=\"http://{domain}:10060/HUBPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n\t\r\n" +
+                                           $"    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://{domain}:10060/HUBPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n\t\r\n\t" +
                                            $"     \r\n    \r\n\t<REDIRECT href=\"eulaCheck.jsp?region={regionNoptions}&autologin=1\" name=\"redirect\"/>\r\n" +
                                             "      \r\n" +
                                             "</SVML>");
@@ -374,38 +390,38 @@ namespace SVO.Games.PS3
                                             "<SVML>\r\n" +
                                             $"   <BROWSER_INIT name=\"init\" />\r\n\t" +
                                             "    \r\n    <SET name=\"nohistory\" neverBackOnto=\"true\"/>\r\n" +
-                                            "    \r\n    <DATA dataType=\"URI\" name=\"SvfsUpload\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/fileservices/UploadFileServlet\"/>\r\n" +
-                                            "    \r\n    <DATA dataType=\"URI\" name=\"SvfsDownload\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/fileservices/Download.jsp\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"SvfsDeleteSubmit\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/fileservices/Delete.jsp\"/>\r\n    \r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpArcadeMachines\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=arcade\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpBowling\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=bowling\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpCharacterCreation\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=characterCustomisation\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpChess\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=chess\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpConversations\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=conversations\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpDoors\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=relocation\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpDraughts\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=draughts\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpEmotes\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=emotes\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpFirstTimeUser\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=firstTimeUsing\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpGameLaunchingCreate\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingCreate\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpGameLaunchingJoin\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingJoin\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpGamesRoom\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamespace\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpHomeApartment\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=homespace\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpPool\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=pool\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpSafetyInHome\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=stayingsafe\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"HelpSeats\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=seats\"/>\r\n\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityNews\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityLatestUpdate\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityHandyLinks\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityMotd\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=messageoftheday\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityUsagePolicy\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=eula\"/>\r\n\r\n    " +
-                                            $"   <DATA dataType=\"URI\" name=\"GriefReportStart\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/griefreporting/GriefReportWelcome.jsp?region={regionNoptions}\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"ViralProvisioningStart\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/viralprovisioning/HomeInviteWelcome.jsp\"/>\r\n" +
-                                            "    <DATA dataType=\"URI\" name=\"UserActivityLogUploadServlet\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/tracking/StatTrackingServlet\"/>\r\n    \r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityNewsSummary\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityNewsDetailed\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
-                                            $"   <DATA dataType=\"URI\" name=\"CommunityBetaTrialRoadmap\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n" +
-                                            "    <DATA dataType=\"DATA\" name=\"gameFinishURL\" value=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n\t\r\n" +
-                                            "    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"https://homeps3.svo.online.scee.com:10061/HUBPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n       " +
+                                            $"    \r\n    <DATA dataType=\"URI\" name=\"SvfsUpload\" value=\"http://{domain}:10060/HUBPS3_SVML/fileservices/UploadFileServlet\"/>\r\n" +
+                                            $"    \r\n    <DATA dataType=\"URI\" name=\"SvfsDownload\" value=\"http://{domain}:10060/HUBPS3_SVML/home/fileservices/Download.jsp\"/>\r\n" +
+                                            $"    <DATA dataType=\"URI\" name=\"SvfsDeleteSubmit\" value=\"http://{domain}:10060/HUBPS3_SVML/home/fileservices/Delete.jsp\"/>\r\n    \r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpArcadeMachines\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=arcade\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpBowling\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=bowling\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpCharacterCreation\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=characterCustomisation\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpChess\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=chess\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpConversations\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=conversations\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpDoors\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=relocation\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpDraughts\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=draughts\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpEmotes\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=emotes\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpFirstTimeUser\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=firstTimeUsing\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpGameLaunchingCreate\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingCreate\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpGameLaunchingJoin\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamelaunchingJoin\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpGamesRoom\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=gamespace\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpHomeApartment\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=homespace\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpPool\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=pool\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpSafetyInHome\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=stayingsafe\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"HelpSeats\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=seats\"/>\r\n\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityNews\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityLatestUpdate\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityHandyLinks\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityMotd\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=messageoftheday\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityUsagePolicy\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=eula\"/>\r\n\r\n    " +
+                                            $"   <DATA dataType=\"URI\" name=\"GriefReportStart\" value=\"http://{domain}:10060/HUBPS3_SVML/home/griefreporting/GriefReportWelcome.jsp?region={regionNoptions}\"/>\r\n" +
+                                            $"    <DATA dataType=\"URI\" name=\"ViralProvisioningStart\" value=\"http://{domain}:10060/HUBPS3_SVML/home/viralprovisioning/HomeInviteWelcome.jsp\"/>\r\n" +
+                                            $"    <DATA dataType=\"URI\" name=\"UserActivityLogUploadServlet\" value=\"http://{domain}:10060/HUBPS3_SVML/tracking/StatTrackingServlet\"/>\r\n    \r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityNewsSummary\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=news\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityNewsDetailed\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=latestUpdate\"/>\r\n" +
+                                            $"   <DATA dataType=\"URI\" name=\"CommunityBetaTrialRoadmap\" value=\"http://{domain}:10060/HUBPS3_SVML/home/help/HelpGeneric.jsp?region={regionNoptions}&amp;pageName=handyLinks\"/>\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"gameFinishURL\" value=\"http://{domain}:10060/HUBPS3_SVML/game/Game_Finish_Submit.jsp\" />\r\n\t\r\n" +
+                                            $"    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"https://{domain}:10061/HUBPS3_SVML/account/SP_Login_Submit.jsp\" />\r\n       " +
                                             $"     \r\n    \r\n\t<REDIRECT href=\"eulaCheck.jsp?region={regionNoptions}&autologin=1\" name=\"redirect\"/>\r\n" +
                                             "      \r\n" +
                                             "</SVML>");
@@ -438,7 +454,7 @@ namespace SVO.Games.PS3
 
                                         string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                        string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                        string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                         if (string.IsNullOrEmpty(serverMac))
                                         {
@@ -494,7 +510,7 @@ namespace SVO.Games.PS3
 
                                         string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                        string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                        string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                         if (string.IsNullOrEmpty(serverMac))
                                         {
@@ -555,7 +571,7 @@ namespace SVO.Games.PS3
 
                                         string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                        string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                        string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                         if (string.IsNullOrEmpty(serverMac))
                                         {
@@ -621,7 +637,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -685,7 +701,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -749,7 +765,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -866,7 +882,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -925,7 +941,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -971,7 +987,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -1014,7 +1030,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -1037,9 +1053,13 @@ namespace SVO.Games.PS3
                                         if (fileExists)
                                         {
                                             string fileId = "1";
+                                            string domain = "homeps3.svo.online.scee.com";
+
+                                            if (!SVOServerConfiguration.PreferDNSUrls)
+                                                await InternetProtocolUtils.TryGetServerIP(out domain).ConfigureAwait(false);
 
                                             xmlMessage = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
-                                                $"<XML>\r\n\r\n<XMLSVOFILETRANSFER direction=\"download\" filename=\"{encodedFileName}\" errorCode=\"None\" src=\"http://homeps3.svo.online.scee.com:10060/HUBPS3_SVML/fileservices/DownloadFileServlet?fileID={fileId}&amp;fileNameBeginsWith={encodedFileName}\"/>\r\n</XML>");
+                                                $"<XML>\r\n\r\n<XMLSVOFILETRANSFER direction=\"download\" filename=\"{encodedFileName}\" errorCode=\"None\" src=\"http://{domain}:10060/HUBPS3_SVML/fileservices/DownloadFileServlet?fileID={fileId}&amp;fileNameBeginsWith={encodedFileName}\"/>\r\n</XML>");
                                         }
                                         else
                                             xmlMessage = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
@@ -1077,7 +1097,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -1158,7 +1178,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -1221,7 +1241,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -1295,7 +1315,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -1413,7 +1433,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {

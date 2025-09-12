@@ -3,7 +3,6 @@ using System.IO;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Linq;
-using SonyEdge;
 using MultiServerLibrary.Extension;
 using HomeTools.BARFramework;
 using HomeTools.Crypto;
@@ -12,6 +11,7 @@ using EndianTools;
 using CustomLogger;
 using System.Collections.Generic;
 using System.Text;
+using CastleLibrary.Sony.Edge;
 
 namespace HomeTools.UnBAR
 {

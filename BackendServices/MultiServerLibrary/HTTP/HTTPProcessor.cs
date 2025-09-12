@@ -657,13 +657,21 @@ namespace MultiServerLibrary.HTTP
             "default.asp"
         };
 
-        public static string RequestURLGET(string url)
+        public static string RequestURLGET(string url, bool timeOut = false)
         {
             try
             {
-#pragma warning disable // NET 6.0 and lower has a bug where GetAsync() is EXTREMLY slow to operate (https://github.com/dotnet/runtime/issues/65375).
-                using (FixedWebClient client = new FixedWebClient())
-                    return client.DownloadString(url);
+#pragma warning disable
+                if (timeOut)
+                {
+                    using (FixedWebClientWithTimeout client = new FixedWebClientWithTimeout())
+                        return client.DownloadString(url);
+                }
+                else
+                {
+                    using (FixedWebClient client = new FixedWebClient())
+                        return client.DownloadString(url);
+                }
 #pragma warning restore
             }
             catch
@@ -674,26 +682,48 @@ namespace MultiServerLibrary.HTTP
             return null;
         }
 
-        public static (byte[] data, Dictionary<string, string> headers) RequestFullURLGET(string url)
+        public static (byte[] data, Dictionary<string, string> headers) RequestFullURLGET(string url, bool timeOut = false)
         {
             try
             {
 #pragma warning disable
-                using (FixedWebClient client = new FixedWebClient())
+                if (timeOut)
                 {
-                    byte[] data = client.DownloadData(url);
-                    var headers = new Dictionary<string, string>();
-
-                    // GZipWebClient exposes headers after a request via ResponseHeaders
-                    if (client.ResponseHeaders != null)
+                    using (FixedWebClientWithTimeout client = new FixedWebClientWithTimeout())
                     {
-                        foreach (string key in client.ResponseHeaders.AllKeys)
-                        {
-                            headers[key] = client.ResponseHeaders[key];
-                        }
-                    }
+                        byte[] data = client.DownloadData(url);
+                        var headers = new Dictionary<string, string>();
 
-                    return (data, headers);
+                        // GZipWebClient exposes headers after a request via ResponseHeaders
+                        if (client.ResponseHeaders != null)
+                        {
+                            foreach (string key in client.ResponseHeaders.AllKeys)
+                            {
+                                headers[key] = client.ResponseHeaders[key];
+                            }
+                        }
+
+                        return (data, headers);
+                    }
+                }
+                else
+                {
+                    using (FixedWebClient client = new FixedWebClient())
+                    {
+                        byte[] data = client.DownloadData(url);
+                        var headers = new Dictionary<string, string>();
+
+                        // GZipWebClient exposes headers after a request via ResponseHeaders
+                        if (client.ResponseHeaders != null)
+                        {
+                            foreach (string key in client.ResponseHeaders.AllKeys)
+                            {
+                                headers[key] = client.ResponseHeaders[key];
+                            }
+                        }
+
+                        return (data, headers);
+                    }
                 }
 #pragma warning restore
             }
@@ -706,25 +736,46 @@ namespace MultiServerLibrary.HTTP
         }
 
 
-        public static string RequestURLPOST(string url, Dictionary<string, string> headers, string postData, string ContentType)
+        public static string RequestURLPOST(string url, Dictionary<string, string> headers, string postData, string ContentType, bool timeOut = false)
         {
             try
             {
-#pragma warning disable // NET 6.0 and lower has a bug where GetAsync() is EXTREMELY slow to operate (https://github.com/dotnet/runtime/issues/65375).
-                using (FixedWebClient client = new FixedWebClient())
+#pragma warning disable
+                if (timeOut)
                 {
-                    // Add headers to the request
-                    if (headers != null)
+                    using (FixedWebClientWithTimeout client = new FixedWebClientWithTimeout())
                     {
-                        foreach (var header in headers)
+                        // Add headers to the request
+                        if (headers != null)
                         {
-                            client.Headers.Add(header.Key, header.Value);
+                            foreach (var header in headers)
+                            {
+                                client.Headers.Add(header.Key, header.Value);
+                            }
                         }
+
+                        client.Headers[HttpRequestHeader.ContentType] = ContentType;
+
+                        return client.UploadString(url, postData);
                     }
+                }
+                else
+                {
+                    using (FixedWebClient client = new FixedWebClient())
+                    {
+                        // Add headers to the request
+                        if (headers != null)
+                        {
+                            foreach (var header in headers)
+                            {
+                                client.Headers.Add(header.Key, header.Value);
+                            }
+                        }
 
-                    client.Headers[HttpRequestHeader.ContentType] = ContentType;
+                        client.Headers[HttpRequestHeader.ContentType] = ContentType;
 
-                    return client.UploadString(url, postData);
+                        return client.UploadString(url, postData);
+                    }
                 }
 #pragma warning restore
             }

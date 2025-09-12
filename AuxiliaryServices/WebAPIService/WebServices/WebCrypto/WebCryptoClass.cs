@@ -8,6 +8,7 @@ using Org.BouncyCastle.Security;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using MultiServerLibrary.Extension;
+using System.Net;
 
 namespace WebAPIService.WebServices.WebCrypto
 {
@@ -15,24 +16,8 @@ namespace WebAPIService.WebServices.WebCrypto
     {
         public static readonly byte[] AuthIV = new byte[] { 0x30, 0x57, 0xB5, 0x1F, 0x32, 0xD4, 0xAD, 0xBF, 0xAA, 0xAA, 0x21, 0x41, 0x6C, 0xDC, 0x5D, 0xF5 };
         public static readonly byte[] IdentIV = new byte[] { 0x47, 0x1A, 0xD2, 0xC3, 0xA4, 0x8B, 0xF1, 0xD9, 0x22, 0xBC, 0xC7, 0x61, 0xFD, 0x09, 0x8E, 0x3A };
-#if NET7_0_OR_GREATER
-        public static async Task<string> GenerateRandomBase64KeyAsync()
-#else
-#pragma warning disable
-        public class FixedWebClientWithTimeout : System.Net.FixedWebClient
-        {
-            public int Timeout { get; set; } = 5000; // milliseconds
 
-            protected override System.Net.WebRequest GetWebRequest(Uri address)
-            {
-                var request = base.GetWebRequest(address);
-                request.Timeout = Timeout;
-                return request;
-            }
-        }
-#pragma warning restore
         public static async Task<string> GenerateRandomBase64KeyAsync()
-#endif
         {
             const string url = "https://www.digitalsanctuary.com/aes-key-generator-free";
             const string startText = "AES-256 Key:";

@@ -21,6 +21,7 @@ public static class SVOServerConfiguration
     public static HashAlgorithmName HTTPSCertificateHashingAlgorithm { get; set; } = HashAlgorithmName.SHA384;
     public static string SVOStaticFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/wwwsvoroot";
     public static bool SVOHTTPSBypass { get; set; } = true;
+    public static bool PreferDNSUrls { get; set; } = true;
     public static bool PSHomeRPCS3Workaround { get; set; } = true;
     public static string? MOTD { get; set; } = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<SVML>\r\n" +
         "    <RECTANGLE class=\"CHIP_FACE\" name=\"backPanel\" x=\"292\" y=\"140\" width=\"708\" height=\"440\"/>\r\n" +
@@ -65,9 +66,10 @@ public static class SVOServerConfiguration
 
             // Write the JObject to a file
             File.WriteAllText(configPath, new JObject(
-                new JProperty("config_version", 2),
+                new JProperty("config_version", 3),
                 new JProperty("static_folder", SVOStaticFolder),
                 new JProperty("enable_keep_alive", EnableKeepAlive),
+                new JProperty("prefer_dns_urls", PreferDNSUrls),
                 new JProperty("https_bypass", SVOHTTPSBypass),
                 new JProperty("https_dns_list", HTTPSDNSList ?? Array.Empty<string>()),
                 new JProperty("certificate_file", HTTPSCertificateFile),
@@ -105,6 +107,8 @@ public static class SVOServerConfiguration
                     LoggerAccessor.LogWarn("Could not find the MOTD file, using default xml.");
                 else
                     MOTD = File.ReadAllText(motd_file);
+                if (config_version > 2)
+                    PreferDNSUrls = GetValueOrDefault(config, "prefer_dns_urls", PreferDNSUrls);
             }
             else
                 LoggerAccessor.LogWarn($"{configPath} file is outdated, using server's default.");

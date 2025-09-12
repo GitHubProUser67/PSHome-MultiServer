@@ -1,9 +1,11 @@
+using CastleLibrary.Sony.Edge;
+
 namespace WebAPIService.WebServices.AdobeFlash.binaries.JwPlayer
 {
     // This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/3.0/ or send a letter to Creative Commons, 171 Second Street, Suite 300, San Francisco, California, 94105, USA.
     public static class jwPlayer43Swf
     {
-        public static readonly byte[] Data = SonyEdge.Zlib.EdgeZlibDecompress(new byte[]
+        public static readonly byte[] Data = Zlib.EdgeZlibDecompress(new byte[]
         {
  0xA6, 0x1B, 0xA6, 0x1B, 0x43, 0x57, 0x53, 0x09, 0xB1, 0x56, 0x01, 0x00, 0x78, 0x9C, 0xEC, 0xBC,
  0x79, 0x7C, 0x14, 0x45, 0xF3, 0x3F, 0x3E, 0x3D, 0xD3, 0x33, 0xB3, 0xB3, 0xB9, 0x43, 0x80, 0x98,

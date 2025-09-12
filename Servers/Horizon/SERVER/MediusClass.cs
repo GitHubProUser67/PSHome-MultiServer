@@ -1,21 +1,23 @@
 using CustomLogger;
-using Newtonsoft.Json;
+using Horizon.Extension.PlayStationHome.Models;
+using Horizon.HTTPSERVICE;
+using Horizon.LIBRARY.Database.Models;
+using Horizon.LIBRARY.libAntiCheat;
+using Horizon.MUM;
+using Horizon.MUM.Models;
+using Horizon.PluginManager;
 using Horizon.RT.Common;
 using Horizon.RT.Models;
 using Horizon.SERVER.Config;
+using Horizon.SERVER.Extension.PlayStationHome;
+using Horizon.SERVER.Medius;
+using MultiServerLibrary.Extension;
+using Newtonsoft.Json;
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
-using Horizon.LIBRARY.libAntiCheat;
-using Horizon.PluginManager;
-using Horizon.SERVER.Medius;
-using Horizon.HTTPSERVICE;
-using Horizon.LIBRARY.Database.Models;
-using Horizon.MUM;
-using Horizon.MUM.Models;
-using Horizon.SERVER.Extension.PlayStationHome;
-using MultiServerLibrary.Extension;
-using Horizon.Extension.PlayStationHome.Models;
+using Tommunism.SoftFloat;
 
 namespace Horizon.SERVER
 {
@@ -584,19 +586,30 @@ namespace Horizon.SERVER
                     HomeOffsetsJsonData data = kvp.Value;
                     data.Sha1Hash = kvp.Key;
 
-                    string[]? parts = data.Version?.Split('.');
+                    string[] parts = data.Version?.Split('.') ?? Array.Empty<string>();
 
-                    if (parts != null && parts.Length >= 2)
+                    if (parts.Length >= 2)
                     {
-                        // Take the first two parts for major and minor versions.
-                        string major = parts[0];
-                        string minor = parts[1];
+                        // Why softfloats? This operation can vary too much between architectures and lead to failures.
+                        SoftFloatContext ctx = new SoftFloatContext();
+                        ctx.Rounding = RoundingMode.NearEven;
 
-                        // Concatenate any remaining parts as part of the decimal, if they exist.
-                        string remaining = string.Concat(parts.Skip(2));
+                        int major = int.Parse(parts[0]);
+                        double value = Float64.FromInt32(ctx, major);
 
-                        // Construct the double as major.minor and append the remaining if exists
-                        data.VersionAsDouble = Convert.ToDouble(remaining.Length > 0 ? $"{major},{minor}{remaining}" : $"{major},{minor}");
+                        int scale = 1;
+                        for (int i = 1; i < parts.Length; i++)
+                        {
+                            if (int.TryParse(parts[i], out int partValue))
+                            {
+                                // increase scale by the number of digits in this part
+                                scale *= (int)Math.Pow(10, parts[i].Length);
+
+                                value += Float64.FromInt32(ctx, partValue) / Float64.FromInt32(ctx, scale);
+                            }
+                        }
+
+                        data.VersionAsDouble = value;
                     }
                 }
 

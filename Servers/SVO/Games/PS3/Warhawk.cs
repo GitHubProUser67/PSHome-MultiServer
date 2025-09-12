@@ -1,4 +1,5 @@
 using CustomLogger;
+using MultiServerLibrary.Extension;
 using SpaceWizards.HttpListener;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -33,7 +34,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -53,9 +54,14 @@ namespace SVO.Games.PS3
                                             languageID = "1";
                                         }
 
+                                        string domain = "{domain}";
+
+                                        if (!SVOServerConfiguration.PreferDNSUrls)
+                                            await InternetProtocolUtils.TryGetServerIP(out domain).ConfigureAwait(false);
+
                                         response.Headers.Set("X-SVOMac", serverMac);
                                         response.Headers.Set("Set-Cookie", $"LangID={languageID}; Path=/");
-                                        response.Headers.Set("Location", "http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/index1.jsp");
+                                        response.Headers.Set("Location", $"http://{domain}:10060/WARHAWK_SVML/index1.jsp");
                                         response.Headers.Set("Content-Type", "text/svml;charset=UTF-8");
                                         response.Headers.Set("Content-Length", "0");
                                         response.Headers.Add("Date", DateTime.Now.ToString("r"));
@@ -74,7 +80,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -87,54 +93,59 @@ namespace SVO.Games.PS3
                                         response.Headers.Add("Date", DateTime.Now.ToString("r"));
                                         response.Headers.Set("X-SVOMac", serverMac);
 
+                                        string domain = "warhawk-prod3.svo.online.scea.com";
+
+                                        if (!SVOServerConfiguration.PreferDNSUrls)
+                                            await InternetProtocolUtils.TryGetServerIP(out domain).ConfigureAwait(false);
+
                                         byte[]? uriStore = null;
 
                                         if (SVOServerConfiguration.SVOHTTPSBypass)
                                             uriStore = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \r\n" +
                                                 "<SVML>\r\n" +
                                                 $"    <SET name=\"IP\" IPAddress=\"{request.RemoteEndPoint.Address}\" />    \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"entryURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/account/Account_Login.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"homeURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/home.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"loginEncryptedURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/account/Account_Encrypted_Login_Submit.jsp\" />    \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"createGameURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/game/Game_Create.jsp?gameMode=%d\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"createGameSubmitURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/game/Game_Create_Submit.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/game/Game_Finish_Submit.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"gamePostBinaryStatsURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/game/Game_PostBinaryStats_Submit.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"createGamePlayerURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusAccountLoginURL\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/medius/Medius_Account_Login.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusAccountCreateURL\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/medius/Medius_Account_Create.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusLobbyListURL\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/medius/Medius_Lobby_List.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusChatLobbyURL\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/medius/Medius_Chat_Lobby.jsp\" />  \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusChallengePopupURL\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/medius/Medius_Challenge_Popup.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusAcceptPopupURL\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/medius/Medius_Accept_Popup.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"tickerStrURL\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/ticker/TickerStr.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"tourLaunchPopupURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/tourney/Tourney_AutoLaunch.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"tourDataURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/tourney/Tourney_CheckIn.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"teamTourneyMatchDataURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/teamtourney/TeamTourney_MatchData.jsp?teamTourID=%d\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"teamTourneyForfeitURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/teamtourney/TeamTourney_ForfeitTeam_Submit.jsp?teamTourTeamID=%d&amp;teamTourBracketID=%d&amp;teamTourID=%d\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"tourForfeitURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/tourney/Tourney_Forfeit_Submit.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"getLadderMatchDataURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/ladder/Ladder_GetMatchData.jsp?ladderMatchID=%d\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"getForfeitLadderMatchURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/ladder/Ladder_Forfeit_Submit.jsp?ladderMatchID=%d&amp;clanID=%d\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"downloadPatch\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/download/patchDownload.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"playerStatsURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/stats/Stats_GetPlayerStats.jsp?PlayerID=%d&amp;gameMode=%d\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"playerProfileURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/profile/Profile_GetPlayerProfile.jsp?PlayerID=%d\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"rankInfoURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/stats/Stats_CareerRankInfo.jsp?playerList=\"  /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"downloadVerificationURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/commerce/Commerce_VerifySubmit.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"purchaseListURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/commerce/Commerce_PurchaseList.jsp?categoryID=default\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"createVerifiedFileGameURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/commerce/Commerce_GameCreatorFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;spectatorPassword=$3\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"joinVerifiedFileGameURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/commerce/Commerce_GameJoinerFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;ticket=$3\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"spectateVerifiedFileGameURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/commerce/Commerce_GameSpectatorFileVerification.jsp?fileList=$1&amp;spectatorPassword=$2&amp;ticket=$3\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/account/SP_Login_Submit.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"SetIgnoreListURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/account/SP_UpdateIgnoreList_Submit.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"SetUniversePasswordURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/account/SP_SetPassword_Submit.jsp\" />\r\n" +
-                                                "    \r\n    <DATA dataType=\"DATA\" name=\"fileServicesGetMetaDataURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/fileservices/FileServices_MetaData.jsp\">\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"entryURI\" value=\"http://{domain}:10060/WARHAWK_SVML/account/Account_Login.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"homeURI\" value=\"http://{domain}:10060/WARHAWK_SVML/home.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"loginEncryptedURI\" value=\"http://{domain}:10060/WARHAWK_SVML/account/Account_Encrypted_Login_Submit.jsp\" />    \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"createGameURI\" value=\"http://{domain}:10060/WARHAWK_SVML/game/Game_Create.jsp?gameMode=%d\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"createGameSubmitURI\" value=\"http://{domain}:10060/WARHAWK_SVML/game/Game_Create_Submit.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://{domain}:10060/WARHAWK_SVML/game/Game_Finish_Submit.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"gamePostBinaryStatsURI\" value=\"http://{domain}:10060/WARHAWK_SVML/game/Game_PostBinaryStats_Submit.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"createGamePlayerURI\" value=\"http://{domain}:10060/WARHAWK_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusAccountLoginURL\" value=\"http://{domain}:10060/WARHAWK_SVML/medius/Medius_Account_Login.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusAccountCreateURL\" value=\"http://{domain}:10060/WARHAWK_SVML/medius/Medius_Account_Create.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusLobbyListURL\" value=\"http://{domain}:10060/WARHAWK_SVML/medius/Medius_Lobby_List.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusChatLobbyURL\" value=\"http://{domain}:10060/WARHAWK_SVML/medius/Medius_Chat_Lobby.jsp\" />  \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusChallengePopupURL\" value=\"http://{domain}:10060/WARHAWK_SVML/medius/Medius_Challenge_Popup.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusAcceptPopupURL\" value=\"http://{domain}:10060/WARHAWK_SVML/medius/Medius_Accept_Popup.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"tickerStrURL\" value=\"http://{domain}:10060/WARHAWK_SVML/ticker/TickerStr.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"tourLaunchPopupURI\" value=\"http://{domain}:10060/WARHAWK_SVML/tourney/Tourney_AutoLaunch.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"tourDataURI\" value=\"http://{domain}:10060/WARHAWK_SVML/tourney/Tourney_CheckIn.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"teamTourneyMatchDataURI\" value=\"http://{domain}:10060/WARHAWK_SVML/teamtourney/TeamTourney_MatchData.jsp?teamTourID=%d\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"teamTourneyForfeitURI\" value=\"http://{domain}:10060/WARHAWK_SVML/teamtourney/TeamTourney_ForfeitTeam_Submit.jsp?teamTourTeamID=%d&amp;teamTourBracketID=%d&amp;teamTourID=%d\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"tourForfeitURI\" value=\"http://{domain}:10060/WARHAWK_SVML/tourney/Tourney_Forfeit_Submit.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"getLadderMatchDataURI\" value=\"http://{domain}:10060/WARHAWK_SVML/ladder/Ladder_GetMatchData.jsp?ladderMatchID=%d\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"getForfeitLadderMatchURI\" value=\"http://{domain}:10060/WARHAWK_SVML/ladder/Ladder_Forfeit_Submit.jsp?ladderMatchID=%d&amp;clanID=%d\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"downloadPatch\" value=\"http://{domain}:10060/WARHAWK_SVML/download/patchDownload.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"playerStatsURI\" value=\"http://{domain}:10060/WARHAWK_SVML/stats/Stats_GetPlayerStats.jsp?PlayerID=%d&amp;gameMode=%d\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"playerProfileURI\" value=\"http://{domain}:10060/WARHAWK_SVML/profile/Profile_GetPlayerProfile.jsp?PlayerID=%d\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"rankInfoURI\" value=\"http://{domain}:10060/WARHAWK_SVML/stats/Stats_CareerRankInfo.jsp?playerList=\"  /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"downloadVerificationURI\" value=\"http://{domain}:10060/WARHAWK_SVML/commerce/Commerce_VerifySubmit.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"purchaseListURI\" value=\"http://{domain}:10060/WARHAWK_SVML/commerce/Commerce_PurchaseList.jsp?categoryID=default\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"createVerifiedFileGameURI\" value=\"http://{domain}:10060/WARHAWK_SVML/commerce/Commerce_GameCreatorFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;spectatorPassword=$3\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"joinVerifiedFileGameURI\" value=\"http://{domain}:10060/WARHAWK_SVML/commerce/Commerce_GameJoinerFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;ticket=$3\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"spectateVerifiedFileGameURI\" value=\"http://{domain}:10060/WARHAWK_SVML/commerce/Commerce_GameSpectatorFileVerification.jsp?fileList=$1&amp;spectatorPassword=$2&amp;ticket=$3\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://{domain}:10060/WARHAWK_SVML/account/SP_Login_Submit.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"SetIgnoreListURI\" value=\"http://{domain}:10060/WARHAWK_SVML/account/SP_UpdateIgnoreList_Submit.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"SetUniversePasswordURI\" value=\"http://{domain}:10060/WARHAWK_SVML/account/SP_SetPassword_Submit.jsp\" />\r\n" +
+                                                $"    \r\n    <DATA dataType=\"DATA\" name=\"fileServicesGetMetaDataURI\" value=\"http://{domain}:10060/WARHAWK_SVML/fileservices/FileServices_MetaData.jsp\">\r\n" +
                                                 "          <ServerParams>\r\n" +
                                                 "                        <Param name=\"fileID\" type=\"integer\" />\r\n" +
                                                 "                        <Param name=\"fileNameBeginsWith\" type=\"string\" />\r\n" +
                                                 "                        <Param name=\"fileMetaDataKey\" type=\"string\" />\r\n" +
                                                 "          </ServerParams>\r\n" +
                                                 "    </DATA>\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"fileServicesUpdateMetaDataURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/fileservices/FileServices_UpdateMetaData.jsp\">\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"fileServicesUpdateMetaDataURI\" value=\"http://{domain}:10060/WARHAWK_SVML/fileservices/FileServices_UpdateMetaData.jsp\">\r\n" +
                                                 "          <ServerParams>\r\n" +
                                                 "                        <Param name=\"fileID\" type=\"integer\" />\r\n" +
                                                 "                        <Param name=\"fileNameBeginsWith\" type=\"string\" />\r\n" +
@@ -142,19 +153,19 @@ namespace SVO.Games.PS3
                                                 "                        <Param name=\"fileMetaDataValue\" type=\"string\" />  \r\n" +
                                                 "          </ServerParams>\r\n" +
                                                 "    </DATA> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"fileServicesStatusURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/fileservices/FileServices_Status.jsp\"> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"fileServicesStatusURI\" value=\"http://{domain}:10060/WARHAWK_SVML/fileservices/FileServices_Status.jsp\"> \r\n" +
                                                 "          <ServerParams>\r\n" +
                                                 "                        <Param name=\"statusCode\" type=\"integer\" />\r\n" +
                                                 "          </ServerParams>\r\n" +
                                                 "    </DATA>\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"fileServicesUploadServletURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/fileservices/UploadFileServlet\"> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"fileServicesUploadServletURI\" value=\"http://{domain}:10060/WARHAWK_SVML/fileservices/UploadFileServlet\"> \r\n" +
                                                 "          <ServerParams>\r\n" +
                                                 "                        <Param name=\"fileNameBeginsWith\" type=\"string\" />\r\n" +
                                                 "                        <Param name=\"fileDescription\" type=\"string\" />\r\n" +
                                                 "                        <Param name=\"filePermission\" type=\"integer\" />  \r\n" +
                                                 "          </ServerParams>\r\n" +
                                                 "    </DATA>\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"fileServicesDownloadServletURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/fileservices/DownloadFileServlet\"> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"fileServicesDownloadServletURI\" value=\"http://{domain}:10060/WARHAWK_SVML/fileservices/DownloadFileServlet\"> \r\n" +
                                                 "          <ServerParams>\r\n" +
                                                 "                        <Param name=\"fileID\" type=\"integer\" />\r\n" +
                                                 "                        <Param name=\"fileNameBeginsWith\" type=\"string\" />\r\n" +
@@ -162,20 +173,20 @@ namespace SVO.Games.PS3
                                                 "    </DATA>\r\n" +
                                                 "    \r\n" +
                                                 "    \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"awardInsertURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/awards/Awards_Insert_Submit.jsp?awardID=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"gameeventsEventInfoURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/gameevents/GameEvents_EventInfo.jsp?eventID=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"spUpdateTicketURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/account/SP_UpdateTicket.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"vulgarityFilterURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/filter/VulgarityFilter.jsp\">\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"awardInsertURI\" value=\"http://{domain}:10060/WARHAWK_SVML/awards/Awards_Insert_Submit.jsp?awardID=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"gameeventsEventInfoURI\" value=\"http://{domain}:10060/WARHAWK_SVML/gameevents/GameEvents_EventInfo.jsp?eventID=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"spUpdateTicketURI\" value=\"http://{domain}:10060/WARHAWK_SVML/account/SP_UpdateTicket.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"vulgarityFilterURI\" value=\"http://{domain}:10060/WARHAWK_SVML/filter/VulgarityFilter.jsp\">\r\n" +
                                                 "          <ServerParams>\r\n" +
                                                 "              <Param name=\"text\" type=\"string\" />\r\n" +
                                                 "          </ServerParams>\r\n" +
                                                 "    </DATA>\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"fileMetadata\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/commerce/Commerce_FileMetadata.jsp\"/>\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"drmSignatureURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/commerce/Commerce_BufferedSignature.jsp\"/>\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"fileMetadata\" value=\"http://{domain}:10060/WARHAWK_SVML/commerce/Commerce_FileMetadata.jsp\"/>\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"drmSignatureURI\" value=\"http://{domain}:10060/WARHAWK_SVML/commerce/Commerce_BufferedSignature.jsp\"/>\r\n" +
                                                 "    \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"blankSVMLURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/test/Test_BlankSVML.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"blankXMLURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/test/Test_BlankXML.jsp\"/>\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"statsBlobDownloadURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/stats/Stats_BinaryStatsDownload_Submit.jsp\" >\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"blankSVMLURI\" value=\"http://{domain}:10060/WARHAWK_SVML/test/Test_BlankSVML.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"blankXMLURI\" value=\"http://{domain}:10060/WARHAWK_SVML/test/Test_BlankXML.jsp\"/>\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"statsBlobDownloadURI\" value=\"http://{domain}:10060/WARHAWK_SVML/stats/Stats_BinaryStatsDownload_Submit.jsp\" >\r\n" +
                                                 "         <ServerParams>\r\n" +
                                                 "            <Param name=\"gameMode\" type=\"integer\" />\r\n" +
                                                 "            <Param name=\"accountID\" type=\"integer\" />\r\n" +
@@ -185,7 +196,7 @@ namespace SVO.Games.PS3
                                                 "        </ServerParams>\r\n" +
                                                 "    </DATA>\r\n" +
                                                 "    \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"careerLeaderboardURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/stats/Stats_CareerLeaderboard.jsp\"> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"careerLeaderboardURI\" value=\"http://{domain}:10060/WARHAWK_SVML/stats/Stats_CareerLeaderboard.jsp\"> \r\n" +
                                                 "          <ServerParams>\r\n\t\t\t" +
                                                 "<Param name=\"gameMode\" type=\"integer\" />\r\n\t\t\t" +
                                                 "<Param name=\"start\" type=\"integer\" />\r\n\t\t\t" +
@@ -196,9 +207,9 @@ namespace SVO.Games.PS3
                                                 "<Param name=\"sortOrder\" type=\"integer\" />\r\n" +
                                                 "          </ServerParams>\r\n" +
                                                 "    </DATA>\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"PSNGameLongDescriptionURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/ilovesony/\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"PSNGameLongDescriptionURI\" value=\"http://{domain}:10060/WARHAWK_SVML/ilovesony/\" />\r\n" +
                                                 "    \r\n " +
-                                                "   <DATA dataType=\"DATA\" name=\"heartbeatURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/heartbeat/heartbeat.jsp\" />\r\n" +
+                                                $"   <DATA dataType=\"DATA\" name=\"heartbeatURI\" value=\"http://{domain}:10060/WARHAWK_SVML/heartbeat/heartbeat.jsp\" />\r\n" +
                                                 "    \r\n" +
                                                 "    <BROWSER_INIT name=\"init\" />\r\n" +
                                                 "</SVML>");
@@ -206,48 +217,48 @@ namespace SVO.Games.PS3
                                             uriStore = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \r\n" +
                                                 "<SVML>\r\n" +
                                                 $"    <SET name=\"IP\" IPAddress=\"{request.RemoteEndPoint.Address}\" />    \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"entryURI\" value=\"https://warhawk-prod3.svo.online.scea.com:10061/WARHAWK_SVML/account/Account_Login.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"homeURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/home.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"loginEncryptedURI\" value=\"https://warhawk-prod3.svo.online.scea.com:10061/WARHAWK_SVML/account/Account_Encrypted_Login_Submit.jsp\" />    \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"createGameURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/game/Game_Create.jsp?gameMode=%d\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"createGameSubmitURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/game/Game_Create_Submit.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/game/Game_Finish_Submit.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"gamePostBinaryStatsURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/game/Game_PostBinaryStats_Submit.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"createGamePlayerURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusAccountLoginURL\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/medius/Medius_Account_Login.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusAccountCreateURL\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/medius/Medius_Account_Create.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusLobbyListURL\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/medius/Medius_Lobby_List.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusChatLobbyURL\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/medius/Medius_Chat_Lobby.jsp\" />  \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusChallengePopupURL\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/medius/Medius_Challenge_Popup.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"mediusAcceptPopupURL\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/medius/Medius_Accept_Popup.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"tickerStrURL\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/ticker/TickerStr.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"tourLaunchPopupURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/tourney/Tourney_AutoLaunch.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"tourDataURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/tourney/Tourney_CheckIn.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"teamTourneyMatchDataURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/teamtourney/TeamTourney_MatchData.jsp?teamTourID=%d\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"teamTourneyForfeitURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/teamtourney/TeamTourney_ForfeitTeam_Submit.jsp?teamTourTeamID=%d&amp;teamTourBracketID=%d&amp;teamTourID=%d\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"tourForfeitURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/tourney/Tourney_Forfeit_Submit.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"getLadderMatchDataURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/ladder/Ladder_GetMatchData.jsp?ladderMatchID=%d\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"getForfeitLadderMatchURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/ladder/Ladder_Forfeit_Submit.jsp?ladderMatchID=%d&amp;clanID=%d\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"downloadPatch\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/download/patchDownload.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"playerStatsURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/stats/Stats_GetPlayerStats.jsp?PlayerID=%d&amp;gameMode=%d\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"playerProfileURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/profile/Profile_GetPlayerProfile.jsp?PlayerID=%d\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"rankInfoURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/stats/Stats_CareerRankInfo.jsp?playerList=\"  /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"downloadVerificationURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/commerce/Commerce_VerifySubmit.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"purchaseListURI\" value=\"https://warhawk-prod3.svo.online.scea.com:10061/WARHAWK_SVML/commerce/Commerce_PurchaseList.jsp?categoryID=default\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"createVerifiedFileGameURI\" value=\"https://warhawk-prod3.svo.online.scea.com:10061/WARHAWK_SVML/commerce/Commerce_GameCreatorFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;spectatorPassword=$3\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"joinVerifiedFileGameURI\" value=\"https://warhawk-prod3.svo.online.scea.com:10061/WARHAWK_SVML/commerce/Commerce_GameJoinerFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;ticket=$3\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"spectateVerifiedFileGameURI\" value=\"https://warhawk-prod3.svo.online.scea.com:10061/WARHAWK_SVML/commerce/Commerce_GameSpectatorFileVerification.jsp?fileList=$1&amp;spectatorPassword=$2&amp;ticket=$3\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"https://warhawk-prod3.svo.online.scea.com:10061/WARHAWK_SVML/account/SP_Login_Submit.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"SetIgnoreListURI\" value=\"https://warhawk-prod3.svo.online.scea.com:10061/WARHAWK_SVML/account/SP_UpdateIgnoreList_Submit.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"SetUniversePasswordURI\" value=\"https://warhawk-prod3.svo.online.scea.com:10061/WARHAWK_SVML/account/SP_SetPassword_Submit.jsp\" />\r\n" +
-                                                "    \r\n    <DATA dataType=\"DATA\" name=\"fileServicesGetMetaDataURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/fileservices/FileServices_MetaData.jsp\">\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"entryURI\" value=\"https://{domain}:10061/WARHAWK_SVML/account/Account_Login.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"homeURI\" value=\"http://{domain}:10060/WARHAWK_SVML/home.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"loginEncryptedURI\" value=\"https://{domain}:10061/WARHAWK_SVML/account/Account_Encrypted_Login_Submit.jsp\" />    \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"createGameURI\" value=\"http://{domain}:10060/WARHAWK_SVML/game/Game_Create.jsp?gameMode=%d\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"createGameSubmitURI\" value=\"http://{domain}:10060/WARHAWK_SVML/game/Game_Create_Submit.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://{domain}:10060/WARHAWK_SVML/game/Game_Finish_Submit.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"gamePostBinaryStatsURI\" value=\"http://{domain}:10060/WARHAWK_SVML/game/Game_PostBinaryStats_Submit.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"createGamePlayerURI\" value=\"http://{domain}:10060/WARHAWK_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusAccountLoginURL\" value=\"http://{domain}:10060/WARHAWK_SVML/medius/Medius_Account_Login.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusAccountCreateURL\" value=\"http://{domain}:10060/WARHAWK_SVML/medius/Medius_Account_Create.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusLobbyListURL\" value=\"http://{domain}:10060/WARHAWK_SVML/medius/Medius_Lobby_List.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusChatLobbyURL\" value=\"http://{domain}:10060/WARHAWK_SVML/medius/Medius_Chat_Lobby.jsp\" />  \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusChallengePopupURL\" value=\"http://{domain}:10060/WARHAWK_SVML/medius/Medius_Challenge_Popup.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"mediusAcceptPopupURL\" value=\"http://{domain}:10060/WARHAWK_SVML/medius/Medius_Accept_Popup.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"tickerStrURL\" value=\"http://{domain}:10060/WARHAWK_SVML/ticker/TickerStr.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"tourLaunchPopupURI\" value=\"http://{domain}:10060/WARHAWK_SVML/tourney/Tourney_AutoLaunch.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"tourDataURI\" value=\"http://{domain}:10060/WARHAWK_SVML/tourney/Tourney_CheckIn.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"teamTourneyMatchDataURI\" value=\"http://{domain}:10060/WARHAWK_SVML/teamtourney/TeamTourney_MatchData.jsp?teamTourID=%d\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"teamTourneyForfeitURI\" value=\"http://{domain}:10060/WARHAWK_SVML/teamtourney/TeamTourney_ForfeitTeam_Submit.jsp?teamTourTeamID=%d&amp;teamTourBracketID=%d&amp;teamTourID=%d\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"tourForfeitURI\" value=\"http://{domain}:10060/WARHAWK_SVML/tourney/Tourney_Forfeit_Submit.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"getLadderMatchDataURI\" value=\"http://{domain}:10060/WARHAWK_SVML/ladder/Ladder_GetMatchData.jsp?ladderMatchID=%d\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"getForfeitLadderMatchURI\" value=\"http://{domain}:10060/WARHAWK_SVML/ladder/Ladder_Forfeit_Submit.jsp?ladderMatchID=%d&amp;clanID=%d\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"downloadPatch\" value=\"http://{domain}:10060/WARHAWK_SVML/download/patchDownload.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"playerStatsURI\" value=\"http://{domain}:10060/WARHAWK_SVML/stats/Stats_GetPlayerStats.jsp?PlayerID=%d&amp;gameMode=%d\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"playerProfileURI\" value=\"http://{domain}:10060/WARHAWK_SVML/profile/Profile_GetPlayerProfile.jsp?PlayerID=%d\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"rankInfoURI\" value=\"http://{domain}:10060/WARHAWK_SVML/stats/Stats_CareerRankInfo.jsp?playerList=\"  /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"downloadVerificationURI\" value=\"http://{domain}:10060/WARHAWK_SVML/commerce/Commerce_VerifySubmit.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"purchaseListURI\" value=\"https://{domain}:10061/WARHAWK_SVML/commerce/Commerce_PurchaseList.jsp?categoryID=default\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"createVerifiedFileGameURI\" value=\"https://{domain}:10061/WARHAWK_SVML/commerce/Commerce_GameCreatorFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;spectatorPassword=$3\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"joinVerifiedFileGameURI\" value=\"https://{domain}:10061/WARHAWK_SVML/commerce/Commerce_GameJoinerFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;ticket=$3\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"spectateVerifiedFileGameURI\" value=\"https://{domain}:10061/WARHAWK_SVML/commerce/Commerce_GameSpectatorFileVerification.jsp?fileList=$1&amp;spectatorPassword=$2&amp;ticket=$3\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"https://{domain}:10061/WARHAWK_SVML/account/SP_Login_Submit.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"SetIgnoreListURI\" value=\"https://{domain}:10061/WARHAWK_SVML/account/SP_UpdateIgnoreList_Submit.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"SetUniversePasswordURI\" value=\"https://{domain}:10061/WARHAWK_SVML/account/SP_SetPassword_Submit.jsp\" />\r\n" +
+                                                $"    \r\n    <DATA dataType=\"DATA\" name=\"fileServicesGetMetaDataURI\" value=\"http://{domain}:10060/WARHAWK_SVML/fileservices/FileServices_MetaData.jsp\">\r\n" +
                                                 "          <ServerParams>\r\n" +
                                                 "                        <Param name=\"fileID\" type=\"integer\" />\r\n" +
                                                 "                        <Param name=\"fileNameBeginsWith\" type=\"string\" />\r\n" +
                                                 "                        <Param name=\"fileMetaDataKey\" type=\"string\" />\r\n" +
                                                 "          </ServerParams>\r\n" +
                                                 "    </DATA>\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"fileServicesUpdateMetaDataURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/fileservices/FileServices_UpdateMetaData.jsp\">\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"fileServicesUpdateMetaDataURI\" value=\"http://{domain}:10060/WARHAWK_SVML/fileservices/FileServices_UpdateMetaData.jsp\">\r\n" +
                                                 "          <ServerParams>\r\n" +
                                                 "                        <Param name=\"fileID\" type=\"integer\" />\r\n" +
                                                 "                        <Param name=\"fileNameBeginsWith\" type=\"string\" />\r\n" +
@@ -255,19 +266,19 @@ namespace SVO.Games.PS3
                                                 "                        <Param name=\"fileMetaDataValue\" type=\"string\" />  \r\n" +
                                                 "          </ServerParams>\r\n" +
                                                 "    </DATA> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"fileServicesStatusURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/fileservices/FileServices_Status.jsp\"> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"fileServicesStatusURI\" value=\"http://{domain}:10060/WARHAWK_SVML/fileservices/FileServices_Status.jsp\"> \r\n" +
                                                 "          <ServerParams>\r\n" +
                                                 "                        <Param name=\"statusCode\" type=\"integer\" />\r\n" +
                                                 "          </ServerParams>\r\n" +
                                                 "    </DATA>\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"fileServicesUploadServletURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/fileservices/UploadFileServlet\"> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"fileServicesUploadServletURI\" value=\"http://{domain}:10060/WARHAWK_SVML/fileservices/UploadFileServlet\"> \r\n" +
                                                 "          <ServerParams>\r\n" +
                                                 "                        <Param name=\"fileNameBeginsWith\" type=\"string\" />\r\n" +
                                                 "                        <Param name=\"fileDescription\" type=\"string\" />\r\n" +
                                                 "                        <Param name=\"filePermission\" type=\"integer\" />  \r\n" +
                                                 "          </ServerParams>\r\n" +
                                                 "    </DATA>\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"fileServicesDownloadServletURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/fileservices/DownloadFileServlet\"> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"fileServicesDownloadServletURI\" value=\"http://{domain}:10060/WARHAWK_SVML/fileservices/DownloadFileServlet\"> \r\n" +
                                                 "          <ServerParams>\r\n" +
                                                 "                        <Param name=\"fileID\" type=\"integer\" />\r\n" +
                                                 "                        <Param name=\"fileNameBeginsWith\" type=\"string\" />\r\n" +
@@ -275,20 +286,20 @@ namespace SVO.Games.PS3
                                                 "    </DATA>\r\n" +
                                                 "    \r\n" +
                                                 "    \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"awardInsertURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/awards/Awards_Insert_Submit.jsp?awardID=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"gameeventsEventInfoURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/gameevents/GameEvents_EventInfo.jsp?eventID=%d\" /> \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"spUpdateTicketURI\" value=\"https://warhawk-prod3.svo.online.scea.com:10061/WARHAWK_SVML/account/SP_UpdateTicket.jsp\" />\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"vulgarityFilterURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/filter/VulgarityFilter.jsp\">\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"awardInsertURI\" value=\"http://{domain}:10060/WARHAWK_SVML/awards/Awards_Insert_Submit.jsp?awardID=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"gameeventsEventInfoURI\" value=\"http://{domain}:10060/WARHAWK_SVML/gameevents/GameEvents_EventInfo.jsp?eventID=%d\" /> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"spUpdateTicketURI\" value=\"https://{domain}:10061/WARHAWK_SVML/account/SP_UpdateTicket.jsp\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"vulgarityFilterURI\" value=\"http://{domain}:10060/WARHAWK_SVML/filter/VulgarityFilter.jsp\">\r\n" +
                                                 "          <ServerParams>\r\n" +
                                                 "              <Param name=\"text\" type=\"string\" />\r\n" +
                                                 "          </ServerParams>\r\n" +
                                                 "    </DATA>\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"fileMetadata\" value=\"https://warhawk-prod3.svo.online.scea.com:10061/WARHAWK_SVML/commerce/Commerce_FileMetadata.jsp\"/>\r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"drmSignatureURI\" value=\"https://warhawk-prod3.svo.online.scea.com:10061/WARHAWK_SVML/commerce/Commerce_BufferedSignature.jsp\"/>\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"fileMetadata\" value=\"https://{domain}:10061/WARHAWK_SVML/commerce/Commerce_FileMetadata.jsp\"/>\r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"drmSignatureURI\" value=\"https://{domain}:10061/WARHAWK_SVML/commerce/Commerce_BufferedSignature.jsp\"/>\r\n" +
                                                 "    \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"blankSVMLURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/test/Test_BlankSVML.jsp\" /> \r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"blankXMLURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/test/Test_BlankXML.jsp\"/>\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"statsBlobDownloadURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/stats/Stats_BinaryStatsDownload_Submit.jsp\" >\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"blankSVMLURI\" value=\"http://{domain}:10060/WARHAWK_SVML/test/Test_BlankSVML.jsp\" /> \r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"blankXMLURI\" value=\"http://{domain}:10060/WARHAWK_SVML/test/Test_BlankXML.jsp\"/>\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"statsBlobDownloadURI\" value=\"http://{domain}:10060/WARHAWK_SVML/stats/Stats_BinaryStatsDownload_Submit.jsp\" >\r\n" +
                                                 "         <ServerParams>\r\n" +
                                                 "            <Param name=\"gameMode\" type=\"integer\" />\r\n" +
                                                 "            <Param name=\"accountID\" type=\"integer\" />\r\n" +
@@ -298,7 +309,7 @@ namespace SVO.Games.PS3
                                                 "        </ServerParams>\r\n" +
                                                 "    </DATA>\r\n" +
                                                 "    \r\n" +
-                                                "    <DATA dataType=\"DATA\" name=\"careerLeaderboardURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/stats/Stats_CareerLeaderboard.jsp\"> \r\n" +
+                                                $"    <DATA dataType=\"DATA\" name=\"careerLeaderboardURI\" value=\"http://{domain}:10060/WARHAWK_SVML/stats/Stats_CareerLeaderboard.jsp\"> \r\n" +
                                                 "          <ServerParams>\r\n\t\t\t" +
                                                 "<Param name=\"gameMode\" type=\"integer\" />\r\n\t\t\t" +
                                                 "<Param name=\"start\" type=\"integer\" />\r\n\t\t\t" +
@@ -309,9 +320,9 @@ namespace SVO.Games.PS3
                                                 "<Param name=\"sortOrder\" type=\"integer\" />\r\n" +
                                                 "          </ServerParams>\r\n" +
                                                 "    </DATA>\r\n" +
-                                                "    <DATA dataType=\"URI\" name=\"PSNGameLongDescriptionURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/ilovesony/\" />\r\n" +
+                                                $"    <DATA dataType=\"URI\" name=\"PSNGameLongDescriptionURI\" value=\"http://{domain}:10060/WARHAWK_SVML/ilovesony/\" />\r\n" +
                                                 "    \r\n " +
-                                                "   <DATA dataType=\"DATA\" name=\"heartbeatURI\" value=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/heartbeat/heartbeat.jsp\" />\r\n" +
+                                                $"   <DATA dataType=\"DATA\" name=\"heartbeatURI\" value=\"http://{domain}:10060/WARHAWK_SVML/heartbeat/heartbeat.jsp\" />\r\n" +
                                                 "    \r\n" +
                                                 "    <BROWSER_INIT name=\"init\" />\r\n" +
                                                 "</SVML>");
@@ -342,7 +353,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -458,7 +469,7 @@ namespace SVO.Games.PS3
                                 case "POST":
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -575,7 +586,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -588,6 +599,11 @@ namespace SVO.Games.PS3
                                         response.Headers.Add("Date", DateTime.Now.ToString("r"));
                                         response.Headers.Set("X-SVOMac", serverMac);
 
+                                        string domain = "warhawk-prod3.svo.online.scea.com";
+
+                                        if (!SVOServerConfiguration.PreferDNSUrls)
+                                            await InternetProtocolUtils.TryGetServerIP(out domain).ConfigureAwait(false);
+
                                         byte[] sp_Login = Encoding.UTF8.GetBytes($"<?xml version=\"1.0\" encoding=\"UTF-8\"?> \r\n<SVML>       \r\n\r\n" +
                                             $"    <TEXT name=\"text\" x=\"320\" y=\"30\" align=\"center\" \r\n" +
                                             $"     class=\"TEXT1\">LOGIN</TEXT>\r\n" +
@@ -597,7 +613,7 @@ namespace SVO.Games.PS3
                                             $"     \r\n" +
                                             $"    <TEXT name=\"text\" x=\"320\" y=\"50\" align=\"center\" class=\"TEXT2\"></TEXT>\r\n" +
                                             $"    \r\n" +
-                                            $"    <FORM name=\"form1\" action=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/account/Account_Login_Submit.jsp\" method=\"POST\">\r\n" +
+                                            $"    <FORM name=\"form1\" action=\"http://{domain}:10060/WARHAWK_SVML/account/Account_Login_Submit.jsp\" method=\"POST\">\r\n" +
                                             $"        \r\n" +
                                             $"        <TEXT name=\"text\" x=\"315\" y=\"105\" align=\"right\" class=\"TEXT3\">USER NAME:</TEXT>\r\n" +
                                             $"        \r\n" +
@@ -650,7 +666,7 @@ namespace SVO.Games.PS3
                                 case "GET":
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -662,6 +678,11 @@ namespace SVO.Games.PS3
                                         response.Headers.Set("X-SVOMac", serverMac);
                                         response.Headers.Set("Content-Type", "text/xml;charset=UTF-8");
                                         response.Headers.Add("Date", DateTime.Now.ToString("r"));
+
+                                        string domain = "warhawk-prod3.svo.online.scea.com";
+
+                                        if (!SVOServerConfiguration.PreferDNSUrls)
+                                            await InternetProtocolUtils.TryGetServerIP(out domain).ConfigureAwait(false);
 
                                         byte[] xmlMessage = Encoding.UTF8.GetBytes($"<?xml version=\"1.0\" encoding=\"UTF-8\"?> \r\n<SVML>       \r\n\r\n" +
                                             $"    <PAGEID name=\"pageID_Medius_Account_Login\"/>\r\n    \r\n" +
@@ -694,7 +715,7 @@ namespace SVO.Games.PS3
                                             $"     passWordField=\"passWord\" passWordLength=\"16\" loginButton=\"login\"/>  \r\n" +
                                             $"    \r\n" +
                                             $"    <BUTTON name=\"button1\" x=\"225\" y=\"250\" width=\"200\" height=\"25\"\r\n" +
-                                            $"     align=\"center\" class=\"BUTTON1\" href=\"http://warhawk-prod3.svo.online.scea.com:10060/WARHAWK_SVML/account/Account_AgeVerification.jsp\">Did this change....CREATE ACCOUNT</BUTTON>\r\n" +
+                                            $"     align=\"center\" class=\"BUTTON1\" href=\"http://{domain}:10060/WARHAWK_SVML/account/Account_AgeVerification.jsp\">Did this change....CREATE ACCOUNT</BUTTON>\r\n" +
                                             $"    \r\n" +
                                             $"</SVML>");
 
@@ -726,7 +747,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -777,7 +798,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {

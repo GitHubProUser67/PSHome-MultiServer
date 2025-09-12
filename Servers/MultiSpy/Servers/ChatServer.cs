@@ -1,4 +1,5 @@
-﻿using CustomLogger;
+﻿using CastleLibrary.Sony.Edge;
+using CustomLogger;
 using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -36,7 +37,7 @@ namespace MultiSpy.Servers
 
                 if (File.Exists(zlibFilePath) && !File.Exists(scriptPath))
                 {
-                    File.WriteAllBytes(scriptPath.Replace(edgeZlibExtension, string.Empty), SonyEdge.Zlib.EdgeZlibDecompress(File.ReadAllBytes(zlibFilePath)));
+                    File.WriteAllBytes(scriptPath.Replace(edgeZlibExtension, string.Empty), Zlib.EdgeZlibDecompress(File.ReadAllBytes(zlibFilePath)));
                     File.Move(zlibFilePath, zlibFilePath + ".old");
                 }
 

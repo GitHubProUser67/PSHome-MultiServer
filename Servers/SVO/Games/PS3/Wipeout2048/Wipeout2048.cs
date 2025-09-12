@@ -36,34 +36,39 @@ namespace SVO.Games.PS3
                                     response.Headers.Set("Content-Type", "application/xml;charset=UTF-8");
                                     response.Headers.Set("Content-Language", string.Empty);
 
+                                    string domain = "wipeout2048.online.scee.com";
+
+                                    if (!SVOServerConfiguration.PreferDNSUrls)
+                                        await InternetProtocolUtils.TryGetServerIP(out domain).ConfigureAwait(false);
+
                                     byte[] start = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                             "<Start>" +
-                                            "<DATA dataType=\"URI\" name=\"startURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/main/Start\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"ticketLoginURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/account/TicketLogin\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"friendsUploadURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/account/Friends\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"friendsDownloadURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/account/Friends\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"binaryUploadURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/binary/Upload\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"binaryDownloadURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/binary/Download\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"eulaURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/legal/Eula\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"announcementsURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/legal/Announcements\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"postScoreURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/games/PostScore\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"postWO2048ScoreURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/games/PostWO2048Score\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"leaderboardsURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/lb/{leaderboardId}\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"leaderboardsListURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/lb/GetList\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"leaderboardsPageURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/lb/GetPage\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"mediusStatsURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/lb/GetMediusStats\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"playerTimesURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/lb/GetPlayerTimes\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"guessRankingURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/lb/GuessRanking\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"rankedConfigURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/lb/GetRankedConfig\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"leaderboardScoreRangeURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/lbNGP/GetLeaderboardRange\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"leaderboards2048URL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/lbNGP/{leaderboardId}\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"leaderboards2048PageURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/lbNGP/GetPage\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"leaderboards2048XPURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/lbNGP/GetXPLeaderboard\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"ghostUploadURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/ghost/Upload\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"ghostDownloadURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/ghost/Download\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"friendActivitiesURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/activities/FriendActivities\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"uploadEventsURL\" value=\"https://wipeout2048.online.scee.com:10062/wox_ws/rest/activities/UploadEvents\"/>" +
-                                            "<DATA dataType=\"URI\" name=\"frameDataUploadURL\" value=\"https://wipeout2048.online.scee.com:10062/FrameRateAnalizer/gui/main/uploadFrameData\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"startURL\" value=\"https://{domain}:10062/wox_ws/rest/main/Start\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"ticketLoginURL\" value=\"https://{domain}:10062/wox_ws/rest/account/TicketLogin\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"friendsUploadURL\" value=\"https://{domain}:10062/wox_ws/rest/account/Friends\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"friendsDownloadURL\" value=\"https://{domain}:10062/wox_ws/rest/account/Friends\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"binaryUploadURL\" value=\"https://{domain}:10062/wox_ws/rest/binary/Upload\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"binaryDownloadURL\" value=\"https://{domain}:10062/wox_ws/rest/binary/Download\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"eulaURL\" value=\"https://{domain}:10062/wox_ws/rest/legal/Eula\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"announcementsURL\" value=\"https://{domain}:10062/wox_ws/rest/legal/Announcements\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"postScoreURL\" value=\"https://{domain}:10062/wox_ws/rest/games/PostScore\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"postWO2048ScoreURL\" value=\"https://{domain}:10062/wox_ws/rest/games/PostWO2048Score\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"leaderboardsURL\" value=\"https://{domain}:10062/wox_ws/rest/lb/{{leaderboardId}}\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"leaderboardsListURL\" value=\"https://{domain}:10062/wox_ws/rest/lb/GetList\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"leaderboardsPageURL\" value=\"https://{domain}:10062/wox_ws/rest/lb/GetPage\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"mediusStatsURL\" value=\"https://{domain}:10062/wox_ws/rest/lb/GetMediusStats\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"playerTimesURL\" value=\"https://{domain}:10062/wox_ws/rest/lb/GetPlayerTimes\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"guessRankingURL\" value=\"https://{domain}:10062/wox_ws/rest/lb/GuessRanking\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"rankedConfigURL\" value=\"https://{domain}:10062/wox_ws/rest/lb/GetRankedConfig\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"leaderboardScoreRangeURL\" value=\"https://{domain}:10062/wox_ws/rest/lbNGP/GetLeaderboardRange\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"leaderboards2048URL\" value=\"https://{domain}:10062/wox_ws/rest/lbNGP/{{leaderboardId}}\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"leaderboards2048PageURL\" value=\"https://{domain}:10062/wox_ws/rest/lbNGP/GetPage\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"leaderboards2048XPURL\" value=\"https://{domain}:10062/wox_ws/rest/lbNGP/GetXPLeaderboard\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"ghostUploadURL\" value=\"https://{domain}:10062/wox_ws/rest/ghost/Upload\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"ghostDownloadURL\" value=\"https://{domain}:10062/wox_ws/rest/ghost/Download\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"friendActivitiesURL\" value=\"https://{domain}:10062/wox_ws/rest/activities/FriendActivities\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"uploadEventsURL\" value=\"https://{domain}:10062/wox_ws/rest/activities/UploadEvents\"/>" +
+                                            $"<DATA dataType=\"URI\" name=\"frameDataUploadURL\" value=\"https://{domain}:10062/FrameRateAnalizer/gui/main/uploadFrameData\"/>" +
                                             "</Start>");
 
                                     response.StatusCode = (int)System.Net.HttpStatusCode.OK;
@@ -1250,11 +1255,11 @@ namespace SVO.Games.PS3
                                             fileName += ".bin";
 
                                         if (File.Exists($"{SVOServerConfiguration.SVOStaticFolder}/wox_ws/rest/fileservices/{name}/{fileName}"))
-                                            fileData = Encoding.UTF8.GetBytes($"<BinaryDownload checksum=\"{SVOSecurityUtils.CalcuateOTGSecuredHash("m4nT15")}\">\n" +
+                                            fileData = Encoding.UTF8.GetBytes($"<BinaryDownload checksum=\"{CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateOTGSecuredHash("m4nT15")}\">\n" +
                                                     $"        <Data>{File.ReadAllText($"{SVOServerConfiguration.SVOStaticFolder}/wox_ws/rest/fileservices/{name}/{fileName}")}</Data>\n" +
                                                     $"    </BinaryDownload>");
                                         else
-                                            fileData = Encoding.UTF8.GetBytes($"<BinaryDownload checksum=\"{SVOSecurityUtils.CalcuateOTGSecuredHash("m4nT15")}\">\n" +
+                                            fileData = Encoding.UTF8.GetBytes($"<BinaryDownload checksum=\"{CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateOTGSecuredHash("m4nT15")}\">\n" +
                                                     "        <Data></Data>\n" +
                                                     $"    </BinaryDownload>");
 

@@ -1,4 +1,5 @@
 using CustomLogger;
+using MultiServerLibrary.Extension;
 using SpaceWizards.HttpListener;
 using System.Text;
 using System.Web;
@@ -30,14 +31,19 @@ namespace SVO.Games.PS3
                             {
                                 case "GET":
 
+                                    string domain = "buzzps3.svo.online.scee.com";
+
+                                    if (!SVOServerConfiguration.PreferDNSUrls)
+                                        InternetProtocolUtils.TryGetServerIP(out domain).Wait();
+
                                     response.Headers.Set("Content-Type", "text/svml; charset=UTF-8");
 
                                     byte[] xmlMessage = Encoding.UTF8.GetBytes("<SVML>\r\n\t" +
-                                                "<URL name=\"getRandomUCQ\" value=\"http://buzzps3.svo.online.scee.com:10060/BUZZPS3_SVML/usercreated/homeapp/HomeApp_UCQBatch.jsp?uid=%a&languageID=%b\" />\r\n\t" +
-                                                "<URL name=\"reportUCQ\" value=\"http://buzzps3.svo.online.scee.com:10060/BUZZPS3_SVML/servlets/HomeUCQReportServlet?fileID=%a&fileGriefReportType=%b&hash=%c&rnd=%d&psn=%e\" />\r\n\t" +
-                                                "<URL name=\"getRandomAdvert\" value=\"http://buzzps3.svo.online.scee.com:10060/BUZZPS3_SVML/GetRandomAdvert.jsp\" />\r\n\t" +
-                                                "<URL name=\"getVariants\" value=\"http://buzzps3.svo.online.scee.com:10060/BUZZPS3_SVML/GetVariants.jsp?dbtable=gamevariants\" />\r\n\t" +
-                                                "<URL name=\"logger\" value=\"http://buzzps3.svo.online.scee.com:10060/BUZZPS3_SVML/logbuzz.jsp?msg=%a\" />\r\n" +
+                                                $"<URL name=\"getRandomUCQ\" value=\"http://{domain}:10060/BUZZPS3_SVML/usercreated/homeapp/HomeApp_UCQBatch.jsp?uid=%a&languageID=%b\" />\r\n\t" +
+                                                $"<URL name=\"reportUCQ\" value=\"http://{domain}:10060/BUZZPS3_SVML/servlets/HomeUCQReportServlet?fileID=%a&fileGriefReportType=%b&hash=%c&rnd=%d&psn=%e\" />\r\n\t" +
+                                                $"<URL name=\"getRandomAdvert\" value=\"http://{domain}:10060/BUZZPS3_SVML/GetRandomAdvert.jsp\" />\r\n\t" +
+                                                $"<URL name=\"getVariants\" value=\"http://{domain}:10060/BUZZPS3_SVML/GetVariants.jsp?dbtable=gamevariants\" />\r\n\t" +
+                                                $"<URL name=\"logger\" value=\"http://{domain}:10060/BUZZPS3_SVML/logbuzz.jsp?msg=%a\" />\r\n" +
                                                 "</SVML>");
 
                                     response.StatusCode = (int)System.Net.HttpStatusCode.OK;

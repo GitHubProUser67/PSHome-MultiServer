@@ -13,9 +13,7 @@ using MultiServerLibrary.Extension;
 using HomeTools.AFS;
 using MultiServerLibrary.HTTP;
 using EndianTools.BinaryExtension;
-using SonyEdge;
-
-
+using CastleLibrary.Sony.Edge;
 #if NET6_0_OR_GREATER
 using MultiServerLibrary.Upscalers;
 #endif

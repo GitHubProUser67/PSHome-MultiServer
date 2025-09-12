@@ -34,7 +34,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -64,121 +64,126 @@ namespace SVO.Games.PS3
                                         response.Headers.Set("X-Powered-By", "MultiServer");
                                         response.Headers.Set("Date", DateTime.Now.ToString("r"));
 
+                                        string domain = "killzoneps3.svo.online.scee.com";
+
+                                        if (!SVOServerConfiguration.PreferDNSUrls)
+                                            await InternetProtocolUtils.TryGetServerIP(out domain).ConfigureAwait(false);
+
                                         byte[]? index = null;
 
                                         if (SVOServerConfiguration.SVOHTTPSBypass)
                                             index = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \r\n<XML>\r\n    " +
                                                 $"<SET name=\"IP\" IPAddress=\"{request.RemoteEndPoint.Address}\" />     \r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"entryURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/SOCOMCF_SVML/account/Account_Login.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"homeURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/home.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"menuURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"logoutURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/account/Logout.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"syncprofileURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"clanCreateURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"mailboxURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"clanTournamentURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"leaderboardClanURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"leaderboardClanMembersURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"personalStatsURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"friendsURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"leaderboardURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"leaderboardFriendsURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"clanURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"viewtimezonesURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"buildInfoURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"clanUniverseURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"loginEncryptedURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/SOCOMCF_SVML/account/Account_Encrypted_Login_Submit.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"personalStatsURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/stats/personalStats.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"DATA\" name=\"gameCreateURL\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/game/tempgame.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"createGameURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/game/Game_Create.jsp?gameMode=%d\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"createGameSubmitURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/game/Game_Create_Submit.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/game/Game_Finish_Submit.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"gamePostBinaryStatsURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/game/Game_PostBinaryStats_Submit.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"createGamePlayerURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d\" />\r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"mediusAccountLoginURL\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/medius/Medius_Account_Login.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"mediusAccountCreateURL\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/medius/Medius_Account_Create.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"mediusLobbyListURL\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/medius/Medius_Lobby_List.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"mediusChatLobbyURL\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/medius/Medius_Chat_Lobby.jsp\" />  \r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"mediusChallengePopupURL\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/medius/Medius_Challenge_Popup.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"mediusAcceptPopupURL\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/medius/Medius_Accept_Popup.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"tickerStrURL\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/ticker/TickerStr.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"rankingsURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/ranks/rankings.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"tourLaunchPopupURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/tourney/Tourney_AutoLaunch.jsp\" /> \r\n   " +
-                                                " <DATA dataType=\"DATA\" name=\"tourDataURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/tourney/Tourney_CheckIn.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"teamTourneyMatchDataURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/teamtourney/TeamTourney_MatchData.jsp?teamTourID=%d\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"teamTourneyForfeitURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/teamtourney/TeamTourney_ForfeitTeam_Submit.jsp?teamTourTeamID=%d&amp;teamTourBracketID=%d&amp;teamTourID=%d\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"tourForfeitURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/tourney/Tourney_Forfeit_Submit.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"getLadderMatchDataURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/ladder/Ladder_GetMatchData.jsp?ladderMatchID=%d\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"getForfeitLadderMatchURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/ladder/Ladder_Forfeit_Submit.jsp?ladderMatchID=%d&amp;clanID=%d\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"downloadPatch\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/download/patchDownload.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"playerStatsURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/stats/Stats_GetPlayerStats.jsp?PlayerID=%d&amp;gameMode=%d\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"playerProfileURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/profile/Profile_GetPlayerProfile.jsp?PlayerID=%d\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"rankInfoURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/stats/Stats_CareerRankInfo.jsp?playerList=\"  /> \r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"downloadVerificationURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/commerce/Commerce_VerifySubmit.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"purchaseListURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/SOCOMCF_SVML/commerce/Commerce_PurchaseList.jsp?categoryID=default\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"createVerifiedFileGameURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/SOCOMCF_SVML/commerce/Commerce_GameCreatorFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;spectatorPassword=$3\" " +
-                                                "/>\r\n    <DATA dataType=\"DATA\" name=\"joinVerifiedFileGameURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/SOCOMCF_SVML/commerce/Commerce_GameJoinerFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;ticket=$3\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"spectateVerifiedFileGameURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/SOCOMCF_SVML/commerce/Commerce_GameSpectatorFileVerification.jsp?fileList=$1&amp;spectatorPassword=$2&amp;ticket=$3\" " +
-                                                "/>\r\n    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/account/SP_Login_Submit.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"SetIgnoreListURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/SOCOMCF_SVML/account/SP_UpdateIgnoreList_Submit.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"SetUniversePasswordURI\" value=\"http://killzoneps3.svo.online.scee.com:10060/SOCOMCF_SVML/account/SP_SetPassword_Submit.jsp\" />\r\n\r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"entryURI\" value=\"http://{domain}:10060/SOCOMCF_SVML/account/Account_Login.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"homeURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/home.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"menuURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"logoutURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/account/Logout.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"syncprofileURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"clanCreateURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"mailboxURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"clanTournamentURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"leaderboardClanURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"leaderboardClanMembersURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"personalStatsURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"friendsURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"leaderboardURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"leaderboardFriendsURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"clanURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"viewtimezonesURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"buildInfoURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"clanUniverseURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"loginEncryptedURI\" value=\"http://{domain}:10060/SOCOMCF_SVML/account/Account_Encrypted_Login_Submit.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"personalStatsURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/stats/personalStats.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"DATA\" name=\"gameCreateURL\" value=\"http://{domain}:10058/SOCOMCF_SVML/game/tempgame.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"createGameURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/game/Game_Create.jsp?gameMode=%d\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"createGameSubmitURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/game/Game_Create_Submit.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/game/Game_Finish_Submit.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"gamePostBinaryStatsURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/game/Game_PostBinaryStats_Submit.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"createGamePlayerURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d\" />\r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"mediusAccountLoginURL\" value=\"http://{domain}:10058/SOCOMCF_SVML/medius/Medius_Account_Login.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"mediusAccountCreateURL\" value=\"http://{domain}:10058/SOCOMCF_SVML/medius/Medius_Account_Create.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"mediusLobbyListURL\" value=\"http://{domain}:10058/SOCOMCF_SVML/medius/Medius_Lobby_List.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"mediusChatLobbyURL\" value=\"http://{domain}:10058/SOCOMCF_SVML/medius/Medius_Chat_Lobby.jsp\" />  \r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"mediusChallengePopupURL\" value=\"http://{domain}:10058/SOCOMCF_SVML/medius/Medius_Challenge_Popup.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"mediusAcceptPopupURL\" value=\"http://{domain}:10058/SOCOMCF_SVML/medius/Medius_Accept_Popup.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"tickerStrURL\" value=\"http://{domain}:10058/SOCOMCF_SVML/ticker/TickerStr.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"rankingsURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/ranks/rankings.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"tourLaunchPopupURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/tourney/Tourney_AutoLaunch.jsp\" /> \r\n   " +
+                                                $"<DATA dataType=\"DATA\" name=\"tourDataURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/tourney/Tourney_CheckIn.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"teamTourneyMatchDataURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/teamtourney/TeamTourney_MatchData.jsp?teamTourID=%d\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"teamTourneyForfeitURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/teamtourney/TeamTourney_ForfeitTeam_Submit.jsp?teamTourTeamID=%d&amp;teamTourBracketID=%d&amp;teamTourID=%d\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"tourForfeitURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/tourney/Tourney_Forfeit_Submit.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"getLadderMatchDataURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/ladder/Ladder_GetMatchData.jsp?ladderMatchID=%d\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"getForfeitLadderMatchURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/ladder/Ladder_Forfeit_Submit.jsp?ladderMatchID=%d&amp;clanID=%d\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"downloadPatch\" value=\"http://{domain}:10058/SOCOMCF_SVML/download/patchDownload.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"playerStatsURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/stats/Stats_GetPlayerStats.jsp?PlayerID=%d&amp;gameMode=%d\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"playerProfileURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/profile/Profile_GetPlayerProfile.jsp?PlayerID=%d\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"rankInfoURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/stats/Stats_CareerRankInfo.jsp?playerList=\"  /> \r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"downloadVerificationURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/commerce/Commerce_VerifySubmit.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"purchaseListURI\" value=\"http://{domain}:10060/SOCOMCF_SVML/commerce/Commerce_PurchaseList.jsp?categoryID=default\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"createVerifiedFileGameURI\" value=\"http://{domain}:10060/SOCOMCF_SVML/commerce/Commerce_GameCreatorFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;spectatorPassword=$3\" " +
+                                                $"/>\r\n    <DATA dataType=\"DATA\" name=\"joinVerifiedFileGameURI\" value=\"http://{domain}:10060/SOCOMCF_SVML/commerce/Commerce_GameJoinerFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;ticket=$3\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"spectateVerifiedFileGameURI\" value=\"http://{domain}:10060/SOCOMCF_SVML/commerce/Commerce_GameSpectatorFileVerification.jsp?fileList=$1&amp;spectatorPassword=$2&amp;ticket=$3\" " +
+                                                $"/>\r\n    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/account/SP_Login_Submit.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"SetIgnoreListURI\" value=\"http://{domain}:10060/SOCOMCF_SVML/account/SP_UpdateIgnoreList_Submit.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"SetUniversePasswordURI\" value=\"http://{domain}:10060/SOCOMCF_SVML/account/SP_SetPassword_Submit.jsp\" />\r\n\r\n    " +
                                                 "<BROWSER_INIT name=\"init\" />\r\n</XML>");
                                         else
                                             index = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?> \r\n<XML>\r\n    " +
                                                 $"<SET name=\"IP\" IPAddress=\"{request.RemoteEndPoint.Address}\" />     \r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"entryURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/SOCOMCF_SVML/account/Account_Login.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"homeURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/home.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"menuURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"logoutURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/account/Logout.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"syncprofileURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"clanCreateURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"mailboxURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"clanTournamentURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"leaderboardClanURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"leaderboardClanMembersURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"personalStatsURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"friendsURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"leaderboardURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"leaderboardFriendsURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"clanURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"viewtimezonesURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"buildInfoURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"clanUniverseURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/menu.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"loginEncryptedURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/SOCOMCF_SVML/account/Account_Encrypted_Login_Submit.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"personalStatsURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/stats/personalStats.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"DATA\" name=\"gameCreateURL\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/game/tempgame.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"createGameURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/game/Game_Create.jsp?gameMode=%d\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"createGameSubmitURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/game/Game_Create_Submit.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/game/Game_Finish_Submit.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"gamePostBinaryStatsURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/game/Game_PostBinaryStats_Submit.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"createGamePlayerURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d\" />\r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"mediusAccountLoginURL\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/medius/Medius_Account_Login.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"mediusAccountCreateURL\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/medius/Medius_Account_Create.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"mediusLobbyListURL\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/medius/Medius_Lobby_List.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"mediusChatLobbyURL\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/medius/Medius_Chat_Lobby.jsp\" />  \r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"mediusChallengePopupURL\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/medius/Medius_Challenge_Popup.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"mediusAcceptPopupURL\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/medius/Medius_Accept_Popup.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"tickerStrURL\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/ticker/TickerStr.jsp\" />\r\n\t" +
-                                                "<DATA dataType=\"URI\" name=\"rankingsURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/ranks/rankings.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"tourLaunchPopupURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/tourney/Tourney_AutoLaunch.jsp\" /> \r\n   " +
-                                                " <DATA dataType=\"DATA\" name=\"tourDataURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/tourney/Tourney_CheckIn.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"teamTourneyMatchDataURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/teamtourney/TeamTourney_MatchData.jsp?teamTourID=%d\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"teamTourneyForfeitURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/teamtourney/TeamTourney_ForfeitTeam_Submit.jsp?teamTourTeamID=%d&amp;teamTourBracketID=%d&amp;teamTourID=%d\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"tourForfeitURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/tourney/Tourney_Forfeit_Submit.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"getLadderMatchDataURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/ladder/Ladder_GetMatchData.jsp?ladderMatchID=%d\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"getForfeitLadderMatchURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/ladder/Ladder_Forfeit_Submit.jsp?ladderMatchID=%d&amp;clanID=%d\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"downloadPatch\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/download/patchDownload.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"playerStatsURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/stats/Stats_GetPlayerStats.jsp?PlayerID=%d&amp;gameMode=%d\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"playerProfileURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/profile/Profile_GetPlayerProfile.jsp?PlayerID=%d\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"rankInfoURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/stats/Stats_CareerRankInfo.jsp?playerList=\"  /> \r\n    " +
-                                                "<DATA dataType=\"URI\" name=\"downloadVerificationURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/commerce/Commerce_VerifySubmit.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"purchaseListURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/SOCOMCF_SVML/commerce/Commerce_PurchaseList.jsp?categoryID=default\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"createVerifiedFileGameURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/SOCOMCF_SVML/commerce/Commerce_GameCreatorFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;spectatorPassword=$3\" " +
-                                                "/>\r\n    <DATA dataType=\"DATA\" name=\"joinVerifiedFileGameURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/SOCOMCF_SVML/commerce/Commerce_GameJoinerFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;ticket=$3\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"spectateVerifiedFileGameURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/SOCOMCF_SVML/commerce/Commerce_GameSpectatorFileVerification.jsp?fileList=$1&amp;spectatorPassword=$2&amp;ticket=$3\" " +
-                                                "/>\r\n    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://killzoneps3.svo.online.scee.com:10058/SOCOMCF_SVML/account/SP_Login_Submit.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"SetIgnoreListURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/SOCOMCF_SVML/account/SP_UpdateIgnoreList_Submit.jsp\" />\r\n    " +
-                                                "<DATA dataType=\"DATA\" name=\"SetUniversePasswordURI\" value=\"https://killzoneps3.svo.online.scee.com:10061/SOCOMCF_SVML/account/SP_SetPassword_Submit.jsp\" />\r\n\r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"entryURI\" value=\"https://{domain}:10061/SOCOMCF_SVML/account/Account_Login.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"homeURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/home.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"menuURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"logoutURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/account/Logout.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"syncprofileURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"clanCreateURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"mailboxURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"clanTournamentURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"leaderboardClanURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"leaderboardClanMembersURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"personalStatsURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"friendsURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"leaderboardURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"leaderboardFriendsURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"clanURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"viewtimezonesURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"buildInfoURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"clanUniverseURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/menu.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"loginEncryptedURI\" value=\"https://{domain}:10061/SOCOMCF_SVML/account/Account_Encrypted_Login_Submit.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"personalStatsURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/stats/personalStats.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"DATA\" name=\"gameCreateURL\" value=\"http://{domain}:10058/SOCOMCF_SVML/game/tempgame.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"createGameURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/game/Game_Create.jsp?gameMode=%d\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"createGameSubmitURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/game/Game_Create_Submit.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"finishGameURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/game/Game_Finish_Submit.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"gamePostBinaryStatsURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/game/Game_PostBinaryStats_Submit.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"createGamePlayerURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d\" />\r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"mediusAccountLoginURL\" value=\"http://{domain}:10058/SOCOMCF_SVML/medius/Medius_Account_Login.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"mediusAccountCreateURL\" value=\"http://{domain}:10058/SOCOMCF_SVML/medius/Medius_Account_Create.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"mediusLobbyListURL\" value=\"http://{domain}:10058/SOCOMCF_SVML/medius/Medius_Lobby_List.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"mediusChatLobbyURL\" value=\"http://{domain}:10058/SOCOMCF_SVML/medius/Medius_Chat_Lobby.jsp\" />  \r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"mediusChallengePopupURL\" value=\"http://{domain}:10058/SOCOMCF_SVML/medius/Medius_Challenge_Popup.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"mediusAcceptPopupURL\" value=\"http://{domain}:10058/SOCOMCF_SVML/medius/Medius_Accept_Popup.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"tickerStrURL\" value=\"http://{domain}:10058/SOCOMCF_SVML/ticker/TickerStr.jsp\" />\r\n\t" +
+                                                $"<DATA dataType=\"URI\" name=\"rankingsURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/ranks/rankings.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"tourLaunchPopupURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/tourney/Tourney_AutoLaunch.jsp\" /> \r\n   " +
+                                                $"<DATA dataType=\"DATA\" name=\"tourDataURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/tourney/Tourney_CheckIn.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"teamTourneyMatchDataURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/teamtourney/TeamTourney_MatchData.jsp?teamTourID=%d\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"teamTourneyForfeitURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/teamtourney/TeamTourney_ForfeitTeam_Submit.jsp?teamTourTeamID=%d&amp;teamTourBracketID=%d&amp;teamTourID=%d\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"tourForfeitURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/tourney/Tourney_Forfeit_Submit.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"getLadderMatchDataURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/ladder/Ladder_GetMatchData.jsp?ladderMatchID=%d\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"getForfeitLadderMatchURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/ladder/Ladder_Forfeit_Submit.jsp?ladderMatchID=%d&amp;clanID=%d\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"downloadPatch\" value=\"http://{domain}:10058/SOCOMCF_SVML/download/patchDownload.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"playerStatsURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/stats/Stats_GetPlayerStats.jsp?PlayerID=%d&amp;gameMode=%d\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"playerProfileURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/profile/Profile_GetPlayerProfile.jsp?PlayerID=%d\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"rankInfoURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/stats/Stats_CareerRankInfo.jsp?playerList=\"  /> \r\n    " +
+                                                $"<DATA dataType=\"URI\" name=\"downloadVerificationURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/commerce/Commerce_VerifySubmit.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"purchaseListURI\" value=\"https://{domain}:10061/SOCOMCF_SVML/commerce/Commerce_PurchaseList.jsp?categoryID=default\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"createVerifiedFileGameURI\" value=\"https://{domain}:10061/SOCOMCF_SVML/commerce/Commerce_GameCreatorFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;spectatorPassword=$3\" " +
+                                                $"/>\r\n    <DATA dataType=\"DATA\" name=\"joinVerifiedFileGameURI\" value=\"https://{domain}:10061/SOCOMCF_SVML/commerce/Commerce_GameJoinerFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;ticket=$3\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"spectateVerifiedFileGameURI\" value=\"https://{domain}:10061/SOCOMCF_SVML/commerce/Commerce_GameSpectatorFileVerification.jsp?fileList=$1&amp;spectatorPassword=$2&amp;ticket=$3\" " +
+                                                $"/>\r\n    <DATA dataType=\"DATA\" name=\"TicketLoginURI\" value=\"http://{domain}:10058/SOCOMCF_SVML/account/SP_Login_Submit.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"SetIgnoreListURI\" value=\"https://{domain}:10061/SOCOMCF_SVML/account/SP_UpdateIgnoreList_Submit.jsp\" />\r\n    " +
+                                                $"<DATA dataType=\"DATA\" name=\"SetUniversePasswordURI\" value=\"https://{domain}:10061/SOCOMCF_SVML/account/SP_SetPassword_Submit.jsp\" />\r\n\r\n    " +
                                                 "<BROWSER_INIT name=\"init\" />\r\n</XML>");
 
                                         response.StatusCode = (int)System.Net.HttpStatusCode.OK;
@@ -208,7 +213,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -361,7 +366,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -409,7 +414,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
@@ -456,7 +461,7 @@ namespace SVO.Games.PS3
 
                                     string? clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {

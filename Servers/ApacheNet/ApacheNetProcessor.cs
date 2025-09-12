@@ -113,7 +113,22 @@ namespace ApacheNet
                     LoggerAccessor.LogError($"[SECURITY] - Client - {ctx.Request.Source.IpAddress}:{ctx.Request.Source.Port} Requested the HTTPS server while being banned!");
                     ctx.Response.StatusCode = 403;
                     await ctx.Response.Send();
+                    return;
                 }
+            }
+            const string svoMacHeader = "X-SVOMac";
+            if (ctx.Request.HeaderExists(svoMacHeader))
+            {
+                string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(ctx.Request.RetrieveHeaderValue(svoMacHeader));
+
+                if (string.IsNullOrEmpty(serverMac))
+                {
+                    ctx.Response.StatusCode = 403;
+                    await ctx.Response.Send();
+                    return;
+                }
+
+                ctx.Response.Headers.Set(svoMacHeader, serverMac);
             }
         }
 

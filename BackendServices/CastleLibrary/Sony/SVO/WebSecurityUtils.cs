@@ -1,11 +1,10 @@
-using System.Security.Cryptography;
 using System.Text;
 
-namespace SVO
+namespace CastleLibrary.Sony.SVO
 {
-    public class SVOSecurityUtils
+    public class WebSecurityUtils
     {
-        public static string? CalcuateSVOMac(string? clientSVOMac)
+        public static string CalcuateSVOMac(string clientSVOMac)
         {
             if (string.IsNullOrEmpty(clientSVOMac) || clientSVOMac.Length != 32)
                 return null;
@@ -16,7 +15,7 @@ namespace SVO
 
         // HMAC-MD5 as result is 16 in length as shown in eboot.
         // Known keys - "m4nT15" (profile) - "GHOST_PWD" (ghost replays)
-        public static string? CalcuateOTGSecuredHash(string keytohash)
+        public static string CalcuateOTGSecuredHash(string keytohash)
         {
             return NetHasher.DotNetHasher.ComputeMD5String(Encoding.ASCII.GetBytes(keytohash), Encoding.ASCII.GetBytes("ca91f51f-a7f5-4b95-814a-5796cfff586c")).ToLower();
         }

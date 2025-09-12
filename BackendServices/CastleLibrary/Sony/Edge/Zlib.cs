@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using EndianTools;
 using Org.BouncyCastle.Utilities.Zlib;
 
-namespace SonyEdge
+namespace CastleLibrary.Sony.Edge
 {
     public class Zlib
     {

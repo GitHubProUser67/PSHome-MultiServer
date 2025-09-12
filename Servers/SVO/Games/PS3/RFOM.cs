@@ -32,7 +32,7 @@ namespace SVO.Games.PS3
                                         resp.Headers.Set("Content-Type", "text/svml");
 
                                         string clientMac = req.Headers.Get("X-SVOMac");
-                                        string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                        string serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
                                         if (string.IsNullOrEmpty(serverMac))
                                         {
                                             response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -48,99 +48,104 @@ namespace SVO.Games.PS3
 
                                             resp.Headers.Set("X-SVOMac", serverMac);
 
+                                            string domain = "resistanceps3.svo.online.scea.com";
+
+                                            if (!SVOServerConfiguration.PreferDNSUrls)
+                                                await InternetProtocolUtils.TryGetServerIP(out domain).ConfigureAwait(false);
+
                                             byte[] uriStore = null;
                                             if (SVOServerConfiguration.SVOHTTPSBypass)
                                             {
-                                                uriStore = Encoding.UTF8.GetBytes(@"<?xml version=""1.0"" encoding=""UTF-8""?>   
+                                                uriStore = Encoding.UTF8.GetBytes($@"<?xml version=""1.0"" encoding=""UTF-8""?>   
                                             <SVML>  
                                                 <SET name=""IP"" IPAddress=""127.0.0.1"" />       
-                                                <DATA dataType=""URI"" name=""entryURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/account/Account_Login.jsp"" />  
-                                                <DATA dataType=""URI"" name=""homeURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/home.jsp"" />  
-                                                <DATA dataType=""URI"" name=""logoutURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/account/Logout.jsp"" />  
-                                                <DATA dataType=""URI"" name=""syncprofileURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/game/syncprofile.jsp"" />  
-                                                <DATA dataType=""DATA"" name=""loginEncryptedURI"" value=""https://resistanceps3.svo.online.scea.com:10061/RESISTANCE_SVML/account/Account_Encrypted_Login_Submit.jsp"" />  
-                                                <DATA dataType=""URI"" name=""personalStatsURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/stats/personalStats.jsp"" />  
-                                                <DATA dataType=""DATA"" name=""gameCreateURL"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/game/tempgame.jsp"" />  
-                                                <DATA dataType=""DATA"" name=""createGameURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/game/Game_Create.jsp?gameMode=%d"" />  
-                                                <DATA dataType=""DATA"" name=""createGameSubmitURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/game/Game_Create_Submit.jsp"" />  
-                                                <DATA dataType=""DATA"" name=""finishGameURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/game/Game_Finish_Submit.jsp"" />  
-                                                <DATA dataType=""DATA"" name=""gamePostBinaryStatsURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/game/Game_PostBinaryStats_Submit.jsp"" />  
-                                                <DATA dataType=""DATA"" name=""createGamePlayerURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d"" />  
-                                                <DATA dataType=""URI"" name=""mediusAccountLoginURL"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/medius/Medius_Account_Login.jsp"" />  
-                                                <DATA dataType=""URI"" name=""mediusAccountCreateURL"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/medius/Medius_Account_Create.jsp"" />  
-                                                <DATA dataType=""URI"" name=""mediusLobbyListURL"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/medius/Medius_Lobby_List.jsp"" />  
-                                                <DATA dataType=""URI"" name=""mediusChatLobbyURL"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/medius/Medius_Chat_Lobby.jsp"" />    
-                                                <DATA dataType=""URI"" name=""mediusChallengePopupURL"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/medius/Medius_Challenge_Popup.jsp"" />  
-                                                <DATA dataType=""URI"" name=""mediusAcceptPopupURL"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/medius/Medius_Accept_Popup.jsp"" />  
-                                                <DATA dataType=""DATA"" name=""tickerStrURL"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/ticker/TickerStr.jsp"" />  
-                                                <DATA dataType=""URI"" name=""rankingsURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/ranks/rankings.jsp"" />  
-                                                <DATA dataType=""URI"" name=""tourLaunchPopupURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/tourney/Tourney_AutoLaunch.jsp"" />   
-                                                <DATA dataType=""DATA"" name=""tourDataURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/tourney/Tourney_CheckIn.jsp"" />  
-                                                <DATA dataType=""DATA"" name=""teamTourneyMatchDataURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/teamtourney/TeamTourney_MatchData.jsp?teamTourID=%d"" />  
-                                                <DATA dataType=""DATA"" name=""teamTourneyForfeitURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/teamtourney/TeamTourney_ForfeitTeam_Submit.jsp?teamTourTeamID=%d&amp;teamTourBracketID=%d&amp;teamTourID=%d"" />  
-                                                <DATA dataType=""DATA"" name=""tourForfeitURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/tourney/Tourney_Forfeit_Submit.jsp"" />  
-                                                <DATA dataType=""DATA"" name=""getLadderMatchDataURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/ladder/Ladder_GetMatchData.jsp?ladderMatchID=%d"" />  
-                                                <DATA dataType=""DATA"" name=""getForfeitLadderMatchURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/ladder/Ladder_Forfeit_Submit.jsp?ladderMatchID=%d&amp;clanID=%d"" />  
-                                                <DATA dataType=""DATA"" name=""downloadPatch"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/download/patchDownload.jsp"" />  
-                                                <DATA dataType=""DATA"" name=""playerStatsURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/stats/Stats_GetPlayerStats.jsp?PlayerID=%d&amp;gameMode=%d"" />  
-                                                <DATA dataType=""DATA"" name=""playerProfileURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/profile/Profile_GetPlayerProfile.jsp?PlayerID=%d"" />  
-                                                <DATA dataType=""DATA"" name=""rankInfoURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/stats/Stats_CareerRankInfo.jsp?playerList=""  />   
-                                                <DATA dataType=""URI"" name=""downloadVerificationURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/commerce/Commerce_VerifySubmit.jsp"" />  
-                                                <DATA dataType=""DATA"" name=""purchaseListURI"" value=""https://resistanceps3.svo.online.scea.com:10061/RESISTANCE_SVML/commerce/Commerce_PurchaseList.jsp?categoryID=default"" />  
-                                                <DATA dataType=""DATA"" name=""createVerifiedFileGameURI"" value=""https://resistanceps3.svo.online.scea.com:10061/RESISTANCE_SVML/commerce/Commerce_GameCreatorFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;spectatorPassword=$3"" />  
-                                                <DATA dataType=""DATA"" name=""joinVerifiedFileGameURI"" value=""https://resistanceps3.svo.online.scea.com:10061/RESISTANCE_SVML/commerce/Commerce_GameJoinerFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;ticket=$3"" />  
-                                                <DATA dataType=""DATA"" name=""spectateVerifiedFileGameURI"" value=""https://resistanceps3.svo.online.scea.com:10061/RESISTANCE_SVML/commerce/Commerce_GameSpectatorFileVerification.jsp?fileList=$1&amp;spectatorPassword=$2&amp;ticket=$3"" />  
-                                                <DATA dataType=""DATA"" name=""TicketLoginURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/account/SP_Login_Submit.jsp"" />  
-                                                <DATA dataType=""DATA"" name=""SetIgnoreListURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/account/SP_UpdateIgnoreList_Submit.jsp"" />  
-                                                <DATA dataType=""DATA"" name=""SetUniversePasswordURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/account/SP_SetPassword_Submit.jsp"" />  
+                                                <DATA dataType=""URI"" name=""entryURI"" value=""http://{domain}:10060/RESISTANCE_SVML/account/Account_Login.jsp"" />  
+                                                <DATA dataType=""URI"" name=""homeURI"" value=""http://{domain}:10060/RESISTANCE_SVML/home.jsp"" />  
+                                                <DATA dataType=""URI"" name=""logoutURI"" value=""http://{domain}:10060/RESISTANCE_SVML/account/Logout.jsp"" />  
+                                                <DATA dataType=""URI"" name=""syncprofileURI"" value=""http://{domain}:10060/RESISTANCE_SVML/game/syncprofile.jsp"" />  
+                                                <DATA dataType=""DATA"" name=""loginEncryptedURI"" value=""https://{domain}:10061/RESISTANCE_SVML/account/Account_Encrypted_Login_Submit.jsp"" />  
+                                                <DATA dataType=""URI"" name=""personalStatsURI"" value=""http://{domain}:10060/RESISTANCE_SVML/stats/personalStats.jsp"" />  
+                                                <DATA dataType=""DATA"" name=""gameCreateURL"" value=""http://{domain}:10060/RESISTANCE_SVML/game/tempgame.jsp"" />  
+                                                <DATA dataType=""DATA"" name=""createGameURI"" value=""http://{domain}:10060/RESISTANCE_SVML/game/Game_Create.jsp?gameMode=%d"" />  
+                                                <DATA dataType=""DATA"" name=""createGameSubmitURI"" value=""http://{domain}:10060/RESISTANCE_SVML/game/Game_Create_Submit.jsp"" />  
+                                                <DATA dataType=""DATA"" name=""finishGameURI"" value=""http://{domain}:10060/RESISTANCE_SVML/game/Game_Finish_Submit.jsp"" />  
+                                                <DATA dataType=""DATA"" name=""gamePostBinaryStatsURI"" value=""http://{domain}:10060/RESISTANCE_SVML/game/Game_PostBinaryStats_Submit.jsp"" />  
+                                                <DATA dataType=""DATA"" name=""createGamePlayerURI"" value=""http://{domain}:10060/RESISTANCE_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d"" />  
+                                                <DATA dataType=""URI"" name=""mediusAccountLoginURL"" value=""http://{domain}:10060/RESISTANCE_SVML/medius/Medius_Account_Login.jsp"" />  
+                                                <DATA dataType=""URI"" name=""mediusAccountCreateURL"" value=""http://{domain}:10060/RESISTANCE_SVML/medius/Medius_Account_Create.jsp"" />  
+                                                <DATA dataType=""URI"" name=""mediusLobbyListURL"" value=""http://{domain}:10060/RESISTANCE_SVML/medius/Medius_Lobby_List.jsp"" />  
+                                                <DATA dataType=""URI"" name=""mediusChatLobbyURL"" value=""http://{domain}:10060/RESISTANCE_SVML/medius/Medius_Chat_Lobby.jsp"" />    
+                                                <DATA dataType=""URI"" name=""mediusChallengePopupURL"" value=""http://{domain}:10060/RESISTANCE_SVML/medius/Medius_Challenge_Popup.jsp"" />  
+                                                <DATA dataType=""URI"" name=""mediusAcceptPopupURL"" value=""http://{domain}:10060/RESISTANCE_SVML/medius/Medius_Accept_Popup.jsp"" />  
+                                                <DATA dataType=""DATA"" name=""tickerStrURL"" value=""http://{domain}:10060/RESISTANCE_SVML/ticker/TickerStr.jsp"" />  
+                                                <DATA dataType=""URI"" name=""rankingsURI"" value=""http://{domain}:10060/RESISTANCE_SVML/ranks/rankings.jsp"" />  
+                                                <DATA dataType=""URI"" name=""tourLaunchPopupURI"" value=""http://{domain}:10060/RESISTANCE_SVML/tourney/Tourney_AutoLaunch.jsp"" />   
+                                                <DATA dataType=""DATA"" name=""tourDataURI"" value=""http://{domain}:10060/RESISTANCE_SVML/tourney/Tourney_CheckIn.jsp"" />  
+                                                <DATA dataType=""DATA"" name=""teamTourneyMatchDataURI"" value=""http://{domain}:10060/RESISTANCE_SVML/teamtourney/TeamTourney_MatchData.jsp?teamTourID=%d"" />  
+                                                <DATA dataType=""DATA"" name=""teamTourneyForfeitURI"" value=""http://{domain}:10060/RESISTANCE_SVML/teamtourney/TeamTourney_ForfeitTeam_Submit.jsp?teamTourTeamID=%d&amp;teamTourBracketID=%d&amp;teamTourID=%d"" />  
+                                                <DATA dataType=""DATA"" name=""tourForfeitURI"" value=""http://{domain}:10060/RESISTANCE_SVML/tourney/Tourney_Forfeit_Submit.jsp"" />  
+                                                <DATA dataType=""DATA"" name=""getLadderMatchDataURI"" value=""http://{domain}:10060/RESISTANCE_SVML/ladder/Ladder_GetMatchData.jsp?ladderMatchID=%d"" />  
+                                                <DATA dataType=""DATA"" name=""getForfeitLadderMatchURI"" value=""http://{domain}:10060/RESISTANCE_SVML/ladder/Ladder_Forfeit_Submit.jsp?ladderMatchID=%d&amp;clanID=%d"" />  
+                                                <DATA dataType=""DATA"" name=""downloadPatch"" value=""http://{domain}:10060/RESISTANCE_SVML/download/patchDownload.jsp"" />  
+                                                <DATA dataType=""DATA"" name=""playerStatsURI"" value=""http://{domain}:10060/RESISTANCE_SVML/stats/Stats_GetPlayerStats.jsp?PlayerID=%d&amp;gameMode=%d"" />  
+                                                <DATA dataType=""DATA"" name=""playerProfileURI"" value=""http://{domain}:10060/RESISTANCE_SVML/profile/Profile_GetPlayerProfile.jsp?PlayerID=%d"" />  
+                                                <DATA dataType=""DATA"" name=""rankInfoURI"" value=""http://{domain}:10060/RESISTANCE_SVML/stats/Stats_CareerRankInfo.jsp?playerList=""  />   
+                                                <DATA dataType=""URI"" name=""downloadVerificationURI"" value=""http://{domain}:10060/RESISTANCE_SVML/commerce/Commerce_VerifySubmit.jsp"" />  
+                                                <DATA dataType=""DATA"" name=""purchaseListURI"" value=""https://{domain}:10061/RESISTANCE_SVML/commerce/Commerce_PurchaseList.jsp?categoryID=default"" />  
+                                                <DATA dataType=""DATA"" name=""createVerifiedFileGameURI"" value=""https://{domain}:10061/RESISTANCE_SVML/commerce/Commerce_GameCreatorFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;spectatorPassword=$3"" />  
+                                                <DATA dataType=""DATA"" name=""joinVerifiedFileGameURI"" value=""https://{domain}:10061/RESISTANCE_SVML/commerce/Commerce_GameJoinerFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;ticket=$3"" />  
+                                                <DATA dataType=""DATA"" name=""spectateVerifiedFileGameURI"" value=""https://{domain}:10061/RESISTANCE_SVML/commerce/Commerce_GameSpectatorFileVerification.jsp?fileList=$1&amp;spectatorPassword=$2&amp;ticket=$3"" />  
+                                                <DATA dataType=""DATA"" name=""TicketLoginURI"" value=""http://{domain}:10060/RESISTANCE_SVML/account/SP_Login_Submit.jsp"" />  
+                                                <DATA dataType=""DATA"" name=""SetIgnoreListURI"" value=""http://{domain}:10060/RESISTANCE_SVML/account/SP_UpdateIgnoreList_Submit.jsp"" />  
+                                                <DATA dataType=""DATA"" name=""SetUniversePasswordURI"" value=""http://{domain}:10060/RESISTANCE_SVML/account/SP_SetPassword_Submit.jsp"" />  
   
                                                 <BROWSER_INIT name=""init"" />  
                                             </SVML>");
                                             }
                                             else
                                             {
-                                                uriStore = Encoding.UTF8.GetBytes(@"<?xml version=""1.0"" encoding=""UTF-8""?>   
+                                                uriStore = Encoding.UTF8.GetBytes($@"<?xml version=""1.0"" encoding=""UTF-8""?>   
                                                 <SVML>  
                                                     <SET name=""IP"" IPAddress=""127.0.0.1"" />       
-                                                    <DATA dataType=""URI"" name=""entryURI"" value=""https://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/account/Account_Login.jsp"" />  
-                                                    <DATA dataType=""URI"" name=""homeURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/home.jsp"" />  
-                                                    <DATA dataType=""URI"" name=""logoutURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/account/Logout.jsp"" />  
-                                                    <DATA dataType=""URI"" name=""syncprofileURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/game/syncprofile.jsp"" />  
-                                                    <DATA dataType=""DATA"" name=""loginEncryptedURI"" value=""https://resistanceps3.svo.online.scea.com:10061/RESISTANCE_SVML/account/Account_Encrypted_Login_Submit.jsp"" />  
-                                                    <DATA dataType=""URI"" name=""personalStatsURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/stats/personalStats.jsp"" />  
-                                                    <DATA dataType=""DATA"" name=""gameCreateURL"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/game/tempgame.jsp"" />  
-                                                    <DATA dataType=""DATA"" name=""createGameURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/game/Game_Create.jsp?gameMode=%d"" />  
-                                                    <DATA dataType=""DATA"" name=""createGameSubmitURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/game/Game_Create_Submit.jsp"" />  
-                                                    <DATA dataType=""DATA"" name=""finishGameURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/game/Game_Finish_Submit.jsp"" />  
-                                                    <DATA dataType=""DATA"" name=""gamePostBinaryStatsURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/game/Game_PostBinaryStats_Submit.jsp"" />  
-                                                    <DATA dataType=""DATA"" name=""createGamePlayerURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d"" />  
-                                                    <DATA dataType=""URI"" name=""mediusAccountLoginURL"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/medius/Medius_Account_Login.jsp"" />  
-                                                    <DATA dataType=""URI"" name=""mediusAccountCreateURL"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/medius/Medius_Account_Create.jsp"" />  
-                                                    <DATA dataType=""URI"" name=""mediusLobbyListURL"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/medius/Medius_Lobby_List.jsp"" />  
-                                                    <DATA dataType=""URI"" name=""mediusChatLobbyURL"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/medius/Medius_Chat_Lobby.jsp"" />    
-                                                    <DATA dataType=""URI"" name=""mediusChallengePopupURL"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/medius/Medius_Challenge_Popup.jsp"" />  
-                                                    <DATA dataType=""URI"" name=""mediusAcceptPopupURL"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/medius/Medius_Accept_Popup.jsp"" />  
-                                                    <DATA dataType=""DATA"" name=""tickerStrURL"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/ticker/TickerStr.jsp"" />  
-                                                    <DATA dataType=""URI"" name=""rankingsURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/ranks/rankings.jsp"" />  
-                                                    <DATA dataType=""URI"" name=""tourLaunchPopupURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/tourney/Tourney_AutoLaunch.jsp"" />   
-                                                    <DATA dataType=""DATA"" name=""tourDataURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/tourney/Tourney_CheckIn.jsp"" />  
-                                                    <DATA dataType=""DATA"" name=""teamTourneyMatchDataURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/teamtourney/TeamTourney_MatchData.jsp?teamTourID=%d"" />  
-                                                    <DATA dataType=""DATA"" name=""teamTourneyForfeitURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/teamtourney/TeamTourney_ForfeitTeam_Submit.jsp?teamTourTeamID=%d&amp;teamTourBracketID=%d&amp;teamTourID=%d"" />  
-                                                    <DATA dataType=""DATA"" name=""tourForfeitURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/tourney/Tourney_Forfeit_Submit.jsp"" />  
-                                                    <DATA dataType=""DATA"" name=""getLadderMatchDataURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/ladder/Ladder_GetMatchData.jsp?ladderMatchID=%d"" />  
-                                                    <DATA dataType=""DATA"" name=""getForfeitLadderMatchURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/ladder/Ladder_Forfeit_Submit.jsp?ladderMatchID=%d&amp;clanID=%d"" />  
-                                                    <DATA dataType=""DATA"" name=""downloadPatch"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/download/patchDownload.jsp"" />  
-                                                    <DATA dataType=""DATA"" name=""playerStatsURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/stats/Stats_GetPlayerStats.jsp?PlayerID=%d&amp;gameMode=%d"" />  
-                                                    <DATA dataType=""DATA"" name=""playerProfileURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/profile/Profile_GetPlayerProfile.jsp?PlayerID=%d"" />  
-                                                    <DATA dataType=""DATA"" name=""rankInfoURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/stats/Stats_CareerRankInfo.jsp?playerList=""  />   
-                                                    <DATA dataType=""URI"" name=""downloadVerificationURI"" value=""http://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/commerce/Commerce_VerifySubmit.jsp"" />  
-                                                    <DATA dataType=""DATA"" name=""purchaseListURI"" value=""https://resistanceps3.svo.online.scea.com:10061/RESISTANCE_SVML/commerce/Commerce_PurchaseList.jsp?categoryID=default"" />  
-                                                    <DATA dataType=""DATA"" name=""createVerifiedFileGameURI"" value=""https://resistanceps3.svo.online.scea.com:10061/RESISTANCE_SVML/commerce/Commerce_GameCreatorFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;spectatorPassword=$3"" />  
-                                                    <DATA dataType=""DATA"" name=""joinVerifiedFileGameURI"" value=""https://resistanceps3.svo.online.scea.com:10061/RESISTANCE_SVML/commerce/Commerce_GameJoinerFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;ticket=$3"" />  
-                                                    <DATA dataType=""DATA"" name=""spectateVerifiedFileGameURI"" value=""https://resistanceps3.svo.online.scea.com:10061/RESISTANCE_SVML/commerce/Commerce_GameSpectatorFileVerification.jsp?fileList=$1&amp;spectatorPassword=$2&amp;ticket=$3"" />  
-                                                    <DATA dataType=""DATA"" name=""TicketLoginURI"" value=""https://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/account/SP_Login_Submit.jsp"" />  
-                                                    <DATA dataType=""DATA"" name=""SetIgnoreListURI"" value=""https://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/account/SP_UpdateIgnoreList_Submit.jsp"" />  
-                                                    <DATA dataType=""DATA"" name=""SetUniversePasswordURI"" value=""https://resistanceps3.svo.online.scea.com:10060/RESISTANCE_SVML/account/SP_SetPassword_Submit.jsp"" />  
+                                                    <DATA dataType=""URI"" name=""entryURI"" value=""https://{domain}:10060/RESISTANCE_SVML/account/Account_Login.jsp"" />  
+                                                    <DATA dataType=""URI"" name=""homeURI"" value=""http://{domain}:10060/RESISTANCE_SVML/home.jsp"" />  
+                                                    <DATA dataType=""URI"" name=""logoutURI"" value=""http://{domain}:10060/RESISTANCE_SVML/account/Logout.jsp"" />  
+                                                    <DATA dataType=""URI"" name=""syncprofileURI"" value=""http://{domain}:10060/RESISTANCE_SVML/game/syncprofile.jsp"" />  
+                                                    <DATA dataType=""DATA"" name=""loginEncryptedURI"" value=""https://{domain}:10061/RESISTANCE_SVML/account/Account_Encrypted_Login_Submit.jsp"" />  
+                                                    <DATA dataType=""URI"" name=""personalStatsURI"" value=""http://{domain}:10060/RESISTANCE_SVML/stats/personalStats.jsp"" />  
+                                                    <DATA dataType=""DATA"" name=""gameCreateURL"" value=""http://{domain}:10060/RESISTANCE_SVML/game/tempgame.jsp"" />  
+                                                    <DATA dataType=""DATA"" name=""createGameURI"" value=""http://{domain}:10060/RESISTANCE_SVML/game/Game_Create.jsp?gameMode=%d"" />  
+                                                    <DATA dataType=""DATA"" name=""createGameSubmitURI"" value=""http://{domain}:10060/RESISTANCE_SVML/game/Game_Create_Submit.jsp"" />  
+                                                    <DATA dataType=""DATA"" name=""finishGameURI"" value=""http://{domain}:10060/RESISTANCE_SVML/game/Game_Finish_Submit.jsp"" />  
+                                                    <DATA dataType=""DATA"" name=""gamePostBinaryStatsURI"" value=""http://{domain}:10060/RESISTANCE_SVML/game/Game_PostBinaryStats_Submit.jsp"" />  
+                                                    <DATA dataType=""DATA"" name=""createGamePlayerURI"" value=""http://{domain}:10060/RESISTANCE_SVML/game/Game_Create_Player_Submit.jsp?SVOGameID=%d&amp;playerSide=%d"" />  
+                                                    <DATA dataType=""URI"" name=""mediusAccountLoginURL"" value=""http://{domain}:10060/RESISTANCE_SVML/medius/Medius_Account_Login.jsp"" />  
+                                                    <DATA dataType=""URI"" name=""mediusAccountCreateURL"" value=""http://{domain}:10060/RESISTANCE_SVML/medius/Medius_Account_Create.jsp"" />  
+                                                    <DATA dataType=""URI"" name=""mediusLobbyListURL"" value=""http://{domain}:10060/RESISTANCE_SVML/medius/Medius_Lobby_List.jsp"" />  
+                                                    <DATA dataType=""URI"" name=""mediusChatLobbyURL"" value=""http://{domain}:10060/RESISTANCE_SVML/medius/Medius_Chat_Lobby.jsp"" />    
+                                                    <DATA dataType=""URI"" name=""mediusChallengePopupURL"" value=""http://{domain}:10060/RESISTANCE_SVML/medius/Medius_Challenge_Popup.jsp"" />  
+                                                    <DATA dataType=""URI"" name=""mediusAcceptPopupURL"" value=""http://{domain}:10060/RESISTANCE_SVML/medius/Medius_Accept_Popup.jsp"" />  
+                                                    <DATA dataType=""DATA"" name=""tickerStrURL"" value=""http://{domain}:10060/RESISTANCE_SVML/ticker/TickerStr.jsp"" />  
+                                                    <DATA dataType=""URI"" name=""rankingsURI"" value=""http://{domain}:10060/RESISTANCE_SVML/ranks/rankings.jsp"" />  
+                                                    <DATA dataType=""URI"" name=""tourLaunchPopupURI"" value=""http://{domain}:10060/RESISTANCE_SVML/tourney/Tourney_AutoLaunch.jsp"" />   
+                                                    <DATA dataType=""DATA"" name=""tourDataURI"" value=""http://{domain}:10060/RESISTANCE_SVML/tourney/Tourney_CheckIn.jsp"" />  
+                                                    <DATA dataType=""DATA"" name=""teamTourneyMatchDataURI"" value=""http://{domain}:10060/RESISTANCE_SVML/teamtourney/TeamTourney_MatchData.jsp?teamTourID=%d"" />  
+                                                    <DATA dataType=""DATA"" name=""teamTourneyForfeitURI"" value=""http://{domain}:10060/RESISTANCE_SVML/teamtourney/TeamTourney_ForfeitTeam_Submit.jsp?teamTourTeamID=%d&amp;teamTourBracketID=%d&amp;teamTourID=%d"" />  
+                                                    <DATA dataType=""DATA"" name=""tourForfeitURI"" value=""http://{domain}:10060/RESISTANCE_SVML/tourney/Tourney_Forfeit_Submit.jsp"" />  
+                                                    <DATA dataType=""DATA"" name=""getLadderMatchDataURI"" value=""http://{domain}:10060/RESISTANCE_SVML/ladder/Ladder_GetMatchData.jsp?ladderMatchID=%d"" />  
+                                                    <DATA dataType=""DATA"" name=""getForfeitLadderMatchURI"" value=""http://{domain}:10060/RESISTANCE_SVML/ladder/Ladder_Forfeit_Submit.jsp?ladderMatchID=%d&amp;clanID=%d"" />  
+                                                    <DATA dataType=""DATA"" name=""downloadPatch"" value=""http://{domain}:10060/RESISTANCE_SVML/download/patchDownload.jsp"" />  
+                                                    <DATA dataType=""DATA"" name=""playerStatsURI"" value=""http://{domain}:10060/RESISTANCE_SVML/stats/Stats_GetPlayerStats.jsp?PlayerID=%d&amp;gameMode=%d"" />  
+                                                    <DATA dataType=""DATA"" name=""playerProfileURI"" value=""http://{domain}:10060/RESISTANCE_SVML/profile/Profile_GetPlayerProfile.jsp?PlayerID=%d"" />  
+                                                    <DATA dataType=""DATA"" name=""rankInfoURI"" value=""http://{domain}:10060/RESISTANCE_SVML/stats/Stats_CareerRankInfo.jsp?playerList=""  />   
+                                                    <DATA dataType=""URI"" name=""downloadVerificationURI"" value=""http://{domain}:10060/RESISTANCE_SVML/commerce/Commerce_VerifySubmit.jsp"" />  
+                                                    <DATA dataType=""DATA"" name=""purchaseListURI"" value=""https://{domain}:10061/RESISTANCE_SVML/commerce/Commerce_PurchaseList.jsp?categoryID=default"" />  
+                                                    <DATA dataType=""DATA"" name=""createVerifiedFileGameURI"" value=""https://{domain}:10061/RESISTANCE_SVML/commerce/Commerce_GameCreatorFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;spectatorPassword=$3"" />  
+                                                    <DATA dataType=""DATA"" name=""joinVerifiedFileGameURI"" value=""https://{domain}:10061/RESISTANCE_SVML/commerce/Commerce_GameJoinerFileVerification.jsp?fileList=$1&amp;userPassword=$2&amp;ticket=$3"" />  
+                                                    <DATA dataType=""DATA"" name=""spectateVerifiedFileGameURI"" value=""https://{domain}:10061/RESISTANCE_SVML/commerce/Commerce_GameSpectatorFileVerification.jsp?fileList=$1&amp;spectatorPassword=$2&amp;ticket=$3"" />  
+                                                    <DATA dataType=""DATA"" name=""TicketLoginURI"" value=""https://{domain}:10060/RESISTANCE_SVML/account/SP_Login_Submit.jsp"" />  
+                                                    <DATA dataType=""DATA"" name=""SetIgnoreListURI"" value=""https://{domain}:10060/RESISTANCE_SVML/account/SP_UpdateIgnoreList_Submit.jsp"" />  
+                                                    <DATA dataType=""DATA"" name=""SetUniversePasswordURI"" value=""https://{domain}:10060/RESISTANCE_SVML/account/SP_SetPassword_Submit.jsp"" />  
   
                                                     <BROWSER_INIT name=""init"" />  
                                                 </SVML>");
@@ -170,7 +175,7 @@ namespace SVO.Games.PS3
                                     string clientMac = req.Headers.Get("X-SVOMac");
 
                                     string sig = HttpUtility.ParseQueryString(req.Url.Query).Get("sig");
-                                    string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
 
                                     resp.Headers.Set("X-SVOMac", serverMac);
                                     if (string.IsNullOrEmpty(serverMac))
@@ -281,7 +286,7 @@ namespace SVO.Games.PS3
 
 
                                     string clientMac = req.Headers.Get("X-SVOMac");
-                                    string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
                                         response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -332,7 +337,7 @@ namespace SVO.Games.PS3
 
 
                                     string clientMac = req.Headers.Get("X-SVOMac");
-                                    string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
                                         response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -378,7 +383,7 @@ namespace SVO.Games.PS3
 
 
                                     string clientMac = req.Headers.Get("X-SVOMac");
-                                    string serverMac = SVOSecurityUtils.CalcuateSVOMac(clientMac);
+                                    string serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
                                     if (serverMac == null)
                                     {
                                         string forbidden = "500 Forbidden";
