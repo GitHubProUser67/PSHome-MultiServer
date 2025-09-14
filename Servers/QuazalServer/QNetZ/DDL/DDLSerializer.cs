@@ -253,20 +253,18 @@ namespace QuazalServer.QNetZ.DDL
             }
             else if (typeof(IEnumerable).IsAssignableFrom(currentType))
             {
-                var arrayValues = (IEnumerable<object>)obj;
+                var arrayValues = (IEnumerable)obj;
 
                 Type? arrayItemType = currentType.GetGenericArguments().SingleOrDefault();
 
-                int size = arrayValues.Count();
-
                 // store array size
-                Helper.WriteU32(str, (uint)size);
+                Helper.WriteU32(str, (uint)arrayValues.Cast<object>().Count());
 
                 // write items
-                for (int i = 0; i < size; i++)
+                foreach (var item in arrayValues)
                 {
                     if (arrayItemType != null)
-                        WriteObject(arrayItemType, arrayValues.ElementAt(i), str);
+                        WriteObject(arrayItemType, item, str);
                 }
             }
 			else

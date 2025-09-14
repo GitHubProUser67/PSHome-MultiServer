@@ -3,7 +3,6 @@ using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.DDL;
 using QuazalServer.QNetZ.Interfaces;
 using QuazalServer.RDVServices.DDL.Models;
-using QuazalServer.RDVServices.RMC;
 using System.Net;
 
 namespace QuazalServer.RDVServices.GameServices.PS3SparkServices

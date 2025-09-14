@@ -44,10 +44,12 @@ namespace QuazalServer.RDVServices.RMC
 
         public override byte[] ToBuffer()
         {
-            MemoryStream m = new();
-            DDLSerializer.WriteObject(objectData, m);
+            using (MemoryStream m = new())
+            {
+                DDLSerializer.WriteObject(objectData, m);
 
-            return m.ToArray();
+                return m.ToArray();
+            }
         }
 
         public override string ToString()

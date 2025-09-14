@@ -368,6 +368,7 @@ tdulive.quazal.net,Redirect,IP
 ridingclubpclive.quazal.net,Redirect,IP
 turoklive.quazal.net,Redirect,IP
 ghostps3live.quazal.net,Redirect,IP
+opflash2ps3live.quazal.net,Redirect,IP
 
 ;EA
 demangler.ea.com,Redirect,IP

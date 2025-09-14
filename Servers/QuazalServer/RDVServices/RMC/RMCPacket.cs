@@ -110,7 +110,7 @@ namespace QuazalServer.RDVServices.RMC
         {
             MemoryStream packetData = new();
 
-            if ((ushort)proto < 0x7F)
+            if (proto < 0x7F)
             {
                 // request has 0x80 flag
                 uint protoIdent = (uint)proto | (isRequest ? 0x80u : 0x0u);
@@ -120,7 +120,7 @@ namespace QuazalServer.RDVServices.RMC
             {
                 uint protoIdent = 0x7Fu | (isRequest ? 0x80u : 0x0u);
                 Helper.WriteU8(packetData, (byte)protoIdent);
-                Helper.WriteU16(packetData, (ushort)proto);
+                Helper.WriteU16(packetData, proto);
             }
 
             byte[] buff = Array.Empty<byte>();

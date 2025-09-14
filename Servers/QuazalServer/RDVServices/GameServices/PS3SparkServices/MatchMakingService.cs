@@ -4,7 +4,6 @@ using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.DDL;
 using QuazalServer.QNetZ.Interfaces;
 using QuazalServer.QNetZ.Connection;
-using QuazalServer.RDVServices.RMC;
 
 namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
 {

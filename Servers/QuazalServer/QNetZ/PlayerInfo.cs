@@ -51,7 +51,7 @@ namespace QuazalServer.QNetZ
 		{
 			IPlayerDataStore? value;
 
-			if(DataStore.TryGetValue(typeof(T), out value))
+			if (DataStore.TryGetValue(typeof(T), out value))
 				return (T)value;
 
 			var createFunc = Expression.Lambda<Func<T>>(

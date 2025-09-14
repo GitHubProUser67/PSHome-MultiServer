@@ -78,7 +78,12 @@ namespace QuazalServer.RDVServices.RMC
             var typeList = bestMethod.GetParameters().Select(x => x.ParameterType);
             object[]? parameters = DDLSerializer.ReadPropertyValues(typeList.ToArray(), m);
 
-            WriteLog(client, () => "Request parameters:" + DDLSerializer.ObjectToString(parameters), false);
+            if (parameters == null)
+                WriteLog(client, () => "No request parameters!", false);
+            else if (parameters.Any(param => param is Stream))
+                WriteLog(client, () => "Request parameters contains a stream, not logged yet!", false);
+            else
+                WriteLog(client, () => "Request parameters:" + DDLSerializer.ObjectToString(parameters), false);
 
             try
             {
@@ -138,7 +143,9 @@ namespace QuazalServer.RDVServices.RMC
             WriteLog(client, () => "Response data:" + reply.PayloadToString(), false);
 
             handler.SendACK(p, client);
-
+#if DEBUG
+            WriteLog(client, () => "Sent ACK.", false);
+#endif
             SendResponsePacket(handler, p, rmc, client, reply, useCompression, error);
         }
 

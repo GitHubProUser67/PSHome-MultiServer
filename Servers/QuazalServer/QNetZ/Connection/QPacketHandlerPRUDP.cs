@@ -182,41 +182,42 @@ namespace QuazalServer.QNetZ
 
         public void MakeAndSend(QClient client, QPacket reqPacket, QPacket newPacket, byte[] data)
 		{
-            MemoryStream stream = new(data);
-
-			int numFragments = 0;
-
-			if (stream.Length > Constants.PacketFragmentMaxSize)
-				newPacket.flags?.AddRange(new[] { QPacket.PACKETFLAG.FLAG_HAS_SIZE });
-
-			newPacket.uiSeqId = client.SeqCounterOut;
-			newPacket.m_byPartNumber = 1;
-			while (stream.Position < stream.Length)
+			using (MemoryStream stream = new(data))
 			{
-				int payloadSize = (int)(stream.Length - stream.Position);
+                int numFragments = 0;
 
-				if (payloadSize <= Constants.PacketFragmentMaxSize)
-                    newPacket.m_byPartNumber = 0;  // indicate last packet
-                else
-                    payloadSize = Constants.PacketFragmentMaxSize;
+                if (stream.Length > Constants.PacketFragmentMaxSize)
+                    newPacket.flags?.AddRange(new[] { QPacket.PACKETFLAG.FLAG_HAS_SIZE });
 
-				byte[] buff = new byte[payloadSize];
-				stream.Read(buff, 0, payloadSize);
+                newPacket.uiSeqId = client.SeqCounterOut;
+                newPacket.m_byPartNumber = 1;
+                while (stream.Position < stream.Length)
+                {
+                    int payloadSize = (int)(stream.Length - stream.Position);
 
-				newPacket.uiSeqId++;
-				newPacket.payload = buff;
-				newPacket.payloadSize = (ushort)newPacket.payload.Length;
+                    if (payloadSize <= Constants.PacketFragmentMaxSize)
+                        newPacket.m_byPartNumber = 0;  // indicate last packet
+                    else
+                        payloadSize = Constants.PacketFragmentMaxSize;
 
-				Send(reqPacket, new QPacket(AccessKey, newPacket.toBuffer(AccessKey)), client.Endpoint);
+                    byte[] buff = new byte[payloadSize];
+                    stream.Read(buff, 0, payloadSize);
 
-				newPacket.m_byPartNumber++;
-				numFragments++;
-			}
+                    newPacket.uiSeqId++;
+                    newPacket.payload = buff;
+                    newPacket.payloadSize = (ushort)newPacket.payload.Length;
 
-			client.SeqCounterOut = newPacket.uiSeqId;
+                    Send(reqPacket, new QPacket(AccessKey, newPacket.toBuffer(AccessKey)), client.Endpoint);
 
-			LoggerAccessor.LogInfo($"[PRUDP Handler] - [{SourceName}] sent {numFragments} packets");
-		}
+                    newPacket.m_byPartNumber++;
+                    numFragments++;
+                }
+
+                client.SeqCounterOut = newPacket.uiSeqId;
+
+                LoggerAccessor.LogInfo($"[PRUDP Handler] - [{SourceName}] sent {numFragments} packets");
+            }
+        }
 
 		public async void Update()
 		{

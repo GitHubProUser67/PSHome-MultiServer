@@ -79,9 +79,11 @@ namespace QuazalServer.QNetZ.DDL
 			long curPos = s.Position;
 			data = DDLSerializer.ReadObject<T>(s);
 
-			if ((s.Position - curPos) != thisSize)
+			long position = (s.Position - curPos);
+
+            if (position != thisSize)
 			{
-				CustomLogger.LoggerAccessor.LogError($"AnyData<{typeof(T).Name}> reading error - data size mismatch");
+				CustomLogger.LoggerAccessor.LogError($"AnyData<{typeof(T).Name}> reading error - data size mismatch (Position:{position}, expected:{thisSize}");
 				return;
 			}
 		}
@@ -90,15 +92,17 @@ namespace QuazalServer.QNetZ.DDL
 		{
 			Helper.WriteString(s, className);
 
-            MemoryStream m = new();
-			DDLSerializer.WriteObject(data, m);
+			using (MemoryStream m = new())
+			{
+                DDLSerializer.WriteObject(data, m);
 
-			uint size = (uint)m.Position;
+                uint size = (uint)m.Position;
 
-			// write size into memory buffer and data
-			Helper.WriteU32(s, size + sizeof(int));
-			Helper.WriteU32(s, size);
-			s.Write(m.GetBuffer(), 0, (int)size);
+                // write size into memory buffer and data
+                Helper.WriteU32(s, size + sizeof(int));
+                Helper.WriteU32(s, size);
+                s.Write(m.GetBuffer(), 0, (int)size);
+            }
 		}
 	}
 }
