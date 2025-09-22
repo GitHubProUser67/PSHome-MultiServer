@@ -12,7 +12,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace MultiServerLibrary.Extension
 {
@@ -199,104 +198,98 @@ namespace MultiServerLibrary.Extension
         {
             List<string> result = new List<string>();
 
-            if (string.IsNullOrEmpty(jsonText))
-                return result;
-
-            // Uses SIMD Json when possible.
-#if NETCOREAPP3_0_OR_GREATER
-            if (Avx2.IsSupported)
+            if (!string.IsNullOrEmpty(jsonText))
             {
-                byte[] bytes = Encoding.UTF8.GetBytes(jsonText);
-
-                if (Microsoft.Win32API.IsWindows)
+                // Uses SIMD Json when possible.
+#if NETCOREAPP3_0_OR_GREATER
+                if (Avx2.IsSupported)
                 {
+                    byte[] bytes = Encoding.UTF8.GetBytes(jsonText);
+
+                    if (Microsoft.Win32API.IsWindows)
+                    {
+                        fixed (byte* ptr = bytes) // pin bytes while we are working on them
+                            using (ParsedJsonN doc = SimdJsonN.ParseJson(ptr, bytes.Length))
+                            {
+                                if (doc.IsValid)
+                                {
+                                    // Open iterator
+                                    using (ParsedJsonIteratorN iterator = doc.CreateIterator())
+                                    {
+                                        while (iterator.MoveForward())
+                                        {
+                                            if (iterator.IsString && iterator.GetUtf16String() == property)
+                                            {
+                                                if (iterator.MoveForward())
+                                                    result.Add(iterator.GetUtf16String());
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                    }
+                    else
+                    {
+                        fixed (byte* ptr = bytes) // pin bytes while we are working on them
+                            using (ParsedJson doc = SimdJson.ParseJson(ptr, bytes.Length))
+                            {
+                                if (doc.IsValid)
+                                {
+                                    // Open iterator
+                                    using (ParsedJsonIterator iterator = doc.CreateIterator())
+                                    {
+                                        while (iterator.MoveForward())
+                                        {
+                                            if (iterator.IsString && iterator.GetUtf16String() == property)
+                                            {
+                                                if (iterator.MoveForward())
+                                                    result.Add(iterator.GetUtf16String());
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                    }
+                }
+#else
+                if (Win32API.IsWindows && IsProcessorFeaturePresent(PF_AVX2_INSTRUCTIONS_AVAILABLE))
+                {
+                    byte[] bytes = Encoding.UTF8.GetBytes(jsonText);
                     fixed (byte* ptr = bytes) // pin bytes while we are working on them
                         using (ParsedJsonN doc = SimdJsonN.ParseJson(ptr, bytes.Length))
                         {
-                            if (!doc.IsValid)
-                                return result;
-
-                            // Open iterator
-                            using (ParsedJsonIteratorN iterator = doc.CreateIterator())
+                            if (doc.IsValid)
                             {
-                                while (iterator.MoveForward())
+                                // Open iterator
+                                using (ParsedJsonIteratorN iterator = doc.CreateIterator())
                                 {
-                                    if (iterator.IsString && iterator.GetUtf16String() == property)
+                                    while (iterator.MoveForward())
                                     {
-                                        if (iterator.MoveForward())
-                                            result.Add(iterator.GetUtf16String());
+                                        if (iterator.IsString && iterator.GetUtf16String() == property)
+                                        {
+                                            if (iterator.MoveForward())
+                                                result.Add(iterator.GetUtf16String());
+                                        }
                                     }
                                 }
                             }
-
-                            return result;
                         }
                 }
+#endif
                 else
                 {
-                    fixed (byte* ptr = bytes) // pin bytes while we are working on them
-                        using (ParsedJson doc = SimdJson.ParseJson(ptr, bytes.Length))
-                        {
-                            if (!doc.IsValid)
-                                return result;
-
-                            // Open iterator
-                            using (ParsedJsonIterator iterator = doc.CreateIterator())
-                            {
-                                while (iterator.MoveForward())
-                                {
-                                    if (iterator.IsString && iterator.GetUtf16String() == property)
-                                    {
-                                        if (iterator.MoveForward())
-                                            result.Add(iterator.GetUtf16String());
-                                    }
-                                }
-                            }
-
-                            return result;
-                        }
-                }
-            }
-#else
-            if (Win32API.IsWindows && IsProcessorFeaturePresent(PF_AVX2_INSTRUCTIONS_AVAILABLE))
-            {
-                byte[] bytes = Encoding.UTF8.GetBytes(jsonText);
-                fixed (byte* ptr = bytes) // pin bytes while we are working on them
-                    using (ParsedJsonN doc = SimdJsonN.ParseJson(ptr, bytes.Length))
+                    try
                     {
-                        if (!doc.IsValid)
-                            return result;
-
-                        // Open iterator
-                        using (ParsedJsonIteratorN iterator = doc.CreateIterator())
-                        {
-                            while (iterator.MoveForward())
-                            {
-                                if (iterator.IsString && iterator.GetUtf16String() == property)
-                                {
-                                    if (iterator.MoveForward())
-                                        result.Add(iterator.GetUtf16String());
-                                }
-                            }
-                        }
-
-                        return result;
+                        using (JsonDocument doc = JsonDocument.Parse(jsonText))
+                            FindPropertyValuesNested(doc.RootElement, result, property);
                     }
+                    catch
+                    {
+                    }
+                }
             }
-#endif
-            else
-            {
-                try
-                {
-                    using (JsonDocument doc = JsonDocument.Parse(jsonText))
-                        FindPropertyValuesNested(doc.RootElement, result, property);
-                }
-                catch 
-                {
-                }
 
-                return result;
-            }
+            return result;
         }
 
         // Recursive method to find all the requested property values in any nested structure

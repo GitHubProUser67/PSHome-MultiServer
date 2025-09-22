@@ -17,9 +17,11 @@ namespace FixedSsl
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
         }
 
+        private const int SSLv2 = 0x0002;  // SSL 2.0
         private const int SSLv3 = 0x0300;  // SSL 3.0
         private const int TLSv1 = 0x0301;  // TLS 1.0
 
+        private static readonly Org.Mentalis.LegacySecurity.Ssl.SecureProtocol unsecureProtocols = Org.Mentalis.LegacySecurity.Ssl.SecureProtocol.Ssl2;
         private static readonly Org.Mentalis.Security.Ssl.SecureProtocol legacyProtocols = Org.Mentalis.Security.Ssl.SecureProtocol.Ssl3 | Org.Mentalis.Security.Ssl.SecureProtocol.Tls1;
 
         public static async Task<Stream> AuthenticateAsServerAsync(Socket socket, X509Certificate2 certificate, bool forceSsl, bool ownSocket)
@@ -54,6 +56,7 @@ namespace FixedSsl
             }
 
             int totalLength = 0;
+            byte[] clientHello = null;
 
             if (ssl)
             {
@@ -63,41 +66,65 @@ namespace FixedSsl
 
                 int recordLength = (header[3] << 8) | header[4];
                 totalLength = 5 + recordLength;
+
+                clientHello = new byte[totalLength];
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
+                received = await socket.ReceiveAsync(clientHello, SocketFlags.Peek).ConfigureAwait(false);
+#else
+                received = socket.Receive(clientHello, SocketFlags.Peek);
+#endif
+                if (received < totalLength)
+                    return null;
+
+                // handshake type needs to be client hello (0x01)
+                if (clientHello[5] != 0x01)
+                {
+                    if (forceSsl)
+                        return null;
+                    return new NetworkStream(socket, ownSocket);
+                }
             }
             else if (sslV2)
             {
                 // SSLv2 header: first 2 bytes = 15-bit length
                 int v2Length = ((header[0] & 0x7F) << 8) | header[1];
                 totalLength = v2Length + 2; // SSLv2 header length
-            }
 
-            byte[] clientHello = new byte[totalLength];
+                clientHello = new byte[totalLength];
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
-            received = await socket.ReceiveAsync(clientHello, SocketFlags.Peek).ConfigureAwait(false);
+                received = await socket.ReceiveAsync(clientHello, SocketFlags.Peek).ConfigureAwait(false);
 #else
-            received = socket.Receive(clientHello, SocketFlags.Peek);
+                received = socket.Receive(clientHello, SocketFlags.Peek);
 #endif
-            if (received < totalLength)
-                return null;
-            // handshake type needs to be client hello (0x01)
-            else if (clientHello[5] != 0x01)
+                if (received < totalLength)
+                    return null;
+
+                // SSLv2 Client Hello validation
+                if (clientHello[2] != 0x01) // Message type must be Client Hello
+                {
+                    if (forceSsl)
+                        return null;
+                    return new NetworkStream(socket, ownSocket);
+                }
+            }
+            else
             {
                 if (forceSsl)
                     return null;
                 return new NetworkStream(socket, ownSocket);
             }
 
-            int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out List<int> versions);
-
-            int maxSslVersion = clientHello[9] << 8 | clientHello[10];
+            int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out _, out int maxSslVersion, out List<int> versions);
 
             // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
             if (maxSslVersion == SSLv3 || maxSslVersion == TLSv1 || (!certificate.Verify() && versions.Any(v => v == SSLv3 || v == TLSv1)))
-            {
-                Org.Mentalis.Security.Ssl.SecurityOptions options = new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server);
-                Org.Mentalis.Security.Ssl.SecureSocket ss = new Org.Mentalis.Security.Ssl.SecureSocket(socket, options);
-                return new Org.Mentalis.Security.Ssl.SecureNetworkStream(ss, true);
-            }
+                return new Org.Mentalis.Security.Ssl.SecureNetworkStream(new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server)), true);
+            // UNTESTED
+            else if (maxSslVersion == SSLv2)
+                return new Org.Mentalis.LegacySecurity.Ssl.SecureNetworkStream(new Org.Mentalis.LegacySecurity.Ssl.SecureSocket(socket, new Org.Mentalis.LegacySecurity.Ssl.AsyncSecureAcceptResult(new object(), ar =>
+                {
+                    CustomLogger.LoggerAccessor.LogWarn($"[SslSocket] - Initialized a SSLv2 connection at {DateTime.Now}.");
+                }, null), new Org.Mentalis.LegacySecurity.Ssl.SecurityOptions(unsecureProtocols, new Org.Mentalis.LegacySecurity.Certificates.Certificate(certificate.Handle, true), Org.Mentalis.LegacySecurity.Ssl.CredentialUse.Server)), true);
 
             SslStream sslStream = new SslStream(new NetworkStream(socket, ownSocket), false);
 
@@ -143,6 +170,7 @@ namespace FixedSsl
             }
 
             int totalLength = 0;
+            byte[] clientHello = null;
 
             if (ssl)
             {
@@ -152,27 +180,51 @@ namespace FixedSsl
 
                 int recordLength = (header[3] << 8) | header[4];
                 totalLength = 5 + recordLength;
+
+                clientHello = new byte[totalLength];
+
+                received = socket.Receive(clientHello, SocketFlags.Peek);
+
+                if (received < totalLength)
+                    return null;
+
+                // handshake type needs to be client hello (0x01)
+                if (clientHello[5] != 0x01)
+                {
+                    if (forceSsl)
+                        return null;
+                    return new NetworkStream(socket, ownSocket);
+                }
             }
             else if (sslV2)
             {
                 // SSLv2 header: first 2 bytes = 15-bit length
                 int v2Length = ((header[0] & 0x7F) << 8) | header[1];
                 totalLength = v2Length + 2; // SSLv2 header length
-            }
 
-            byte[] clientHello = new byte[totalLength];
-            received = socket.Receive(clientHello, SocketFlags.Peek);
-            if (received < totalLength)
-                return null;
-            // handshake type needs to be client hello (0x01)
-            else if (clientHello[5] != 0x01)
+                clientHello = new byte[totalLength];
+
+                received = socket.Receive(clientHello, SocketFlags.Peek);
+
+                if (received < totalLength)
+                    return null;
+
+                // SSLv2 Client Hello validation
+                if (clientHello[2] != 0x01) // Message type must be Client Hello
+                {
+                    if (forceSsl)
+                        return null;
+                    return new NetworkStream(socket, ownSocket);
+                }
+            }
+            else
             {
                 if (forceSsl)
                     return null;
                 return new NetworkStream(socket, ownSocket);
             }
 
-            int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out List<int> versions);
+            int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out _, out int maxSslVersion, out List<int> versions);
 
             X509Certificate2 certificate = (X509Certificate2)authOptions.ServerCertificateSelectionCallback?.Invoke(socket, hostname);
             if (certificate == null)
@@ -182,20 +234,20 @@ namespace FixedSsl
                 return new NetworkStream(socket, ownSocket);
             }
 
-            int maxSslVersion = clientHello[9] << 8 | clientHello[10];
-
             // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
             if (maxSslVersion == SSLv3 || maxSslVersion == TLSv1 || (!certificate.Verify() && versions.Any(v => v == SSLv3 || v == TLSv1)))
-            {
-                Org.Mentalis.Security.Ssl.SecurityOptions options = new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server);
-                Org.Mentalis.Security.Ssl.SecureSocket ss = new Org.Mentalis.Security.Ssl.SecureSocket(socket, options);
-                return new Org.Mentalis.Security.Ssl.SecureNetworkStream(ss, true);
-            }
+                return new Org.Mentalis.Security.Ssl.SecureNetworkStream(new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server)), true);
+            // UNTESTED
+            else if (maxSslVersion == SSLv2)
+                return new Org.Mentalis.LegacySecurity.Ssl.SecureNetworkStream(new Org.Mentalis.LegacySecurity.Ssl.SecureSocket(socket, new Org.Mentalis.LegacySecurity.Ssl.AsyncSecureAcceptResult(new object(), ar =>
+                {
+                    CustomLogger.LoggerAccessor.LogWarn($"[SslSocket] - Initialized a SSLv2 connection at {DateTime.Now}.");
+                }, null), new Org.Mentalis.LegacySecurity.Ssl.SecurityOptions(unsecureProtocols, new Org.Mentalis.LegacySecurity.Certificates.Certificate(certificate.Handle, true), Org.Mentalis.LegacySecurity.Ssl.CredentialUse.Server)), true);
 
             X509Certificate2 clientCert = null;
             int[] clientCertErr = null;
 
-            var sslStream = new SslStream(new NetworkStream(socket, ownSocket), false, (t, c, ch, e) =>
+            SslStream sslStream = new SslStream(new NetworkStream(socket, ownSocket), false, (t, c, ch, e) =>
             {
                 if (c == null)
                     return true;

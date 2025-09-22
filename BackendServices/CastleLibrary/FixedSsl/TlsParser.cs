@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace FixedSsl
@@ -42,10 +43,12 @@ namespace FixedSsl
         private const byte TLS_HANDSHAKE_CONTENT_TYPE = 0x16;
         private const byte TLS_HANDSHAKE_TYPE_CLIENT_HELLO = 0x01;
 
+        private const int SSLV2_CLIENT_HELLO = 0x01;
+
         /// <summary>
         /// Parse a TLS packet for the Server Name Indication (SNI) extension.
         /// </summary>
-        /// <param name="data">TLS record bytes</param>
+        /// <param name="clientHello">TLS record bytes</param>
         /// <param name="hostname">Extracted hostname, if found</param>
         /// <returns>
         ///  >=0  - length of hostname  
@@ -55,78 +58,126 @@ namespace FixedSsl
         ///  -4   - Memory allocation failure (not applicable in managed code, but kept for parity)  
         ///  < -4 - Invalid TLS client hello
         /// </returns>
-        public static int ParseTlsHeader(byte[] data, out string hostname, out List<int> versions)
+        public static int ParseTlsHeader(byte[] clientHello, out string hostname, out bool isSslV2, out int maxSslVersion, out List<int> versions)
         {
+            isSslV2 = false;
+            maxSslVersion = -1;
             hostname = null;
             versions = new List<int>();
 
-            if (data == null)
+            if (clientHello == null)
                 return -3;
 
-            if (data.Length < TLS_HEADER_LEN)
+            if (clientHello.Length < TLS_HEADER_LEN)
                 return -1;
 
             // SSL 2.0 Client Hello
-            if ((data[0] & 0x80) != 0 && data[2] == 1)
+            if (IsSslV2ClientHello(clientHello, out maxSslVersion, out versions))
+            {
+                isSslV2 = true;
+                // SSLv2 doesn't support SNI, so return -2 (no hostname)
                 return -2;
+            }
 
-            byte tlsContentType = data[0];
+            maxSslVersion = clientHello[9] << 8 | clientHello[10];
+
+            byte tlsContentType = clientHello[0];
             if (tlsContentType != TLS_HANDSHAKE_CONTENT_TYPE)
                 return -5;
 
-            byte tlsVersionMajor = data[1];
-            byte tlsVersionMinor = data[2];
+            byte tlsVersionMajor = clientHello[1];
+            byte tlsVersionMinor = clientHello[2];
 
             if (tlsVersionMajor < 3)
                 return -2;
 
-            int recordLen = (data[3] << 8) | data[4];
+            int recordLen = (clientHello[3] << 8) | clientHello[4];
             recordLen += TLS_HEADER_LEN;
 
-            if (data.Length < recordLen)
+            if (clientHello.Length < recordLen)
                 return -1;
 
             int pos = TLS_HEADER_LEN;
-            if (pos + 1 > data.Length)
+            if (pos + 1 > clientHello.Length)
                 return -5;
 
-            if (data[pos] != TLS_HANDSHAKE_TYPE_CLIENT_HELLO)
+            if (clientHello[pos] != TLS_HANDSHAKE_TYPE_CLIENT_HELLO)
                 return -5;
 
             // Skip: 1 (Handshake Type), 3 (Length), 2 (Version), 32 (Random)
             pos += 38;
 
             // Session ID
-            if (pos + 1 > data.Length)
+            if (pos + 1 > clientHello.Length)
                 return -5;
-            int len = data[pos];
+            int len = clientHello[pos];
             pos += 1 + len;
 
             // Cipher Suites
-            if (pos + 2 > data.Length)
+            if (pos + 2 > clientHello.Length)
                 return -5;
-            len = (data[pos] << 8) | data[pos + 1];
+            len = (clientHello[pos] << 8) | clientHello[pos + 1];
             pos += 2 + len;
 
             // Compression Methods
-            if (pos + 1 > data.Length)
+            if (pos + 1 > clientHello.Length)
                 return -5;
-            len = data[pos];
+            len = clientHello[pos];
             pos += 1 + len;
 
-            if (pos == data.Length && tlsVersionMajor == 3 && tlsVersionMinor == 0)
+            if (pos == clientHello.Length && tlsVersionMajor == 3 && tlsVersionMinor == 0)
                 return -2; // SSL 3.0 without extensions
 
             // Extensions
-            if (pos + 2 > data.Length)
+            if (pos + 2 > clientHello.Length)
                 return -5;
-            len = (data[pos] << 8) | data[pos + 1];
+            len = (clientHello[pos] << 8) | clientHello[pos + 1];
             pos += 2;
 
-            if (pos + len > data.Length) 
+            if (pos + len > clientHello.Length) 
                 return -5;
 
-            return ParseExtensions(data, pos, len, ref versions, out hostname);
+            return ParseExtensions(clientHello, pos, len, ref versions, out hostname);
+        }
+
+        private static bool IsSslV2ClientHello(byte[] data, out int maxSslVersion, out List<int> versions)
+        {
+            maxSslVersion = -1;
+            versions = new List<int>();
+
+            // SSLv2 Client Hello format:
+            // Bytes 0-1: Length (high bit set, 15-bit length)
+            // Byte 2: Message type (0x01 for Client Hello)
+            // Bytes 3-4: Version (major, minor)
+            // Byte 5-6: Cipher spec length
+            // Byte 7-8: Session ID length
+            // Byte 9-10: Challenge length
+            // Followed by cipher specs, session ID, and challenge data
+
+            if (data.Length < 11)
+                return false;
+
+            // Check for SSLv2 length indicator (high bit set in first byte)
+            bool hasLengthIndicator = (data[0] & 0x80) != 0;
+            bool isClientHelloType = data[2] == SSLV2_CLIENT_HELLO;
+
+            if (!hasLengthIndicator || !isClientHelloType)
+                return false;
+
+            // Mark the version requested in the hello (can be more than SSLv2 such as in PS2 DNAS)
+            maxSslVersion = (data[3] << 8) | data[4];
+
+            // *** OPTIONAL: Parse cipher specs to determine additional capabilities ***
+            int cipherSpecLength = (data[5] << 8) | data[6];
+            if (cipherSpecLength > 0 && data.Length >= 11 + cipherSpecLength)
+            {
+                // SSLv2 cipher specs are 3 bytes each
+                int cipherCount = cipherSpecLength / 3;
+                // You could analyze specific ciphers here if needed for version detection
+                // For now, just confirm we have valid SSLv2 structure
+            }
+
+            return true;
         }
 
         private static int ParseExtensions(byte[] data, int offset, int dataLen, ref List<int> versions, out string hostname)

@@ -11,8 +11,6 @@ namespace NetHasher
 {
     public class HashCompute
     {
-        private static readonly bool isLittleEndianSystem = BitConverter.IsLittleEndian;
-
         public static byte[] ComputeObject(object inData, string hashName, byte[] HMACKey = null)
         {
             if (inData is byte[] bytes)
@@ -24,23 +22,23 @@ namespace NetHasher
             else if (inData is byte b)
                 return ComputeHash(new[] { b }, hashName, HMACKey);
             else if (inData is short s)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseShort(s) : s), hashName, HMACKey);
+                return ComputeHash(BitConverter.GetBytes(!EndianAwareConverter.isLittleEndianSystem ? EndianUtils.ReverseShort(s) : s), hashName, HMACKey);
             else if (inData is ushort us)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseUshort(us) : us), hashName, HMACKey);
+                return ComputeHash(BitConverter.GetBytes(!EndianAwareConverter.isLittleEndianSystem ? EndianUtils.ReverseUshort(us) : us), hashName, HMACKey);
             else if (inData is char c)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseChar(c) : c), hashName, HMACKey);
+                return ComputeHash(BitConverter.GetBytes(!EndianAwareConverter.isLittleEndianSystem ? EndianUtils.ReverseChar(c) : c), hashName, HMACKey);
             else if (inData is int i)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseInt(i) : i), hashName, HMACKey);
+                return ComputeHash(BitConverter.GetBytes(!EndianAwareConverter.isLittleEndianSystem ? EndianUtils.ReverseInt(i) : i), hashName, HMACKey);
             else if (inData is uint ui)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseUint(ui) : ui), hashName, HMACKey);
+                return ComputeHash(BitConverter.GetBytes(!EndianAwareConverter.isLittleEndianSystem ? EndianUtils.ReverseUint(ui) : ui), hashName, HMACKey);
             else if (inData is long l)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseLong(l) : l), hashName, HMACKey);
+                return ComputeHash(BitConverter.GetBytes(!EndianAwareConverter.isLittleEndianSystem ? EndianUtils.ReverseLong(l) : l), hashName, HMACKey);
             else if (inData is ulong ul)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseUlong(ul) : ul), hashName, HMACKey);
+                return ComputeHash(BitConverter.GetBytes(!EndianAwareConverter.isLittleEndianSystem ? EndianUtils.ReverseUlong(ul) : ul), hashName, HMACKey);
             else if (inData is float f)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseFloat(f) : f), hashName, HMACKey);
+                return ComputeHash(BitConverter.GetBytes(!EndianAwareConverter.isLittleEndianSystem ? EndianUtils.ReverseFloat(f) : f), hashName, HMACKey);
             else if (inData is double d)
-                return ComputeHash(BitConverter.GetBytes(!isLittleEndianSystem ? EndianUtils.ReverseDouble(d) : d), hashName, HMACKey);
+                return ComputeHash(BitConverter.GetBytes(!EndianAwareConverter.isLittleEndianSystem ? EndianUtils.ReverseDouble(d) : d), hashName, HMACKey);
 
             var t = inData.GetType();
 
@@ -75,17 +73,17 @@ namespace NetHasher
         {
             if (HMACKey != null && HMACKey.Length > 0)
             {
-                if (hashName == "SHA224")
+                if (hashName == DotNetHasher.Sha224Const)
                     return ComputeHmacSha224Hash(data, HMACKey);
                 else
                 {
                     HMAC hmac = hashName switch
                     {
-                        "MD5" => new HMACMD5(HMACKey),
-                        "SHA1" => new HMACSHA1(HMACKey),
-                        "SHA256" => new HMACSHA256(HMACKey),
-                        "SHA384" => new HMACSHA384(HMACKey),
-                        "SHA512" => new HMACSHA512(HMACKey),
+                        DotNetHasher.MD5Const => new HMACMD5(HMACKey),
+                        DotNetHasher.Sha1Const => new HMACSHA1(HMACKey),
+                        DotNetHasher.Sha256Const => new HMACSHA256(HMACKey),
+                        DotNetHasher.Sha384Const => new HMACSHA384(HMACKey),
+                        DotNetHasher.Sha512Const => new HMACSHA512(HMACKey),
                         _ => throw new ArgumentException($"[HashCompute] - ComputeHash - Unknown HMAC algorithm: {hashName}")
                     };
 
@@ -97,12 +95,12 @@ namespace NetHasher
             {
                 return hashName switch
                 {
-                    "MD5" => ComputeMD5Hash(data),
-                    "SHA1" => ComputeSha1Hash(data),
-                    "SHA224" => ComputeSha224Hash(data),
-                    "SHA256" => ComputeSha256Hash(data),
-                    "SHA384" => ComputeSha384Hash(data),
-                    "SHA512" => ComputeSha512Hash(data),
+                    DotNetHasher.MD5Const => ComputeMD5Hash(data),
+                    DotNetHasher.Sha1Const => ComputeSha1Hash(data),
+                    DotNetHasher.Sha224Const => ComputeSha224Hash(data),
+                    DotNetHasher.Sha256Const => ComputeSha256Hash(data),
+                    DotNetHasher.Sha384Const => ComputeSha384Hash(data),
+                    DotNetHasher.Sha512Const => ComputeSha512Hash(data),
                     _ => ComputeWithHashAlgorithm(data, hashName)
                 };
             }
@@ -133,20 +131,28 @@ namespace NetHasher
 
         private static byte[] ComputeMD5Hash(byte[] data)
         {
+#if NET6_0_OR_GREATER
+            return MD5.HashData(data);
+#else
             MD5Digest digest = new MD5Digest();
             digest.BlockUpdate(data, 0, data.Length);
             byte[] hashBuf = new byte[digest.GetDigestSize()];
             digest.DoFinal(hashBuf, 0);
             return hashBuf;
+#endif
         }
 
         private static byte[] ComputeSha1Hash(byte[] data)
         {
+#if NET6_0_OR_GREATER
+            return SHA1.HashData(data);
+#else
             Sha1Digest digest = new Sha1Digest();
             digest.BlockUpdate(data, 0, data.Length);
             byte[] hashBuf = new byte[digest.GetDigestSize()];
             digest.DoFinal(hashBuf, 0);
             return hashBuf;
+#endif
         }
 
         private static byte[] ComputeSha224Hash(byte[] data)
@@ -170,29 +176,41 @@ namespace NetHasher
 
         private static byte[] ComputeSha256Hash(byte[] data)
         {
+#if NET6_0_OR_GREATER
+            return SHA256.HashData(data);
+#else
             Sha256Digest digest = new Sha256Digest();
             digest.BlockUpdate(data, 0, data.Length);
             byte[] hashBuf = new byte[digest.GetDigestSize()];
             digest.DoFinal(hashBuf, 0);
             return hashBuf;
+#endif
         }
 
         private static byte[] ComputeSha384Hash(byte[] data)
         {
+#if NET6_0_OR_GREATER
+            return SHA384.HashData(data);
+#else
             Sha384Digest digest = new Sha384Digest();
             digest.BlockUpdate(data, 0, data.Length);
             byte[] hashBuf = new byte[digest.GetDigestSize()];
             digest.DoFinal(hashBuf, 0);
             return hashBuf;
+#endif
         }
 
         private static byte[] ComputeSha512Hash(byte[] data)
         {
+#if NET6_0_OR_GREATER
+            return SHA512.HashData(data);
+#else
             Sha512Digest digest = new Sha512Digest();
             digest.BlockUpdate(data, 0, data.Length);
             byte[] hashBuf = new byte[digest.GetDigestSize()];
             digest.DoFinal(hashBuf, 0);
             return hashBuf;
+#endif
         }
 
         private static byte[] ToByteArray(short[] values)

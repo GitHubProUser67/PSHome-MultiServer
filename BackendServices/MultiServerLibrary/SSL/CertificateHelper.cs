@@ -4,10 +4,10 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System;
 using System.IO;
-using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Concurrent;
 using MultiServerLibrary.Extension;
+using NetHasher;
 #if !NETCOREAPP3_0_OR_GREATER
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Crypto;
@@ -16,12 +16,12 @@ using Org.BouncyCastle.Security;
 #else
 using System.Collections.Generic;
 #endif
-
 namespace MultiServerLibrary.SSL
 {
     public static class CertificateHelper
     {
-        const string certificate_email = "MultiServer@gmail.com";
+        // Change to your liking.
+        public static string certificate_email = "MultiServer@gmail.com";
 
         // PEM file headers.
         public const string certBegin = "-----BEGIN CERTIFICATE-----";
@@ -338,7 +338,7 @@ namespace MultiServerLibrary.SSL
                     SubjectAlternativeNameBuilder sanBuilder = new SubjectAlternativeNameBuilder();
 
                     sanBuilder.AddDnsName(certSubject); // Some legacy clients will not recognize the cert serial-number.
-                    sanBuilder.AddEmailAddress("SpaceWizards@gmail.com");
+                    sanBuilder.AddEmailAddress(certificate_email);
                     sanBuilder.AddIpAddress(serverIp);
 
                     if (wildcard)
@@ -431,7 +431,7 @@ namespace MultiServerLibrary.SSL
                         sanBuilder.AddIpAddress(LocalServerIP);
                     }
 
-                    sanBuilder.AddEmailAddress("MultiServer@gmail.com");
+                    sanBuilder.AddEmailAddress(certificate_email);
 
                     request.CertificateExtensions.Add(sanBuilder.Build());
 
@@ -920,20 +920,23 @@ namespace MultiServerLibrary.SSL
             const string SHA384id = "300D06092A864886F70D01010C0500"; //?
             const string SHA512id = "300D06092A864886F70D01010D0500";
 
-            if (hashAlgorithm == HashAlgorithmName.MD5)
-                return MD5id.HexStringToByteArray();
-            else if (hashAlgorithm == HashAlgorithmName.SHA1)
-                return SHA1id.HexStringToByteArray();
-            else if (hashAlgorithm == HashAlgorithmName.SHA256)
-                return SHA256id.HexStringToByteArray();
-            else if (hashAlgorithm == HashAlgorithmName.SHA384)
-                return SHA384id.HexStringToByteArray();
-            else if (hashAlgorithm == HashAlgorithmName.SHA512)
-                return SHA512id.HexStringToByteArray();
+            byte[] oid = hashAlgorithm.Name switch
+            {
+                DotNetHasher.MD5Const => MD5id.HexStringToByteArray(),
+                DotNetHasher.Sha1Const => SHA1id.HexStringToByteArray(),
+                DotNetHasher.Sha256Const => SHA256id.HexStringToByteArray(),
+                DotNetHasher.Sha384Const => SHA384id.HexStringToByteArray(),
+                DotNetHasher.Sha512Const => SHA512id.HexStringToByteArray(),
+                _ => null
+            };
 
-            LoggerAccessor.LogError("[RsaPkcs1SignatureGenerator] - " + nameof(hashAlgorithm), "'" + hashAlgorithm + "' is not a supported algorithm at this moment.");
+            if (oid == null)
+                LoggerAccessor.LogError(
+                        "[RsaPkcs1SignatureGenerator] - " + nameof(hashAlgorithm),
+                        $"'{hashAlgorithm}' is not a supported algorithm at this moment."
+                    );
 
-            return null;
+            return oid;
         }
 
         /// <summary>

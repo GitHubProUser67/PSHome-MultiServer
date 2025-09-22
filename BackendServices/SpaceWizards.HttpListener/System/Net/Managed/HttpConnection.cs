@@ -52,6 +52,14 @@ namespace SpaceWizards.HttpListener
         public bool Initialized = false;
 
         private static readonly Action<Task<int>, object> s_onreadCallback = OnRead;
+#pragma warning disable
+        private static SslProtocols _sslprotocols =
+#if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+            SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
+#else
+            SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
+#endif
+#pragma warning restore
         private const int BufferSize = 8192;
         private Socket _socket;
         private Stream _stream;
@@ -79,20 +87,15 @@ namespace SpaceWizards.HttpListener
         private LineState _lineState = LineState.None;
         private int _position;
 
-        internal static SslProtocols GetSslProtocol
+        public static SslProtocols SslProtocols
         {
             get
             {
-#pragma warning disable
-                SslProtocols protocols = SslProtocols.Ssl2 | SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
-#pragma warning restore
-
-#if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-
-                protocols |= SslProtocols.Tls13;
-#endif
-
-                return protocols;
+                return _sslprotocols;
+            }
+            set
+            {
+                _sslprotocols = value;
             }
         }
 
@@ -106,7 +109,7 @@ namespace SpaceWizards.HttpListener
             SslSocket.BeginAuthenticateAsServer(sock, secure ? new SslServerAuthenticationOptions
             {
                 ClientCertificateRequired = false,
-                EnabledSslProtocols = GetSslProtocol,
+                EnabledSslProtocols = SslProtocols,
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
                 ServerCertificateSelectionCallback = (sender, actualHostName) =>
                 {

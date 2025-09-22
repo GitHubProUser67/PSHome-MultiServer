@@ -5,12 +5,12 @@ namespace NetHasher
 {
     public class DotNetHasher
     {
-        private const string MD5Const = "MD5";
-        private const string Sha1Const = "SHA1";
-        private const string Sha224Const = "SHA224";
-        private const string Sha256Const = "SHA256";
-        private const string Sha384Const = "SHA384";
-        private const string Sha512Const = "SHA512";
+        public const string MD5Const = "MD5";
+        public const string Sha1Const = "SHA1";
+        public const string Sha224Const = "SHA224";
+        public const string Sha256Const = "SHA256";
+        public const string Sha384Const = "SHA384";
+        public const string Sha512Const = "SHA512";
 
         public static byte[] ComputeMD5(object input, byte[] HMACKey = null)
         {

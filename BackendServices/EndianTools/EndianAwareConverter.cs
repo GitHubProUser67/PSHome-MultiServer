@@ -9,7 +9,7 @@ namespace EndianTools
     // Massives thanks to TDUWorld for their endian helper class.
     public static class EndianAwareConverter
     {
-        private static readonly bool isLittleEndianSystem = BitConverter.IsLittleEndian;
+        public static readonly bool isLittleEndianSystem = BitConverter.IsLittleEndian;
 
         public static byte ToUInt8(byte[] buf, Endianness endianness, uint address)
         {
@@ -302,20 +302,21 @@ namespace EndianTools
             for (int i = 0; i < buf.Length; i++)
             {
                 uint value = buf[i];
+                int address = i * 4;
 
                 if (endianness == Endianness.LittleEndian)
                 {
-                    bytes[i * 4] = (byte)(value & mask);
-                    bytes[i * 4 + 1] = (byte)((value >> 8) & mask);
-                    bytes[i * 4 + 2] = (byte)((value >> 16) & mask);
-                    bytes[i * 4 + 3] = (byte)((value >> 24) & mask);
+                    bytes[address] = (byte)(value & mask);
+                    bytes[address + 1] = (byte)((value >> 8) & mask);
+                    bytes[address + 2] = (byte)((value >> 16) & mask);
+                    bytes[address + 3] = (byte)((value >> 24) & mask);
                 }
                 else
                 {
-                    bytes[i * 4] = (byte)((value >> 24) & mask);
-                    bytes[i * 4 + 1] = (byte)((value >> 16) & mask);
-                    bytes[i * 4 + 2] = (byte)((value >> 8) & mask);
-                    bytes[i * 4 + 3] = (byte)(value & mask);
+                    bytes[address] = (byte)((value >> 24) & mask);
+                    bytes[address + 1] = (byte)((value >> 16) & mask);
+                    bytes[address + 2] = (byte)((value >> 8) & mask);
+                    bytes[address + 3] = (byte)(value & mask);
                 }
             }
             return bytes;
