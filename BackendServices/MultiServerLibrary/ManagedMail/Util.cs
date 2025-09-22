@@ -37,25 +37,6 @@ namespace S22.Imap {
 		}
 
 		/// <summary>
-		/// Splits a string into chunks of the specified number of characters.
-		/// </summary>
-		/// <param name="str">Extension method for the String class.</param>
-		/// <param name="characters">The length of a chunk, measured in characters.</param>
-		/// <returns>An array of string chunks.</returns>
-		[Obsolete]
-		internal static string[] ToChunks(this string str, int characters) {
-			List<string> list = new List<string>();
-			while (str.Length > 0) {
-				int length = str.Length > characters ? characters :
-					str.Length;
-				string t = str.Substring(0, length);
-				str = str.Remove(0, length);
-				list.Add(t);
-			}
-			return list.ToArray();
-		}
-
-		/// <summary>
 		/// Determines whether the specified string occurs within this string.
 		/// </summary>
 		/// <param name="str">Extension method for the String class.</param>
@@ -137,12 +118,10 @@ namespace S22.Imap {
 		/// <param name="bigEndian">Set to true to interpret the short value as big endian value.</param>
 		/// <returns>The 16-byte unsigned short value read from the underlying stream.</returns>
 		internal static ushort ReadUInt16(this BinaryReader reader, bool bigEndian) {
-			if (!bigEndian)
-				return reader.ReadUInt16();
-			int ret = 0;
-			ret |= (reader.ReadByte() << 8);
-			ret |= (reader.ReadByte() << 0);
-			return (ushort) ret;
+			ushort ret = reader.ReadUInt16();
+            if (bigEndian)
+                ret = EndianTools.EndianUtils.ReverseUshort(ret);
+			return ret;
 		}
 
 		/// <summary>
@@ -214,14 +193,14 @@ namespace S22.Imap {
 			Match m = rxDecodeWord.Match(word);
 			if (!m.Success)
 				return word;
-			Encoding encoding = Util.GetEncoding(m.Groups[1].Value);
+			Encoding encoding = GetEncoding(m.Groups[1].Value);
 			string type = m.Groups[2].Value.ToUpper();
 			string text = m.Groups[3].Value;
 			switch (type) {
 				case "Q":
-					return Util.QDecode(text, encoding);
+					return QDecode(text, encoding);
 				case "B":
-					return encoding.GetString(Util.Base64Decode(text));
+					return encoding.GetString(StringUtils.IsBase64(text).Item2);
 				default:
 					throw new FormatException("Encoding not recognized in encoded word: " + word);
 			}
@@ -315,20 +294,6 @@ namespace S22.Imap {
 			} catch {
 				throw new FormatException("The value is not a valid RFC2231-encoded string.");
 			}
-		}
-
-		/// <summary>
-		/// Takes a Base64-encoded string and decodes it.
-		/// </summary>
-		/// <param name="value">The Base64-encoded string to decode.</param>
-		/// <returns>A byte array containing the Base64-decoded bytes of the input string.</returns>
-		/// <exception cref="System.ArgumentNullException">The value parameter is null.</exception>
-		/// <exception cref="System.FormatException">The length of value, ignoring white-space
-		/// characters, is not zero or a multiple of 4, or the format of value is invalid, or the value
-		/// contains a non-base-64 character, more than two padding characters, or a non-white
-		/// space-character among the padding characters.</exception>
-		internal static byte[] Base64Decode(string value) {
-			return StringUtils.IsBase64(value).Item2;
 		}
 
 		/// <summary>

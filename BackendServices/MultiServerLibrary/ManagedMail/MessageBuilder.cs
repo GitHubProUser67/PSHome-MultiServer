@@ -1,4 +1,6 @@
-﻿using System;
+﻿using MultiServerLibrary.Extension;
+using SharpCompress.Common;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
@@ -337,14 +339,18 @@ namespace S22.Imap {
 						bytes = encoding.GetBytes(Util.QPDecode(content, encoding));
 						break;
 					case ContentTransferEncoding.Base64:
-						bytes = Util.Base64Decode(content);
-						break;
+						var base64DecodedData = StringUtils.IsBase64(content);
+						if (base64DecodedData.Item1)
+							bytes = base64DecodedData.Item2;
+                        else // If it's not a valid Base64 encoded string just leave the data as is.
+                            bytes = Encoding.UTF8.GetBytes(content);
+                        break;
 					default:
 						bytes = Encoding.UTF8.GetBytes(content);
 						break;
 				}
 			} catch {
-				// If it's not a valid Base64 or quoted-printable encoded string just leave the data as is.
+				// If it's not a valid quoted-printable encoded string just leave the data as is.
 				bytes = Encoding.UTF8.GetBytes(content);
 			}
 
