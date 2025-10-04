@@ -32,7 +32,7 @@ namespace NetHasher
             byte[] result = null;
             Tpm2 _tpm = null;
 
-            if ((HMACKey == null || HMACKey.Length == 0) && input is byte[])
+            if ((HMACKey == null || HMACKey.Length == 0) && input is byte[] v)
             {
                 try
                 {
@@ -40,7 +40,7 @@ namespace NetHasher
                     _crypto_device.Connect();
                     _tpm = new Tpm2(_crypto_device);
 
-                    result = _tpm.Hash((byte[])input,
+                    result = _tpm.Hash(v,
                            TpmAlgId.Sha1,
                            TpmRh.Owner,
                            out _);
@@ -89,7 +89,7 @@ namespace NetHasher
             byte[] result = null;
             Tpm2 _tpm = null;
 
-            if ((HMACKey == null || HMACKey.Length == 0) && input is byte[])
+            if ((HMACKey == null || HMACKey.Length == 0) && input is byte[] v)
             {
                 try
                 {
@@ -97,7 +97,7 @@ namespace NetHasher
                     _crypto_device.Connect();
                     _tpm = new Tpm2(_crypto_device);
 
-                    result = _tpm.Hash((byte[])input,
+                    result = _tpm.Hash(v,
                            TpmAlgId.Sha256,
                            TpmRh.Owner,
                            out _);
@@ -131,7 +131,7 @@ namespace NetHasher
             byte[] result = null;
             Tpm2 _tpm = null;
 
-            if ((HMACKey == null || HMACKey.Length == 0) && input is byte[])
+            if ((HMACKey == null || HMACKey.Length == 0) && input is byte[] v)
             {
                 try
                 {
@@ -139,7 +139,7 @@ namespace NetHasher
                     _crypto_device.Connect();
                     _tpm = new Tpm2(_crypto_device);
 
-                    result = _tpm.Hash((byte[])input,
+                    result = _tpm.Hash(v,
                            TpmAlgId.Sha384,
                            TpmRh.Owner,
                            out _);
@@ -173,7 +173,7 @@ namespace NetHasher
             byte[] result = null;
             Tpm2 _tpm = null;
 
-            if ((HMACKey == null || HMACKey.Length == 0) && input is byte[])
+            if ((HMACKey == null || HMACKey.Length == 0) && input is byte[] v)
             {
                 try
                 {
@@ -181,7 +181,7 @@ namespace NetHasher
                     _crypto_device.Connect();
                     _tpm = new Tpm2(_crypto_device);
 
-                    result = _tpm.Hash((byte[])input,
+                    result = _tpm.Hash(v,
                            TpmAlgId.Sha512,
                            TpmRh.Owner,
                            out _);

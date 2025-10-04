@@ -41,8 +41,6 @@ namespace BlazeCommon
         public BlazeServerConfiguration Configuration { get; }
 
         private Socket? _listenSocket;
-        private TcpClient? _target;
-        private SslStream? _targetstream;
         private long _nextConnectionId;
         private ConcurrentDictionary<long, ProtoFireConnection> _connections;
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
@@ -158,22 +156,13 @@ namespace BlazeCommon
                 return;
             }
 
-            try
+            // Use a named tuple so it's clearer when using ref
+            (TcpClient? target, SslStream? stream) targetClient = (null, null);
+
+            // First-time target connection (now pass by ref so RestartTargetConnectionAsync updates caller tuple)
+            if (!await RestartTargetConnectionAsync(ref targetClient, connection).ConfigureAwait(false))
             {
-                _target = new TcpClient(Configuration.MitmTargetIp, Configuration.MitmTargetPort);
-                LoggerAccessor.LogInfo($"[MitmProtoFireServer] - Connected to target for connection({connection.ID}).");
-                _targetstream = new SslStream(_target.GetStream(), true, new RemoteCertificateValidationCallback(ValidateAlways), null);
-                LoggerAccessor.LogInfo($"[MitmProtoFireServer] - Established SSL for connection({connection.ID}).");
-                await _targetstream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
-                {
-                    TargetHost = Configuration.MitmTargetHostname,
-                    EnabledSslProtocols = Configuration.MitmProtocols,
-                });
-                LoggerAccessor.LogInfo($"[MitmProtoFireServer] - Authenticated as client for connection({connection.ID}).");
-            }
-            catch (Exception ex)
-            {
-                LoggerAccessor.LogError($"[MitmProtoFireServer] - Failed to initiate MITM connection for connection({connection.ID}) (Exception: {ex}).");
+                // failed to connect to target initially
                 connection.Disconnect();
                 return;
             }
@@ -196,15 +185,39 @@ namespace BlazeCommon
 
             ProtoFirePacket? packet;
 
+            // local references - will be refreshed from the tuple each loop iteration and after reconnects
+            TcpClient? target = targetClient.target;
+            SslStream? targetStream = targetClient.stream;
+
             while (IsRunning && connection.Connected)
             {
+                // small delay, but check connection health frequently
                 await Task.Delay(10).ConfigureAwait(false);
                 clientRequest = Array.Empty<byte>();
                 targetResponse = Array.Empty<byte>();
 
                 try
                 {
-                    clientRequest = ReadContent(connection.Stream);
+                    // refresh local references (in case tuple was updated by RestartTargetConnectionAsync previously)
+                    target = targetClient.target;
+                    targetStream = targetClient.stream;
+
+                    // if target connection dropped, attempt to restart before any I/O
+                    if (target == null || target.Client == null || !target.Connected || targetStream == null)
+                    {
+                        LoggerAccessor.LogWarn($"[MitmProtoFireServer] - Target not connected. Attempting restart for connection({connection.ID}).");
+                        if (!await RestartTargetConnectionAsync(ref targetClient, connection).ConfigureAwait(false))
+                        {
+                            LoggerAccessor.LogError($"[MitmProtoFireServer] - Failed to restart target for connection({connection.ID}). Disconnecting client.");
+                            break;
+                        }
+
+                        // refresh local references after a successful reconnect
+                        target = targetClient.target;
+                        targetStream = targetClient.stream;
+                    }
+
+                    clientRequest = ReadContent(connection.Stream); // may block/throw
                     packet = await ReadPacketBytes(clientRequest).ConfigureAwait(false);
                     if (clientRequest.Length >= 0xC)
                     {
@@ -218,10 +231,53 @@ namespace BlazeCommon
                         else if (packet != null)
                             BlazeUtils.LogPacket(Configuration.GetComponent(packet.Frame.Component), DecodeMitmPacket(packet), true);
                         clientCounter++;
-                        _targetstream.Write(clientRequest);
-                        _targetstream.Flush();
+
+                        // wrap send to target in try so we can detect broken pipe / socket closed
+                        try
+                        {
+                            await targetStream!.WriteAsync(clientRequest, 0, clientRequest.Length).ConfigureAwait(false);
+                            await targetStream.FlushAsync().ConfigureAwait(false);
+                        }
+                        catch (Exception writeEx)
+                        {
+                            LoggerAccessor.LogWarn($"[MitmProtoFireServer] - Write to target failed for connection({connection.ID}) (Exception: {writeEx}). Attempting restart.");
+                            bool reconnected = await RestartTargetConnectionAsync(ref targetClient, connection).ConfigureAwait(false);
+                            if (!reconnected)
+                            {
+                                LoggerAccessor.LogError($"[MitmProtoFireServer] - Could not reconnect to target after write failure for connection({connection.ID}).");
+                                break;
+                            }
+
+                            // refresh local references after reconnect and optionally retry once immediately
+                            target = targetClient.target;
+                            targetStream = targetClient.stream;
+
+                            await targetStream!.WriteAsync(clientRequest, 0, clientRequest.Length).ConfigureAwait(false);
+                            await targetStream.FlushAsync().ConfigureAwait(false);
+                        }
                     }
-                    targetResponse = ReadContentSSL(_targetstream);
+
+                    // Read response from target (SSL stream)
+                    try
+                    {
+                        targetResponse = ReadContentSSL(targetStream!);
+                    }
+                    catch (Exception readTargetEx)
+                    {
+                        LoggerAccessor.LogWarn($"[MitmProtoFireServer] - Read from target failed for connection({connection.ID}) (Exception: {readTargetEx}). Attempting restart.");
+                        if (!await RestartTargetConnectionAsync(ref targetClient, connection).ConfigureAwait(false))
+                        {
+                            LoggerAccessor.LogError($"[MitmProtoFireServer] - Could not reconnect to target after read failure for connection({connection.ID}).");
+                            break;
+                        }
+
+                        // refresh local references after reconnect, then try reading again
+                        target = targetClient.target;
+                        targetStream = targetClient.stream;
+
+                        targetResponse = ReadContentSSL(targetStream!);
+                    }
+
                     packet = await ReadPacketBytes(targetResponse).ConfigureAwait(false);
                     if (targetResponse.Length > 5 && targetResponse[0] == 0x17)
                     {
@@ -247,10 +303,152 @@ namespace BlazeCommon
                         connection.Stream?.Flush();
                     }
                 }
-                catch (Exception ex) { await OnProtoFireErrorInternalAsync(connection, ex).ConfigureAwait(false); }
+                catch (Exception ex)
+                {
+                    // try to detect if it's target related; best effort: SocketException, IOException, AuthenticationException
+                    if (IsTargetRelatedException(ex))
+                    {
+                        LoggerAccessor.LogWarn($"[MitmProtoFireServer] - Detected target-related exception for connection({connection.ID}) (Exception: {ex}). Attempting restart.");
+                        bool ok = await RestartTargetConnectionAsync(ref targetClient, connection).ConfigureAwait(false);
+                        if (!ok)
+                        {
+                            await OnProtoFireErrorInternalAsync(connection, ex).ConfigureAwait(false);
+                            break;
+                        }
+
+                        // refresh local references and continue main loop after reconnect
+                        target = targetClient.target;
+                        targetStream = targetClient.stream;
+                        continue;
+                    }
+
+                    await OnProtoFireErrorInternalAsync(connection, ex).ConfigureAwait(false);
+                    break;
+                }
             }
 
+            // final cleanup
+            _ = Task.Run(() => {
+                try { targetClient.stream?.Dispose(); } catch { }
+                try { targetClient.target?.Dispose(); } catch { }
+            });
+
             connection.Disconnect();
+        }
+
+        /// <summary>
+        /// Tries to dispose the current target connection and create a new one with retries and backoff.
+        /// Returns true if successful, false otherwise.
+        /// Updates the provided tuple (by ref) so the caller sees the new objects.
+        /// </summary>
+        private Task<bool> RestartTargetConnectionAsync(
+            ref (TcpClient? target, SslStream? stream) targetClient,
+            ProtoFireConnection connection,
+            int maxAttempts = 3,
+            int baseDelayMs = 250)
+        {
+            int attempt = 0;
+            Exception? lastEx = null;
+
+            // Start by disposing any existing objects referenced in the tuple (best-effort)
+            try
+            {
+                if (targetClient.stream != null)
+                {
+                    try { targetClient.stream.Close(); targetClient.stream.Dispose(); } catch { }
+                    targetClient.stream = null;
+                }
+            }
+            catch { /* ignore */ }
+
+            try
+            {
+                if (targetClient.target != null)
+                {
+                    try { targetClient.target.Close(); targetClient.target.Dispose(); } catch { }
+                    targetClient.target = null;
+                }
+            }
+            catch { /* ignore */ }
+
+            // We'll use local variables while attempting, then assign back to the tuple on success
+            TcpClient? target = null;
+            SslStream? targetStream = null;
+
+            while (attempt < maxAttempts && IsRunning && connection.Connected)
+            {
+                attempt++;
+                try
+                {
+                    target = new TcpClient();
+                    // optional timeout for connect
+                    var timeout = Task.Delay(5000);
+                    if (Task.WhenAny(target.ConnectAsync(Configuration.MitmTargetIp, Configuration.MitmTargetPort), timeout).Result == timeout)
+                        throw new TimeoutException("Timed out while connecting to target.");
+
+                    LoggerAccessor.LogInfo($"[MitmProtoFireServer] - Connected to target for connection({connection.ID}) (attempt {attempt}).");
+
+                    // create SSL stream and authenticate as client
+                    targetStream = new SslStream(target.GetStream(), true, new RemoteCertificateValidationCallback(ValidateAlways), null);
+
+                    targetStream.AuthenticateAsClient(new SslClientAuthenticationOptions
+                    {
+                        TargetHost = Configuration.MitmTargetHostname,
+                        EnabledSslProtocols = Configuration.MitmProtocols,
+                    });
+
+                    LoggerAccessor.LogInfo($"[MitmProtoFireServer] - Authenticated as client for connection({connection.ID}) (attempt {attempt}).");
+
+                    // success: update the caller tuple so they see the new objects
+                    targetClient = (target, targetStream);
+                    return Task.FromResult(true);
+                }
+                catch (Exception ex)
+                {
+                    lastEx = ex;
+                    LoggerAccessor.LogWarn($"[MitmProtoFireServer] - Restart attempt {attempt}/{maxAttempts} failed for connection({connection.ID}) (Exception: {ex}).");
+
+                    // dispose partially created objects before retry
+                    try { targetStream?.Close(); targetStream?.Dispose(); } catch { }
+                    targetStream = null;
+                    try { target?.Close(); target?.Dispose(); } catch { }
+                    target = null;
+
+                    // exponential backoff (best-effort)
+                    Thread.Sleep(baseDelayMs * attempt);
+                }
+            }
+
+            LoggerAccessor.LogError($"[MitmProtoFireServer] - All restart attempts failed for connection({connection.ID}). Last exception: {lastEx}");
+
+            // ensure tuple does not hold any stale references
+            targetClient = (null, null);
+            return Task.FromResult(false);
+        }
+
+        /// <summary>
+        /// Best-effort check if exception is likely related to the target socket/ssl
+        /// </summary>
+        private bool IsTargetRelatedException(Exception ex)
+        {
+            if (ex == null) return false;
+            // direct socket/io exceptions
+            if (ex is SocketException) return true;
+            if (ex is IOException) return true;
+            if (ex is AuthenticationException) return true;
+            // unwrap AggregateException / InnerException
+            if (ex is AggregateException agg)
+            {
+                foreach (var inner in agg.InnerExceptions)
+                    if (IsTargetRelatedException(inner)) return true;
+            }
+            if (ex.InnerException != null) return IsTargetRelatedException(ex.InnerException);
+            // fallback: check message text (not ideal, but sometimes useful)
+            var msg = ex.Message?.ToLowerInvariant() ?? string.Empty;
+            if (msg.Contains("connection") && (msg.Contains("reset") || msg.Contains("refused") || msg.Contains("closed") || msg.Contains("broken pipe") || msg.Contains("timed out")))
+                return true;
+
+            return false;
         }
 
         public uint GetCipheredRemoteIPvalue(ProtoFireConnection connection)
@@ -296,15 +494,16 @@ namespace BlazeCommon
 
         public static byte[] ReadContentSSL(SslStream sslStream)
         {
+            const int bufferSize = 0x10000;
             int bytesRead;
-            byte[] buff = new byte[0x10000];
+            byte[] buff = new byte[bufferSize];
 
             using (MemoryStream res = new MemoryStream())
             {
                 try
                 {
                     sslStream.ReadTimeout = ReadTimeout;
-                    while ((bytesRead = sslStream.Read(buff, 0, 0x10000)) > 0)
+                    while ((bytesRead = sslStream.Read(buff, 0, bufferSize)) > 0)
                     {
                         res.Write(buff, 0, bytesRead);
                         if (CheckIfStreamComplete(res))
