@@ -220,8 +220,10 @@ namespace ApacheNet
                                 return await ctx.SendImmediate().ConfigureAwait(false);
                             }
                         }
-                        catch
+                        catch (Exception e)
                         {
+                            LoggerAccessor.LogError($"[HTTPS_DNS] - An assertion was thrown, not returning any results. (Exception:{e})");
+
                             ctx.StatusCode = HttpStatusCode.InternalServerError;
                             return await ctx.SendImmediate().ConfigureAwait(false);
                         }
@@ -391,8 +393,10 @@ namespace ApacheNet
                             return await ctx.SendImmediate().ConfigureAwait(false);
                         }
                     }
-                    catch
+                    catch (Exception e)
                     {
+                        LoggerAccessor.LogError($"[HTTPS_DNS] - An assertion was thrown, not returning any results. (Exception:{e})");
+
                         ctx.StatusCode = HttpStatusCode.InternalServerError;
                         return await ctx.SendImmediate().ConfigureAwait(false);
                     }

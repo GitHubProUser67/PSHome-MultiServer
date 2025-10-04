@@ -32,8 +32,6 @@
  *   OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-using System;
-
 namespace Org.Mentalis.LegacySecurity {
 	/// <summary>
 	/// Defines the external methods of the CryptoAPI and SCHANNEL API.

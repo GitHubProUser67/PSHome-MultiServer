@@ -16,7 +16,7 @@ namespace WebAPIService.GameServices.OHS
 {
     public class Leaderboard
     {
-        private static ConcurrentDictionary<string, OHSScoreBoardData> _leaderboards = new ConcurrentDictionary<string, OHSScoreBoardData>();
+        private static Dictionary<string, OHSScoreBoardData> _leaderboards = new Dictionary<string, OHSScoreBoardData>();
 
         public static string Levelboard_GetAll(string project, int game, bool levelboard)
         {
@@ -310,30 +310,43 @@ namespace WebAPIService.GameServices.OHS
             string scoreboarddata = string.Empty;
             string tablekey = levelboard ? project + $"|{key}" + "|levelboard" : project + $"|{key}";
 
-            InitializeLeaderboard(tablekey);
+            OHSScoreBoardData lb;
+            lock (_leaderboards)
+            {
+                InitializeLeaderboard(tablekey);
+                lb = _leaderboards[tablekey];
+            }
 
-            _ = _leaderboards[tablekey].UpdateScoreAsync(playerId, newScore);
+            _ = lb.UpdateScoreAsync(playerId, newScore);
             if (!string.IsNullOrEmpty(extraData))
-                _ = _leaderboards[tablekey].SetJaminExtraData(playerId, extraData);
-            return _leaderboards[tablekey].SerializeToStringEx(null, playerId).Result ?? "{ }";
+                _ = lb.SetJaminExtraData(playerId, extraData);
+            return lb.SerializeToStringEx(null, playerId).Result ?? "{ }";
         }
 
         public static string GetAllBetterScores(string project, bool levelboard)
         {
             string returnvalue = string.Empty;
 
-            foreach (var leaderboard in _leaderboards.Where(x => x.Key.Contains(project) && (!levelboard || x.Key.Contains("|levelboard"))))
+            IEnumerable<KeyValuePair<string, OHSScoreBoardData>> leaderboardsToProcess;
+
+            lock (_leaderboards)
             {
-                var scoreEntries = _leaderboards[leaderboard.Key].GetTopScoresAsync(1).Result;
+                leaderboardsToProcess = _leaderboards
+                    .Where(x => x.Key.Contains(project) && (!levelboard || x.Key.Contains("|levelboard")));
+            }
+
+            foreach (var kvp in leaderboardsToProcess)
+            {
+                var scoreEntries = kvp.Value.GetTopScoresAsync(1).Result;
 
                 if (scoreEntries.Any())
                 {
                     var scoreEntry = scoreEntries.First();
 
                     if (returnvalue.Length != 0)
-                        returnvalue += $", [\"{leaderboard.Key.Split('|')[1]}\"] = {{ [\"score\"] = {scoreEntry.Score}, [\"user\"] = \"{scoreEntry.PsnId}\" }}";
+                        returnvalue += $", [\"{kvp.Key.Split('|')[1]}\"] = {{ [\"score\"] = {scoreEntry.Score}, [\"user\"] = \"{scoreEntry.PsnId}\" }}";
                     else
-                        returnvalue = $"{{ [\"{leaderboard.Key.Split('|')[1]}\"] = {{ [\"score\"] = {scoreEntry.Score}, [\"user\"] = \"{scoreEntry.PsnId}\" }}";
+                        returnvalue = $"{{ [\"{kvp.Key.Split('|')[1]}\"] = {{ [\"score\"] = {scoreEntry.Score}, [\"user\"] = \"{scoreEntry.PsnId}\" }}";
                 }
             }
 
@@ -357,10 +370,15 @@ namespace WebAPIService.GameServices.OHS
                 {
                     string key = data.Key;
                     string tablekey = levelboard ? project + $"|{key}" + "|levelboard" : project + $"|{key}";
+                    bool hasKey = false;
 
-                    InitializeLeaderboard(tablekey);
+                    lock (_leaderboards)
+                    {
+                        InitializeLeaderboard(tablekey);
+                        hasKey = _leaderboards.ContainsKey(tablekey);
+                    }
 
-                    if (_leaderboards.ContainsKey(tablekey))
+                    if (hasKey)
                     {
                         List<Entities.OHSScoreboardEntry> scoreEntries;
 
@@ -394,7 +412,7 @@ namespace WebAPIService.GameServices.OHS
 
                             int i = 1;
 
-                            foreach (var entry in scoreEntries)
+                            foreach (var entry in scoreEntries.Where(entry => data.Users.Contains(entry.PsnId)).OrderByDescending(entry => entry.Score))
                             {
                                 luaTable.Add(i, new Dictionary<string, object>
                                                         {
@@ -451,29 +469,22 @@ namespace WebAPIService.GameServices.OHS
                     if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(key))
                         return null;
 
+                    bool hasKey = false;
                     string tablekey = levelboard ? project + $"|{key}" + "|levelboard" : project + $"|{key}";
 
-                    InitializeLeaderboard(tablekey);
-
-                    if (!_leaderboards.ContainsKey(tablekey))
+                    lock (_leaderboards)
                     {
-                        var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                        retCtx.Database.Migrate();
-
-                        if (_leaderboards.TryAdd(tablekey, new OHSScoreBoardData(retCtx, tablekey)))
-                        {
-                            for (int j = 1; j < 11; j++)
-                            {
-                                _ = _leaderboards[tablekey].UpdateScoreAsync(FrenchNameGenerator.GetRandomWord(), 1000 - (j * 50));
-                            }
-                        }
+                        InitializeLeaderboard(tablekey);
+                        hasKey = _leaderboards.ContainsKey(tablekey);
                     }
 
-                    if (key.Contains("daily"))
-                        return _leaderboards[tablekey].SerializeToStringDailyEx(null, user, start, numEntries).Result;
-                    else
-                        return _leaderboards[tablekey].SerializeToStringEx(null, user, start, numEntries).Result;
+                    if (hasKey)
+                    {
+                        if (key.Contains("daily"))
+                            return _leaderboards[tablekey].SerializeToStringDailyEx(null, user, start, numEntries).Result;
+                        else
+                            return _leaderboards[tablekey].SerializeToStringEx(null, user, start, numEntries).Result;
+                    }
                 }
             }
             catch (Exception ex)

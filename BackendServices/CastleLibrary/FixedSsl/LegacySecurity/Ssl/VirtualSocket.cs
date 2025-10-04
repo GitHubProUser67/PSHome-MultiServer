@@ -35,7 +35,6 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Collections;
 
 namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>
@@ -48,7 +47,6 @@ namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// has a constructor that accepts an already created Socket; this can be very useful is you have
 	/// to override the Accept and BeginAccept/EndAccept methods in a derived class.
 	/// </remarks>
-	[CLSCompliant(true)]
 	public class VirtualSocket {
 		/// <summary>
 		/// Initializes a new instance of the VirtualSocket class.

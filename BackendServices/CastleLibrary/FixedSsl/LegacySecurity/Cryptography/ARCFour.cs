@@ -32,10 +32,7 @@
  *   OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-using System;
 using System.Security.Cryptography;
-using System.Runtime.InteropServices;
-using Org.Mentalis.LegacySecurity;
 
 // Microsoft implementations of RC4: 56-bit and 128-bit 
 namespace Org.Mentalis.LegacySecurity.Cryptography {
@@ -47,7 +44,6 @@ namespace Org.Mentalis.LegacySecurity.Cryptography {
 	/// RC4 is a trademark of RSA Data Security Inc.
 	/// For more information about ARCFour, consult the help files.
 	/// </remarks>
-	[CLSCompliant(true)]
 	public abstract class ARCFour : SymmetricAlgorithm {
 		/// <summary>
 		/// Initializes a new instance of the ARCFourManaged class.
@@ -56,7 +52,7 @@ namespace Org.Mentalis.LegacySecurity.Cryptography {
 		/// The default keysize is 128 bits.
 		/// </remarks>
 		public ARCFour() {
-			this.KeySizeValue = 128;
+			KeySizeValue = 128;
 		}
 		/// <summary>
 		/// Gets or sets the block size of the cryptographic operation in bits.
@@ -162,9 +158,13 @@ namespace Org.Mentalis.LegacySecurity.Cryptography {
 		/// </summary>
 		/// <remarks>Use this method to generate a random key when none is specified.</remarks>
 		public override void GenerateKey() {
-			byte[] key = new byte[this.KeySize / 8];
+			byte[] key = new byte[KeySize / 8];
+#if NET6_0_OR_GREATER
+            RandomNumberGenerator.Fill(key);
+#else
 			new RNGCryptoServiceProvider().GetBytes(key);
-			this.Key = key;
+#endif
+			Key = key;
 		}
 		/// <summary>
 		/// Creates an instance of the default cryptographic object used to perform the ARCFour transformation.

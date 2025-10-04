@@ -38,7 +38,6 @@ namespace Org.Mentalis.LegacySecurity {
 	/// <summary>
 	/// The exception that is thrown when a security error is detected.
 	/// </summary>
-	[CLSCompliant(true)]
 	public class SecurityException : Exception {
 		/// <summary>
 		/// Initializes a new instance of the SecurityException class with default properties.

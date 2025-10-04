@@ -354,7 +354,8 @@ namespace PS2FloatLibrary
             }
             else if (Dvdtexp == 0 || Dvsrexp != 0)
             {
-                if (Dvdtexp == 0 && Dvsrexp != 0) { return sign; }
+                if (Dvdtexp == 0 && Dvsrexp != 0) 
+                    return sign;
             }
             else
             {

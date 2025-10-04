@@ -174,10 +174,7 @@ namespace MultiServerLibrary.Extension
             // by the netstat command line application, just in .Net strongly-typed object
             // form.  We will look through the list, and if our port we would like to use
             // in our TcpClient is occupied, we will set isAvailable to false.
-            IPGlobalProperties ipGlobalProperties = IPGlobalProperties.GetIPGlobalProperties();
-            IPEndPoint[] tcpConnInfoArray = ipGlobalProperties.GetActiveTcpListeners();
-
-            foreach (IPEndPoint endpoint in tcpConnInfoArray)
+            foreach (IPEndPoint endpoint in IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners())
             {
                 if (endpoint.Port == port)
                 {

@@ -35,13 +35,11 @@
 using System;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
-using Org.Mentalis.LegacySecurity;
 
 namespace Org.Mentalis.LegacySecurity.Cryptography {
 	/// <summary>
 	/// Defines the basic operations of a unmanaged Rijndael cryptographic transformation.
 	/// </summary>
-	[CLSCompliant(true)]
 	internal class RijndaelUnmanagedTransform : ICryptoTransform {
 		/// <summary>
 		/// Initializes a new instance of the RijndaelUnmanagedTransform class.

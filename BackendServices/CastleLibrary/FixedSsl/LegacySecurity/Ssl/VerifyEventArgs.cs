@@ -32,13 +32,6 @@
  *   OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-using System;
-using System.Net;
-using System.Net.Sockets;
-using System.Collections;
-using System.Runtime.InteropServices;
-using Org.Mentalis.LegacySecurity.Certificates;
-
 namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>
 	/// Provides data for the Verify event.
@@ -46,7 +39,6 @@ namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <remarks>
 	/// When the CertVerifyEventHandler delegate is called, one of its parameters is an instance of this class. If the certificate should not be accepted and the connection should be closed, simply set the Valid property to <b>false</b> and return from the callback.
 	/// </remarks>
-	[CLSCompliant(true)]
 	public class VerifyEventArgs {
 		/// <summary>
 		/// Initializes a new VerifyEventArgs instance.

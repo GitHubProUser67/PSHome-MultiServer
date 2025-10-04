@@ -33,11 +33,7 @@
 */
 
 using System;
-using System.Net;
-using System.Net.Sockets;
-using System.Collections;
 using System.Runtime.InteropServices;
-using Org.Mentalis.LegacySecurity.Certificates;
 
 namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>

@@ -40,7 +40,6 @@ namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>
 	/// Listens for secure connections from TCP network clients.
 	/// </summary>
-	[CLSCompliant(true)]
 	public class SecureTcpListener {
 		/// <summary>
 		/// Initializes a new instance of the SecureTcpListener class that listens on the specified port.

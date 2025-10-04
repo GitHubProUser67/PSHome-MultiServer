@@ -38,7 +38,6 @@ namespace Org.Mentalis.LegacySecurity.Certificates {
 	/// <summary>
 	/// The exception that is thrown when a certificate error is detected.
 	/// </summary>
-	[CLSCompliant(true)]
 	public class CertificateException : Exception {
 		/// <summary>
 		/// Initializes a new instance of the CertificateException class with default properties.

@@ -36,7 +36,6 @@ using System;
 using System.Text;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
-using Org.Mentalis.LegacySecurity;
 
 namespace Org.Mentalis.LegacySecurity.Cryptography {
 	/// <summary>
@@ -45,7 +44,6 @@ namespace Org.Mentalis.LegacySecurity.Cryptography {
 	/// <remarks>
 	/// Large parts of this code are based on the article available at http://support.microsoft.com/default.aspx?scid=KB;en-us;q228786
 	/// </remarks>
-	[CLSCompliant(true)]
 	internal sealed class SymmetricKey : IDisposable {
 		/// <summary>
 		/// Initializes a new instance of the SymmetricKey class.
@@ -346,10 +344,10 @@ namespace Org.Mentalis.LegacySecurity.Cryptography {
 				// Import the exponent-of-one private key.      
 				if (SspiProvider.CryptImportKey(m_Provider, keyblob, dwKeyBlob, 0, SecurityConstants.CRYPT_EXPORTABLE, ref hPrivateKey) == 0)
 					throw new SecurityException("Could not import modified key.");
-			} catch (Exception e) {
+			} catch (Exception) {
 				if (hPrivateKey != 0)
 					SspiProvider.CryptDestroyKey(hPrivateKey);
-				throw e;
+				throw;
 			} finally {
 				if (keyblob != IntPtr.Zero)
 					Marshal.FreeHGlobal(keyblob);

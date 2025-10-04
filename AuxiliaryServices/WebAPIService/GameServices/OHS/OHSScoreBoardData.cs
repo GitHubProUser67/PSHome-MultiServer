@@ -36,6 +36,18 @@ namespace WebAPIService.GameServices.OHS
                 .ToListAsync().ConfigureAwait(false);
         }
 
+        public async Task<List<OHSScoreboardEntry>> GetTopScoresAsyncEx(int start, int count)
+        {
+            return await _dbContext.Set<OHSScoreboardEntry>()
+                .Where(x => x.ExtraData1 == _gameproject)
+                .OrderByDescending(e => e.Score)
+                .Skip(start - 1) // skip entries before the page
+                .Take(count) // take the requested number
+                .ToListAsync()
+                .ConfigureAwait(false);
+        }
+
+
         public override async Task UpdateScoreAsync(string playerId, float newScore, List<object> extraData = null)
         {
             if (string.IsNullOrEmpty(playerId))
@@ -145,15 +157,9 @@ namespace WebAPIService.GameServices.OHS
             int scoreForUser = 0;
             int i = 1;
 
-            // Skip "start" entries and take "count" after that
-            var entries = (await GetTopScoresAsync(start + count).ConfigureAwait(false))
-                          .Skip(start)
-                          .Take(count)
-                          .ToList();
-
             Dictionary<int, Dictionary<string, object>> luaTable = new Dictionary<int, Dictionary<string, object>>();
 
-            foreach (var entry in entries)
+            foreach (var entry in await GetTopScoresAsyncEx(start, count).ConfigureAwait(false))
             {
                 luaTable.Add(i, new Dictionary<string, object>
                 {
@@ -175,15 +181,9 @@ namespace WebAPIService.GameServices.OHS
             int scoreForUser = 0;
             int i = 1;
 
-            // Skip "start" entries and take "count" after that
-            var entries = (await GetTodayScoresAsync(start + count).ConfigureAwait(false))
-                          .Skip(start)
-                          .Take(count)
-                          .ToList();
-
             Dictionary<int, Dictionary<string, object>> luaTable = new Dictionary<int, Dictionary<string, object>>();
 
-            foreach (var entry in entries)
+            foreach (var entry in await GetTopScoresAsyncEx(start, count).ConfigureAwait(false))
             {
                 luaTable.Add(i, new Dictionary<string, object>
                 {

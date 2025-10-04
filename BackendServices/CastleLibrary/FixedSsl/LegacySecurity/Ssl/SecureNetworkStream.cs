@@ -34,14 +34,12 @@
 
 using System;
 using System.IO;
-using System.Net;
 using System.Net.Sockets;
 
 namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>
 	/// Provides the underlying stream of data for secure network access.
 	/// </summary>
-	[CLSCompliant(true)]
 	public class SecureNetworkStream : Stream {
 		/// <summary>
 		/// Creates a new instance of the SecureNetworkStream class for the specified <see cref="SecureSocket"/>.

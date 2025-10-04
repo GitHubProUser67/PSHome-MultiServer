@@ -34,8 +34,6 @@
 
 using System;
 using System.Security.Cryptography;
-using System.Runtime.InteropServices;
-using Org.Mentalis.LegacySecurity;
 
 namespace Org.Mentalis.LegacySecurity.Cryptography {
 	/// <summary>
@@ -46,7 +44,6 @@ namespace Org.Mentalis.LegacySecurity.Cryptography {
 	/// RC4 is a trademark of RSA Data Security Inc.
 	/// For more information about ARCFour, consult the help files.
 	/// </remarks>
-	[CLSCompliant(true)]
 	public sealed class ARCFourManaged : ARCFour {
 		/// <summary>
 		/// Initializes a new instance of the ARCFourManaged class.

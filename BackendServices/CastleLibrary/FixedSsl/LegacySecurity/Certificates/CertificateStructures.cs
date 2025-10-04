@@ -32,14 +32,10 @@
  *   OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-using System;
-using System.Runtime.InteropServices;
-
 namespace Org.Mentalis.LegacySecurity.Certificates {
 	/// <summary>
 	/// Defines the different hash type values.
 	/// </summary>
-	[CLSCompliant(true)]
 	public enum HashType : int {
 		/// <summary>The certificate will be hashed using the SHA1 algorithm.</summary>
 		SHA1 = SecurityConstants.CERT_SHA1_HASH_PROP_ID,
@@ -51,7 +47,6 @@ namespace Org.Mentalis.LegacySecurity.Certificates {
 	/// <summary>
 	/// Defines the different key usage values.
 	/// </summary>
-	[CLSCompliant(true)]
 	public enum KeyUsage : int {
 		/// <summary>The key can be used for data encipherment.</summary>
 		DataEncipherment = SecurityConstants.CERT_DATA_ENCIPHERMENT_KEY_USAGE,
@@ -71,7 +66,6 @@ namespace Org.Mentalis.LegacySecurity.Certificates {
 	/// <summary>
 	/// Defines the different authentication type values.
 	/// </summary>
-	[CLSCompliant(true)]
 	public enum AuthType : int {
 		/// <summary>The certificate is a client certificate.</summary>
 		Client = SecurityConstants.AUTHTYPE_CLIENT, // used to validate a certificate that comes from a client
@@ -81,7 +75,6 @@ namespace Org.Mentalis.LegacySecurity.Certificates {
 	/// <summary>
 	/// Defines the different certificate status values.
 	/// </summary>
-	[CLSCompliant(true)]
 	public enum CertificateStatus : int {
 		/// <summary>The certificate is valid.</summary>
 		ValidCertificate = 0,
@@ -121,7 +114,6 @@ namespace Org.Mentalis.LegacySecurity.Certificates {
 	/// <summary>
 	/// Defines the different certificate store values.
 	/// </summary>
-	[CLSCompliant(true)]
 	public enum CertificateStoreType : int {
 		/// <summary>The certificate store should be saved as a serializes store.</summary>
 		SerializedStore = SecurityConstants.CERT_STORE_SAVE_AS_STORE,
@@ -134,7 +126,6 @@ namespace Org.Mentalis.LegacySecurity.Certificates {
 	/// <remarks>
 	/// You can specify more VerificationFlags at once by combining them with the OR operator.
 	/// </remarks>
-	[CLSCompliant(true)]
 	public enum VerificationFlags : int {
 		/// <summary>No flags.</summary>
 		None = 0,

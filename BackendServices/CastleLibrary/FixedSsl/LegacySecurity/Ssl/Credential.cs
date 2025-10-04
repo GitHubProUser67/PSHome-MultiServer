@@ -33,17 +33,13 @@
 */
 
 using System;
-using System.IO;
-using System.Text;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography.X509Certificates;
 using Org.Mentalis.LegacySecurity.Certificates;
 
 namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>
 	/// Defines a credential that can be used in a secure socket connection to authenticate, encrypt and decrypt.
 	/// </summary>
-	[CLSCompliant(true)]
 	internal class Credential {
 		/// <summary>
 		/// Initializes a new Credential instance.

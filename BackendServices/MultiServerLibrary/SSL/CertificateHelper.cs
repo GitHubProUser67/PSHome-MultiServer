@@ -606,9 +606,7 @@ namespace MultiServerLibrary.SSL
         {
             // Remove PEM header/footer and convert base64
             return new X509Certificate2(certPem.Replace(certBegin, string.Empty)
-                                   .Replace(certEnd, string.Empty)
-                                   .Replace("\r", string.Empty)
-                                   .Replace("\n", string.Empty).IsBase64().Item2);
+                                   .Replace(certEnd, string.Empty).IsBase64().Item2);
         }
 
         public static AsymmetricAlgorithm LoadPrivateKey(string privateKeyPath)
@@ -717,8 +715,6 @@ namespace MultiServerLibrary.SSL
             byte[] keyBytes = privateKeyPem
                 .Replace(keyBegin, string.Empty)
                 .Replace(keyEnd, string.Empty)
-                .Replace("\r", string.Empty)
-                .Replace("\n", string.Empty)
                 .Trim().IsBase64().Item2;
 
             RSA rsa = RSA.Create();
@@ -728,8 +724,6 @@ namespace MultiServerLibrary.SSL
                 .Replace("-----END PRIVATE KEY-----", string.Empty)
                 .Replace(keyBegin, string.Empty)
                 .Replace(keyEnd, string.Empty)
-                .Replace("\r", string.Empty)
-                .Replace("\n", string.Empty)
                 .Trim().IsBase64().Item2, out _);
 #else
             rsa.ImportRSAPrivateKey(privateKeyPem);

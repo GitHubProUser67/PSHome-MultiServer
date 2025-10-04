@@ -34,7 +34,6 @@
 
 using System;
 using System.Runtime.InteropServices;
-using Org.Mentalis.LegacySecurity.Certificates;
 using Org.Mentalis.LegacySecurity.Ssl;
 
 namespace Org.Mentalis.LegacySecurity {

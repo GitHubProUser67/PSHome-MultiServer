@@ -592,9 +592,9 @@ namespace Org.Mentalis.LegacySecurity.Ssl {
 			IsSending = true;
 			try {
 				base.BeginSend(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(OnRawSent), null);
-			} catch (Exception e) {
+			} catch (Exception) {
 				IsSending = false;
-				throw e;
+				throw;
 			}
 			return AsyncSendResult;
 		}
@@ -604,9 +604,9 @@ namespace Org.Mentalis.LegacySecurity.Ssl {
 			IsSending = true;
 			try {
 				base.BeginSend(async.Buffer, 0, async.Buffer.Length, SocketFlags.None, new AsyncCallback(OnRawSent), null);
-			} catch (Exception e) {
+			} catch (Exception) {
 				IsSending = false;
-				throw e;
+				throw;
 			}
 			return AsyncSendResult;
 		}

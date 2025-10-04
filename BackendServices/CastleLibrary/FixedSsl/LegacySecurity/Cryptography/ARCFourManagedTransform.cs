@@ -34,14 +34,11 @@
 
 using System;
 using System.Security.Cryptography;
-using System.Runtime.InteropServices;
-using Org.Mentalis.LegacySecurity;
 
 namespace Org.Mentalis.LegacySecurity.Cryptography {
 	/// <summary>
 	/// Represents an ARCFour managed ICryptoTransform.
 	/// </summary>
-	[CLSCompliant(true)]
 	internal sealed class ARCFourManagedTransform : ICryptoTransform {
 		/// <summary>
 		/// Initializes a new instance of the ARCFourManagedTransform class.

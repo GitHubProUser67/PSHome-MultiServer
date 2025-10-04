@@ -40,7 +40,6 @@ namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>
 	/// Provides secure client connections for TCP network services.
 	/// </summary>
-	[CLSCompliant(true)]
 	public class SecureTcpClient {
 		/// <summary>
 		/// Initializes a new instance of the <see cref="SecureTcpClient"/> class.
@@ -147,15 +146,19 @@ namespace Org.Mentalis.LegacySecurity.Ssl {
 		public virtual void Connect(string hostname, int port) {
 			if (hostname == null)
 				throw new ArgumentNullException();
+#if NET6_0_OR_GREATER
+            Connect(Dns.GetHostEntry(hostname).AddressList[0], port);
+#else
 			Connect(Dns.Resolve(hostname).AddressList[0], port);
-		}
-		/// <summary>
-		/// Returns the stream used to send and receive data.
-		/// </summary>
-		/// <returns>The underlying <see cref="SecureNetworkStream"/>.</returns>
-		/// <exception cref="ObjectDisposedException">The <see cref="SecureTcpClient"/> has been closed.</exception>
-		/// <exception cref="InvalidOperationException">The SecureTcpClient is not connected to a remote host.</exception>
-		public virtual SecureNetworkStream GetStream() {
+#endif
+        }
+        /// <summary>
+        /// Returns the stream used to send and receive data.
+        /// </summary>
+        /// <returns>The underlying <see cref="SecureNetworkStream"/>.</returns>
+        /// <exception cref="ObjectDisposedException">The <see cref="SecureTcpClient"/> has been closed.</exception>
+        /// <exception cref="InvalidOperationException">The SecureTcpClient is not connected to a remote host.</exception>
+        public virtual SecureNetworkStream GetStream() {
 			if (CleanedUp)
 				throw new ObjectDisposedException(this.GetType().FullName);
 			if (!Client.Connected)

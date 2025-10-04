@@ -33,17 +33,12 @@
 */
 
 using System;
-using System.Net;
-using System.Net.Sockets;
-using System.Collections;
-using System.Runtime.InteropServices;
 using Org.Mentalis.LegacySecurity.Certificates;
 
 namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>
 	/// Represents the security options that should be used when connecting to a secure server, or when accepting secure connections.
 	/// </summary>
-	[CLSCompliant(true)]
 	public struct SecurityOptions {
 		/// <summary>
 		/// Initializes a new instance of the SecurityOptions structure.

@@ -34,7 +34,6 @@
 
 using System;
 using System.IO;
-using System.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Runtime.InteropServices;
 using System.Collections.Specialized;
@@ -43,7 +42,6 @@ namespace Org.Mentalis.LegacySecurity.Certificates {
 	/// <summary>
 	/// Defines a X509 v3 encoded certificate.
 	/// </summary>
-	[CLSCompliant(true)]
 	public class Certificate : ICloneable {
 		/// <summary>
 		/// Creates a new instance of the <see cref="Certificate"/> class by opening a PFX file and retrieving the first certificate from it.
@@ -214,8 +212,8 @@ namespace Org.Mentalis.LegacySecurity.Certificates {
 					throw new CertificateException("An error occurs while retrieving the hash of the certificate.");
 				ret = new byte[size];
 				Marshal.Copy(hash, ret, 0, size);
-			} catch (Exception e) {
-				throw e;
+			} catch (Exception) {
+				throw;
 			} finally {
 				Marshal.FreeHGlobal(hash);
 			}
@@ -390,8 +388,8 @@ namespace Org.Mentalis.LegacySecurity.Certificates {
 						} catch {}
 					}
 				}
-			} catch (CertificateException ce) {
-				throw ce;
+			} catch (CertificateException) {
+				throw;
 			} catch (Exception e) {
 				throw new CertificateException("Could not get certificate attributes.", e);
 			} finally {
@@ -423,8 +421,8 @@ namespace Org.Mentalis.LegacySecurity.Certificates {
 					RdnAttribute att = (RdnAttribute)Marshal.PtrToStructure(attPointer, typeof(RdnAttribute));
 					ret = Marshal.PtrToStringAnsi(att.pbData);
 				}
-			} catch (CertificateException ce) {
-				throw ce;
+			} catch (CertificateException) {
+				throw;
 			} catch (Exception e) {
 				throw new CertificateException("Could not get certificate attributes.", e);
 			} finally {

@@ -35,7 +35,6 @@
 using System;
 using System.IO;
 using System.Text;
-using System.Security;
 using System.Collections;
 using System.Runtime.InteropServices;
 
@@ -43,7 +42,6 @@ namespace Org.Mentalis.LegacySecurity.Certificates {
 	/// <summary>
 	/// Defines a certificate store.
 	/// </summary>
-	[CLSCompliant(true)]
 	public class CertificateStore {
 		/// <summary>
 		/// Creates a new certificate store from a PFX/P12 encoded file.
@@ -97,9 +95,9 @@ namespace Org.Mentalis.LegacySecurity.Certificates {
 				} else {
 					throw new CertificateException("The specified file is not a PFX file.");
 				}
-			} catch (Exception e) {
-				throw e;
-			} finally {
+			} catch (Exception) {
+                throw;
+            } finally {
 				// Free the pointer
 				Marshal.FreeHGlobal(buffer);
 			}

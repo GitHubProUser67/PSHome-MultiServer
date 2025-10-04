@@ -3,6 +3,7 @@ using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using static MultiServerLibrary.Extension.Microsoft.Bcrypt;
 
 namespace MultiServerLibrary.SSL
@@ -10,6 +11,7 @@ namespace MultiServerLibrary.SSL
     // From: https://github.com/PrivateServerEmulator/ME3PSE/blob/master/ME3Server_WV/SSL3SupportCheck.cs
     public class SSL3SupportCheck
     {
+        [SupportedOSPlatform("windows")]
         public static void PerformSSL3Checks()
         {
             if (!CheckCipherSuites())
@@ -20,9 +22,7 @@ namespace MultiServerLibrary.SSL
                     LoggerAccessor.LogWarn("[SSL3SupportCheck] - PerformSSL3Checks: Cipher suites: attempt to enable by MultiServer has failed.");
             }
             else
-            {
                 LoggerAccessor.LogInfo("[SSL3SupportCheck] - PerformSSL3Checks: Cipher suites: verification OK.");
-            }
 
             if (Environment.OSVersion.Version.Build < 19041)
                 return;
@@ -75,6 +75,7 @@ namespace MultiServerLibrary.SSL
             return AddCipherSuite("TLS_RSA_WITH_RC4_128_SHA") || AddCipherSuite("TLS_RSA_WITH_RC4_128_MD5");
         }
 
+        [SupportedOSPlatform("windows")]
         public static int GetSSL3ServerStatus()
         {
             object result = Registry.GetValue(ssl3serverpath, "Enabled", -1);
@@ -83,6 +84,7 @@ namespace MultiServerLibrary.SSL
             return (int)result;
         }
 
+        [SupportedOSPlatform("windows")]
         public static bool EnableSSL3Server()
         {
             try

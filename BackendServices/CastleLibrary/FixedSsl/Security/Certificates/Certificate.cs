@@ -141,7 +141,7 @@ namespace Org.Mentalis.Security.Certificates
 
         public static RSA GetRSAPublicKeyLegacyNet(X509Certificate2 certificate)
         {
-            if (!(certificate.PublicKey.Key is RSA rsaPublicKey))
+            if (certificate.GetRSAPublicKey() is not RSA rsaPublicKey)
             {
                 throw new InvalidOperationException("Certificate does not contain an RSA public key.");
             }

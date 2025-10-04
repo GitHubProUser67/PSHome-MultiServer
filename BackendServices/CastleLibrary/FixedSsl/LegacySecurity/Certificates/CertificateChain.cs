@@ -41,7 +41,6 @@ namespace Org.Mentalis.LegacySecurity.Certificates {
 	/// <summary>
 	/// Defines a chain of certificates.
 	/// </summary>
-	[CLSCompliant(true)]
 	public class CertificateChain {
 		/// <summary>
 		/// Initializes a new <see cref="CertificateChain"/> instance from a <see cref="Certificate"/>.

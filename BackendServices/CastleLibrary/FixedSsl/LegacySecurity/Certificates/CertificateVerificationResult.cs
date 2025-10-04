@@ -34,13 +34,11 @@
 
 using System;
 using System.Threading;
-using Org.Mentalis.LegacySecurity;
 
 namespace Org.Mentalis.LegacySecurity.Certificates {
 	/// <summary>
 	/// Represents the status of an asynchronous certificate chain verification operation.
 	/// </summary>
-	[CLSCompliant(true)]
 	internal class CertificateVerificationResult : IAsyncResult {
 		/// <summary>
 		/// Initializes a new CertificateVerificationResult instance.

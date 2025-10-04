@@ -34,13 +34,11 @@
 
 using System;
 using System.Threading;
-using System.Net.Sockets;
 
 namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>
 	/// A class that implements the IAsyncResult interface.
 	/// </summary>
-	[CLSCompliant(true)]
 	internal class AsyncSecureResult : IAsyncResult {
 		/// <summary>Initializes the internal variables of this object</summary>
 		/// <param name="parent">The parent object of this AsyncSecureResult.</param>
@@ -144,7 +142,6 @@ namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>
 	/// A class that implements the IAsyncResult interface.
 	/// </summary>
-	[CLSCompliant(true)]
 	internal class AsyncSecureConnectResult : AsyncSecureResult {
 		/// <summary>Initializes the internal variables of this object</summary>
 		/// <param name="parent">The parent object of this AsyncSecureResult.</param>
@@ -171,7 +168,6 @@ namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>
 	/// A class that implements the IAsyncResult interface.
 	/// </summary>
-	[CLSCompliant(true)]
 	internal class AsyncSecureSendResult : AsyncSecureTransferResult {
 		/// <summary>Initializes the internal variables of this object</summary>
 		/// <param name="parent">The parent object of this AsyncSecureResult.</param>
@@ -196,7 +192,6 @@ namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>
 	/// A class that implements the IAsyncResult interface.
 	/// </summary>
-	[CLSCompliant(true)]
 	internal class AsyncSecureReceiveResult : AsyncSecureTransferResult {
 		/// <summary>Initializes the internal variables of this object</summary>
 		/// <param name="parent">The parent object of this AsyncSecureResult.</param>
@@ -207,7 +202,6 @@ namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>
 	/// A class that implements the IAsyncResult interface.
 	/// </summary>
-	[CLSCompliant(true)]
 	internal class AsyncSecureTransferResult : AsyncSecureResult {
 		/// <summary>Initializes the internal variables of this object</summary>
 		/// <param name="parent">The parent object of this AsyncSecureResult.</param>
@@ -260,7 +254,6 @@ namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>
 	/// A class that implements the IAsyncResult interface.
 	/// </summary>
-	[CLSCompliant(true)]
 	internal class AsyncSecureAcceptResult : AsyncSecureResult {
 		/// <summary>Initializes the internal variables of this object</summary>
 		/// <param name="parent">The parent object of this AsyncSecureResult.</param>
@@ -301,7 +294,6 @@ namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>
 	/// A class that implements the IAsyncResult interface.
 	/// </summary>
-	[CLSCompliant(true)]
 	internal class AsyncSecureShutdownResult : AsyncSecureResult {
 		/// <summary>Initializes the internal variables of this object</summary>
 		/// <param name="parent">The parent object of this AsyncSecureShutdownResult.</param>
@@ -312,7 +304,6 @@ namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>
 	/// A class that implements the IAsyncResult interface.
 	/// </summary>
-	[CLSCompliant(true)]
 	internal class AsyncSecureAvailableResult : AsyncSecureResult {
 		/// <summary>Initializes the internal variables of this object</summary>
 		internal AsyncSecureAvailableResult() : base(null, null, null) {}
@@ -320,7 +311,6 @@ namespace Org.Mentalis.LegacySecurity.Ssl {
 	/// <summary>
 	/// A class that implements the IAsyncResult interface.
 	/// </summary>
-	[CLSCompliant(true)]
 	internal class AsyncSecureRenegotiateResult : AsyncSecureResult {
 		/// <summary>Initializes the internal variables of this object</summary>
 		/// <param name="parent">The parent object of this AsyncSecureShutdownResult.</param>

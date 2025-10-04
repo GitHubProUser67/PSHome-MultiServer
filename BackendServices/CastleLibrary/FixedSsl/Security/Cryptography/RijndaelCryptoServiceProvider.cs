@@ -37,7 +37,7 @@ using System.Security.Cryptography;
 namespace Org.Mentalis.Security.Cryptography
 {
     /// <summary>
-    /// Accesses the unmanaged version of the <see cref="Rijndael"/> algorithm. This class cannot be inherited.
+    /// Accesses the unmanaged version of the <see cref="Aes"/> algorithm. This class cannot be inherited.
     /// </summary>
     /// <remarks>
     /// This class will use the unmanaged implementation of the Rijndael algorithm, when possible. If the unmanaged Rijndael algorithm is not available, it will fall back to the <see cref="RijndaelManaged"/> implementation.
