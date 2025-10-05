@@ -287,7 +287,7 @@ namespace WebAPIService.GameServices.OHS
             return dataforohs;
         }
 
-        public static void InitializeLeaderboard(string tablekey)
+        public static void InitializeLeaderboard(string tablekey, bool fillResults = true)
         {
             if (!_leaderboards.ContainsKey(tablekey))
             {
@@ -295,7 +295,7 @@ namespace WebAPIService.GameServices.OHS
 
                 retCtx.Database.Migrate();
 
-                if (_leaderboards.TryAdd(tablekey, new OHSScoreBoardData(retCtx, tablekey)))
+                if (_leaderboards.TryAdd(tablekey, new OHSScoreBoardData(retCtx, tablekey)) && fillResults)
                 {
                     for (int j = 1; j < 11; j++)
                     {
@@ -382,8 +382,13 @@ namespace WebAPIService.GameServices.OHS
                     {
                         List<Entities.OHSScoreboardEntry> scoreEntries;
 
-                        if (key.Contains("daily"))
+                        bool isDaily = key.Contains("daily", StringComparison.InvariantCultureIgnoreCase);
+                        bool isWeekly = key.Contains("weekly", StringComparison.InvariantCultureIgnoreCase);
+
+                        if (isDaily)
                             scoreEntries = _leaderboards[tablekey].GetTodayScoresAsync(-1).Result;
+                        else if (isWeekly)
+                            scoreEntries = _leaderboards[tablekey].GetCurrentWeekScoresAsync(-1).Result;
                         else
                             scoreEntries = _leaderboards[tablekey].GetAllScoresAsync().Result;
 
@@ -470,18 +475,22 @@ namespace WebAPIService.GameServices.OHS
                         return null;
 
                     bool hasKey = false;
+                    bool isDaily = key.Contains("daily", StringComparison.InvariantCultureIgnoreCase);
+                    bool isWeekly = key.Contains("weekly", StringComparison.InvariantCultureIgnoreCase);
                     string tablekey = levelboard ? project + $"|{key}" + "|levelboard" : project + $"|{key}";
 
                     lock (_leaderboards)
                     {
-                        InitializeLeaderboard(tablekey);
+                        InitializeLeaderboard(tablekey, !(isDaily || isWeekly));
                         hasKey = _leaderboards.ContainsKey(tablekey);
                     }
 
                     if (hasKey)
                     {
-                        if (key.Contains("daily"))
+                        if (isDaily)
                             return _leaderboards[tablekey].SerializeToStringDailyEx(null, user, start, numEntries).Result;
+                        else if (isWeekly)
+                            return _leaderboards[tablekey].SerializeToWeeklyStringEx(null, user, start, numEntries).Result;
                         else
                             return _leaderboards[tablekey].SerializeToStringEx(null, user, start, numEntries).Result;
                     }

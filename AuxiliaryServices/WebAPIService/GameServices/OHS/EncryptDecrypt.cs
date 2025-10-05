@@ -6,202 +6,85 @@ namespace WebAPIService.GameServices.OHS
 {
     public class EncryptDecrypt
     {
-        private const string LUAHttpDecryptor = @"local cipher = PUT_KEYVALS_HERE
-
-        function wrapped( index, max )
-            if index > max then
-                return 1 + (index % (max+1))
+        private static int Wrapped(int index, int max)
+        {
+            if (index > max)
+                return 1 + (index % (max + 1));
             else
-                return index
-            end
-        end
-
-        function encrypt( str, offset )
-            assert(offset <= 95 * 95)
-            local chars = {}
-
-            local offsethi = math.floor((offset - 1) / 95)
-            local offsetlo = ((offset - 1) % 95)
-            -- print(""offsethi: "", offsethi, "" offsetlo: "", offsetlo)
-            table.insert(chars, string.char(offsethi + 32))
-            table.insert(chars, string.char(offsetlo + 32))
-
-            -- print(""encoded offset: "", chars[1], chars[2])
-
-            for i = 1, #str do
-                local srcbyte = str:byte(i) - 32
-                assert(0 <= srcbyte and srcbyte <= 95)
-                local cipherbyte = cipher[wrapped(i + offset, #cipher)]
-
-                local encbyte = ((srcbyte + cipherbyte) % 95) + 32
-
-                -- print(""src: "", srcbyte, ""cipher: "", cipherbyte, "" enc: "", encbyte)
-
-                table.insert(chars, string.char(encbyte))
-            end
-
-            return table.concat(chars)
-        end
-
-        function decrypt( str )
-            local chars = {}
-
-            -- print(""encoded offset: "", str:sub(1, 1), str:sub(2, 2))
-
-            local offsethi = str:byte(1) - 32
-            local offsetlo = str:byte(2) - 32
-            -- print(""decrypt offsethi: "", offsethi, "" offsetlo: "", offsetlo)
-
-            local offset  = (offsethi * 95) + offsetlo + 1
-            -- print(""decrypt offset: "", offset)
-
-            for i = 3, #str do
-                local srcbyte = str:byte(i) - 32
-                assert(0 <= srcbyte and srcbyte <= 95)
-                local cipherbyte = cipher[wrapped((i-2) + offset, #cipher)]
-
-                local decbyte = ((srcbyte - cipherbyte) % 95) + 32
-
-                table.insert(chars, string.char(decbyte))
-            end
-
-            return table.concat(chars)
-        end
-
-        return decrypt(PUT_ENCRYPTEDVALUE_HERE)";
-
-        private const string LUAHttpEncryptor = @"local cipher = PUT_KEYVALS_HERE
-
-        function wrapped( index, max )
-            if index > max then
-                return 1 + (index % (max+1))
-            else
-                return index
-            end
-        end
-
-        function encrypt( str, offset )
-            assert(offset <= 95 * 95)
-            local chars = {}
-
-            local offsethi = math.floor((offset - 1) / 95)
-            local offsetlo = ((offset - 1) % 95)
-            -- print(""offsethi: "", offsethi, "" offsetlo: "", offsetlo)
-            table.insert(chars, string.char(offsethi + 32))
-            table.insert(chars, string.char(offsetlo + 32))
-
-            -- print(""encoded offset: "", chars[1], chars[2])
-
-            for i = 1, #str do
-                local srcbyte = str:byte(i) - 32
-                assert(0 <= srcbyte and srcbyte <= 95)
-                local cipherbyte = cipher[wrapped(i + offset, #cipher)]
-
-                local encbyte = ((srcbyte + cipherbyte) % 95) + 32
-
-                -- print(""src: "", srcbyte, ""cipher: "", cipherbyte, "" enc: "", encbyte)
-
-                table.insert(chars, string.char(encbyte))
-            end
-
-            return table.concat(chars)
-        end
-
-        function decrypt( str )
-            local chars = {}
-
-            -- print(""encoded offset: "", str:sub(1, 1), str:sub(2, 2))
-
-            local offsethi = str:byte(1) - 32
-            local offsetlo = str:byte(2) - 32
-            -- print(""decrypt offsethi: "", offsethi, "" offsetlo: "", offsetlo)
-
-            local offset  = (offsethi * 95) + offsetlo + 1
-            -- print(""decrypt offset: "", offset)
-
-            for i = 3, #str do
-                local srcbyte = str:byte(i) - 32
-                assert(0 <= srcbyte and srcbyte <= 95)
-                local cipherbyte = cipher[wrapped((i-2) + offset, #cipher)]
-
-                local decbyte = ((srcbyte - cipherbyte) % 95) + 32
-
-                table.insert(chars, string.char(decbyte))
-            end
-
-            return table.concat(chars)
-        end
-
-        return encrypt(PUT_DECRYPTEDVALUE_HERE, PUT_OFFSET_HERE)";
+                return index;
+        }
 
         public static string Encrypt(string str, int offset, int game)
         {
-            if (!string.IsNullOrEmpty(str))
+            if (string.IsNullOrEmpty(str))
+                return null;
+
+            if (offset > StaticKeys.keyLength)
             {
-                if (offset > 9025)
+                LoggerAccessor.LogError("[OHS - Encrypt] - Offset is too large.");
+                return null;
+            }
+
+            StringBuilder chars = new StringBuilder();
+
+            chars.Append((char)(((int)Math.Floor((double)((offset - 1) / 95))) + 32));
+            chars.Append((char)(((offset - 1) % 95) + 32));
+
+            for (int i = 0; i < str.Length; i++)
+            {
+                int srcbyte = str[i] - 32;
+                if (srcbyte < 0 || srcbyte > 95)
                 {
-                    LoggerAccessor.LogError($"[OHS - Encrypt] - Offset:{offset} is too large.");
+                    LoggerAccessor.LogError("[OHS - Encrypt] - Invalid character in input string");
                     return null;
                 }
 
-                string keyvakStr = null;
-                switch (game)
-                {
-                    case 1:
-                        keyvakStr = StaticKeys.version1cipher;
-                        break;
-                    case 2:
-                        keyvakStr = StaticKeys.version2cipher;
-                        break;
-                    default:
-                        LoggerAccessor.LogError($"[OHS - Encrypt] - Game:{game} doesn't have a cipher associated with it.");
-                        return null;
-                }
+                int cipherbyte;
 
-                try
-                {
-                    // Execute the Lua script and get the result
-                    return LuaUtils.ExecuteLuaScript(LUAHttpEncryptor.Replace("PUT_DECRYPTEDVALUE_HERE", LuaUtils.ToLiteral(str)).Replace("PUT_OFFSET_HERE", offset.ToString()).Replace("PUT_KEYVALS_HERE", keyvakStr))[0].ToString();
-                }
-                catch (Exception ex)
-                {
-                    LoggerAccessor.LogError($"[OHS - Encrypt] - lua script failed - {ex}");
-                }
+                if (game == 1)
+                    cipherbyte = StaticKeys.version1cipher[Wrapped(i + 1 + offset, StaticKeys.version1cipher.Length) - 1];
+                else if (game == 2)
+                    cipherbyte = StaticKeys.version2cipher[Wrapped(i + 1 + offset, StaticKeys.version2cipher.Length) - 1];
+                else
+                    return null;
+
+                chars.Append((char)((srcbyte + cipherbyte) % 95 + 32));
             }
 
-            return null;
+            return chars.ToString();
         }
 
         public static string Decrypt(string str, int game)
         {
-            if (!string.IsNullOrEmpty(str))
+            if (string.IsNullOrEmpty(str))
+                return null;
+
+            StringBuilder chars = new StringBuilder();
+
+            int offset = ((str[0] - 32) * 95) + (str[1] - 32) + 1;
+
+            for (int i = 3; i <= str.Length; i++)
             {
-                string keyvakStr = null;
-                switch (game)
+                int srcbyte = str[i - 1] - 32;
+                if (srcbyte < 0 || srcbyte > 95)
                 {
-                    case 1:
-                        keyvakStr = StaticKeys.version1cipher;
-                        break;
-                    case 2:
-                        keyvakStr = StaticKeys.version2cipher;
-                        break;
-                    default:
-                        LoggerAccessor.LogError($"[OHS - Decrypt] - Game:{game} doesn't have a cipher associated with it.");
-                        return null;
+                    LoggerAccessor.LogError("[OHS - Decrypt] - Invalid character in input string");
+                    return null;
                 }
 
-                try
-                {
-                    // Execute the Lua script and get the result
-                    return LuaUtils.ExecuteLuaScript(LUAHttpDecryptor.Replace("PUT_ENCRYPTEDVALUE_HERE", LuaUtils.ToLiteral(str)).Replace("PUT_KEYVALS_HERE", keyvakStr))[0].ToString();
-                }
-                catch (Exception ex)
-                {
-                    LoggerAccessor.LogError($"[OHS - Decrypt] - lua script failed - {ex}");
-                }
+                int cipherbyte;
+
+                if (game == 1)
+                    cipherbyte = StaticKeys.version1cipher[Wrapped(i - 2 + offset, StaticKeys.version1cipher.Length) - 1];
+                else if (game == 2)
+                    cipherbyte = StaticKeys.version2cipher[Wrapped(i - 2 + offset, StaticKeys.version2cipher.Length) - 1];
+                else
+                    return null;
+
+                chars.Append((char)(((srcbyte - cipherbyte) % 95 + 95) % 95 + 32));
             }
 
-            return null;
+            return chars.ToString();
         }
 
         private static ushort Hash16(string str, ushort histart, ushort lostart)

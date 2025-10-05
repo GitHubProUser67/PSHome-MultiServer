@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -612,34 +613,47 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
                         string absolutepath = ctx.AbsolutePath;
 
                         #region OHS API Version
-                                int version = 0;
-                                if (ctx.Secure)
+                                int? version = null;
+
+                                if (!ctx.Secure)
                                 {
-                                    // No OHS crypto on HTTPS.
+                                    Dictionary<int, (string, bool)[]> versionMap = new Dictionary<int, (string, bool)[]>
+                                    {
+                                        [2] = new[]
+                                        {
+                                            ("/Insomniac/4BarrelsOfFury/", false),
+                                            ("/SCEA/SaucerPop/", false),
+                                            ("/AirRace/", false),
+                                            ("/Flugtag/", false)
+                                        },
+                                        [1] = new[]
+                                        {
+                                            ("/SCEA/op4_", false),
+                                            ("/uncharted2", true),
+                                            ("/Infamous/", false),
+                                            ("/warhawk_shooter/", false),
+                                            ("/SCEA/WorldDomination/", false)
+                                        }
+                                    };
+
+                                    foreach (var kvp in versionMap)
+                                    {
+                                        foreach (var tuple in kvp.Value)
+                                        {
+                                            if (absolutepath.Contains(tuple.Item1, tuple.Item2 ? StringComparison.InvariantCultureIgnoreCase : StringComparison.InvariantCulture))
+                                            {
+                                                version = kvp.Key;
+                                                break;
+                                            }
+                                        }
+
+                                        if (version.HasValue)
+                                            break;
+                                    }
                                 }
-                                else if (absolutepath.Contains("/Insomniac/4BarrelsOfFury/"))
-                                    version = 2;
-                                else if (absolutepath.Contains("/SCEA/SaucerPop/"))
-                                    version = 2;
-                                else if (absolutepath.Contains("/AirRace/"))
-                                    version = 2;
-                                else if (absolutepath.Contains("/Flugtag/"))
-                                    version = 2;
-                                else if (absolutepath.Contains("/SCEA/op4_"))
-                                    version = 1;
-                                else if (absolutepath.Contains("/uncharted2"))
-                                    version = 1;
-                                else if (absolutepath.Contains("/Uncharted2"))
-                                    version = 1;
-                                else if (absolutepath.Contains("/Infamous/"))
-                                    version = 1;
-                                else if (absolutepath.Contains("/warhawk_shooter/"))
-                                    version = 1;
-                                else if (absolutepath.Contains("/SCEA/WorldDomination/"))
-                                    version = 1;
                                 #endregion
 
-                                string? res = new OHSClass(ctx.Request.Method.ToString(), absolutepath, version).ProcessRequest(ctx.Request.DataAsBytes, ctx.Request.ContentType, ctx.ApiPath);
+                                string? res = new OHSClass(ctx.Request.Method.ToString(), absolutepath, version ?? 0).ProcessRequest(ctx.Request.DataAsBytes, ctx.Request.ContentType, ctx.ApiPath);
                                 if (string.IsNullOrEmpty(res))
                                 {
                                     ctx.Response.ContentType = "text/plain";

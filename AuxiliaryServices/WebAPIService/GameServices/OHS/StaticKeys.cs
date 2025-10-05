@@ -2,8 +2,10 @@ namespace WebAPIService.GameServices.OHS
 {
     internal static class StaticKeys
     {
+        public const ushort keyLength = 9025;
+
         // Uncharted 2 - Unfamous - warhawk - Vilains Lair.
-        public static readonly string version1cipher = "{" + string.Join(",", new int[9025] {
+        public static readonly int[] version1cipher = new int[keyLength] {
             93, 45, 76, 47, 68,
             92, 7, 8, 33, 8,
             68, 62, 56, 39, 60,
@@ -1809,10 +1811,10 @@ namespace WebAPIService.GameServices.OHS
             44, 16, 40, 64, 57,
             49, 21, 24, 18, 13,
             34, 50, 60, 81, 83,
-        }) + "}";
+        };
 
         // Resistance 2 - Red Bull Air Race - saucer pop.
-        public static readonly string version2cipher = "{" + string.Join(",", new int[9025] {
+        public static readonly int[] version2cipher = new int[keyLength] {
             72, 16, 52, 85, 81,
             45, 26, 14, 30, 24,
             41, 2, 72, 85, 94,
@@ -3618,6 +3620,6 @@ namespace WebAPIService.GameServices.OHS
             10, 89, 4, 35, 28,
             68, 53, 38, 9, 25,
             64, 29, 91, 63, 38,
-        }) + "}";
+        };
     }
 }

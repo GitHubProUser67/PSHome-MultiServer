@@ -90,19 +90,65 @@ namespace WebAPIService.GameServices.OHS
             DateTime today = DateTime.UtcNow.Date;
             if (max == -1)
                 return await _dbContext.Set<OHSScoreboardEntry>()
-                        .Where(x => x.ExtraData1 == _gameproject)
-                        .Where(e => e.UpdatedAt >= today)
-                        .OrderByDescending(e => e.Score)
-                        .ToListAsync()
-                        .ConfigureAwait(false);
-            else
-                return await _dbContext.Set<OHSScoreboardEntry>()
+                    .Where(x => x.ExtraData1 == _gameproject)
+                    .Where(e => e.UpdatedAt >= today)
+                    .OrderByDescending(e => e.Score)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+            return await _dbContext.Set<OHSScoreboardEntry>()
                     .Where(x => x.ExtraData1 == _gameproject)
                     .Where(e => e.UpdatedAt >= today)
                     .OrderByDescending(e => e.Score)
                     .Take(max)
                     .ToListAsync()
                     .ConfigureAwait(false);
+        }
+
+        public override async Task<List<OHSScoreboardEntry>> GetCurrentWeekScoresAsync(int max = 10)
+        {
+            DateTime today = DateTime.UtcNow.Date;
+            int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
+            DateTime weekStart = today.AddDays(-1 * diff); // Monday
+            if (max == -1)
+                return await _dbContext.Set<OHSScoreboardEntry>()
+                .Where(e => e.UpdatedAt >= weekStart)
+                .OrderByDescending(e => e.Score)
+                .ToListAsync()
+                .ConfigureAwait(false);
+            return await _dbContext.Set<OHSScoreboardEntry>()
+                .Where(e => e.UpdatedAt >= weekStart)
+                .OrderByDescending(e => e.Score)
+                .Take(max)
+                .ToListAsync()
+                .ConfigureAwait(false);
+        }
+
+        public async Task<List<OHSScoreboardEntry>> GetTodayScoresAsyncEx(int start, int count)
+        {
+            DateTime today = DateTime.UtcNow.Date;
+            return await _dbContext.Set<OHSScoreboardEntry>()
+                    .Where(x => x.ExtraData1 == _gameproject)
+                    .Where(e => e.UpdatedAt >= today)
+                    .OrderByDescending(e => e.Score)
+                    .Skip(start - 1) // skip entries before the page
+                    .Take(count) // take the requested number
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+        }
+
+        public async Task<List<OHSScoreboardEntry>> GetCurrentWeekScoresAsyncEx(int start, int count)
+        {
+            DateTime today = DateTime.UtcNow.Date;
+            int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
+            DateTime weekStart = today.AddDays(-1 * diff); // Monday
+            return await _dbContext.Set<OHSScoreboardEntry>()
+                   .Where(x => x.ExtraData1 == _gameproject)
+                   .Where(e => e.UpdatedAt >= weekStart)
+                   .OrderByDescending(e => e.Score)
+                   .Skip(start - 1) // skip entries before the page
+                    .Take(count) // take the requested number
+                   .ToListAsync()
+                   .ConfigureAwait(false);
         }
 
         public async Task SetJaminExtraData(string playerId, string extraData)
@@ -183,7 +229,31 @@ namespace WebAPIService.GameServices.OHS
 
             Dictionary<int, Dictionary<string, object>> luaTable = new Dictionary<int, Dictionary<string, object>>();
 
-            foreach (var entry in await GetTopScoresAsyncEx(start, count).ConfigureAwait(false))
+            foreach (var entry in await GetTodayScoresAsyncEx(start, count).ConfigureAwait(false))
+            {
+                luaTable.Add(i, new Dictionary<string, object>
+                {
+                    { "[\"user\"]", $"\"{entry.PsnId}\"" },
+                    { "[\"score\"]", $"{entry.Score}" }
+                });
+
+                if (entry.PsnId == user)
+                    scoreForUser = (int)entry.Score;
+
+                i++;
+            }
+
+            return $"{{ [\"user\"] = {{ [\"score\"] = {scoreForUser} }}, [\"entries\"] = {FormatScoreBoardLuaTable(luaTable)} }}";
+        }
+
+        public async Task<string> SerializeToWeeklyStringEx(string gameName, string user, int start, int count)
+        {
+            int scoreForUser = 0;
+            int i = 1;
+
+            Dictionary<int, Dictionary<string, object>> luaTable = new Dictionary<int, Dictionary<string, object>>();
+
+            foreach (var entry in await GetCurrentWeekScoresAsyncEx(start, count).ConfigureAwait(false))
             {
                 luaTable.Add(i, new Dictionary<string, object>
                 {
