@@ -12,13 +12,7 @@ namespace WebAPIService.GameServices.VEEMEE.gofish
         public static void InitializeLeaderboard()
         {
             if (Leaderboard == null)
-            {
-                var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                retCtx.Database.Migrate();
-
-                Leaderboard = new GFScoreBoardData(retCtx);
-            }
+                Leaderboard = new GFScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
         }
 
         public static string GetLeaderboardPOST(byte[] PostData, string ContentType, int mode, string apiPath)

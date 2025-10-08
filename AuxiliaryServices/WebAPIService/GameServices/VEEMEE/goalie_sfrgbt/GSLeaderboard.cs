@@ -15,13 +15,7 @@ namespace WebAPIService.GameServices.VEEMEE.goalie_sfrgbt
             lock (Leaderboards)
             {
                 if (!Leaderboards.ContainsKey(gameName))
-                {
-                    var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                    retCtx.Database.Migrate();
-
-                    Leaderboards.Add(gameName, new GSScoreBoardData(retCtx, gameName));
-                }
+                    Leaderboards.Add(gameName, new GSScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, gameName));
             }
         }
 

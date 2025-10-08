@@ -14,141 +14,172 @@ namespace WebAPIService.GameServices.OHS
     {
         private string _gameproject;
 
-        public OHSScoreBoardData(LeaderboardDbContext dbContext, object obj = null)
-            : base(dbContext)
+        public OHSScoreBoardData(DbContextOptions options, object obj = null)
+            : base(options)
         {
             _gameproject = (string)obj;
         }
 
         public override async Task<List<OHSScoreboardEntry>> GetAllScoresAsync()
         {
-            return await _dbContext.Set<OHSScoreboardEntry>()
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return await db.Set<OHSScoreboardEntry>()
                .Where(x => x.ExtraData1 == _gameproject)
                .ToListAsync().ConfigureAwait(false);
+            }
         }
 
         public override async Task<List<OHSScoreboardEntry>> GetTopScoresAsync(int max = 10)
         {
-            return await _dbContext.Set<OHSScoreboardEntry>()
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return await db.Set<OHSScoreboardEntry>()
                 .Where(x => x.ExtraData1 == _gameproject)
                 .OrderByDescending(e => e.Score)
                 .Take(max)
                 .ToListAsync().ConfigureAwait(false);
+            }
         }
 
         public async Task<List<OHSScoreboardEntry>> GetTopScoresAsyncEx(int start, int count)
         {
-            return await _dbContext.Set<OHSScoreboardEntry>()
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return await db.Set<OHSScoreboardEntry>()
                 .Where(x => x.ExtraData1 == _gameproject)
                 .OrderByDescending(e => e.Score)
                 .Skip(start - 1) // skip entries before the page
                 .Take(count) // take the requested number
                 .ToListAsync()
                 .ConfigureAwait(false);
+            }
         }
-
 
         public override async Task UpdateScoreAsync(string playerId, float newScore, List<object> extraData = null)
         {
             if (string.IsNullOrEmpty(playerId))
                 return;
 
-            var set = _dbContext.Set<OHSScoreboardEntry>();
-            DateTime now = DateTime.UtcNow; // use UTC for consistency
-
-            var existing = await set
-                .Where(x => x.ExtraData1 == _gameproject)
-                .FirstOrDefaultAsync(e =>
-                e.PlayerId != null &&
-                e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
-
-            if (existing != null)
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
             {
-                if (newScore > existing.Score)
+                db.Database.Migrate();
+                var set = db.Set<OHSScoreboardEntry>();
+                DateTime now = DateTime.UtcNow; // use UTC for consistency
+
+                var existing = await set
+                    .Where(x => x.ExtraData1 == _gameproject)
+                    .FirstOrDefaultAsync(e =>
+                    e.PlayerId != null &&
+                    e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
+
+                if (existing != null)
                 {
-                    existing.Score = newScore;
-                    existing.UpdatedAt = now; // update timestamp
-                    _dbContext.Update(existing);
-                    await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                    if (newScore > existing.Score)
+                    {
+                        existing.Score = newScore;
+                        existing.UpdatedAt = now; // update timestamp
+                        db.Update(existing);
+                        await db.SaveChangesAsync().ConfigureAwait(false);
+                    }
                 }
-            }
-            else
-            {
-                await set.AddAsync(new OHSScoreboardEntry
+                else
                 {
-                    ExtraData1 = _gameproject,
-                    PlayerId = playerId,
-                    Score = newScore,
-                    UpdatedAt = now // set timestamp for new entry
-                }).ConfigureAwait(false);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                    await set.AddAsync(new OHSScoreboardEntry
+                    {
+                        ExtraData1 = _gameproject,
+                        PlayerId = playerId,
+                        Score = newScore,
+                        UpdatedAt = now // set timestamp for new entry
+                    }).ConfigureAwait(false);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
             }
         }
 
         public override async Task<List<OHSScoreboardEntry>> GetTodayScoresAsync(int max = 10)
         {
-            DateTime today = DateTime.UtcNow.Date;
-            if (max == -1)
-                return await _dbContext.Set<OHSScoreboardEntry>()
-                    .Where(x => x.ExtraData1 == _gameproject)
-                    .Where(e => e.UpdatedAt >= today)
-                    .OrderByDescending(e => e.Score)
-                    .ToListAsync()
-                    .ConfigureAwait(false);
-            return await _dbContext.Set<OHSScoreboardEntry>()
-                    .Where(x => x.ExtraData1 == _gameproject)
-                    .Where(e => e.UpdatedAt >= today)
-                    .OrderByDescending(e => e.Score)
-                    .Take(max)
-                    .ToListAsync()
-                    .ConfigureAwait(false);
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                DateTime today = DateTime.UtcNow.Date;
+                if (max == -1)
+                    return await db.Set<OHSScoreboardEntry>()
+                        .Where(x => x.ExtraData1 == _gameproject)
+                        .Where(e => e.UpdatedAt >= today)
+                        .OrderByDescending(e => e.Score)
+                        .ToListAsync()
+                        .ConfigureAwait(false);
+                return await db.Set<OHSScoreboardEntry>()
+                        .Where(x => x.ExtraData1 == _gameproject)
+                        .Where(e => e.UpdatedAt >= today)
+                        .OrderByDescending(e => e.Score)
+                        .Take(max)
+                        .ToListAsync()
+                        .ConfigureAwait(false);
+            }
         }
 
         public override async Task<List<OHSScoreboardEntry>> GetCurrentWeekScoresAsync(int max = 10)
         {
-            DateTime today = DateTime.UtcNow.Date;
-            int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
-            DateTime weekStart = today.AddDays(-1 * diff); // Monday
-            if (max == -1)
-                return await _dbContext.Set<OHSScoreboardEntry>()
-                .Where(e => e.UpdatedAt >= weekStart)
-                .OrderByDescending(e => e.Score)
-                .ToListAsync()
-                .ConfigureAwait(false);
-            return await _dbContext.Set<OHSScoreboardEntry>()
-                .Where(e => e.UpdatedAt >= weekStart)
-                .OrderByDescending(e => e.Score)
-                .Take(max)
-                .ToListAsync()
-                .ConfigureAwait(false);
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                DateTime today = DateTime.UtcNow.Date;
+                int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
+                DateTime weekStart = today.AddDays(-1 * diff); // Monday
+                if (max == -1)
+                    return await db.Set<OHSScoreboardEntry>()
+                    .Where(e => e.UpdatedAt >= weekStart)
+                    .OrderByDescending(e => e.Score)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+                return await db.Set<OHSScoreboardEntry>()
+                    .Where(e => e.UpdatedAt >= weekStart)
+                    .OrderByDescending(e => e.Score)
+                    .Take(max)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+            }
         }
 
         public async Task<List<OHSScoreboardEntry>> GetTodayScoresAsyncEx(int start, int count)
         {
-            DateTime today = DateTime.UtcNow.Date;
-            return await _dbContext.Set<OHSScoreboardEntry>()
-                    .Where(x => x.ExtraData1 == _gameproject)
-                    .Where(e => e.UpdatedAt >= today)
-                    .OrderByDescending(e => e.Score)
-                    .Skip(start - 1) // skip entries before the page
-                    .Take(count) // take the requested number
-                    .ToListAsync()
-                    .ConfigureAwait(false);
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                DateTime today = DateTime.UtcNow.Date;
+                return await db.Set<OHSScoreboardEntry>()
+                        .Where(x => x.ExtraData1 == _gameproject)
+                        .Where(e => e.UpdatedAt >= today)
+                        .OrderByDescending(e => e.Score)
+                        .Skip(start - 1) // skip entries before the page
+                        .Take(count) // take the requested number
+                        .ToListAsync()
+                        .ConfigureAwait(false);
+            }
         }
 
         public async Task<List<OHSScoreboardEntry>> GetCurrentWeekScoresAsyncEx(int start, int count)
         {
-            DateTime today = DateTime.UtcNow.Date;
-            int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
-            DateTime weekStart = today.AddDays(-1 * diff); // Monday
-            return await _dbContext.Set<OHSScoreboardEntry>()
-                   .Where(x => x.ExtraData1 == _gameproject)
-                   .Where(e => e.UpdatedAt >= weekStart)
-                   .OrderByDescending(e => e.Score)
-                   .Skip(start - 1) // skip entries before the page
-                    .Take(count) // take the requested number
-                   .ToListAsync()
-                   .ConfigureAwait(false);
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                DateTime today = DateTime.UtcNow.Date;
+                int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
+                DateTime weekStart = today.AddDays(-1 * diff); // Monday
+                return await db.Set<OHSScoreboardEntry>()
+                       .Where(x => x.ExtraData1 == _gameproject)
+                       .Where(e => e.UpdatedAt >= weekStart)
+                       .OrderByDescending(e => e.Score)
+                       .Skip(start - 1) // skip entries before the page
+                        .Take(count) // take the requested number
+                       .ToListAsync()
+                       .ConfigureAwait(false);
+            }
         }
 
         public async Task SetJaminExtraData(string playerId, string extraData)
@@ -156,21 +187,25 @@ namespace WebAPIService.GameServices.OHS
             if (string.IsNullOrEmpty(playerId))
                 return;
 
-            var set = _dbContext.Set<OHSScoreboardEntry>();
-            DateTime now = DateTime.UtcNow; // use UTC for consistency
-
-            var existing = await set
-                .Where(x => x.ExtraData1 == _gameproject)
-                .FirstOrDefaultAsync(e =>
-                e.PlayerId != null &&
-                e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
-
-            if (existing != null)
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
             {
-                existing.ExtraData2 = extraData;
-                existing.UpdatedAt = now; // update timestamp
-                _dbContext.Update(existing);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                db.Database.Migrate();
+                var set = db.Set<OHSScoreboardEntry>();
+                DateTime now = DateTime.UtcNow; // use UTC for consistency
+
+                var existing = await set
+                    .Where(x => x.ExtraData1 == _gameproject)
+                    .FirstOrDefaultAsync(e =>
+                    e.PlayerId != null &&
+                    e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
+
+                if (existing != null)
+                {
+                    existing.ExtraData2 = extraData;
+                    existing.UpdatedAt = now; // update timestamp
+                    db.Update(existing);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
             }
         }
 

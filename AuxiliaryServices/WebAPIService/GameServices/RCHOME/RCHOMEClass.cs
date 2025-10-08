@@ -54,13 +54,8 @@ namespace WebAPIService.GameServices.RCHOME
                                             lock (_leaderboards)
                                             {
                                                 if (!_leaderboards.ContainsKey(gameName))
-                                                {
-                                                    var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+                                                    _leaderboards.Add(gameName, new FiringRangeScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, gameName));
 
-                                                    retCtx.Database.Migrate();
-
-                                                    _leaderboards.Add(gameName, new FiringRangeScoreBoardData(retCtx, gameName));
-                                                }
                                                 return _leaderboards[gameName].SerializeToString("data").Result;
                                             }
                                         }
@@ -94,13 +89,7 @@ namespace WebAPIService.GameServices.RCHOME
                                                 if (!string.IsNullOrEmpty(gameName))
                                                 {
                                                     if (!_leaderboards.ContainsKey(gameName))
-                                                    {
-                                                        var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                                                        retCtx.Database.Migrate();
-
-                                                        _leaderboards.Add(gameName, new FiringRangeScoreBoardData(retCtx, gameName));
-                                                    }
+                                                        _leaderboards.Add(gameName, new FiringRangeScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, gameName));
 
                                                     _ = _leaderboards[gameName].UpdateScoreAsync(player, (int)float.Parse(score, CultureInfo.InvariantCulture));
                                                     return _leaderboards[gameName].SerializeToString("data").Result;

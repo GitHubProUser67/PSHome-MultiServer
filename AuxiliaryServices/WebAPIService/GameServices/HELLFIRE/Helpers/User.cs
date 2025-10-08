@@ -696,13 +696,7 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                                     #region Leaderboard entry update
 
                                     if (Leaderboards.NovusLeaderboard == null)
-                                    {
-                                        var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                                        retCtx.Database.Migrate();
-
-                                        Leaderboards.NovusLeaderboard = new InterGalacticScoreBoardData(retCtx);
-                                    }
+                                        Leaderboards.NovusLeaderboard = new InterGalacticScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
                                     int totalNebulonEver = (int)double.Parse(data.GetParameterValue("TotalNebulonEver"), CultureInfo.InvariantCulture);
 

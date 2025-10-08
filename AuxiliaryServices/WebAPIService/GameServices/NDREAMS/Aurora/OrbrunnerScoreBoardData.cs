@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using System.Text;
 using System.Threading.Tasks;
 using WebAPIService.GameServices.NDREAMS.Aurora.Entities;
@@ -8,8 +9,8 @@ namespace WebAPIService.GameServices.NDREAMS.Aurora
     internal class OrbrunnerScoreBoardData
     : ScoreboardService<OrbrunnerScoreBoardEntry>
     {
-        public OrbrunnerScoreBoardData(LeaderboardDbContext dbContext, object obj = null)
-            : base(dbContext)
+        public OrbrunnerScoreBoardData(DbContextOptions options, object obj = null)
+            : base(options)
         {
         }
 

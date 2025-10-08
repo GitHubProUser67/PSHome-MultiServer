@@ -12,27 +12,35 @@ namespace WebAPIService.GameServices.VEEMEE.gofish
     internal class GFScoreBoardData
     : ScoreboardService<GFScoreboardEntry>
     {
-        public GFScoreBoardData(LeaderboardDbContext dbContext, object obj = null)
-            : base(dbContext)
+        public GFScoreBoardData(DbContextOptions options, object obj = null)
+            : base(options)
         {
         }
 
         public async Task<List<GFScoreboardEntry>> GetYesterdayScoresAsync(int max = 20)
         {
-            DateTime today = DateTime.UtcNow.Date.AddDays(-1);
-            return await _dbContext.Set<GFScoreboardEntry>()
-                .Where(e => e.UpdatedAt >= today)
-                .OrderByDescending(e => e.Score)
-                .Take(max)
-                .ToListAsync()
-                .ConfigureAwait(false);
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                DateTime today = DateTime.UtcNow.Date.AddDays(-1);
+                return await db.Set<GFScoreboardEntry>()
+                    .Where(e => e.UpdatedAt >= today)
+                    .OrderByDescending(e => e.Score)
+                    .Take(max)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+            }
         }
 
         public GFScoreboardEntry GetEntryForUser(string userName)
         {
-            return _dbContext.Set<GFScoreboardEntry>()
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return db.Set<GFScoreboardEntry>()
                  .Where(x => x.PlayerId == userName)
                  .FirstOrDefault();
+            }
         }
 
         public override async Task UpdateScoreAsync(string playerId, float newScore, List<object> extraData = null)
@@ -44,39 +52,43 @@ namespace WebAPIService.GameServices.VEEMEE.gofish
             string biggestfishweight = (string)extraData[1];
             string totalfishweight = (string)extraData[2];
 
-            var set = _dbContext.Set<GFScoreboardEntry>();
-            DateTime now = DateTime.UtcNow; // use UTC for consistency
-
-            var existing = await set
-                .FirstOrDefaultAsync(e =>
-                e.PlayerId != null &&
-                e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
-
-            if (existing != null)
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
             {
-                if (newScore > existing.Score)
-                    existing.Score = newScore;
+                db.Database.Migrate();
+                var set = db.Set<GFScoreboardEntry>();
+                DateTime now = DateTime.UtcNow; // use UTC for consistency
 
-                existing.fishcount = fishcount;
-                existing.biggestfishweight = biggestfishweight;
-                existing.totalfishweight = totalfishweight;
-                existing.UpdatedAt = now; // update timestamp
+                var existing = await set
+                    .FirstOrDefaultAsync(e =>
+                    e.PlayerId != null &&
+                    e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
 
-                _dbContext.Update(existing);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
-            }
-            else
-            {
-                await set.AddAsync(new GFScoreboardEntry
+                if (existing != null)
                 {
-                    fishcount = fishcount,
-                    biggestfishweight = biggestfishweight,
-                    totalfishweight = totalfishweight,
-                    PlayerId = playerId,
-                    Score = newScore,
-                    UpdatedAt = now // set timestamp for new entry
-                }).ConfigureAwait(false);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                    if (newScore > existing.Score)
+                        existing.Score = newScore;
+
+                    existing.fishcount = fishcount;
+                    existing.biggestfishweight = biggestfishweight;
+                    existing.totalfishweight = totalfishweight;
+                    existing.UpdatedAt = now; // update timestamp
+
+                    db.Update(existing);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
+                else
+                {
+                    await set.AddAsync(new GFScoreboardEntry
+                    {
+                        fishcount = fishcount,
+                        biggestfishweight = biggestfishweight,
+                        totalfishweight = totalfishweight,
+                        PlayerId = playerId,
+                        Score = newScore,
+                        UpdatedAt = now // set timestamp for new entry
+                    }).ConfigureAwait(false);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
             }
         }
 

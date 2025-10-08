@@ -10,13 +10,7 @@ namespace WebAPIService.GameServices.JUGGERNAUT.clearasil
             if (QueryParameters != null)
             {
                 if (pushscore.Leaderboard == null)
-                {
-                    var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                    retCtx.Database.Migrate();
-
-                    pushscore.Leaderboard = new ClearasilScoreBoardData(retCtx);
-                }
+                    pushscore.Leaderboard = new ClearasilScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
                 if (!string.IsNullOrEmpty(QueryParameters["phase"]))
                     return pushscore.Leaderboard.SerializeToString("xml").Result;

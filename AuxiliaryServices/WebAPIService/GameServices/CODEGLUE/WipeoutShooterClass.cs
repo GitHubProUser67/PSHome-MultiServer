@@ -61,13 +61,7 @@ namespace WebAPIService.GameServices.CODEGLUE
                                     lock (_leaderboards)
                                     {
                                         if (!_leaderboards.ContainsKey(GAME_TYPE))
-                                        {
-                                            var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                                            retCtx.Database.Migrate();
-
-                                            _leaderboards.Add(GAME_TYPE, new WipeoutShooterScoreBoardData(retCtx, GAME_TYPE));
-                                        }
+                                            _leaderboards.Add(GAME_TYPE, new WipeoutShooterScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, GAME_TYPE));
 
                                         _ = _leaderboards[GAME_TYPE].UpdateScoreAsync(data.GetParameterValue("NAME"), float.Parse(data.GetParameterValue("SCORE"), CultureInfo.InvariantCulture));
                                         return _leaderboards[GAME_TYPE].SerializeToString(GAME_TYPE).Result;
@@ -110,13 +104,8 @@ namespace WebAPIService.GameServices.CODEGLUE
                                 lock (_leaderboards)
                                 {
                                     if (!_leaderboards.ContainsKey(GAME_TYPE))
-                                    {
-                                        var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+                                        _leaderboards.Add(GAME_TYPE, new WipeoutShooterScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, GAME_TYPE));
 
-                                        retCtx.Database.Migrate();
-
-                                        _leaderboards.Add(GAME_TYPE, new WipeoutShooterScoreBoardData(retCtx, GAME_TYPE));
-                                    }
                                     st.Append(_leaderboards[GAME_TYPE].SerializeToString(GAME_TYPE).Result);
                                 }
                             }

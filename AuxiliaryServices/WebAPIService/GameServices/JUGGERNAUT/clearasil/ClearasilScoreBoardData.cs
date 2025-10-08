@@ -10,8 +10,8 @@ namespace WebAPIService.GameServices.JUGGERNAUT.clearasil
     public class ClearasilScoreBoardData
     : ScoreboardService<ClearasilScoreBoardEntry>
     {
-        public ClearasilScoreBoardData(LeaderboardDbContext dbContext, object obj = null)
-            : base(dbContext)
+        public ClearasilScoreBoardData(DbContextOptions options, object obj = null)
+            : base(options)
         {
         }
 
@@ -20,30 +20,34 @@ namespace WebAPIService.GameServices.JUGGERNAUT.clearasil
             if (string.IsNullOrEmpty(playerId))
                 return;
 
-            var set = _dbContext.Set<ClearasilScoreBoardEntry>();
-            DateTime now = DateTime.UtcNow;
-
-            var existing = await set.FirstOrDefaultAsync(e =>
-                e.PsnId != null &&
-                e.PsnId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
-
-            if (existing != null)
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
             {
-                existing.Time = time;
-                existing.UpdatedAt = now;
-                _dbContext.Update(existing);
-            }
-            else
-            {
-                await set.AddAsync(new ClearasilScoreBoardEntry
+                db.Database.Migrate();
+                var set = db.Set<ClearasilScoreBoardEntry>();
+                DateTime now = DateTime.UtcNow;
+
+                var existing = await set.FirstOrDefaultAsync(e =>
+                    e.PsnId != null &&
+                    e.PsnId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
+
+                if (existing != null)
                 {
-                    PsnId = playerId,
-                    Time = time,
-                    UpdatedAt = now
-                }).ConfigureAwait(false);
-            }
+                    existing.Time = time;
+                    existing.UpdatedAt = now;
+                    db.Update(existing);
+                }
+                else
+                {
+                    await set.AddAsync(new ClearasilScoreBoardEntry
+                    {
+                        PsnId = playerId,
+                        Time = time,
+                        UpdatedAt = now
+                    }).ConfigureAwait(false);
+                }
 
-            await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                await db.SaveChangesAsync().ConfigureAwait(false);
+            }
         }
 
         public override async Task<string> SerializeToString(string gameName, int max = 20)

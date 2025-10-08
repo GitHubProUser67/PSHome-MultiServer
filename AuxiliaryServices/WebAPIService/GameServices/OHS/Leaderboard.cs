@@ -291,11 +291,7 @@ namespace WebAPIService.GameServices.OHS
         {
             if (!_leaderboards.ContainsKey(tablekey))
             {
-                var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                retCtx.Database.Migrate();
-
-                if (_leaderboards.TryAdd(tablekey, new OHSScoreBoardData(retCtx, tablekey)) && fillResults)
+                if (_leaderboards.TryAdd(tablekey, new OHSScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, tablekey)) && fillResults)
                 {
                     for (int j = 1; j < 11; j++)
                     {

@@ -12,16 +12,20 @@ namespace WebAPIService.GameServices.VEEMEE.olm
     internal class OLMScoreBoardData
     : ScoreboardService<OLMScoreboardEntry>
     {
-        public OLMScoreBoardData(LeaderboardDbContext dbContext, object obj = null)
-            : base(dbContext)
+        public OLMScoreBoardData(DbContextOptions options, object obj = null)
+            : base(options)
         {
         }
 
         public OLMScoreboardEntry GetEntryForUser(string userName)
         {
-            return _dbContext.Set<OLMScoreboardEntry>()
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return db.Set<OLMScoreboardEntry>()
                  .Where(x => x.PlayerId == userName)
                  .FirstOrDefault();
+            }
         }
 
         public override async Task UpdateScoreAsync(string playerId, float newScore, List<object> extraData = null)
@@ -31,35 +35,39 @@ namespace WebAPIService.GameServices.VEEMEE.olm
 
             string throws = (string)extraData[0];
 
-            var set = _dbContext.Set<OLMScoreboardEntry>();
-            DateTime now = DateTime.UtcNow; // use UTC for consistency
-
-            var existing = await set
-                .FirstOrDefaultAsync(e =>
-                e.PlayerId != null &&
-                e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
-
-            if (existing != null)
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
             {
-                if (newScore > existing.Score)
-                    existing.Score = newScore;
+                db.Database.Migrate();
+                var set = db.Set<OLMScoreboardEntry>();
+                DateTime now = DateTime.UtcNow; // use UTC for consistency
 
-                existing.throws = throws;
-                existing.UpdatedAt = now; // update timestamp
+                var existing = await set
+                    .FirstOrDefaultAsync(e =>
+                    e.PlayerId != null &&
+                    e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
 
-                _dbContext.Update(existing);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
-            }
-            else
-            {
-                await set.AddAsync(new OLMScoreboardEntry
+                if (existing != null)
                 {
-                    throws = throws,
-                    PlayerId = playerId,
-                    Score = newScore,
-                    UpdatedAt = now // set timestamp for new entry
-                }).ConfigureAwait(false);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                    if (newScore > existing.Score)
+                        existing.Score = newScore;
+
+                    existing.throws = throws;
+                    existing.UpdatedAt = now; // update timestamp
+
+                    db.Update(existing);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
+                else
+                {
+                    await set.AddAsync(new OLMScoreboardEntry
+                    {
+                        throws = throws,
+                        PlayerId = playerId,
+                        Score = newScore,
+                        UpdatedAt = now // set timestamp for new entry
+                    }).ConfigureAwait(false);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
             }
         }
 

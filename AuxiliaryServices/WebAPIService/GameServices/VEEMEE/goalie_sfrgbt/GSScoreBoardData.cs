@@ -14,78 +14,102 @@ namespace WebAPIService.GameServices.VEEMEE.goalie_sfrgbt
     {
         private string _gameproject;
 
-        public GSScoreBoardData(LeaderboardDbContext dbContext, object obj = null)
-            : base(dbContext)
+        public GSScoreBoardData(DbContextOptions options, object obj = null)
+            : base(options)
         {
             _gameproject = (string)obj;
         }
 
         public override async Task<List<GSScoreboardEntry>> GetTopScoresAsync(int max = 10)
         {
-            return await _dbContext.Set<GSScoreboardEntry>()
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return await db.Set<GSScoreboardEntry>()
                 .Where(x => x.ExtraData1 == _gameproject)
                 .OrderByDescending(e => e.Score)
                 .Take(max)
                 .ToListAsync().ConfigureAwait(false);
+            }
         }
 
         public override async Task<List<GSScoreboardEntry>> GetTodayScoresAsync(int max = 10)
         {
-            DateTime today = DateTime.UtcNow.Date;
-            return await _dbContext.Set<GSScoreboardEntry>()
-                .Where(x => x.ExtraData1 == _gameproject)
-                .Where(e => e.UpdatedAt >= today)
-                .OrderByDescending(e => e.Score)
-                .Take(max)
-                .ToListAsync()
-                .ConfigureAwait(false);
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                DateTime today = DateTime.UtcNow.Date;
+                return await db.Set<GSScoreboardEntry>()
+                    .Where(x => x.ExtraData1 == _gameproject)
+                    .Where(e => e.UpdatedAt >= today)
+                    .OrderByDescending(e => e.Score)
+                    .Take(max)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+            }
         }
 
         public async Task<List<GSScoreboardEntry>> GetYesterdayScoresAsync(int max = 10)
         {
-            DateTime today = DateTime.UtcNow.Date.AddDays(-1);
-            return await _dbContext.Set<GSScoreboardEntry>()
-                .Where(x => x.ExtraData1 == _gameproject)
-                .Where(e => e.UpdatedAt >= today)
-                .OrderByDescending(e => e.Score)
-                .Take(max)
-                .ToListAsync()
-                .ConfigureAwait(false);
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                DateTime today = DateTime.UtcNow.Date.AddDays(-1);
+                return await db.Set<GSScoreboardEntry>()
+                    .Where(x => x.ExtraData1 == _gameproject)
+                    .Where(e => e.UpdatedAt >= today)
+                    .OrderByDescending(e => e.Score)
+                    .Take(max)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+            }
         }
 
         public override async Task<List<GSScoreboardEntry>> GetCurrentWeekScoresAsync(int max = 10)
         {
-            DateTime today = DateTime.UtcNow.Date;
-            int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
-            DateTime weekStart = today.AddDays(-1 * diff); // Monday
-            return await _dbContext.Set<GSScoreboardEntry>()
-                .Where(x => x.ExtraData1 == _gameproject)
-                .Where(e => e.UpdatedAt >= weekStart)
-                .OrderByDescending(e => e.Score)
-                .Take(max)
-                .ToListAsync()
-                .ConfigureAwait(false);
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                DateTime today = DateTime.UtcNow.Date;
+                int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
+                DateTime weekStart = today.AddDays(-1 * diff); // Monday
+                return await db.Set<GSScoreboardEntry>()
+                    .Where(x => x.ExtraData1 == _gameproject)
+                    .Where(e => e.UpdatedAt >= weekStart)
+                    .OrderByDescending(e => e.Score)
+                    .Take(max)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+            }
         }
 
         public override async Task<List<GSScoreboardEntry>> GetCurrentMonthScoresAsync(int max = 10)
         {
-            DateTime today = DateTime.UtcNow.Date;
-            DateTime monthStart = new DateTime(today.Year, today.Month, 1);
-            return await _dbContext.Set<GSScoreboardEntry>()
-                .Where(x => x.ExtraData1 == _gameproject)
-                .Where(e => e.UpdatedAt >= monthStart)
-                .OrderByDescending(e => e.Score)
-                .Take(max)
-                .ToListAsync()
-                .ConfigureAwait(false);
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                DateTime today = DateTime.UtcNow.Date;
+                DateTime monthStart = new DateTime(today.Year, today.Month, 1);
+                return await db.Set<GSScoreboardEntry>()
+                    .Where(x => x.ExtraData1 == _gameproject)
+                    .Where(e => e.UpdatedAt >= monthStart)
+                    .OrderByDescending(e => e.Score)
+                    .Take(max)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+            }
         }
 
         public GSScoreboardEntry GetEntryForUser(string userName)
         {
-            return _dbContext.Set<GSScoreboardEntry>()
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return db.Set<GSScoreboardEntry>()
                  .Where(x => x.ExtraData1 == _gameproject)
                  .Where(x => x.PlayerId == userName)
                  .FirstOrDefault();
+            }
         }
 
         public override async Task UpdateScoreAsync(string playerId, float newScore, List<object> extraData = null)
@@ -96,39 +120,43 @@ namespace WebAPIService.GameServices.VEEMEE.goalie_sfrgbt
             string duration = (string)extraData[0];
             string guest = (string)extraData[1];
 
-            var set = _dbContext.Set<GSScoreboardEntry>();
-            DateTime now = DateTime.UtcNow; // use UTC for consistency
-
-            var existing = await set
-                .Where(x => x.ExtraData1 == _gameproject)
-                .FirstOrDefaultAsync(e =>
-                e.PlayerId != null &&
-                e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
-
-            if (existing != null)
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
             {
-                if (newScore > existing.Score)
-                    existing.Score = newScore;
+                db.Database.Migrate();
+                var set = db.Set<GSScoreboardEntry>();
+                DateTime now = DateTime.UtcNow; // use UTC for consistency
 
-                existing.duration = duration;
-                existing.guest = guest;
-                existing.UpdatedAt = now; // update timestamp
+                var existing = await set
+                    .Where(x => x.ExtraData1 == _gameproject)
+                    .FirstOrDefaultAsync(e =>
+                    e.PlayerId != null &&
+                    e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
 
-                _dbContext.Update(existing);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
-            }
-            else
-            {
-                await set.AddAsync(new GSScoreboardEntry
+                if (existing != null)
                 {
-                    ExtraData1 = _gameproject,
-                    duration = duration,
-                    guest = guest,
-                    PlayerId = playerId,
-                    Score = newScore,
-                    UpdatedAt = now // set timestamp for new entry
-                }).ConfigureAwait(false);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                    if (newScore > existing.Score)
+                        existing.Score = newScore;
+
+                    existing.duration = duration;
+                    existing.guest = guest;
+                    existing.UpdatedAt = now; // update timestamp
+
+                    db.Update(existing);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
+                else
+                {
+                    await set.AddAsync(new GSScoreboardEntry
+                    {
+                        ExtraData1 = _gameproject,
+                        duration = duration,
+                        guest = guest,
+                        PlayerId = playerId,
+                        Score = newScore,
+                        UpdatedAt = now // set timestamp for new entry
+                    }).ConfigureAwait(false);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
             }
         }
 

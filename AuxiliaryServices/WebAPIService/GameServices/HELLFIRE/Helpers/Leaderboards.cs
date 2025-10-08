@@ -97,13 +97,7 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                 string UserNovusPrimeID = data.GetParameterValue("UserID");
 
                 if (NovusLeaderboard == null)
-                {
-                    var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                    retCtx.Database.Migrate();
-
-                    NovusLeaderboard = new InterGalacticScoreBoardData(retCtx);
-                }
+                    NovusLeaderboard = new InterGalacticScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
                 return "<Response>" + NovusLeaderboard.SerializeToString("Root").Result ?? string.Empty + "</Response>";
             }

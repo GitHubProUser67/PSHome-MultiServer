@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using WebAPIService.GameServices.COGS.Entities;
 using WebAPIService.LeaderboardService;
@@ -8,8 +9,8 @@ namespace WebAPIService.GameServices.COGS
     internal class COGSScoreBoardData
     : ScoreboardService<CogsScoreboardEntry>
     {
-        public COGSScoreBoardData(LeaderboardDbContext dbContext, object obj = null)
-            : base(dbContext)
+        public COGSScoreBoardData(DbContextOptions options, object obj = null)
+            : base(options)
         {
         }
 

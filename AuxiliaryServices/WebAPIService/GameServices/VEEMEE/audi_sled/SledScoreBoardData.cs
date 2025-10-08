@@ -12,17 +12,21 @@ namespace WebAPIService.GameServices.VEEMEE.audi_sled
     internal class SledScoreBoardData
    : ScoreboardService<SledScoreboardEntry>
     {
-        public SledScoreBoardData(LeaderboardDbContext dbContext, object obj = null)
-            : base(dbContext)
+        public SledScoreBoardData(DbContextOptions options, object obj = null)
+            : base(options)
         {
         }
 
         public override async Task<List<SledScoreboardEntry>> GetTopScoresAsync(int max = 10)
         {
-            return await _dbContext.Set<SledScoreboardEntry>()
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return await db.Set<SledScoreboardEntry>()
                 .OrderBy(e => e.Score)
                 .Take(max)
                 .ToListAsync().ConfigureAwait(false);
+            }
         }
 
         public override async Task UpdateScoreAsync(string playerId, float newScore, List<object> extraData = null)
@@ -32,52 +36,64 @@ namespace WebAPIService.GameServices.VEEMEE.audi_sled
 
             int numOfRaces = (int)extraData[0];
 
-            var set = _dbContext.Set<SledScoreboardEntry>();
-            DateTime now = DateTime.UtcNow; // use UTC for consistency
-
-            var existing = await set
-                .FirstOrDefaultAsync(e =>
-                e.PlayerId != null &&
-                e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
-
-            if (existing != null)
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
             {
-                if (newScore < existing.Score)
-                    existing.Score = newScore;
+                db.Database.Migrate();
+                var set = db.Set<SledScoreboardEntry>();
+                DateTime now = DateTime.UtcNow; // use UTC for consistency
 
-                existing.numOfRaces = numOfRaces;
-                existing.UpdatedAt = now; // update timestamp
+                var existing = await set
+                    .FirstOrDefaultAsync(e =>
+                    e.PlayerId != null &&
+                    e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
 
-                _dbContext.Update(existing);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
-            }
-            else
-            {
-                await set.AddAsync(new SledScoreboardEntry
+                if (existing != null)
                 {
-                    numOfRaces = numOfRaces,
-                    PlayerId = playerId,
-                    Score = newScore,
-                    UpdatedAt = now // set timestamp for new entry
-                }).ConfigureAwait(false);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                    if (newScore < existing.Score)
+                        existing.Score = newScore;
+
+                    existing.numOfRaces = numOfRaces;
+                    existing.UpdatedAt = now; // update timestamp
+
+                    db.Update(existing);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
+                else
+                {
+                    await set.AddAsync(new SledScoreboardEntry
+                    {
+                        numOfRaces = numOfRaces,
+                        PlayerId = playerId,
+                        Score = newScore,
+                        UpdatedAt = now // set timestamp for new entry
+                    }).ConfigureAwait(false);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
             }
         }
 
         public int GetNumOfRacesForUser(string userName)
         {
-           return _dbContext.Set<SledScoreboardEntry>()
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return db.Set<SledScoreboardEntry>()
                 .Where(x => x.PlayerId == userName)
                 .Select(x => (int?)x.numOfRaces)
                 .FirstOrDefault() ?? 1;
+            }
         }
 
         public float GetScoreForUser(string userName)
         {
-            return _dbContext.Set<SledScoreboardEntry>()
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return db.Set<SledScoreboardEntry>()
                  .Where(x => x.PlayerId == userName)
                  .Select(x => (float?)x.Score)
                  .FirstOrDefault() ?? (float)0.0;
+            }
         }
 
         public override async Task<string> SerializeToString(string gameName, int max = 10)

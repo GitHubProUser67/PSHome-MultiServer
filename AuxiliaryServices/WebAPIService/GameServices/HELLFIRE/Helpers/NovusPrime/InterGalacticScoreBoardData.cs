@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using WebAPIService.GameServices.HELLFIRE.Entities.NovusPrime;
 using WebAPIService.LeaderboardService;
@@ -8,8 +9,8 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers.NovusPrime
     public class InterGalacticScoreBoardData
    : ScoreboardService<InterGalacticScoreboardEntry>
     {
-        public InterGalacticScoreBoardData(LeaderboardDbContext dbContext, object obj = null)
-            : base(dbContext)
+        public InterGalacticScoreBoardData(DbContextOptions options, object obj = null)
+            : base(options)
         {
         }
 

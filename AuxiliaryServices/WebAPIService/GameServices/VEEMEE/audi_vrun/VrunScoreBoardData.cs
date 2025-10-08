@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using WebAPIService.GameServices.VEEMEE.audi_sled.Entities;
 using WebAPIService.GameServices.VEEMEE.audi_vrun.Entities;
 using WebAPIService.LeaderboardService;
 
@@ -13,8 +12,8 @@ namespace WebAPIService.GameServices.VEEMEE.audi_vrun
     internal class VrunScoreBoardData
    : ScoreboardService<VrunScoreboardEntry>
     {
-        public VrunScoreBoardData(LeaderboardDbContext dbContext, object obj = null)
-            : base(dbContext)
+        public VrunScoreBoardData(DbContextOptions options, object obj = null)
+            : base(options)
         {
         }
 
@@ -26,62 +25,78 @@ namespace WebAPIService.GameServices.VEEMEE.audi_vrun
             int numOfRaces = (int)extraData[0];
             float time = (float)extraData[1];
 
-            var set = _dbContext.Set<VrunScoreboardEntry>();
-            DateTime now = DateTime.UtcNow; // use UTC for consistency
-
-            var existing = await set
-                .FirstOrDefaultAsync(e =>
-                e.PlayerId != null &&
-                e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
-
-            if (existing != null)
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
             {
-                if (newScore > existing.Score)
-                    existing.Score = newScore;
+                db.Database.Migrate();
+                var set = db.Set<VrunScoreboardEntry>();
+                DateTime now = DateTime.UtcNow; // use UTC for consistency
 
-                existing.time = time;
-                existing.numOfRaces = numOfRaces;
-                existing.UpdatedAt = now; // update timestamp
+                var existing = await set
+                    .FirstOrDefaultAsync(e =>
+                    e.PlayerId != null &&
+                    e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
 
-                _dbContext.Update(existing);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
-            }
-            else
-            {
-                await set.AddAsync(new VrunScoreboardEntry
+                if (existing != null)
                 {
-                    time = time,
-                    numOfRaces = numOfRaces,
-                    PlayerId = playerId,
-                    Score = newScore,
-                    UpdatedAt = now // set timestamp for new entry
-                }).ConfigureAwait(false);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                    if (newScore > existing.Score)
+                        existing.Score = newScore;
+
+                    existing.time = time;
+                    existing.numOfRaces = numOfRaces;
+                    existing.UpdatedAt = now; // update timestamp
+
+                    db.Update(existing);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
+                else
+                {
+                    await set.AddAsync(new VrunScoreboardEntry
+                    {
+                        time = time,
+                        numOfRaces = numOfRaces,
+                        PlayerId = playerId,
+                        Score = newScore,
+                        UpdatedAt = now // set timestamp for new entry
+                    }).ConfigureAwait(false);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
             }
         }
 
         public int GetNumOfRacesForUser(string userName)
         {
-            return _dbContext.Set<SledMpScoreboardEntry>()
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return db.Set<VrunScoreboardEntry>()
                  .Where(x => x.PlayerId == userName)
                  .Select(x => (int?)x.numOfRaces)
                  .FirstOrDefault() ?? 1;
+            }
         }
 
         public float GetScoreForUser(string userName)
         {
-            return _dbContext.Set<VrunScoreboardEntry>()
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return db.Set<VrunScoreboardEntry>()
                  .Where(x => x.PlayerId == userName)
                  .Select(x => (float?)x.Score)
                  .FirstOrDefault() ?? (float)0.0;
+            }
         }
 
         public float GetTimeForUser(string userName)
         {
-            return _dbContext.Set<VrunScoreboardEntry>()
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return db.Set<VrunScoreboardEntry>()
                  .Where(x => x.PlayerId == userName)
                  .Select(x => (float?)x.time)
                  .FirstOrDefault() ?? (float)0.0;
+            }
         }
 
         public override async Task<string> SerializeToString(string gameName, int max = 8)

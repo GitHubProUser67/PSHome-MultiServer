@@ -11,61 +11,81 @@ namespace WebAPIService.LeaderboardService
     public class ScoreboardService<TEntry> : IScoreboardService<TEntry>
     where TEntry : ScoreboardEntryBase, new()
     {
-        protected readonly LeaderboardDbContext _dbContext;
+        protected readonly DbContextOptions _dboptions;
 
-        public ScoreboardService(LeaderboardDbContext dbContext, object obj = null)
+        public ScoreboardService(DbContextOptions options, object obj = null)
         {
-            _dbContext = dbContext;
+            _dboptions = options;
         }
 
         public virtual async Task<List<TEntry>> GetAllScoresAsync()
         {
-            return await _dbContext.Set<TEntry>()
-                .ToListAsync().ConfigureAwait(false);
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return await db.Set<TEntry>()
+                   .ToListAsync().ConfigureAwait(false);
+            }
         }
 
         public virtual async Task<List<TEntry>> GetTopScoresAsync(int max = 10)
         {
-            return await _dbContext.Set<TEntry>()
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return await db.Set<TEntry>()
                 .OrderByDescending(e => e.Score)
                 .Take(max)
                 .ToListAsync().ConfigureAwait(false);
+            }
         }
 
         public virtual async Task<List<TEntry>> GetTodayScoresAsync(int max = 10)
         {
-            DateTime today = DateTime.UtcNow.Date;
-            return await _dbContext.Set<TEntry>()
-                .Where(e => e.UpdatedAt >= today)
-                .OrderByDescending(e => e.Score)
-                .Take(max)
-                .ToListAsync()
-                .ConfigureAwait(false);
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                DateTime today = DateTime.UtcNow.Date;
+                return await db.Set<TEntry>()
+                    .Where(e => e.UpdatedAt >= today)
+                    .OrderByDescending(e => e.Score)
+                    .Take(max)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+            }
         }
 
         public virtual async Task<List<TEntry>> GetCurrentWeekScoresAsync(int max = 10)
         {
-            DateTime today = DateTime.UtcNow.Date;
-            int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
-            DateTime weekStart = today.AddDays(-1 * diff); // Monday
-            return await _dbContext.Set<TEntry>()
-                .Where(e => e.UpdatedAt >= weekStart)
-                .OrderByDescending(e => e.Score)
-                .Take(max)
-                .ToListAsync()
-                .ConfigureAwait(false);
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                DateTime today = DateTime.UtcNow.Date;
+                int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
+                DateTime weekStart = today.AddDays(-1 * diff); // Monday
+                return await db.Set<TEntry>()
+                    .Where(e => e.UpdatedAt >= weekStart)
+                    .OrderByDescending(e => e.Score)
+                    .Take(max)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+            }
         }
 
         public virtual async Task<List<TEntry>> GetCurrentMonthScoresAsync(int max = 10)
         {
-            DateTime today = DateTime.UtcNow.Date;
-            DateTime monthStart = new DateTime(today.Year, today.Month, 1);
-            return await _dbContext.Set<TEntry>()
-                .Where(e => e.UpdatedAt >= monthStart)
-                .OrderByDescending(e => e.Score)
-                .Take(max)
-                .ToListAsync()
-                .ConfigureAwait(false);
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                DateTime today = DateTime.UtcNow.Date;
+                DateTime monthStart = new DateTime(today.Year, today.Month, 1);
+                return await db.Set<TEntry>()
+                    .Where(e => e.UpdatedAt >= monthStart)
+                    .OrderByDescending(e => e.Score)
+                    .Take(max)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+            }
         }
 
         public virtual async Task UpdateScoreAsync(string playerId, float newScore, List<object> extraData = null)
@@ -73,32 +93,36 @@ namespace WebAPIService.LeaderboardService
             if (string.IsNullOrEmpty(playerId))
                 return;
 
-            var set = _dbContext.Set<TEntry>();
-            DateTime now = DateTime.UtcNow; // use UTC for consistency
-
-            var existing = await set.FirstOrDefaultAsync(e =>
-                e.PlayerId != null &&
-                e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
-
-            if (existing != null)
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
             {
-                if (newScore > existing.Score)
+                db.Database.Migrate();
+                var set = db.Set<TEntry>();
+                DateTime now = DateTime.UtcNow; // use UTC for consistency
+
+                var existing = await set.FirstOrDefaultAsync(e =>
+                    e.PlayerId != null &&
+                    e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
+
+                if (existing != null)
                 {
-                    existing.Score = newScore;
-                    existing.UpdatedAt = now; // update timestamp
-                    _dbContext.Update(existing);
-                    await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                    if (newScore > existing.Score)
+                    {
+                        existing.Score = newScore;
+                        existing.UpdatedAt = now; // update timestamp
+                        db.Update(existing);
+                        await db.SaveChangesAsync().ConfigureAwait(false);
+                    }
                 }
-            }
-            else
-            {
-                await set.AddAsync(new TEntry
+                else
                 {
-                    PlayerId = playerId,
-                    Score = newScore,
-                    UpdatedAt = now // set timestamp for new entry
-                }).ConfigureAwait(false);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                    await set.AddAsync(new TEntry
+                    {
+                        PlayerId = playerId,
+                        Score = newScore,
+                        UpdatedAt = now // set timestamp for new entry
+                    }).ConfigureAwait(false);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
             }
         }
 

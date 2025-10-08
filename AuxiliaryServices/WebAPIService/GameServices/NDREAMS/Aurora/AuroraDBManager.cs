@@ -279,11 +279,7 @@ namespace WebAPIService.GameServices.NDREAMS.Aurora
                             {
                                 if (_leaderboard == null)
                                 {
-                                    var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                                    retCtx.Database.Migrate();
-
-                                    _leaderboard = new OrbrunnerScoreBoardData(retCtx);
+                                    _leaderboard = new OrbrunnerScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
                                     _ = _leaderboard.UpdateScoreAsync("EatFlammingDeath", 50000);
                                 }
@@ -315,11 +311,7 @@ namespace WebAPIService.GameServices.NDREAMS.Aurora
                     case "high":
                         if (_leaderboard == null)
                         {
-                            var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                            retCtx.Database.Migrate();
-
-                            _leaderboard = new OrbrunnerScoreBoardData(retCtx);
+                            _leaderboard = new OrbrunnerScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
                             _ = _leaderboard.UpdateScoreAsync("EatFlammingDeath", 50000);
                         }

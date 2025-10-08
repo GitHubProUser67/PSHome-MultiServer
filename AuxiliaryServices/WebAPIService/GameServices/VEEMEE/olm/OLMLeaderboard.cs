@@ -12,13 +12,7 @@ namespace WebAPIService.GameServices.VEEMEE.olm
         public static void InitializeLeaderboard()
         {
             if (Leaderboard == null)
-            {
-                var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                retCtx.Database.Migrate();
-
-                Leaderboard = new OLMScoreBoardData(retCtx);
-            }
+                Leaderboard = new OLMScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
         }
 
         public static string GetLeaderboardPOST(byte[] PostData, string ContentType, int mode, string apiPath)

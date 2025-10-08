@@ -25,13 +25,7 @@ namespace WebAPIService.GameServices.COGS
         public string ProcessRequest(byte[] PostData = null, string ContentType = null)
         {
             if (_leaderboard == null)
-            {
-                var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                retCtx.Database.Migrate();
-
-                _leaderboard = new COGSScoreBoardData(retCtx);
-            }
+                _leaderboard = new COGSScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
             switch (method)
             {

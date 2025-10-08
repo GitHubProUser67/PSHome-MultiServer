@@ -14,19 +14,23 @@ namespace WebAPIService.GameServices.RCHOME
     {
         private string _gameproject;
 
-        public FiringRangeScoreBoardData(LeaderboardDbContext dbContext, object obj = null)
-            : base(dbContext)
+        public FiringRangeScoreBoardData(DbContextOptions options, object obj = null)
+            : base(options)
         {
             _gameproject = (string)obj;
         }
 
         public override async Task<List<FiringRangeScoreBoardEntry>> GetTopScoresAsync(int max = 10)
         {
-            return await _dbContext.Set<FiringRangeScoreBoardEntry>()
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return await db.Set<FiringRangeScoreBoardEntry>()
                 .Where(x => x.ExtraData1 == _gameproject)
                 .OrderByDescending(e => e.Score)
                 .Take(max)
                 .ToListAsync().ConfigureAwait(false);
+            }
         }
 
         public override async Task UpdateScoreAsync(string playerId, float newScore, List<object> extraData = null)
@@ -34,35 +38,39 @@ namespace WebAPIService.GameServices.RCHOME
             if (string.IsNullOrEmpty(playerId))
                 return;
 
-            var set = _dbContext.Set<FiringRangeScoreBoardEntry>();
-            DateTime now = DateTime.UtcNow; // use UTC for consistency
-
-            var existing = await set
-                .Where(x => x.ExtraData1 == _gameproject)
-                .FirstOrDefaultAsync(e =>
-                e.PlayerId != null &&
-                e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
-
-            if (existing != null)
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
             {
-                if (newScore > existing.Score)
+                db.Database.Migrate();
+                var set = db.Set<FiringRangeScoreBoardEntry>();
+                DateTime now = DateTime.UtcNow; // use UTC for consistency
+
+                var existing = await set
+                    .Where(x => x.ExtraData1 == _gameproject)
+                    .FirstOrDefaultAsync(e =>
+                    e.PlayerId != null &&
+                    e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
+
+                if (existing != null)
                 {
-                    existing.Score = newScore;
-                    existing.UpdatedAt = now; // update timestamp
-                    _dbContext.Update(existing);
-                    await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                    if (newScore > existing.Score)
+                    {
+                        existing.Score = newScore;
+                        existing.UpdatedAt = now; // update timestamp
+                        db.Update(existing);
+                        await db.SaveChangesAsync().ConfigureAwait(false);
+                    }
                 }
-            }
-            else
-            {
-                await set.AddAsync(new FiringRangeScoreBoardEntry
+                else
                 {
-                    ExtraData1 = _gameproject,
-                    PlayerId = playerId,
-                    Score = newScore,
-                    UpdatedAt = now // set timestamp for new entry
-                }).ConfigureAwait(false);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                    await set.AddAsync(new FiringRangeScoreBoardEntry
+                    {
+                        ExtraData1 = _gameproject,
+                        PlayerId = playerId,
+                        Score = newScore,
+                        UpdatedAt = now // set timestamp for new entry
+                    }).ConfigureAwait(false);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
             }
         }
 

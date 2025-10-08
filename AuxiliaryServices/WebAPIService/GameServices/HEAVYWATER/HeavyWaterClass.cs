@@ -523,13 +523,7 @@ namespace WebAPIService.GameServices.HEAVYWATER
                                     Directory.CreateDirectory(hexxDataPath);
 
                                     if (_hexx_leaderboard == null)
-                                    {
-                                        var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                                        retCtx.Database.Migrate();
-
-                                        _hexx_leaderboard = new ScoreboardService<HexxScoreboardEntry>(retCtx);
-                                    }
+                                        _hexx_leaderboard = new ScoreboardService<HexxScoreboardEntry>(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
                                     _ = _hexx_leaderboard.UpdateScoreAsync(parts[parts.Length - 2], int.Parse(parts[parts.Length - 1]));
 

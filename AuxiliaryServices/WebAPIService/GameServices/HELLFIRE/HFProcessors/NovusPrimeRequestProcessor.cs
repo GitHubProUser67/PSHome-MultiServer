@@ -165,13 +165,7 @@ namespace WebAPIService.GameServices.HELLFIRE.HFProcessors
                             DateTime refdate = DateTime.Now; // We avoid race conditions by calculating it one time.
 
                             if (Leaderboards.NovusLeaderboard == null)
-                            {
-                                var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                                retCtx.Database.Migrate();
-
-                                Leaderboards.NovusLeaderboard = new InterGalacticScoreBoardData(retCtx);
-                            }
+                                Leaderboards.NovusLeaderboard = new InterGalacticScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
                             switch (Type)
                             {

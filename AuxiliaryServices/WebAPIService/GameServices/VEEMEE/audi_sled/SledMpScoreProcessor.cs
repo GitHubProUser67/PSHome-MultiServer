@@ -16,13 +16,7 @@ namespace WebAPIService.GameServices.VEEMEE.audi_sled
         public static void InitializeLeaderboard()
         {
             if (_leaderboard == null)
-            {
-                var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                retCtx.Database.Migrate();
-
-                _leaderboard = new SledMpScoreBoardData(retCtx);
-            }
+                _leaderboard = new SledMpScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
         }
 
         public static string SetUserDataPOST(byte[] PostData, string boundary, string apiPath)

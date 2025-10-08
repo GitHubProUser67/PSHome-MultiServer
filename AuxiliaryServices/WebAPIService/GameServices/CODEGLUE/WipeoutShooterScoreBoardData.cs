@@ -14,19 +14,23 @@ namespace WebAPIService.GameServices.CODEGLUE
     {
         private string _gametype;
 
-        public WipeoutShooterScoreBoardData(LeaderboardDbContext dbContext, object obj = null)
-            : base(dbContext)
+        public WipeoutShooterScoreBoardData(DbContextOptions options, object obj = null)
+            : base(options)
         {
             _gametype = (string)obj;
         }
 
         public override async Task<List<WipeoutShooterScoreboardEntry>> GetTopScoresAsync(int max = 10)
         {
-            return await _dbContext.Set<WipeoutShooterScoreboardEntry>()
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return await db.Set<WipeoutShooterScoreboardEntry>()
                 .Where(x => x.ExtraData1 == _gametype)
                 .OrderByDescending(e => e.Score)
                 .Take(max)
                 .ToListAsync().ConfigureAwait(false);
+            }
         }
 
         public override async Task UpdateScoreAsync(string playerId, float newScore, List<object> extraData = null)
@@ -34,35 +38,39 @@ namespace WebAPIService.GameServices.CODEGLUE
             if (string.IsNullOrEmpty(playerId))
                 return;
 
-            var set = _dbContext.Set<WipeoutShooterScoreboardEntry>();
-            DateTime now = DateTime.UtcNow; // use UTC for consistency
-
-            var existing = await set
-                .Where(x => x.ExtraData1 == _gametype)
-                .FirstOrDefaultAsync(e =>
-                e.PlayerId != null &&
-                e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
-
-            if (existing != null)
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
             {
-                if (newScore > existing.Score)
+                db.Database.Migrate();
+                var set = db.Set<WipeoutShooterScoreboardEntry>();
+                DateTime now = DateTime.UtcNow; // use UTC for consistency
+
+                var existing = await set
+                    .Where(x => x.ExtraData1 == _gametype)
+                    .FirstOrDefaultAsync(e =>
+                    e.PlayerId != null &&
+                    e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
+
+                if (existing != null)
                 {
-                    existing.Score = newScore;
-                    existing.UpdatedAt = now; // update timestamp
-                    _dbContext.Update(existing);
-                    await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                    if (newScore > existing.Score)
+                    {
+                        existing.Score = newScore;
+                        existing.UpdatedAt = now; // update timestamp
+                        db.Update(existing);
+                        await db.SaveChangesAsync().ConfigureAwait(false);
+                    }
                 }
-            }
-            else
-            {
-                await set.AddAsync(new WipeoutShooterScoreboardEntry
+                else
                 {
-                    ExtraData1 = _gametype,
-                    PlayerId = playerId,
-                    Score = newScore,
-                    UpdatedAt = now // set timestamp for new entry
-                }).ConfigureAwait(false);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                    await set.AddAsync(new WipeoutShooterScoreboardEntry
+                    {
+                        ExtraData1 = _gametype,
+                        PlayerId = playerId,
+                        Score = newScore,
+                        UpdatedAt = now // set timestamp for new entry
+                    }).ConfigureAwait(false);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
             }
         }
 

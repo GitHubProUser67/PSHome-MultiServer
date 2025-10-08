@@ -34,13 +34,8 @@ namespace WebAPIService.GameServices.HOMELEADERBOARDS
                                     lock (_leaderboards)
                                     {
                                         if (!_leaderboards.ContainsKey(game))
-                                        {
-                                            var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+                                            _leaderboards.Add(game, new HomeScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, game));
 
-                                            retCtx.Database.Migrate();
-
-                                            _leaderboards.Add(game, new HomeScoreBoardData(retCtx, game));
-                                        }
                                         return $"<MsRoot>{_leaderboards[game].SerializeToString("PAGE").Result}</MsRoot>";
                                     }
                                 }
@@ -54,13 +49,8 @@ namespace WebAPIService.GameServices.HOMELEADERBOARDS
                                     if (!string.IsNullOrEmpty(game))
                                     {
                                         if (!_leaderboards.ContainsKey(game))
-                                        {
-                                            var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+                                            _leaderboards.Add(game, new HomeScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, game));
 
-                                            retCtx.Database.Migrate();
-
-                                            _leaderboards.Add(game, new HomeScoreBoardData(retCtx, game));
-                                        }
                                         _ = _leaderboards[game].UpdateScoreAsync(player, score);
                                         return $"<MsRoot>{_leaderboards[game].SerializeToString("PAGE").Result}</MsRoot>";
                                     }

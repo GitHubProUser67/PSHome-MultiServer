@@ -21,13 +21,7 @@ namespace WebAPIService.GameServices.JUGGERNAUT.clearasil
                 if (!string.IsNullOrEmpty(user) && !string.IsNullOrEmpty(score))
                 {
                     if (Leaderboard == null)
-                    {
-                        var retCtx = new LeaderboardDbContext(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
-
-                        retCtx.Database.Migrate();
-
-                        Leaderboard = new ClearasilScoreBoardData(retCtx);
-                    }
+                        Leaderboard = new ClearasilScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
                     _ = Leaderboard.UpdateScoreAsync(user, int.Parse(score));
 
