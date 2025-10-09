@@ -163,13 +163,13 @@ namespace SpaceWizards.HttpListener
                 _stream = SslSocket.EndAuthenticateAsServer(result);
 
                 if (_stream == null)
-                    LoggerAccessor.LogError($"[HttpConnection] - Failed to authenticate as server.");
+                    LoggerAccessor.LogWarn($"[HttpConnection] - Failed to authenticate as server.");
             }
             catch (Exception ex)
             {
                 _stream = null;
 
-                LoggerAccessor.LogError($"[HttpConnection] - Failed to authenticate as server. (Exception: {ex}).");
+                LoggerAccessor.LogError($"[HttpConnection] - Errored out while trying to authenticate as server. (Exception: {ex}).");
             }
 
             if (_stream != null)
