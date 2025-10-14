@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 
 namespace BlazeCommon
@@ -23,7 +24,9 @@ namespace BlazeCommon
         private long _nextConnectionId;
         private ConcurrentDictionary<long, ProtoFireConnection> _connections;
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-
+#pragma warning disable
+        private static readonly SslProtocols _sslProtocols = SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
+#pragma warning restore
         public ProtoFireServer(string name, IPEndPoint localEP, X509Certificate2? cert, bool forceSsl)
         {
             Name = name;
@@ -178,7 +181,7 @@ namespace BlazeCommon
                 if (Secure)
                     LoggerAccessor.LogInfo($"[ProtoFireServer] - Authenticating as server for connection({connection.ID}).");
 
-                SslSocket.BeginAuthenticateAsServer(connection.Socket, Certificate, ForceSsl, true, AuthenticateAsServerCallback, connection);
+                SslSocket.BeginAuthenticateAsServer(_sslProtocols, connection.Socket, Certificate, ForceSsl, true, AuthenticateAsServerCallback, connection);
             }
         }
 

@@ -1,16 +1,17 @@
 using CustomLogger;
-using MultiServerLibrary.GeoLocalization;
-using MultiServerLibrary.HTTP;
+using Horizon.Extension.Extension.PlayStationHome;
+using Horizon.MUM.Models;
 using Horizon.SERVER;
 using Horizon.SERVER.Extension.PlayStationHome;
+using MultiServerLibrary.GeoLocalization;
+using MultiServerLibrary.HTTP;
+using Newtonsoft.Json;
+using Prometheus;
 using System.Net;
+using System.Security.Authentication;
 using System.Text;
 using WatsonWebserver;
 using WatsonWebserver.Core;
-using Horizon.MUM.Models;
-using Newtonsoft.Json;
-using Prometheus;
-using Horizon.Extension.Extension.PlayStationHome;
 
 namespace Horizon.HTTPSERVICE
 {
@@ -41,7 +42,11 @@ namespace Horizon.HTTPSERVICE
             }
 
             _Server = new Webserver(settings, DefaultRoute);
-
+#if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+            _Server.SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
+#else
+            _Server.SslProtocols = SslProtocols.Tls12;
+#endif
             StartServer();
         }
 

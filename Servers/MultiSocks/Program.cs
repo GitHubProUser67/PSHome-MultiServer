@@ -1,21 +1,29 @@
+﻿using Blaze2SDK;
+using Blaze3SDK;
+using BlazeCommon;
 using CustomLogger;
+using Microsoft.Extensions.Logging;
+using MultiServerLibrary;
+using MultiServerLibrary.Extension;
+using MultiServerLibrary.SNMP;
+using MultiSocks;
 using MultiSocks.Aries;
-using MultiSocks.Blaze;
+using MultiSocks.Aries.DataStore;
+using MultiSocks.Blaze.Redirector;
+using MultiSocks.ProtoSSL;
 using Newtonsoft.Json.Linq;
+using System.Net;
 using System.Reflection;
 using System.Runtime;
-using MultiServerLibrary.SNMP;
-using MultiServerLibrary;
-using Microsoft.Extensions.Logging;
-using MultiServerLibrary.Extension;
+using System.Security.Cryptography.X509Certificates;
 
 public static class MultiSocksServerConfiguration
 {
     public static string ServerBindAddress { get; set; } = InternetProtocolUtils.TryGetServerIP(out string extractedIp).Result ? extractedIp : extractedIp;
     public static bool RPCS3Workarounds { get; set; } = true;
     public static bool EnableBlazeEncryption { get; set; } = false;
-    public static string DirtySocksDatabasePath { get; set; } = $"{Directory.GetCurrentDirectory()}/static/dirtysocks.db.sqlite" +
-        $"";
+    public static string DirtySocksDatabasePath { get; set; } = $"{Directory.GetCurrentDirectory()}/static/dirtysocks.db.sqlite";
+    public static List<ServerConfig> Servers { get; private set; } = new();
 
     /// <summary>
     /// Tries to load the specified configuration file.
@@ -32,13 +40,94 @@ public static class MultiSocksServerConfiguration
 
             Directory.CreateDirectory(Path.GetDirectoryName(configPath) ?? Directory.GetCurrentDirectory() + "/static");
 
+            var defaultServers = new JArray(
+
+                // ────────────────────────────────
+                // Aries Servers
+                // ────────────────────────────────
+                // SSX3 (NTSC)
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Redirector"),
+                    new JProperty("port", 11000),
+                    new JProperty("target_ip", "0.0.0.0"),
+                    new JProperty("target_port", 11051),
+                    new JProperty("project", "SSX-ER-PS2-2004"),
+                    new JProperty("sku", "PS2")
+                ),
+
+                // SSX3 (PAL)
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Redirector"),
+                    new JProperty("port", 11050),
+                    new JProperty("target_ip", "0.0.0.0"),
+                    new JProperty("target_port", 11051),
+                    new JProperty("project", "SSX-ER-PS2-2004"),
+                    new JProperty("sku", "PS2")
+                ),
+
+                // SSX3 Matchmaker
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Matchmaker"),
+                    new JProperty("port", 11051),
+                    new JProperty("listen_ip", "0.0.0.0"),
+                    new JProperty("project", "SSX-ER-PS2-2004"),
+                    new JProperty("sku", "PS2")
+                ),
+
+                // Sims Bustin Out Matchmaker
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Matchmaker"),
+                    new JProperty("port", 11101),
+                    new JProperty("listen_ip", "0.0.0.0"),
+                    new JProperty("project", "TSBO"),
+                    new JProperty("sku", "PS2"),
+                    new JProperty("rooms_to_add", new JArray(
+                        new JObject(new JProperty("name", "Veronaville"), new JProperty("is_global", true)),
+                        new JObject(new JProperty("name", "Strangetown"), new JProperty("is_global", true)),
+                        new JObject(new JProperty("name", "Pleasantview"), new JProperty("is_global", true)),
+                        new JObject(new JProperty("name", "Belladonna Cove"), new JProperty("is_global", true)),
+                        new JObject(new JProperty("name", "Riverblossom Hills"), new JProperty("is_global", true))
+                    ))
+                ),
+
+                // ────────────────────────────────
+                // Blaze3 Servers
+                // ────────────────────────────────
+                new JObject(
+                    new JProperty("type", "Blaze3"),
+                    new JProperty("subtype", "Redirector"),
+                    new JProperty("game", "Blaze3 Redirector"),
+                    new JProperty("port", 42127),
+                    new JProperty("ssl_domain", "gosredirector.ea.com")
+                ),
+                new JObject(
+                    new JProperty("type", "Blaze3"),
+                    new JProperty("subtype", "Main"),
+                    new JProperty("game", "Mass Effect 3 (PS3)"),
+                    new JProperty("port", 33152),
+                    new JProperty("ssl_domain", "gosredirector.ea.com"),
+                    new JProperty("components", new JArray(
+                        "MassEffect3PS3Components.Auth.AuthComponent",
+                        "MassEffect3PS3Components.Util.UtilComponent"
+                    ))
+                )
+            );
+
             // Write the JObject to a file
             File.WriteAllText(configPath, new JObject(
+                new JProperty("config_version", (ushort)3),
                 new JProperty("server_bind_address", ServerBindAddress),
                 new JProperty("rpcs3_workarounds", RPCS3Workarounds),
                 new JProperty("enable_blaze_encryption", EnableBlazeEncryption),
-                new JProperty("dirtysocks_database_path", DirtySocksDatabasePath)
+                new JProperty("dirtysocks_database_path", DirtySocksDatabasePath),
+                new JProperty("servers", defaultServers)
             ).ToString());
+
+            Servers = defaultServers.ToObject<List<ServerConfig>>() ?? new();
 
             return;
         }
@@ -48,10 +137,18 @@ public static class MultiSocksServerConfiguration
             // Parse the JSON configuration
             dynamic config = JObject.Parse(File.ReadAllText(configPath));
 
-            ServerBindAddress = GetValueOrDefault(config, "server_bind_address", ServerBindAddress);
-            RPCS3Workarounds = GetValueOrDefault(config, "rpcs3_workarounds", RPCS3Workarounds);
-            EnableBlazeEncryption = GetValueOrDefault(config, "enable_blaze_encryption", EnableBlazeEncryption);
-            DirtySocksDatabasePath = GetValueOrDefault(config, "dirtysocks_database_path", DirtySocksDatabasePath);
+            ushort config_version = GetValueOrDefault(config, "config_version", (ushort)0);
+            if (config_version >= 2)
+            {
+                ServerBindAddress = GetValueOrDefault(config, "server_bind_address", ServerBindAddress);
+                RPCS3Workarounds = GetValueOrDefault(config, "rpcs3_workarounds", RPCS3Workarounds);
+                EnableBlazeEncryption = GetValueOrDefault(config, "enable_blaze_encryption", EnableBlazeEncryption);
+                DirtySocksDatabasePath = GetValueOrDefault(config, "dirtysocks_database_path", DirtySocksDatabasePath);
+                if (config.servers != null)
+                    Servers = ((JArray)config.servers).ToObject<List<ServerConfig>>() ?? new();
+            }
+            else
+                LoggerAccessor.LogWarn($"{configPath} file is outdated, using server's default.");
         }
         catch (Exception ex)
         {
@@ -92,20 +189,231 @@ class Program
     private static string configPath = configDir + "MultiSocks.json";
     private static string configMultiServerLibraryPath = configDir + "MultiServerLibrary.json";
     private static SnmpTrapSender? trapSender = null;
-    private static AriesServer? DirtySocksServer;
-    private static BlazeClass? BlazeDirtySocksServer;
+
+    public static IDatabase? DirtySocksDatabase = null;
+
+    private static readonly Dictionary<string, object> AriesServers = new();
+    private static readonly Dictionary<string, BlazeServer> BlazeServers = new();
+
+    private static VulnerableCertificateGenerator BlazeSSLCache = new();
 
     private static void StartOrUpdateServer()
     {
-        DirtySocksServer?.Dispose();
-        BlazeDirtySocksServer?.Dispose();
+        foreach (var server in AriesServers.Values)
+        {
+            if (server is MatchmakerServer matchmaker)
+                matchmaker.Dispose();
+            else if (server is RedirectorServer redirector)
+                redirector.Dispose();
+            else
+                ((EAMessengerServer)server).Dispose();
+        }
+        foreach (var server in BlazeServers.Values)
+        {
+            server.Stop();
+        }
 
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
 
-        DirtySocksServer = new AriesServer(new CancellationTokenSource().Token);
-        BlazeDirtySocksServer = new BlazeClass(new CancellationTokenSource().Token);
+        InitializeServers();
+    }
+
+    public static void InitializeServers()
+    {
+        foreach (var server in MultiSocksServerConfiguration.Servers)
+        {
+            string srvType = server.Type.ToLower();
+
+            try
+            {
+                switch (srvType)
+                {
+                    case "aries":
+                        InitializeAries(server);
+                        break;
+                    default:
+                        if (srvType.StartsWith("blaze"))
+                            InitializeBlaze(server);
+                        else
+                            LoggerAccessor.LogWarn($"Unknown server type: {server.Type}");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggerAccessor.LogError($"Failed to initialize {server.Type} {server.Subtype}: {ex}");
+            }
+        }
+    }
+
+    private static void InitializeAries(ServerConfig config)
+    {
+        if (MultiSocksServerConfiguration.DirtySocksDatabasePath.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase))
+            DirtySocksDatabase = new DirtySocksJSONDatabase();
+        else
+            DirtySocksDatabase = new DirtySocksSQLiteDatabase();
+
+        switch (config.Subtype.ToLower())
+        {
+            case "redirector":
+
+                var redirector = new RedirectorServer(
+                    config.Port,
+                    config.TargetIP ?? "127.0.0.1",
+                    config.TargetPort ?? 0,
+                    config.Project,
+                    config.SKU,
+                    config.Secure,
+                    config.CN,
+                    config.WeakChainSignedRSAKey
+                );
+
+                AriesServers[$"{config.Project}-{config.SKU}_Redirector"] = redirector;
+
+                LoggerAccessor.LogInfo($"Started Aries Redirector on port {config.Port}");
+                break;
+
+            case "messenger":
+
+                var messenger = new EAMessengerServer(
+                    config.Port,
+                    config.ListenIP ?? "127.0.0.1",
+                    config.Project,
+                    config.SKU,
+                    config.Secure,
+                    config.CN,
+                    config.WeakChainSignedRSAKey
+                );
+
+                AriesServers[$"{config.Project}-{config.SKU}_Messenger"] = messenger;
+
+                LoggerAccessor.LogInfo($"Started Aries Messenger on port {config.Port}");
+                break;
+
+            case "matchmaker":
+
+                List<Tuple<string, bool>>? roomTuples = null;
+                if (config.RoomsToAdd != null)
+                {
+                    roomTuples = config.RoomsToAdd
+                        .Select(r => Tuple.Create(r.Name, r.IsGlobal))
+                        .ToList();
+                }
+
+                var matchmaker = new MatchmakerServer(
+                    config.Port,
+                    config.ListenIP ?? "0.0.0.0",
+                    roomTuples,
+                    config.Project,
+                    config.SKU,
+                    config.Secure,
+                    config.CN,
+                    config.WeakChainSignedRSAKey
+                );
+
+                AriesServers[$"{config.Project}-{config.SKU}_Matchmaker"] = matchmaker;
+
+                LoggerAccessor.LogInfo(
+                    $"Started Aries Matchmaker on port {config.Port} with {roomTuples?.Count ?? 0} room(s)."
+                );
+                break;
+
+            default:
+                LoggerAccessor.LogWarn($"Unknown Aries subtype: {config.Subtype}");
+                break;
+        }
+    }
+
+    private static void InitializeBlaze(ServerConfig config)
+    {
+        string blazeVersion = config.Type.ToLower();
+        const string defaultSslDomain = "gosredirector.ea.com";
+        string sslDomain = config.SSLDomain ?? defaultSslDomain;
+
+        // Factory selector for Blaze2 (defaults to Blaze3)
+        Func<string, IPEndPoint, X509Certificate2?, bool, dynamic> createBlazeServer = blazeVersion switch
+        {
+            "blaze2" => (name, endpoint, cert, secure) => Blaze2.CreateBlazeServer(name, endpoint, cert, secure),
+            _ => (name, endpoint, cert, secure) => Blaze3.CreateBlazeServer(name, endpoint, cert, secure)
+        };
+
+        switch (config.Subtype.ToLower())
+        {
+            case "redirector":
+                {
+                    var redirector = createBlazeServer(
+                        $"{config.Type} Redirector",
+                        new IPEndPoint(IPAddress.Any, config.Port),
+                        BlazeSSLCache.GetVulnerableCustomEaCert(sslDomain, "Global Online Studio", true, true).Item3,
+                        config.Secure
+                    );
+
+                    redirector.AddComponent<RedirectorComponent>();
+
+                    _ = redirector.Start(-1).ConfigureAwait(false);
+
+                    BlazeServers[$"{blazeVersion}_Redirector"] = redirector;
+                    LoggerAccessor.LogInfo($"[{blazeVersion.ToUpper()}] Redirector running on port {config.Port}");
+                    break;
+                }
+
+            case "main":
+                {
+                    if (string.IsNullOrEmpty(config.Game))
+                    {
+                        LoggerAccessor.LogWarn($"[{blazeVersion.ToUpper()}] Missing 'game' field for Blaze main server on port {config.Port}");
+                        return;
+                    }
+
+                    const string EA_OU = "Global Online Studio";
+
+                    var blazeServer = createBlazeServer(
+                        config.Game,
+                        new IPEndPoint(IPAddress.Any, config.Port),
+                        BlazeSSLCache.GetVulnerableCustomEaCert(sslDomain, EA_OU, true, true).Item3,
+                        config.Secure
+                    );
+
+                    if (config.Components != null)
+                    {
+                        const string classPrefix = "MultiSocks.Blaze.";
+
+                        foreach (var compName in config.Components)
+                        {
+                            try
+                            {
+                                var type = Type.GetType(compName.StartsWith(classPrefix) ? compName : classPrefix + compName, throwOnError: false);
+                                if (type != null)
+                                {
+                                    blazeServer.AddComponent(type);
+                                    LoggerAccessor.LogInfo($"[{blazeVersion.ToUpper()}] Added component: {compName}");
+                                }
+                                else
+                                {
+                                    LoggerAccessor.LogWarn($"[{blazeVersion.ToUpper()}] Component not found: {compName}");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                LoggerAccessor.LogError($"[{blazeVersion.ToUpper()}] Failed to add component '{compName}': {ex}");
+                            }
+                        }
+                    }
+
+                    _ = blazeServer.Start(-1).ConfigureAwait(false);
+
+                    BlazeServers[$"{config.Type}_{config.Game}"] = blazeServer;
+
+                    LoggerAccessor.LogInfo($"[{blazeVersion.ToUpper()}] Main server '{config.Game}' running on port {config.Port}");
+                    break;
+                }
+
+            default:
+                LoggerAccessor.LogWarn($"Unknown Blaze subtype: {config.Subtype}");
+                break;
+        }
     }
 
     static void Main()

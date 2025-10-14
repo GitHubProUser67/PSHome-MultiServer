@@ -1,15 +1,16 @@
 ﻿namespace WatsonWebserver
 {
+    using MultiServerLibrary.Extension;
+    using MultiServerLibrary.HTTP;
+    using SpaceWizards.HttpListener;
     using System;
+    using System.Collections.Generic;
     using System.Collections.Specialized;
+    using System.Security.Authentication;
+    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using WatsonWebserver.Core;
-    using System.Text;
-    using SpaceWizards.HttpListener;
-    using System.Collections.Generic;
-    using MultiServerLibrary.Extension;
-    using MultiServerLibrary.HTTP;
 
     /// <summary>
     /// Watson webserver.
@@ -64,6 +65,18 @@
             }
         }
 
+        public SslProtocols SslProtocols
+        {
+            get
+            {
+                return _sslprotocols;
+            }
+            set
+            {
+                _sslprotocols = value;
+            }
+        }
+
         #endregion
 
         #region Private-Members
@@ -73,6 +86,15 @@
         private bool _ResponseMsg = true;
         private bool _KeepAliveResponseData = true;
         private int _RequestCount = 0;
+
+#pragma warning disable
+        private SslProtocols _sslprotocols =
+#if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+            SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
+#else
+            SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
+#endif
+#pragma warning restore
 
         private List<Task> HttpClientTasks = new List<Task>();
 
@@ -133,6 +155,8 @@
             _TokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
             _Token = token;
 
+            _HttpListener.SslProtocols = _sslprotocols;
+
             if (Settings.Ssl.Enable)
                 _HttpListener.SetCertificate(System.Net.IPAddress.Parse(InternetProtocolUtils.GetFirstActiveIPAddress(Settings.Hostname, "0.0.0.0")), Settings.Port, Settings.Ssl.SslCertificate);
 
@@ -157,6 +181,8 @@
 
             _TokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
             _Token = token;
+
+            _HttpListener.SslProtocols = _sslprotocols;
 
             if (Settings.Ssl.Enable)
                 _HttpListener.SetCertificate(System.Net.IPAddress.Parse(InternetProtocolUtils.GetFirstActiveIPAddress(Settings.Hostname, "0.0.0.0")), Settings.Port, Settings.Ssl.SslCertificate);

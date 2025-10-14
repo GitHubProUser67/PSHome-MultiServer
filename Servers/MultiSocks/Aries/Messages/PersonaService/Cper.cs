@@ -16,7 +16,7 @@ namespace MultiSocks.Aries.Messages.PersonaService
 
             if (context is not MatchmakerServer || PERS == null || client.User == null || !client.HasAuth()) return;
 
-            int index = AriesServer.Database.AddPersona(client.User.ID, PERS);
+            int index = Program.DirtySocksDatabase.AddPersona(client.User.ID, PERS);
             if (index < 0)
             {
                 if (index == -2) client.SendMessage(new CperDupl());

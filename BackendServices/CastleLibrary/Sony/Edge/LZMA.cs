@@ -12,8 +12,6 @@ namespace CastleLibrary.Sony.Edge
 {
     public class LZMA
     {
-        private static readonly bool LittleEndian = BitConverter.IsLittleEndian;
-
         private static readonly SemaphoreSlim lzmaSema = new SemaphoreSlim(Environment.ProcessorCount);
 
         /// <summary>
@@ -29,9 +27,9 @@ namespace CastleLibrary.Sony.Edge
                 {
                     if (InBuffer.Length > 4 && InBuffer[0] == 0x73 && InBuffer[1] == 0x65 && InBuffer[2] == 0x67 && InBuffer[3] == 0x73)
                     {
-                        int numofsegments = BitConverter.ToInt16(!LittleEndian ? new byte[] { InBuffer[6], InBuffer[7] } : new byte[] { InBuffer[7], InBuffer[6] }, 0);
-                        int OriginalSize = BitConverter.ToInt32(!LittleEndian ? new byte[] { InBuffer[8], InBuffer[9], InBuffer[10], InBuffer[11] } : new byte[] { InBuffer[11], InBuffer[10], InBuffer[9], InBuffer[8] }, 0);
-                        //int CompressedSize = BitConverter.ToInt32(!LittleEndian ? new byte[] { inbuffer[12], inbuffer[13], inbuffer[14], inbuffer[15] } : new byte[] { inbuffer[15], inbuffer[14], inbuffer[13], inbuffer[12] }, 0); // Unused during decompression.
+                        int numofsegments = BitConverter.ToInt16(!EndianAwareConverter.isLittleEndianSystem ? new byte[] { InBuffer[6], InBuffer[7] } : new byte[] { InBuffer[7], InBuffer[6] }, 0);
+                        int OriginalSize = BitConverter.ToInt32(!EndianAwareConverter.isLittleEndianSystem ? new byte[] { InBuffer[8], InBuffer[9], InBuffer[10], InBuffer[11] } : new byte[] { InBuffer[11], InBuffer[10], InBuffer[9], InBuffer[8] }, 0);
+                        //int CompressedSize = BitConverter.ToInt32(!EndianAwareConverter.isLittleEndianSystem ? new byte[] { inbuffer[12], inbuffer[13], inbuffer[14], inbuffer[15] } : new byte[] { inbuffer[15], inbuffer[14], inbuffer[13], inbuffer[12] }, 0); // Unused during decompression.
 
                         byte[] TOCData = new byte[8 * numofsegments]; // 8 being size of each TOC entry.
 
@@ -62,7 +60,7 @@ namespace CastleLibrary.Sony.Edge
                                         int SegmentOffset;
                                         byte[] CompressedData, output;
 
-                                        if (LittleEndian)
+                                        if (EndianAwareConverter.isLittleEndianSystem)
                                         {
                                             Array.Reverse(SegmentCompressedSizeByte);
                                             Array.Reverse(SegmentOriginalSizeByte);

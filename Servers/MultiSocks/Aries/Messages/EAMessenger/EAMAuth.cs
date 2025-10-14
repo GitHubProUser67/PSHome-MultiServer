@@ -41,7 +41,7 @@ namespace MultiSocks.Aries.Messages
             client.VERS = VERS;
             client.SKU = SKU;
 
-            DbAccount? user = AriesServer.Database?.GetByName(USER?.Split("/").First());
+            DbAccount? user = Program.DirtySocksDatabase?.GetByName(USER?.Split("/").First());
             if (user == null)
             {
                 client.SendMessage(this);

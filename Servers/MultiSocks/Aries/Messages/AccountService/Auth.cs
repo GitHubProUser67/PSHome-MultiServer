@@ -44,7 +44,7 @@ namespace MultiSocks.Aries.Messages.AccountService
                 if (NAME.Contains("@"))
                     NAME = NAME.Split("@")[0] + NAME.Split("@")[1];
 
-                DbAccount? user = AriesServer.Database?.GetByName(NAME);
+                DbAccount? user = Program.DirtySocksDatabase?.GetByName(NAME);
                 if (user != null)
                 {
                     mc.TryLogin(user, client, PASS, LOC ?? "enUS", MAC, TOKEN);

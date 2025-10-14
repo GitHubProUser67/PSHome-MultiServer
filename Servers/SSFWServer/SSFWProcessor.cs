@@ -11,6 +11,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Security;
 using System.Reflection;
+using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -64,7 +65,7 @@ namespace SSFWServer
             {
                 _Server = new NativeWebserver(settings, DefaultRoute, MaxConcurrentListeners);
 #if !DEBUG
-                    ((NativeWebserver)_Server).LogResponseSentMsg = false;
+                ((NativeWebserver)_Server).LogResponseSentMsg = false;
 #endif
                 ((NativeWebserver)_Server).KeepAliveResponseData = false;
             }
@@ -72,9 +73,10 @@ namespace SSFWServer
             {
                 _Server = new Webserver(settings, DefaultRoute, MaxConcurrentListeners);
 #if !DEBUG
-                    ((Webserver)_Server).LogResponseSentMsg = false;
+                ((Webserver)_Server).LogResponseSentMsg = false;
 #endif
                 ((Webserver)_Server).KeepAliveResponseData = false;
+                ((Webserver)_Server).SslProtocols = SslProtocols.Tls12;
             }
 
             StarterThread = new Thread(StartServer)

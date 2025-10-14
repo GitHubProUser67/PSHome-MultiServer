@@ -13,7 +13,7 @@ namespace MultiSocks.Aries.Messages.PersonaService
 
             string? PERS = GetInputCacheValue("PERS");
 
-            int index = AriesServer.Database.DeletePersona(client.User.ID, PERS);
+            int index = Program.DirtySocksDatabase.DeletePersona(client.User.ID, PERS);
             if (index == -1)
                 return;
             Model.AriesUser user = client.User;

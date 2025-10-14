@@ -6,11 +6,14 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using Tpm2Lib;
 
 namespace NetHasher
 {
     public class HashCompute
     {
+        public static int Sha224StreamBufferSize { get; set; } = 512; // Update this value to speedup large SHA224 stream checksum calculations.
+
         public static byte[] ComputeObject(object inData, string hashName, byte[] HMACKey = null)
         {
             if (inData is byte[] bytes)
@@ -91,41 +94,58 @@ namespace NetHasher
                         return hmac.ComputeHash(data);
                 }
             }
-            else
+
+            return hashName switch
             {
-                return hashName switch
-                {
-                    DotNetHasher.MD5Const => ComputeMD5Hash(data),
-                    DotNetHasher.Sha1Const => ComputeSha1Hash(data),
-                    DotNetHasher.Sha224Const => ComputeSha224Hash(data),
-                    DotNetHasher.Sha256Const => ComputeSha256Hash(data),
-                    DotNetHasher.Sha384Const => ComputeSha384Hash(data),
-                    DotNetHasher.Sha512Const => ComputeSha512Hash(data),
-                    _ => ComputeWithHashAlgorithm(data, hashName)
-                };
-            }
+                DotNetHasher.MD5Const => ComputeMD5Hash(data),
+                DotNetHasher.Sha1Const => ComputeSha1Hash(data),
+                DotNetHasher.Sha224Const => ComputeSha224Hash(data),
+                DotNetHasher.Sha256Const => ComputeSha256Hash(data),
+                DotNetHasher.Sha384Const => ComputeSha384Hash(data),
+                DotNetHasher.Sha512Const => ComputeSha512Hash(data),
+                _ => ComputeWithHashAlgorithm(data, hashName)
+            };
         }
 
         private static byte[] ComputeStreamHash(Stream stream, string hashName, byte[] HMACKey)
         {
             if (HMACKey != null && HMACKey.Length > 0)
-                throw new NotSupportedException($"[HashCompute] - ComputeStreamHash - HMAC algorithms not supported while using streams.");
-
-            using (var algorithm = HashAlgorithm.Create(hashName))
             {
-                if (algorithm == null)
-                    throw new ArgumentException($"[HashCompute] - ComputeStreamHash - Unknown hash algorithm: {hashName}");
-                return algorithm.ComputeHash(stream);
+                if (hashName == DotNetHasher.Sha224Const)
+                    return ComputeHmacSha224Hash(stream, HMACKey);
+                else
+                {
+                    HMAC hmac = hashName switch
+                    {
+                        DotNetHasher.MD5Const => new HMACMD5(HMACKey),
+                        DotNetHasher.Sha1Const => new HMACSHA1(HMACKey),
+                        DotNetHasher.Sha256Const => new HMACSHA256(HMACKey),
+                        DotNetHasher.Sha384Const => new HMACSHA384(HMACKey),
+                        DotNetHasher.Sha512Const => new HMACSHA512(HMACKey),
+                        _ => throw new ArgumentException($"[HashCompute] - ComputeHash - Unknown HMAC algorithm: {hashName}")
+                    };
+
+                    using (hmac)
+                        return hmac.ComputeHash(stream);
+                }
             }
+
+            return hashName switch
+            {
+                DotNetHasher.Sha224Const => ComputeSha224Hash(stream),
+                _ => ComputeWithHashAlgorithm(stream, hashName)
+            };
         }
 
-        private static byte[] ComputeWithHashAlgorithm(byte[] data, string hashName)
+        private static byte[] ComputeWithHashAlgorithm(object data, string hashName)
         {
             using (var algorithm = HashAlgorithm.Create(hashName))
             {
                 if (algorithm == null)
                     throw new ArgumentException($"[HashCompute] - ComputeWithHashAlgorithm - Unknown hash algorithm: {hashName}");
-                return algorithm.ComputeHash(data);
+                else if (data is byte[] v)
+                    return algorithm.ComputeHash(v);
+                return algorithm.ComputeHash((Stream)data);
             }
         }
 
@@ -144,21 +164,49 @@ namespace NetHasher
 
         private static byte[] ComputeSha1Hash(byte[] data)
         {
+            try
+            {
+                using var cryptoDevice = new TbsDevice();
+                cryptoDevice.Connect();
+                using var tpm = new Tpm2(cryptoDevice);
+
+                return tpm.Hash(data,
+                       TpmAlgId.Sha1,
+                       TpmRh.Owner,
+                       out _);
+            }
+            catch
+            {
 #if NET6_0_OR_GREATER
-            return SHA1.HashData(data);
+                return SHA1.HashData(data);
 #else
-            Sha1Digest digest = new Sha1Digest();
-            digest.BlockUpdate(data, 0, data.Length);
-            byte[] hashBuf = new byte[digest.GetDigestSize()];
-            digest.DoFinal(hashBuf, 0);
-            return hashBuf;
+                Sha1Digest digest = new Sha1Digest();
+                digest.BlockUpdate(data, 0, data.Length);
+                byte[] hashBuf = new byte[digest.GetDigestSize()];
+                digest.DoFinal(hashBuf, 0);
+                return hashBuf;
 #endif
+            }
         }
 
         private static byte[] ComputeSha224Hash(byte[] data)
         {
             Sha224Digest digest = new Sha224Digest();
             digest.BlockUpdate(data, 0, data.Length);
+            byte[] hashBuf = new byte[digest.GetDigestSize()];
+            digest.DoFinal(hashBuf, 0);
+            return hashBuf;
+        }
+
+        private static byte[] ComputeSha224Hash(Stream data)
+        {
+            Sha224Digest digest = new Sha224Digest();
+            int bytesRead;
+            byte[] buffer = new byte[Sha224StreamBufferSize];
+            while ((bytesRead = data.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                digest.BlockUpdate(buffer, 0, bytesRead);
+            }
             byte[] hashBuf = new byte[digest.GetDigestSize()];
             digest.DoFinal(hashBuf, 0);
             return hashBuf;
@@ -174,43 +222,100 @@ namespace NetHasher
             return hashBuf;
         }
 
+        private static byte[] ComputeHmacSha224Hash(Stream data, byte[] key)
+        {
+            HMac hmac = new HMac(new Sha224Digest());
+            hmac.Init(new KeyParameter(key));
+            int bytesRead;
+            byte[] buffer = new byte[Sha224StreamBufferSize];
+            while ((bytesRead = data.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                hmac.BlockUpdate(buffer, 0, bytesRead);
+            }
+            byte[] hashBuf = new byte[hmac.GetMacSize()];
+            hmac.DoFinal(hashBuf, 0);
+            return hashBuf;
+        }
+
         private static byte[] ComputeSha256Hash(byte[] data)
         {
+            try
+            {
+                using var cryptoDevice = new TbsDevice();
+                cryptoDevice.Connect();
+                using var tpm = new Tpm2(cryptoDevice);
+
+                return tpm.Hash(data,
+                       TpmAlgId.Sha256,
+                       TpmRh.Owner,
+                       out _);
+            }
+            catch
+            {
 #if NET6_0_OR_GREATER
-            return SHA256.HashData(data);
+                return SHA256.HashData(data);
 #else
-            Sha256Digest digest = new Sha256Digest();
-            digest.BlockUpdate(data, 0, data.Length);
-            byte[] hashBuf = new byte[digest.GetDigestSize()];
-            digest.DoFinal(hashBuf, 0);
-            return hashBuf;
+                Sha256Digest digest = new Sha256Digest();
+                digest.BlockUpdate(data, 0, data.Length);
+                byte[] hashBuf = new byte[digest.GetDigestSize()];
+                digest.DoFinal(hashBuf, 0);
+                return hashBuf;
 #endif
+            }
         }
 
         private static byte[] ComputeSha384Hash(byte[] data)
         {
+            try
+            {
+                using var cryptoDevice = new TbsDevice();
+                cryptoDevice.Connect();
+                using var tpm = new Tpm2(cryptoDevice);
+
+                return tpm.Hash(data,
+                       TpmAlgId.Sha384,
+                       TpmRh.Owner,
+                       out _);
+            }
+            catch
+            {
 #if NET6_0_OR_GREATER
-            return SHA384.HashData(data);
+                return SHA384.HashData(data);
 #else
-            Sha384Digest digest = new Sha384Digest();
-            digest.BlockUpdate(data, 0, data.Length);
-            byte[] hashBuf = new byte[digest.GetDigestSize()];
-            digest.DoFinal(hashBuf, 0);
-            return hashBuf;
+                Sha384Digest digest = new Sha384Digest();
+                digest.BlockUpdate(data, 0, data.Length);
+                byte[] hashBuf = new byte[digest.GetDigestSize()];
+                digest.DoFinal(hashBuf, 0);
+                return hashBuf;
 #endif
+            }
         }
 
         private static byte[] ComputeSha512Hash(byte[] data)
         {
+            try
+            {
+                using var cryptoDevice = new TbsDevice();
+                cryptoDevice.Connect();
+                using var tpm = new Tpm2(cryptoDevice);
+
+                return tpm.Hash(data,
+                       TpmAlgId.Sha512,
+                       TpmRh.Owner,
+                       out _);
+            }
+            catch
+            {
 #if NET6_0_OR_GREATER
-            return SHA512.HashData(data);
+                return SHA512.HashData(data);
 #else
-            Sha512Digest digest = new Sha512Digest();
-            digest.BlockUpdate(data, 0, data.Length);
-            byte[] hashBuf = new byte[digest.GetDigestSize()];
-            digest.DoFinal(hashBuf, 0);
-            return hashBuf;
+                Sha512Digest digest = new Sha512Digest();
+                digest.BlockUpdate(data, 0, data.Length);
+                byte[] hashBuf = new byte[digest.GetDigestSize()];
+                digest.DoFinal(hashBuf, 0);
+                return hashBuf;
 #endif
+            }
         }
 
         private static byte[] ToByteArray(short[] values)

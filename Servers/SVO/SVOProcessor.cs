@@ -5,6 +5,7 @@ using MultiServerLibrary.Extension;
 using MultiServerLibrary.HTTP;
 using SpaceWizards.HttpListener;
 using SVO.Games.PS3;
+using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
@@ -39,7 +40,7 @@ namespace SVO
 
         public static bool IsIPBanned(string ipAddress)
         {
-            if (MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibrary.MultiServerLibraryConfiguration.BannedIPs.Contains(ipAddress))
+            if (MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibraryConfiguration.BannedIPs.Contains(ipAddress))
                 return true;
 
             return false;
@@ -113,6 +114,9 @@ namespace SVO
                     listener.SetCertificate(hostAddr, 10061, certificate);
                     listener.SetCertificate(hostAddr, 10062, certificate);
                 }
+#pragma warning disable
+                listener.SslProtocols = SslProtocols.Ssl2 | SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
+#pragma warning restore
                 listener.Prefixes.Add(string.Format("http://{0}:{1}/", host, 10058));
                 const ushort startingSVOPort = 10060;
                 for (byte i = 0; i < 3; i++)

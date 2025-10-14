@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Tpm2Lib;
 
 namespace NetHasher
@@ -14,6 +15,9 @@ namespace NetHasher
 
         public static byte[] ComputeMD5(object input, byte[] HMACKey = null)
         {
+            if (input == null)
+                throw new ArgumentNullException(nameof(input));
+
             byte[] result = HashCompute.ComputeObject(input, MD5Const, HMACKey);
 
             if (result.Length != 16)
@@ -29,34 +33,10 @@ namespace NetHasher
 
         public static byte[] ComputeSHA1(object input, byte[] HMACKey = null)
         {
-            byte[] result = null;
-            Tpm2 _tpm = null;
+            if (input == null)
+                throw new ArgumentNullException(nameof(input));
 
-            if ((HMACKey == null || HMACKey.Length == 0) && input is byte[] v)
-            {
-                try
-                {
-                    TbsDevice _crypto_device = new TbsDevice();
-                    _crypto_device.Connect();
-                    _tpm = new Tpm2(_crypto_device);
-
-                    result = _tpm.Hash(v,
-                           TpmAlgId.Sha1,
-                           TpmRh.Owner,
-                           out _);
-                }
-                catch
-                {
-                    // Fallback to classic HashFactory Methods.
-                }
-                finally
-                {
-                    if (_tpm != null) _tpm.Dispose();
-                }
-            }
-
-            if (result == null)
-                result = HashCompute.ComputeObject(input, Sha1Const, HMACKey);
+            byte[] result = HashCompute.ComputeObject(input, Sha1Const, HMACKey);
 
             if (result.Length != 20)
                 throw new InvalidOperationException("[DotNetHasher] - ComputeSHA1 - The computed SHA1 hash is not 20 bytes long.");
@@ -71,6 +51,9 @@ namespace NetHasher
 
         public static byte[] ComputeSHA224(object input, byte[] HMACKey = null)
         {
+            if (input == null)
+                throw new ArgumentNullException(nameof(input));
+
             byte[] result = HashCompute.ComputeObject(input, Sha224Const, HMACKey);
 
             if (result.Length != 28)
@@ -86,34 +69,10 @@ namespace NetHasher
 
         public static byte[] ComputeSHA256(object input, byte[] HMACKey = null)
         {
-            byte[] result = null;
-            Tpm2 _tpm = null;
+            if (input == null)
+                throw new ArgumentNullException(nameof(input));
 
-            if ((HMACKey == null || HMACKey.Length == 0) && input is byte[] v)
-            {
-                try
-                {
-                    TbsDevice _crypto_device = new TbsDevice();
-                    _crypto_device.Connect();
-                    _tpm = new Tpm2(_crypto_device);
-
-                    result = _tpm.Hash(v,
-                           TpmAlgId.Sha256,
-                           TpmRh.Owner,
-                           out _);
-                }
-                catch
-                {
-                    // Fallback to classic HashFactory Methods.
-                }
-                finally
-                {
-                    if (_tpm != null) _tpm.Dispose();
-                }
-            }
-
-            if (result == null)
-                result = HashCompute.ComputeObject(input, Sha256Const, HMACKey);
+            byte[] result = HashCompute.ComputeObject(input, Sha256Const, HMACKey);
 
             if (result.Length != 32)
                 throw new InvalidOperationException("[DotNetHasher] - ComputeSHA256 - The computed SHA256 hash is not 32 bytes long.");
@@ -128,34 +87,10 @@ namespace NetHasher
 
         public static byte[] ComputeSHA384(object input, byte[] HMACKey = null)
         {
-            byte[] result = null;
-            Tpm2 _tpm = null;
+            if (input == null)
+                throw new ArgumentNullException(nameof(input));
 
-            if ((HMACKey == null || HMACKey.Length == 0) && input is byte[] v)
-            {
-                try
-                {
-                    TbsDevice _crypto_device = new TbsDevice();
-                    _crypto_device.Connect();
-                    _tpm = new Tpm2(_crypto_device);
-
-                    result = _tpm.Hash(v,
-                           TpmAlgId.Sha384,
-                           TpmRh.Owner,
-                           out _);
-                }
-                catch
-                {
-                    // Fallback to classic HashFactory Methods.
-                }
-                finally
-                {
-                    if (_tpm != null) _tpm.Dispose();
-                }
-            }
-
-            if (result == null)
-                result = HashCompute.ComputeObject(input, Sha384Const, HMACKey);
+            byte[] result = HashCompute.ComputeObject(input, Sha384Const, HMACKey);
 
             if (result.Length != 48)
                 throw new InvalidOperationException("[DotNetHasher] - ComputeSHA384 - The computed SHA384 hash is not 48 bytes long.");
@@ -170,34 +105,10 @@ namespace NetHasher
 
         public static byte[] ComputeSHA512(object input, byte[] HMACKey = null)
         {
-            byte[] result = null;
-            Tpm2 _tpm = null;
+            if (input == null)
+                throw new ArgumentNullException(nameof(input));
 
-            if ((HMACKey == null || HMACKey.Length == 0) && input is byte[] v)
-            {
-                try
-                {
-                    TbsDevice _crypto_device = new TbsDevice();
-                    _crypto_device.Connect();
-                    _tpm = new Tpm2(_crypto_device);
-
-                    result = _tpm.Hash(v,
-                           TpmAlgId.Sha512,
-                           TpmRh.Owner,
-                           out _);
-                }
-                catch
-                {
-                    // Fallback to classic HashFactory Methods.
-                }
-                finally
-                {
-                    if (_tpm != null) _tpm.Dispose();
-                }
-            }
-
-            if (result == null)
-                result = HashCompute.ComputeObject(input, Sha512Const, HMACKey);
+            byte[] result = HashCompute.ComputeObject(input, Sha512Const, HMACKey);
 
             if (result.Length != 64)
                 throw new InvalidOperationException("[DotNetHasher] - ComputeSHA512 - The computed SHA512 hash is not 64 bytes long.");

@@ -44,7 +44,9 @@ namespace BlazeCommon
         private long _nextConnectionId;
         private ConcurrentDictionary<long, ProtoFireConnection> _connections;
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-
+#pragma warning disable
+        private static readonly SslProtocols _sslProtocols = SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
+#pragma warning restore
         public MitmProtoFireServer(BlazeServerConfiguration settings, uint addressEncryptionKey)
         {
             AddressEncryptionKey = addressEncryptionKey;
@@ -667,7 +669,7 @@ namespace BlazeCommon
                 if (Secure)
                     LoggerAccessor.LogInfo($"[ProtoFireServer] - Authenticating as server for connection({connection.ID}).");
 
-                SslSocket.BeginAuthenticateAsServer(connection.Socket, Certificate, ForceSsl, true, AuthenticateAsServerCallback, connection);
+                SslSocket.BeginAuthenticateAsServer(_sslProtocols, connection.Socket, Certificate, ForceSsl, true, AuthenticateAsServerCallback, connection);
             }
         }
 

@@ -33,13 +33,13 @@
 using CustomLogger;
 using FixedSsl;
 using MultiServerLibrary.SSL;
+using Org.Mentalis.Security.Ssl;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -52,14 +52,6 @@ namespace SpaceWizards.HttpListener
         public bool Initialized = false;
 
         private static readonly Action<Task<int>, object> s_onreadCallback = OnRead;
-#pragma warning disable
-        private static SslProtocols _sslprotocols =
-#if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-            SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
-#else
-            SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
-#endif
-#pragma warning restore
         private const int BufferSize = 8192;
         private Socket _socket;
         private Stream _stream;
@@ -87,18 +79,6 @@ namespace SpaceWizards.HttpListener
         private LineState _lineState = LineState.None;
         private int _position;
 
-        public static SslProtocols SslProtocols
-        {
-            get
-            {
-                return _sslprotocols;
-            }
-            set
-            {
-                _sslprotocols = value;
-            }
-        }
-
         public HttpConnection(Socket sock, HttpEndPointListener epl, bool secure, X509Certificate2 cert)
         {
             _socket = sock;
@@ -109,7 +89,7 @@ namespace SpaceWizards.HttpListener
             SslSocket.BeginAuthenticateAsServer(sock, secure ? new SslServerAuthenticationOptions
             {
                 ClientCertificateRequired = false,
-                EnabledSslProtocols = SslProtocols,
+                EnabledSslProtocols = epl.Listener.SslProtocols,
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
                 ServerCertificateSelectionCallback = (sender, actualHostName) =>
                 {
@@ -194,8 +174,10 @@ namespace SpaceWizards.HttpListener
             {
                 if (_stream is SslStream sslStream)
                     return sslStream;
+                else if (_stream is SecureNetworkStream sslStream1)
+                    return sslStream1;
                 else
-                    throw new Exception($"[HttpConnection] - Connection stream is not of type:{typeof(SslStream)}.");
+                    throw new Exception($"[HttpConnection] - Connection stream can only be of types:{typeof(SslStream)}|{typeof(SecureNetworkStream)}.");
             }
         }
 #if NET5_0_OR_GREATER
@@ -444,7 +426,7 @@ namespace SpaceWizards.HttpListener
                 if (line == null)
                     break;
 
-                if (line == "")
+                if (line == string.Empty)
                 {
                     if (_inputState == InputState.RequestLine)
                         continue;

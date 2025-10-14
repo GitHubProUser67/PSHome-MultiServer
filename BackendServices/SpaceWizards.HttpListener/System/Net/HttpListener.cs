@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
 using MultiServerLibrary.SSL;
+using System.Security.Authentication;
 
 namespace SpaceWizards.HttpListener
 {
@@ -36,7 +37,14 @@ namespace SpaceWizards.HttpListener
         private string _realm;
         private Dictionary<(IPAddress, int), X509Certificate2> _certificateCache;
         private HashAlgorithmName _hashAlgorithm = HashAlgorithmName.SHA384;
-
+#pragma warning disable
+        private SslProtocols _sslprotocols =
+#if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+            SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
+#else
+            SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
+#endif
+#pragma warning restore
         internal ICollection PrefixCollection => _uriPrefixes.Keys;
 
         public HttpListener()
@@ -311,6 +319,18 @@ namespace SpaceWizards.HttpListener
         public HashAlgorithmName GetPreferedHashAlgorithm()
         {
             return _hashAlgorithm;
+        }
+
+        public SslProtocols SslProtocols
+        {
+            get
+            {
+                return _sslprotocols;
+            }
+            set
+            {
+                _sslprotocols = value;
+            }
         }
 
         public void Close()

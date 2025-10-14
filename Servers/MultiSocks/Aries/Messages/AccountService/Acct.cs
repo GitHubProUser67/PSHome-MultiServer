@@ -42,7 +42,7 @@ namespace MultiSocks.Aries.Messages.AccountService
                     Password = DecryptedPass,
                 };
 
-                bool? created = AriesServer.Database?.CreateNew(info);
+                bool? created = Program.DirtySocksDatabase?.CreateNew(info);
                 if (created != null && created.Value)
                 {
                     CustomLogger.LoggerAccessor.LogInfo("Created new account: " + info.Username);

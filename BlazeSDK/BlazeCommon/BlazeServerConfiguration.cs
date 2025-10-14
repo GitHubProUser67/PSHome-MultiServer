@@ -52,6 +52,11 @@ namespace BlazeCommon
             return _components.TryAdd(component.Id, component);
         }
 
+        public bool AddComponent(IBlazeServerComponent component)
+        {
+            return _components.TryAdd(component.Id, component);
+        }
+
         public bool RemoveComponent(ushort componentId, out IBlazeServerComponent? component)
         {
             return _components.Remove(componentId, out component);

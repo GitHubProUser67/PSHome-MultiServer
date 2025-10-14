@@ -21,7 +21,7 @@ namespace MultiSocks.Aries.Messages
 
                             foreach (string SplitedUser in SplitedList)
                             {
-                                AriesServer.Database?.AddFriend(client.User.ID, SplitedUser);
+                                Program.DirtySocksDatabase?.AddFriend(client.User.ID, SplitedUser);
                             }
                         }
                         if (!string.IsNullOrEmpty(DELETE))
@@ -30,7 +30,7 @@ namespace MultiSocks.Aries.Messages
 
                             foreach (string SplitedUser in SplitedList)
                             {
-                                AriesServer.Database?.DeleteFriend(client.User.ID, SplitedUser);
+                                Program.DirtySocksDatabase?.DeleteFriend(client.User.ID, SplitedUser);
                             }
                         }
                         break;
@@ -41,7 +41,7 @@ namespace MultiSocks.Aries.Messages
 
                             foreach (string SplitedUser in SplitedList)
                             {
-                                AriesServer.Database?.AddRival(client.User.ID, SplitedUser);
+                                Program.DirtySocksDatabase?.AddRival(client.User.ID, SplitedUser);
                             }
                         }
                         if (!string.IsNullOrEmpty(DELETE))
@@ -50,7 +50,7 @@ namespace MultiSocks.Aries.Messages
 
                             foreach (string SplitedUser in SplitedList)
                             {
-                                AriesServer.Database?.DeleteRival(client.User.ID, SplitedUser);
+                                Program.DirtySocksDatabase?.DeleteRival(client.User.ID, SplitedUser);
                             }
                         }
                         break;

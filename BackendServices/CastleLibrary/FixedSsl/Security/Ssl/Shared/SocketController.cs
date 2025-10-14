@@ -64,40 +64,53 @@ namespace Org.Mentalis.Security.Ssl.Shared
 			}
 		}
 		protected void OnReceive(IAsyncResult ar) {
-			lock(this) {	// synchronize
+			lock (this) // synchronize
+            {
 				try {
 					int size = m_Socket.EndReceive(ar);
-					if (size == 0) {
-						CloseConnection(null); // connection has been shut down
-					} else {
+					if (size == 0)
+                        CloseConnection(null); // connection has been shut down
+                    else
+                    {
 						SslRecordStatus status;
-						if (m_RecordLayer == null) {
+						if (m_RecordLayer == null)
+						{
 							CompatibilityResult ret = m_Compatibility.ProcessHello(m_ReceiveBuffer, 0, size);
 							m_RecordLayer = ret.RecordLayer;
 							status = ret.Status;
 							if (m_RecordLayer != null)
 								m_Compatibility = null;
-						} else {
-							status = m_RecordLayer.ProcessBytes(m_ReceiveBuffer, 0, size);
-						}
-						if (status.Buffer != null) {
-							if (status.Status == SslStatus.Close) { // shut down the connection after the send
-								m_IsShuttingDown = true;
-							}
-							BeginSend(status.Buffer, 0, status.Buffer.Length, null, DataType.ProtocolData);
-						} else if (status.Status == SslStatus.Close) { // Record Layer instructs us to shut down
+						} 
+						else
+                            status = m_RecordLayer.ProcessBytes(m_ReceiveBuffer, 0, size);
+                        if (status.Buffer != null)
+						{
+							if (status.Status == SslStatus.Close)
+                                // shut down the connection after the send
+                                m_IsShuttingDown = true;
+                            BeginSend(status.Buffer, 0, status.Buffer.Length, null, DataType.ProtocolData);
+						} 
+						else if (status.Status == SslStatus.Close)
+						{ 
+							// Record Layer instructs us to shut down
 							m_Socket.Shutdown(SocketShutdown.Both);
 							CloseConnection(null);
-						} else if (status.Status == SslStatus.OK) {
-							ResumeSending();
 						}
-						if (status.Decrypted != null)
+						else if (status.Status == SslStatus.OK)
+                            ResumeSending();
+                        if (status.Decrypted != null)
 							ProcessDecryptedBytes(status.Decrypted);
 						if (!m_IsDisposed && !m_IsShuttingDown)
-							m_Socket.BeginReceive(m_ReceiveBuffer, 0, m_ReceiveBufferLength, SocketFlags.None, new AsyncCallback(this.OnReceive), null);
+							m_Socket.BeginReceive(m_ReceiveBuffer, 0, m_ReceiveBufferLength, SocketFlags.None, new AsyncCallback(OnReceive), null);
 					}
-				} catch (Exception e) {
-					CustomLogger.LoggerAccessor.LogError(e);
+				}
+                catch (ObjectDisposedException e)
+                {
+                    CloseConnection(e);
+                }
+                catch (Exception e)
+				{
+					CustomLogger.LoggerAccessor.LogError($"[SocketController] - An assertion was thrown. (Exception:{e})");
 					CloseConnection(e);
 				}
 			}

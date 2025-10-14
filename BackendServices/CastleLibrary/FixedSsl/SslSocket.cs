@@ -1,3 +1,6 @@
+using CastleLibrary.FixedSsl;
+using Org.Mentalis.Security.Certificates;
+using Org.Mentalis.Security.Ssl;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -5,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
@@ -14,16 +18,17 @@ namespace FixedSsl
     {
         static SslSocket()
         {
-            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+            // TLS1.3 is only compatible with Windows 10 and Windows server 2019, for now I simply allow TLS1.2 to maintain compatibility, enable yourself if there is a need for 1.3 .
+            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12 /*| SecurityProtocolType.Tls13*/;
         }
 
         private const int SSLv2 = 0x0002;  // SSL 2.0
         private const int SSLv3 = 0x0300;  // SSL 3.0
         private const int TLSv1 = 0x0301;  // TLS 1.0
 
-        private static readonly Org.Mentalis.Security.Ssl.SecureProtocol legacyProtocols = Org.Mentalis.Security.Ssl.SecureProtocol.Ssl3 | Org.Mentalis.Security.Ssl.SecureProtocol.Tls1;
+        private static readonly SecureProtocol legacyProtocols = SecureProtocol.Ssl3 | SecureProtocol.Tls1;
 
-        public static async Task<Stream> AuthenticateAsServerAsync(Socket socket, X509Certificate2 certificate, bool forceSsl, bool ownSocket)
+        public static async Task<Stream> AuthenticateAsServerAsync(SslProtocols protocols, Socket socket, X509Certificate2 certificate, bool forceSsl, bool ownSocket)
         {
             // no certificate, no ssl
             if (certificate == null)
@@ -115,10 +120,21 @@ namespace FixedSsl
 
             int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out _, out int maxSslVersion, out List<int> versions);
 
+            var allowedProtocols = protocols.GetEnabledProtocols();
+
             // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
-            if (maxSslVersion == SSLv3 || maxSslVersion == TLSv1 || (!certificate.Verify() && versions.Any(v => v == SSLv3 || v == TLSv1)))
-                return new Org.Mentalis.Security.Ssl.SecureNetworkStream(new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server)), true);
-            else if (maxSslVersion == SSLv2)
+            if (
+#pragma warning disable
+                    (allowedProtocols.Contains(SslProtocols.Ssl3) || allowedProtocols.Contains(SslProtocols.Tls)) &&
+                    (
+                        maxSslVersion == SSLv3 ||
+                        maxSslVersion == TLSv1 ||
+                        (!certificate.Verify() && versions.Any(v => v == SSLv3 || v == TLSv1))
+                    )
+                )
+                return new SecureNetworkStream(new SecureSocket(socket, new SecurityOptions(legacyProtocols, new Certificate(certificate), ConnectionEnd.Server)), true);
+            else if (allowedProtocols.Contains(SslProtocols.Ssl2) && maxSslVersion == SSLv2)
+#pragma warning restore
             {
                 CustomLogger.LoggerAccessor.LogWarn($"[SslSocket] - Client tried to initialize a SSLv2 connection at {DateTime.Now}, invalidating the request...");
                 return null;
@@ -232,17 +248,37 @@ namespace FixedSsl
                 return new NetworkStream(socket, ownSocket);
             }
 
+            var allowedProtocols = authOptions.EnabledSslProtocols.GetEnabledProtocols();
+
             // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
-            if (maxSslVersion == SSLv3 || maxSslVersion == TLSv1 || (!certificate.Verify() && versions.Any(v => v == SSLv3 || v == TLSv1)))
-                return new Org.Mentalis.Security.Ssl.SecureNetworkStream(new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server)), true);
-            else if (maxSslVersion == SSLv2)
+            if (
+#pragma warning disable
+                    (allowedProtocols.Contains(SslProtocols.Ssl3) || allowedProtocols.Contains(SslProtocols.Tls)) &&
+                    (
+                        maxSslVersion == SSLv3 ||
+                        maxSslVersion == TLSv1 ||
+                        (!certificate.Verify() && versions.Any(v => v == SSLv3 || v == TLSv1))
+                    )
+                )
+            {
+                SecureSocket sock = new SecureSocket(socket, new SecurityOptions(legacyProtocols, new Certificate(certificate), ConnectionEnd.Server));
+
+                // Only fills the client certificate since for now, I have no idea how to extract cert related failures.
+                clientCertificate = new X509Certificate2(sock.RemoteCertificate.UnderlyingCert.GetRawCertData());
+
+                // Idea: using a lookup based on the client endpoint and certificate to return DNAS certificates on the fly.
+
+                return new SecureNetworkStream(sock, true);
+            }
+            else if (allowedProtocols.Contains(SslProtocols.Ssl2) && maxSslVersion == SSLv2)
+#pragma warning restore
             {
                 CustomLogger.LoggerAccessor.LogWarn($"[SslSocket] - Client tried to initialize a SSLv2 connection at {DateTime.Now}, invalidating the request...");
                 return null;
             }
 
-            X509Certificate2 clientCert = null;
             int[] clientCertErr = null;
+            X509Certificate2 clientCert = null;
 
             SslStream sslStream = new SslStream(new NetworkStream(socket, ownSocket), false, (t, c, ch, e) =>
             {
@@ -267,9 +303,9 @@ namespace FixedSsl
             return sslStream;
         }
 
-        public static IAsyncResult BeginAuthenticateAsServer(Socket socket, X509Certificate2 certificate, bool forceSsl, bool ownSocket, AsyncCallback callback, object state)
+        public static IAsyncResult BeginAuthenticateAsServer(SslProtocols protocols, Socket socket, X509Certificate2 certificate, bool forceSsl, bool ownSocket, AsyncCallback callback, object state)
         {
-            return AuthenticateAsServerAsync(socket, certificate, forceSsl, ownSocket).AsApm(callback, state);
+            return AuthenticateAsServerAsync(protocols, socket, certificate, forceSsl, ownSocket).AsApm(callback, state);
         }
 
         public static IAsyncResult BeginAuthenticateAsServer(

@@ -22,6 +22,18 @@ namespace BlazeCommon
             return Configuration.AddComponent<TComponent>();
         }
 
+        public bool AddComponent(Type componentType)
+        {
+            if (!typeof(IBlazeServerComponent).IsAssignableFrom(componentType))
+                throw new ArgumentException("Type must implement IBlazeServerComponent", nameof(componentType));
+
+            var component = Activator.CreateInstance(componentType) as IBlazeServerComponent;
+            if (component == null)
+                return false;
+
+            return Configuration.AddComponent(component);
+        }
+
         public bool RemoveComponent(ushort componentId, out IBlazeServerComponent? component)
         {
             return Configuration.RemoveComponent(componentId, out component);
