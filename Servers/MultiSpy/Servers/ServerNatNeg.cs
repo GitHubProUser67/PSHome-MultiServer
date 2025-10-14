@@ -35,17 +35,20 @@ namespace MultiSpy.Servers
 
 		protected virtual void Dispose(bool disposing)
 		{
-			try {
-				if (disposing) {
-					if (_socket != null) {
-						_socket.Close();
-						_socket.Dispose();
-						_socket = null;
-					}
-				}
-			} catch {
-			}
-		}
+            if (disposing)
+            {
+                if (_socket != null)
+                {
+                    try
+                    {
+                        _socket.Close();
+                        _socket.Dispose();
+                    }
+                    catch { /* ignore */ }
+                    _socket = null;
+                }
+            }
+        }
 
 		~ServerNatNeg()
 		{

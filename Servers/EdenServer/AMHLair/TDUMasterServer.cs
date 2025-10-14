@@ -15,6 +15,8 @@ namespace EdenServer.AMHLair
 
         private EndPoint? senderEndPoint;
 
+        private volatile bool _isRunning = true;
+
         public TDUMasterServer(IPAddress listen, ushort port)
         {
             Thread = new Thread(StartServer)
@@ -40,16 +42,35 @@ namespace EdenServer.AMHLair
             {
                 if (disposing)
                 {
+                    _isRunning = false;
+
+                    // Unblock the thread if it’s waiting
+                    _reset.Set();
+
                     if (_socket != null)
                     {
-                        _socket.Close();
-                        _socket.Dispose();
+                        try
+                        {
+                            _socket.Close();
+                            _socket.Dispose();
+                        }
+                        catch { /* ignore */ }
                         _socket = null;
+                    }
+
+                    // Give thread time to exit gracefully
+                    if (Thread != null && Thread.IsAlive)
+                    {
+                        if (!Thread.Join(TimeSpan.FromSeconds(2)))
+                        {
+                            try { Thread.Interrupt(); } catch { }
+                        }
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                LoggerAccessor.LogError($"[AMHMasterServer] - Error during Dispose: {e}");
             }
         }
 
@@ -77,30 +98,42 @@ namespace EdenServer.AMHLair
                 return;
             }
 
-            while (true)
+            while (_isRunning)
             {
-                _reset.Reset();
-                StartReceiving();
-                _reset.WaitOne();
+                try
+                {
+                    _reset.Reset();
+                    StartReceiving();
+                    _reset.WaitOne();
+                }
+                catch (ObjectDisposedException)
+                {
+                    break;
+                }
+                catch (ThreadInterruptedException)
+                {
+                    break;
+                }
+                catch (Exception e)
+                {
+                    LoggerAccessor.LogError($"[AMHMasterServer] - Server loop error: {e}");
+                }
             }
         }
 
         private void StartReceiving()
         {
-            try
-            {
-                byte[] buffer = new byte[8];
+            if (_socket == null || !_isRunning) return;
 
-                _socket!.BeginReceiveFrom(buffer, 0, buffer.Length, SocketFlags.None, ref senderEndPoint!, new AsyncCallback(ReceiveCallback), new UdpState { Buffer = buffer, EndPoint = senderEndPoint });
-            }
-            catch (ObjectDisposedException)
-            {
+            byte[] buffer = new byte[8];
 
-            }
+            _socket!.BeginReceiveFrom(buffer, 0, buffer.Length, SocketFlags.None, ref senderEndPoint!, new AsyncCallback(ReceiveCallback), new UdpState { Buffer = buffer, EndPoint = senderEndPoint });
         }
 
         private void ReceiveCallback(IAsyncResult ar)
         {
+            if (_socket == null || !_isRunning) return;
+
             try
             {
                 _reset.Set();
@@ -120,7 +153,7 @@ namespace EdenServer.AMHLair
             }
             catch (ObjectDisposedException)
             {
-
+                // Not Important.
             }
             catch (Exception e)
             {

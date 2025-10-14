@@ -45,21 +45,29 @@ namespace MultiSpy.Servers
 
 		protected virtual void Dispose(bool disposing)
 		{
-			try {
-				if (disposing) {
-					if (_clientManagerSocket != null) {
-						_clientManagerSocket.Close();
-						_clientManagerSocket.Dispose();
-						_clientManagerSocket = null;
-					}
-					if (_searchManagerSocket != null) {
-						_searchManagerSocket.Close();
-						_searchManagerSocket.Dispose();
-						_searchManagerSocket = null;
-					}
-				}
-			} catch (Exception) {
-			}
+            if (disposing)
+            {
+                if (_clientManagerSocket != null)
+                {
+                    try
+                    {
+                        _clientManagerSocket.Close();
+                        _clientManagerSocket.Dispose();
+                    }
+                    catch { /* ignore */ }
+                    _clientManagerSocket = null;
+                }
+                if (_searchManagerSocket != null)
+                {
+                    try
+                    {
+                        _searchManagerSocket.Close();
+                        _searchManagerSocket.Dispose();
+                    }
+                    catch { /* ignore */ }
+                    _searchManagerSocket = null;
+                }
+            }
 		}
 
 		~LoginServer()
