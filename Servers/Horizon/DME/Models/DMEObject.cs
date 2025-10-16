@@ -143,25 +143,39 @@ namespace Horizon.DME.Models
                     _timedout = false;
                 else
                 {
+                    const int expirationDelay = 2;
                     double deltaSec = (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds;
                     int timeoutThreshold = DmeClass.GetAppSettingsOrDefault(ApplicationId).ClientTimeoutSeconds;
 
-                    if (!_timedout && deltaSec > timeoutThreshold + 2)
+                    if (deltaSec > timeoutThreshold + expirationDelay)
                     {
-                        _missedEchos++;
-                        LoggerAccessor.LogError(
-                               $"[DMEObject] - TIMEOUT - Client {mumClient.AccountName} missed echo #{_missedEchos}. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
-                           );
-
-                        if (_missedEchos > 2)
+                        if (!_timedout)
                         {
-                            _missedEchos = 0;
-                            _timedout = true;
+                            _missedEchos++;
+                            LoggerAccessor.LogWarn(
+                                   $"[DMEObject] - TIMEOUT - Client {mumClient.AccountName} missed echo #{_missedEchos}. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
+                               );
+
+                            if (_missedEchos > expirationDelay)
+                            {
+                                _missedEchos = 0;
+                                _timedout = true;
+                            }
                         }
                     }
-                    else if (deltaSec <= timeoutThreshold + 2)
-                        _missedEchos = 0;
+                    else
+                    {
+                        if (_timedout)
+                        {
+                            _timedout = false;
 
+                            LoggerAccessor.LogInfo(
+                                $"[DMEObject] - RECOVERED - Client {mumClient.AccountName} recovered. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
+                            );
+                        }
+
+                        _missedEchos = 0;
+                    }
                 }
 
                 return _timedout;
@@ -171,24 +185,39 @@ namespace Horizon.DME.Models
         {
             get
             {
+                const int expirationDelay = 2;
                 double deltaSec = (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds;
                 int timeoutThreshold = DmeClass.GetAppSettingsOrDefault(ApplicationId).ClientLongTimeoutSeconds;
 
-                if (!_long_timedout && deltaSec > timeoutThreshold + 2)
+                if (deltaSec > timeoutThreshold + expirationDelay)
                 {
-                    _missedLongEchos++;
-                    LoggerAccessor.LogError(
-                             $"[DMEObject] - LONG_TIMEOUT - Client {mumClient.AccountName} missed echo #{_missedLongEchos}. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
-                         );
-
-                    if (_missedLongEchos > 2)
+                    if (!_long_timedout)
                     {
-                        _missedLongEchos = 0;
-                        _long_timedout = true;
+                        _missedLongEchos++;
+                        LoggerAccessor.LogWarn(
+                                 $"[DMEObject] - LONG_TIMEOUT - Client {mumClient.AccountName} missed echo #{_missedLongEchos}. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
+                             );
+
+                        if (_missedLongEchos > expirationDelay)
+                        {
+                            _missedLongEchos = 0;
+                            _long_timedout = true;
+                        }
                     }
                 }
-                else if (deltaSec <= timeoutThreshold + 2)
+                else
+                {
+                    if (_long_timedout)
+                    {
+                        _long_timedout = false;
+
+                        LoggerAccessor.LogInfo(
+                            $"[DMEObject] - LONG_RECOVERED - Client {mumClient.AccountName} recovered. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
+                        );
+                    }
+
                     _missedLongEchos = 0;
+                }
 
                 return _long_timedout;
             }
