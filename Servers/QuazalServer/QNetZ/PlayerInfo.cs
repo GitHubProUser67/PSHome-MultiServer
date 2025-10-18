@@ -12,6 +12,11 @@ namespace QuazalServer.QNetZ
 
 		public void OnDropped()
 		{
+			if (CurrentSparkGameId != 0)
+			{
+				RDVServices.GameServices.PS3SparkServices.SparkProtocolService.RefreshGames(true, this);
+            }
+
 			foreach (var ds in DataStore.Values)
 				ds.OnDropped();
 		}
@@ -19,7 +24,9 @@ namespace QuazalServer.QNetZ
 		public QClient? Client;	// connection info
 		public uint PID { get; set; } // printcipal ID
 		public uint RVCID { get; set; } // rendez-vous connection ID
-		public uint StationID { get; set; }
+		public uint CurrentSparkGameId { get; set; } = 0; // current spark game lobby id
+        public uint StationID { get; set; }
+        public string AccessKey { get; set; } = string.Empty;
         public string? AccountId { get; set; }
         public string? UbiCountryCode { get; set; }
         public string? UbiLanguageCode { get; set; }

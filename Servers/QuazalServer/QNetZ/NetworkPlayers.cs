@@ -1,6 +1,7 @@
 using NetHasher.CRC;
 using CustomLogger;
 using System.Text;
+using QuazalServer.QNetZ.Interfaces;
 
 namespace QuazalServer.QNetZ
 {
@@ -24,13 +25,14 @@ namespace QuazalServer.QNetZ
                 return Players.Where(pl => pl.Name == userName).FirstOrDefault();
         }
 
-		public static PlayerInfo CreatePlayerInfo(QClient connection)
+		public static PlayerInfo CreatePlayerInfo(RMCContext ctx)
 		{
             PlayerInfo plInfo = new()
             {
-                Client = connection,
+                Client = ctx.Client,
                 PID = 0,
-                RVCID = RVCIDCounter++
+                RVCID = RVCIDCounter++,
+                AccessKey = ctx.Handler.AccessKey
             };
 
             lock (_Lock)

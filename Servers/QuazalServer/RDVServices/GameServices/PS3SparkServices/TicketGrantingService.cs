@@ -28,7 +28,7 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
 
                 if (userName == "guest")
                 {
-                    plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
+                    plInfo = NetworkPlayers.CreatePlayerInfo(Context);
                     plInfo.PID = 100;
                     plInfo.AccountId = userName;
                     plInfo.Name = userName;
@@ -81,7 +81,7 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
 
                 LoggerAccessor.LogInfo($"[RMC Authentication] - User login request {userName}");
 
-                plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
+                plInfo = NetworkPlayers.CreatePlayerInfo(Context);
 
                 // Console login not uses Quazal storage, they use a given account to log-in.
                 plInfo.PID = NetworkPlayers.GenerateUniqueUint(userName + "a1nPut!");

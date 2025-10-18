@@ -30,7 +30,7 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 
                 if (userName == "guest")
                 {
-                    plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
+                    plInfo = NetworkPlayers.CreatePlayerInfo(Context);
                     plInfo.PID = 100;
                     plInfo.AccountId = userName;
                     plInfo.Name = userName;
@@ -58,7 +58,7 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                 }
                 else if (userName == "Tracking")
                 {
-                    plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
+                    plInfo = NetworkPlayers.CreatePlayerInfo(Context);
                     plInfo.PID = 0;
                     plInfo.AccountId = userName;
                     plInfo.Name = userName;
@@ -111,7 +111,7 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 
                 LoggerAccessor.LogInfo($"[RMC Authentication] - User login request {userName}");
 
-                plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
+                plInfo = NetworkPlayers.CreatePlayerInfo(Context);
 
                 // Console login not uses Quazal storage, they use a given account to log-in.
                 plInfo.PID = NetworkPlayers.GenerateUniqueUint(userName + "!PcF0r3ver");
@@ -236,7 +236,7 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                 }
                 else
                 {
-                    plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
+                    plInfo = NetworkPlayers.CreatePlayerInfo(Context);
                     plInfo.PID = user.Id;
                     plInfo.AccountId = userName;
                     plInfo.Name = oExtraData.data.username;

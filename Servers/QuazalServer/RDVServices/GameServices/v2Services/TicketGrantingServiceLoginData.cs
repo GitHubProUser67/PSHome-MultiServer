@@ -30,7 +30,7 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
 
                 if (userName == "guest")
                 {
-                    plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
+                    plInfo = NetworkPlayers.CreatePlayerInfo(Context);
                     plInfo.PID = 100;
                     plInfo.AccountId = userName;
                     plInfo.Name = userName;
@@ -84,7 +84,7 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
                 LoggerAccessor.LogInfo($"[RMC Authentication] - User login request {userName}");
 
                 User? dbUser = DBHelper.GetUserByUserName(Context.Handler.Factory.Item1, userName);
-                plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
+                plInfo = NetworkPlayers.CreatePlayerInfo(Context);
 
                 if (dbUser != null)
                 {
@@ -159,7 +159,7 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
                 LoggerAccessor.LogInfo($"[RMC Authentication] - User login request {userName}");
 
                 User? dbUser = DBHelper.GetUserByUserName(Context.Handler.Factory.Item1, userName);
-                plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
+                plInfo = NetworkPlayers.CreatePlayerInfo(Context);
 
                 if (dbUser != null)
                 {

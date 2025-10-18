@@ -31,7 +31,7 @@ namespace QuazalServer.RDVServices.GameServices.PS3RaymanLegendsServices
 
                 if (userName == "guest")
                 {
-                    plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
+                    plInfo = NetworkPlayers.CreatePlayerInfo(Context);
                     plInfo.PID = 100;
                     plInfo.AccountId = userName;
                     plInfo.Name = userName;
@@ -59,7 +59,7 @@ namespace QuazalServer.RDVServices.GameServices.PS3RaymanLegendsServices
                 }
                 else if (userName == "Tracking")
                 {
-                    plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
+                    plInfo = NetworkPlayers.CreatePlayerInfo(Context);
                     plInfo.PID = 0;
                     plInfo.AccountId = userName;
                     plInfo.Name = userName;
@@ -112,7 +112,7 @@ namespace QuazalServer.RDVServices.GameServices.PS3RaymanLegendsServices
 
                 LoggerAccessor.LogInfo($"[RMC Authentication] - User login request {userName}");
 
-                plInfo = NetworkPlayers.CreatePlayerInfo(Context.Client);
+                plInfo = NetworkPlayers.CreatePlayerInfo(Context);
 
                 // Console login not uses Quazal storage, they use a given account to log-in.
                 plInfo.PID = NetworkPlayers.GenerateUniqueUint(userName + "a1nPut!");
