@@ -121,10 +121,7 @@ namespace SpaceWizards.HttpListener
 
             HttpConnection conn = new HttpConnection(accepted, epl, epl._secure, epl._cert);
 
-            while (!conn.Initialized)
-            {
-                Thread.Sleep(1);
-            }
+            conn.WaitForAuthentication();
 
             if (conn.ConnectedStream == null)
             {

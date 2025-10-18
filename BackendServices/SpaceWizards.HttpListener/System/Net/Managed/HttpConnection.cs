@@ -49,8 +49,7 @@ namespace SpaceWizards.HttpListener
 {
     internal sealed class HttpConnection
     {
-        public bool Initialized = false;
-
+        private readonly ManualResetEventSlim _initializedEvent = new(false);
         private static readonly Action<Task<int>, object> s_onreadCallback = OnRead;
         private const int BufferSize = 8192;
         private Socket _socket;
@@ -151,11 +150,18 @@ namespace SpaceWizards.HttpListener
 
                 LoggerAccessor.LogError($"[HttpConnection] - Errored out while trying to authenticate as server. (Exception: {ex}).");
             }
+            finally
+            {
+                if (_stream != null)
+                    Init();
 
-            if (_stream != null)
-                Init();
+                _initializedEvent.Set();
+            }
+        }
 
-            Initialized = true;
+        public void WaitForAuthentication()
+        {
+            _initializedEvent.Wait();
         }
 
         internal int[] ClientCertificateErrors
