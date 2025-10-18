@@ -1,8 +1,9 @@
+using System;
 using System.IO;
 
 namespace EndianTools.BinaryExtension
 {
-    public abstract class EndianAwareBinaryReader
+    public abstract class EndianAwareBinaryReader : IDisposable
     {
         public EndianAwareBinaryReader(Stream input)
         {
@@ -17,6 +18,8 @@ namespace EndianTools.BinaryExtension
         }
 
         public abstract byte[] ReadBytes(int length);
+
+        public abstract byte ReadByte();
 
         public abstract uint ReadUInt32();
 
@@ -33,5 +36,23 @@ namespace EndianTools.BinaryExtension
         public abstract ulong ReadUInt64();
 
         protected BinaryReader m_br;
+        private bool disposedValue;
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                    m_br.Dispose();
+
+                disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
     }
 }

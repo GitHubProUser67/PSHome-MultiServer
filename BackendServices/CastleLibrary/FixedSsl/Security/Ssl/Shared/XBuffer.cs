@@ -12,7 +12,6 @@ namespace Org.Mentalis.Security.Ssl.Shared
 		/// Initializes a new instance of the XBuffer class with an expandable capacity initialized to zero.
 		/// </summary>
 		public XBuffer() : base() {
-			//
 		}
 		/// <summary>
 		/// Removes a number of leading bytes from the buffer.

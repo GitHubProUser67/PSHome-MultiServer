@@ -1,10 +1,11 @@
-﻿using Org.Mentalis.Security.Cryptography;
-using S22.Imap.Auth.Sasl.Mechanisms.Srp;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using MultiServerLibrary.Extension;
+using Org.Mentalis.Security.Cryptography;
+using S22.Imap.Auth.Sasl.Mechanisms.Srp;
 
 namespace S22.Imap.Auth.Sasl.Mechanisms {
 	/// <summary>
@@ -250,7 +251,7 @@ namespace S22.Imap.Auth.Sasl.Mechanisms {
 			// Compute the proof and compare it with the one sent by the server.
 			byte[] proof = Helper.ComputeServerProof(PublicKey, ClientProof, SharedKey,
 				AuthId, Options, m.SessionId, m.Ttl, HashAlgorithm);
-			return proof.SequenceEqual(m.Proof) ? new byte[0] :
+			return proof.EqualsTo(m.Proof) ? new byte[0] :
 				Encoding.UTF8.GetBytes("*");
 		}
 
@@ -265,12 +266,14 @@ namespace S22.Imap.Auth.Sasl.Mechanisms {
 		private Tuple<string, Type> SelectHashAlgorithm(string list) {
 			string[] supported = list.Split(',');
 			var l = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase) {
+#pragma warning disable
 				{ "SHA-1", typeof(SHA1Managed) },
 				{ "SHA-256", typeof(SHA256Managed) },
 				{ "SHA-384", typeof(SHA384Managed) },
 				{ "SHA-512", typeof(SHA512Managed) },
 				{ "RIPEMD-160", typeof(RIPEMD160Managed) },
 				{ "MD5", typeof(MD5CryptoServiceProvider) }
+#pragma warning restore
 			};
 			foreach (KeyValuePair<string, Type> p in l) {
 				if (supported.Contains(p.Key, StringComparer.InvariantCultureIgnoreCase))

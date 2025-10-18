@@ -326,21 +326,27 @@ namespace Org.Mentalis.Security.Ssl.Shared
 			if (offset < 0 || offset + size > buffer.Length || size < 0)
 				throw new ArgumentException();
 			//TODO: als buffer kleiner dan max length => geen memorystream
-			MemoryStream ms = new MemoryStream(size + (size / m_MaxMessageLength + 1) * 25);
-			byte[] message;
-			int encrypted = 0;
-			while(encrypted < size) {
-				if (encrypted + m_MaxMessageLength > size) {
-					//message = InternalEncryptBytes2(buffer, offset + encrypted, size - encrypted, type);
-					message = InternalEncryptBytes(buffer, offset + encrypted, size - encrypted, type);
-					ms.Write(message, 0, message.Length);
-				} else {
-					message = InternalEncryptBytes(buffer, offset + encrypted, m_MaxMessageLength, type);
-					ms.Write(message, 0, message.Length);
-				}
-				encrypted += m_MaxMessageLength;
-			}
-			return ms.ToArray();
+			using (MemoryStream ms = new MemoryStream(size + (size / m_MaxMessageLength + 1) * 25))
+			{
+                byte[] message;
+                int encrypted = 0;
+                while (encrypted < size)
+                {
+                    if (encrypted + m_MaxMessageLength > size)
+                    {
+                        //message = InternalEncryptBytes2(buffer, offset + encrypted, size - encrypted, type);
+                        message = InternalEncryptBytes(buffer, offset + encrypted, size - encrypted, type);
+                        ms.Write(message, 0, message.Length);
+                    }
+                    else
+                    {
+                        message = InternalEncryptBytes(buffer, offset + encrypted, m_MaxMessageLength, type);
+                        ms.Write(message, 0, message.Length);
+                    }
+                    encrypted += m_MaxMessageLength;
+                }
+                return ms.ToArray();
+            }
 		}
 		protected bool IsRecordMessageComplete(byte[] buffer, int offset) {
 			if (buffer.Length < offset + 6)

@@ -3,9 +3,9 @@ using System.IO;
 
 namespace EndianTools.BinaryExtension
 {
-    internal class BEBinaryWriter : EndianAwareBinaryWriter
+    public class BEBinaryWriter : EndianAwareBinaryWriter
     {
-        internal BEBinaryWriter(Stream output) : base(output)
+        public BEBinaryWriter(Stream output) : base(output)
         {
         }
 

@@ -111,20 +111,6 @@ namespace S22.Imap {
 		}
 
 		/// <summary>
-		/// Reads an unsigned short value from the underlying stream, optionally using big-endian byte
-		/// ordering.
-		/// </summary>
-		/// <param name="reader">Extension method for BinaryReader.</param>
-		/// <param name="bigEndian">Set to true to interpret the short value as big endian value.</param>
-		/// <returns>The 16-byte unsigned short value read from the underlying stream.</returns>
-		internal static ushort ReadUInt16(this BinaryReader reader, bool bigEndian) {
-			ushort ret = reader.ReadUInt16();
-            if (bigEndian)
-                ret = EndianTools.EndianUtils.ReverseUshort(ret);
-			return ret;
-		}
-
-		/// <summary>
 		/// Decodes a string composed of one or several MIME 'encoded-words'.
 		/// </summary>
 		/// <param name="words">A string to composed of one or several MIME 'encoded-words'.</param>

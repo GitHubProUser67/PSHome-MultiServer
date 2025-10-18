@@ -1,8 +1,5 @@
-﻿using S22.Imap.Auth;
-using System;
-using System.IO;
+﻿using System.IO;
 using System.Text;
-using System.Linq;
 
 namespace S22.Imap.Auth.Sasl.Mechanisms.Srp {
 	/// <summary>
@@ -20,14 +17,10 @@ namespace S22.Imap.Auth.Sasl.Mechanisms.Srp {
 		/// <returns>The 32-byte unsigned integer value read from the underlying
 		/// stream.</returns>
 		public static uint ReadUInt32(this BinaryReader reader, bool bigEndian) {
-			if (!bigEndian)
-				return reader.ReadUInt32();
-			int ret = 0;
-			ret |= (reader.ReadByte() << 24);
-			ret |= (reader.ReadByte() << 16);
-			ret |= (reader.ReadByte() <<  8);
-			ret |= (reader.ReadByte() <<  0);
-			return (uint) ret;
+			uint result = reader.ReadUInt32();
+            if (bigEndian)
+				return EndianTools.EndianUtils.ReverseUint(result);
+			return result;
 		}
 
 		/// <summary>
@@ -40,12 +33,10 @@ namespace S22.Imap.Auth.Sasl.Mechanisms.Srp {
 		/// <returns>The 16-byte unsigned short value read from the underlying
 		/// stream.</returns>
 		public static ushort ReadUInt16(this BinaryReader reader, bool bigEndian) {
-			if (!bigEndian)
-				return reader.ReadUInt16();
-			int ret = 0;
-			ret |= (reader.ReadByte() << 8);
-			ret |= (reader.ReadByte() << 0);
-			return (ushort) ret;
+            ushort result = reader.ReadUInt16();
+            if (bigEndian)
+                return EndianTools.EndianUtils.ReverseUshort(result);
+            return result;
 		}
 
 		/// <summary>
@@ -55,10 +46,7 @@ namespace S22.Imap.Auth.Sasl.Mechanisms.Srp {
 		/// <returns>An instance of the Mpi class decoded from the bytes read
 		/// from the underlying stream.</returns>
 		public static Mpi ReadMpi(this BinaryReader reader) {
-			ushort length = reader.ReadUInt16(true);
-			byte[] data = reader.ReadBytes(length);
-
-			return new Mpi(data);
+			return new Mpi(reader.ReadBytes(reader.ReadUInt16(true)));
 		}
 
 		/// <summary>
@@ -68,10 +56,7 @@ namespace S22.Imap.Auth.Sasl.Mechanisms.Srp {
 		/// <returns>An instance of the OctetSequence class decoded from the bytes
 		/// read from the underlying stream.</returns>
 		public static OctetSequence ReadOs(this BinaryReader reader) {
-			byte length = reader.ReadByte();
-			byte[] data = reader.ReadBytes(length);
-
-			return new OctetSequence(data);
+			return new OctetSequence(reader.ReadBytes(reader.ReadByte()));
 		}
 
 		/// <summary>
@@ -81,10 +66,7 @@ namespace S22.Imap.Auth.Sasl.Mechanisms.Srp {
 		/// <returns>An instance of the Utf8String class decoded from the bytes
 		/// read from the underlying stream.</returns>
 		public static Utf8String ReadUtf8String(this BinaryReader reader) {
-			ushort length = reader.ReadUInt16(true);
-			byte[] data = reader.ReadBytes(length);
-
-			return new Utf8String(Encoding.UTF8.GetString(data));
+			return new Utf8String(Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadUInt16(true))));
 		}
 	}
 }

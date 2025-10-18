@@ -3,9 +3,9 @@ using System.IO;
 
 namespace EndianTools.BinaryExtension
 {
-    internal class BEBinaryReader : EndianAwareBinaryReader
+    public class BEBinaryReader : EndianAwareBinaryReader
     {
-        internal BEBinaryReader(Stream input) : base(input)
+        public BEBinaryReader(Stream input) : base(input)
         {
         }
 
@@ -16,6 +16,14 @@ namespace EndianTools.BinaryExtension
                 return Array.Empty<byte>();
 
             return EndianUtils.EndianSwap(m_br.ReadBytes(length));
+        }
+
+        public override byte ReadByte()
+        {
+            byte[] bytes = ReadBytes(1);
+            if (bytes.Length == 0)
+                return 0;
+            return bytes[0];
         }
 
         public override short ReadInt16()

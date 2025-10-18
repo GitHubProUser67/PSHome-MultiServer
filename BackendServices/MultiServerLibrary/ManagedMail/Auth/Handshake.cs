@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.Serialization;
+using EndianTools.BinaryExtension;
 
 namespace S22.Imap.Auth {
 	/// <summary>
@@ -83,13 +84,13 @@ namespace S22.Imap.Auth {
 		public static Handshake Deserialize(byte[] data) {
 			Handshake hs = new Handshake();
 			using (var ms = new MemoryStream(data)) {
-				using (var r = new BinaryReader(ms)) {
+				using (var r = new BEBinaryReader(ms)) {
 					try {
 						hs.MessageId = (HandshakeType) r.ReadByte();
 						hs.MajorVersion = r.ReadByte();
 						hs.MinorVersion = r.ReadByte();
 						// The payload size is in network byte order (big endian).
-						hs.PayloadSize = r.ReadUInt16(true);
+						hs.PayloadSize = r.ReadUInt16();
 					} catch (Exception e) {
 						throw new SerializationException("The specified byte array contains " +
 							"invalid data.", e);

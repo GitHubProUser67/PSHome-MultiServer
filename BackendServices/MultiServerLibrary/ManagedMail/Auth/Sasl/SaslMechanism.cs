@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System;
+using MultiServerLibrary.Extension;
 
 namespace S22.Imap.Auth.Sasl {
 	/// <summary>
@@ -62,8 +63,9 @@ namespace S22.Imap.Auth.Sasl {
 		/// not be retrieved. Refer to the inner exception for error details.</exception>
 		public string GetResponse(string challenge) {
 			try {
-				byte[] data = String.IsNullOrEmpty(challenge) ? new byte[0] :
-					Convert.FromBase64String(challenge);
+				var isBase64 = challenge.IsBase64();
+                byte[] data = isBase64.Item1 ?
+                    isBase64.Item2 : new byte[0];
 				byte[] response = ComputeResponse(data);
 				return Convert.ToBase64String(response);
 			} catch (Exception e) {

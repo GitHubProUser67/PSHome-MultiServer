@@ -275,22 +275,24 @@ namespace Org.Mentalis.Security.Ssl.Shared
                 cert_bytes[i] = certs[i].ToCerBuffer();
                 size += cert_bytes[i].Length + 3;
             }
-            MemoryStream ret = new MemoryStream(size + 3 * certs.Length + 3);
-            // write length of certificate list
-            ret.WriteByte((byte)(size / 65536));
-            ret.WriteByte((byte)((size % 65536) / 256));
-            ret.WriteByte((byte)(size % 256));
-            for (int i = 0; i < cert_bytes.Length; i++)
+            using (MemoryStream ret = new MemoryStream(size + 3 * certs.Length + 3))
             {
-                // write the length of the certificate
-                size = cert_bytes[i].Length;
-                ret.WriteByte((byte)(size / 65536)); // write length of certificates
+                // write length of certificate list
+                ret.WriteByte((byte)(size / 65536));
                 ret.WriteByte((byte)((size % 65536) / 256));
                 ret.WriteByte((byte)(size % 256));
-                // write the certificate
-                ret.Write(cert_bytes[i], 0, size);
+                for (int i = 0; i < cert_bytes.Length; i++)
+                {
+                    // write the length of the certificate
+                    size = cert_bytes[i].Length;
+                    ret.WriteByte((byte)(size / 65536)); // write length of certificates
+                    ret.WriteByte((byte)((size % 65536) / 256));
+                    ret.WriteByte((byte)(size % 256));
+                    // write the certificate
+                    ret.Write(cert_bytes[i], 0, size);
+                }
+                return ret.ToArray();
             }
-            return ret.ToArray();
         }
         protected SslHandshakeStatus ProcessClientKeyExchange(HandshakeMessage message)
         {

@@ -226,7 +226,7 @@ namespace S22.Imap.Auth.Sasl.Mechanisms {
 				calculatedSignature = HMAC(serverKey, AuthMessage);
 			// If both signatures are equal, server has been authenticated. Otherwise
 			// cancel the authentication process.
-			return serverSignature.SequenceEqual(calculatedSignature) ?
+			return serverSignature.EqualsTo(calculatedSignature) ?
 				new byte[0] : Encoding.UTF8.GetBytes("*");
 		}
 

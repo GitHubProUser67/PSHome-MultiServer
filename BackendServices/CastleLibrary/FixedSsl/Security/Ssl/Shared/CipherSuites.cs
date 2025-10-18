@@ -31,12 +31,13 @@
  *   OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-using System;
-using System.IO;
-using System.Security.Cryptography;
 using Org.Mentalis.Security.Cryptography;
 using Org.Mentalis.Security.Ssl.Ssl3;
 using Org.Mentalis.Security.Ssl.Tls1;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Security.Cryptography;
 
 namespace Org.Mentalis.Security.Ssl.Shared
 {
@@ -44,57 +45,52 @@ namespace Org.Mentalis.Security.Ssl.Shared
     // 1024bit export ciphers: http://www.ietf.org/proceedings/99nov/I-D/draft-ietf-tls-56-bit-ciphersuites-00.txt
     internal sealed class CipherSuites {
 		private CipherSuites() {}
-		public static SslAlgorithms GetCipherAlgorithmType(byte[] buffer, int offset) {
+
+        // Map TLS cipher identifiers (0x00XX) to algorithms
+        public static Dictionary<(byte, byte), SslAlgorithms> CipherMap = new()
+		{
+			{ (0, 0), SslAlgorithms.NONE },
+			{ (0, 3), SslAlgorithms.RSA_RC4_40_MD5 },
+			{ (0, 4), SslAlgorithms.RSA_RC4_128_MD5 },
+			{ (0, 5), SslAlgorithms.RSA_RC4_128_SHA },
+			{ (0, 6), SslAlgorithms.RSA_RC2_40_MD5 },
+			{ (0, 8), SslAlgorithms.RSA_DES_40_SHA },
+			{ (0, 9), SslAlgorithms.RSA_DES_56_SHA },
+			{ (0, 10), SslAlgorithms.RSA_3DES_168_SHA },
+			{ (0, 47), SslAlgorithms.RSA_AES_128_SHA },
+			{ (0, 53), SslAlgorithms.RSA_AES_256_SHA },
+		};
+
+		public static Dictionary<SslAlgorithms, byte[]> AlgorithmBytes = new()
+		{
+			{ SslAlgorithms.RSA_AES_256_SHA, new byte[] { 0, 53 } },
+			{ SslAlgorithms.RSA_AES_128_SHA, new byte[] { 0, 47 } },
+			{ SslAlgorithms.RSA_RC4_128_SHA, new byte[] { 0, 5 } },
+			{ SslAlgorithms.RSA_RC4_128_MD5, new byte[] { 0, 4 } },
+			{ SslAlgorithms.RSA_3DES_168_SHA, new byte[] { 0, 10 } },
+			{ SslAlgorithms.RSA_DES_56_SHA, new byte[] { 0, 9 } },
+			{ SslAlgorithms.RSA_RC4_40_MD5, new byte[] { 0, 3 } },
+			{ SslAlgorithms.RSA_RC2_40_MD5, new byte[] { 0, 6 } },
+			{ SslAlgorithms.RSA_DES_40_SHA, new byte[] { 0, 8 } },
+		};
+
+        public static SslAlgorithms GetCipherAlgorithmType(byte[] buffer, int offset) {
 			if (buffer.Length < offset + 2)
 				throw new SslException(AlertDescription.InternalError, "Buffer overflow in GetCipherAlgorithm.");
-			byte b1 = buffer[offset];
-			byte b2 = buffer[offset + 1];
-			if (b1 == 0 && b2 == 0)
-				return SslAlgorithms.NONE;
-			else if(b1 == 0 && b2 == 5)
-				return SslAlgorithms.RSA_RC4_128_SHA;
-			else if(b1 == 0 && b2 == 4)
-				return SslAlgorithms.RSA_RC4_128_MD5;
-			else if(b1 == 0 && b2 == 3)
-				return SslAlgorithms.RSA_RC4_40_MD5;
-			else if(b1 == 0 && b2 == 6)
-				return SslAlgorithms.RSA_RC2_40_MD5;
-			else if(b1 == 0 && b2 == 9)
-				return SslAlgorithms.RSA_DES_56_SHA;
-			else if(b1 == 0 && b2 == 10)
-				return SslAlgorithms.RSA_3DES_168_SHA;
-			else if(b1 == 0 && b2 == 8)
-				return SslAlgorithms.RSA_DES_40_SHA;
-			else if(b1 == 0 && b2 == 47)
-				return SslAlgorithms.RSA_AES_128_SHA;
-			else if(b1 == 0 && b2 == 53)
-				return SslAlgorithms.RSA_AES_256_SHA;
-			else
-				return SslAlgorithms.NONE;
-		}
-		public static byte[] GetCipherAlgorithmBytes(SslAlgorithms algorithm) {
-			MemoryStream ms = new MemoryStream();
-			// write them to the memory stream in order of preference
-			int algo = (int)algorithm;
-			if ((algo & (int)SslAlgorithms.RSA_AES_256_SHA) != 0)
-				ms.Write(new byte[]{0,53}, 0, 2);
-			if ((algo & (int)SslAlgorithms.RSA_AES_128_SHA) != 0)
-				ms.Write(new byte[]{0,47}, 0, 2);
-			if ((algo & (int)SslAlgorithms.RSA_RC4_128_SHA) != 0)
-				ms.Write(new byte[]{0,5}, 0, 2);
-			if ((algo & (int)SslAlgorithms.RSA_RC4_128_MD5) != 0)
-				ms.Write(new byte[]{0,4}, 0, 2);
-			if ((algo & (int)SslAlgorithms.RSA_3DES_168_SHA) != 0)
-				ms.Write(new byte[]{0,10}, 0, 2);
-			if ((algo & (int)SslAlgorithms.RSA_DES_56_SHA) != 0)
-				ms.Write(new byte[]{0,9}, 0, 2);
-			if ((algo & (int)SslAlgorithms.RSA_RC4_40_MD5) != 0)
-				ms.Write(new byte[]{0,3}, 0, 2);
-			if ((algo & (int)SslAlgorithms.RSA_RC2_40_MD5) != 0)
-				ms.Write(new byte[]{0,6}, 0, 2);
-			if ((algo & (int)SslAlgorithms.RSA_DES_40_SHA) != 0)
-				ms.Write(new byte[]{0,8}, 0, 2);
-			return ms.ToArray();
+            var key = (buffer[offset], buffer[offset + 1]);
+            return CipherMap.TryGetValue(key, out var algorithm) ? algorithm : SslAlgorithms.NONE;
+        }
+		public static byte[] GetCipherAlgorithmBytes(SslAlgorithms algorithms) {
+			using (MemoryStream ms = new MemoryStream())
+			{
+                // Write them to the memory stream in order of preference as registered in the dictionary
+                foreach (var (algo, bytes) in AlgorithmBytes)
+                {
+                    if (((int)algorithms & (int)algo) != 0)
+                        ms.Write(bytes, 0, 2);
+                }
+                return ms.ToArray();
+            }
 		}
 		public static SslAlgorithms GetCipherSuiteAlgorithm(byte[] algorithms, SslAlgorithms allowed) {
 			int alwd = (int)allowed;

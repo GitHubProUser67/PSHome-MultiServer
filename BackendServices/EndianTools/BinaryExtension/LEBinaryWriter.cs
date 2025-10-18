@@ -2,9 +2,9 @@ using System.IO;
 
 namespace EndianTools.BinaryExtension
 {
-    internal class LEBinaryWriter : EndianAwareBinaryWriter
+    public class LEBinaryWriter : EndianAwareBinaryWriter
     {
-        internal LEBinaryWriter(Stream output) : base(output)
+        public LEBinaryWriter(Stream output) : base(output)
         {
         }
 

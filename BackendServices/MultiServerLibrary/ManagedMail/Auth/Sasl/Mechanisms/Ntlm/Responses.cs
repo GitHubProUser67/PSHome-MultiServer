@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Security.Cryptography;
 using System.Text;
+using NetHasher.MD;
 
 namespace S22.Imap.Auth.Sasl.Mechanisms.Ntlm {
 	/// <summary>
