@@ -32,7 +32,7 @@ namespace FixedSsl
         {
             // no certificate, no ssl
             if (certificate == null)
-                return new NetworkStream(socket, true);
+                return new NetworkStream(socket, ownSocket);
 
             // content type - 1 byte
             // version - 2 bytes

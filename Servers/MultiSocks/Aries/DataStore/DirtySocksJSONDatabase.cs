@@ -54,13 +54,13 @@ namespace MultiSocks.Aries.DataStore
                 }
                 else
                 {
-                    LoggerAccessor.LogWarn("Database file not existant. Starting with a blank slate.");
+                    LoggerAccessor.LogWarn("Database file not existant. Starting with a blank state.");
                     Save();
                 }
             }
             catch (Exception)
             {
-                LoggerAccessor.LogWarn("Error loading database! Starting with a blank slate.");
+                LoggerAccessor.LogWarn("Error loading database! Starting with a blank state.");
                 Save();
             }
         }

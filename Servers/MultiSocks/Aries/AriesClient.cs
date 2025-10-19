@@ -1,14 +1,13 @@
-using System.Collections.Concurrent;
-using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using CustomLogger;
+using FixedSsl;
 using MultiSocks.Aries.Messages;
 using MultiSocks.Aries.Model;
 using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Tls;
-using MultiSocks.ProtoSSL;
-using MultiSocks.ProtoSSL.Crypto;
+using System.Collections.Concurrent;
+using System.Net.Sockets;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
 
 namespace MultiSocks.Aries
 {
@@ -38,7 +37,7 @@ namespace MultiSocks.Aries
         private string CommandName = "null";
         private uint ErrorCode = 0;
 
-        private (AsymmetricKeyParameter, Certificate, X509Certificate2) SecureKeyCert;
+        private (AsymmetricKeyParameter, Org.BouncyCastle.Tls.Certificate, X509Certificate2) SecureKeyCert;
 
         public long PingSendTick;
         public int Ping;
@@ -65,46 +64,34 @@ namespace MultiSocks.Aries
             RecvThread.Start();
         }
 
-        private void RunLoop()
+        private async void RunLoop()
         {
-            ClientStream = tcpClient.GetStream();
-
-            if (secure)
+            try
             {
-                Ssl3TlsServer connTls = new(new Rc4TlsCrypto(false), SecureKeyCert.Item2, SecureKeyCert.Item1);
-                TlsServerProtocol serverProtocol = new(ClientStream);
+#pragma warning disable
+                ClientStream = await SslSocket.AuthenticateAsServerAsync(SslProtocols.Ssl3, tcpClient.Client, SecureKeyCert.Item3, secure, true).ConfigureAwait(false);
+#pragma warning restore
+            }
+            catch (Exception e)
+            {
+                ClientStream?.Dispose();
+                tcpClient.Dispose();
+                Disconnected = true;
+                LoggerAccessor.LogError($"[AriesClient] - Failed to accept connection, User {ADDR} forced disconnected. (Exception:{e})");
+                Context.RemoveClient(this);
 
-                try
-                {
-                    serverProtocol.Accept(connTls);
-                }
-                catch (Exception e)
-                {
-                    LoggerAccessor.LogError($"[AriesClient] - ProtoSSL - Failed to accept connection:{e}");
-
-                    serverProtocol.Close();
-                    connTls.Cancel();
-
-                    ClientStream?.Dispose();
-                    tcpClient.Dispose();
-					Disconnected = true;
-                    LoggerAccessor.LogWarn($"[AriesClient] - User {ADDR} forced disconnected.");
-                    Context.RemoveClient(this);
-
-                    return;
-                }
-
-                ClientStream = serverProtocol.Stream;
+                return;
             }
 
             bool InHeader = false;
             int len, TempDatOff = 0;
             int ExpectedBytes = -1;
-            Span<byte> TempData = null;
-            Span<byte> bytes = new byte[65536];
+            byte[]? TempData = null;
+            byte[] bytes = new byte[65536];
 
             try
             {
+                // Do not use the async equivalent of ClientStream.Read or issues will happen.
                 while ((len = ClientStream.Read(bytes)) != 0)
                 {
                     int off = 0;
@@ -123,7 +110,7 @@ namespace MultiSocks.Aries
                         if (TempData != null)
                         {
                             int copyLen = Math.Min(len, TempData.Length - TempDatOff);
-                            bytes.Slice(off, copyLen).CopyTo(TempData.Slice(TempDatOff));
+                            Array.Copy(bytes, off, TempData, TempDatOff, copyLen);
                             off += copyLen;
                             TempDatOff += copyLen;
                             len -= copyLen;
@@ -132,7 +119,7 @@ namespace MultiSocks.Aries
                             {
                                 if (InHeader)
                                 {
-                                    //header complete.
+                                    // header complete.
                                     InHeader = false;
                                     int size = TempData[11] | TempData[10] << 8 | TempData[9] << 16 | TempData[8] << 24;
                                     if (size > MAX_SIZE)
@@ -162,7 +149,7 @@ namespace MultiSocks.Aries
             }
             catch
             {
-
+                // Not Important.
             }
 
             ClientStream?.Dispose();
@@ -215,7 +202,7 @@ namespace MultiSocks.Aries
             {
                 try
                 {
-                    ClientStream.Write(data);
+                    ClientStream.Write(data, 0, data.Length);
 
                     return true;
                 }
@@ -244,7 +231,8 @@ namespace MultiSocks.Aries
 
             try
             {
-                ClientStream?.Write(msg.GetData());
+                byte[] data = msg.GetData();
+                ClientStream?.Write(data, 0, data.Length);
             }
             catch
             {

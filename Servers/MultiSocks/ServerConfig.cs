@@ -36,8 +36,6 @@ namespace MultiSocks
         public List<RoomConfig>? RoomsToAdd { get; set; }
 
         // Blaze-specific
-        [JsonProperty("ssl_domain")]
-        public string? SSLDomain { get; set; }
         public string? Game { get; set; }
         public List<string>? Components { get; set; }
     }

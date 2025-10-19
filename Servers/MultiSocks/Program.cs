@@ -33,41 +33,125 @@ public static class MultiSocksServerConfiguration
     /// <exception cref="FileNotFoundException"></exception>
     public static void RefreshVariables(string configPath)
     {
-        // Make sure the file exists
-        if (!File.Exists(configPath))
-        {
-            LoggerAccessor.LogWarn($"Could not find the configuration file:{configPath}, writing and using server's default.");
+        var defaultServers = new JArray(
 
-            Directory.CreateDirectory(Path.GetDirectoryName(configPath) ?? Directory.GetCurrentDirectory() + "/static");
-
-            var defaultServers = new JArray(
-
-                // ────────────────────────────────
-                // Aries Servers
-                // ────────────────────────────────
-                // SSX3 (NTSC)
+        #region Aries Servers
+        #region Redirectors
+        #region SSX3 (NTSC)
                 new JObject(
                     new JProperty("type", "Aries"),
                     new JProperty("subtype", "Redirector"),
                     new JProperty("port", 11000),
-                    new JProperty("target_ip", "0.0.0.0"),
+                    new JProperty("target_ip", ServerBindAddress),
                     new JProperty("target_port", 11051),
                     new JProperty("project", "SSX-ER-PS2-2004"),
                     new JProperty("sku", "PS2")
                 ),
-
-                // SSX3 (PAL)
+        #endregion
+        #region SSX3 (PAL)
                 new JObject(
                     new JProperty("type", "Aries"),
                     new JProperty("subtype", "Redirector"),
                     new JProperty("port", 11050),
-                    new JProperty("target_ip", "0.0.0.0"),
+                    new JProperty("target_ip", ServerBindAddress),
                     new JProperty("target_port", 11051),
                     new JProperty("project", "SSX-ER-PS2-2004"),
                     new JProperty("sku", "PS2")
                 ),
-
-                // SSX3 Matchmaker
+        #endregion
+        #region Burnout Paradise PS3
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Redirector"),
+                    new JProperty("port", 21850),
+                    new JProperty("target_ip", ServerBindAddress),
+                    new JProperty("target_port", 21851),
+                    new JProperty("project", "BURNOUT5"),
+                    new JProperty("sku", "PS3")
+                ),
+        #endregion
+        #region Burnout Paradise Ultimate Box PC
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Redirector"),
+                    new JProperty("port", 21841),
+                    new JProperty("target_ip", ServerBindAddress),
+                    new JProperty("target_port", 21842),
+                    new JProperty("project", "BURNOUT5"),
+                    new JProperty("sku", "PC"),
+                    new JProperty("secure", "true"),
+                    new JProperty("cn", "pcburnout08.ea.com")
+                ),
+        #endregion
+        #region Burnout Paradise Ultimate Box PS3
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Redirector"),
+                    new JProperty("port", 21870),
+                    new JProperty("target_ip", ServerBindAddress),
+                    new JProperty("target_port", 21871),
+                    new JProperty("project", "BURNOUT5"),
+                    new JProperty("sku", "PS3")
+                ),
+        #endregion
+        #region NASCAR 09 PS3
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Redirector"),
+                    new JProperty("port", 30671),
+                    new JProperty("target_ip", ServerBindAddress),
+                    new JProperty("target_port", 30672),
+                    new JProperty("project", "NASCAR09"),
+                    new JProperty("sku", "PS3"),
+                    new JProperty("secure", "true"),
+                    new JProperty("cn", "ps3nascar09.ea.com")
+                ),
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Redirector"),
+                    new JProperty("port", 30670),
+                    new JProperty("target_ip", ServerBindAddress),
+                    new JProperty("target_port", 30672),
+                    new JProperty("project", "NASCAR09"),
+                    new JProperty("sku", "PS3")
+                ),
+        #endregion
+        #region Hasbro Family Game Night PS3
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Redirector"),
+                    new JProperty("port", 32950),
+                    new JProperty("target_ip", ServerBindAddress),
+                    new JProperty("target_port", 32951),
+                    new JProperty("project", "DPR-09"),
+                    new JProperty("sku", "PS3")
+                ),
+        #endregion
+        #region Marvel Nemesis PS2
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Redirector"),
+                    new JProperty("port", 31700),
+                    new JProperty("target_ip", ServerBindAddress),
+                    new JProperty("target_port", 31701),
+                    new JProperty("project", "MARVEL06"),
+                    new JProperty("sku", "PS2")
+                ),
+        #endregion
+        #region 007: Everything or Nothing PS2
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Redirector"),
+                    new JProperty("port", 11600),
+                    new JProperty("target_ip", ServerBindAddress),
+                    new JProperty("target_port", 11601),
+                    new JProperty("project", "PS2-BOND-2004"),
+                    new JProperty("sku", "PS2")
+                ),
+        #endregion
+        #endregion
+        #region Matchmakers
+        #region SSX3 Matchmaker
                 new JObject(
                     new JProperty("type", "Aries"),
                     new JProperty("subtype", "Matchmaker"),
@@ -76,8 +160,81 @@ public static class MultiSocksServerConfiguration
                     new JProperty("project", "SSX-ER-PS2-2004"),
                     new JProperty("sku", "PS2")
                 ),
-
-                // Sims Bustin Out Matchmaker
+        #endregion
+        #region Burnout Paradise PS3 Matchmaker
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Matchmaker"),
+                    new JProperty("port", 21851),
+                    new JProperty("listen_ip", "0.0.0.0"),
+                    new JProperty("project", "BURNOUT5"),
+                    new JProperty("sku", "PS3")
+                ),
+        #endregion
+        #region Burnout Paradise Ultimate Box PC Matchmaker
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Matchmaker"),
+                    new JProperty("port", 21842),
+                    new JProperty("listen_ip", "0.0.0.0"),
+                    new JProperty("project", "BURNOUT5"),
+                    new JProperty("sku", "PC")
+                ),
+        #endregion
+        #region Burnout Paradise Ultimate Box PS3 Matchmaker
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Matchmaker"),
+                    new JProperty("port", 21871),
+                    new JProperty("listen_ip", "0.0.0.0"),
+                    new JProperty("project", "BURNOUT5"),
+                    new JProperty("sku", "PS3")
+                ),
+        #endregion
+        #region NASCAR 09 PS3 Matchmaker
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Matchmaker"),
+                    new JProperty("port", 30672),
+                    new JProperty("listen_ip", "0.0.0.0"),
+                    new JProperty("project", "NASCAR09"),
+                    new JProperty("sku", "PS3")
+                ),
+        #endregion
+        #region Hasbro Family Game Night PS3 Matchmaker
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Matchmaker"),
+                    new JProperty("port", 32951),
+                    new JProperty("listen_ip", "0.0.0.0"),
+                    new JProperty("project", "DPR-09"),
+                    new JProperty("sku", "PS3")
+                ),
+        #endregion
+        #region Marvel Nemesis PS2 Matchmaker
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Matchmaker"),
+                    new JProperty("port", 31701),
+                    new JProperty("listen_ip", "0.0.0.0"),
+                    new JProperty("project", "MARVEL06"),
+                    new JProperty("sku", "PS2"),
+                    new JProperty("rooms_to_add", new JArray(
+                        new JObject(new JProperty("name", "Earth"), new JProperty("is_global", true))
+                    ))
+                ),
+        #endregion
+        #region 007: Everything or Nothing PS2 Matchmaker
+                new JObject(
+                    new JProperty("type", "Aries"),
+                    new JProperty("subtype", "Matchmaker"),
+                    new JProperty("port", 11601),
+                    new JProperty("listen_ip", "0.0.0.0"),
+                    new JProperty("project", "PS2-BOND-2004"),
+                    new JProperty("sku", "PS2")
+                ),
+        #endregion
+        #region Sims Bustin Out PS2 Matchmaker
                 new JObject(
                     new JProperty("type", "Aries"),
                     new JProperty("subtype", "Matchmaker"),
@@ -93,7 +250,9 @@ public static class MultiSocksServerConfiguration
                         new JObject(new JProperty("name", "Riverblossom Hills"), new JProperty("is_global", true))
                     ))
                 ),
-
+        #endregion
+        #endregion
+        #endregion
                 // ────────────────────────────────
                 // Blaze3 Servers
                 // ────────────────────────────────
@@ -102,14 +261,15 @@ public static class MultiSocksServerConfiguration
                     new JProperty("subtype", "Redirector"),
                     new JProperty("game", "Blaze3 Redirector"),
                     new JProperty("port", 42127),
-                    new JProperty("ssl_domain", "gosredirector.ea.com")
+                    new JProperty("secure", "true"),
+                    new JProperty("cn", "gosredirector.ea.com")
                 ),
                 new JObject(
                     new JProperty("type", "Blaze3"),
                     new JProperty("subtype", "Main"),
                     new JProperty("game", "Mass Effect 3 (PS3)"),
                     new JProperty("port", 33152),
-                    new JProperty("ssl_domain", "gosredirector.ea.com"),
+                    new JProperty("cn", "gosredirector.ea.com"),
                     new JProperty("components", new JArray(
                         "MassEffect3PS3Components.Auth.AuthComponent",
                         "MassEffect3PS3Components.Util.UtilComponent"
@@ -117,9 +277,18 @@ public static class MultiSocksServerConfiguration
                 )
             );
 
+        ushort config_ver = 4;
+
+        // Make sure the file exists
+        if (!File.Exists(configPath))
+        {
+            LoggerAccessor.LogWarn($"Could not find the configuration file:{configPath}, writing and using server's default.");
+
+            Directory.CreateDirectory(Path.GetDirectoryName(configPath) ?? Directory.GetCurrentDirectory() + "/static");
+
             // Write the JObject to a file
             File.WriteAllText(configPath, new JObject(
-                new JProperty("config_version", (ushort)3),
+                new JProperty("config_version", config_ver),
                 new JProperty("server_bind_address", ServerBindAddress),
                 new JProperty("rpcs3_workarounds", RPCS3Workarounds),
                 new JProperty("enable_blaze_encryption", EnableBlazeEncryption),
@@ -138,7 +307,7 @@ public static class MultiSocksServerConfiguration
             dynamic config = JObject.Parse(File.ReadAllText(configPath));
 
             ushort config_version = GetValueOrDefault(config, "config_version", (ushort)0);
-            if (config_version >= 2)
+            if (config_version >= config_ver)
             {
                 ServerBindAddress = GetValueOrDefault(config, "server_bind_address", ServerBindAddress);
                 RPCS3Workarounds = GetValueOrDefault(config, "rpcs3_workarounds", RPCS3Workarounds);
@@ -146,6 +315,8 @@ public static class MultiSocksServerConfiguration
                 DirtySocksDatabasePath = GetValueOrDefault(config, "dirtysocks_database_path", DirtySocksDatabasePath);
                 if (config.servers != null)
                     Servers = ((JArray)config.servers).ToObject<List<ServerConfig>>() ?? new();
+
+                return;
             }
             else
                 LoggerAccessor.LogWarn($"{configPath} file is outdated, using server's default.");
@@ -154,6 +325,8 @@ public static class MultiSocksServerConfiguration
         {
             LoggerAccessor.LogWarn($"{configPath} file is malformed (exception: {ex}), using server's default.");
         }
+
+        Servers = defaultServers.ToObject<List<ServerConfig>>() ?? new();
     }
 
     // Helper method to get a value or default value if not present
@@ -279,7 +452,7 @@ class Program
 
                 var messenger = new EAMessengerServer(
                     config.Port,
-                    config.ListenIP ?? "127.0.0.1",
+                    config.ListenIP ?? "0.0.0.0",
                     config.Project,
                     config.SKU,
                     config.Secure,
@@ -330,7 +503,7 @@ class Program
     {
         string blazeVersion = config.Type.ToLower();
         const string defaultSslDomain = "gosredirector.ea.com";
-        string sslDomain = config.SSLDomain ?? defaultSslDomain;
+        string sslDomain = config.CN ?? defaultSslDomain;
 
         // Factory selector for Blaze2 (defaults to Blaze3)
         Func<string, IPEndPoint, X509Certificate2?, bool, dynamic> createBlazeServer = blazeVersion switch

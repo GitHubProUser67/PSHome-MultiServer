@@ -539,67 +539,63 @@ namespace MultiServerLibrary.SSL
                 .Select(ext => certificatePathInput + ext)
                 .FirstOrDefault(File.Exists);
 
-            if (certificatePath == null)
+            if (certificatePath != null)
             {
-                LoggerAccessor.LogWarn($"[CertificateHelper] - LoadCertificate: Certificate file not found for: {certificatePathInput} with {(Path.HasExtension(certificatePathInput) ? $"extension {Path.GetExtension(certificatePathInput)}" : $"extensions {string.Join(", ", certExtensions)}")}");
-                return null;
-            }
+                // Find first existing private key file
+                string privateKeyPath = Path.HasExtension(privateKeyPathInput)
+                        ? File.Exists(privateKeyPathInput) ? privateKeyPathInput : null
+                        : keyExtensions
+                        .Select(ext => privateKeyPathInput + ext)
+                        .FirstOrDefault(File.Exists);
 
-            // Find first existing private key file
-            string privateKeyPath = Path.HasExtension(privateKeyPathInput)
-                ? File.Exists(privateKeyPathInput) ? privateKeyPathInput : null
-                : keyExtensions
-                .Select(ext => privateKeyPathInput + ext)
-                .FirstOrDefault(File.Exists);
-
-            if (privateKeyPath == null)
-            {
-                LoggerAccessor.LogWarn($"[CertificateHelper] - LoadCertificate: Private key file not found for: {privateKeyPathInput} with {(Path.HasExtension(privateKeyPathInput) ? $"extension {Path.GetExtension(privateKeyPathInput)}" : $"extensions {string.Join(", ", keyExtensions)}")}");
-                return null;
-            }
-#if DEBUG
-            LoggerAccessor.LogInfo($"[CertificateHelper] - LoadCertificate: Using certificate: {certificatePath}");
-            LoggerAccessor.LogInfo($"[CertificateHelper] - LoadCertificate: Using private key: {privateKeyPath}");
-#endif
-            using (X509Certificate2 cert = new X509Certificate2(certificatePath))
-            {
-                if (cert.HasPrivateKey)
-                    return cert;
-
-                AsymmetricAlgorithm key = null;
-
-                try
+                if (privateKeyPath != null)
                 {
-                    if (privateKeyPath.EndsWith(".pfx", StringComparison.OrdinalIgnoreCase))
+#if DEBUG
+                    LoggerAccessor.LogInfo($"[CertificateHelper] - LoadCertificate: Using certificate: {certificatePath}");
+                    LoggerAccessor.LogInfo($"[CertificateHelper] - LoadCertificate: Using private key: {privateKeyPath}");
+#endif
+                    using (X509Certificate2 cert = new X509Certificate2(certificatePath))
                     {
-                        var keyCert = new X509Certificate2(privateKeyPath);
-                        key = keyCert.GetRSAPrivateKey() as AsymmetricAlgorithm
-                            ?? keyCert.GetECDsaPrivateKey();
+                        if (cert.HasPrivateKey)
+                            return cert;
 
-                        if (key == null)
+                        AsymmetricAlgorithm key = null;
+
+                        try
                         {
-                            LoggerAccessor.LogError($"[CertificateHelper] - LoadCertificate: No supported private key found in PFX.");
-                            return null;
+                            if (privateKeyPath.EndsWith(".pfx", StringComparison.OrdinalIgnoreCase))
+                                key = GetPrivateKey(new X509Certificate2(privateKeyPath));
+                            else
+                                key = LoadPrivateKey(privateKeyPath);
+
+                            if (key is RSA rsaKey)
+                                return new X509Certificate2(cert.CopyWithPrivateKey(rsaKey).Export(X509ContentType.Pfx));
+                            else if (key is DSA dsaKey)
+                                return new X509Certificate2(cert.CopyWithPrivateKey(dsaKey).Export(X509ContentType.Pfx));
+                            else if (key is ECDsa ecdsaKey)
+                                return new X509Certificate2(cert.CopyWithPrivateKey(ecdsaKey).Export(X509ContentType.Pfx));
+                            else if (key is ECDiffieHellman ecdiffKey)
+                                return new X509Certificate2(cert.CopyWithPrivateKey(ecdiffKey).Export(X509ContentType.Pfx));
+                            else
+                                LoggerAccessor.LogError($"[CertificateHelper] - LoadCertificate: Unsupported key type.");
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggerAccessor.LogError($"[CertificateHelper] - LoadCertificate: Loading thrown an assertion. (Exception:{ex})");
+                        }
+                        finally
+                        {
+                            key?.Dispose();
                         }
                     }
-                    else
-                        key = LoadPrivateKey(privateKeyPath);
-
-                    if (key is RSA rsaKey)
-                        return new X509Certificate2(cert.CopyWithPrivateKey(rsaKey).Export(X509ContentType.Pfx));
-                    else if (key is ECDsa ecdsaKey)
-                        return new X509Certificate2(cert.CopyWithPrivateKey(ecdsaKey).Export(X509ContentType.Pfx));
-                    else
-                    {
-                        LoggerAccessor.LogError($"[CertificateHelper] - LoadCertificate: Unsupported key type.");
-                        return null;
-                    }
                 }
-                finally
-                {
-                    key?.Dispose();
-                }
+                else
+                    LoggerAccessor.LogWarn($"[CertificateHelper] - LoadCertificate: Private key file not found for: {privateKeyPathInput} with {(Path.HasExtension(privateKeyPathInput) ? $"extension {Path.GetExtension(privateKeyPathInput)}" : $"extensions {string.Join(", ", keyExtensions)}")}");
             }
+            else
+                LoggerAccessor.LogWarn($"[CertificateHelper] - LoadCertificate: Certificate file not found for: {certificatePathInput} with {(Path.HasExtension(certificatePathInput) ? $"extension {Path.GetExtension(certificatePathInput)}" : $"extensions {string.Join(", ", certExtensions)}")}");
+
+            return null;
         }
 
         public static X509Certificate2 LoadCertificateFromPemString(string certPem)
@@ -609,9 +605,36 @@ namespace MultiServerLibrary.SSL
                                    .Replace(certEnd, string.Empty).IsBase64().Item2);
         }
 
+        public static AsymmetricAlgorithm GetPrivateKey(X509Certificate2 certificate)
+        {
+            if (!certificate.HasPrivateKey)
+                return null;
+
+            RSA rsa = certificate.GetRSAPrivateKey();
+            if (rsa != null)
+                return rsa;
+
+            DSA dsa = certificate.GetDSAPrivateKey();
+            if (dsa != null)
+                return dsa;
+
+            ECDsa ecdsa = certificate.GetECDsaPrivateKey();
+            if (ecdsa != null)
+                return ecdsa;
+
+            ECDiffieHellman ecdh = certificate.GetECDiffieHellmanPrivateKey();
+            if (ecdh != null)
+                return ecdh;
+
+            throw new NotSupportedException("[CertificateHelper] - GetPrivateKey: Key algorithm not supported");
+        }
+
         public static AsymmetricAlgorithm LoadPrivateKey(string privateKeyPath)
         {
+            byte[] keyBytes;
             (bool, byte[]) isPemFormat = (false, null);
+            RSA rsa;
+
 #if NET6_0_OR_GREATER
             string[] pemPrivateKeyBlocks = File.ReadAllText(privateKeyPath).Split("-", StringSplitOptions.RemoveEmptyEntries);
 #else
@@ -623,43 +646,117 @@ namespace MultiServerLibrary.SSL
             if (pemPrivateKeyBlocks.Length >= 2)
                 isPemFormat = pemPrivateKeyBlocks[1].IsBase64();
 #if NET5_0_OR_GREATER
+
+            ECDsa ecdsa;
+            ECDiffieHellman ecdh;
+
             if (isPemFormat.Item1)
             {
-                if (pemPrivateKeyBlocks[0] == "BEGIN PRIVATE KEY")
+                string header = pemPrivateKeyBlocks[0];
+                keyBytes = isPemFormat.Item2;
+
+                if (header == "BEGIN PRIVATE KEY")
                 {
+                    DSA dsa;
+
                     try
                     {
-                        ECDsa ecdsa = ECDsa.Create();
-                        ecdsa.ImportPkcs8PrivateKey(isPemFormat.Item2, out _);
+                        rsa = RSA.Create();
+                        rsa.ImportPkcs8PrivateKey(keyBytes, out _);
+                        return rsa;
+                    }
+                    catch
+                    {
+                        rsa = null;
+                    }
+
+                    try
+                    {
+                        ecdsa = ECDsa.Create();
+                        ecdsa.ImportPkcs8PrivateKey(keyBytes, out _);
                         return ecdsa;
                     }
-                    catch { }
+                    catch
+                    {
+                        ecdsa = null;
+                    }
 
-                    RSA rsa = RSA.Create();
-                    rsa.ImportPkcs8PrivateKey(isPemFormat.Item2, out _);
+                    try
+                    {
+                        ecdh = ECDiffieHellman.Create();
+                        ecdh.ImportPkcs8PrivateKey(keyBytes, out _);
+                        return ecdh;
+                    }
+                    catch
+                    {
+                        ecdh = null;
+                    }
+
+                    try
+                    {
+                        dsa = DSA.Create();
+                        dsa.ImportPkcs8PrivateKey(keyBytes, out _);
+                        return dsa;
+                    }
+                    catch
+                    {
+                        dsa = null;
+                    }
+
+                    throw new CryptographicException("[CertificateHelper] - LoadPrivateKey - Unsupported PKCS8 private key format.");
+                }
+                else if (header == "BEGIN RSA PRIVATE KEY")
+                {
+                    rsa = RSA.Create();
+                    rsa.ImportRSAPrivateKey(keyBytes, out _);
                     return rsa;
                 }
-                else if (pemPrivateKeyBlocks[0] == "BEGIN RSA PRIVATE KEY")
+                else if (header == "BEGIN EC PRIVATE KEY")
                 {
-                    RSA rsa = RSA.Create();
-                    rsa.ImportRSAPrivateKey(isPemFormat.Item2, out _);
-                    return rsa;
-                }
-                else if (pemPrivateKeyBlocks[0] == "BEGIN EC PRIVATE KEY")
-                {
-                    ECDsa ecdsa = ECDsa.Create();
-                    ecdsa.ImportECPrivateKey(isPemFormat.Item2, out _);
+                    ecdsa = ECDsa.Create();
+                    ecdsa.ImportECPrivateKey(keyBytes, out _);
                     return ecdsa;
                 }
-                else
-                    throw new CryptographicException("[CertificateHelper] - LoadPrivateKey - Unsupported pem private key format.");
+                
+                throw new CryptographicException("[CertificateHelper] - LoadPrivateKey - Unsupported pem private key format.");
             }
-            else
+
+            keyBytes = File.ReadAllBytes(privateKeyPath);
+
+            try
             {
-                RSA rsa = RSA.Create();
-                rsa.ImportRSAPrivateKey(File.ReadAllBytes(privateKeyPath), out _);
+                rsa = RSA.Create();
+                rsa.ImportRSAPrivateKey(keyBytes, out _);
                 return rsa;
             }
+            catch
+            {
+                rsa = null;
+            }
+
+            try
+            {
+                ecdsa = ECDsa.Create();
+                ecdsa.ImportECPrivateKey(keyBytes, out _);
+                return ecdsa;
+            }
+            catch
+            {
+                ecdsa = null;
+            }
+
+            try
+            {
+                ecdh = ECDiffieHellman.Create();
+                ecdh.ImportECPrivateKey(keyBytes, out _);
+                return ecdh;
+            }
+            catch
+            {
+                ecdh = null;
+            }
+
+            throw new CryptographicException("[CertificateHelper] - LoadPrivateKey - Unsupported private key format.");
 #else
             if (isPemFormat.Item1)
             {
@@ -678,7 +775,7 @@ namespace MultiServerLibrary.SSL
                     throw new CryptographicException("[CertificateHelper] - LoadPrivateKey - Unsupported pem private key format.");
 
                 // Import parameters into the RSA object
-                RSA rsa = RSA.Create();
+                rsa = RSA.Create();
                 rsa.ImportParameters(rsaParameters);
                 return rsa;
             }
