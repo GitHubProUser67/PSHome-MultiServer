@@ -49,7 +49,6 @@ namespace SpaceWizards.HttpListener
 {
     internal sealed class HttpConnection
     {
-        private readonly ManualResetEventSlim _initializedEvent = new(false);
         private static readonly Action<Task<int>, object> s_onreadCallback = OnRead;
         private const int BufferSize = 8192;
         private Socket _socket;
@@ -85,7 +84,7 @@ namespace SpaceWizards.HttpListener
             _secure = secure;
             _cert = cert;
             _timer = new Timer(OnTimeout, null, Timeout.Infinite, Timeout.Infinite);
-            SslSocket.BeginAuthenticateAsServer(sock, secure ? new SslServerAuthenticationOptions
+            _stream = SslSocket.AuthenticateAsServer(sock, secure ? new SslServerAuthenticationOptions
             {
                 ClientCertificateRequired = false,
                 EnabledSslProtocols = epl.Listener.SslProtocols,
@@ -132,36 +131,9 @@ namespace SpaceWizards.HttpListener
                     ((IPEndPoint)sock.RemoteEndPoint).Address ?? IPAddress.Any, DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now.AddDays(7),
                     epl.Listener.wildcardCertificates) : _cert;
                 }
-            } : null, false, false, AuthenticateAsServerCallback, null, out _clientCert, out _clientCertErrors);
-        }
-
-        public void AuthenticateAsServerCallback(IAsyncResult result)
-        {
-            try
-            {
-                _stream = SslSocket.EndAuthenticateAsServer(result);
-
-                if (_stream == null)
-                    LoggerAccessor.LogWarn($"[HttpConnection] - Failed to authenticate as server.");
-            }
-            catch (Exception ex)
-            {
-                _stream = null;
-
-                LoggerAccessor.LogError($"[HttpConnection] - Errored out while trying to authenticate as server. (Exception: {ex}).");
-            }
-            finally
-            {
-                if (_stream != null)
-                    Init();
-
-                _initializedEvent.Set();
-            }
-        }
-
-        public void WaitForAuthentication()
-        {
-            _initializedEvent.Wait();
+            } : null, secure, false, out _clientCert, out _clientCertErrors);
+            if (_stream != null)
+                Init();
         }
 
         internal int[] ClientCertificateErrors

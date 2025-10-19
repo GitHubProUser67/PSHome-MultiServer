@@ -135,10 +135,7 @@ namespace FixedSsl
                 return new SecureNetworkStream(new SecureSocket(socket, new SecurityOptions(legacyProtocols, new Certificate(certificate), ConnectionEnd.Server)), true);
             else if (allowedProtocols.Contains(SslProtocols.Ssl2) && maxSslVersion == SSLv2)
 #pragma warning restore
-            {
-                CustomLogger.LoggerAccessor.LogWarn($"[SslSocket] - Client tried to initialize a SSLv2 connection at {DateTime.Now}, invalidating the request...");
-                return null;
-            }
+                throw new NotSupportedException($"[SslSocket] - Client tried to initialize a SSLv2 connection which is not supported yet, invalidating the request...");
 
             SslStream sslStream = new SslStream(new NetworkStream(socket, ownSocket), false);
 
@@ -272,10 +269,7 @@ namespace FixedSsl
             }
             else if (allowedProtocols.Contains(SslProtocols.Ssl2) && maxSslVersion == SSLv2)
 #pragma warning restore
-            {
-                CustomLogger.LoggerAccessor.LogWarn($"[SslSocket] - Client tried to initialize a SSLv2 connection at {DateTime.Now}, invalidating the request...");
-                return null;
-            }
+                throw new NotSupportedException($"[SslSocket] - Client tried to initialize a SSLv2 connection which is not supported yet, invalidating the request...");
 
             int[] clientCertErr = null;
             X509Certificate2 clientCert = null;
