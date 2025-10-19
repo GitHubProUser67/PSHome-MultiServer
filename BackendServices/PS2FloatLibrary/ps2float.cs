@@ -263,7 +263,7 @@ namespace PS2FloatLibrary
             uint sign = (raw ^ other.raw) & SIGNMASK;
 
             int resExponent = selfExponent + otherExponent - BIAS;
-            uint resMantissa = (uint)(BoothMultiplier.MulMantissa(selfMantissa, otherMantissa) >> MANTISSA_BITS);
+            uint resMantissa = (uint)(BoothMultiplier.MultiplyMantissa(selfMantissa, otherMantissa) >> MANTISSA_BITS);
 
             if (resMantissa > 0xFFFFFF)
             {
