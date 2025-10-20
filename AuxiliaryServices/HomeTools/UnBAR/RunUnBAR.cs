@@ -52,9 +52,7 @@ namespace HomeTools.UnBAR
             {
                 int ExitCode = new EDAT().decryptFile(sdatfilePath, datfilePath, new byte[16], null);
 
-                if (ExitCode != 0)
-                    LoggerAccessor.LogError($"[RunUnBAR] - RunDecrypt failed with status code : {ExitCode}");
-                else if (ExitCode == sbyte.MinValue)
+                if (ExitCode == sbyte.MinValue)
                 {
                     string makeNpExePath = converterPath + "/make_npdata/" + (!MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows ? "make_npdata_win32.exe" : "make_npdata");
 
@@ -84,6 +82,8 @@ namespace HomeTools.UnBAR
                     else
                         LoggerAccessor.LogError($"[RunUnBAR] - RunDecrypt dectected LZ compressed data, but no makenpdata executable were found at path: {makeNpExePath}");
                 }
+                else if (ExitCode != 0)
+                    LoggerAccessor.LogError($"[RunUnBAR] - RunDecrypt failed with status code : {ExitCode}");
                 else
                     await RunExtract(datfilePath, outDir, cdnMode);
             }
