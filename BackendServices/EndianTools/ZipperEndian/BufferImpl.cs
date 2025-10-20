@@ -295,7 +295,7 @@ namespace EndianTools.ZipperEndian
             int byteCount = bitOffset == 0 ? sizeOfShort : sizeOfShort + 1;
 
             byte[] temp = new byte[byteCount];
-            EndianAwareConverter.WriteInt16(temp, Endianness.Automatic, 0, value);
+            EndianAwareConverter.WriteInt16(temp, Endianness.BigEndian, 0, value);
 
             // Shift left to align to bitOffset
             if (bitOffset != 0)
@@ -328,7 +328,7 @@ namespace EndianTools.ZipperEndian
             int byteCount = bitOffset == 0 ? sizeOfShort : sizeOfShort + 1;
 
             byte[] temp = new byte[byteCount];
-            EndianAwareConverter.WriteUInt16(temp, Endianness.Automatic, 0, value);
+            EndianAwareConverter.WriteUInt16(temp, Endianness.BigEndian, 0, value);
 
             // Shift left to align to bitOffset
             if (bitOffset != 0)
