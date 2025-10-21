@@ -117,9 +117,12 @@ namespace Tommunism.SoftFloat
         public static explicit operator ulong(SFUInt128 value) => value.V00;
 
 #if NET7_0_OR_GREATER
-    public static implicit operator UInt128(SFUInt128 value) => new(upper: value.V64, lower: value.V00);
+        public static implicit operator UInt128(SFUInt128 value) => new(upper: value.V64, lower: value.V00);
 
-    public static implicit operator SFUInt128(UInt128 value) => new(v64: value.GetUpperUI64(), v0: value.GetLowerUI64());
+        public static implicit operator SFUInt128(UInt128 value)
+        {
+            return new SFUInt128(value.GetUpperUI64(), value.GetLowerUI64());
+        }
 #endif
 
         public static bool operator ==(SFUInt128 left, SFUInt128 right) => EQ128(left.V64, left.V00, right.V64, right.V00);
