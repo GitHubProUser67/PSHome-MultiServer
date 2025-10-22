@@ -35,8 +35,8 @@
     <!--For now disable the PSN ticket verification as many keys are still undocumented -->
     <DefineConstants>$(DefineConstants);DISABLE_PSN_XI5_VERIFICATION</DefineConstants>
     <!--Mentalis is a very old library, and our version is hacked to support vulnerable certificates and to be more "modern OS friendly",
-    but it still has issues on some systems, so enable only to support PS2 DNAS for now -->
-    <DefineConstants>$(DefineConstants);DISABLE_MENTALIS_SSL_SERVER</DefineConstants>
+    but it still has issues on some systems -->
+    <!--<DefineConstants>$(DefineConstants);FORCE_MENTALIS_SSL_SERVER</DefineConstants>-->
   </PropertyGroup>
 
 </Project>
