@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Linq;
 using System.Runtime.InteropServices;
 #if NETCOREAPP3_0_OR_GREATER
@@ -87,7 +88,7 @@ namespace MultiServerLibrary.Extension
         /// <param name="b">The right array.</param>
         /// </summary>
         /// <returns>A boolean.</returns>
-        public static unsafe bool EqualsTo(this byte[] a, byte[] b, CompareDirection direction = CompareDirection.Forward)
+        public static bool EqualsTo(this byte[] a, byte[] b, CompareDirection direction = CompareDirection.Forward)
         {
             // returns when a and b are same array or both null
             if (a == b)
@@ -103,95 +104,28 @@ namespace MultiServerLibrary.Extension
             if (len != b.Length)
                 return false;
 
-            else if (Microsoft.Win32API.IsWindows && direction == CompareDirection.Forward)
-                // Validate buffers are the same.
-                return memcmp(a, b, len) == 0;
-
-            const int UNROLLED = 16;                // count of longs 'unrolled' in optimization
-            int size = sizeof(long) * UNROLLED;     // 128 bytes (min size for 'unrolled' optimization)
-            int n = len / size;         // count of full 128 byte segments
-            int r = len % size;         // count of remaining 'unoptimized' bytes
-
-            // pin the arrays and access them via pointers
-            fixed (byte* pb_a = a, pb_b = b)
+            if (direction == CompareDirection.Forward)
             {
-                if (r > 0 && direction == CompareDirection.Backward)
-                {
-                    byte* pa = pb_a + len - 1;
-                    byte* pb = pb_b + len - 1;
-                    byte* phead = pb_a + len - r;
-                    while (pa >= phead)
-                    {
-                        if (*pa != *pb)
-                            return false;
-                        pa--;
-                        pb--;
-                    }
-                }
+                if (Microsoft.Win32API.IsWindows)
+                    // Validate buffers are the same.
+                    return memcmp(a, b, len) == 0;
 
-                if (n > 0)
-                {
-                    int nOffset = n * size;
-                    if (direction == CompareDirection.Forward)
-                    {
-                        long* pa = (long*)pb_a;
-                        long* pb = (long*)pb_b;
-                        long* ptail = (long*)(pb_a + nOffset);
-                        while (pa < ptail)
-                        {
-                            if (*(pa + 0) != *(pb + 0) || *(pa + 1) != *(pb + 1) ||
-                                *(pa + 2) != *(pb + 2) || *(pa + 3) != *(pb + 3) ||
-                                *(pa + 4) != *(pb + 4) || *(pa + 5) != *(pb + 5) ||
-                                *(pa + 6) != *(pb + 6) || *(pa + 7) != *(pb + 7) ||
-                                *(pa + 8) != *(pb + 8) || *(pa + 9) != *(pb + 9) ||
-                                *(pa + 10) != *(pb + 10) || *(pa + 11) != *(pb + 11) ||
-                                *(pa + 12) != *(pb + 12) || *(pa + 13) != *(pb + 13) ||
-                                *(pa + 14) != *(pb + 14) || *(pa + 15) != *(pb + 15)
-                            )
-                                return false;
-                            pa += UNROLLED;
-                            pb += UNROLLED;
-                        }
-                    }
-                    else
-                    {
-                        long* pa = (long*)(pb_a + nOffset);
-                        long* pb = (long*)(pb_b + nOffset);
-                        long* phead = (long*)pb_a;
-                        while (phead < pa)
-                        {
-                            if (*(pa - 1) != *(pb - 1) || *(pa - 2) != *(pb - 2) ||
-                                *(pa - 3) != *(pb - 3) || *(pa - 4) != *(pb - 4) ||
-                                *(pa - 5) != *(pb - 5) || *(pa - 6) != *(pb - 6) ||
-                                *(pa - 7) != *(pb - 7) || *(pa - 8) != *(pb - 8) ||
-                                *(pa - 9) != *(pb - 9) || *(pa - 10) != *(pb - 10) ||
-                                *(pa - 11) != *(pb - 11) || *(pa - 12) != *(pb - 12) ||
-                                *(pa - 13) != *(pb - 13) || *(pa - 14) != *(pb - 14) ||
-                                *(pa - 15) != *(pb - 15) || *(pa - 16) != *(pb - 16)
-                            )
-                                return false;
-                            pa -= UNROLLED;
-                            pb -= UNROLLED;
-                        }
-                    }
-                }
-
-                if (r > 0 && direction == CompareDirection.Forward)
-                {
-                    byte* pa = pb_a + len - r;
-                    byte* pb = pb_b + len - r;
-                    byte* ptail = pb_a + len;
-                    while (pa < ptail)
-                    {
-                        if (*pa != *pb)
-                            return false;
-                        pa++;
-                        pb++;
-                    }
-                }
+                return StructuralComparisons.StructuralEqualityComparer.Equals(a, b);
             }
+            else
+            {
+                int i = len - 1;
 
-            return true;
+                while (i >= 0 && (a[i] == b[i]))
+                {
+                    i--;
+                }
+
+                if (i < 0)
+                    return true;
+
+                return false;
+            }
         }
 
         public static byte[] SubArray(this byte[] arr, int sizeToSubstract, bool atStart = false)
