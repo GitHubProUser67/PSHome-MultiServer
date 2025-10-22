@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Linq;
 using System.Runtime.InteropServices;
 #if NETCOREAPP3_0_OR_GREATER
@@ -110,7 +109,7 @@ namespace MultiServerLibrary.Extension
                     // Validate buffers are the same.
                     return memcmp(a, b, len) == 0;
 
-                return StructuralComparisons.StructuralEqualityComparer.Equals(a, b);
+                return a.SequenceEqual(b);
             }
             else
             {

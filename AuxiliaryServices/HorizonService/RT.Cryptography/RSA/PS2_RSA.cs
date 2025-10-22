@@ -1,3 +1,4 @@
+using MultiServerLibrary.Extension;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Org.BouncyCastle.Math;
@@ -55,7 +56,7 @@ namespace Horizon.RT.Cryptography.RSA
 
             // if hashes don't match then try adding N
             // this accounts for when a value larger than N but less than 513 bits is encrypted
-            if (!ourHash.SequenceEqual(hash))
+            if (!ourHash.EqualsTo(hash))
             {
                 // decrypt
                 plainBytes = plainBigInt.Add(N).ToBA();
@@ -63,7 +64,7 @@ namespace Horizon.RT.Cryptography.RSA
                 Hash(plain, out ourHash);
             }
 
-            return ourHash.SequenceEqual(hash);
+            return ourHash.EqualsTo(hash);
         }
 
         public virtual bool Encrypt(byte[] input, out byte[] cipher, out byte[] hash)

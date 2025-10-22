@@ -34,6 +34,7 @@
   <PropertyGroup>
     <!--For now disable the PSN ticket verification as many keys are still undocumented -->
     <DefineConstants>$(DefineConstants);DISABLE_PSN_XI5_VERIFICATION</DefineConstants>
+	<!--<DefineConstants>$(DefineConstants);DISABLE_MENTALIS_SSL_SERVER</DefineConstants>-->
   </PropertyGroup>
 
 </Project>

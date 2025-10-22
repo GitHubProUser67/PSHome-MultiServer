@@ -121,10 +121,10 @@ namespace FixedSsl
             int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out _, out int maxSslVersion, out List<int> versions);
 
             var allowedProtocols = protocols.GetEnabledProtocols();
-
+#pragma warning disable
+#if !DISABLE_MENTALIS_SSL_SERVER
             // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
             if (
-#pragma warning disable
                     (allowedProtocols.Contains(SslProtocols.Ssl3) || allowedProtocols.Contains(SslProtocols.Tls)) &&
                     (
                         maxSslVersion == SSLv3 ||
@@ -132,8 +132,12 @@ namespace FixedSsl
                         (!certificate.Verify() && versions.Any(v => v == SSLv3 || v == TLSv1))
                     )
                 )
+            {
                 return new SecureNetworkStream(new SecureSocket(socket, new SecurityOptions(legacyProtocols, new Certificate(certificate), ConnectionEnd.Server)), true);
-            else if (allowedProtocols.Contains(SslProtocols.Ssl2) && maxSslVersion == SSLv2)
+            }
+            else
+#endif
+            if (allowedProtocols.Contains(SslProtocols.Ssl2) && maxSslVersion == SSLv2)
 #pragma warning restore
                 throw new NotSupportedException($"[SslSocket] - Client tried to initialize a SSLv2 connection which is not supported yet, invalidating the request...");
 
@@ -246,10 +250,10 @@ namespace FixedSsl
             }
 
             var allowedProtocols = authOptions.EnabledSslProtocols.GetEnabledProtocols();
-
+#pragma warning disable
+#if !DISABLE_MENTALIS_SSL_SERVER
             // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
             if (
-#pragma warning disable
                     (allowedProtocols.Contains(SslProtocols.Ssl3) || allowedProtocols.Contains(SslProtocols.Tls)) &&
                     (
                         maxSslVersion == SSLv3 ||
@@ -267,7 +271,9 @@ namespace FixedSsl
 
                 return new SecureNetworkStream(sock, true);
             }
-            else if (allowedProtocols.Contains(SslProtocols.Ssl2) && maxSslVersion == SSLv2)
+            else 
+#endif
+            if (allowedProtocols.Contains(SslProtocols.Ssl2) && maxSslVersion == SSLv2)
 #pragma warning restore
                 throw new NotSupportedException($"[SslSocket] - Client tried to initialize a SSLv2 connection which is not supported yet, invalidating the request...");
 

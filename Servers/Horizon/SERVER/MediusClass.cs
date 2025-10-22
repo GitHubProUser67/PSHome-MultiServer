@@ -13,8 +13,6 @@ using Horizon.SERVER.Extension.PlayStationHome;
 using Horizon.SERVER.Medius;
 using MultiServerLibrary.Extension;
 using Newtonsoft.Json;
-using System.Diagnostics;
-using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
 using Tommunism.SoftFloat;
@@ -38,7 +36,7 @@ namespace Horizon.SERVER
 
         public static MAPS ProfileServer = new();
         public static MMS MatchmakingServer = new();
-        public static ConcurrentList<MAS> AuthenticationServers = new();
+        public static List<MAS> AuthenticationServers = new();
         public static MLS LobbyServer = new();
         public static MPS ProxyServer = new();
 
@@ -149,9 +147,12 @@ namespace Horizon.SERVER
         {
             started = false;
 
-            foreach (var authServer in AuthenticationServers)
+            lock (AuthenticationServers)
             {
-                await authServer.Stop();
+                foreach (var authServer in AuthenticationServers)
+                {
+                    authServer.Stop().Wait();
+                }
             }
             await LobbyServer.Stop();
             await ProxyServer.Stop();
