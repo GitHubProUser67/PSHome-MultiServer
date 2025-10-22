@@ -135,119 +135,15 @@ namespace Horizon.DME.Models
         public bool HasJoined { get; set; } = false;
 
         public virtual bool IsConnectingGracePeriod => !TimeAuthenticated.HasValue && (DateTimeUtils.GetHighPrecisionUtcTime() - TimeCreated).TotalSeconds < DmeClass.GetAppSettingsOrDefault(ApplicationId).ClientTimeoutSeconds;
-        public virtual bool Timedout
-        {
-            get
-            {
-                if (IsConnectingGracePeriod)
-                    _timedout = false;
-                else
-                {
-                    const int expirationDelay = 2;
-                    double deltaSec = (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds;
-                    int timeoutThreshold = DmeClass.GetAppSettingsOrDefault(ApplicationId).ClientTimeoutSeconds;
-
-                    if (deltaSec > timeoutThreshold + expirationDelay)
-                    {
-                        if (!_timedout)
-                        {
-                            _missedEchos++;
-                            LoggerAccessor.LogWarn(
-                                   $"[DMEObject] - TIMEOUT - Client {mumClient.AccountName} missed echo #{_missedEchos}. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
-                               );
-
-                            if (_missedEchos > expirationDelay)
-                            {
-                                _missedEchos = 0;
-                                _timedout = true;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (_timedout)
-                        {
-                            _timedout = false;
-
-                            LoggerAccessor.LogInfo(
-                                $"[DMEObject] - RECOVERED - Client {mumClient.AccountName} recovered. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
-                            );
-                        }
-
-                        _missedEchos = 0;
-                    }
-                }
-
-                return _timedout;
-            }
-        }
-        public virtual bool LongTimedout
-        {
-            get
-            {
-                const int expirationDelay = 2;
-                double deltaSec = (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds;
-                int timeoutThreshold = DmeClass.GetAppSettingsOrDefault(ApplicationId).ClientLongTimeoutSeconds;
-
-                if (deltaSec > timeoutThreshold + expirationDelay)
-                {
-                    if (!_long_timedout)
-                    {
-                        _missedLongEchos++;
-                        LoggerAccessor.LogWarn(
-                                 $"[DMEObject] - LONG_TIMEOUT - Client {mumClient.AccountName} missed echo #{_missedLongEchos}. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
-                             );
-
-                        if (_missedLongEchos > expirationDelay)
-                        {
-                            _missedLongEchos = 0;
-                            _long_timedout = true;
-                        }
-                    }
-                }
-                else
-                {
-                    if (_long_timedout)
-                    {
-                        _long_timedout = false;
-
-                        LoggerAccessor.LogInfo(
-                            $"[DMEObject] - LONG_RECOVERED - Client {mumClient.AccountName} recovered. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
-                        );
-                    }
-
-                    _missedLongEchos = 0;
-                }
-
-                return _long_timedout;
-            }
-        }
+        public virtual bool Timedout => !IsConnectingGracePeriod && ((DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds > DmeClass.GetAppSettingsOrDefault(ApplicationId).ClientTimeoutSeconds);
+        public virtual bool LongTimedout => (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds > DmeClass.GetAppSettingsOrDefault(ApplicationId).ClientLongTimeoutSeconds;
         public virtual bool IsConnected => !Disconnected && Tcp != null && Tcp.Active && mumClient.IsInGame && !LongTimedout;
         public virtual bool IsAuthenticated => TimeAuthenticated.HasValue;
         public virtual bool Destroy => Disconnected || (!IsConnected && !IsConnectingGracePeriod);
         public virtual bool IsDestroyed { get; protected set; } = false;
         public virtual bool IsAggTime => !LastAggTime.HasValue || (DateTimeUtils.GetMillisecondsSinceStartup() - LastAggTime.Value) >= AggTimeMs;
 
-        /// <summary>
-        /// 
-        /// </summary>
-        protected int _missedEchos;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        protected int _missedLongEchos;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        protected bool _timedout;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        protected bool _long_timedout;
-
+       
         public Action<DMEObject>? OnDestroyed;
 
 
@@ -305,13 +201,12 @@ namespace Horizon.DME.Models
 
         public void OnRecvServerEcho(RT_MSG_SERVER_ECHO echo)
         {
-            DateTime echoTime = echo.UnixTimestamp.ToUtcDateTime();
-            double latencyMs = (DateTimeUtils.GetHighPrecisionUtcTime() - echoTime).TotalMilliseconds;
-
-            if (latencyMs >= 0 && latencyMs < 10000)
-                LatencyMs = (uint)latencyMs;
-
-            _lastServerEchoValue = echoTime;
+            var echoTime = echo.UnixTimestamp.ToUtcDateTime();
+            if (echoTime > _lastServerEchoValue)
+            {
+                _lastServerEchoValue = echoTime;
+                LatencyMs = (uint)(DateTimeUtils.GetHighPrecisionUtcTime() - echoTime).TotalMilliseconds;
+            }
         }
 
         public void OnRecvClientEcho(RT_MSG_CLIENT_ECHO echo)
