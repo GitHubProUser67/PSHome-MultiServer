@@ -22,12 +22,14 @@ public class TlsRc4Cipher : TlsCipher
     {
         if (cipherKeySize < 1 || cipherKeySize > 256)
             throw new TlsFatalAlert(AlertDescription.internal_error);
+		
+		bool isServer = cryptoParams.IsServer;
 
         m_encryptionCipher = new RC4Engine();
         m_decryptionCipher = new RC4Engine();
 
         RC4Engine clientCipher, serverCipher;
-        if (cryptoParams.IsServer)
+        if (isServer)
         {
             clientCipher = m_decryptionCipher;
             serverCipher = m_encryptionCipher;
@@ -38,10 +40,7 @@ public class TlsRc4Cipher : TlsCipher
             serverCipher = m_decryptionCipher;
         }
 
-        int keyBlockSize = 2 * cipherKeySize + clientMac.MacLength + serverMac.MacLength;
-        Span<byte> keyBlock = keyBlockSize <= 512
-            ? stackalloc byte[keyBlockSize]
-            : new byte[keyBlockSize];
+        Span<byte> keyBlock = new byte[2 * cipherKeySize + clientMac.MacLength + serverMac.MacLength];
 
         TlsImplUtilities.CalculateKeyBlock(cryptoParams, keyBlock);
 
@@ -50,9 +49,10 @@ public class TlsRc4Cipher : TlsCipher
         clientCipher.Init(true, new KeyParameter(keyBlock[..cipherKeySize])); keyBlock = keyBlock[cipherKeySize..];
         serverCipher.Init(false, new KeyParameter(keyBlock[..cipherKeySize])); keyBlock = keyBlock[cipherKeySize..];
 
-        if (!keyBlock.IsEmpty) throw new TlsFatalAlert(AlertDescription.internal_error);
+        if (!keyBlock.IsEmpty)
+			throw new TlsFatalAlert(AlertDescription.internal_error);
 
-        if (cryptoParams.IsServer)
+        if (isServer)
         {
             m_writeMac = new TlsSuiteHmac(cryptoParams, serverMac);
             m_readMac = new TlsSuiteHmac(cryptoParams, clientMac);
@@ -108,9 +108,7 @@ public class TlsRc4Cipher : TlsCipher
         var plaintext = new byte[len];
         m_decryptionCipher.ProcessBytes(ciphertext.AsSpan(offset, len), plaintext);
 
-        byte[] expectedMac = m_readMac.CalculateMac(seqNo, recordType, plaintext.AsSpan(0, macInputLen));
-        bool badMac = !TlsUtilities.ConstantTimeAreEqual(macSize, expectedMac, 0, plaintext, macInputLen);
-        if (badMac)
+        if (!TlsUtilities.ConstantTimeAreEqual(macSize, m_readMac.CalculateMac(seqNo, recordType, plaintext.AsSpan(0, macInputLen)), 0, plaintext, macInputLen))
             throw new TlsFatalAlert(AlertDescription.bad_record_mac);
 
         return new TlsDecodeResult(plaintext, 0, macInputLen, recordType);
