@@ -1,6 +1,5 @@
-using CastleLibrary.FixedSsl;
-using Org.Mentalis.Security.Certificates;
-using Org.Mentalis.Security.Ssl;
+using FixedSsl.Crypto;
+using FixedSsl.ProtoSSL;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -26,7 +25,7 @@ namespace FixedSsl
         private const int SSLv3 = 0x0300;  // SSL 3.0
         private const int TLSv1 = 0x0301;  // TLS 1.0
 
-        private static readonly SecureProtocol legacyProtocols = SecureProtocol.Ssl3 | SecureProtocol.Tls1;
+        private static readonly Org.Mentalis.Security.Ssl.SecureProtocol legacyProtocols = Org.Mentalis.Security.Ssl.SecureProtocol.Ssl3 | Org.Mentalis.Security.Ssl.SecureProtocol.Tls1;
 
         public static async Task<Stream> AuthenticateAsServerAsync(SslProtocols protocols, Socket socket, X509Certificate2 certificate, bool forceSsl, bool ownSocket)
         {
@@ -121,9 +120,7 @@ namespace FixedSsl
             int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out _, out int maxSslVersion, out List<int> versions);
 
             var allowedProtocols = protocols.GetEnabledProtocols();
-#pragma warning disable
-#if !DISABLE_MENTALIS_SSL_SERVER
-            // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
+#pragma warning disable            // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
             if (
                     (allowedProtocols.Contains(SslProtocols.Ssl3) || allowedProtocols.Contains(SslProtocols.Tls)) &&
                     (
@@ -133,11 +130,20 @@ namespace FixedSsl
                     )
                 )
             {
-                return new SecureNetworkStream(new SecureSocket(socket, new SecurityOptions(legacyProtocols, new Certificate(certificate), ConnectionEnd.Server)), true);
-            }
-            else
+#if DISABLE_MENTALIS_SSL_SERVER
+                BCSSLCertificate bcCertificate = certificate;
+
+                Ssl3TlsServer connTls = new(new Rc4TlsCrypto(false), bcCertificate.Certificate, bcCertificate.PrivateKey);
+                Org.BouncyCastle.Tls.TlsServerProtocol serverProtocol = new(new NetworkStream(socket, ownSocket));
+
+                serverProtocol.Accept(connTls);
+
+                return serverProtocol.Stream;
+#else
+                return new Org.Mentalis.Security.Ssl.SecureNetworkStream(new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server)), true);
 #endif
-            if (allowedProtocols.Contains(SslProtocols.Ssl2) && maxSslVersion == SSLv2)
+            }
+            else if (allowedProtocols.Contains(SslProtocols.Ssl2) && maxSslVersion == SSLv2)
 #pragma warning restore
                 throw new NotSupportedException($"[SslSocket] - Client tried to initialize a SSLv2 connection which is not supported yet, invalidating the request...");
 
@@ -251,7 +257,6 @@ namespace FixedSsl
 
             var allowedProtocols = authOptions.EnabledSslProtocols.GetEnabledProtocols();
 #pragma warning disable
-#if !DISABLE_MENTALIS_SSL_SERVER
             // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
             if (
                     (allowedProtocols.Contains(SslProtocols.Ssl3) || allowedProtocols.Contains(SslProtocols.Tls)) &&
@@ -262,18 +267,27 @@ namespace FixedSsl
                     )
                 )
             {
-                SecureSocket sock = new SecureSocket(socket, new SecurityOptions(legacyProtocols, new Certificate(certificate), ConnectionEnd.Server));
+#if DISABLE_MENTALIS_SSL_SERVER
+                BCSSLCertificate bcCertificate = certificate;
+
+                Ssl3TlsServer connTls = new(new Rc4TlsCrypto(false), bcCertificate.Certificate, bcCertificate.PrivateKey);
+                Org.BouncyCastle.Tls.TlsServerProtocol serverProtocol = new(new NetworkStream(socket, ownSocket));
+
+                serverProtocol.Accept(connTls);
+
+                return serverProtocol.Stream;
+#else
+                Org.Mentalis.Security.Ssl.SecureSocket sock = new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server));
 
                 // Only fills the client certificate since for now, I have no idea how to extract cert related failures.
                 clientCertificate = new X509Certificate2(sock.RemoteCertificate.UnderlyingCert.GetRawCertData());
 
                 // Idea: using a lookup based on the client endpoint and certificate to return DNAS certificates on the fly.
 
-                return new SecureNetworkStream(sock, true);
-            }
-            else 
+                return new Org.Mentalis.Security.Ssl.SecureNetworkStream(sock, true);
 #endif
-            if (allowedProtocols.Contains(SslProtocols.Ssl2) && maxSslVersion == SSLv2)
+            }
+            else if (allowedProtocols.Contains(SslProtocols.Ssl2) && maxSslVersion == SSLv2)
 #pragma warning restore
                 throw new NotSupportedException($"[SslSocket] - Client tried to initialize a SSLv2 connection which is not supported yet, invalidating the request...");
 

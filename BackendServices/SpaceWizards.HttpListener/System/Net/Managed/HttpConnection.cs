@@ -30,10 +30,8 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using CustomLogger;
 using FixedSsl;
 using MultiServerLibrary.SSL;
-using Org.Mentalis.Security.Ssl;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -146,18 +144,6 @@ namespace SpaceWizards.HttpListener
             get { return _clientCert; }
         }
 
-        internal Stream SslStream
-        {
-            get 
-            {
-                if (_stream is SslStream sslStream)
-                    return sslStream;
-                else if (_stream is SecureNetworkStream sslStream1)
-                    return sslStream1;
-                else
-                    throw new Exception($"[HttpConnection] - Connection stream can only be of types:{typeof(SslStream)}|{typeof(SecureNetworkStream)}.");
-            }
-        }
 #if NET5_0_OR_GREATER
         [MemberNotNull(nameof(_memoryStream))]
         [MemberNotNull(nameof(_context))]

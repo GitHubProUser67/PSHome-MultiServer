@@ -564,7 +564,7 @@ namespace MultiServerLibrary.SSL
                         try
                         {
                             if (privateKeyPath.EndsWith(".pfx", StringComparison.OrdinalIgnoreCase))
-                                key = GetPrivateKey(new X509Certificate2(privateKeyPath));
+                                key = FixedSsl.BCSSLCertificate.GetPrivateKey(new X509Certificate2(privateKeyPath));
                             else
                                 key = LoadPrivateKey(privateKeyPath);
 
@@ -603,30 +603,6 @@ namespace MultiServerLibrary.SSL
             // Remove PEM header/footer and convert base64
             return new X509Certificate2(certPem.Replace(certBegin, string.Empty)
                                    .Replace(certEnd, string.Empty).IsBase64().Item2);
-        }
-
-        public static AsymmetricAlgorithm GetPrivateKey(X509Certificate2 certificate)
-        {
-            if (!certificate.HasPrivateKey)
-                return null;
-
-            RSA rsa = certificate.GetRSAPrivateKey();
-            if (rsa != null)
-                return rsa;
-
-            DSA dsa = certificate.GetDSAPrivateKey();
-            if (dsa != null)
-                return dsa;
-
-            ECDsa ecdsa = certificate.GetECDsaPrivateKey();
-            if (ecdsa != null)
-                return ecdsa;
-
-            ECDiffieHellman ecdh = certificate.GetECDiffieHellmanPrivateKey();
-            if (ecdh != null)
-                return ecdh;
-
-            throw new NotSupportedException("[CertificateHelper] - GetPrivateKey: Key algorithm not supported");
         }
 
         public static AsymmetricAlgorithm LoadPrivateKey(string privateKeyPath)
