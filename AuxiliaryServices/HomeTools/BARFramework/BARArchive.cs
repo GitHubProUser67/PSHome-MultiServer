@@ -679,7 +679,7 @@ namespace HomeTools.BARFramework
             return tocentry;
         }
 
-        private async void CompressAndAddFile(bool compress, Stream inStream, TOCEntry tocEntry)
+        private void CompressAndAddFile(bool compress, Stream inStream, TOCEntry tocEntry)
         {
             if (m_header.Version == 512)
             {
@@ -946,6 +946,8 @@ namespace HomeTools.BARFramework
         public void AddFile(string filePath, Stream inStream, BARAddFileOptions options)
         {
             TOCEntry tocEntryFromFilepath = GetTocEntryFromFilepath(filePath, (uint)inStream.Length);
+			if (tocEntryFromFilepath == null)
+				return;
             bool compress = ShouldCompress(filePath, options);
             CompressAndAddFile(compress, inStream, tocEntryFromFilepath);
             m_toc.Add(tocEntryFromFilepath);
@@ -1293,6 +1295,8 @@ namespace HomeTools.BARFramework
             {
                 TOCEntry tocentry = (TOCEntry)obj;
                 string key = Path.GetDirectoryName(tocentry.Path)?.Replace(Path.DirectorySeparatorChar, '/');
+                if (key == null)
+                    continue;
                 string fileName = Path.GetFileName(tocentry.Path);
                 List<string> list;
                 if (hashtable.ContainsKey(key))
