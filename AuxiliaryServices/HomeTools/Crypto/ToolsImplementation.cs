@@ -131,6 +131,8 @@ namespace HomeTools.Crypto
 
         public static readonly byte[] MetaDataV1IVA = InitiateMetaDataV1IVA();
 
+        public static readonly byte[] BEE5BEE5Header = new byte[4] { 0xBE, 0xE5, 0xBE, 0xE5 };
+
         public static readonly byte[] CryptoVersionBytesBE = BitConverter.GetBytes(BitConverter.IsLittleEndian ? CryptoVersion : EndianUtils.ReverseInt(CryptoVersion));
 
         public static readonly bool ClientsCertificatesWrittenToDisk = InitiateDecryptedClientsCertificates();

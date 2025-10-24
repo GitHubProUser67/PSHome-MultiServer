@@ -416,13 +416,14 @@ namespace HomeWebTools
                 {
                     using (MemoryStream ms = new MemoryStream())
                     {
-                        PostData.CopyTo(ms);
+                        await PostData.CopyToAsync(ms);
                         ms.Position = 0;
                         ushort cdnMode = 0;
                         string filename = string.Empty;
                         string ogfilename = string.Empty;
                         string subfolder = string.Empty;
                         string bruteforce = string.Empty;
+                        string afsengine = string.Empty;
                         var data = MultipartFormDataParser.Parse(ms, boundary);
                         string prefix = data.GetParameterValue("prefix");
                         try
@@ -444,6 +445,14 @@ namespace HomeWebTools
                         try
                         {
                             cdnMode = ushort.Parse(data.GetParameterValue("cdnmode"));
+                        }
+                        catch
+                        {
+                            // Not Important
+                        }
+                        try
+                        {
+                            afsengine = data.GetParameterValue("afsengine");
                         }
                         catch
                         {
@@ -536,79 +545,111 @@ namespace HomeWebTools
                                     continue;
                                 }
 
-                                AFSMapper? map = new AFSMapper();
-
-                                if (Directory.Exists(unbardir + $"/{filename}") && (ogfilename.EndsWith(".bar", StringComparison.InvariantCultureIgnoreCase) || ogfilename.EndsWith(".sharc", StringComparison.InvariantCultureIgnoreCase) || ogfilename.EndsWith(".sdat", StringComparison.InvariantCultureIgnoreCase)))
+                                LegacyMapper? map = new LegacyMapper();
+                                using (AFSMapper? afsMap = new AFSMapper())
                                 {
-                                    if (subfolder == "on")
+                                    if (Directory.Exists(unbardir + $"/{filename}") && (ogfilename.EndsWith(".bar", StringComparison.InvariantCultureIgnoreCase) || ogfilename.EndsWith(".sharc", StringComparison.InvariantCultureIgnoreCase) || ogfilename.EndsWith(".sdat", StringComparison.InvariantCultureIgnoreCase)))
                                     {
-                                        foreach (var dircursor in Directory.GetDirectories(unbardir + $"/{filename}"))
+                                        if (subfolder == "on")
                                         {
-                                            int fileCount = Directory.GetFiles(dircursor).Length;
+                                            foreach (var dircursor in Directory.GetDirectories(unbardir + $"/{filename}"))
+                                            {
+                                                int fileCount = Directory.GetFiles(dircursor).Length;
+
+                                                if (fileCount > 0)
+                                                {
+                                                    if (afsengine == "on")
+                                                        await afsMap.MapperStart(dircursor, HelperStaticFolder, prefix, bruteforce);
+                                                    else
+                                                        await map.MapperStart(dircursor, HelperStaticFolder, prefix, bruteforce);
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            int fileCount = Directory.GetFiles(unbardir + $"/{filename}").Length;
 
                                             if (fileCount > 0)
-                                                await map.MapperStart(dircursor, HelperStaticFolder, prefix, bruteforce);
+                                            {
+                                                if (afsengine == "on")
+                                                    await afsMap.MapperStart(unbardir + $"/{filename}", HelperStaticFolder, prefix, bruteforce);
+                                                else
+                                                    await map.MapperStart(unbardir + $"/{filename}", HelperStaticFolder, prefix, bruteforce);
+                                            }
                                         }
+
+                                        ZipFile.CreateFromDirectory(unbardir + $"/{filename}", tempdir + $"/{filename}_Mapped.zip");
+
+                                        TasksResult.Add((File.ReadAllBytes(tempdir + $"/{filename}_Mapped.zip"), $"{filename}_Mapped.zip"));
+                                    }
+                                    else if (Directory.Exists(unbardir + $"/{filename}"))
+                                    {
+                                        if (subfolder == "on")
+                                        {
+                                            foreach (var dircursor in Directory.GetDirectories(unbardir + $"/{filename}"))
+                                            {
+                                                int fileCount = Directory.GetFiles(dircursor).Length;
+
+                                                if (fileCount > 0)
+                                                {
+                                                    if (afsengine == "on")
+                                                        await afsMap.MapperStart(dircursor, HelperStaticFolder, prefix, bruteforce);
+                                                    else
+                                                        await map.MapperStart(dircursor, HelperStaticFolder, prefix, bruteforce);
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            int fileCount = Directory.GetFiles(unbardir + $"/{filename}").Length;
+
+                                            if (fileCount > 0)
+                                            {
+                                                if (afsengine == "on")
+                                                    await afsMap.MapperStart(unbardir + $"/{filename}", HelperStaticFolder, prefix, bruteforce);
+                                                else
+                                                    await map.MapperStart(unbardir + $"/{filename}", HelperStaticFolder, prefix, bruteforce);
+                                            }
+                                        }
+
+                                        ZipFile.CreateFromDirectory(unbardir + $"/{filename}", tempdir + $"/{filename}_Mapped.zip");
+
+                                        TasksResult.Add((File.ReadAllBytes(tempdir + $"/{filename}_Mapped.zip"), $"{filename}_Mapped.zip"));
                                     }
                                     else
                                     {
-                                        int fileCount = Directory.GetFiles(unbardir + $"/{filename}").Length;
-
-                                        if (fileCount > 0)
-                                            await map.MapperStart(unbardir + $"/{filename}", HelperStaticFolder, prefix, bruteforce);
-                                    }
-
-                                    ZipFile.CreateFromDirectory(unbardir + $"/{filename}", tempdir + $"/{filename}_Mapped.zip");
-
-                                    TasksResult.Add((File.ReadAllBytes(tempdir + $"/{filename}_Mapped.zip"), $"{filename}_Mapped.zip"));
-                                }
-                                else if (Directory.Exists(unbardir + $"/{filename}"))
-                                {
-                                    if (subfolder == "on")
-                                    {
-                                        foreach (var dircursor in Directory.GetDirectories(unbardir + $"/{filename}"))
+                                        if (subfolder == "on")
                                         {
-                                            int fileCount = Directory.GetFiles(dircursor).Length;
+                                            foreach (var dircursor in Directory.GetDirectories(unbardir))
+                                            {
+                                                int fileCount = Directory.GetFiles(dircursor).Length;
+
+                                                if (fileCount > 0)
+                                                {
+                                                    if (afsengine == "on")
+                                                        await afsMap.MapperStart(dircursor, HelperStaticFolder, prefix, bruteforce);
+                                                    else
+                                                        await map.MapperStart(dircursor, HelperStaticFolder, prefix, bruteforce);
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            int fileCount = Directory.GetFiles(unbardir).Length;
 
                                             if (fileCount > 0)
-                                                await map.MapperStart(dircursor, HelperStaticFolder, prefix, bruteforce);
+                                            {
+                                                if (afsengine == "on")
+                                                    await afsMap.MapperStart(unbardir, HelperStaticFolder, prefix, bruteforce);
+                                                else
+                                                    await map.MapperStart(unbardir, HelperStaticFolder, prefix, bruteforce);
+                                            }
                                         }
+
+                                        ZipFile.CreateFromDirectory(unbardir, tempdir + $"/{filename}_Mapped.zip");
+
+                                        TasksResult.Add((File.ReadAllBytes(tempdir + $"/{filename}_Mapped.zip"), $"{filename}_Mapped.zip"));
                                     }
-                                    else
-                                    {
-                                        int fileCount = Directory.GetFiles(unbardir + $"/{filename}").Length;
-
-                                        if (fileCount > 0)
-                                            await map.MapperStart(unbardir + $"/{filename}", HelperStaticFolder, prefix, bruteforce);
-                                    }
-
-                                    ZipFile.CreateFromDirectory(unbardir + $"/{filename}", tempdir + $"/{filename}_Mapped.zip");
-
-                                    TasksResult.Add((File.ReadAllBytes(tempdir + $"/{filename}_Mapped.zip"), $"{filename}_Mapped.zip"));
-                                }
-                                else
-                                {
-                                    if (subfolder == "on")
-                                    {
-                                        foreach (var dircursor in Directory.GetDirectories(unbardir))
-                                        {
-                                            int fileCount = Directory.GetFiles(dircursor).Length;
-
-                                            if (fileCount > 0)
-                                                await map.MapperStart(dircursor, HelperStaticFolder, prefix, bruteforce);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        int fileCount = Directory.GetFiles(unbardir).Length;
-
-                                        if (fileCount > 0)
-                                            await map.MapperStart(unbardir, HelperStaticFolder, prefix, bruteforce);
-                                    }
-
-                                    ZipFile.CreateFromDirectory(unbardir, tempdir + $"/{filename}_Mapped.zip");
-
-                                    TasksResult.Add((File.ReadAllBytes(tempdir + $"/{filename}_Mapped.zip"), $"{filename}_Mapped.zip"));
                                 }
 
                                 map = null;
@@ -969,8 +1010,10 @@ namespace HomeWebTools
 
                                 filename = multipartfile.FileName;
 
-                                if (buffer.Length > 8 && buffer[0] == 0xBE && buffer[1] == 0xE5 && buffer[2] == 0xBE && buffer[3] == 0xE5
-                                     && buffer[4] == 0x00 && buffer[5] == 0x00 && buffer[6] == 0x00 && buffer[7] == 0x01 && version1 == "on")
+                                byte[] cryptoVersionBytesLE = EndianUtils.ReverseArray(ToolsImplementation.CryptoVersionBytesBE);
+
+                                if (buffer.Length > 8 && ByteUtils.FindBytePattern(buffer, ToolsImplementation.BEE5BEE5Header) != -1
+                                     && ByteUtils.FindBytePattern(buffer, cryptoVersionBytesLE, 4) != -1 && version1 == "on")
                                 {
                                     byte[] ProcessedFileBytes = new byte[buffer.Length - 8];
                                     Buffer.BlockCopy(buffer, 8, ProcessedFileBytes, 0, ProcessedFileBytes.Length);
@@ -979,20 +1022,25 @@ namespace HomeWebTools
                                         TasksResult.Add((ProcessedFileBytes, $"{filename}_Decrypted.lst"));
                                 }
                                 else if (version1 == "on")
-                                    TasksResult.Add((ByteUtils.CombineByteArray(new byte[] { 0xBE, 0xE5, 0xBE, 0xE5, 0x00, 0x00, 0x00, 0x01 }, ToolsImplementation.ProcessCrypt_Decrypt(buffer, ToolsImplementation.TicketListV1Key, ToolsImplementation.TicketListV1IV.ShadowCopy(), 1))
+                                    TasksResult.Add((ByteUtils.CombineByteArrays(ToolsImplementation.BEE5BEE5Header, cryptoVersionBytesLE, ToolsImplementation.ProcessCrypt_Decrypt(buffer, ToolsImplementation.TicketListV1Key, ToolsImplementation.TicketListV1IV.ShadowCopy(), 1))
                                             , $"{filename}_Encrypted.lst"));
-                                else if (buffer.Length > 8 && buffer[0] == 0xBE && buffer[1] == 0xE5 && buffer[2] == 0xBE && buffer[3] == 0xE5
-                                    && buffer[4] == 0x00 && buffer[5] == 0x00 && buffer[6] == 0x00 && buffer[7] == 0x00)
-                                {
-                                    byte[] ProcessedFileBytes = new byte[buffer.Length - 8];
-                                    Buffer.BlockCopy(buffer, 8, ProcessedFileBytes, 0, ProcessedFileBytes.Length);
-                                    ProcessedFileBytes = ToolsImplementation.ProcessCrypt_Decrypt(ProcessedFileBytes, ToolsImplementation.TicketListV0Key, ToolsImplementation.TicketListV0IV.ShadowCopy(), 1);
-                                    if (ProcessedFileBytes != null)
-                                        TasksResult.Add((ProcessedFileBytes, $"{filename}_Decrypted.lst"));
-                                }
                                 else
-                                    TasksResult.Add((ByteUtils.CombineByteArray(new byte[] { 0xBE, 0xE5, 0xBE, 0xE5, 0x00, 0x00, 0x00, 0x00 }, ToolsImplementation.ProcessCrypt_Decrypt(buffer, ToolsImplementation.TicketListV0Key, ToolsImplementation.TicketListV0IV.ShadowCopy(), 1))
-                                            , $"{filename}_Encrypted.lst"));
+                                {
+                                    byte[] empty = new byte[4];
+
+                                    if (buffer.Length > 8 && ByteUtils.FindBytePattern(buffer, ToolsImplementation.BEE5BEE5Header) != -1
+                                    && ByteUtils.FindBytePattern(buffer, empty, 4) != -1)
+                                    {
+                                        byte[] ProcessedFileBytes = new byte[buffer.Length - 8];
+                                        Buffer.BlockCopy(buffer, 8, ProcessedFileBytes, 0, ProcessedFileBytes.Length);
+                                        ProcessedFileBytes = ToolsImplementation.ProcessCrypt_Decrypt(ProcessedFileBytes, ToolsImplementation.TicketListV0Key, ToolsImplementation.TicketListV0IV.ShadowCopy(), 1);
+                                        if (ProcessedFileBytes != null)
+                                            TasksResult.Add((ProcessedFileBytes, $"{filename}_Decrypted.lst"));
+                                    }
+                                    else
+                                        TasksResult.Add((ByteUtils.CombineByteArrays(ToolsImplementation.BEE5BEE5Header, empty, ToolsImplementation.ProcessCrypt_Decrypt(buffer, ToolsImplementation.TicketListV0Key, ToolsImplementation.TicketListV0IV.ShadowCopy(), 1))
+                                                , $"{filename}_Encrypted.lst"));
+                                }
 
                                 i++;
                                 filedata.Flush();
