@@ -8,7 +8,6 @@ using Horizon.PluginManager;
 using Horizon.RT.Models;
 using MultiServerLibrary.Extension;
 using Newtonsoft.Json;
-using System.Globalization;
 using System.Net;
 using Tommunism.SoftFloat;
 
@@ -27,7 +26,7 @@ namespace Horizon.MUIS
 
         public static RSA_KEY? GlobalAuthPublic = null;
 
-        public static MUIS[]? UniverseInfoServers = null;
+        public static List<MUIS> UniverseInfoServers = new();
 
         public static List<HomeOffsetsJsonData> HomeOffsetsList = new();
 
@@ -74,8 +73,7 @@ namespace Horizon.MUIS
                     }
                 }
 
-                if (UniverseInfoServers != null)
-                    await Task.WhenAll(UniverseInfoServers.Select(x => x.Tick()));
+                await Task.WhenAll(UniverseInfoServers.Select(x => x.Tick()));
 
                 // Reload config
                 if ((DateTimeUtils.GetHighPrecisionUtcTime() - lastConfigRefresh).TotalMilliseconds > Settings.RefreshConfigInterval)
@@ -102,12 +100,17 @@ namespace Horizon.MUIS
             }
         }
 
-        public static async void StopServer()
+        public static void StopServer()
         {
             started = false;
 
-            if (UniverseInfoServers != null)
-                await Task.WhenAll(UniverseInfoServers.Select(x => x.Stop()));
+            lock (UniverseInfoServers)
+            {
+                foreach (var muisServer in UniverseInfoServers)
+                {
+                    muisServer.Stop().Wait();
+                }
+            }
         }
 
         private static Task StartServerAsync()
@@ -126,19 +129,14 @@ namespace Horizon.MUIS
             else
                 LoggerAccessor.LogInfo("* Database Enabled Medius Stack");
 
-            UniverseInfoServers = new MUIS[Settings.Ports.Length];
-            for (int i = 0; i < UniverseInfoServers.Length; ++i)
+            LoggerAccessor.LogInfo($"* Enabling MUIS on Server IP = {SERVER_IP} TCP Ports = {string.Join(", ", UniverseInfoServers.Select(server => server.Port))}.");
+
+            //Connecting to Medius Universe Manager 127.0.0.1 10076 1
+            //Connected to Universe Manager server
+
+            foreach (var authServer in UniverseInfoServers)
             {
-                try
-                {
-                    LoggerAccessor.LogInfo($"* Enabling MUIS on TCP Port = {Settings.Ports[i]}.");
-                    UniverseInfoServers[i] = new MUIS(Settings.Ports[i]);
-                    UniverseInfoServers[i].Start();
-                }
-                catch (Exception)
-                {
-                    LoggerAccessor.LogError($"MUIS failed to start on TCP Port = {Settings.Ports[i]}");
-                }
+                authServer.Start();
             }
 
             LoggerAccessor.LogInfo($"* Server Key Type: {Settings.EncryptMessages}");
@@ -208,7 +206,7 @@ namespace Horizon.MUIS
                 // Add the appids to the ApplicationIds list
                 Settings.CompatibleApplicationIds.AddRange(new List<int>
                 {
-                    11204, 11354, 21914, 21624, 20764, 20371, 20384, 22500, 10540, 10550, 10582, 10584, 22920, 
+                    11204, 11354, 21914, 21624, 20764, 20371, 20384, 22500, 10540, 10550, 10582, 10584, 22920,
                     22923, 22924, 21731, 21834, 23624, 20032, 20034, 20454, 20314, 21874, 21244, 20304, 20463,
                     21614, 20344, 20434, 22204, 23360, 21513, 21064, 20804, 20374, 21094, 20060, 10984, 10782,
                     10421, 10130, 10954, 21784, 21564, 21354, 21564, 21574, 21584, 21594, 22274, 22284, 22294,
@@ -1067,6 +1065,18 @@ namespace Horizon.MUIS
                 File.WriteAllText(CONFIG_FILE ?? Directory.GetCurrentDirectory() + "/static/muis.json", JsonConvert.SerializeObject(Settings, Formatting.Indented));
             }
             #endregion
+
+            foreach (int muisPort in Settings.Ports)
+            {
+                if (!UniverseInfoServers.Any(x => x.Port == muisPort))
+                    UniverseInfoServers.Add(new MUIS(muisPort));
+            }
+
+            foreach (var server in UniverseInfoServers
+                .Where(x => !Settings.Ports.Contains(x.Port)))
+            {
+                server.Stop().ContinueWith(_ => UniverseInfoServers.Remove(server));
+            }
 
             #region Check ebootdefs.json
             if (!string.IsNullOrEmpty(HorizonServerConfiguration.EBOOTDEFSConfig) && File.Exists(HorizonServerConfiguration.EBOOTDEFSConfig))
