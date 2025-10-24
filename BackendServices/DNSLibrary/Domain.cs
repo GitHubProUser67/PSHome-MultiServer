@@ -24,10 +24,10 @@ namespace DNS.Protocol {
         }
 
         public static Domain FromArray(byte[] message, int offset, out int endOffset) {
-            IList<byte[]> labels = new List<byte[]>();
             bool endOffsetAssigned = false;
             endOffset = 0;
             byte lengthOrPointer;
+            IList<byte[]> labels = new List<byte[]>();
             HashSet<int> visitedOffsetPointers = new HashSet<int>();
 
             while ((lengthOrPointer = message[offset++]) > 0) {

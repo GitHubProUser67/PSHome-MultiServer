@@ -7,8 +7,9 @@ using DNS.Protocol.ResourceRecords;
 
 namespace DNS.Protocol {
     public class Request : IRequest {
+#if !NETCOREAPP3_0_OR_GREATER
         private static readonly RandomNumberGenerator RANDOM = new RNGCryptoServiceProvider();
-
+#endif
         private IList<Question> questions;
         private Header header;
         private IList<IResourceRecord> additional;
@@ -114,10 +115,17 @@ namespace DNS.Protocol {
             header.AdditionalRecordCount = additional.Count;
         }
 
+#if !NETCOREAPP3_0_OR_GREATER
         private ushort NextRandomId() {
             byte[] buffer = new byte[sizeof(ushort)];
             RANDOM.GetBytes(buffer);
             return BitConverter.ToUInt16(buffer, 0);
         }
+#else
+        private static ushort NextRandomId() => RandomNumberGenerator.GetBytes(sizeof(ushort)) switch
+        {
+            var bytes => BitConverter.ToUInt16(bytes)
+        };
+#endif
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using EndianTools;
 
 namespace DNS.Protocol.ResourceRecords {
     public class ServiceResourceRecord : BaseResourceRecord {
@@ -20,7 +21,15 @@ namespace DNS.Protocol.ResourceRecords {
         }
 
         public ServiceResourceRecord(IResourceRecord record, byte[] message, int dataOffset) : base(record) {
-            Head head = Marshalling.Struct.GetStruct<Head>(message, dataOffset, Head.SIZE);
+            if (dataOffset + Head.SIZE > message.Length)
+                throw new ArgumentException("Message too short for ResourceRecord Head");
+
+            Head head = new Head()
+            {
+                Priority = EndianAwareConverter.ToUInt16(message, Endianness.BigEndian, (uint)dataOffset),
+                Weight = EndianAwareConverter.ToUInt16(message, Endianness.BigEndian, (uint)(dataOffset + 2)),
+                Port = EndianAwareConverter.ToUInt16(message, Endianness.BigEndian, (uint)(dataOffset + 4)),
+            };
 
             Priority = head.Priority;
             Weight = head.Weight;

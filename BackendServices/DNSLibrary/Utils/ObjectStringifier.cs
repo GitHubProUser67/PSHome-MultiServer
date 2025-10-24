@@ -16,12 +16,12 @@ namespace DNS.Protocol.Utils {
         }
 
         private static string StringifyObject(object obj) {
-            if (obj is string) {
-                return (string) obj;
-            } else if (obj is IDictionary) {
-                return StringifyDictionary((IDictionary) obj);
-            } else if (obj is IEnumerable) {
-                return StringifyList((IEnumerable) obj);
+            if (obj is string v) {
+                return v;
+            } else if (obj is IDictionary dictionary) {
+                return StringifyDictionary(dictionary);
+            } else if (obj is IEnumerable enumerable) {
+                return StringifyList(enumerable);
             } else {
                 return obj == null ? "null" : obj.ToString();
             }
@@ -34,12 +34,12 @@ namespace DNS.Protocol.Utils {
         private static string StringifyDictionary(IDictionary dict) {
             StringBuilder result = new StringBuilder();
 
-            result.Append("{");
+            result.Append('{');
 
             foreach (DictionaryEntry pair in dict) {
                 result
                     .Append(pair.Key)
-                    .Append("=")
+                    .Append('=')
                     .Append(StringifyObject(pair.Value))
                     .Append(", ");
             }
@@ -48,7 +48,7 @@ namespace DNS.Protocol.Utils {
                 result.Remove(result.Length - 2, 2);
             }
 
-            return result.Append("}").ToString();
+            return result.Append('}').ToString();
         }
 
         private object obj;

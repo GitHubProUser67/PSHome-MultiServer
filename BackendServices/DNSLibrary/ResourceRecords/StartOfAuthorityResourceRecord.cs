@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using DNS.Protocol.Utils;
+using EndianTools;
 
 namespace DNS.Protocol.ResourceRecords {
     public class StartOfAuthorityResourceRecord : BaseResourceRecord {
@@ -28,7 +29,17 @@ namespace DNS.Protocol.ResourceRecords {
             MasterDomainName = Domain.FromArray(message, dataOffset, out dataOffset);
             ResponsibleDomainName = Domain.FromArray(message, dataOffset, out dataOffset);
 
-            Options tail = Marshalling.Struct.GetStruct<Options>(message, dataOffset, Options.SIZE);
+            if (dataOffset + Options.SIZE > message.Length)
+                throw new ArgumentException("Message too short for StartOfAuthorityResourceRecord Options");
+
+            Options tail = new Options()
+            {
+                SerialNumber = EndianAwareConverter.ToUInt32(message, Endianness.BigEndian, (uint)dataOffset),
+                RefreshInterval = TimeSpan.FromSeconds(EndianAwareConverter.ToUInt32(message, Endianness.BigEndian, (uint)(dataOffset + 4))),
+                RetryInterval = TimeSpan.FromSeconds(EndianAwareConverter.ToUInt32(message, Endianness.BigEndian, (uint)(dataOffset + 8))),
+                ExpireInterval = TimeSpan.FromSeconds(EndianAwareConverter.ToUInt32(message, Endianness.BigEndian, (uint)(dataOffset + 12))),
+                MinimumTimeToLive = TimeSpan.FromSeconds(EndianAwareConverter.ToUInt32(message, Endianness.BigEndian, (uint)(dataOffset + 16))),
+            };
 
             SerialNumber = tail.SerialNumber;
             RefreshInterval = tail.RefreshInterval;

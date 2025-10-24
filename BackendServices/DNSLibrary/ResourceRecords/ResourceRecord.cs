@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using DNS.Protocol.Utils;
+using EndianTools;
 
 namespace DNS.Protocol.ResourceRecords {
     public class ResourceRecord : IResourceRecord {
@@ -32,7 +33,17 @@ namespace DNS.Protocol.ResourceRecords {
 
         public static ResourceRecord FromArray(byte[] message, int offset, out int endOffset) {
             Domain domain = Domain.FromArray(message, offset, out offset);
-            Tail tail = Marshalling.Struct.GetStruct<Tail>(message, offset, Tail.SIZE);
+
+            if (offset + Tail.SIZE > message.Length)
+                throw new ArgumentException("Message too short for question tail");
+
+            Tail tail = new Tail
+            {
+                Type = (RecordType)EndianAwareConverter.ToUInt16(message, Endianness.BigEndian, (uint)offset),
+                Class = (RecordClass)EndianAwareConverter.ToUInt16(message, Endianness.BigEndian, (uint)(offset + 2)),
+                TimeToLive = TimeSpan.FromSeconds(EndianAwareConverter.ToUInt32(message, Endianness.BigEndian, (uint)(offset + 4))),
+                DataLength = EndianAwareConverter.ToUInt16(message, Endianness.BigEndian, (uint)(offset + 8)),
+            };
 
             byte[] data = new byte[tail.DataLength];
 

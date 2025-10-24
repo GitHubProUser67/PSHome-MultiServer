@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using DNS.Protocol.Utils;
+using EndianTools;
 
 namespace DNS.Protocol {
     // 12 bytes message header
@@ -14,7 +15,16 @@ namespace DNS.Protocol {
                 throw new ArgumentException("Header length too small");
             }
 
-            return Marshalling.Struct.GetStruct<Header>(header, 0, SIZE);
+            return new Header()
+            {
+                Id = EndianAwareConverter.ToUInt16(header, Endianness.BigEndian, 0),
+                Flag0 = EndianAwareConverter.ToUInt8(header, Endianness.Automatic, 2),
+                Flag1 = EndianAwareConverter.ToUInt8(header, Endianness.Automatic, 3),
+                QuestionCount = EndianAwareConverter.ToUInt16(header, Endianness.BigEndian, 4),
+                AnswerRecordCount = EndianAwareConverter.ToUInt16(header, Endianness.BigEndian, 6),
+                AuthorityRecordCount = EndianAwareConverter.ToUInt16(header, Endianness.BigEndian, 8),
+                AdditionalRecordCount = EndianAwareConverter.ToUInt16(header, Endianness.BigEndian, 10),
+            };
         }
 
         private ushort id;

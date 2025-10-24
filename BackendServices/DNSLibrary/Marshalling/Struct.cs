@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Reflection;
 using System.Linq;
+using EndianTools;
 
 namespace DNS.Protocol.Marshalling {
     public static class Struct {
@@ -25,30 +26,13 @@ namespace DNS.Protocol.Marshalling {
                 #pragma warning restore 618
                 endian = endian ?? (EndianAttribute) field.GetCustomAttributes(typeof(EndianAttribute), false).First();
 
-                if (endian.Endianness == Endianness.Big && BitConverter.IsLittleEndian ||
-                        endian.Endianness == Endianness.Little && !BitConverter.IsLittleEndian) {
+                if (endian.Endianness == Endianness.Big && EndianAwareConverter.isLittleEndianSystem ||
+                        endian.Endianness == Endianness.Little && !EndianAwareConverter.isLittleEndianSystem) {
                     Array.Reverse(data, offset, length);
                 }
             }
 
             return data;
-        }
-
-        public static T GetStruct<T>(byte[] data) where T : struct {
-            return GetStruct<T>(data, 0, data.Length);
-        }
-
-        public static T GetStruct<T>(byte[] data, int offset, int length) where T : struct {
-            byte[] buffer = new byte[length];
-            Array.Copy(data, offset, buffer, 0, buffer.Length);
-
-            GCHandle handle = GCHandle.Alloc(ConvertEndian<T>(buffer), GCHandleType.Pinned);
-
-            try {
-                return Marshal.PtrToStructure<T>(handle.AddrOfPinnedObject());
-            } finally {
-                handle.Free();
-            }
         }
 
         public static byte[] GetBytes<T>(T obj) where T : struct {
