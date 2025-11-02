@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DotNetty.Buffers;
+using MultiServerLibrary.Extension.LinqSQL;
 
 namespace Horizon.LIBRARY.Pipeline.Udp
 {
@@ -22,10 +23,11 @@ namespace Horizon.LIBRARY.Pipeline.Udp
 
         protected override void Encode(IChannelHandlerContext ctx, IEnumerable<ScertDatagramPacket> messages, List<object> output)
         {
-            List<byte[]> temp = new List<byte[]>();
-            Dictionary<EndPoint, List<byte[]>> msgsByEndpoint = new Dictionary<EndPoint, List<byte[]>>();
             if (messages is null)
                 return;
+
+            List<byte[]> temp = new List<byte[]>();
+            Dictionary<EndPoint, List<byte[]>> msgsByEndpoint = new Dictionary<EndPoint, List<byte[]>>();
 
             if (!ctx.HasAttribute(Constants.SCERT_CLIENT))
                 ctx.GetAttribute(Constants.SCERT_CLIENT).Set(new Attribute.ScertClientAttribute());
@@ -56,8 +58,8 @@ namespace Horizon.LIBRARY.Pipeline.Udp
 
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            LoggerAccessor.LogError(exception.ToString());
-            context.CloseAsync();
+            LoggerAccessor.LogError($"[ScertDatagramIEnumerableEncoder] - Udp: An assertion was caught. (Exception:{exception})");
+            _ = context.CloseAsync();
         }
     }
 }

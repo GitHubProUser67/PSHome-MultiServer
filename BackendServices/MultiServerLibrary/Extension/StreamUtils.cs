@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,11 +7,6 @@ namespace MultiServerLibrary.Extension
 {
     public static class StreamUtils
     {
-        public static string GetString(this Stream stream)
-        {
-            return Encoding.ASCII.GetString(((MemoryStream)stream).ToArray());
-        }
-
         /// <summary>
         /// Copies a Stream to an other.
         /// <para>Copie d'un Stream � un autre.</para>

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Collections.Concurrent;
 using MultiServerLibrary.Extension;
 using NetHasher;
+using System.Threading;
 #if !NETCOREAPP3_0_OR_GREATER
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Crypto;
@@ -216,7 +217,7 @@ namespace MultiServerLibrary.SSL
         private static readonly string[] certExtensions = { string.Empty, ".cer", ".pem", ".pfx" };
         private static readonly string[] keyExtensions = { string.Empty, ".pem", ".pfx", ".pvk" };
 
-        private static ConcurrentDictionary<string, X509Certificate2> FakeCertificates = new ConcurrentDictionary<string, X509Certificate2>();
+        private static readonly ConcurrentDictionary<string, X509Certificate2> FakeCertificates = new ConcurrentDictionary<string, X509Certificate2>();
 
         /// <summary>
         /// Creates a Root CA Cert for chain signed usage.
@@ -228,18 +229,13 @@ namespace MultiServerLibrary.SSL
         public static X509Certificate2 CreateRootCertificateAuthority(string OutputCertificatePath, HashAlgorithmName Hashing, string CN = "MultiServer Certificate Authority", string OU = "Scientists Department", string O = "MultiServer Corp", string L = "New York", string S = "Northeastern United", string C = "US")
         {
             string certDirectoryPath = Path.GetDirectoryName(OutputCertificatePath);
-            string lockFilePath = certDirectoryPath + $"/{nameof(CertificateHelper)}.lock";
-
-            File.WriteAllText(lockFilePath, "DO NOT MODIFY OR REMOVE THIS FILE");
 
             byte[] certSerialNumber = new byte[16];
 
-            // Generate a new RSA key pair
             using (RSA rsa = RSA.Create())
             {
                 rsa.ImportParameters(ROOT_CA_PARAMETERS);
 
-                // Create a certificate request with the RSA key pair
                 CertificateRequest request = new CertificateRequest($"CN={CN}, OU={OU}, O=\"{O}\", L={L}, S={S}, C={C}", rsa, Hashing, RSASignaturePadding.Pkcs1);
 
                 // Configure the certificate as CA.
@@ -254,29 +250,25 @@ namespace MultiServerLibrary.SSL
 
                 X509Certificate2 RootCACertificate = request.Create(
                     request.SubjectName,
-                    new RsaPkcs1SignatureGenerator(rsa),
+                    CreateSignatureGenerator(rsa),
                     new DateTimeOffset(new DateTime(2011, 1, 1)),
                     new DateTimeOffset(new DateTime(2130, 1, 1)),
                     certSerialNumber).CopyWithPrivateKey(rsa);
 
                 string PemRootCACertificate = CRT_HEADER + Convert.ToBase64String(RootCACertificate.RawData, Base64FormattingOptions.InsertLineBreaks) + CRT_FOOTER;
 
-                // Export the private key.
                 File.WriteAllText(certDirectoryPath + $"/{Path.GetFileNameWithoutExtension(OutputCertificatePath)}_privkey.pem",
                     PRIVATE_RSA_KEY_HEADER + Convert.ToBase64String(rsa.ExportRSAPrivateKey(), Base64FormattingOptions.InsertLineBreaks) + PRIVATE_RSA_KEY_FOOTER);
 
                 rsa.Clear();
 
-                // Export the certificate.
                 File.WriteAllText(certDirectoryPath + $"/{Path.GetFileNameWithoutExtension(OutputCertificatePath)}.pem", PemRootCACertificate);
 
                 string outputExtension = certExtensions.FirstOrDefault(ext =>
                     Path.GetExtension(OutputCertificatePath).Equals(ext, StringComparison.OrdinalIgnoreCase))
                     ?? ".pfx";
 
-                // Export the certificate in it's requested format.
                 if (".cer".Equals(outputExtension, StringComparison.OrdinalIgnoreCase))
-                    // Export as DER-encoded cert
                     File.WriteAllBytes(OutputCertificatePath, RootCACertificate.Export(X509ContentType.Cert, string.Empty));
                 else if (".pem".Equals(outputExtension, StringComparison.OrdinalIgnoreCase))
                 {
@@ -284,8 +276,6 @@ namespace MultiServerLibrary.SSL
                 }
                 else
                     File.WriteAllBytes(OutputCertificatePath, RootCACertificate.Export(X509ContentType.Pfx, string.Empty));
-
-                File.Delete(lockFilePath);
 
                 return RootCACertificate;
             }
@@ -321,20 +311,20 @@ namespace MultiServerLibrary.SSL
 #endif
             }
 
-            using (RSA issuerPrivKey = issuerCertificate.GetRSAPrivateKey() ?? throw new Exception("[CertificateHelper] - Issuer Certificate doesn't have a private key, Chain Signed Certificate will not be generated."))
+            using (AsymmetricAlgorithm RootCAPrivateKey = FixedSsl.BCSSLCertificate.GetPrivateKey(issuerCertificate) ?? throw new Exception("[CertificateHelper] - Issuer Certificate doesn't have a private key, Chain Signed Certificate will not be generated."))
             {
-                // If not found, initialize private key generator & set up a certificate creation request.
                 using (RSA rsa = RSA.Create())
                 {
-                    // Generate an unique serial number.
                     byte[] certSerialNumber = new byte[16];
+#if NET6_0_OR_GREATER
+                    RandomNumberGenerator.Fill(certSerialNumber);
+#else
                     new Random().NextBytes(certSerialNumber);
+#endif
 
-                    // set up a certificate creation request.
                     CertificateRequest certRequestAny = new CertificateRequest($"CN={certSubject} [{GetRandomInt64(100, 999)}], OU=Wizards Department," +
                         $" O=\"MultiServer Corp\", L=New York, S=Northeastern United, C=US", rsa, certHashAlgorithm, RSASignaturePadding.Pkcs1);
 
-                    // set up a optional SAN builder.
                     SubjectAlternativeNameBuilder sanBuilder = new SubjectAlternativeNameBuilder();
 
                     sanBuilder.AddDnsName(certSubject); // Some legacy clients will not recognize the cert serial-number.
@@ -351,13 +341,14 @@ namespace MultiServerLibrary.SSL
 
                     certRequestAny.CertificateExtensions.Add(sanBuilder.Build());
 
-                    // Export the issued certificate with private key.
                     X509Certificate2 certificateWithKey = new X509Certificate2(certRequestAny.Create(
                         issuerCertificate.IssuerName,
-                        new RsaPkcs1SignatureGenerator(issuerPrivKey),
+                        CreateSignatureGenerator(RootCAPrivateKey),
                         certVaildBeforeNow,
                         certVaildAfterNow,
-                        certSerialNumber).CopyWithPrivateKey(rsa).Export(X509ContentType.Pfx));
+                        certSerialNumber).CopyWithPrivateKey(rsa).Export(X509ContentType.Pfx),
+                        (string)null,
+                        X509KeyStorageFlags.Exportable);
 
                     // Save the certificate and return it.
                     FakeCertificates.TryAdd(certSubject, certificateWithKey);
@@ -370,42 +361,36 @@ namespace MultiServerLibrary.SSL
         /// Creates a master chained signed certificate.
         /// <para>Creation d'un certificat master sur une chaine de certificats issue d'un RootCA.</para>
         /// </summary>
-        /// <param name="RootCACertificate">The initial RootCA.</param>
+        /// <param name="issuerCertificate">The initial RootCA.</param>
         /// <param name="Hashing">The Hashing algorithm to use.</param>
         /// <param name="OutputCertificatePath">The output chained signed certificate file path.</param>
         /// <param name="OutputCertificatePassword">The password of the output chained signed certificate.</param>
         /// <param name="DnsList">DNS to set in the SAN attributes.</param>
-        public static void MakeMasterChainSignedCert(X509Certificate2 RootCACertificate, HashAlgorithmName Hashing, string OutputCertificatePath,
+        public static void MakeMasterChainSignedCert(X509Certificate2 issuerCertificate, HashAlgorithmName Hashing, string OutputCertificatePath,
             string OutputCertificatePassword, string[] DnsList, string CN = "MultiServerCorp.online", string OU = "Scientists Department",
             string O = "MultiServer Corp", string L = "New York", string S = "Northeastern United", string C = "US", bool Wildcard = true)
         {
-            if (RootCACertificate == null)
+            if (issuerCertificate == null)
                 return;
 
-            using (RSA RootCAPrivateKey = RootCACertificate.GetRSAPrivateKey())
+            using (AsymmetricAlgorithm RootCAPrivateKey = FixedSsl.BCSSLCertificate.GetPrivateKey(issuerCertificate) ?? throw new Exception("[CertificateHelper] - Issuer Certificate doesn't have a private key, Chain Signed Certificate will not be generated."))
             {
-                if (RootCAPrivateKey == null)
-                {
-                    LoggerAccessor.LogError("[CertificateHelper] - Root Certificate doesn't have a private key, Chain Signed Certificate will not be generated.");
-                    return;
-                }
-
                 DateTime CurrentDate = DateTime.Now;
 
                 byte[] certSerialNumber = new byte[16];
+#if NET6_0_OR_GREATER
+                RandomNumberGenerator.Fill(certSerialNumber);
+#else
                 new Random().NextBytes(certSerialNumber);
-
-                // Generate a new RSA key pair
+#endif
                 using (RSA rsa = RSA.Create())
                 {
                     IPAddress Loopback = IPAddress.Loopback;
                     IPAddress PublicServerIP = IPAddress.Parse(InternetProtocolUtils.GetPublicIPAddress());
                     IPAddress LocalServerIP = InternetProtocolUtils.GetLocalIPAddresses().First();
 
-                    // Add a Subject Alternative Name (SAN) extension with a wildcard DNS entry
                     SubjectAlternativeNameBuilder sanBuilder = new SubjectAlternativeNameBuilder();
 
-                    // Create a certificate request with the RSA key pair
                     CertificateRequest request = new CertificateRequest($"CN={CN} [{GetRandomInt64(100, 999)}], OU={OU}, O=\"{O}\", L={L}, S={S}, C={C}", rsa, Hashing, RSASignaturePadding.Pkcs1);
 
                     DnsList?.Select(str => str) // Some clients do not allow wildcard domains, so we use SAN attributes as a fallback.
@@ -436,21 +421,18 @@ namespace MultiServerLibrary.SSL
                     request.CertificateExtensions.Add(sanBuilder.Build());
 
                     X509Certificate2 ChainSignedCert = request.Create(
-                        RootCACertificate.IssuerName,
-                        new RsaPkcs1SignatureGenerator(RootCAPrivateKey),
+                        issuerCertificate.IssuerName,
+                        CreateSignatureGenerator(RootCAPrivateKey),
                         new DateTimeOffset(CurrentDate.AddDays(-1)),
                         new DateTimeOffset(CurrentDate.AddYears(100)),
                         certSerialNumber).CopyWithPrivateKey(rsa);
 
-                    // Export the private key.
                     File.WriteAllText(Path.GetDirectoryName(OutputCertificatePath) + $"/{Path.GetFileNameWithoutExtension(OutputCertificatePath)}_privkey.pem",
                         PRIVATE_RSA_KEY_HEADER + Convert.ToBase64String(rsa.ExportRSAPrivateKey(), Base64FormattingOptions.InsertLineBreaks) + PRIVATE_RSA_KEY_FOOTER);
 
-                    // Export the public key.
                     File.WriteAllText(Path.GetDirectoryName(OutputCertificatePath) + $"/{Path.GetFileNameWithoutExtension(OutputCertificatePath)}_pubkey.pem",
                         PUBLIC_RSA_KEY_HEADER + Convert.ToBase64String(rsa.ExportRSAPublicKey(), Base64FormattingOptions.InsertLineBreaks) + PUBLIC_RSA_KEY_FOOTER);
 
-                    // Export the certificate.
                     File.WriteAllText(Path.GetDirectoryName(OutputCertificatePath) + $"/{Path.GetFileNameWithoutExtension(OutputCertificatePath)}.pem",
                         CRT_HEADER + Convert.ToBase64String(ChainSignedCert.RawData, Base64FormattingOptions.InsertLineBreaks) + CRT_FOOTER);
 
@@ -458,9 +440,7 @@ namespace MultiServerLibrary.SSL
                     Path.GetExtension(OutputCertificatePath).Equals(ext, StringComparison.OrdinalIgnoreCase))
                     ?? ".pfx";
 
-                    // Export the certificate in it's requested format.
                     if (".cer".Equals(outputExtension, StringComparison.OrdinalIgnoreCase))
-                        // Export as DER-encoded cert
                         File.WriteAllBytes(OutputCertificatePath, ChainSignedCert.Export(X509ContentType.Cert, OutputCertificatePassword));
                     else if (".pem".Equals(outputExtension, StringComparison.OrdinalIgnoreCase))
                     {
@@ -496,20 +476,35 @@ namespace MultiServerLibrary.SSL
             Directory.CreateDirectory(directoryPath);
 
             X509Certificate2 RootCACertificate = null;
-            string lockFilePath = directoryPath + $"/{nameof(CertificateHelper)}.lock";
 
-            if (File.Exists(lockFilePath))
-                FileSystemUtils.WaitForFileDeletionAsync(lockFilePath).Wait();
+            try
+            {
+                using (Mutex mutex = new Mutex(false, $"Global\\{nameof(CertificateHelper)}Lock"))
+                {
+                    try
+                    {
+                        mutex.WaitOne();
 
-            RootCACertificate = LoadCertificate(directoryPath + $"/{rootCaCertName}_rootca.pem", directoryPath + $"/{rootCaCertName}_rootca_privkey.pem");
+                        RootCACertificate = LoadCertificate(directoryPath + $"/{rootCaCertName}_rootca.pem", directoryPath + $"/{rootCaCertName}_rootca_privkey.pem");
 
-            if (RootCACertificate == null)
-                RootCACertificate = CreateRootCertificateAuthority(directoryPath + $"/{rootCaCertName}_rootca.pfx", HashAlgorithmName.SHA256);
+                        if (RootCACertificate == null)
+                            RootCACertificate = CreateRootCertificateAuthority(directoryPath + $"/{rootCaCertName}_rootca.pfx", HashAlgorithmName.SHA256);
 
-            if (!File.Exists(directoryPath + "/CERTIFICATES.TXT") && File.Exists(directoryPath + $"/{rootCaCertName}_rootca.pem"))
-                CreateCertificatesTextFile(File.ReadAllText(directoryPath + $"/{rootCaCertName}_rootca.pem"), directoryPath + "/CERTIFICATES.TXT");
+                        if (!File.Exists(directoryPath + "/CERTIFICATES.TXT") && File.Exists(directoryPath + $"/{rootCaCertName}_rootca.pem"))
+                            CreateCertificatesTextFile(File.ReadAllText(directoryPath + $"/{rootCaCertName}_rootca.pem"), directoryPath + "/CERTIFICATES.TXT");
 
-            MakeMasterChainSignedCert(RootCACertificate, Hashing, certPath, certPassword, DnsList);
+                        MakeMasterChainSignedCert(RootCACertificate, Hashing, certPath, certPassword, DnsList);
+                    }
+                    finally
+                    {
+                        mutex.ReleaseMutex();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                LoggerAccessor.LogError($"[CertificateHelper] - InitializeSSLChainSignedCertificates: Failed to get mutex (exception: {e})");
+            }
         }
 
         /// <summary>
@@ -529,8 +524,10 @@ namespace MultiServerLibrary.SSL
         /// </summary>
         /// <param name="certificatePathInput">cert path.</param>
         /// <param name="privateKeyPathInput">private key path.</param>
+        /// <param name="pfxCertificatePassword">pfx cert password.</param>
+        /// <param name="pfxPrivateKeyPassword">pfx private key password.</param>
         /// <returns>A X509Certificate2.</returns>
-        public static X509Certificate2 LoadCertificate(string certificatePathInput, string privateKeyPathInput)
+        public static X509Certificate2 LoadCertificate(string certificatePathInput, string privateKeyPathInput = null, string pfxCertificatePassword = null, string pfxPrivateKeyPassword = null)
         {
             // Find first existing certificate file
             string certificatePath = Path.HasExtension(certificatePathInput)
@@ -541,30 +538,32 @@ namespace MultiServerLibrary.SSL
 
             if (certificatePath != null)
             {
-                // Find first existing private key file
-                string privateKeyPath = Path.HasExtension(privateKeyPathInput)
-                        ? File.Exists(privateKeyPathInput) ? privateKeyPathInput : null
-                        : keyExtensions
-                        .Select(ext => privateKeyPathInput + ext)
-                        .FirstOrDefault(File.Exists);
-
-                if (privateKeyPath != null)
-                {
 #if DEBUG
-                    LoggerAccessor.LogInfo($"[CertificateHelper] - LoadCertificate: Using certificate: {certificatePath}");
-                    LoggerAccessor.LogInfo($"[CertificateHelper] - LoadCertificate: Using private key: {privateKeyPath}");
+                LoggerAccessor.LogInfo($"[CertificateHelper] - LoadCertificate: Using certificate: {certificatePath}");
 #endif
-                    using (X509Certificate2 cert = new X509Certificate2(certificatePath))
-                    {
-                        if (cert.HasPrivateKey)
-                            return cert;
+                using (X509Certificate2 cert = (pfxCertificatePassword != null && certificatePath.EndsWith(".pfx", StringComparison.OrdinalIgnoreCase)) ? new X509Certificate2(certificatePath, pfxCertificatePassword) : new X509Certificate2(certificatePath))
+                {
+                    if (cert.HasPrivateKey)
+                        return cert;
 
+                    // Find first existing private key file
+                    string privateKeyPath = Path.HasExtension(privateKeyPathInput)
+                            ? File.Exists(privateKeyPathInput) ? privateKeyPathInput : null
+                            : keyExtensions
+                            .Select(ext => privateKeyPathInput + ext)
+                            .FirstOrDefault(File.Exists);
+
+                    if (privateKeyPath != null)
+                    {
+#if DEBUG
+                        LoggerAccessor.LogInfo($"[CertificateHelper] - LoadCertificate: Using private key: {privateKeyPath}");
+#endif
                         AsymmetricAlgorithm key = null;
 
                         try
                         {
                             if (privateKeyPath.EndsWith(".pfx", StringComparison.OrdinalIgnoreCase))
-                                key = FixedSsl.BCSSLCertificate.GetPrivateKey(new X509Certificate2(privateKeyPath));
+                                key = FixedSsl.BCSSLCertificate.GetPrivateKey(pfxPrivateKeyPassword != null ? new X509Certificate2(privateKeyPath, pfxPrivateKeyPassword) : new X509Certificate2(privateKeyPath));
                             else
                                 key = LoadPrivateKey(privateKeyPath);
 
@@ -581,16 +580,16 @@ namespace MultiServerLibrary.SSL
                         }
                         catch (Exception ex)
                         {
-                            LoggerAccessor.LogError($"[CertificateHelper] - LoadCertificate: Loading thrown an assertion. (Exception:{ex})");
+                            LoggerAccessor.LogError($"[CertificateHelper] - LoadCertificate: Loading thrown an assertion while loading private key:{privateKeyPath}. (Exception:{ex})");
                         }
                         finally
                         {
                             key?.Dispose();
                         }
                     }
+                    else
+                        LoggerAccessor.LogWarn($"[CertificateHelper] - LoadCertificate: Private key file not found for: {privateKeyPathInput} with {(Path.HasExtension(privateKeyPathInput) ? $"extension {Path.GetExtension(privateKeyPathInput)}" : $"extensions {string.Join(", ", keyExtensions)}")}");
                 }
-                else
-                    LoggerAccessor.LogWarn($"[CertificateHelper] - LoadCertificate: Private key file not found for: {privateKeyPathInput} with {(Path.HasExtension(privateKeyPathInput) ? $"extension {Path.GetExtension(privateKeyPathInput)}" : $"extensions {string.Join(", ", keyExtensions)}")}");
             }
             else
                 LoggerAccessor.LogWarn($"[CertificateHelper] - LoadCertificate: Certificate file not found for: {certificatePathInput} with {(Path.HasExtension(certificatePathInput) ? $"extension {Path.GetExtension(certificatePathInput)}" : $"extensions {string.Join(", ", certExtensions)}")}");
@@ -862,6 +861,16 @@ namespace MultiServerLibrary.SSL
             return false;
         }
 
+        private static X509SignatureGenerator CreateSignatureGenerator(AsymmetricAlgorithm privateKey)
+        {
+            return privateKey switch
+            {
+                RSA rsa => new RsaPkcs1SignatureGenerator(rsa),
+                ECDsa ecdsa => new EcdsaSignatureGenerator(ecdsa),
+                _ => null,// ECDiffieHellman and DSA are not valid for signing certs
+            };
+        }
+
         /// <summary>
         /// Creates a specific CERTIFICATES.TXT file.
         /// <para>Génération d'un fichier CERTIFICATES.TXT.</para>
@@ -973,8 +982,6 @@ namespace MultiServerLibrary.SSL
 				300b06092a864886f70d01010b      :sha256WithRSAEncryption        2
 				300b06092a864886f70d010105      :sha1WithRSAEncryption          1
 				300d06092a864886f70d01010c0500  :sha384WithRSAEncryption        20
-				300a06082a8648ce3d040303        :ecdsa-with-SHA384              20
-				300a06082a8648ce3d040302        :ecdsa-with-SHA256              97
 				300d06092a864886f70d0101040500  :md5WithRSAEncryption           6512
 				300d06092a864886f70d01010d0500  :sha512WithRSAEncryption        7715
 				300d06092a864886f70d01010b0500  :sha256WithRSAEncryption        483338
@@ -1012,5 +1019,59 @@ namespace MultiServerLibrary.SSL
         /// <returns>X.509 signature for specified data.</returns>
         public override byte[] SignData(byte[] data, HashAlgorithmName hashAlgorithm) =>
             _realRsaGenerator.SignData(data, hashAlgorithm);
+    }
+
+    /// <summary>
+	/// ECDSA-SHA256, ECDSA-SHA384 signature generator for X509 certificates.
+	/// </summary>
+	sealed class EcdsaSignatureGenerator : X509SignatureGenerator
+    {
+        private readonly X509SignatureGenerator _realEcGenerator;
+
+        internal EcdsaSignatureGenerator(ECDsa ec)
+        {
+            _realEcGenerator = CreateForECDsa(ec);
+        }
+
+        protected override PublicKey BuildPublicKey() => _realEcGenerator.PublicKey;
+
+        /// <summary>
+        /// Callback for .NET signing functions.
+        /// </summary>
+        /// <param name="hashAlgorithm">Hashing algorithm name.</param>
+        /// <returns>Hashing algorithm ID in some correct format.</returns>
+        public override byte[] GetSignatureAlgorithmIdentifier(HashAlgorithmName hashAlgorithm)
+        {
+            /*
+			 * https://bugzilla.mozilla.org/show_bug.cgi?id=1064636#c28
+				300a06082a8648ce3d040303        :ecdsa-with-SHA384              20
+				300a06082a8648ce3d040302        :ecdsa-with-SHA256              97
+			 */
+
+            const string SHA256id = "300A06082A8648CE3D040302";
+            const string SHA384id = "300A06082A8648CE3D040303";
+
+            byte[] oid = hashAlgorithm.Name switch
+            {
+                DotNetHasher.Sha256Const => SHA256id.HexStringToByteArray(),
+                DotNetHasher.Sha384Const => SHA384id.HexStringToByteArray(),
+                _ => null
+            };
+
+            if (oid == null)
+                LoggerAccessor.LogError(
+                        "[EcdsaSignatureGenerator] - " + nameof(hashAlgorithm),
+                        $"'{hashAlgorithm}' is not a supported algorithm at this moment."
+                    );
+
+            return oid;
+        }
+
+        /// <summary>
+        /// Sign specified <paramref name="data"/> using specified <paramref name="hashAlgorithm"/>.
+        /// </summary>
+        /// <returns>X.509 signature for specified data.</returns>
+        public override byte[] SignData(byte[] data, HashAlgorithmName hashAlgorithm) =>
+            _realEcGenerator.SignData(data, hashAlgorithm);
     }
 }

@@ -124,9 +124,11 @@ namespace SpaceWizards.HttpListener
             {
                 conn = new HttpConnection(accepted, epl, epl._secure, epl._cert);
             }
-            catch
+            catch (Exception ex)
             {
-                // Not Important.
+#if DEBUG
+                CustomLogger.LoggerAccessor.LogError($"[HttpEndPointListener] - ProcessAccept: thrown an assertion while accepting client. (Exception:{ex})");
+#endif
             }
 
             if (conn == null || conn.ConnectedStream == null)

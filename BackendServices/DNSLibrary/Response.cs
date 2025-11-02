@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using DNS.Protocol.ResourceRecords;
 using DNS.Protocol.Utils;
+using EndianTools;
 
 namespace DNS.Protocol {
     public class Response : IResponse {
@@ -14,6 +15,16 @@ namespace DNS.Protocol {
         private IList<IResourceRecord> authority;
         private IList<IResourceRecord> additional;
 
+        // Static byte arrays for record types and classes
+        private static readonly byte[] TypeA_InClass = new byte[4] { 0x00, 0x01, 0x00, 0x01 };   // A, IN
+        private static readonly byte[] TypeAAAA_InClass = new byte[4] { 0x00, 0x1C, 0x00, 0x01 }; // AAAA, IN
+
+        enum RCODE : byte
+        {
+            X83 = 0x83,
+            X80 = 0x80,
+        }
+
         public static byte[] MakeType0DnsResponsePacket(byte[] Req, List<IPAddress> Ips, int maxResponseSize = 512, int timeToLive = 180)
         {
             const byte dnsHeaderSize = 12;
@@ -21,29 +32,47 @@ namespace DNS.Protocol {
             if (Req.Length < dnsHeaderSize || Ips == null)
                 return null;
 
-            bool TruncateFlag = false;
+            const Endianness big = Endianness.BigEndian;
+            const byte ptr = byte.MinValue;
+            const ushort sizeOfUshort = sizeof(ushort);
 
+            bool TruncateFlag = false;
             List<byte> ans = new List<byte>();
 
             // https://web.archive.org/web/20150326065952/http://www.ccs.neu.edu/home/amislove/teaching/cs4700/fall09/handouts/project1-primer.pdf
             // Header
-            ans.AddRange(new byte[2] { Req[0], Req[1] }); // ID
+
+            byte[] ulongBuffer = new byte[sizeof(ulong) - sizeOfUshort];
+            byte[] intBuffer = new byte[sizeof(int)];
+            byte[] ushortBuffer = new byte[sizeOfUshort] { Req[0], Req[1] }; // ID
+
+            ans.AddRange(ushortBuffer);
+
+            ushortBuffer[ptr] = 0x81;
 
             if (Ips.Count == 0)
             {
-                ans.AddRange(new byte[2] { 0x81, 0x83 });
+                ushortBuffer[1] = (byte)RCODE.X83;
+
                 Ips.Add(IPAddress.None); // NXDOMAIN
             }
             else
-                ans.AddRange(new byte[2] { 0x81, 0x80 }); // OPCODE & RCODE etc...
+                ushortBuffer[1] = (byte)RCODE.X80;
 
-            ans.AddRange(new byte[2] { Req[4], Req[5] }); // QDCOUNT (copy from request)
+            ans.AddRange(ushortBuffer); // OPCODE & RCODE etc...
 
-            ans.AddRange(BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianTools.EndianUtils.ReverseUshort((ushort)IPAddress.HostToNetworkOrder((short)Ips.Count)) : (ushort)IPAddress.HostToNetworkOrder((short)Ips.Count))); // ANCOUNT (number of answers)
+            ushortBuffer[ptr] = Req[4]; // QDCOUNT (copy from request)
+            ushortBuffer[1] = Req[5];
 
-            ans.AddRange(new byte[4]); // NSCOUNT & ARCOUNT (not used)
+            ans.AddRange(ushortBuffer);
 
-            for (int i = 12; i < Req.Length; i++)
+            EndianAwareConverter.WriteUInt16(ushortBuffer, big, ptr, (ushort)Ips.Count); // ANCOUNT (number of answers)
+
+            ans.AddRange(ushortBuffer);
+
+            ans.AddRange(intBuffer); // NSCOUNT & ARCOUNT (not used)
+
+            for (int i = dnsHeaderSize; i < Req.Length; i++)
                 ans.Add(Req[i]);
 
             int responseSize = ans.Count;
@@ -62,25 +91,31 @@ namespace DNS.Protocol {
                     break;
                 }
 
-                ans.AddRange(new byte[2] { 0xC0, 0x0C }); // Pointer to domain name in query
+                const ushort ptrFlag = 0xC000; // 0xC000 = pointer flag
+
+                ushort pointer = ptrFlag | (dnsHeaderSize);
+
+                EndianAwareConverter.WriteUInt16(ushortBuffer, big, ptr, pointer);
+
+                ans.AddRange(ushortBuffer); // Pointer to domain name in query
 
                 if (ip.AddressFamily == AddressFamily.InterNetworkV6)
-                    ans.AddRange(new byte[4] { 0x00, 0x1C, 0x00, 0x01 }); // Type AAAA (IPv6), Class IN
+                    ans.AddRange(TypeAAAA_InClass);
                 else
-                    ans.AddRange(new byte[4] { 0x00, 0x01, 0x00, 0x01 }); // Type A (IPv4), Class IN
+                    ans.AddRange(TypeA_InClass);
 
-                ans.AddRange(BitConverter.GetBytes(BitConverter.IsLittleEndian ? EndianTools.EndianUtils.ReverseInt(timeToLive) : timeToLive)); // TTL
-                ans.AddRange(BitConverter.GetBytes(BitConverter.IsLittleEndian ? EndianTools.EndianUtils.ReverseUshort(addrSizeOf) : addrSizeOf)); // Data length (4 bytes for IPv4, 16 bytes for IPv6)
+                // Combine Data length (4 bytes for IPv4, 16 bytes for IPv6) and TTL
+                EndianAwareConverter.WriteUInt64(ulongBuffer, big, ptr, ((ulong)(uint)timeToLive << 16) | addrSizeOf, true);
+
+                ans.AddRange(ulongBuffer);
                 ans.AddRange(addrBytes);
 
                 responseSize += payloadSize;
             }
 
             if (TruncateFlag)
-            {
                 // Set the truncated (TC) flag in the header (6th bit of second byte)
                 ans[3] = (byte)(ans[3] | 0x02);
-            }
 
             byte[] response = ans.ToArray();
 
@@ -91,9 +126,10 @@ namespace DNS.Protocol {
         }
 
         public static Response FromRequest(IRequest request) {
-            Response response = new Response();
-
-            response.Id = request.Id;
+            Response response = new Response
+            {
+                Id = request.Id
+            };
 
             foreach (Question question in request.Questions) {
                 response.Questions.Add(question);
@@ -135,23 +171,23 @@ namespace DNS.Protocol {
         }
 
         public Response() {
-            this.header = new Header();
-            this.questions = new List<Question>();
-            this.answers = new List<IResourceRecord>();
-            this.authority = new List<IResourceRecord>();
-            this.additional = new List<IResourceRecord>();
+            header = new Header();
+            questions = new List<Question>();
+            answers = new List<IResourceRecord>();
+            authority = new List<IResourceRecord>();
+            additional = new List<IResourceRecord>();
 
-            this.header.Response = true;
+            header.Response = true;
         }
 
         public Response(IResponse response) {
-            this.header = new Header();
-            this.questions = new List<Question>(response.Questions);
-            this.answers = new List<IResourceRecord>(response.AnswerRecords);
-            this.authority = new List<IResourceRecord>(response.AuthorityRecords);
-            this.additional = new List<IResourceRecord>(response.AdditionalRecords);
+            header = new Header();
+            questions = new List<Question>(response.Questions);
+            answers = new List<IResourceRecord>(response.AnswerRecords);
+            authority = new List<IResourceRecord>(response.AuthorityRecords);
+            additional = new List<IResourceRecord>(response.AdditionalRecords);
 
-            this.header.Response = true;
+            header.Response = true;
 
             Id = response.Id;
             RecursionAvailable = response.RecursionAvailable;

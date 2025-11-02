@@ -1,5 +1,4 @@
 using FixedSsl.Crypto;
-using FixedSsl.ProtoSSL;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -117,7 +116,7 @@ namespace FixedSsl
                 return new NetworkStream(socket, ownSocket);
             }
 
-            int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out bool isSslV2, out int maxSslVersion, out List<int> versions);
+            int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out bool isSslV2, out int maxSslVersion, out List<int> versions, out List<int> cipherSuites);
 
             var allowedProtocols = protocols.GetEnabledProtocols();
 #pragma warning disable            // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
@@ -131,19 +130,37 @@ namespace FixedSsl
                 )
             {
 #if !FORCE_MENTALIS_SSL_SERVER
-                if (!isSslV2)
+                if (!isSslV2 && (cipherSuites.Exists(c => Ssl3TlsServer.AESCipherSuites.Contains(c)) || cipherSuites.Exists(c => Ssl3TlsServer.RC4CipherSuites.Contains(c))))
                 {
-                    BCSSLCertificate bcCertificate = certificate;
+                    BCSSLCertificate bcCertificate = null;
 
-                    Ssl3TlsServer connTls = new(new Rc4TlsCrypto(false), bcCertificate.Certificate, bcCertificate.PrivateKey);
-                    Org.BouncyCastle.Tls.TlsServerProtocol serverProtocol = new(new NetworkStream(socket, ownSocket));
+                    try
+                    {
+                        bcCertificate = certificate;
+                    }
+                    catch (ArgumentException)
+                    {
+                        // Fallback to Mentalis.
+                    }
 
-                    serverProtocol.Accept(connTls);
+                    if (bcCertificate != null)
+                    {
+                        Ssl3TlsServer connTls = new(
+#if DEBUG
+                        new Rc4TlsCrypto(true)
+#else
+                        new Rc4TlsCrypto(false)
+#endif
+                        , bcCertificate.Certificate, bcCertificate.PrivateKey);
+                        Org.BouncyCastle.Tls.TlsServerProtocol serverProtocol = new(new NetworkStream(socket, ownSocket));
 
-                    return serverProtocol.Stream;
+                        serverProtocol.Accept(connTls);
+
+                        return serverProtocol.Stream;
+                    }
                 }
 #endif
-                return new Org.Mentalis.Security.Ssl.SecureNetworkStream(new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server)), true);
+                return new Org.Mentalis.Security.Ssl.SecureNetworkStream(new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server)), ownSocket);
             }
             else if (allowedProtocols.Contains(SslProtocols.Ssl2) && maxSslVersion == SSLv2)
 #pragma warning restore
@@ -247,7 +264,7 @@ namespace FixedSsl
                 return new NetworkStream(socket, ownSocket);
             }
 
-            int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out bool isSslV2, out int maxSslVersion, out List<int> versions);
+            int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out bool isSslV2, out int maxSslVersion, out List<int> versions, out List<int> cipherSuites);
 
             X509Certificate2 certificate = (X509Certificate2)authOptions.ServerCertificateSelectionCallback?.Invoke(socket, hostname);
             if (certificate == null)
@@ -270,26 +287,37 @@ namespace FixedSsl
                 )
             {
 #if !FORCE_MENTALIS_SSL_SERVER
-                if (!isSslV2)
+                if (!isSslV2 && (cipherSuites.Exists(c => Ssl3TlsServer.AESCipherSuites.Contains(c)) || cipherSuites.Exists(c => Ssl3TlsServer.RC4CipherSuites.Contains(c))))
                 {
-                    BCSSLCertificate bcCertificate = certificate;
+                    BCSSLCertificate bcCertificate = null;
 
-                    Ssl3TlsServer connTls = new(new Rc4TlsCrypto(false), bcCertificate.Certificate, bcCertificate.PrivateKey);
-                    Org.BouncyCastle.Tls.TlsServerProtocol serverProtocol = new(new NetworkStream(socket, ownSocket));
+                    try
+                    {
+                        bcCertificate = certificate;
+                    }
+                    catch (ArgumentException)
+                    {
+                        // Fallback to Mentalis.
+                    }
 
-                    serverProtocol.Accept(connTls);
+                    if (bcCertificate != null)
+                    {
+                        Ssl3TlsServer connTls = new(
+#if DEBUG
+                        new Rc4TlsCrypto(true)
+#else
+                        new Rc4TlsCrypto(false)
+#endif
+                        , bcCertificate.Certificate, bcCertificate.PrivateKey);
+                        Org.BouncyCastle.Tls.TlsServerProtocol serverProtocol = new(new NetworkStream(socket, ownSocket));
 
-                    return serverProtocol.Stream;
+                        serverProtocol.Accept(connTls);
+
+                        return serverProtocol.Stream;
+                    }
                 }
 #endif
-                Org.Mentalis.Security.Ssl.SecureSocket sock = new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server));
-
-                // Only fills the client certificate since for now, I have no idea how to extract cert related failures.
-                clientCertificate = new X509Certificate2(sock.RemoteCertificate.UnderlyingCert.GetRawCertData());
-
-                // Idea: using a lookup based on the client endpoint and certificate to return DNAS certificates on the fly.
-
-                return new Org.Mentalis.Security.Ssl.SecureNetworkStream(sock, true);
+                return new Org.Mentalis.Security.Ssl.SecureNetworkStream(new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server)), ownSocket);
             }
             else if (allowedProtocols.Contains(SslProtocols.Ssl2) && maxSslVersion == SSLv2)
 #pragma warning restore
@@ -298,7 +326,7 @@ namespace FixedSsl
             int[] clientCertErr = null;
             X509Certificate2 clientCert = null;
 
-            SslStream sslStream = new SslStream(new NetworkStream(socket, ownSocket), false, (t, c, ch, e) =>
+            SslStream sslStream = new SslStream(new NetworkStream(socket, ownSocket), false, authOptions.RemoteCertificateValidationCallback == null ? (t, c, ch, e) =>
             {
                 if (c == null)
                     return true;
@@ -309,7 +337,7 @@ namespace FixedSsl
                 clientCert = c2;
                 clientCertErr = new int[] { (int)e };
                 return true;
-            });
+            } : authOptions.RemoteCertificateValidationCallback);
 
             // Shortcut
             authOptions.ServerCertificateSelectionCallback = (sender, host) => certificate;

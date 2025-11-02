@@ -380,12 +380,10 @@ public class VulnerableCertificateGenerator
     private const string SHA1CipherAlgorithm = "SHA1WITHRSA";
     private const string MD5CipherAlgorithm = "MD5WITHRSA";
     private const string IssuerDN = "CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group";
-    private static readonly string OTGRootCACertPath = Program.configDir + "SSL/otg.pem";
-    private static readonly string OTGRootCAPrivKeyPath = Program.configDir + "SSL/otg_privatekey.pem";
     private static readonly ReadOnlyMemory<byte> SHA1CipherSignature = new byte[] { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05 };
     private static readonly ReadOnlyMemory<byte> MD5CipherSignature = new byte[] { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x04 };
 
-    public (AsymmetricKeyParameter, Certificate, X509Certificate2) GetVulnerableFeslEaCert(bool EnableExploit, bool SHA1 = false)
+    public (AsymmetricKeyParameter, Certificate, X509Certificate2) GetVulnerableFeslEaCert(bool SHA1 = false)
     {
         string cacheKey = "fesl.ea.com";
         string SubjectDN = $"C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN={cacheKey}";
@@ -394,12 +392,12 @@ public class VulnerableCertificateGenerator
             // !TODO: New connections will break after running continuously several years without a restart 
             return cacheHit;
 
-        (AsymmetricKeyParameter, Certificate, X509Certificate2) creds = GenerateVulnerableCert(IssuerDN, SubjectDN, EnableExploit, SHA1);
+        (AsymmetricKeyParameter, Certificate, X509Certificate2) creds = GenerateVulnerableCert(IssuerDN, SubjectDN, SHA1);
         _certCache.TryAdd(cacheKey, creds);
         return creds;
     }
 
-    public (AsymmetricKeyParameter, Certificate, X509Certificate2) GetVulnerableCustomEaCert(string CN, string OU, bool EnableExploit, bool SHA1 = false)
+    public (AsymmetricKeyParameter, Certificate, X509Certificate2) GetVulnerableCustomEaCert(string CN, string OU, bool SHA1 = false)
     {
         string SubjectDN = $"C=US, ST=California, O=\"Electronic Arts, Inc.\", OU={OU}, CN={CN}";
 
@@ -407,19 +405,19 @@ public class VulnerableCertificateGenerator
             // !TODO: New connections will break after running continuously several years without a restart 
             return cacheHit;
 
-        (AsymmetricKeyParameter, Certificate, X509Certificate2) creds = GenerateVulnerableCert(IssuerDN, SubjectDN, EnableExploit, SHA1);
+        (AsymmetricKeyParameter, Certificate, X509Certificate2) creds = GenerateVulnerableCert(IssuerDN, SubjectDN, SHA1);
         _certCache.TryAdd(CN, creds);
         return creds;
     }
 
-    public (AsymmetricKeyParameter, Certificate, X509Certificate2) GetVulnerableLegacyCustomEaCert(string CN, bool WeakChainSignedRSAKey, bool EnableExploit)
+    public (AsymmetricKeyParameter, Certificate, X509Certificate2) GetVulnerableLegacyCustomEaCert(string CN, bool WeakChainSignedRSAKey)
     {
         if (_certCache.TryGetValue(CN, out (AsymmetricKeyParameter, Certificate, X509Certificate2) cacheHit))
             // !TODO: New connections will break after running continuously several years without a restart 
             return cacheHit;
 
         (AsymmetricKeyParameter, Certificate, X509Certificate2) creds = GenerateVulnerableLegacyCert("OTG3 Certificate Authority",
-            CN, WeakChainSignedRSAKey, EnableExploit);
+            CN, WeakChainSignedRSAKey);
         _certCache.TryAdd(CN, creds);
         return creds;
     }
@@ -427,113 +425,53 @@ public class VulnerableCertificateGenerator
     /// <summary>
     /// Generates a vulnerable certificate for vulnerable ProtoSSL versions.
     /// </summary>
-    private static (AsymmetricKeyParameter, Certificate, X509Certificate2) GenerateVulnerableCert(string issuer, string subject, bool EnableExploit, bool SHA1 = false)
+    private static (AsymmetricKeyParameter, Certificate, X509Certificate2) GenerateVulnerableCert(string issuer, string subject, bool SHA1 = false)
     {
-        X509CertificateEntry certEntry;
-        AsymmetricCipherKeyPair caKeyPair;
-        Pkcs12Store store;
         BcTlsCrypto crypto = new(new SecureRandom());
         RsaKeyPairGenerator rsaKeyPairGen = new();
         rsaKeyPairGen.Init(new KeyGenerationParameters(crypto.SecureRandom, 1024));
 
         AsymmetricCipherKeyPair cKeyPair = rsaKeyPairGen.GenerateKeyPair();
+        AsymmetricCipherKeyPair caKeyPair = rsaKeyPairGen.GenerateKeyPair();
 
-        if (!EnableExploit)
-        {
-            if (!File.Exists(OTGRootCACertPath))
-                throw new Exception($"[ProtoSSL] - GenerateVulnerableCert: OTG Root Certificate was not found on path: {OTGRootCACertPath}");
-            else if (!File.Exists(OTGRootCAPrivKeyPath))
-                throw new Exception($"[ProtoSSL] - GenerateVulnerableCert: OTG Root Certificate Private Key was not found on path: {OTGRootCAPrivKeyPath}");
+        Pkcs12Store store = new Pkcs12StoreBuilder().Build();
+        X509CertificateEntry certEntry = new(PatchCertificateSignaturePattern(GenerateCertificate(SHA1 ? SHA1CipherAlgorithm : MD5CipherAlgorithm, subject,
+        cKeyPair, caKeyPair.Private, GenerateCertificate(SHA1 ? SHA1CipherAlgorithm : MD5CipherAlgorithm, issuer, caKeyPair, caKeyPair.Private)), !SHA1));
 
-            caKeyPair = DotNetUtilities.GetRsaKeyPair(((RSACryptoServiceProvider?)CertificateHelper.LoadCertificate(OTGRootCACertPath, OTGRootCAPrivKeyPath).GetRSAPrivateKey() 
-                ?? throw new Exception($"[ProtoSSL] - GenerateVulnerableCert: OTG Root Certificate does not contains a PrivateKey!")).ExportParameters(true));
+        string certDomain = subject.Split("CN=")[1].Split(",")[0];
 
-            store = new Pkcs12StoreBuilder().Build();
-            certEntry = new(GenerateCertificate(SHA1 ? SHA1CipherAlgorithm : MD5CipherAlgorithm, subject,
-            cKeyPair, caKeyPair.Private, GenerateCertificate(SHA1 ? SHA1CipherAlgorithm : MD5CipherAlgorithm, issuer, caKeyPair, caKeyPair.Private)));
+        LoggerAccessor.LogDebug("[ProtoSSL] - Certificate generated for: {domain}", certDomain);
 
-            string certDomain = subject.Split("CN=")[1].Split(",")[0];
+        store.SetCertificateEntry(certDomain, certEntry);
+        store.SetKeyEntry(certDomain, new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
 
-            LoggerAccessor.LogDebug("[ProtoSSL] - Certificate generated for: {domain}", certDomain);
-
-            store.SetCertificateEntry(certDomain, certEntry);
-            store.SetKeyEntry(certDomain, new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
-
-            return (cKeyPair.Private, new Certificate(new TlsCertificate[] { new BcTlsCertificate(crypto, certEntry.Certificate.GetEncoded()) }),
-                ConvertPEMToX509Certificate2(WriteObjectToPEM(certEntry.Certificate), WriteObjectToPEM(cKeyPair.Private)));
-        }
-        else
-        {
-            caKeyPair = rsaKeyPairGen.GenerateKeyPair();
-
-            store = new Pkcs12StoreBuilder().Build();
-            certEntry = new(PatchCertificateSignaturePattern(GenerateCertificate(SHA1 ? SHA1CipherAlgorithm : MD5CipherAlgorithm, subject,
-            cKeyPair, caKeyPair.Private, GenerateCertificate(SHA1 ? SHA1CipherAlgorithm : MD5CipherAlgorithm, issuer, caKeyPair, caKeyPair.Private)), !SHA1));
-
-            string certDomain = subject.Split("CN=")[1].Split(",")[0];
-
-            LoggerAccessor.LogDebug("[ProtoSSL] - Certificate generated for: {domain}", certDomain);
-
-            store.SetCertificateEntry(certDomain, certEntry);
-            store.SetKeyEntry(certDomain, new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
-
-            return (cKeyPair.Private, new Certificate(new TlsCertificate[] { new BcTlsCertificate(crypto, certEntry.Certificate.GetEncoded()) }),
-                ConvertPEMToX509Certificate2(WriteObjectToPEM(certEntry.Certificate), WriteObjectToPEM(cKeyPair.Private)));
-        }
+        return (cKeyPair.Private, new Certificate(new TlsCertificate[] { new BcTlsCertificate(crypto, certEntry.Certificate.GetEncoded()) }),
+            ConvertPEMToX509Certificate2(WriteObjectToPEM(certEntry.Certificate), WriteObjectToPEM(cKeyPair.Private)));
     }
 
     /// <summary>
     /// Generates a vulnerable certificate for vulnerable ProtoSSL versions.
     /// </summary>
-    private static (AsymmetricKeyParameter, Certificate, X509Certificate2) GenerateVulnerableLegacyCert(string RootCN, string ChainCN, bool WeakChainSignedRSAKey, bool EnableExploit)
+    private static (AsymmetricKeyParameter, Certificate, X509Certificate2) GenerateVulnerableLegacyCert(string RootCN, string ChainCN, bool WeakChainSignedRSAKey)
     {
-        X509CertificateEntry certEntry;
-        AsymmetricCipherKeyPair caKeyPair;
-        Pkcs12Store store;
         BcTlsCrypto crypto = new(new SecureRandom());
         RsaKeyPairGenerator rsaKeyPairGen = new();
         rsaKeyPairGen.Init(new KeyGenerationParameters(crypto.SecureRandom, WeakChainSignedRSAKey ? 512 : 1024));
 
         AsymmetricCipherKeyPair cKeyPair = rsaKeyPairGen.GenerateKeyPair();
+        AsymmetricCipherKeyPair caKeyPair = rsaKeyPairGen.GenerateKeyPair();
 
-        if (!EnableExploit)
-        {
-            if (!File.Exists(OTGRootCACertPath))
-                throw new Exception($"[ProtoSSL] - GenerateVulnerableLegacyCert: OTG Root Certificate was not found on path: {OTGRootCACertPath}");
-            else if (!File.Exists(OTGRootCAPrivKeyPath))
-                throw new Exception($"[ProtoSSL] - GenerateVulnerableLegacyCert: OTG Root Certificate Private Key was not found on path: {OTGRootCAPrivKeyPath}");
+        Pkcs12Store store = new Pkcs12StoreBuilder().Build();
+        X509CertificateEntry certEntry = new(PatchCertificateSignaturePattern(GenerateLegacyCertificate(MD5CipherAlgorithm, ChainCN,
+            cKeyPair, caKeyPair.Private, GenerateLegacyCertificate(MD5CipherAlgorithm, RootCN, caKeyPair, caKeyPair.Private)), true));
 
-            caKeyPair = DotNetUtilities.GetRsaKeyPair(((RSACryptoServiceProvider?)CertificateHelper.LoadCertificate(OTGRootCACertPath, OTGRootCAPrivKeyPath).GetRSAPrivateKey()
-                ?? throw new Exception($"[ProtoSSL] - GenerateVulnerableLegacyCert: OTG Root Certificate does not contains a PrivateKey!")).ExportParameters(true));
+        LoggerAccessor.LogDebug("[ProtoSSL] - Legacy Certificate generated for: {domain}", ChainCN);
 
-            store = new Pkcs12StoreBuilder().Build();
-            certEntry = new(GenerateLegacyCertificate(MD5CipherAlgorithm, ChainCN,
-                cKeyPair, caKeyPair.Private, GenerateLegacyCertificate(MD5CipherAlgorithm, RootCN, caKeyPair, caKeyPair.Private)));
+        store.SetCertificateEntry(ChainCN, certEntry);
+        store.SetKeyEntry(ChainCN, new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
 
-            LoggerAccessor.LogDebug("[ProtoSSL] - Legacy Certificate generated for: {domain}", ChainCN);
-
-            store.SetCertificateEntry(ChainCN, certEntry);
-            store.SetKeyEntry(ChainCN, new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
-
-            return (cKeyPair.Private, new Certificate(new TlsCertificate[] { new BcTlsCertificate(crypto, certEntry.Certificate.GetEncoded()) }),
-                ConvertPEMToX509Certificate2(WriteObjectToPEM(certEntry.Certificate), WriteObjectToPEM(cKeyPair.Private)));
-        }
-        else
-        {
-            caKeyPair = rsaKeyPairGen.GenerateKeyPair();
-
-            store = new Pkcs12StoreBuilder().Build();
-            certEntry = new(PatchCertificateSignaturePattern(GenerateLegacyCertificate(MD5CipherAlgorithm, ChainCN,
-                cKeyPair, caKeyPair.Private, GenerateLegacyCertificate(MD5CipherAlgorithm, RootCN, caKeyPair, caKeyPair.Private)), true));
-
-            LoggerAccessor.LogDebug("[ProtoSSL] - Legacy Certificate generated for: {domain}", ChainCN);
-
-            store.SetCertificateEntry(ChainCN, certEntry);
-            store.SetKeyEntry(ChainCN, new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
-
-            return (cKeyPair.Private, new Certificate(new TlsCertificate[] { new BcTlsCertificate(crypto, certEntry.Certificate.GetEncoded()) }),
-                ConvertPEMToX509Certificate2(WriteObjectToPEM(certEntry.Certificate), WriteObjectToPEM(cKeyPair.Private)));
-        }
+        return (cKeyPair.Private, new Certificate(new TlsCertificate[] { new BcTlsCertificate(crypto, certEntry.Certificate.GetEncoded()) }),
+            ConvertPEMToX509Certificate2(WriteObjectToPEM(certEntry.Certificate), WriteObjectToPEM(cKeyPair.Private)));
     }
 
     private static Org.BouncyCastle.X509.X509Certificate GenerateCertificate(string CipherAlgorithm, string subjectName, AsymmetricCipherKeyPair subjectKeyPair, AsymmetricKeyParameter issuerPrivKey, Org.BouncyCastle.X509.X509Certificate? issuerCert = null)

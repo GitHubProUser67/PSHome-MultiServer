@@ -585,15 +585,15 @@ sendImmediate:
                                     if (TotalBytes == 0)
                                         return await ctx.Response.SendChunk(Array.Empty<byte>(), true).ConfigureAwait(false);
 
-                                    const int buffersize = 16 * 1024;
+                                    int bufferSize = TotalBytes > 8000000 && ApacheNetServerConfiguration.BufferSize < 500000 ? 500000 : ApacheNetServerConfiguration.BufferSize;
 
                                     bool isNotlastChunk;
                                     byte[] buffer;
 
                                     while (TotalBytes > 0)
                                     {
-                                        isNotlastChunk = TotalBytes > buffersize;
-                                        buffer = new byte[isNotlastChunk ? buffersize : TotalBytes];
+                                        isNotlastChunk = TotalBytes > bufferSize;
+                                        buffer = new byte[isNotlastChunk ? bufferSize : TotalBytes];
                                         int n = await fs.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
 
                                         if (isNotlastChunk)

@@ -31,7 +31,7 @@ namespace Horizon.LIBRARY.Pipeline.Udp
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError(ex.ToString());
+                LoggerAccessor.LogWarn($"[ScertDatagramMultiAppDecoder] - Udp: Failed to decode a SCERT message. (Exception:{ex})");
             }
         }
     }

@@ -186,13 +186,13 @@ namespace WebAPIService.GameServices.HELLFIRE.HFProcessors
                         case "CompleteMission":
                             return User.NovusCompleteMission(PostData, boundary, UserID, WorkPath);
                         case "RequestCharacter":
-                            return User.UpdateCharacter(PostData, boundary, UserID, WorkPath, Command);
+                            return User.UpdateNovusPrimeCharacter(PostData, boundary, UserID, WorkPath, Command);
                         case "UpdateCharacter":
-                            return User.UpdateCharacter(PostData, boundary, UserID, WorkPath, Command);
+                            return User.UpdateNovusPrimeCharacter(PostData, boundary, UserID, WorkPath, Command);
                         case "ReadShipConfigData":
                             return "<Response></Response>";
                         case "ConfigureShip":
-                            return User.UpdateCharacter(PostData, boundary, UserID, WorkPath, Command);
+                            return User.UpdateNovusPrimeCharacter(PostData, boundary, UserID, WorkPath, Command);
                         case "QueryServerGlobals":
                         case "RequestStore":
                             return "<Response></Response>";
@@ -302,11 +302,11 @@ namespace WebAPIService.GameServices.HELLFIRE.HFProcessors
                                       </Item>
                                     </Response>";
                         case "RequestInventory":
-                            return User.UpdateCharacter(PostData, boundary, UserID, WorkPath, Command);
+                            return User.UpdateNovusPrimeCharacter(PostData, boundary, UserID, WorkPath, Command);
                         case "AddInventory":
-                            return User.UpdateCharacter(PostData, boundary, UserID, WorkPath, Command);
+                            return User.UpdateNovusPrimeCharacter(PostData, boundary, UserID, WorkPath, Command);
                         case "UseDaily":
-                            return User.UpdateCharacter(PostData, boundary, UserID, WorkPath, Command);
+                            return User.UpdateNovusPrimeCharacter(PostData, boundary, UserID, WorkPath, Command);
                         case "QueryDaily":
                             if (File.Exists($"{WorkPath}/NovusPrime/User_Data/{UserID}_Rewards.xml"))
                                 return $"<Response>{File.ReadAllText($"{WorkPath}/NovusPrime/User_Data/{UserID}_Rewards.xml")}</Response>";

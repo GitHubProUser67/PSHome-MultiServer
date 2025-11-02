@@ -35,9 +35,9 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
                 if (decoded != null)
                     output.AddRange(decoded);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                LoggerAccessor.LogWarn(e.ToString());
+                LoggerAccessor.LogWarn($"[ScertIEnumerableDecoder] - Tcp: Failed to decode a SCERT message. (Exception:{ex})");
             }
         }
 
@@ -54,7 +54,6 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
         {
             List<object> messages = new List<object>();
 
-            //input.MarkReaderIndex();
             byte id = input.GetByte(input.ReaderIndex);
             byte[] hash = null;
             long frameLength = input.GetShortLE(input.ReaderIndex + 1);
@@ -88,10 +87,7 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
             // never overflows because it's less than maxFrameLength
             int frameLengthInt = (int)frameLength;
             if (input.ReadableBytes < frameLengthInt)
-            {
-                //input.ResetReaderIndex();
                 return null;
-            }
 
             // extract frame
             byte[] messageContents = new byte[frameLengthInt];

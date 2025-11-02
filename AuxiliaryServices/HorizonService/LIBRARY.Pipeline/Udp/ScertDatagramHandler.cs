@@ -19,7 +19,7 @@ namespace Horizon.LIBRARY.Pipeline.Udp
             // Detect when client disconnects
             ctx.Channel.CloseCompletion.ContinueWith((x) =>
             {
-                LoggerAccessor.LogWarn("[UDP] - Channel Closed");
+                LoggerAccessor.LogWarn("[ScertDatagramHandler] - Udp: Channel Closed");
                 OnChannelInactive?.Invoke(ctx.Channel);
             });
 
@@ -30,7 +30,7 @@ namespace Horizon.LIBRARY.Pipeline.Udp
         // The Channel is closed hence the connection is closed
         public override void ChannelInactive(IChannelHandlerContext ctx)
         {
-            LoggerAccessor.LogWarn("[UDP] - Client disconnected");
+            LoggerAccessor.LogWarn("[ScertDatagramHandler] - Udp: Client disconnected");
 
             // Send event upstream
             OnChannelInactive?.Invoke(ctx.Channel);
@@ -52,7 +52,7 @@ namespace Horizon.LIBRARY.Pipeline.Udp
 
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            LoggerAccessor.LogError(exception.ToString());
+            LoggerAccessor.LogError($"[ScertDatagramHandler] - Udp: An assertion was caught. (Exception:{exception})");
         }
     }
 }

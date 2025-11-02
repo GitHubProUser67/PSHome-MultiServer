@@ -295,7 +295,7 @@ namespace WebAPIService.GameServices.OHS
                 {
                     for (int j = 1; j < 11; j++)
                     {
-                        _ = _leaderboards[tablekey].UpdateScoreAsync(FrenchNameGenerator.GetRandomWord(), 1000 - (j * 50));
+                        _ = _leaderboards[tablekey].UpdateScoreAsync(FrenchNameGenerator.GetRandomWord(), 0);
                     }
                 }
             }

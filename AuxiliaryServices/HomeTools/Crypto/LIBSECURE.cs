@@ -141,7 +141,7 @@ namespace HomeTools.Crypto
             }
         }
 
-        public static string MemXOR(string IV, string block, byte blocksize)
+        private static string MemXOR(string IV, string block, byte blocksize)
         {
             StringBuilder CryptoBytes = new StringBuilder();
 

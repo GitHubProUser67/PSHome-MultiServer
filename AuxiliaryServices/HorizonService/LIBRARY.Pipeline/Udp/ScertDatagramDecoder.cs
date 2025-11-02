@@ -28,7 +28,7 @@ namespace Horizon.LIBRARY.Pipeline.Udp
 
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            LoggerAccessor.LogWarn(exception.ToString());
+            LoggerAccessor.LogWarn($"[ScertDecoder] - Udp: Failed to decode a SCERT message. (Exception:{exception})");
         }
 
         protected override void Decode(IChannelHandlerContext context, DatagramPacket message, List<object> output)
@@ -78,15 +78,11 @@ namespace Horizon.LIBRARY.Pipeline.Udp
             }
 
             if (frameLength < 0)
-            {
-                LoggerAccessor.LogError("negative pre-adjustment length field: " + frameLength);
-                return null;
-            }
+                throw new InvalidOperationException("negative pre-adjustment length field: " + frameLength);
 
             // never overflows because it's less than maxFrameLength
             int frameLengthInt = (int)frameLength;
             if (input.Content.ReadableBytes < frameLengthInt)
-                //input.ResetReaderIndex();
                 return null;
 
             // extract frame

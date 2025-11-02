@@ -14,7 +14,6 @@ namespace Horizon.HTTPSERVICE
 
         private static readonly List<Room> rooms = new List<Room>();
 
-        // Update or Create a Room based on the provided parameters
         public static void UpdateOrCreateRoom(string appId, string? gameName, int? gameId, string? worldId, string? accountName, int accountDmeId, string? languageType, bool host)
         {
             lock (rooms)
@@ -217,7 +216,6 @@ namespace Horizon.HTTPSERVICE
             }
         }
 
-        // Get a list of all Rooms
         public static List<Room> GetAllRooms()
         {
             lock (rooms)
@@ -237,7 +235,6 @@ namespace Horizon.HTTPSERVICE
             return usersList;
         }
 
-        // Serialize the RoomConfig to JSON
         public static string ToJson()
         {
             return "{\"usernames\":" + JsonConvert.SerializeObject(GetAllLoggedInUsers()) + ",\"rooms\":" + JsonConvert.SerializeObject(GetAllRooms()) + "}";

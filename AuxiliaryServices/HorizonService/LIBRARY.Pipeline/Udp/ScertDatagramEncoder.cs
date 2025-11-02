@@ -4,6 +4,7 @@ using DotNetty.Codecs;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
 using Horizon.LIBRARY.Common;
+using MultiServerLibrary.Extension.LinqSQL;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -48,7 +49,7 @@ namespace Horizon.LIBRARY.Pipeline.Udp
 
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            LoggerAccessor.LogError(exception.ToString());
+            LoggerAccessor.LogError($"[ScertDatagramEncoder] - Udp: An assertion was caught. (Exception:{exception})");
         }
     }
 }

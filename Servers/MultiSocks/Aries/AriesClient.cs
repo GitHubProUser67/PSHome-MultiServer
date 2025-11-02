@@ -55,9 +55,9 @@ namespace MultiSocks.Aries
             if (secure && context.SSLCache != null)
             {
                 if (CN == "fesl.ea.com")
-                    SecureKeyCert = context.SSLCache.GetVulnerableFeslEaCert(true);
+                    SecureKeyCert = context.SSLCache.GetVulnerableFeslEaCert();
                 else
-                    SecureKeyCert = context.SSLCache.GetVulnerableLegacyCustomEaCert(CN, WeakChainSignedRSAKey, true);
+                    SecureKeyCert = context.SSLCache.GetVulnerableLegacyCustomEaCert(CN, WeakChainSignedRSAKey);
             }
 
             RecvThread = new Thread(RunLoop);

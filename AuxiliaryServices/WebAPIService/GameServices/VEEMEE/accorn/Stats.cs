@@ -3,7 +3,7 @@ using MultiServerLibrary.HTTP;
 using CustomLogger;
 using HttpMultipartParser;
 
-namespace WebAPIService.GameServices.VEEMEE
+namespace WebAPIService.GameServices.VEEMEE.accorn
 {
     public static class Stats
     {

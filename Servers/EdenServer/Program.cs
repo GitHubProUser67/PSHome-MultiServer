@@ -255,24 +255,23 @@ class Program
     {
         proxyServer?.Stop();
         orbServer?.Stop();
-
-        amhTDUMasterServer?.Dispose();
+        amhTDUMasterServer?.Stop();
 
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
 
         if (proxyServer == null)
-            proxyServer = new(8889);
-        else
-            proxyServer.Start();
+            proxyServer = new();
+        proxyServer.Start(8889);
 
         if (orbServer == null)
-            orbServer = new(EdenServerConfiguration.ORBServerPort);
-        else
-            orbServer.Start();
+            orbServer = new();
+        orbServer.Start(EdenServerConfiguration.ORBServerPort);
 
-        amhTDUMasterServer = new TDUMasterServer(IPAddress.Any, EdenServerConfiguration.AMHMasterServerPort);
+        if (amhTDUMasterServer == null)
+            amhTDUMasterServer = new();
+        amhTDUMasterServer.Start(EdenServerConfiguration.AMHMasterServerPort);
     }
 
     private static void ConsoleExitHandler(object sender, ConsoleCancelEventArgs args)
@@ -314,7 +313,7 @@ class Program
         };
 #endif
 
-        _ = GeoIP.Initialize();
+        _ = Task.Run(GeoIP.Initialize);
 
         MultiServerLibraryConfiguration.RefreshVariables(configMultiServerLibraryPath);
 

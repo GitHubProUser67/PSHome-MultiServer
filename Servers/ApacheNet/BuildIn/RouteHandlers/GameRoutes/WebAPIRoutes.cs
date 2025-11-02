@@ -547,7 +547,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
                 },
                 new() {
                     Name = "HELLFIRE API",
-                    UrlRegex = @".*\.php$",
+                    UrlRegex = @".*\.(php|jpg)$",
                     Hosts = HellFireGamesDomains.ToArray(),
                     Callable = (ctx) => {
                         HttpStatusCode statusCode;
@@ -559,8 +559,8 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
                                 }
                                 else
                                 {
-                                    string res = new HELLFIREClass(ctx.Request.Method.ToString(), ctx.AbsolutePath, ApacheNetServerConfiguration.APIStaticFolder).ProcessRequest(ctx.Request.DataAsBytes, ctx.Request.ContentType, ctx.Secure);
-                                    if (string.IsNullOrEmpty(res))
+                                    byte[] res = new HELLFIREClass(ctx.Request.Method.ToString(), ctx.AbsolutePath, ApacheNetServerConfiguration.APIStaticFolder).ProcessRequest(ctx.Request.DataAsBytes, ctx.Request.ContentType, ctx.Secure);
+                                    if (res == null)
                                     {
                                         ctx.Response.ContentType = "text/plain";
                                         statusCode = HttpStatusCode.InternalServerError;
@@ -573,7 +573,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
                                     }
                                     ctx.Response.StatusCode = (int)statusCode;
                                     if (ctx.Response.ChunkedTransfer)
-                                        return ctx.Response.SendChunk(!string.IsNullOrEmpty(res) ? Encoding.UTF8.GetBytes(res) : null, true).Result;
+                                        return ctx.Response.SendChunk(res, true).Result;
                                     else
                                         return ctx.Response.Send(res).Result;
                                 }

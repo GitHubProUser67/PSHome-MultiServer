@@ -20,7 +20,9 @@ namespace MitmDNS
         public static AdGuardFilterChecker adChecker = new AdGuardFilterChecker();
         public static DanPollockChecker danChecker = new DanPollockChecker();
 
-        private static readonly UdpClientService udpClientService = new UdpClientService();
+        private static readonly UdpClientService udpClientService = new UdpClientService(
+                    (int)TimeSpan.FromSeconds(5).TotalMilliseconds,
+                    (int)TimeSpan.FromSeconds(15).TotalMilliseconds);
 
         public static async Task<byte[]> ProcRequest(byte[] DnsReq)
         {
@@ -103,49 +105,76 @@ namespace MitmDNS
 
                     if (!treated && MitmDNSServerConfiguration.DNSAllowUnsafeRequests)
                     {
+#if DEBUG
+                        LoggerAccessor.LogInfo($"[DNSResolver] - Issuing mitm request for domain: {fullname}");
+#endif
+                        bool error = false;
                         var udpClient = udpClientService.Dequeue();
                         try
                         {
-                            await udpClient.Client.SendAsync(DnsReq, SocketFlags.None);
+                            await udpClient.Client.SendAsync(DnsReq, SocketFlags.None).ConfigureAwait(false);
 
-                            var res = await udpClient.ReceiveAsync();
-                            return res.Buffer;
+                            var res = udpClient.BeginReceive(null, null);
+                            // begin recieve right after request
+                            if (res.AsyncWaitHandle.WaitOne(udpClientService.SendTimeoutMs))
+                            {
+                                IPEndPoint remoteEP = udpClient.Client.RemoteEndPoint as IPEndPoint;
+#if DEBUG
+                                LoggerAccessor.LogInfo($"[DNSResolver] - Recieved message from endpoint:{remoteEP}, returning...");
+#endif
+                                DnsReq = udpClient.EndReceive(res, ref remoteEP);
+                            }
+                            else
+                            {
+#if DEBUG
+                                LoggerAccessor.LogWarn($"[DNSResolver] - No Bytes Recieved from UdpRequest.");
+#endif
+                                DnsReq = null;
+                            }
                         }
                         catch
                         {
+                            error = true;
                             return null;
                         }
                         finally
                         {
-                            udpClientService.ReturnToQueue(udpClient);
+                            udpClientService.ReturnToQueue(udpClient, error);
                         }
                     }
-                    else if (!string.IsNullOrEmpty(url) && url != "NXDOMAIN")
+                    else
                     {
                         List<IPAddress> Ips = new();
 
-                        try
+                        if (!string.IsNullOrEmpty(url) && url != "NXDOMAIN")
                         {
-                            if (!IPAddress.TryParse(url, out IPAddress address))
+                            try
                             {
-                                foreach (var extractedIp in Dns.GetHostEntry(url).AddressList)
+                                if (!IPAddress.TryParse(url, out IPAddress address))
                                 {
-                                    Ips.Add(extractedIp);
+                                    foreach (var extractedIp in Dns.GetHostEntry(url).AddressList)
+                                    {
+                                        Ips.Add(extractedIp);
+                                    }
                                 }
+                                else Ips.Add(address);
                             }
-                            else Ips.Add(address);
+                            catch
+                            {
+                                Ips.Clear();
+                            }
+#if DEBUG
+                            LoggerAccessor.LogInfo($"[DNSResolver] - Resolved: {fullname} to: {string.Join(", ", Ips)}");
+#endif
+                            return Response.MakeType0DnsResponsePacket(DnsReq.Trim(), Ips);
                         }
-                        catch
+                        else
                         {
-                            Ips.Clear();
+                            LoggerAccessor.LogWarn($"[DNSResolver] - No domain found for: {fullname}");
+
+                            return Response.MakeType0DnsResponsePacket(DnsReq.Trim(), Ips);
                         }
-
-                        LoggerAccessor.LogInfo($"[DNSResolver] - Resolved: {fullname} to: {string.Join(", ", Ips)}");
-
-                        return Response.MakeType0DnsResponsePacket(DnsReq.Trim(), Ips);
                     }
-                    else
-                        return Response.MakeType0DnsResponsePacket(DnsReq.Trim(), new List<IPAddress> { });
                 }
                 else
                     LoggerAccessor.LogWarn($"[DNSResolver] - The requested OperationCode: {Req.OperationCode} is not yet supported, report to GITHUB!");

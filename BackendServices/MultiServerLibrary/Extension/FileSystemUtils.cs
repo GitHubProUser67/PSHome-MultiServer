@@ -273,32 +273,5 @@ namespace MultiServerLibrary.Extension
 
             return null;
         }
-
-        public static async Task WaitForFileDeletionAsync(string filePath)
-        {
-            string directoryPath = Path.GetDirectoryName(filePath);
-
-            if (!string.IsNullOrEmpty(directoryPath))
-            {
-                using (FileSystemWatcher fileSystemWatcher = new FileSystemWatcher(directoryPath))
-                {
-                    TaskCompletionSource<bool> deletionCompletionSource = new TaskCompletionSource<bool>();
-
-                    // Watch for file deletion
-                    fileSystemWatcher.Deleted += (sender, e) =>
-                    {
-                        if (e.Name == Path.GetFileName(filePath))
-                            // Signal that the file has been deleted
-                            deletionCompletionSource.SetResult(true);
-                    };
-
-                    // Enable watching
-                    fileSystemWatcher.EnableRaisingEvents = true;
-
-                    // Wait for the file to be deleted or for cancellation
-                    await deletionCompletionSource.Task.ConfigureAwait(false);
-                }
-            }
-        }
     }
 }

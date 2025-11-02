@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Transactions;
 
 namespace System.Text
 {
@@ -16,14 +17,14 @@ namespace System.Text
         /// </summary>
         /// <param name="fileName"></param>
         /// <returns>true if utf8 encoded, otherwise false.</returns>
-        bool Check(string fileName);
+        bool Check(string fileName, bool allowPartialMatch);
 
         /// <summary>
         /// Check if stream is utf8 encoded.
         /// </summary>
         /// <param name="stream"></param>
         /// <returns>true if utf8 encoded, otherwise false.</returns>
-        bool IsUtf8(Stream stream);
+        bool IsUtf8(Stream stream, bool allowPartialMatch);
 
         /// <summary>
         /// Return a list of found errors of type of IErrorUtf8Checker
@@ -50,32 +51,38 @@ namespace System.Text
     public class Utf8Checker : IUtf8Checker
     {
         // newLineArray = used to understand the new line sequence 
-        private static byte[] newLineArray = new byte[2] { 13, 10 };
-        private int line = 1;
-        private byte[] lineArray = new byte[2] { 0, 0 };
+        private static readonly byte[] _newLineArray = new byte[2] { 13, 10 };
+        private int _line = 1;
+        private readonly byte[] _lineArray = new byte[2] { 0, 0 };
 
         // used to keep trak of number of errors found into the file            
-        private List<IErrorUtf8Checker> errorsList;
+        private readonly List<IErrorUtf8Checker> errorsList;
 
         public Utf8Checker()
         {
             errorsList = new List<IErrorUtf8Checker>();
         }
 
-        public int getNumberOfErrors()
+        public int GetNumberOfErrors()
         {
-            return errorsList.Count();
+            return errorsList.Count;
         }
 
-        public bool Check(string fileName)
+        public bool Check(string fileName, bool allowPartialMatch = false)
         {
             using (BufferedStream fstream = new BufferedStream(File.OpenRead(fileName)))
-                return IsUtf8(fstream);
+                return IsUtf8(fstream, allowPartialMatch);
+        }
+
+        public bool Check(byte[] fileBytes, bool allowPartialMatch = false)
+        {
+            using (MemoryStream mstream = new MemoryStream(fileBytes))
+                return IsUtf8(mstream, allowPartialMatch);
         }
 
         public int getLine()
         {
-            return line;
+            return _line;
         }
 
         public List<IErrorUtf8Checker> GetErrorList()
@@ -89,7 +96,7 @@ namespace System.Text
         /// </summary>
         /// <param name="stream">Stream to read from.</param>
         /// <returns>True if the whole stream is utf8 encoded.</returns>
-        public bool IsUtf8(Stream stream)
+        public bool IsUtf8(Stream stream, bool allowPartialMatch)
         {
             int count = 4 * 1024;
             byte[] buffer;
@@ -104,7 +111,7 @@ namespace System.Text
                 buffer = null;
                 count *= 2;
             }
-            return IsUtf8(buffer, read);
+            return IsUtf8(buffer, read, allowPartialMatch);
         }
 
         /// <summary>
@@ -113,19 +120,29 @@ namespace System.Text
         /// <param name="buffer"></param>
         /// <param name="length"></param>
         /// <returns></returns>
-        public bool IsUtf8(byte[] buffer, int length)
+        public bool IsUtf8(byte[] buffer, int length, bool allowPartialMatch)
         {
             int position = 0;
             int bytes = 0;
-            bool ret = true;
+            bool ret = !allowPartialMatch;
             while (position < length)
             {
-                if (!IsValid(buffer, position, length, ref bytes))
+                if (allowPartialMatch)
+                {
+                    if (IsValid(buffer, position, length, ref bytes))
+                    {
+                        if (!ret)
+                            ret = true;
+                    }
+                    else
+                        errorsList.Add(new ErrorUtf8Checker(getLine(), buffer[position]));
+                }
+                else if (!IsValid(buffer, position, length, ref bytes))
                 {
                     ret = false;
                     errorsList.Add(new ErrorUtf8Checker(getLine(), buffer[position]));
-
                 }
+                
                 position += bytes;
             }
             return ret;
@@ -153,7 +170,7 @@ namespace System.Text
             byte ch = buffer[position];
             char ctest = (char)ch; // for debug  only
 
-            this.detectNewLine(ch);
+            DetectNewLine(ch);
 
             if (ch <= 0x7F)
             {
@@ -278,45 +295,45 @@ namespace System.Text
             return false;
         }
 
-        private void detectNewLine(byte ch)
+        private void DetectNewLine(byte ch)
         {
             // looking for second char for new line (char 13 feed)
-            if (lineArray[0] == newLineArray[0])
+            if (_lineArray[0] == _newLineArray[0])
             {
-                if (ch == newLineArray[1])
+                if (ch == _newLineArray[1])
                 {
                     // found new line
-                    lineArray[1] = ch;
-                    line++;
+                    _lineArray[1] = ch;
+                    _line++;
                     // reset work array: lineArray
-                    lineArray[1] = 0;
+                    _lineArray[1] = 0;
                 }
                 // we have to reset work array because CR(13)LF(10) must be in sequence
-                lineArray[0] = 0;
+                _lineArray[0] = 0;
             }
             else
             {
                 // found first character (char 10 return)
-                if (ch == newLineArray[0])
-                    lineArray[0] = ch;
+                if (ch == _newLineArray[0])
+                    _lineArray[0] = ch;
             }
         }
     }
 
     public class ErrorUtf8Checker : IErrorUtf8Checker
     {
-        private int line;
-        private byte ch;
+        private readonly int _line;
+        private readonly byte _ch;
 
         public ErrorUtf8Checker(int line, byte character)
         {
-            this.line = line;
-            ch = character;
+            _line = line;
+            _ch = character;
         }
 
         public ErrorUtf8Checker(int line)
         {
-            this.line = line;
+            _line = line;
         }
 
         public override string ToString()
@@ -324,10 +341,10 @@ namespace System.Text
             string s;
             try
             {
-                if (ch > 0)
-                    s = "line: " + line + " code: " + ch + ", char: " + (char)ch;
+                if (_ch > 0)
+                    s = "line: " + _line + " code: " + _ch + ", char: " + (char)_ch;
                 else
-                    s = "line: " + line;
+                    s = "line: " + _line;
                 return s;
             }
             catch

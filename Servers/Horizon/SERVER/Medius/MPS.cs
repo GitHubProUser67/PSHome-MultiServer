@@ -3,7 +3,6 @@ using DotNetty.Transport.Channels;
 using Horizon.RT.Common;
 using Horizon.RT.Cryptography;
 using Horizon.RT.Models;
-using Horizon.LIBRARY.Common;
 using Horizon.SERVER.Config;
 using Horizon.SERVER.PluginArgs;
 using Horizon.LIBRARY.Pipeline.Attribute;

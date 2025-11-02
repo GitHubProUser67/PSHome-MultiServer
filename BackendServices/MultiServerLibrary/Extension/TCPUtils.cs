@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -109,51 +108,7 @@ namespace MultiServerLibrary.Extension
                 return sourceport;
             }
 
-            return GetNextVacantTCPPortUnix(sourceport, attemptcount);
-        }
-
-        /// <summary>
-        /// Get the next available port on the system.
-        /// <para>Obtiens le prochain port disponible.</para>
-        /// </summary>
-        /// <param name="sourceport">The initial port to start with.</param>
-        /// <param name="attemptcount">Maximum number of tries.</param>
-        /// <returns>A int.</returns>
-        public static int GetNextVacantTCPPortUnix(int sourceport, uint attemptcount)
-        {
-            if (attemptcount == 0)
-                throw new ArgumentOutOfRangeException("attemptcount");
-
-            List<int> portArray = new List<int>();
-
-            IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
-
-            // getting active connections
-            TcpConnectionInformation[] connections = properties.GetActiveTcpConnections();
-            portArray.AddRange(from n in connections
-                               select n.LocalEndPoint.Port);
-
-            // getting active tcp listners - WCF service listening in tcp
-            portArray.AddRange(from n in properties.GetActiveTcpListeners()
-                               select n.Port);
-
-            portArray.Sort();
-
-            foreach (int port in portArray)
-            {
-                if (sourceport == port)
-                {
-                    sourceport += 1;
-                    attemptcount -= 1;
-                    if (sourceport >= 0xffff && attemptcount > 0)
-                        sourceport = 1;
-                    else if (sourceport >= 0xffff && attemptcount == 0)
-                        return -1;
-                    return GetNextVacantTCPPortUnix(sourceport, attemptcount);
-                }
-            }
-
-            return sourceport;
+            throw new PlatformNotSupportedException("[TCPUtils] - GetNextVacantTCPPort is only supported on Windows.");
         }
 
         /// <summary>
@@ -161,27 +116,17 @@ namespace MultiServerLibrary.Extension
         /// <para>Savoir si le port TCP en question est disponible.</para>
         /// </summary>
         /// <param name="port">The port on which we scan.</param>
-        /// <param name="ip">The optional ip on which we scan.</param>
         /// <returns>A boolean.</returns>
-        public static bool IsTCPPortAvailable(int port, string ip = "localhost")
+        public static bool IsTCPPortAvailable(int port)
         {
 #if DEBUG
             CustomLogger.LoggerAccessor.LogInfo("[TCPUtils] - Checking Port {0}", port);
 #endif
-            bool isAvailable = true;
-
             // Evaluate current system tcp connections. This is the same information provided
             // by the netstat command line application, just in .Net strongly-typed object
             // form.  We will look through the list, and if our port we would like to use
             // in our TcpClient is occupied, we will set isAvailable to false.
-            foreach (IPEndPoint endpoint in IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners())
-            {
-                if (endpoint.Port == port)
-                {
-                    isAvailable = false;
-                    break;
-                }
-            }
+            bool isAvailable = !IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners().Any(p => p.Port == port);
 #if DEBUG
             CustomLogger.LoggerAccessor.LogInfo("[TCPUtils] - Port {0} available = {1}", port, isAvailable);
 #endif

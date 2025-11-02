@@ -5,10 +5,7 @@ using System;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Security;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using MultiServerLibrary.Extension;
-using System.Net;
 
 namespace WebAPIService.WebServices.WebCrypto
 {
@@ -16,50 +13,6 @@ namespace WebAPIService.WebServices.WebCrypto
     {
         public static readonly byte[] AuthIV = new byte[] { 0x30, 0x57, 0xB5, 0x1F, 0x32, 0xD4, 0xAD, 0xBF, 0xAA, 0xAA, 0x21, 0x41, 0x6C, 0xDC, 0x5D, 0xF5 };
         public static readonly byte[] IdentIV = new byte[] { 0x47, 0x1A, 0xD2, 0xC3, 0xA4, 0x8B, 0xF1, 0xD9, 0x22, 0xBC, 0xC7, 0x61, 0xFD, 0x09, 0x8E, 0x3A };
-
-        public static async Task<string> GenerateRandomBase64KeyAsync()
-        {
-            const string url = "https://www.digitalsanctuary.com/aes-key-generator-free";
-            const string startText = "AES-256 Key:";
-            const string endText = "You ";
-            string content;
-
-            try
-            {
-                using (FixedWebClientWithTimeout client = new FixedWebClientWithTimeout())
-                {
-                    // Fetch the webpage content using GZipWebClient
-                    content = await client.DownloadStringTaskAsync(url).ConfigureAwait(false);
-                }
-
-                // Locate the target text and extract the key
-                int startIndex = content.IndexOf(startText);
-
-                if (startIndex != -1)
-                {
-                    startIndex += startText.Length; // Move past the marker text
-                    int endIndex = content.IndexOf(endText, startIndex);
-
-                    if (endIndex != -1)
-                    {
-                        // Match the key inside <strong>...</strong> tags
-                        Match match = new Regex(@"<strong>(.*?)<\/strong>")
-                            .Match(content.Substring(startIndex, endIndex - startIndex).Trim());
-
-                        if (match.Success)
-                            return match.Groups[1].Value.Trim();
-                    }
-                }
-
-                CustomLogger.LoggerAccessor.LogDebug($"[WebCrypto] - GenerateRandomBase64KeyAsync - website didn't return the expected data, switching to built-in engine...");
-            }
-            catch (Exception ex)
-            {
-                CustomLogger.LoggerAccessor.LogDebug($"[WebCrypto] - GenerateRandomBase64KeyAsync - an exception was thrown while fetching the key:{ex}, switching to built-in engine...");
-            }
-
-            return Convert.ToBase64String(ByteUtils.GenerateRandomBytes(32));
-        }
 
         public static string EncryptCBC(object ObjectToEncrypt, string AccessKey, byte[] IV, bool xmlsecuretags = false, bool xmlbody = false)
         {

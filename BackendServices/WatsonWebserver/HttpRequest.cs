@@ -1,6 +1,4 @@
-﻿namespace WatsonWebserver
-{
-    using MultiServerLibrary.Extension;
+﻿    using MultiServerLibrary.Extension;
     using SpaceWizards.HttpListener;
     using System;
     using System.Collections.Specialized;
@@ -12,7 +10,9 @@
     using System.Threading;
     using System.Threading.Tasks;
     using WatsonWebserver.Core;
-
+	
+namespace WatsonWebserver
+{
     /// <summary>
     /// HTTP request.
     /// </summary>

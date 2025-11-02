@@ -19,15 +19,14 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
             if (messages is null)
                 return;
 
-            // Serialize and add
             foreach (BaseScertMessage msg in messages)
                 output.Add(msg);
         }
 
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            LoggerAccessor.LogError(exception.ToString());
-            context.CloseAsync();
+            LoggerAccessor.LogError($"[ScertIEnumerableEncoder] - Tcp: An assertion was caught. (Exception:{exception})");
+            _ = context.CloseAsync();
         }
     }
 }

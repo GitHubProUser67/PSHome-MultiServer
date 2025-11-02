@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Net;
 #if NETCOREAPP3_0_OR_GREATER
 using System.Runtime.Intrinsics.X86;
 #else
@@ -12,6 +13,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace MultiServerLibrary.Extension
 {
@@ -62,6 +64,8 @@ namespace MultiServerLibrary.Extension
         {
             return c.Substring(c.IndexOf(a), c.IndexOf(b) - c.IndexOf(a));
         }
+
+        public static string RemoveSuffix(this string self, char toRemove) => string.IsNullOrEmpty(self) ? self : (self.EndsWith(toRemove) ? self.Substring(0, self.Length - 1) : self);
 
         /// <summary>
         /// Transform a string to it's hexadecimal representation.
@@ -186,12 +190,43 @@ namespace MultiServerLibrary.Extension
             return (false, null);
         }
 
-        public static MemoryStream ToStream(this string str, Encoding encoding = null)
+        public static async Task<string> GenerateRandomBase64KeyAsync()
         {
-            if (encoding == null)
-                encoding = Encoding.UTF8;
+            const string url = "https://www.digitalsanctuary.com/aes-key-generator-free";
+            const string startText = "AES-256 Key:";
+            const string endText = "You ";
+            string content;
 
-            return new MemoryStream(encoding.GetBytes(str));
+            try
+            {
+                using (FixedWebClientWithTimeout client = new FixedWebClientWithTimeout())
+                    content = await client.DownloadStringTaskAsync(url).ConfigureAwait(false);
+
+                int startIndex = content.IndexOf(startText);
+
+                if (startIndex != -1)
+                {
+                    startIndex += startText.Length; // Move past the marker text
+                    int endIndex = content.IndexOf(endText, startIndex);
+
+                    if (endIndex != -1)
+                    {
+                        Match match = new Regex(@"<strong>(.*?)<\/strong>")
+                            .Match(content.Substring(startIndex, endIndex - startIndex).Trim());
+
+                        if (match.Success)
+                            return match.Groups[1].Value.Trim();
+                    }
+                }
+
+                CustomLogger.LoggerAccessor.LogDebug($"[StringUtils] - GenerateRandomBase64KeyAsync - website didn't return the expected data, switching to built-in engine...");
+            }
+            catch (Exception ex)
+            {
+                CustomLogger.LoggerAccessor.LogDebug($"[StringUtils] - GenerateRandomBase64KeyAsync - an exception was thrown while fetching the key:{ex}, switching to built-in engine...");
+            }
+
+            return Convert.ToBase64String(ByteUtils.GenerateRandomBytes(32));
         }
 
         public unsafe static List<string> ParseJsonStringProperty(this string jsonText, string property)

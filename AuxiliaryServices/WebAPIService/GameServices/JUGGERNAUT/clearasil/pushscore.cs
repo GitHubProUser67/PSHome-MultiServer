@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Xml;
+using System.Globalization;
 using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.JUGGERNAUT.clearasil
@@ -23,7 +24,7 @@ namespace WebAPIService.GameServices.JUGGERNAUT.clearasil
                     if (Leaderboard == null)
                         Leaderboard = new ClearasilScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
-                    _ = Leaderboard.UpdateScoreAsync(user, int.Parse(score));
+                    _ = Leaderboard.UpdateScoreAsync(user, (int)double.Parse(score, CultureInfo.InvariantCulture));
 
                     Directory.CreateDirectory($"{apiPath}/juggernaut/clearasil/space_access");
 
@@ -40,7 +41,7 @@ namespace WebAPIService.GameServices.JUGGERNAUT.clearasil
                         {
                             try
                             {
-                                int increment = int.Parse(score);
+                                int increment = (int)double.Parse(score, CultureInfo.InvariantCulture);
                                 int existingscore = int.Parse(scoreElement.InnerText);
                                 // Replace the value of <score> with a new value
                                 scoreElement.InnerText = (existingscore + increment).ToString();

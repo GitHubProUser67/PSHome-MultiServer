@@ -1,24 +1,25 @@
-using CustomLogger;
-using Horizon.LIBRARY.Database;
-using Horizon.PluginManager;
-using Newtonsoft.Json.Linq;
-using MultiServerLibrary.GeoLocalization;
+using System.Collections.Concurrent;
+using System.Net;
+using System.Reflection;
 using System.Runtime;
 using System.Security.Cryptography;
-using System.Collections.Concurrent;
-using System.Reflection;
+using CustomLogger;
 using Horizon.HTTPSERVICE;
+using Horizon.LIBRARY.Database;
 using Horizon.MUM;
-using MultiServerLibrary.Extension;
-using MultiServerLibrary.SNMP;
-using MultiServerLibrary;
+using Horizon.PluginManager;
 using Microsoft.Extensions.Logging;
+using MultiServerLibrary;
+using MultiServerLibrary.Extension;
+using MultiServerLibrary.GeoLocalization;
+using MultiServerLibrary.SNMP;
+using Newtonsoft.Json.Linq;
 using Prometheus;
-using WebAPIService.WebServices.WebCrypto;
 
 public static class HorizonServerConfiguration
 {
-    public static string PluginsFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/medius_plugins";
+    public static string MediusPluginsFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/medius_plugins";
+    public static string DmePluginsFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/dme_plugins";
     public static string DatabaseConfig { get; set; } = $"{Directory.GetCurrentDirectory()}/static/db.config.json";
     public static string HTTPSCertificateFile { get; set; } = $"{Directory.GetCurrentDirectory()}/static/SSL/HorizonHTTPService.pfx";
     public static string HTTPSCertificatePassword { get; set; } = "qwerty";
@@ -38,13 +39,11 @@ public static class HorizonServerConfiguration
     public static string? MUISConfig { get; set; } = $"{Directory.GetCurrentDirectory()}/static/muis.json";
     public static string? BWPSConfig { get; set; } = $"{Directory.GetCurrentDirectory()}/static/bwps.json";
     public static string? NATConfig { get; set; } = $"{Directory.GetCurrentDirectory()}/static/nat.json";
-    public static string MediusAPIKey { get; set; } = WebCryptoClass.GenerateRandomBase64KeyAsync().Result;
+    public static string MediusAPIKey { get; set; } = StringUtils.GenerateRandomBase64KeyAsync().Result;
     public static string SSFWUrl { get; set; } = $"http://{(InternetProtocolUtils.TryGetServerIP(out _).Result ? InternetProtocolUtils.GetPublicIPAddress() : InternetProtocolUtils.GetLocalIPAddresses().First().ToString())}:8080";
     public static string[]? HTTPSDNSList { get; set; }
 
     public static DbController Database = new(DatabaseConfig);
-
-    public static List<IPlugin> plugins = PluginLoader.LoadPluginsFromFolder(PluginsFolder);
 
     /// <summary>
     /// Tries to load the specified configuration file.
@@ -63,7 +62,7 @@ public static class HorizonServerConfiguration
 
             // Write the JObject to a file
             File.WriteAllText(configPath, new JObject(
-                new JProperty("config_version", (ushort)3),
+                new JProperty("config_version", (ushort)4),
                 new JProperty("medius", new JObject(
                     new JProperty("enabled", EnableMedius),
                     new JProperty("config", MEDIUSConfig)
@@ -92,7 +91,8 @@ public static class HorizonServerConfiguration
                 new JProperty("player_api_static_path", PlayerAPIStaticPath),
                 new JProperty("medius_api_key", MediusAPIKey),
                 new JProperty("ssfw_url", SSFWUrl),
-                new JProperty("plugins_folder", PluginsFolder),
+                new JProperty("medius_plugins_folder", MediusPluginsFolder),
+                new JProperty("dme_plugins_folder", DmePluginsFolder),
                 new JProperty("database", DatabaseConfig),
                 new JProperty("prometheus", new JObject(
                     new JProperty("enabled", EnableMetrics),
@@ -141,7 +141,13 @@ public static class HorizonServerConfiguration
                 string ssfwADR = GetValueOrDefault(config, "ssfw_url", SSFWUrl);
                 if (!string.IsNullOrEmpty(ssfwADR) && ssfwADR.StartsWith("http", StringComparison.InvariantCultureIgnoreCase))
                     SSFWUrl = ssfwADR;
-                PluginsFolder = GetValueOrDefault(config, "plugins_folder", PluginsFolder);
+                if (config_version > 3)
+                {
+                    MediusPluginsFolder = GetValueOrDefault(config, "medius_plugins_folder", MediusPluginsFolder);
+                    DmePluginsFolder = GetValueOrDefault(config, "dme_plugins_folder", MediusPluginsFolder);
+                }
+                else
+                    DmePluginsFolder = MediusPluginsFolder = GetValueOrDefault(config, "plugins_folder", MediusPluginsFolder);
                 DatabaseConfig = GetValueOrDefault(config, "database", DatabaseConfig);
             }
             else
@@ -209,7 +215,7 @@ class Program
                 HTTPBag = new ConcurrentBag<CrudServerHandler>
                 {
                     new("*", 61920),
-                    new("*", 8443, HorizonServerConfiguration.HTTPSCertificateFile, HorizonServerConfiguration.HTTPSCertificatePassword)
+                    new("*", NetworkPorts.Http.SslAux, HorizonServerConfiguration.HTTPSCertificateFile, HorizonServerConfiguration.HTTPSCertificatePassword)
                 };
             }
             catch (Exception ex)
@@ -238,19 +244,19 @@ class Program
 
     private static void StartOrUpdateServer()
     {
-        if (Horizon.DME.DmeClass.started)
+        if (Horizon.DME.DmeClass.IsStarted)
             Horizon.DME.DmeClass.StopServer();
 
-        if (Horizon.MUIS.MuisClass.started)
+        if (Horizon.MUIS.MuisClass.IsStarted)
             Horizon.MUIS.MuisClass.StopServer();
 
-        if (Horizon.BWPS.BWPSClass.started)
+        if (Horizon.BWPS.BWPSClass.IsStarted)
             Horizon.BWPS.BWPSClass.StopServer();
 
-        if (Horizon.NAT.NATClass.started)
+        if (Horizon.NAT.NATClass.IsStarted)
             Horizon.NAT.NATClass.StopServer();
 
-        if (Horizon.SERVER.MediusClass.started)
+        if (Horizon.SERVER.MediusClass.IsStarted)
             Horizon.SERVER.MediusClass.StopServer();
 
         MUMServer?.StopServer();
@@ -298,7 +304,7 @@ class Program
         };
 #endif
 
-        _ = GeoIP.Initialize();
+        _ = Task.Run(GeoIP.Initialize);
 
         MultiServerLibraryConfiguration.RefreshVariables(configMultiServerLibraryPath);
 

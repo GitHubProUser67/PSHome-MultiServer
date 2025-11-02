@@ -285,12 +285,7 @@ namespace HomeTools.UnBAR
                             }
                             catch (Exception ex)
                             {
-                                LoggerAccessor.LogWarn($"[RunUnBAR] - RunExtract Errored out on file:{tableOfContent.FileName} (Exception: {ex})");
-
-                                if (archive.GetHeader().Version == 512)
-                                    await ExtractToFileBarVersion2(archive.GetHeader().Key, FileData, archive, tableOfContent.FileName, barDirectoryPath).ConfigureAwait(false);
-                                else
-                                    await ExtractToFileBarVersion1(RawBarData, FileData, archive, tableOfContent.FileName, barDirectoryPath, cdnMode).ConfigureAwait(false);
+                                LoggerAccessor.LogError($"[RunUnBAR] - RunExtract Errored out on file:{tableOfContent.FileName} (Exception: {ex})");
                             }
                         }).ConfigureAwait(false);
 #elif NETCOREAPP || NETSTANDARD1_0_OR_GREATER || NET40_OR_GREATER
@@ -308,12 +303,7 @@ namespace HomeTools.UnBAR
                             }
                             catch (Exception ex)
                             {
-                                LoggerAccessor.LogWarn($"[RunUnBAR] - RunExtract Errored out on file:{tableOfContent.FileName} (Exception: {ex})");
-
-                                if (archive.GetHeader().Version == 512)
-                                    await ExtractToFileBarVersion2(archive.GetHeader().Key, FileData, archive, tableOfContent.FileName, barDirectoryPath).ConfigureAwait(false);
-                                else
-                                    await ExtractToFileBarVersion1(RawBarData, FileData, archive, tableOfContent.FileName, barDirectoryPath, cdnMode).ConfigureAwait(false);
+                                LoggerAccessor.LogError($"[RunUnBAR] - RunExtract Errored out on file:{tableOfContent.FileName} (Exception: {ex})");
                             }
                         });
 #else
@@ -330,12 +320,7 @@ namespace HomeTools.UnBAR
                             }
                             catch (Exception ex)
                             {
-                                LoggerAccessor.LogWarn($"[RunUnBAR] - RunExtract Errored out on file:{tableOfContent.FileName} (Exception: {ex})");
-
-                                if (archive.GetHeader().Version == 512)
-                                    await ExtractToFileBarVersion2(archive.GetHeader().Key, FileData, archive, tableOfContent.FileName, barDirectoryPath).ConfigureAwait(false);
-                                else
-                                    await ExtractToFileBarVersion1(RawBarData, FileData, archive, tableOfContent.FileName, barDirectoryPath, cdnMode).ConfigureAwait(false);
+                                LoggerAccessor.LogError($"[RunUnBAR] - RunExtract Errored out on file:{tableOfContent.FileName} (Exception: {ex})");
                             }
                         }
 #endif

@@ -22,6 +22,7 @@ namespace WebAPIService
             ZipArchiveEntry entry = archive.CreateEntry(entryName);
 
             // Write content to the entry
+            using (contentStream)
             using (Stream entryStream = entry.Open())
                 contentStream.CopyTo(entryStream);
         }

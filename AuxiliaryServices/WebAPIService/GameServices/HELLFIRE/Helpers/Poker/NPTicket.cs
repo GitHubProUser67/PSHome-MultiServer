@@ -5,7 +5,7 @@ using System.IO;
 using System;
 using NetHasher;
 using XI5;
-using WebAPIService.GameServices.SSFW;
+using CastleLibrary.Sony.SSFW;
 
 namespace WebAPIService.GameServices.HELLFIRE.Helpers.Poker
 {

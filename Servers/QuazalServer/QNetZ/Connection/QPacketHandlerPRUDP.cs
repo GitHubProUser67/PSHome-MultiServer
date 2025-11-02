@@ -285,7 +285,7 @@ namespace QuazalServer.QNetZ
 							if (client == null)
 								break;
 
-							if (Defrag(client, packetIn) == false)
+							if (!Defrag(client, packetIn))
 								break;
 
 							// ack for reliable packets

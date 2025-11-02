@@ -22,8 +22,42 @@ namespace EndianTools
 
             int inputLength = dataIn.Length;
 
-            byte[] reversedArray = new byte[inputLength];
+            if (inputLength <= chunkSize)
+                return ReverseArray(dataIn);
 
+            byte[] reversedArray = new byte[inputLength];
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+            byte chunkSize64 = chunkSize << 1;
+            byte hilo64 = chunkSize << 3;
+
+            ReadOnlySpan<byte> inputSpan = dataIn;
+            Span<byte> outputSpan = reversedArray;
+
+            int i = 0;
+
+            while (i + chunkSize64 <= inputLength)
+            {
+                ulong word64 = BitConverter.ToUInt64(inputSpan.Slice(i, chunkSize64));
+                BitConverter.TryWriteBytes(outputSpan.Slice(i, chunkSize64), ((ulong)BinaryPrimitives.ReverseEndianness((uint)(word64 & uint.MaxValue)) << hilo64) | (BinaryPrimitives.ReverseEndianness((uint)(word64 >> hilo64))));
+                i += chunkSize64;
+            }
+
+            while (i + chunkSize <= inputLength)
+            {
+                uint val = BitConverter.ToUInt32(inputSpan.Slice(i, chunkSize));
+                val = BinaryPrimitives.ReverseEndianness(val);
+                BitConverter.TryWriteBytes(outputSpan.Slice(i, chunkSize), val);
+                i += chunkSize;
+            }
+
+            // Handle remaining bytes
+            int remaining = inputLength - i;
+            if (remaining > 0)
+            {
+                for (int j = 0; j < remaining; j++)
+                    reversedArray[i + j] = inputSpan[inputLength - j - 1];
+            }
+#else
             Array.Copy(dataIn, reversedArray, inputLength);
 
             int numofBytes;
@@ -36,10 +70,11 @@ namespace EndianTools
                     numofBytes = remainingBytes;
                 Array.Reverse(reversedArray, i, numofBytes);
             }
-
+#endif
             return reversedArray;
         }
 
+        [Obsolete("EndianSwap2 is a hack, never use it.")]
         public static byte[] EndianSwap2(byte[] dataIn)
         {
             if (dataIn == null)
@@ -87,13 +122,9 @@ namespace EndianTools
         /// <returns>A char.</returns>
         public static char ReverseChar(char dataIn)
         {
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-            return (char)BinaryPrimitives.ReverseEndianness((ushort)dataIn);
-#else
             byte[] bytes = BitConverter.GetBytes(dataIn);
             Array.Reverse(bytes);
             return BitConverter.ToChar(bytes, 0);
-#endif
         }
 
         /// <summary>

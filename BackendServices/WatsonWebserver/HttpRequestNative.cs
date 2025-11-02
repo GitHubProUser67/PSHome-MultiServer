@@ -1,22 +1,22 @@
-﻿namespace WatsonWebserver.Native
-{
-    using MultiServerLibrary.Extension;
+﻿    using MultiServerLibrary.Extension;
     using System;
+	using System.Net;
     using System.Collections.Specialized;
     using System.Globalization;
     using System.IO;
     using System.Linq;
-    using System.Net;
     using System.Text;
     using System.Text.Json.Serialization;
     using System.Threading;
     using System.Threading.Tasks;
     using WatsonWebserver.Core;
-
+	
+namespace WatsonWebserver
+{
     /// <summary>
     /// HTTP request.
     /// </summary>
-    public class HttpRequest : HttpRequestBase
+    public class HttpRequestNative : HttpRequestBase
     {
         #region Public-Members
 
@@ -85,7 +85,7 @@
         /// <summary>
         /// HTTP request.
         /// </summary>
-        public HttpRequest()
+        public HttpRequestNative()
         { 
         }
 
@@ -95,7 +95,7 @@
         /// </summary>
         /// <param name="ctx">HttpListenerContext.</param>
         /// <param name="serializer">Serialization helper.</param>
-        public HttpRequest(HttpListenerContext ctx, ISerializationHelper serializer)
+        public HttpRequestNative(HttpListenerContext ctx, ISerializationHelper serializer)
         { 
             if (ctx == null) throw new ArgumentNullException(nameof(ctx));
             if (ctx.Request == null) throw new ArgumentNullException(nameof(ctx.Request));

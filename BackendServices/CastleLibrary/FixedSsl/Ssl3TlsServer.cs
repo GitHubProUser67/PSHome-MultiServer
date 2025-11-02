@@ -1,8 +1,9 @@
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
+using System.Linq;
 
-namespace FixedSsl.ProtoSSL;
+namespace FixedSsl;
 
 public class Ssl3TlsServer : DefaultTlsServer
 {
@@ -17,7 +18,13 @@ public class Ssl3TlsServer : DefaultTlsServer
         _serverPrivateKey = serverPrivateKey;
     }
 
-    private static readonly int[] _cipherSuites = new int[]
+    public static readonly int[] AESCipherSuites = new int[]
+    {
+        CipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA,
+        CipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA,
+    };
+
+    public static readonly int[] RC4CipherSuites = new int[]
     {
         CipherSuite.TLS_RSA_WITH_RC4_128_MD5,
         CipherSuite.TLS_RSA_WITH_RC4_128_SHA
@@ -41,12 +48,12 @@ public class Ssl3TlsServer : DefaultTlsServer
 
     public override int[] GetCipherSuites()
     {
-        return _cipherSuites;
+        return AESCipherSuites.Concat(RC4CipherSuites).ToArray();
     }
 
     protected override int[] GetSupportedCipherSuites()
     {
-        return _cipherSuites;
+        return AESCipherSuites.Concat(RC4CipherSuites).ToArray();
     }
 
     public override void NotifySecureRenegotiation(bool secureRenegotiation)

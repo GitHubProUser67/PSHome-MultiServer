@@ -15,11 +15,11 @@ namespace Horizon.BWPS
         public static ServerSettings Settings = new();
         public static BWPS BWPS = new();
 
-        public static bool started = false;
+        public static bool IsStarted = false;
 
         public static async void StopServer()
         {
-            started = false;
+            IsStarted = false;
 
             await BWPS.Stop();
         }
@@ -48,11 +48,13 @@ namespace Horizon.BWPS
 
                 LoggerAccessor.LogInfo($"UDP BWPS started on port {Settings.BWPSPort}.");
 
-                started = true;
+                LoggerAccessor.LogInfo($"[BWPSClass] - Initialized server .");
+
+                IsStarted = true;
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[BWPS] - Server failed to initialize with error - {ex}");
+                LoggerAccessor.LogError($"[BWPSClass] - Server failed to initialize with error - {ex}");
             }
 
             return Task.CompletedTask;

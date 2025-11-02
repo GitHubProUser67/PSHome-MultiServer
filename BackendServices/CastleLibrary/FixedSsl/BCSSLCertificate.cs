@@ -23,7 +23,7 @@ namespace FixedSsl
 
         public BCSSLCertificate(X509Certificate2 certificate)
         {
-            AsymmetricAlgorithm? privateKey = GetPrivateKey(certificate);
+            AsymmetricAlgorithm privateKey = GetPrivateKey(certificate);
             if (privateKey == null)
                 throw new ArgumentException("[BCSSLCertificate] - Certificate does not contain a private key");
 
@@ -37,14 +37,6 @@ namespace FixedSsl
             }
 
             Certificate = new Certificate(new TlsCertificate[] { new BcTlsCertificate(new BcTlsCrypto(new SecureRandom()), DotNetUtilities.FromX509Certificate(certificate).CertificateStructure) });
-        }
-
-        public static BCSSLCertificate FromX509Certificate2(X509Certificate2 certificate) => new BCSSLCertificate(certificate);
-
-        public X509Certificate2 AsX509Certificate2()
-        {
-            // TODO
-            throw new NotImplementedException();
         }
 
         public static AsymmetricAlgorithm GetPrivateKey(X509Certificate2 certificate)
@@ -74,6 +66,8 @@ namespace FixedSsl
             throw new NotSupportedException("[BCSSLCertificate] - GetPrivateKey: Key algorithm not supported");
         }
 
-        public static implicit operator BCSSLCertificate(X509Certificate2 certificate) => new BCSSLCertificate(certificate);
+        public static BCSSLCertificate FromX509Certificate2(X509Certificate2 certificate) => new BCSSLCertificate(certificate);
+
+        public static implicit operator BCSSLCertificate(X509Certificate2 certificate) => FromX509Certificate2(certificate);
     }
 }

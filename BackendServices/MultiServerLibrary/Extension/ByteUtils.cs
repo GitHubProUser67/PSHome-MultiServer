@@ -100,31 +100,31 @@ namespace MultiServerLibrary.Extension
             int len = a.Length;
 
             // if different length, can't be equal
-            if (len != b.Length)
-                return false;
-
-            if (direction == CompareDirection.Forward)
+            if (len == b.Length)
             {
-                if (Microsoft.Win32API.IsWindows)
-                    // Validate buffers are the same.
-                    return memcmp(a, b, len) == 0;
-
-                return a.SequenceEqual(b);
-            }
-            else
-            {
-                int i = len - 1;
-
-                while (i >= 0 && (a[i] == b[i]))
+                if (direction == CompareDirection.Forward)
                 {
-                    i--;
+                    if (Microsoft.Win32API.IsWindows)
+                        // Validate buffers are the same.
+                        return memcmp(a, b, len) == 0;
+
+                    return a.SequenceEqual(b);
                 }
+                else
+                {
+                    int i = len - 1;
 
-                if (i < 0)
-                    return true;
+                    while (i >= 0 && (a[i] == b[i]))
+                    {
+                        i--;
+                    }
 
-                return false;
+                    if (i < 0)
+                        return true;
+                }
             }
+
+            return false;
         }
 
         public static byte[] SubArray(this byte[] arr, int sizeToSubstract, bool atStart = false)
@@ -154,35 +154,25 @@ namespace MultiServerLibrary.Extension
 
         public static byte[] GenerateRandomBytes(ushort size)
         {
-            Tpm2 _tpm = null;
-
             try
             {
-                TbsDevice _crypto_device = new TbsDevice();
-                _crypto_device.Connect();
-                _tpm = new Tpm2(_crypto_device);
+                using var cryptoDevice = new TbsDevice();
+                cryptoDevice.Connect();
+                using var tpm = new Tpm2(cryptoDevice);
 
-                return _tpm.GetRandom(size);
+                return tpm.GetRandom(size);
             }
             catch
             {
-                // Fallback to classic .NET version.
-            }
-            finally
-            {
-                if (_tpm != null) _tpm.Dispose();
-            }
-
-            byte[] result = new byte[size];
-
+                byte[] result = new byte[size];
 #if NETCOREAPP2_0_OR_GREATER
-            RandomNumberGenerator.Fill(result);
+                RandomNumberGenerator.Fill(result);
 #else
-            using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
-                rng.GetBytes(result);
+                using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
+                    rng.GetBytes(result);
 #endif
-
-            return result;
+                return result;
+            }
         }
 
         /// <summary>
@@ -511,45 +501,47 @@ namespace MultiServerLibrary.Extension
         /// <param name="buffer">The array in which we search for the sequence.</param>
         /// <param name="searchPattern">The byte array sequence to find.</param>
         /// <param name="offset">The offset from where we start our research.</param>
+        /// <param name="maxOffset">The maximum offset from where we do our research.</param>
         /// <returns>A int (-1 if not found).</returns>
-        public static int FindBytePattern(byte[] buffer, byte[] searchPattern, int offset = 0)
+        public static int FindBytePattern(byte[] buffer, byte[] searchPattern, int offset = 0, int maxOffset = -1)
         {
             int found = -1;
 
-            if (buffer.Length > 0 && searchPattern.Length > 0 && offset <= buffer.Length - searchPattern.Length && buffer.Length >= searchPattern.Length)
+            if (buffer.Length == 0 || searchPattern.Length == 0 || offset < 0 || offset > buffer.Length - searchPattern.Length)
+                return -1;
+
+            int searchPatternSize = searchPattern.Length;
+
+            // Calculate end boundary
+            if (maxOffset == -1 || maxOffset > buffer.Length - searchPatternSize)
+                maxOffset = buffer.Length - searchPatternSize;
+
+            for (int i = offset; i <= maxOffset; i++)
             {
-                for (int i = offset; i <= buffer.Length - searchPattern.Length; i++)
+                if (buffer[i] == searchPattern[0])
                 {
-                    if (buffer[i] == searchPattern[0])
+                    bool matched = true;
+
+                    for (int y = 1; y < searchPatternSize; y++)
                     {
-                        if (buffer.Length > 1)
+                        if (buffer[i + y] != searchPattern[y])
                         {
-                            bool matched = true;
-                            for (int y = 1; y <= searchPattern.Length - 1; y++)
-                            {
-                                if (buffer[i + y] != searchPattern[y])
-                                {
-                                    matched = false;
-                                    break;
-                                }
-                            }
-                            if (matched)
-                            {
-                                found = i;
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            found = i;
+                            matched = false;
                             break;
                         }
+                    }
+
+                    if (matched)
+                    {
+                        found = i;
+                        break;
                     }
                 }
             }
 
             return found;
         }
+
 
         /// <summary>
         /// Finds a sequence of bytes within a byte array.
@@ -558,15 +550,22 @@ namespace MultiServerLibrary.Extension
         /// <param name="buffer">The Span byte in which we search for the sequence.</param>
         /// <param name="searchPattern">The Span byte sequence to find.</param>
         /// <param name="offset">The offset from where we start our research.</param>
+        /// <param name="maxOffset">The maximum offset from where we do our research.</param>
         /// <returns>A int (-1 if not found).</returns>
-        public static int FindBytePattern(ReadOnlySpan<byte> buffer, ReadOnlySpan<byte> searchPattern, int offset = 0)
+        public static int FindBytePattern(ReadOnlySpan<byte> buffer, ReadOnlySpan<byte> searchPattern, int offset = 0, int maxOffset = -1)
         {
-            if (searchPattern.IsEmpty || buffer.Length < searchPattern.Length || offset > buffer.Length - searchPattern.Length)
+            if (searchPattern.IsEmpty || buffer.Length < searchPattern.Length || offset < 0 || offset > buffer.Length - searchPattern.Length)
                 return -1;
 
-            for (int i = offset; i < buffer.Length - searchPattern.Length + 1; i++)
+            int searchPatternSize = searchPattern.Length;
+
+            // Calculate end boundary
+            if (maxOffset == -1 || maxOffset > buffer.Length - searchPatternSize)
+                maxOffset = buffer.Length - searchPatternSize;
+
+            for (int i = offset; i <= maxOffset; i++)
             {
-                if (buffer[i] == searchPattern[0] && buffer.Slice(i, searchPattern.Length).SequenceEqual(searchPattern))
+                if (buffer[i] == searchPattern[0] && buffer.Slice(i, searchPatternSize).SequenceEqual(searchPattern))
                     return i;
             }
 

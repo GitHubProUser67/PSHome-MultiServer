@@ -2,9 +2,9 @@ using CustomLogger;
 using MultiSocks.Aries.Messages;
 using MultiSocks.ProtoSSL;
 using MultiServerLibrary.Extension;
-using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using MultiServerLibrary.CustomServers;
 
 namespace MultiSocks.Aries
 {
@@ -18,16 +18,13 @@ namespace MultiSocks.Aries
         public int SessionID = 1;
         public VulnerableCertificateGenerator? SSLCache = null;
         public List<AriesClient> DirtySocksClients = new();
-        public TcpListener? Listener;
 
-        private List<Task> TcpClientTasks = new();
-        private readonly int AwaiterTimeoutInMS = 500;
-        private int MaxConcurrentListeners = 10;
-        private volatile bool threadActive;
-        private bool secure = false;
-        private bool WeakChainSignedRSAKey = false;
-        private string CN = string.Empty;
-        private Thread? ListenerThread;
+        private readonly int MaxConcurrentListeners = Environment.ProcessorCount;
+
+        private readonly bool secure = false;
+        private readonly bool WeakChainSignedRSAKey = false;
+        private readonly string CN = string.Empty;
+        private readonly TCPServer? Server;
 
         public AbstractAriesServer(ushort port, string listenIP, string? Project = null, string? SKU = null, bool secure = false, string CN = "", bool WeakChainSignedRSAKey = false)
         {
@@ -42,79 +39,31 @@ namespace MultiSocks.Aries
             if (secure)
                 SSLCache = new();
 
-            ListenerThread = new Thread(RunLoop);
-            ListenerThread.Start();
-        }
-
-        private void RunLoop()
-        {
-            threadActive = true;
-
-            object _sync = new object();
-
-            try
-            {
-                Listener = new TcpListener(IPAddress.Any, listenPort);
-                Listener.Start();
-            }
-            catch (Exception e)
-            {
-                LoggerAccessor.LogError("[AbstractAriesServer] - An Exception Occured while starting the DirtySock listener: " + e.Message);
-                threadActive = false;
-                return;
-            }
-
-            LoggerAccessor.LogInfo($"[AbstractAriesServer] - DirtySock Server started on port {listenPort}...");
-
-            // wait for requests
-            while (threadActive)
-            {
-                lock (_sync)
+            if (Server == null)
+                Server = new TCPServer();
+            Server.StartAsync(
+                new List<ushort> { port },
+                MaxConcurrentListeners,
+                null,
+                null,
+                null,
+                (serverPort, client, remoteEP) =>
                 {
-                    if (!threadActive)
-                        break;
-                }
-
-                while (TcpClientTasks.Count < MaxConcurrentListeners) //Maximum number of concurrent listeners
-                    TcpClientTasks.Add(Listener!.AcceptTcpClientAsync().ContinueWith(t =>
-                    {
-                        TcpClient? client = null;
-                        try
+                    if (remoteEP.AddressFamily == AddressFamily.InterNetworkV6)
+                        AddClient(new AriesClient(this, client, this.secure, this.CN, this.WeakChainSignedRSAKey)
                         {
-                            if (!t.IsCompleted)
-                                return;
-
-                            client = t.Result;
-                        }
-                        catch
-                        {
-                        }
-                        _ = Task.Run(() => {
-                            if (client != null && client.Client.RemoteEndPoint is IPEndPoint remoteEndPoint)
-                            {
-#if DEBUG
-                                LoggerAccessor.LogInfo($"[AbstractAriesServer] - Connection received (Thread " + Thread.CurrentThread.ManagedThreadId.ToString() + ")");
-#endif
-                                if (remoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6)
-                                    AddClient(new AriesClient(this, client, secure, CN, WeakChainSignedRSAKey)
-                                    {
-                                        ADDR = remoteEndPoint.Address.MapToIPv4().ToString(),
-                                        SessionID = SessionID++
-                                    });
-                                else
-                                    AddClient(new AriesClient(this, client, secure, CN, WeakChainSignedRSAKey)
-                                    {
-                                        ADDR = remoteEndPoint.Address.ToString(),
-                                        SessionID = SessionID++
-                                    });
-                            }
+                            ADDR = remoteEP.Address.MapToIPv4().ToString(),
+                            SessionID = SessionID++
                         });
-                    }));
-
-                int RemoveAtIndex = Task.WaitAny(TcpClientTasks.ToArray(), AwaiterTimeoutInMS); //Synchronously Waits up to 500ms for any Task completion
-                if (RemoveAtIndex != -1) //Remove the completed task from the list
-                    TcpClientTasks.RemoveAt(RemoveAtIndex);
-            }
+                    else
+                        AddClient(new AriesClient(this, client, this.secure, this.CN, this.WeakChainSignedRSAKey)
+                        {
+                            ADDR = remoteEP.Address.ToString(),
+                            SessionID = SessionID++
+                        });
+                },
+                new CancellationTokenSource().Token
+                );
         }
 
         public virtual void AddClient(AriesClient client)
@@ -182,22 +131,7 @@ namespace MultiSocks.Aries
 
         public void Dispose()
         {
-            // stop thread and listener
-            threadActive = false;
-
-            if (Listener != null)
-                Listener.Stop();
-
-            // wait for thread to finish
-            if (ListenerThread != null)
-            {
-                ListenerThread.Join();
-                ListenerThread = null;
-            }
-
-            // finish closing listener
-            if (Listener != null)
-                Listener = null;
+            Server?.Stop();
         }
     }
 }

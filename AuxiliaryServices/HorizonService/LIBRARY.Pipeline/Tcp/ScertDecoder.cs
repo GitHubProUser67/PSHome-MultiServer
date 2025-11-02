@@ -30,7 +30,7 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogWarn(ex.ToString());
+                LoggerAccessor.LogWarn($"[ScertDecoder] - Tcp: Failed to decode a SCERT message. (Exception:{ex})");
             }
         }
 
@@ -45,7 +45,6 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
         /// <returns>The <see cref="IByteBuffer" /> which represents the frame or <c>null</c> if no frame could be created.</returns>
         protected virtual object Decode(IChannelHandlerContext context, IByteBuffer input)
         {
-            //input.MarkReaderIndex();
             byte id = input.GetByte(input.ReaderIndex);
             byte[] hash = null;
             long frameLength = input.GetShortLE(input.ReaderIndex + 1);
@@ -67,15 +66,11 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
             }
 
             if (frameLength < 0)
-            {
-                LoggerAccessor.LogError("negative pre-adjustment length field: " + frameLength);
-                return null;
-            }
+                throw new InvalidOperationException("negative pre-adjustment length field: " + frameLength);
 
             // never overflows because it's less than maxFrameLength
             int frameLengthInt = (int)frameLength;
             if (input.ReadableBytes < frameLengthInt)
-                //input.ResetReaderIndex();
                 return null;
 
             // extract frame

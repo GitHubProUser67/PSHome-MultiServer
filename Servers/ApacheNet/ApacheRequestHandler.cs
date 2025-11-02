@@ -15,7 +15,7 @@ namespace ApacheNet
             FileInfo? fileInfo = new(ctx.FilePath ?? string.Empty);
             if (fileInfo.Exists)
             {
-                string ContentType = HTTPProcessor.GetMimeType(Path.GetExtension(ctx.FilePath), ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor._mimeTypes);
+                string ContentType = HTTPProcessor.GetMimeType(Path.GetExtension(ctx.FilePath), ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor.MimeTypes);
                 if (ContentType == "application/octet-stream")
                 {
                     bool matched = false;
@@ -53,7 +53,7 @@ namespace ApacheNet
         {
             if (File.Exists(ctx.FilePath))
             {
-                string ContentType = HTTPProcessor.GetMimeType(Path.GetExtension(ctx.FilePath), ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor._mimeTypes);
+                string ContentType = HTTPProcessor.GetMimeType(Path.GetExtension(ctx.FilePath), ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor.MimeTypes);
                 if (ContentType == "application/octet-stream")
                 {
                     byte[] VerificationChunck = FileSystemUtils.TryReadFileChunck(ctx.FilePath, 10, FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs);

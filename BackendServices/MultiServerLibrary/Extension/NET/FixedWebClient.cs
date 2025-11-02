@@ -6,7 +6,7 @@ namespace System.Net
     {
         private const bool bypassProxyLocalHost = false; /*still use the proxy for local addresses*/
 
-        /* WebClient won't automatically decompress gzipped data and has no proxy abstraction layer, hence this hack. */
+        /* WebClient won't automatically decompress compressed data and has no proxy abstraction layer, hence this hack. */
 
         /* Suppress the WebClient obsolete warning.
 
@@ -31,7 +31,7 @@ namespace System.Net
         protected override WebRequest GetWebRequest(Uri address)
         {
             var request = (HttpWebRequest)base.GetWebRequest(address);
-            request.AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip;
+            request.AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip | DecompressionMethods.Brotli;
             return request;
         }
     }

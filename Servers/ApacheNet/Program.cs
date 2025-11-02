@@ -1,3 +1,13 @@
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Reflection;
+using System.Runtime;
+using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
 using ApacheNet;
 using ApacheNet.PluginManager;
 using CustomLogger;
@@ -8,20 +18,10 @@ using MultiServerLibrary.GeoLocalization;
 using MultiServerLibrary.HTTP;
 using MultiServerLibrary.SNMP;
 using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Reflection;
-using System.Runtime;
-using System.Security.Cryptography;
-using System.Threading;
-using System.Threading.Tasks;
 
 public static class ApacheNetServerConfiguration
 {
-    public static string PluginsFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/plugins";
+    public static string PluginsFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/apachenet-plugins";
     public static ushort DefaultPluginsPort { get; set; } = 60850;
     public static bool DNSOverEthernetEnabled { get; set; } = false;
     public static string DNSConfig { get; set; } = $"{Directory.GetCurrentDirectory()}/static/routes.txt";
@@ -38,14 +38,13 @@ public static class ApacheNetServerConfiguration
     public static string ImageMagickPath { get; set; } = $"{Directory.GetCurrentDirectory()}/static/ImageMagick";
     public static string ASPNETRedirectUrl { get; set; } = string.Empty;
     public static string PHPRedirectUrl { get; set; } = string.Empty;
-    public static string PHPVersion { get; set; } = "8.4.6";
+    public static string PHPVersion { get; set; } = "8.4.14";
     public static string PHPStaticFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/PHP";
     public static bool PHPDebugErrors { get; set; } = false;
     public static int BufferSize { get; set; } = 4096;
     public static string HTTPSCertificateFile { get; set; } = $"{Directory.GetCurrentDirectory()}/static/SSL/MultiServer.pfx";
     public static string HTTPSCertificatePassword { get; set; } = "qwerty";
     public static HashAlgorithmName HTTPSCertificateHashingAlgorithm { get; set; } = HashAlgorithmName.SHA384;
-    public static bool PreferNativeHttpListenerEngine { get; set; } = false;
     public static bool RangeHandling { get; set; } = false;
     public static bool ChunkedTransfers { get; set; } = false;
     public static bool NestedDirectoryReporting { get; set; } = false;
@@ -53,7 +52,7 @@ public static class ApacheNetServerConfiguration
     public static int NotFoundWebArchiveDateLimit { get; set; } = 0;
     public static bool EnableHTTPCompression { get; set; } = false;
     public static bool EnableImageUpscale { get; set; } = false;
-    public static Dictionary<string, string>? MimeTypes { get; set; } = HTTPProcessor._mimeTypes;
+    public static Dictionary<string, string>? MimeTypes { get; set; } = HTTPProcessor.MimeTypes;
     public static string[]? HTTPSDNSList { get; set; } = {
             "www.outso-srv1.com",
             "www.ndreamshs.com",
@@ -118,7 +117,7 @@ public static class ApacheNetServerConfiguration
             "secure.heavyh2o.net",
             "game.hellfiregames.com"
         };
-    public static List<ushort>? Ports { get; set; } = new() { 80, 443, 3074, 3658, 9090, 10010, 26004, 33000 };
+    public static List<ushort>? Ports { get; set; } = new() { NetworkPorts.Http.Tcp, NetworkPorts.Http.Ssl, 3074, 3658, 9090, 10010, 26004, 33000 };
     public static List<string>? RedirectRules { get; set; }
     public static List<string>? AllowedManagementIPs { get; set; }
 
@@ -173,7 +172,6 @@ public static class ApacheNetServerConfiguration
                 new JProperty("nested_directory_reporting", NestedDirectoryReporting),
                 new JProperty("404_not_found_web_archive", NotFoundWebArchive),
                 new JProperty("404_not_found_web_archive_date_limit", NotFoundWebArchiveDateLimit),
-                new JProperty("prefer_native_httplistener_engine", PreferNativeHttpListenerEngine),
                 new JProperty("enable_range_handling", RangeHandling),
                 new JProperty("enable_chunked_transfers", ChunkedTransfers),
                 new JProperty("enable_http_compression", EnableHTTPCompression),
@@ -225,7 +223,6 @@ public static class ApacheNetServerConfiguration
                 DefaultPluginsPort = GetValueOrDefault(config, "default_plugins_port", DefaultPluginsPort);
                 NotFoundWebArchive = GetValueOrDefault(config, "404_not_found_web_archive", NotFoundWebArchive);
                 NotFoundWebArchiveDateLimit = GetValueOrDefault(config, "404_not_found_web_archive_date_limit", NotFoundWebArchiveDateLimit);
-                PreferNativeHttpListenerEngine = GetValueOrDefault(config, "prefer_native_httplistener_engine", PreferNativeHttpListenerEngine);
                 RangeHandling = GetValueOrDefault(config, "enable_range_handling", RangeHandling);
                 ChunkedTransfers = GetValueOrDefault(config, "enable_chunked_transfers", ChunkedTransfers);
                 EnableHTTPCompression = GetValueOrDefault(config, "enable_http_compression", EnableHTTPCompression);
@@ -310,8 +307,6 @@ public static class ApacheNetServerConfiguration
 
 class Program
 {
-    private static int workerThreads, completionPortThreads;
-
     private static string configDir = Directory.GetCurrentDirectory() + "/static/";
     public static string configPath = configDir + "ApacheNet.json";
     private static string configMultiServerLibraryPath = configDir + "MultiServerLibrary.json";
@@ -419,7 +414,7 @@ class Program
         else if (dnswatcher.EnableRaisingEvents)
             dnswatcher.EnableRaisingEvents = false;
 
-        if (ApacheNetServerConfiguration.plugins.Count > 0)
+        if (!ApacheNetServerConfiguration.plugins.IsEmpty)
         {
             int i = 0;
             foreach (var plugin in ApacheNetServerConfiguration.plugins)
@@ -446,16 +441,19 @@ class Program
 
     private static void WarmUpServers()
     {
-        int optimalProcessorCount = Environment.ProcessorCount;
-
         HTTPBag = new();
 
         lock (HTTPBag)
         {
-            foreach (var port in ApacheNetServerConfiguration.Ports!)
+            foreach (ushort port in ApacheNetServerConfiguration.Ports!)
             {
-                if (TCPUtils.IsTCPPortAvailable(port))
-                    HTTPBag.Add(new ApacheNetProcessor(ApacheNetServerConfiguration.HTTPSCertificateFile, ApacheNetServerConfiguration.HTTPSCertificatePassword, "*", port, port.ToString().EndsWith("443"), optimalProcessorCount));
+                HTTPBag.Add(new ApacheNetProcessor(
+                    ApacheNetServerConfiguration.HTTPSCertificateFile,
+                    ApacheNetServerConfiguration.HTTPSCertificatePassword,
+                    "*",
+                    port,
+                    port.ToString().EndsWith("443"),
+                    Environment.ProcessorCount));
             }
         }
     }
@@ -485,8 +483,6 @@ class Program
 
     static void Main()
     {
-        ThreadPool.GetMaxThreads(out workerThreads, out completionPortThreads);
-
         dnswatcher.NotifyFilter = NotifyFilters.LastWrite;
         dnswatcher.Changed += OnDNSChanged;
 
@@ -512,7 +508,7 @@ class Program
         };
 #endif
 
-        _ = GeoIP.Initialize();
+        _ = Task.Run(GeoIP.Initialize);
 
         MultiServerLibraryConfiguration.RefreshVariables(configMultiServerLibraryPath);
 
@@ -558,15 +554,6 @@ class Program
         }
 
         ApacheNetServerConfiguration.RefreshVariables(configPath);
-
-        if (ApacheNetServerConfiguration.PreferNativeHttpListenerEngine
-            && MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows
-            && !MultiServerLibrary.Extension.Microsoft.Win32API.IsAdministrator())
-        {
-            LoggerAccessor.LogWarn("[Program] - Trying to restart as admin...");
-            if (MultiServerLibrary.Extension.Microsoft.Win32API.StartAsAdmin(Process.GetCurrentProcess().MainModule?.FileName))
-                Environment.Exit(0);
-        }
 
         StartOrUpdateServer();
 

@@ -7,13 +7,12 @@ namespace PS2FloatLibrary
     {
         private const byte BIAS = 127;
         private const byte MANTISSA_BITS = 23;
-        private const uint SIGNMASK = 0x80000000;
 
+        public const uint SIGNMASK = 0x80000000;
         public const uint MAX_FLOATING_POINT_VALUE = 0x7FFFFFFF;
         public const uint MIN_FLOATING_POINT_VALUE = uint.MaxValue;
         public const uint ONE = 0x3F800000;
         public const uint MIN_ONE = 0xBF800000;
-        public const uint EPSILON = 0x00000001;
 
         public uint raw { get; private set; }
 
@@ -61,7 +60,6 @@ namespace PS2FloatLibrary
         public static ps2float MinValue => new ps2float(MIN_FLOATING_POINT_VALUE);
         public static ps2float One => new ps2float(ONE);
         public static ps2float MinOne => new ps2float(MIN_ONE);
-        public static ps2float Epsilon => new ps2float(EPSILON);
 
         public static ps2float operator +(ps2float f1, ps2float f2)
         {

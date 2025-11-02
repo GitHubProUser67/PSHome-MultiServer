@@ -234,7 +234,7 @@ namespace HomeTools.Crypto
             return BitConverter.ToUInt64(!BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(digest) : digest, 0);
         }
 
-        public static byte[] ApplyPaddingPrefix(byte[] filebytes, bool bigEndian) // Before you say anything, this is an actual Home Feature...
+        public static byte[] ApplyPaddingPrefix(byte[] filebytes, bool bigEndian)
         {
             return ByteUtils.CombineByteArray(bigEndian ? CryptoVersionBytesBE : EndianUtils.EndianSwap(CryptoVersionBytesBE), filebytes);
         }
@@ -275,8 +275,6 @@ namespace HomeTools.Crypto
             byte[] ciphertextBytes = new byte[cipher.GetOutputSize(metaSize)];
             int ciphertextLength = cipher.ProcessBytes(nulledBytes, 0, metaSize, ciphertextBytes, 0);
             cipher.DoFinal(ciphertextBytes, ciphertextLength);
-
-            cipher = null;
 
             return ciphertextBytes;
         }

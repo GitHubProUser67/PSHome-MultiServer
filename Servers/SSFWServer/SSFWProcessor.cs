@@ -1,139 +1,60 @@
-﻿using CustomLogger;
-using MultiServerLibrary;
-using MultiServerLibrary.Extension;
-using MultiServerLibrary.HTTP;
-using MultiServerLibrary.SSL;
-using Newtonsoft.Json;
-using SSFWServer.Helpers.FileHelper;
-using SSFWServer.SaveDataHelper;
-using SSFWServer.Services;
-using System.Collections.Concurrent;
-using System.Net;
+﻿using System.Net;
+using System.Net.Sockets;
 using System.Net.Security;
-using System.Reflection;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
-using WatsonWebserver;
-using WatsonWebserver.Core;
-using WatsonWebserver.Native;
+using NetCoreServer;
+using CustomLogger;
+using SSFWServer.Services;
+using SSFWServer.SaveDataHelper;
+using MultiServerLibrary.Extension;
+using MultiServerLibrary.HTTP;
+using System.Collections.Concurrent;
+using SSFWServer.Helpers.FileHelper;
+using MultiServerLibrary.SSL;
+using NetCoreServer.CustomServers;
 
 namespace SSFWServer
 {
-    public partial class SSFWProcessor
+    public class SSFWProcessor
     {
-        public const string allowedMethods = "HEAD, GET, PUT, POST, DELETE, OPTIONS";
-        public static List<string> allowedOrigins = new List<string>() { };
-
         private const string LoginGUID = "bb88aea9-6bf8-4201-a6ff-5d1f8da0dd37";
 
         // Defines a list of web-related file extensions
-        private static HashSet<string> allowedWebExtensions = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
+        private static readonly HashSet<string> allowedWebExtensions = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
         {
             ".html", ".htm", ".cgi", ".css", ".js", ".svg", ".gif", ".ico", ".woff", ".woff2", ".ttf", ".eot"
         };
 
-        private static ConcurrentDictionary<string, string> LayoutGetOverrides = new();
+        private static readonly ushort[] _ports = new ushort[] { NetworkPorts.Http.TcpAux, 10443 };
 
-        private static string serverRevision = Assembly.GetExecutingAssembly().GetName().Name + " " + Assembly.GetExecutingAssembly().GetName().Version;
+        private NCHTTPServer? _Server;
+        private static readonly ConcurrentDictionary<string, string> LayoutGetOverrides = new();
 
-        private WebserverBase? _Server;
-        private readonly ushort port;
-        private Thread? StarterThread;
+        private readonly string _certpath;
+        private readonly string _certpass;
 
-        public SSFWProcessor(string certpath, string certpass, string ip, ushort port, bool secure, int MaxConcurrentListeners)
+        private static string? _legacykey;
+
+        public SSFWProcessor(string certpath, string certpass, string? locallegacykey)
         {
-            bool useHttpSys = SSFWServerConfiguration.PreferNativeHttpListenerEngine;
-            this.port = port;
-            WebserverSettings settings = new()
-            {
-                Hostname = ip,
-                Port = port,
-            };
-            settings.IO.StreamBufferSize = SSFWServerConfiguration.BufferSize;
-            settings.IO.EnableKeepAlive = SSFWServerConfiguration.EnableKeepAlive;
-            if (secure)
-            {
-                useHttpSys = false;
-                settings.Ssl.PfxCertificateFile = certpath;
-                settings.Ssl.PfxCertificatePassword = certpass;
-                settings.Ssl.MutuallyAuthenticate = true;
-                settings.Ssl.Enable = true;
-            }
-            if (useHttpSys)
-            {
-                _Server = new NativeWebserver(settings, DefaultRoute, MaxConcurrentListeners);
-#if !DEBUG
-                ((NativeWebserver)_Server).LogResponseSentMsg = false;
-#endif
-                ((NativeWebserver)_Server).KeepAliveResponseData = false;
-            }
-            else
-            {
-                _Server = new Webserver(settings, DefaultRoute, MaxConcurrentListeners);
-#if !DEBUG
-                ((Webserver)_Server).LogResponseSentMsg = false;
-#endif
-                ((Webserver)_Server).KeepAliveResponseData = false;
-                ((Webserver)_Server).SslProtocols = SslProtocols.Tls12;
-            }
-
-            StarterThread = new Thread(StartServer)
-            {
-                Name = "Server Starter"
-            };
-            StarterThread.Start();
+            _certpath = certpath;
+            _certpass = certpass;
+            _legacykey = locallegacykey;
         }
 
-        private static void SetCorsHeaders(HttpContextBase ctx)
+        private static (string HeaderIndex, string HeaderItem)[] CollectHeaders(HttpRequest request)
         {
-            const string originHeader = "Origin";
-            string origin = ctx.Request.RetrieveHeaderValue(originHeader);
-
-            if (string.IsNullOrEmpty(origin) || allowedOrigins.Count == 0)
-                // Allow requests with no Origin header (e.g., direct server-to-server requests) or if we not set any CORS rules.
-                ctx.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-            else if (allowedOrigins.Contains(origin))
-                // Allow requests with a valid Origin
-                ctx.Response.Headers.Add("Access-Control-Allow-Origin", origin);
-            else
-            {
-                ctx.Response.Headers.Add("Access-Control-Deny-Origin", origin);
-                return;
-            }
-
-            ctx.Response.Headers.Add("Access-Control-Allow-Methods", allowedMethods);
-            ctx.Response.Headers.Add("Access-Control-Allow-Headers", "*");
-            ctx.Response.Headers.Add("Access-Control-Expose-Headers", string.Empty);
-        }
-
-        private static async Task AuthorizeConnection(HttpContextBase ctx)
-        {
-            string IpToBan = ctx.Request.Source.IpAddress;
-            if (!"::1".Equals(IpToBan) && !"127.0.0.1".Equals(IpToBan) && !"localhost".Equals(IpToBan, StringComparison.InvariantCultureIgnoreCase))
-            {
-                if (!string.IsNullOrEmpty(IpToBan) && ((MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibraryConfiguration.BannedIPs.Contains(IpToBan))
-                    || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(IpToBan))))
-                {
-                    LoggerAccessor.LogError($"[SECURITY] - Client - {ctx.Request.Source.IpAddress}:{ctx.Request.Source.Port} Requested the HTTPS server while being banned!");
-                    ctx.Response.StatusCode = 403;
-                    await ctx.Response.Send();
-                }
-            }
-        }
-
-        private static (string HeaderIndex, string HeaderItem)[] CollectHeaders(HttpRequestBase request)
-        {
-            int headerindex = (int)request.Headers.Count;
+            int headerindex = (int)request.Headers; // There is a slight mistake in netcoreserver, where the index is long, and the parser is int
+                                                    // So we accomodate that with a cast.
 
             (string HeaderIndex, string HeaderItem)[] CollectHeader = new (string, string)[headerindex];
 
             for (int i = 0; i < headerindex; i++)
             {
-                string? headerKey = request.Headers.GetKey(i);
-                if (!string.IsNullOrEmpty(headerKey))
-                    CollectHeader[i] = (headerKey, request.Headers.Get(i) ?? string.Empty);
+                CollectHeader[i] = request.Header(i);
             }
 
             return CollectHeader;
@@ -143,7 +64,7 @@ namespace SSFWServer
         {
             if (headers.Length > 0)
             {
-                const string pattern = @"^(.*?):\s(.*)$";
+                const string pattern = @"^(.*?):\s(.*)$"; // Make a GITHUB ticket for netcoreserver, the header tuple can get out of sync with null values, we try to mitigate the problem.
 
                 foreach ((string HeaderIndex, string HeaderItem) in headers)
                 {
@@ -156,7 +77,7 @@ namespace SSFWServer
                             Match match = Regex.Match(HeaderItem, pattern);
 
                             if (caseSensitive ? HeaderItem.Contains(requestedHeaderIndex) : HeaderItem.Contains(requestedHeaderIndex, StringComparison.InvariantCultureIgnoreCase)
-                                && match.Success)
+                                && match.Success) // Make a GITHUB ticket for netcoreserver, the header tuple can get out of sync with null values, we try to mitigate the problem.
                                 return match.Groups[2].Value;
                         }
                         catch
@@ -191,260 +112,178 @@ namespace SSFWServer
             return !string.IsNullOrEmpty(SSFWUserSessionManager.GetIdBySessionId(sessionid));
         }
 
-        public void StopServer()
+        public void StartSSFW()
+        {
+            if (_Server == null)
+                _Server = new NCHTTPServer();
+
+            // Ports are hardcoded, ideally move them to a proper loop. 
+            _Server.Start(
+                new HttpSSFWServer(IPAddress.Any, _ports[0]),
+                new SSFWServer(new SslContext(SslProtocols.Tls12, new X509Certificate2(_certpath, _certpass), MyRemoteCertificateValidationCallback) { ClientCertificateRequired = true }, IPAddress.Any, _ports[1])
+                );
+
+            LoggerAccessor.LogInfo($"[SSFWProcessor] - Server started on ports {string.Join(", ", _ports)}...");
+        }
+
+        public void StopSSFW()
+        {
+            _Server?.Stop();
+        }
+
+        private static HttpResponse SSFWRequestProcess(HttpRequest request, HttpResponse Response)
         {
             try
             {
-                _Server?.Dispose();
+                string absolutepath = HTTPProcessor.DecodeUrl(request.Url);
 
-                LoggerAccessor.LogWarn($"SSFW Server on port: {port} stopped...");
-            }
-            catch (Exception ex)
-            {
-                LoggerAccessor.LogError($"SSFW Server on port: {port} stopped unexpectedly! (Exception: {ex})");
-            }
-        }
-
-        public void StartServer()
-        {
-            if (_Server != null && !_Server.IsListening)
-            {
-                _Server.Routes.AuthenticateRequest = AuthorizeConnection;
-                _Server.Events.ExceptionEncountered += ExceptionEncountered;
-                _Server.Events.Logger = LoggerAccessor.LogInfo;
-#if DEBUG
-                _Server.Settings.Debug.Responses = true;
-                _Server.Settings.Debug.Routing = true;
-#endif
-                _Server.Start();
-                LoggerAccessor.LogInfo($"SSFW Server initiated on port: {port}...");
-            }
-        }
-
-        private static async Task DefaultRoute(HttpContextBase ctx)
-        {
-            bool sent = false;
-            HttpStatusCode statusCode;
-            HttpRequestBase request = ctx.Request;
-            HttpResponseBase response = ctx.Response;
-            string legacykey = SSFWServerConfiguration.SSFWLegacyKey;
-            string absolutepath = HTTPProcessor.DecodeUrl(request.Url.RawWithoutQuery);
-            string clientip = request.Source.IpAddress;
-            string clientport = request.Source.Port.ToString();
-
-            SetCorsHeaders(ctx);
-
-            if (absolutepath != string.Empty)
-            {
-                (string HeaderIndex, string HeaderItem)[] Headers = CollectHeaders(request);
-#if DEBUG
-                IEnumerable<string> HeadersValue;
-                try
+                if (!string.IsNullOrEmpty(absolutepath))
                 {
-                    HeadersValue = ctx.Request.Headers.AllKeys.SelectMany(key => ctx.Request.Headers.GetValues(key) ?? Enumerable.Empty<string>());
-                }
-                catch (ArgumentNullException)
-                {
-                    HeadersValue = Enumerable.Empty<string>();
-                }
-                LoggerAccessor.LogInfo($"[SSFW] - {clientip}:{clientport} Requested the Server with URL : {request.Url.RawWithQuery} (Details: " + JsonConvert.SerializeObject(new
-                {
-                    HttpMethod = request.Method,
-                    Url = request.Url.RawWithQuery,
-                    Headers = request.Headers,
-                    HeadersValues = HeadersValue,
-                    UserAgent = string.IsNullOrEmpty(request.Useragent) ? string.Empty : request.Useragent,
-                    ClientAddress = request.Source.IpAddress + ":" + request.Source.Port,
-#if false // Serve as a HTTP json debugging.
-                    Body = request.ContentLength >= 0 ? Convert.ToBase64String(request.DataAsBytes) : string.Empty
-#endif
-                }, Formatting.Indented) + ") (" + ctx.Timestamp.TotalMs + "ms)");
-#else
-                    LoggerAccessor.LogInfo($"[SSFW] - {clientip}:{clientport} Requested the Server with URL : {request.Url.RawWithQuery} (" + ctx.Timestamp.TotalMs + "ms)");
-#endif
-                string? encoding = null;
-                string UserAgent = GetHeaderValue(Headers, "User-Agent", false);
-                string cacheControl = GetHeaderValue(Headers, "Cache-Control");
+                    (string HeaderIndex, string HeaderItem)[] Headers = CollectHeaders(request);
 
-                if (string.IsNullOrEmpty(cacheControl) || cacheControl != "no-transform")
-                    encoding = GetHeaderValue(Headers, "Accept-Encoding");
-
-                // Split the URL into segments
-                string[] segments = absolutepath.Trim('/').Split('/');
-
-                // Combine the folder segments into a directory path
-                string directoryPath = Path.Combine(SSFWServerConfiguration.SSFWStaticFolder, string.Join("/", segments.Take(segments.Length - 1).ToArray()));
-
-                // Process the request based on the HTTP method
-                string filePath = Path.Combine(SSFWServerConfiguration.SSFWStaticFolder, absolutepath[1..]);
-
-                if (!string.IsNullOrEmpty(UserAgent) && UserAgent.Contains("PSHome"))
-                {
                     string host = GetHeaderValue(Headers, "host", false);
-                    string? env = ExtractBeforeFirstDot(host);
-                    string sessionid = GetHeaderValue(Headers, "X-Home-Session-Id");
 
-                    if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
-                        env = "cprod";
+                    string? encoding = null;
+                    string UserAgent = GetHeaderValue(Headers, "User-Agent", false);
+                    string cacheControl = GetHeaderValue(Headers, "Cache-Control");
 
-                    // Instantiate services
-                    SSFWAuditService auditService = new(sessionid, env, legacykey);
-                    SSFWRewardsService rewardSvc = new(legacykey);
-                    SSFWLayoutService layout = new(legacykey);
-                    SSFWAvatarLayoutService avatarLayout = new(sessionid, legacykey);
+                    if (SSFWServerConfiguration.EnableHTTPCompression && (string.IsNullOrEmpty(cacheControl) || cacheControl != "no-transform"))
+                        encoding = GetHeaderValue(Headers, "Accept-Encoding");
 
-                    switch (request.Method.ToString())
-                    {
-                        case "GET":
+                    // Split the URL into segments
+                    string[] segments = absolutepath.Trim('/').Split('/');
 
-                            #region LayoutService
-                            if (absolutepath.Contains($"/LayoutService/{env}/person/") && IsSSFWRegistered(sessionid))
-                            {
-                                string? res = null;
+                    // Combine the folder segments into a directory path
+                    string directoryPath = Path.Combine(SSFWServerConfiguration.SSFWStaticFolder, string.Join("/", segments.Take(segments.Length - 1).ToArray()));
 
-                                if (LayoutGetOverrides.ContainsKey(sessionid))
-                                    LayoutGetOverrides.Remove(sessionid, out res);
-                                else
-                                    res = layout.HandleLayoutServiceGET(directoryPath, filePath);
+                    // Process the request based on the HTTP method
+                    string filePath = Path.Combine(SSFWServerConfiguration.SSFWStaticFolder, absolutepath[1..]);
 
-                                if (res == null)
-                                {
-                                    statusCode = HttpStatusCode.Forbidden;
-                                    response.StatusCode = (int)statusCode;
-                                    sent = await response.Send();
-                                }
-                                else if (res == string.Empty)
-                                {
-                                    statusCode = HttpStatusCode.NotFound;
-                                    response.StatusCode = (int)statusCode;
-                                    sent = await response.Send();
-                                }
-                                else
-                                {
-                                    statusCode = HttpStatusCode.OK;
-                                    response.StatusCode = (int)statusCode;
-                                    response.ContentType = "application/json";
-                                    sent = await response.Send(res);
-                                }
-                            }
-                            #endregion
-
-                            #region AdminObjectService
-                            else if (absolutepath.Contains("/AdminObjectService/start") && IsSSFWRegistered(sessionid))
-                            {
-                                if (new SSFWAdminObjectService(sessionid, legacykey).HandleAdminObjectService(UserAgent))
-                                    statusCode = HttpStatusCode.OK;
-                                else
-                                    statusCode = HttpStatusCode.Forbidden;
-                                response.StatusCode = (int)statusCode;
-                                sent = await response.Send();
-                            }
-                            #endregion
-
-                            #region SaveDataService
-                            else if (absolutepath.Contains($"/SaveDataService/{env}/{segments.LastOrDefault()}") && IsSSFWRegistered(sessionid))
-                            {
-                                string? res = SSFWGetFileList.SSFWSaveDataDebugGetFileList(directoryPath, segments.LastOrDefault());
-                                if (res != null)
-                                {
-                                    statusCode = HttpStatusCode.OK;
-                                    response.StatusCode = (int)statusCode;
-                                    response.ContentType = "application/json";
-                                    sent = await response.Send(CompressResponse(response, res, encoding));
-                                }
-                                else
-                                {
-                                    statusCode = HttpStatusCode.InternalServerError;
-                                    response.StatusCode = (int)statusCode;
-                                    sent = await response.Send();
-                                }
-                            }
-                            #endregion
-
-                            else if (IsSSFWRegistered(sessionid))
-                            {
-                                //First check if this is a Inventory request
-                                if (absolutepath.Contains($"/RewardsService/") && absolutepath.Contains("counts"))
-                                {
-                                    //Detect if existing inv exists
-                                    if (File.Exists(filePath + ".json"))
-                                    {
-                                        string? res = FileHelper.ReadAllText(filePath + ".json", legacykey);
-
-                                        if (!string.IsNullOrEmpty(res))
-                                        {
-                                            if (GetHeaderValue(Headers, "Accept") == "application/json")
-                                            {
-                                                statusCode = HttpStatusCode.OK;
-                                                response.StatusCode = (int)statusCode;
-                                                response.ContentType = "application/json";
-                                                sent = await response.Send(CompressResponse(response, res, encoding));
-                                            }
-                                            else
-                                            {
-                                                statusCode = HttpStatusCode.OK;
-                                                response.StatusCode = (int)statusCode;
-                                                sent = await response.Send(CompressResponse(response, res, encoding));
-                                            }
-                                        }
-                                        else
-                                        {
-                                            statusCode = HttpStatusCode.InternalServerError;
-                                            response.StatusCode = (int)statusCode;
-                                            sent = await response.Send();
-                                        }
-                                    }
-                                    else //fallback default 
-                                    {
-                                        statusCode = HttpStatusCode.OK;
-                                        response.StatusCode = (int)statusCode;
-                                        response.ContentType = "application/json";
-                                        sent = await response.Send(CompressResponse(response, @"{ ""00000000-00000000-00000000-00000001"": 1 } ", encoding));
-                                    }
-                                }
-                                //Check for specifically the Tracking GUID
-                                else if (absolutepath.Contains($"/RewardsService/") && absolutepath.Contains("object/00000000-00000000-00000000-00000001"))
-                                {
-                                    //Detect if existing inv exists
-                                    if (File.Exists(filePath + ".json"))
-                                    {
-                                        string? res = FileHelper.ReadAllText(filePath + ".json", legacykey);
-
-                                        if (!string.IsNullOrEmpty(res))
-                                        {
-                                            if (GetHeaderValue(Headers, "Accept") == "application/json")
-                                            {
-                                                statusCode = HttpStatusCode.OK;
-                                                response.StatusCode = (int)statusCode;
-                                                response.ContentType = "application/json";
-                                                sent = await response.Send(CompressResponse(response, res, encoding));
-                                            }
-                                            else
-                                            {
-                                                statusCode = HttpStatusCode.OK;
-                                                response.StatusCode = (int)statusCode;
-                                                sent = await response.Send(CompressResponse(response, res, encoding));
-                                            }
-                                        }
-                                        else
-                                        {
-                                            statusCode = HttpStatusCode.InternalServerError;
-                                            response.StatusCode = (int)statusCode;
-                                            sent = await response.Send();
-                                        }
-                                    }
-                                    else //fallback default 
-                                    {
 #if DEBUG
-                                        LoggerAccessor.LogWarn($"[SSFW] : {UserAgent} Non-existent inventories detected, using defaults!");
+                    LoggerAccessor.LogInfo($"[SSFWProcessor] - Home Client Requested the SSFW Server with URL : {request.Method} {absolutepath} (Details: \n{{ \"NetCoreServer\":" + JsonSerializer.Serialize(request, new JsonSerializerOptions { WriteIndented = true })
+                        + (Headers.Length > 0 ? $", \"Headers\":{JsonSerializer.Serialize(Headers.ToDictionary(header => header.HeaderIndex, header => header.HeaderItem), new JsonSerializerOptions { WriteIndented = true })} }} )" : "} )"));
+#else
+                    LoggerAccessor.LogInfo($"[SSFWProcessor] - Home Client Requested the SSFW Server with URL : {request.Method} {absolutepath}");
 #endif
-                                        if (absolutepath.Contains("p4t-cprod"))
+
+                    if (!string.IsNullOrEmpty(UserAgent) && UserAgent.Contains("PSHome"))
+                    {
+                        string? env = ExtractBeforeFirstDot(host);
+                        string sessionid = GetHeaderValue(Headers, "X-Home-Session-Id");
+
+                        if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
+                            env = "cprod";
+
+                        // Instantiate services
+                        SSFWAuditService auditService = new(sessionid, env, _legacykey);
+                        SSFWRewardsService rewardSvc = new(_legacykey);
+                        SSFWLayoutService layout = new(_legacykey);
+                        SSFWAvatarLayoutService avatarLayout = new(sessionid, _legacykey);
+
+                        switch (request.Method)
+                        {
+                            case "GET":
+
+                                #region LayoutService
+                                if (absolutepath.Contains($"/LayoutService/{env}/person/") && IsSSFWRegistered(sessionid))
+                                {
+                                    string? res = null;
+
+                                    if (LayoutGetOverrides.ContainsKey(sessionid))
+                                        LayoutGetOverrides.Remove(sessionid, out res);
+                                    else
+                                        res = layout.HandleLayoutServiceGET(directoryPath, filePath);
+
+                                    if (res == null)
+                                    {
+                                        Response.Clear();
+                                        Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                        Response.SetBody();
+                                    }
+                                    else if (res == string.Empty)
+                                    {
+                                        Response.Clear();
+                                        Response.SetBegin((int)HttpStatusCode.NotFound);
+                                        Response.SetBody();
+                                    }
+                                    else
+                                        Response.MakeGetResponse(res, "application/json");
+                                }
+                                #endregion
+
+                                #region AdminObjectService
+                                else if (absolutepath.Contains("/AdminObjectService/start") && IsSSFWRegistered(sessionid))
+                                {
+                                    Response.Clear();
+                                    if (new SSFWAdminObjectService(sessionid, _legacykey).HandleAdminObjectService(UserAgent))
+                                        Response.SetBegin((int)HttpStatusCode.OK);
+                                    else
+                                        Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                    Response.SetBody();
+                                }
+                                #endregion
+
+                                #region SaveDataService
+                                else if (absolutepath.Contains($"/SaveDataService/{env}/{segments.LastOrDefault()}") && IsSSFWRegistered(sessionid))
+                                {
+                                    string? res = SSFWGetFileList.SSFWSaveDataDebugGetFileList(directoryPath, segments.LastOrDefault());
+                                    if (res != null)
+                                        Response.MakeGetResponse(res, "application/json");
+                                    else
+                                        Response.MakeErrorResponse();
+                                }
+                                #endregion
+
+                                else if (IsSSFWRegistered(sessionid))
+                                {
+                                    //First check if this is a Inventory request
+                                    if (absolutepath.Contains($"/RewardsService/") && absolutepath.Contains("counts"))
+                                    {
+                                        //Detect if existing inv exists
+                                        if (File.Exists(filePath + ".json"))
                                         {
-                                            #region Quest for Greatness
-                                            statusCode = HttpStatusCode.OK;
-                                            response.StatusCode = (int)statusCode;
-                                            response.ContentType = "application/json";
-                                            sent = await response.Send(CompressResponse(response, @"{
+                                            string? res = FileHelper.ReadAllText(filePath + ".json", _legacykey);
+
+                                            if (!string.IsNullOrEmpty(res))
+                                            {
+                                                if (GetHeaderValue(Headers, "Accept") == "application/json")
+                                                    Response.MakeGetResponse(res, "application/json");
+                                                else
+                                                    Response.MakeGetResponse(res);
+                                            }
+                                            else
+                                                Response.MakeErrorResponse();
+                                        }
+                                        else //fallback default 
+                                            Response.MakeGetResponse(@"{ ""00000000-00000000-00000000-00000001"": 1 } ", "application/json");
+                                    }
+                                    //Check for specifically the Tracking GUID
+                                    else if (absolutepath.Contains($"/RewardsService/") && absolutepath.Contains("object/00000000-00000000-00000000-00000001"))
+                                    {
+                                        //Detect if existing inv exists
+                                        if (File.Exists(filePath + ".json"))
+                                        {
+                                            string? res = FileHelper.ReadAllText(filePath + ".json", _legacykey);
+
+                                            if (!string.IsNullOrEmpty(res))
+                                            {
+                                                if (GetHeaderValue(Headers, "Accept") == "application/json")
+                                                    Response.MakeGetResponse(res, "application/json");
+                                                else
+                                                    Response.MakeGetResponse(res);
+                                            }
+                                            else
+                                                Response.MakeErrorResponse();
+                                        }
+                                        else //fallback default 
+                                        {
+#if DEBUG
+                                            LoggerAccessor.LogWarn($"[SSFWProcessor] : {UserAgent} Non-existent inventories detected, using defaults!");
+#endif
+                                            if (absolutepath.Contains("p4t-cprod"))
+                                            {
+                                                #region Quest for Greatness
+                                                Response.MakeGetResponse(@"{
                                                       ""result"": 0,
                                                       ""rewards"": {
                                                         ""00000000-00000000-00000000-00000001"": {
@@ -452,16 +291,13 @@ namespace SSFWServer
                                                           ""_id"": ""1""
                                                         }
                                                       }
-                                                    }", encoding));
-                                            #endregion
-                                        }
-                                        else
-                                        {
-                                            #region Pottermore
-                                            statusCode = HttpStatusCode.OK;
-                                            response.StatusCode = (int)statusCode;
-                                            response.ContentType = "application/json";
-                                            sent = await response.Send(CompressResponse(response, @"{
+                                                    }", "application/json");
+                                                #endregion
+                                            }
+                                            else
+                                            {
+                                                #region Pottermore
+                                                Response.MakeGetResponse(@"{
                                                       ""result"": 0,
                                                       ""rewards"": [
                                                         {
@@ -471,929 +307,813 @@ namespace SSFWServer
                                                           }
                                                         }
                                                       ]
-                                                    }", encoding));
-                                            #endregion
+                                                    }", "application/json");
+                                                #endregion
+                                            }
+
                                         }
-
                                     }
-                                }
-                                else if (File.Exists(filePath + ".json"))
-                                {
-                                    string? res = FileHelper.ReadAllText(filePath + ".json", legacykey);
-
-                                    if (!string.IsNullOrEmpty(res))
+                                    else if (File.Exists(filePath + ".json"))
                                     {
-                                        if (GetHeaderValue(Headers, "Accept") == "application/json")
+                                        string? res = FileHelper.ReadAllText(filePath + ".json", _legacykey);
+
+                                        if (!string.IsNullOrEmpty(res))
                                         {
-                                            statusCode = HttpStatusCode.OK;
-                                            response.StatusCode = (int)statusCode;
-                                            response.ContentType = "application/json";
-                                            sent = await response.Send(CompressResponse(response, res, encoding));
+                                            if (GetHeaderValue(Headers, "Accept") == "application/json")
+                                                Response.MakeGetResponse(res, "application/json");
+                                            else
+                                                Response.MakeGetResponse(res);
                                         }
                                         else
-                                        {
-                                            statusCode = HttpStatusCode.OK;
-                                            response.StatusCode = (int)statusCode;
-                                            sent = await response.Send(CompressResponse(response, res, encoding));
-                                        }
+                                            Response.MakeErrorResponse();
+                                    }
+                                    else if (File.Exists(filePath + ".bin"))
+                                    {
+                                        byte[]? res = FileHelper.ReadAllBytes(filePath + ".bin", _legacykey);
+
+                                        if (res != null)
+                                            Response.MakeGetResponse(res, "application/octet-stream");
+                                        else
+                                            Response.MakeErrorResponse();
+                                    }
+                                    else if (File.Exists(filePath + ".jpeg"))
+                                    {
+                                        byte[]? res = FileHelper.ReadAllBytes(filePath + ".jpeg", _legacykey);
+
+                                        if (res != null)
+                                            Response.MakeGetResponse(res, "image/jpeg");
+                                        else
+                                            Response.MakeErrorResponse();
                                     }
                                     else
                                     {
-                                        statusCode = HttpStatusCode.InternalServerError;
-                                        response.StatusCode = (int)statusCode;
-                                        sent = await response.Send();
+                                        LoggerAccessor.LogWarn($"[SSFWProcessor] : {UserAgent} Requested a non-existent file - {filePath}");
+                                        Response.Clear();
+                                        Response.SetBegin((int)HttpStatusCode.NotFound);
+                                        Response.SetBody();
                                     }
                                 }
-                                else if (File.Exists(filePath + ".bin"))
-                                {
-                                    byte[]? res = FileHelper.ReadAllBytes(filePath + ".bin", legacykey);
-
-                                    if (res != null)
-                                    {
-                                        statusCode = HttpStatusCode.OK;
-                                        response.StatusCode = (int)statusCode;
-                                        response.ContentType = "application/octet-stream";
-                                        sent = await response.Send(CompressResponse(response, res, encoding));
-                                    }
-                                    else
-                                    {
-                                        statusCode = HttpStatusCode.InternalServerError;
-                                        response.StatusCode = (int)statusCode;
-                                        sent = await response.Send();
-                                    }
-                                }
-                                else if (File.Exists(filePath + ".jpeg"))
-                                {
-                                    byte[]? res = FileHelper.ReadAllBytes(filePath + ".jpeg", legacykey);
-
-                                    if (res != null)
-                                    {
-                                        statusCode = HttpStatusCode.OK;
-                                        response.StatusCode = (int)statusCode;
-                                        response.ContentType = "image/jpeg";
-                                        sent = await response.Send(CompressResponse(response, res, encoding));
-                                    }
-                                    else
-                                    {
-                                        statusCode = HttpStatusCode.InternalServerError;
-                                        response.StatusCode = (int)statusCode;
-                                        sent = await response.Send();
-                                    }
-                                }
-                                else
-                                {
-                                    LoggerAccessor.LogWarn($"[SSFW] : {UserAgent} Requested a non-existent file - {filePath}");
-                                    statusCode = HttpStatusCode.NotFound;
-                                    response.StatusCode = (int)statusCode;
-                                    sent = await response.Send();
-                                }
-                            }
-                            else if (absolutepath.Contains($"/SaveDataService/avatar/{env}/") && absolutepath.EndsWith(".jpg"))
-                            {
-                                if (File.Exists(filePath))
-                                {
-                                    byte[]? res = FileHelper.ReadAllBytes(filePath, legacykey);
-
-                                    if (res != null)
-                                    {
-                                        statusCode = HttpStatusCode.OK;
-                                        response.StatusCode = (int)statusCode;
-                                        response.ContentType = "image/jpg";
-                                        sent = await response.Send(CompressResponse(response, res, encoding));
-                                    }
-                                    else
-                                    {
-                                        statusCode = HttpStatusCode.InternalServerError;
-                                        response.StatusCode = (int)statusCode;
-                                        sent = await response.Send();
-                                    }
-                                }
-                                else
-                                {
-                                    statusCode = HttpStatusCode.NotFound;
-                                    response.StatusCode = (int)statusCode;
-                                    sent = await response.Send();
-                                }
-                            }
-                            else
-                            {
-                                statusCode = HttpStatusCode.Forbidden;
-                                response.StatusCode = (int)statusCode;
-                                sent = await response.Send();
-                            }
-                            break;
-                        case "POST":
-
-                            #region SSFW Login
-                            byte[] postbuffer = request.DataAsBytes;
-                            if (absolutepath == $"/{LoginGUID}/login/token/psn")
-                            {
-                                string? XHomeClientVersion = GetHeaderValue(Headers, "X-HomeClientVersion");
-                                string? generalsecret = GetHeaderValue(Headers, "general-secret");
-
-                                if (!string.IsNullOrEmpty(XHomeClientVersion) && !string.IsNullOrEmpty(generalsecret))
-                                {
-                                    SSFWLogin login = new(XHomeClientVersion, generalsecret, XHomeClientVersion.Replace(".", string.Empty).PadRight(6, '0'), GetHeaderValue(Headers, "x-signature"), legacykey);
-                                    string? res = login.HandleLogin(postbuffer, env);
-                                    if (!string.IsNullOrEmpty(res))
-                                    {
-                                        statusCode = HttpStatusCode.Created;
-                                        response.StatusCode = (int)statusCode;
-                                        response.ContentType = "application/json";
-                                        sent = await response.Send(CompressResponse(response, res, encoding));
-
-                                    }
-                                    else
-                                    {
-                                        statusCode = HttpStatusCode.InternalServerError;
-                                        response.StatusCode = (int)statusCode;
-                                        sent = await response.Send();
-                                    }
-                                    login.Dispose();
-                                }
-                                else
-                                {
-                                    statusCode = HttpStatusCode.Forbidden;
-                                    response.StatusCode = (int)statusCode;
-                                    sent = await response.Send();
-                                }
-                            }
-                            #endregion
-
-                            #region PING
-                            else if (absolutepath.Contains("/morelife") && !string.IsNullOrEmpty(GetHeaderValue(Headers, "x-signature")))
-                            {
-                                const byte GuidLength = 36;
-                                int index = absolutepath.IndexOf("/morelife");
-
-                                if (index != -1 && index > GuidLength) // Makes sure we have at least 36 chars available beforehand.
-                                {
-                                    // Extract the substring between the last '/' and the morelife separator.
-                                    string resultSessionId = absolutepath.Substring(index - GuidLength, GuidLength);
-
-                                    if (Regex.IsMatch(resultSessionId, @"^[{(]?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})[)}]?$") && IsSSFWRegistered(resultSessionId))
-                                    {
-                                        SSFWUserSessionManager.UpdateKeepAliveTime(resultSessionId);
-                                        statusCode = HttpStatusCode.OK;
-                                        response.StatusCode = (int)statusCode;
-                                        response.ContentType = "application/json";
-                                        sent = await response.Send(CompressResponse(response, "{}", encoding));
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        statusCode = HttpStatusCode.Forbidden;
-                                        response.StatusCode = (int)statusCode;
-                                        sent = await response.Send();
-                                    }
-                                }
-                                else
-                                {
-                                    statusCode = HttpStatusCode.InternalServerError;
-                                    response.StatusCode = (int)statusCode;
-                                    sent = await response.Send();
-                                }
-                            }
-                            #endregion
-
-                            #region AvatarLayoutService
-                            else if (absolutepath.Contains($"/AvatarLayoutService/{env}/") && IsSSFWRegistered(sessionid))
-                            {
-                                if (avatarLayout.HandleAvatarLayout(postbuffer, directoryPath, filePath, absolutepath, false))
-                                    statusCode = HttpStatusCode.OK;
-                                else
-                                    statusCode = HttpStatusCode.Forbidden;
-                                response.StatusCode = (int)statusCode;
-                                sent = await response.Send();
-                            }
-                            #endregion
-
-                            #region LayoutService
-                            else if (absolutepath.Contains($"/LayoutService/{env}/person/") && IsSSFWRegistered(sessionid))
-                            {
-                                if (layout.HandleLayoutServicePOST(postbuffer, directoryPath, absolutepath))
-                                    statusCode = HttpStatusCode.OK;
-                                else
-                                    statusCode = HttpStatusCode.Forbidden;
-                                response.StatusCode = (int)statusCode;
-                                sent = await response.Send();
-                            }
-                            #endregion
-
-                            #region RewardsService
-                            else if (absolutepath.Contains($"/RewardsService/{env}/rewards/") && IsSSFWRegistered(sessionid))
-                            {
-                                statusCode = HttpStatusCode.OK;
-                                response.StatusCode = (int)statusCode;
-                                response.ContentType = "application/json";
-                                sent = await response.Send(CompressResponse(response, rewardSvc.HandleRewardServicePOST(postbuffer, directoryPath, filePath, absolutepath), encoding));
-                            }
-                            else if (absolutepath.Contains($"/RewardsService/trunks-{env}/trunks/") && absolutepath.Contains("/setpartial") && IsSSFWRegistered(sessionid))
-                            {
-                                rewardSvc.HandleRewardServiceTrunksPOST(postbuffer, directoryPath, filePath, absolutepath, env, SSFWUserSessionManager.GetIdBySessionId(sessionid));
-                                statusCode = HttpStatusCode.OK;
-                                response.StatusCode = (int)statusCode;
-                                sent = await response.Send();
-                            }
-                            else if (absolutepath.Contains($"/RewardsService/trunks-{env}/trunks/") && absolutepath.Contains("/set") && IsSSFWRegistered(sessionid))
-                            {
-                                rewardSvc.HandleRewardServiceTrunksEmergencyPOST(postbuffer, directoryPath, absolutepath);
-                                statusCode = HttpStatusCode.OK;
-                                response.StatusCode = (int)statusCode;
-                                sent = await response.Send();
-                            }
-                            else if (
-                                (absolutepath.Contains($"/RewardsService/pm_{env}_inv/")
-                                || absolutepath.Contains($"/RewardsService/pmcards/")
-                                || absolutepath.Contains($"/RewardsService/p4t-{env}/"))
-                                && IsSSFWRegistered(sessionid))
-                            {
-                                statusCode = HttpStatusCode.OK;
-                                response.StatusCode = (int)statusCode;
-                                response.ContentType = "application/json";
-                                sent = await response.Send(CompressResponse(response, rewardSvc.HandleRewardServiceInvPOST(postbuffer, directoryPath, filePath, absolutepath), encoding));
-                            }
-                            #endregion
-
-                            else if (IsSSFWRegistered(sessionid))
-                            {
-                                LoggerAccessor.LogWarn($"[SSFW] : Host requested a POST method I don't know about! - Report it to GITHUB with the request : {absolutepath}");
-                                if (postbuffer != null)
-                                {
-                                    Directory.CreateDirectory(directoryPath);
-                                    switch (GetHeaderValue(Headers, "Content-type", false))
-                                    {
-                                        case "image/jpeg":
-                                            File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.jpeg", postbuffer);
-                                            break;
-                                        case "application/json":
-                                            File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.json", postbuffer);
-                                            break;
-                                        default:
-                                            File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.bin", postbuffer);
-                                            break;
-                                    }
-                                }
-                                statusCode = HttpStatusCode.OK;
-                                response.StatusCode = (int)statusCode;
-                                sent = await response.Send();
-                            }
-                            else
-                            {
-                                statusCode = HttpStatusCode.Forbidden;
-                                response.StatusCode = (int)statusCode;
-                                sent = await response.Send();
-                            }
-
-                            break;
-                        case "PUT":
-                            if (IsSSFWRegistered(sessionid))
-                            {
-                                byte[] putbuffer = request.DataAsBytes;
-                                if (putbuffer != null)
-                                {
-                                    Directory.CreateDirectory(directoryPath);
-                                    switch (GetHeaderValue(Headers, "Content-type", false))
-                                    {
-                                        case "image/jpeg":
-                                            string savaDataAvatarDirectoryPath = Path.Combine(SSFWServerConfiguration.SSFWStaticFolder, $"SaveDataService/avatar/{env}/");
-
-                                            Directory.CreateDirectory(savaDataAvatarDirectoryPath);
-
-                                            string? userName = SSFWUserSessionManager.GetFormatedUsernameBySessionId(sessionid);
-
-                                            if (!string.IsNullOrEmpty(userName))
-                                            {
-                                                Task.WhenAll(File.WriteAllBytesAsync($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.jpeg", putbuffer),
-                                                    File.WriteAllBytesAsync($"{savaDataAvatarDirectoryPath}{userName}.jpg", putbuffer)).Wait();
-                                                statusCode = HttpStatusCode.OK;
-                                                response.StatusCode = (int)statusCode;
-                                                sent = await response.Send();
-                                            }
-                                            else
-                                            {
-                                                statusCode = HttpStatusCode.InternalServerError;
-                                                response.StatusCode = (int)statusCode;
-                                                sent = await response.Send();
-                                            }
-                                            break;
-                                        case "application/json":
-                                            if (absolutepath.Equals("/AuditService/log"))
-                                            {
-                                                auditService.HandleAuditService(absolutepath, putbuffer);
-                                                //Audit doesn't care we send ok!
-                                                statusCode = HttpStatusCode.OK;
-                                                response.StatusCode = (int)statusCode;
-                                                sent = await response.Send();
-                                            }
-                                            else
-                                            {
-                                                File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.json", putbuffer);
-                                                statusCode = HttpStatusCode.OK;
-                                                response.StatusCode = (int)statusCode;
-                                                sent = await response.Send();
-                                            }
-                                            break;
-                                        default:
-                                            File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.bin", putbuffer);
-                                            statusCode = HttpStatusCode.OK;
-                                            response.StatusCode = (int)statusCode;
-                                            sent = await response.Send();
-                                            break;
-                                    }
-                                }
-                                else
-                                {
-                                    statusCode = HttpStatusCode.Forbidden;
-                                    response.StatusCode = (int)statusCode;
-                                    sent = await response.Send();
-                                }
-                            }
-                            else
-                            {
-                                statusCode = HttpStatusCode.Forbidden;
-                                response.StatusCode = (int)statusCode;
-                                sent = await response.Send();
-                            }
-                            break;
-                        case "DELETE":
-
-                            #region AvatarLayoutService
-                            if (absolutepath.Contains($"/AvatarLayoutService/{env}/") && IsSSFWRegistered(sessionid))
-                            {
-                                if (avatarLayout.HandleAvatarLayout(request.DataAsBytes, directoryPath, filePath, absolutepath, true))
-                                    statusCode = HttpStatusCode.OK;
-                                else
-                                    statusCode = HttpStatusCode.Forbidden;
-                                response.StatusCode = (int)statusCode;
-                                sent = await response.Send();
-                            }
-                            #endregion
-
-                            else if (IsSSFWRegistered(sessionid))
-                            {
-                                if (File.Exists(filePath + ".json"))
-                                {
-                                    File.Delete(filePath + ".json");
-                                    statusCode = HttpStatusCode.OK;
-                                    response.StatusCode = (int)statusCode;
-                                    sent = await response.Send();
-                                }
-                                else if (File.Exists(filePath + ".bin"))
-                                {
-                                    File.Delete(filePath + ".bin");
-                                    statusCode = HttpStatusCode.OK;
-                                    response.StatusCode = (int)statusCode;
-                                    sent = await response.Send();
-                                }
-                                else if (File.Exists(filePath + ".jpeg"))
-                                {
-                                    File.Delete(filePath + ".jpeg");
-                                    statusCode = HttpStatusCode.OK;
-                                    response.StatusCode = (int)statusCode;
-                                    sent = await response.Send();
-                                }
-                                else
-                                {
-                                    LoggerAccessor.LogError($"[SSFW] : {UserAgent} Requested a file to delete that doesn't exist - {filePath}");
-                                    statusCode = HttpStatusCode.NotFound;
-                                    response.StatusCode = (int)statusCode;
-                                    sent = await response.Send();
-                                }
-                            }
-                            else
-                            {
-                                statusCode = HttpStatusCode.Forbidden;
-                                response.StatusCode = (int)statusCode;
-                                sent = await response.Send();
-                            }
-                            break;
-                        default:
-                            statusCode = HttpStatusCode.Forbidden;
-                            response.StatusCode = (int)statusCode;
-                            sent = await response.Send();
-                            break;
-                    }
-                }
-                else
-                {
-                    switch (request.Method.ToString())
-                    {
-                        case "GET":
-                            try
-                            {
-                                string? extension = Path.GetExtension(filePath);
-
-                                if (!string.IsNullOrEmpty(extension) && allowedWebExtensions.Contains(extension))
+                                else if (absolutepath.Contains($"/SaveDataService/avatar/{env}/") && absolutepath.EndsWith(".jpg"))
                                 {
                                     if (File.Exists(filePath))
                                     {
-                                        statusCode = HttpStatusCode.OK;
-                                        response.StatusCode = (int)statusCode;
-                                        response.ContentType = HTTPProcessor.GetMimeType(extension, HTTPProcessor._mimeTypes);
-                                        sent = await response.Send(CompressResponse(response, File.ReadAllBytes(filePath), encoding));
+                                        byte[]? res = FileHelper.ReadAllBytes(filePath, _legacykey);
+
+                                        if (res != null)
+                                            Response.MakeGetResponse(res, "image/jpg");
+                                        else
+                                            Response.MakeErrorResponse();
                                     }
                                     else
                                     {
-                                        statusCode = HttpStatusCode.NotFound;
-                                        response.StatusCode = (int)statusCode;
-                                        sent = await response.Send(string.Empty);
+                                        Response.Clear();
+                                        Response.SetBegin((int)HttpStatusCode.NotFound);
+                                        Response.SetBody();
                                     }
                                 }
                                 else
                                 {
-                                    statusCode = HttpStatusCode.Forbidden;
-                                    response.StatusCode = (int)statusCode;
-                                    sent = await response.Send(string.Empty);
+                                    Response.Clear();
+                                    Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                    Response.SetBody();
                                 }
-                            }
-                            catch
-                            {
-                                statusCode = HttpStatusCode.InternalServerError;
-                                response.StatusCode = (int)statusCode;
-                                sent = await response.Send(string.Empty);
-                            }
-                            break;
-                        case "OPTIONS":
-                            statusCode = HttpStatusCode.OK;
-                            response.StatusCode = (int)statusCode;
-                            response.Headers.Add("Allow", allowedMethods);
-                            sent = await response.Send(string.Empty);
-                            break;
-                        case "POST":
-                            byte InventoryEntryType = 0;
-                            string? userId = null;
-                            string uuid = string.Empty;
-                            string sessionId = string.Empty;
-                            string env = string.Empty;
-                            string[]? uuids = null;
+                                break;
+                            case "POST":
 
-                            switch (absolutepath)
-                            {
-                                case "/WebService/GetSceneLike/":
-                                    string sceneNameLike = GetHeaderValue(Headers, "like", false);
-
-                                    if (!string.IsNullOrEmpty(sceneNameLike))
+                                if (request.BodyLength <= Array.MaxLength)
+                                {
+                                    #region SSFW Login
+                                    byte[] postbuffer = request.BodyBytes;
+                                    if (absolutepath == $"/{LoginGUID}/login/token/psn")
                                     {
-                                        KeyValuePair<string, string>? sceneData = ScenelistParser.GetSceneNameLike(sceneNameLike);
+                                        string? XHomeClientVersion = GetHeaderValue(Headers, "X-HomeClientVersion");
+                                        string? generalsecret = GetHeaderValue(Headers, "general-secret");
 
-                                        if (sceneData != null && int.TryParse(sceneData.Value.Value, out int extractedId))
+                                        if (!string.IsNullOrEmpty(XHomeClientVersion) && !string.IsNullOrEmpty(generalsecret))
                                         {
-                                            statusCode = HttpStatusCode.OK;
-                                            response.StatusCode = (int)statusCode;
-                                            sent = await response.Send(sceneData.Value.Key + ',' + extractedId.ToUuid());
+                                            SSFWLogin login = new(XHomeClientVersion, generalsecret, XHomeClientVersion.Replace(".", string.Empty).PadRight(6, '0'), GetHeaderValue(Headers, "x-signature"), _legacykey);
+                                            string? result = login.HandleLogin(postbuffer, env);
+                                            if (!string.IsNullOrEmpty(result))
+                                            {
+                                                Response.Clear();
+                                                Response.SetBegin((int)HttpStatusCode.Created);
+                                                Response.SetContentType("application/json");
+                                                Response.SetBody(result, encoding);
+                                            }
+                                            else
+                                                Response.MakeErrorResponse();
                                         }
                                         else
                                         {
-                                            statusCode = HttpStatusCode.InternalServerError;
-                                            response.StatusCode = (int)statusCode;
-                                            sent = await response.Send("SceneNameLike returned a null or empty sceneName!");
+                                            Response.Clear();
+                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                            Response.SetBody();
+                                        }
+                                    }
+                                    #endregion
+
+                                    #region PING
+                                    else if (absolutepath.Contains("/morelife") && !string.IsNullOrEmpty(GetHeaderValue(Headers, "x-signature")))
+                                    {
+                                        const byte GuidLength = 36;
+                                        int index = absolutepath.IndexOf("/morelife");
+
+                                        if (index != -1 && index > GuidLength) // Makes sure we have at least 36 chars available beforehand.
+                                        {
+                                            // Extract the substring between the last '/' and the morelife separator.
+                                            string resultSessionId = absolutepath.Substring(index - GuidLength, GuidLength);
+
+                                            if (Regex.IsMatch(resultSessionId, @"^[{(]?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})[)}]?$") && IsSSFWRegistered(resultSessionId))
+                                            {
+                                                SSFWUserSessionManager.UpdateKeepAliveTime(resultSessionId);
+                                                Response.MakeGetResponse("{}", "application/json");
+                                                break;
+                                            }
+                                            else
+                                            {
+                                                Response.Clear();
+                                                Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                                Response.SetBody();
+                                            }
+                                        }
+                                        else
+                                            Response.MakeErrorResponse();
+                                    }
+                                    #endregion
+
+                                    #region AvatarLayoutService
+                                    else if (absolutepath.Contains($"/AvatarLayoutService/{env}/") && IsSSFWRegistered(sessionid))
+                                    {
+                                        Response.Clear();
+                                        if (avatarLayout.HandleAvatarLayout(postbuffer, directoryPath, filePath, absolutepath, false))
+                                            Response.SetBegin((int)HttpStatusCode.OK);
+                                        else
+                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                        Response.SetBody();
+                                    }
+                                    #endregion
+
+                                    #region LayoutService
+                                    else if (absolutepath.Contains($"/LayoutService/{env}/person/") && IsSSFWRegistered(sessionid))
+                                    {
+                                        Response.Clear();
+                                        if (layout.HandleLayoutServicePOST(postbuffer, directoryPath, absolutepath))
+                                            Response.SetBegin((int)HttpStatusCode.OK);
+                                        else
+                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                        Response.SetBody();
+                                    }
+                                    #endregion
+
+                                    #region RewardsService
+                                    else if (absolutepath.Contains($"/RewardsService/{env}/rewards/") && IsSSFWRegistered(sessionid))
+                                        Response.MakeGetResponse(rewardSvc.HandleRewardServicePOST(postbuffer, directoryPath, filePath, absolutepath), "application/json");
+                                    else if (absolutepath.Contains($"/RewardsService/trunks-{env}/trunks/") && absolutepath.Contains("/setpartial") && IsSSFWRegistered(sessionid))
+                                    {
+                                        rewardSvc.HandleRewardServiceTrunksPOST(postbuffer, directoryPath, filePath, absolutepath, env, SSFWUserSessionManager.GetIdBySessionId(sessionid));
+                                        Response.MakeOkResponse();
+                                    }
+                                    else if (absolutepath.Contains($"/RewardsService/trunks-{env}/trunks/") && absolutepath.Contains("/set") && IsSSFWRegistered(sessionid))
+                                    {
+                                        rewardSvc.HandleRewardServiceTrunksEmergencyPOST(postbuffer, directoryPath, absolutepath);
+                                        Response.MakeOkResponse();
+                                    }
+                                    else if (
+                                        (absolutepath.Contains($"/RewardsService/pm_{env}_inv/")
+                                        || absolutepath.Contains($"/RewardsService/pmcards/")
+                                        || absolutepath.Contains($"/RewardsService/p4t-{env}/"))
+                                        && IsSSFWRegistered(sessionid))
+                                        Response.MakeGetResponse(rewardSvc.HandleRewardServiceInvPOST(postbuffer, directoryPath, filePath, absolutepath), "application/json");
+                                    #endregion
+
+                                    else if (IsSSFWRegistered(sessionid))
+                                    {
+                                        LoggerAccessor.LogWarn($"[SSFWProcessor] : Host requested a POST method I don't know about! - Report it to GITHUB with the request : {absolutepath}");
+                                        if (postbuffer != null)
+                                        {
+                                            Directory.CreateDirectory(directoryPath);
+                                            switch (GetHeaderValue(Headers, "Content-type", false))
+                                            {
+                                                case "image/jpeg":
+                                                    File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.jpeg", postbuffer);
+                                                    break;
+                                                case "application/json":
+                                                    File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.json", postbuffer);
+                                                    break;
+                                                default:
+                                                    File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.bin", postbuffer);
+                                                    break;
+                                            }
+                                        }
+                                        Response.MakeOkResponse();
+                                    }
+                                    else
+                                    {
+                                        Response.Clear();
+                                        Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                        Response.SetBody();
+                                    }
+                                }
+                                else
+                                {
+                                    Response.Clear();
+                                    Response.SetBegin(400);
+                                    Response.SetBody();
+                                }
+
+                                break;
+                            case "PUT":
+                                if (IsSSFWRegistered(sessionid))
+                                {
+                                    if (request.BodyLength <= Array.MaxLength)
+                                    {
+                                        byte[] putbuffer = request.BodyBytes;
+                                        if (putbuffer != null)
+                                        {
+                                            Directory.CreateDirectory(directoryPath);
+                                            switch (GetHeaderValue(Headers, "Content-type", false))
+                                            {
+                                                case "image/jpeg":
+                                                    string savaDataAvatarDirectoryPath = Path.Combine(SSFWServerConfiguration.SSFWStaticFolder, $"SaveDataService/avatar/{env}/");
+
+                                                    Directory.CreateDirectory(savaDataAvatarDirectoryPath);
+
+                                                    string? userName = SSFWUserSessionManager.GetFormatedUsernameBySessionId(sessionid);
+
+                                                    if (!string.IsNullOrEmpty(userName))
+                                                    {
+                                                        Task.WhenAll(File.WriteAllBytesAsync($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.jpeg", putbuffer),
+                                                            File.WriteAllBytesAsync($"{savaDataAvatarDirectoryPath}{userName}.jpg", putbuffer)).Wait();
+                                                        Response.MakeOkResponse();
+                                                    }
+                                                    else
+                                                        Response.MakeErrorResponse();
+                                                    break;
+                                                case "application/json":
+                                                    if (absolutepath.Equals("/AuditService/log"))
+                                                    {
+                                                        auditService.HandleAuditService(absolutepath, putbuffer);
+                                                        //Audit doesn't care we send ok!
+                                                        Response.MakeOkResponse();
+                                                    }
+                                                    else
+                                                    {
+                                                        File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.json", putbuffer);
+                                                        Response.MakeOkResponse();
+                                                    }
+                                                    break;
+                                                default:
+                                                    File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.bin", putbuffer);
+                                                    Response.MakeOkResponse();
+                                                    break;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Response.Clear();
+                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                            Response.SetBody();
                                         }
                                     }
                                     else
                                     {
-                                        statusCode = HttpStatusCode.Forbidden;
-                                        response.StatusCode = (int)statusCode;
-                                        sent = await response.Send("Invalid like attribute was used!");
+                                        Response.Clear();
+                                        Response.SetBegin(400);
+                                        Response.SetBody();
                                     }
-                                    break;
-                                case "/WebService/ApplyLayoutOverride/":
-                                    sessionId = GetHeaderValue(Headers, "sessionid", false);
-                                    string targetUserName = GetHeaderValue(Headers, "targetUserName", false);
-                                    string sceneId = GetHeaderValue(Headers, "sceneId", false);
-                                    env = GetHeaderValue(Headers, "env", false);
+                                }
+                                else
+                                {
+                                    Response.Clear();
+                                    Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                    Response.SetBody();
+                                }
+                                break;
+                            case "DELETE":
 
-                                    if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
-                                        env = "cprod";
-
-                                    if (!string.IsNullOrEmpty(sessionId) && !string.IsNullOrEmpty(targetUserName) && !string.IsNullOrEmpty(sceneId) && IsSSFWRegistered(sessionId))
+                                #region AvatarLayoutService
+                                if (absolutepath.Contains($"/AvatarLayoutService/{env}/") && IsSSFWRegistered(sessionid))
+                                {
+                                    if (request.BodyLength <= Array.MaxLength)
                                     {
-                                        string? res = null;
-                                        bool isRpcnUser = targetUserName.Contains("@RPCN");
-                                        string LayoutDirectoryPath = Path.Combine(SSFWServerConfiguration.SSFWStaticFolder, $"LayoutService/{env}/person/");
+                                        Response.Clear();
+                                        if (avatarLayout.HandleAvatarLayout(request.BodyBytes, directoryPath, filePath, absolutepath, true))
+                                            Response.SetBegin((int)HttpStatusCode.OK);
+                                        else
+                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                        Response.SetBody();
+                                    }
+                                    else
+                                    {
+                                        Response.Clear();
+                                        Response.SetBegin(400);
+                                        Response.SetBody();
+                                    }
+                                }
+                                #endregion
 
-                                        if (Directory.Exists(LayoutDirectoryPath))
+                                else if (IsSSFWRegistered(sessionid))
+                                {
+                                    if (File.Exists(filePath + ".json"))
+                                    {
+                                        File.Delete(filePath + ".json");
+                                        Response.MakeOkResponse();
+                                    }
+                                    else if (File.Exists(filePath + ".bin"))
+                                    {
+                                        File.Delete(filePath + ".bin");
+                                        Response.MakeOkResponse();
+                                    }
+                                    else if (File.Exists(filePath + ".jpeg"))
+                                    {
+                                        File.Delete(filePath + ".jpeg");
+                                        Response.MakeOkResponse();
+                                    }
+                                    else
+                                    {
+                                        LoggerAccessor.LogError($"[SSFWProcessor] : {UserAgent} Requested a file to delete that doesn't exist - {filePath}");
+                                        Response.Clear();
+                                        Response.SetBegin((int)HttpStatusCode.NotFound);
+                                        Response.SetBody();
+                                    }
+                                }
+                                else
+                                {
+                                    Response.Clear();
+                                    Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                    Response.SetBody();
+                                }
+                                break;
+                            default:
+                                Response.Clear();
+                                Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                Response.SetBody();
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        switch (request.Method)
+                        {
+                            case "GET":
+                                try
+                                {
+                                    string? extension = Path.GetExtension(filePath);
+
+                                    if (!string.IsNullOrEmpty(extension) && allowedWebExtensions.Contains(extension))
+                                    {
+                                        if (File.Exists(filePath))
                                         {
-                                            string? matchingDirectory = null;
-                                            string? username = SSFWUserSessionManager.GetUsernameBySessionId(sessionId);
-                                            string? clientVersion = username?.Substring(username.Length - 6, 6);
+                                            Response.Clear();
+                                            Response.SetBegin((int)HttpStatusCode.OK);
+                                            Response.SetContentType(HTTPProcessor.GetMimeType(extension, HTTPProcessor.MimeTypes));
+                                            Response.SetBody(File.ReadAllBytes(filePath), encoding, GetHeaderValue(Headers, "Origin"));
+                                        }
+                                        else
+                                        {
+                                            Response.Clear();
+                                            Response.SetBegin((int)HttpStatusCode.NotFound);
+                                            Response.SetBody(string.Empty, null, GetHeaderValue(Headers, "Origin"));
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Response.Clear();
+                                        Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                        Response.SetBody(string.Empty, null, GetHeaderValue(Headers, "Origin"));
+                                    }
+                                }
+                                catch
+                                {
+                                    Response.Clear();
+                                    Response.SetBegin((int)HttpStatusCode.InternalServerError);
+                                    Response.SetBody(string.Empty, null, GetHeaderValue(Headers, "Origin"));
+                                }
+                                break;
+                            case "OPTIONS":
+                                Response.Clear();
+                                Response.SetBegin((int)HttpStatusCode.OK);
+                                Response.SetHeader("Allow", HttpResponse.allowedMethods);
+                                Response.SetBody(string.Empty, null, GetHeaderValue(Headers, "Origin"));
+                                break;
+                            case "POST":
+                                byte InventoryEntryType = 0;
+                                string? userId = null;
+                                string uuid = string.Empty;
+                                string sessionId = string.Empty;
+                                string env = string.Empty;
+                                string[]? uuids = null;
 
-                                            if (!string.IsNullOrEmpty(clientVersion))
+                                switch (absolutepath)
+                                {
+                                    case "/WebService/GetSceneLike/":
+                                        string sceneNameLike = GetHeaderValue(Headers, "like", false);
+
+                                        Response.Clear();
+
+                                        if (!string.IsNullOrEmpty(sceneNameLike))
+                                        {
+                                            KeyValuePair<string, string>? sceneData = ScenelistParser.GetSceneNameLike(sceneNameLike);
+
+                                            if (sceneData != null && int.TryParse(sceneData.Value.Value, out int extractedId))
                                             {
-                                                if (isRpcnUser)
-                                                {
-                                                    string[] nameParts = targetUserName.Split('@');
+                                                Response.SetBegin((int)HttpStatusCode.OK);
+                                                Response.SetBody(sceneData.Value.Key + ',' + extractedId.ToUuid(), encoding, GetHeaderValue(Headers, "Origin"));
+                                            }
+                                            else
+                                            {
+                                                Response.SetBegin((int)HttpStatusCode.InternalServerError);
+                                                Response.SetBody("SceneNameLike returned a null or empty sceneName!", encoding, GetHeaderValue(Headers, "Origin"));
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                            Response.SetBody("Invalid like attribute was used!", encoding, GetHeaderValue(Headers, "Origin"));
+                                        }
+                                        break;
+                                    case "/WebService/ApplyLayoutOverride/":
+                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        string targetUserName = GetHeaderValue(Headers, "targetUserName", false);
+                                        string sceneId = GetHeaderValue(Headers, "sceneId", false);
+                                        env = GetHeaderValue(Headers, "env", false);
 
-                                                    if (nameParts.Length == 2 && !SSFWServerConfiguration.SSFWCrossSave)
+                                        if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
+                                            env = "cprod";
+
+                                        Response.Clear();
+
+                                        if (!string.IsNullOrEmpty(sessionId) && !string.IsNullOrEmpty(targetUserName) && !string.IsNullOrEmpty(sceneId) && IsSSFWRegistered(sessionId))
+                                        {
+                                            string? res = null;
+                                            bool isRpcnUser = targetUserName.Contains("@RPCN");
+                                            string LayoutDirectoryPath = Path.Combine(SSFWServerConfiguration.SSFWStaticFolder, $"LayoutService/{env}/person/");
+
+                                            if (Directory.Exists(LayoutDirectoryPath))
+                                            {
+                                                string? matchingDirectory = null;
+                                                string? username = SSFWUserSessionManager.GetUsernameBySessionId(sessionId);
+                                                string? clientVersion = username?.Substring(username.Length - 6, 6);
+
+                                                if (!string.IsNullOrEmpty(clientVersion))
+                                                {
+                                                    if (isRpcnUser)
                                                     {
-                                                        matchingDirectory = Directory.GetDirectories(LayoutDirectoryPath)
-                                                           .Where(dir =>
-                                                               Path.GetFileName(dir).StartsWith(nameParts[0]) &&
-                                                               Path.GetFileName(dir).Contains(nameParts[1]) &&
-                                                               Path.GetFileName(dir).Contains(clientVersion)
-                                                           ).FirstOrDefault();
+                                                        string[] nameParts = targetUserName.Split('@');
+
+                                                        if (nameParts.Length == 2 && !SSFWServerConfiguration.SSFWCrossSave)
+                                                        {
+                                                            matchingDirectory = Directory.GetDirectories(LayoutDirectoryPath)
+                                                               .Where(dir =>
+                                                                   Path.GetFileName(dir).StartsWith(nameParts[0]) &&
+                                                                   Path.GetFileName(dir).Contains(nameParts[1]) &&
+                                                                   Path.GetFileName(dir).Contains(clientVersion)
+                                                               ).FirstOrDefault();
+                                                        }
+                                                        else
+                                                            matchingDirectory = Directory.GetDirectories(LayoutDirectoryPath)
+                                                              .Where(dir =>
+                                                                  Path.GetFileName(dir).StartsWith(targetUserName.Replace("@RPCN", string.Empty)) &&
+                                                                  Path.GetFileName(dir).Contains(clientVersion)
+                                                              ).FirstOrDefault();
                                                     }
                                                     else
                                                         matchingDirectory = Directory.GetDirectories(LayoutDirectoryPath)
                                                           .Where(dir =>
-                                                              Path.GetFileName(dir).StartsWith(targetUserName.Replace("@RPCN", string.Empty)) &&
+                                                              Path.GetFileName(dir).StartsWith(targetUserName) &&
+                                                              !Path.GetFileName(dir).Contains("RPCN") &&
                                                               Path.GetFileName(dir).Contains(clientVersion)
                                                           ).FirstOrDefault();
                                                 }
-                                                else
-                                                    matchingDirectory = Directory.GetDirectories(LayoutDirectoryPath)
-                                                      .Where(dir =>
-                                                          Path.GetFileName(dir).StartsWith(targetUserName) &&
-                                                          !Path.GetFileName(dir).Contains("RPCN") &&
-                                                          Path.GetFileName(dir).Contains(clientVersion)
-                                                      ).FirstOrDefault();
-                                            }
 
-                                            if (!string.IsNullOrEmpty(matchingDirectory))
-                                                res = new SSFWLayoutService(legacykey).HandleLayoutServiceGET(matchingDirectory, sceneId);
+                                                if (!string.IsNullOrEmpty(matchingDirectory))
+                                                    res = new SSFWLayoutService(_legacykey).HandleLayoutServiceGET(matchingDirectory, sceneId);
 
-                                        } // if the dir not exists, we return 403.
+                                            } // if the dir not exists, we return 403.
 
-                                        if (res == null)
-                                        {
-                                            statusCode = HttpStatusCode.Forbidden;
-                                            response.StatusCode = (int)statusCode;
-                                            sent = await response.Send($"Override set for {sessionId}, but no layout was found for this scene.");
-                                        }
-                                        else if (res == string.Empty)
-                                        {
-                                            statusCode = HttpStatusCode.NotFound;
-                                            response.StatusCode = (int)statusCode;
-                                            sent = await response.Send($"Override set for {sessionId}, but layout data was empty.");
-                                        }
-                                        else
-                                        {
-                                            if (!LayoutGetOverrides.TryAdd(sessionId, res))
-                                                LayoutGetOverrides[sessionId] = res;
-
-                                            statusCode = HttpStatusCode.OK;
-                                            response.StatusCode = (int)statusCode;
-                                            response.ContentType = "application/json; charset=utf-8";
-                                            sent = await response.Send(CompressResponse(response, res, encoding));
-                                        }
-                                    }
-                                    else
-                                    {
-                                        statusCode = HttpStatusCode.Forbidden;
-                                        response.StatusCode = (int)statusCode;
-                                        sent = await response.Send("Invalid sessionid or targetUserName attribute was used!");
-                                    }
-                                    break;
-                                case "/WebService/R3moveLayoutOverride/":
-                                    sessionId = GetHeaderValue(Headers, "sessionid", false);
-
-                                    if (!string.IsNullOrEmpty(sessionId) && IsSSFWRegistered(sessionId))
-                                    {
-                                        if (LayoutGetOverrides.Remove(sessionId, out _))
-                                        {
-                                            statusCode = HttpStatusCode.OK;
-                                            response.StatusCode = (int)statusCode;
-                                            sent = await response.Send($"Override removed for {sessionId}.");
-                                        }
-                                        else
-                                        {
-                                            statusCode = HttpStatusCode.NotFound;
-                                            response.StatusCode = (int)statusCode;
-                                            sent = await response.Send($"Override not found for {sessionId}.");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        statusCode = HttpStatusCode.Forbidden;
-                                        response.StatusCode = (int)statusCode;
-                                        sent = await response.Send("Invalid sessionid attribute was used!");
-                                    }
-                                    break;
-                                case "/WebService/GetMini/":
-                                    sessionId = GetHeaderValue(Headers, "sessionid", false);
-                                    env = GetHeaderValue(Headers, "env", false);
-
-                                    if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
-                                        env = "cprod";
-
-                                    userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
-
-                                    if (!string.IsNullOrEmpty(userId))
-                                    {
-                                        string miniPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{userId}/mini.json";
-
-                                        if (File.Exists(miniPath))
-                                        {
-                                            try
+                                            if (res == null)
                                             {
-                                                statusCode = HttpStatusCode.OK;
-                                                response.StatusCode = (int)statusCode;
-                                                response.ContentType = "application/json; charset=utf-8";
-                                                sent = await response.Send(CompressResponse(response, FileHelper.ReadAllText(miniPath, legacykey) ?? string.Empty, encoding));
+                                                Response.Clear();
+                                                Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                                Response.SetBody($"Override set for {sessionId}, but no layout was found for this scene.", encoding, GetHeaderValue(Headers, "Origin"));
                                             }
-                                            catch
+                                            else if (res == string.Empty)
                                             {
-                                                statusCode = HttpStatusCode.InternalServerError;
-                                                response.StatusCode = (int)statusCode;
-                                                sent = await response.Send($"Error while reading the mini file for User: {sessionId} on env:{env}!");
+                                                Response.Clear();
+                                                Response.SetBegin((int)HttpStatusCode.NotFound);
+                                                Response.SetBody($"Override set for {sessionId}, but layout data was empty.", encoding, GetHeaderValue(Headers, "Origin"));
+                                            }
+                                            else
+                                            {
+                                                if (!LayoutGetOverrides.TryAdd(sessionId, res))
+                                                    LayoutGetOverrides[sessionId] = res;
+
+                                                Response.SetBegin((int)HttpStatusCode.OK);
+                                                Response.SetContentType("application/json; charset=utf-8");
+                                                Response.SetBody(res, encoding, GetHeaderValue(Headers, "Origin"));
                                             }
                                         }
                                         else
                                         {
-                                            statusCode = HttpStatusCode.Forbidden;
-                                            response.StatusCode = (int)statusCode;
-                                            sent = await response.Send($"User: {sessionId} on env:{env} doesn't have a ssfw mini file!");
+                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                            Response.SetBody("Invalid sessionid or targetUserName attribute was used!", encoding, GetHeaderValue(Headers, "Origin"));
                                         }
-                                    }
-                                    else
-                                    {
-                                        statusCode = HttpStatusCode.Forbidden;
-                                        response.StatusCode = (int)statusCode;
-                                        sent = await response.Send($"User: {sessionId} is not connected!");
-                                    }
-                                    break;
-                                case "/WebService/AddMiniItem/":
-                                    uuid = GetHeaderValue(Headers, "uuid", false);
-                                    sessionId = GetHeaderValue(Headers, "sessionid", false);
-                                    env = GetHeaderValue(Headers, "env", false);
+                                        break;
+                                    case "/WebService/R3moveLayoutOverride/":
+                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
 
-                                    if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
-                                        env = "cprod";
+                                        Response.Clear();
 
-                                    userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
-
-                                    if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(uuid) && byte.TryParse(GetHeaderValue(Headers, "invtype", false), out InventoryEntryType))
-                                    {
-                                        string miniPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{userId}/mini.json";
-
-                                        if (File.Exists(miniPath))
+                                        if (!string.IsNullOrEmpty(sessionId) && IsSSFWRegistered(sessionId))
                                         {
-                                            try
+                                            if (LayoutGetOverrides.Remove(sessionId, out _))
                                             {
-                                                new SSFWRewardsService(legacykey).AddMiniEntry(uuid, InventoryEntryType, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
-                                                statusCode = HttpStatusCode.OK;
-                                                response.StatusCode = (int)statusCode;
-                                                sent = await response.Send($"UUID: {uuid} successfully added to the Mini rewards list.");
+                                                Response.SetBegin((int)HttpStatusCode.OK);
+                                                Response.SetBody($"Override removed for {sessionId}.", encoding, GetHeaderValue(Headers, "Origin"));
                                             }
-                                            catch (Exception ex)
+                                            else
                                             {
-                                                string errMsg = $"Mini rewards list file update errored out for file: {miniPath} (Exception: {ex})";
-                                                statusCode = HttpStatusCode.InternalServerError;
-                                                response.StatusCode = (int)statusCode;
-                                                sent = await response.Send(errMsg);
-                                                LoggerAccessor.LogError($"[SSFW] - {errMsg}");
+                                                Response.SetBegin((int)HttpStatusCode.NotFound);
+                                                Response.SetBody($"Override not found for {sessionId}.", encoding, GetHeaderValue(Headers, "Origin"));
                                             }
                                         }
                                         else
                                         {
-                                            statusCode = HttpStatusCode.Forbidden;
-                                            response.StatusCode = (int)statusCode;
-                                            sent = await response.Send($"User: {sessionId} on env:{env} doesn't have a ssfw mini file!");
+                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                            Response.SetBody("Invalid sessionid attribute was used!", encoding, GetHeaderValue(Headers, "Origin"));
                                         }
-                                    }
-                                    else
-                                    {
-                                        statusCode = HttpStatusCode.Forbidden;
-                                        response.StatusCode = (int)statusCode;
-                                        sent = await response.Send($"User: {sessionId} is not connected or sent invalid InventoryEntryType!");
-                                    }
-                                    break;
-                                case "/WebService/AddMiniItems/":
-                                    uuids = GetHeaderValue(Headers, "uuids", false).Split(',');
-                                    sessionId = GetHeaderValue(Headers, "sessionid", false);
-                                    env = GetHeaderValue(Headers, "env", false);
+                                        break;
+                                    case "/WebService/GetMini/":
+                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        env = GetHeaderValue(Headers, "env", false);
 
-                                    if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
-                                        env = "cprod";
+                                        if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
+                                            env = "cprod";
 
-                                    userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
+                                        userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
 
-                                    if (!string.IsNullOrEmpty(userId) && uuids != null && byte.TryParse(GetHeaderValue(Headers, "invtype", false), out InventoryEntryType))
-                                    {
-                                        string miniPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{userId}/mini.json";
-
-                                        if (File.Exists(miniPath))
+                                        if (!string.IsNullOrEmpty(userId))
                                         {
-                                            Dictionary<string, byte> entriesToAdd = new();
+                                            string miniPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{userId}/mini.json";
 
-                                            foreach (string iteruuid in uuids)
+                                            if (File.Exists(miniPath))
                                             {
-                                                entriesToAdd.TryAdd(iteruuid, InventoryEntryType);
-                                            }
+                                                Response.Clear();
 
-                                            try
-                                            {
-                                                new SSFWRewardsService(legacykey).AddMiniEntries(entriesToAdd, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
-                                                statusCode = HttpStatusCode.OK;
-                                                response.StatusCode = (int)statusCode;
-                                                sent = await response.Send(CompressResponse(response, $"UUIDs: {string.Join(",", uuids)} successfully added to the Mini rewards list.", encoding));
+                                                try
+                                                {
+                                                    Response.SetBegin((int)HttpStatusCode.OK);
+                                                    Response.SetContentType("application/json; charset=utf-8");
+                                                    Response.SetBody(FileHelper.ReadAllText(miniPath, _legacykey) ?? string.Empty, encoding, GetHeaderValue(Headers, "Origin"));
+                                                }
+                                                catch
+                                                {
+                                                    Response.SetBegin((int)HttpStatusCode.InternalServerError);
+                                                    Response.SetBody($"Error while reading the mini file for User: {sessionId} on env:{env}!", encoding, GetHeaderValue(Headers, "Origin"));
+                                                }
                                             }
-                                            catch (Exception ex)
+                                            else
                                             {
-                                                string errMsg = $"Mini rewards list file update errored out for file: {miniPath} (Exception: {ex})";
-                                                statusCode = HttpStatusCode.InternalServerError;
-                                                response.StatusCode = (int)statusCode;
-                                                sent = await response.Send(errMsg);
-                                                LoggerAccessor.LogError($"[SSFW] - {errMsg}");
+                                                Response.Clear();
+                                                Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                                Response.SetBody($"User: {sessionId} on env:{env} doesn't have a ssfw mini file!", encoding, GetHeaderValue(Headers, "Origin"));
                                             }
                                         }
                                         else
                                         {
-                                            statusCode = HttpStatusCode.Forbidden;
-                                            response.StatusCode = (int)statusCode;
-                                            sent = await response.Send($"User: {sessionId} on env:{env} doesn't have a ssfw mini file!");
+                                            Response.Clear();
+                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                            Response.SetBody($"User: {sessionId} is not connected!", encoding, GetHeaderValue(Headers, "Origin"));
                                         }
-                                    }
-                                    else
-                                    {
-                                        statusCode = HttpStatusCode.Forbidden;
-                                        response.StatusCode = (int)statusCode;
-                                        sent = await response.Send($"User: {sessionId} is not connected or sent invalid InventoryEntryType!");
-                                    }
-                                    break;
-                                case "/WebService/RemoveMiniItem/":
-                                    uuid = GetHeaderValue(Headers, "uuid", false);
-                                    sessionId = GetHeaderValue(Headers, "sessionid", false);
-                                    env = GetHeaderValue(Headers, "env", false);
+                                        break;
+                                    case "/WebService/AddMiniItem/":
+                                        uuid = GetHeaderValue(Headers, "uuid", false);
+                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        env = GetHeaderValue(Headers, "env", false);
 
-                                    if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
-                                        env = "cprod";
+                                        if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
+                                            env = "cprod";
 
-                                    userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
+                                        userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
 
-                                    if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(uuid) && byte.TryParse(GetHeaderValue(Headers, "invtype", false), out InventoryEntryType))
-                                    {
-                                        string miniPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{userId}/mini.json";
-
-                                        if (File.Exists(miniPath))
+                                        if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(uuid) && byte.TryParse(GetHeaderValue(Headers, "invtype", false), out InventoryEntryType))
                                         {
-                                            try
+                                            string miniPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{userId}/mini.json";
+
+                                            if (File.Exists(miniPath))
                                             {
-                                                new SSFWRewardsService(legacykey).RemoveMiniEntry(uuid, InventoryEntryType, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
-                                                statusCode = HttpStatusCode.OK;
-                                                response.StatusCode = (int)statusCode;
-                                                sent = await response.Send($"UUID: {uuid} successfully removed in the Mini rewards list.");
+                                                try
+                                                {
+                                                    new SSFWRewardsService(_legacykey).AddMiniEntry(uuid, InventoryEntryType, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
+                                                    Response.Clear();
+                                                    Response.SetBegin((int)HttpStatusCode.OK);
+                                                    Response.SetBody($"UUID: {uuid} successfully added to the Mini rewards list.", encoding, GetHeaderValue(Headers, "Origin"));
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    string errMsg = $"Mini rewards list file update errored out for file: {miniPath} (Exception: {ex})";
+                                                    Response.Clear();
+                                                    Response.SetBegin((int)HttpStatusCode.InternalServerError);
+                                                    Response.SetBody(errMsg, encoding, GetHeaderValue(Headers, "Origin"));
+                                                    LoggerAccessor.LogError($"[SSFWProcessor] - {errMsg}");
+                                                }
                                             }
-                                            catch (Exception ex)
+                                            else
                                             {
-                                                string errMsg = $"Mini rewards list file update errored out for file: {miniPath} (Exception: {ex})";
-                                                statusCode = HttpStatusCode.InternalServerError;
-                                                response.StatusCode = (int)statusCode;
-                                                sent = await response.Send(errMsg);
-                                                LoggerAccessor.LogError($"[SSFW] - {errMsg}");
+                                                Response.Clear();
+                                                Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                                Response.SetBody($"User: {sessionId} on env:{env} doesn't have a ssfw mini file!", encoding, GetHeaderValue(Headers, "Origin"));
                                             }
                                         }
                                         else
                                         {
-                                            statusCode = HttpStatusCode.Forbidden;
-                                            response.StatusCode = (int)statusCode;
-                                            sent = await response.Send($"User: {sessionId} on env:{env} doesn't have a ssfw mini file!");
+                                            Response.Clear();
+                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                            Response.SetBody($"User: {sessionId} is not connected or sent invalid InventoryEntryType!", encoding, GetHeaderValue(Headers, "Origin"));
                                         }
-                                    }
-                                    else
-                                    {
-                                        statusCode = HttpStatusCode.Forbidden;
-                                        response.StatusCode = (int)statusCode;
-                                        sent = await response.Send($"User: {sessionId} is not connected or sent invalid InventoryEntryType!");
-                                    }
-                                    break;
-                                case "/WebService/RemoveMiniItems/":
-                                    uuids = GetHeaderValue(Headers, "uuids", false).Split(',');
-                                    sessionId = GetHeaderValue(Headers, "sessionid", false);
-                                    env = GetHeaderValue(Headers, "env", false);
+                                        break;
+                                    case "/WebService/AddMiniItems/":
+                                        uuids = GetHeaderValue(Headers, "uuids", false).Split(',');
+                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        env = GetHeaderValue(Headers, "env", false);
 
-                                    if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
-                                        env = "cprod";
+                                        if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
+                                            env = "cprod";
 
-                                    userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
+                                        userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
 
-                                    if (!string.IsNullOrEmpty(userId) && uuids != null && byte.TryParse(GetHeaderValue(Headers, "invtype", false), out InventoryEntryType))
-                                    {
-                                        string miniPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{userId}/mini.json";
-
-                                        if (File.Exists(miniPath))
+                                        if (!string.IsNullOrEmpty(userId) && uuids != null && byte.TryParse(GetHeaderValue(Headers, "invtype", false), out InventoryEntryType))
                                         {
-                                            Dictionary<string, byte> entriesToRemove = new();
+                                            string miniPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{userId}/mini.json";
 
-                                            foreach (string iteruuid in uuids)
+                                            if (File.Exists(miniPath))
                                             {
-                                                entriesToRemove.TryAdd(iteruuid, InventoryEntryType);
-                                            }
+                                                Dictionary<string, byte> entriesToAdd = new();
 
-                                            try
-                                            {
-                                                new SSFWRewardsService(legacykey).RemoveMiniEntries(entriesToRemove, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
-                                                statusCode = HttpStatusCode.OK;
-                                                response.StatusCode = (int)statusCode;
-                                                sent = await response.Send(CompressResponse(response, $"UUIDs: {string.Join(",", uuids)} removed in the Mini rewards list.", encoding));
+                                                foreach (string iteruuid in uuids)
+                                                {
+                                                    entriesToAdd.TryAdd(iteruuid, InventoryEntryType);
+                                                }
+
+                                                try
+                                                {
+                                                    new SSFWRewardsService(_legacykey).AddMiniEntries(entriesToAdd, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
+                                                    Response.Clear();
+                                                    Response.SetBegin((int)HttpStatusCode.OK);
+                                                    Response.SetBody($"UUIDs: {string.Join(",", uuids)} successfully added to the Mini rewards list.", encoding, GetHeaderValue(Headers, "Origin"));
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    string errMsg = $"Mini rewards list file update errored out for file: {miniPath} (Exception: {ex})";
+                                                    Response.Clear();
+                                                    Response.SetBegin((int)HttpStatusCode.InternalServerError);
+                                                    Response.SetBody(errMsg, encoding, GetHeaderValue(Headers, "Origin"));
+                                                    LoggerAccessor.LogError($"[SSFWProcessor] - {errMsg}");
+                                                }
                                             }
-                                            catch (Exception ex)
+                                            else
                                             {
-                                                string errMsg = $"Mini rewards list file update errored out for file: {miniPath} (Exception: {ex})";
-                                                statusCode = HttpStatusCode.InternalServerError;
-                                                response.StatusCode = (int)statusCode;
-                                                sent = await response.Send(errMsg);
-                                                LoggerAccessor.LogError($"[SSFW] - {errMsg}");
+                                                Response.Clear();
+                                                Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                                Response.SetBody($"User: {sessionId} on env:{env} doesn't have a ssfw mini file!", encoding, GetHeaderValue(Headers, "Origin"));
                                             }
                                         }
                                         else
                                         {
-                                            statusCode = HttpStatusCode.Forbidden;
-                                            response.StatusCode = (int)statusCode;
-                                            sent = await response.Send($"User: {sessionId} on env:{env} doesn't have a ssfw mini file!");
+                                            Response.Clear();
+                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                            Response.SetBody($"User: {sessionId} is not connected or sent invalid InventoryEntryType!", encoding, GetHeaderValue(Headers, "Origin"));
                                         }
-                                    }
-                                    else
-                                    {
-                                        statusCode = HttpStatusCode.Forbidden;
-                                        response.StatusCode = (int)statusCode;
-                                        sent = await response.Send($"User: {sessionId} is not connected or sent invalid InventoryEntryType!");
-                                    }
-                                    break;
-                                default:
-                                    statusCode = HttpStatusCode.Forbidden;
-                                    response.StatusCode = (int)statusCode;
-                                    sent = await response.Send(string.Empty);
-                                    break;
-                            }
-                            break;
-                        default:
-                            statusCode = HttpStatusCode.Forbidden;
-                            response.StatusCode = (int)statusCode;
-                            sent = await response.Send(string.Empty);
-                            break;
+                                        break;
+                                    case "/WebService/RemoveMiniItem/":
+                                        uuid = GetHeaderValue(Headers, "uuid", false);
+                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        env = GetHeaderValue(Headers, "env", false);
+
+                                        if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
+                                            env = "cprod";
+
+                                        userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
+
+                                        if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(uuid) && byte.TryParse(GetHeaderValue(Headers, "invtype", false), out InventoryEntryType))
+                                        {
+                                            string miniPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{userId}/mini.json";
+
+                                            if (File.Exists(miniPath))
+                                            {
+                                                try
+                                                {
+                                                    new SSFWRewardsService(_legacykey).RemoveMiniEntry(uuid, InventoryEntryType, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
+                                                    Response.Clear();
+                                                    Response.SetBegin((int)HttpStatusCode.OK);
+                                                    Response.SetBody($"UUID: {uuid} successfully removed in the Mini rewards list.", encoding, GetHeaderValue(Headers, "Origin"));
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    string errMsg = $"Mini rewards list file update errored out for file: {miniPath} (Exception: {ex})";
+                                                    Response.Clear();
+                                                    Response.SetBegin((int)HttpStatusCode.InternalServerError);
+                                                    Response.SetBody(errMsg, encoding, GetHeaderValue(Headers, "Origin"));
+                                                    LoggerAccessor.LogError($"[SSFWProcessor] - {errMsg}");
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Response.Clear();
+                                                Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                                Response.SetBody($"User: {sessionId} on env:{env} doesn't have a ssfw mini file!", encoding, GetHeaderValue(Headers, "Origin"));
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Response.Clear();
+                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                            Response.SetBody($"User: {sessionId} is not connected or sent invalid InventoryEntryType!", encoding, GetHeaderValue(Headers, "Origin"));
+                                        }
+                                        break;
+                                    case "/WebService/RemoveMiniItems/":
+                                        uuids = GetHeaderValue(Headers, "uuids", false).Split(',');
+                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        env = GetHeaderValue(Headers, "env", false);
+
+                                        if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
+                                            env = "cprod";
+
+                                        userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
+
+                                        if (!string.IsNullOrEmpty(userId) && uuids != null && byte.TryParse(GetHeaderValue(Headers, "invtype", false), out InventoryEntryType))
+                                        {
+                                            string miniPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{userId}/mini.json";
+
+                                            if (File.Exists(miniPath))
+                                            {
+                                                Dictionary<string, byte> entriesToRemove = new();
+
+                                                foreach (string iteruuid in uuids)
+                                                {
+                                                    entriesToRemove.TryAdd(iteruuid, InventoryEntryType);
+                                                }
+
+                                                try
+                                                {
+                                                    new SSFWRewardsService(_legacykey).RemoveMiniEntries(entriesToRemove, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
+                                                    Response.Clear();
+                                                    Response.SetBegin((int)HttpStatusCode.OK);
+                                                    Response.SetBody($"UUIDs: {string.Join(",", uuids)} removed in the Mini rewards list.", encoding, GetHeaderValue(Headers, "Origin"));
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    string errMsg = $"Mini rewards list file update errored out for file: {miniPath} (Exception: {ex})";
+                                                    Response.Clear();
+                                                    Response.SetBegin((int)HttpStatusCode.InternalServerError);
+                                                    Response.SetBody(errMsg, encoding, GetHeaderValue(Headers, "Origin"));
+                                                    LoggerAccessor.LogError($"[SSFWProcessor] - {errMsg}");
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Response.Clear();
+                                                Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                                Response.SetBody($"User: {sessionId} on env:{env} doesn't have a ssfw mini file!", encoding, GetHeaderValue(Headers, "Origin"));
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Response.Clear();
+                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                            Response.SetBody($"User: {sessionId} is not connected or sent invalid InventoryEntryType!", encoding, GetHeaderValue(Headers, "Origin"));
+                                        }
+                                        break;
+                                    default:
+                                        Response.Clear();
+                                        Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                        Response.SetBody(string.Empty, null, GetHeaderValue(Headers, "Origin"));
+                                        break;
+                                }
+                                break;
+                            default:
+                                Response.Clear();
+                                Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                Response.SetBody(string.Empty, null, GetHeaderValue(Headers, "Origin"));
+                                break;
+                        }
                     }
                 }
+                else
+                {
+                    LoggerAccessor.LogError($"[SSFWProcessor] - Home Client Requested the SSFW Server with an invalid url!");
+                    Response.Clear();
+                    Response.SetBegin(400);
+                    Response.SetBody();
+                }
             }
-            else
+            catch (Exception e)
             {
-                LoggerAccessor.LogError($"[SSFW] - Home Client Requested the SSFW Server with an invalid url!");
-                response.StatusCode = (int)HttpStatusCode.BadRequest;
-                sent = await response.Send();
+                Response.MakeErrorResponse();
+                LoggerAccessor.LogError($"[SSFWProcessor] - SSFW Request thrown an error : {e}");
             }
 
-            if (response.StatusCode < 400)
-                LoggerAccessor.LogInfo($"[SSFW] - {clientip}:{clientport} -> {response.StatusCode}");
-            else
-            {
-                switch (response.StatusCode)
-                {
-                    case (int)HttpStatusCode.NotFound:
-                    case (int)HttpStatusCode.NotImplemented:
-                    case (int)HttpStatusCode.RequestedRangeNotSatisfiable:
-                        LoggerAccessor.LogWarn($"[SSFW] - {clientip}:{clientport} -> {response.StatusCode}");
-                        break;
-
-                    default:
-                        LoggerAccessor.LogError($"[SSFW] - {clientip}:{clientport} -> {response.StatusCode}");
-                        break;
-                }
-            }
-        }
-
-        private static byte[]? CompressResponse(HttpResponseBase response, byte[]? data, string? encoding)
-        {
-            if (SSFWServerConfiguration.EnableHTTPCompression && !string.IsNullOrEmpty(encoding))
-            {
-                if (encoding.Contains("gzip"))
-                {
-                    response.Headers.Add("Content-Encoding", "gzip");
-                    return HTTPProcessor.CompressGzip(data);
-                }
-                else if (encoding.Contains("deflate"))
-                {
-                    response.Headers.Add("Content-Encoding", "deflate");
-                    return HTTPProcessor.Deflate(data);
-                }
-            }
-
-            return data;
-        }
-
-        private static byte[]? CompressResponse(HttpResponseBase response, string? data, string? encoding)
-        {
-            if (data == null)
-                return null;
-            else if (SSFWServerConfiguration.EnableHTTPCompression && !string.IsNullOrEmpty(encoding))
-            {
-                if (encoding.Contains("gzip"))
-                {
-                    response.Headers.Add("Content-Encoding", "gzip");
-                    return HTTPProcessor.CompressGzip(Encoding.UTF8.GetBytes(data));
-                }
-                else if (encoding.Contains("deflate"))
-                {
-                    response.Headers.Add("Content-Encoding", "deflate");
-                    return HTTPProcessor.Deflate(Encoding.UTF8.GetBytes(data));
-                }
-            }
-
-            return Encoding.UTF8.GetBytes(data);
-        }
-
-        private void ExceptionEncountered(object? sender, ExceptionEventArgs args)
-        {
-            LoggerAccessor.LogError($"[SSFW] - Exception Encountered: {args.Exception}");
+            return Response;
         }
 
         private bool MyRemoteCertificateValidationCallback(object? sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors)
@@ -1401,14 +1121,14 @@ namespace SSFWServer
             // If certificate is null, reject
             if (certificate == null)
             {
-                LoggerAccessor.LogError("[SSFW] - MyRemoteCertificateValidationCallback: Certificate is null.");
+                LoggerAccessor.LogError("[SSFWClass] - MyRemoteCertificateValidationCallback: Certificate is null.");
                 return false;
             }
 
             // Cast to X509Certificate2 for date and signature checks
             if (certificate is not X509Certificate2 cert2)
             {
-                LoggerAccessor.LogError("[SSFW] - MyRemoteCertificateValidationCallback: Certificate is not an X509Certificate2.");
+                LoggerAccessor.LogError("[SSFWClass] - MyRemoteCertificateValidationCallback: Certificate is not an X509Certificate2.");
                 return false;
             }
 
@@ -1417,14 +1137,14 @@ namespace SSFWServer
             // Check certificate validity dates (skip NotAfter date as Home certs are old)
             if (now < cert2.NotBefore)
             {
-                LoggerAccessor.LogError($"[SSFW] - MyRemoteCertificateValidationCallback: Certificate is not valid at current date/time: {now}");
+                LoggerAccessor.LogError($"[SSFWClass] - MyRemoteCertificateValidationCallback: Certificate is not valid at current date/time: {now}");
                 return false;
             }
 
             // If no SSL chain reported
             if (chain == null)
             {
-                LoggerAccessor.LogError("[SSFW] - MyRemoteCertificateValidationCallback: Certificate chain is null.");
+                LoggerAccessor.LogError("[SSFWClass] - MyRemoteCertificateValidationCallback: Certificate chain is null.");
                 return false;
             }
 
@@ -1448,25 +1168,89 @@ namespace SSFWServer
 
                     if (!File.Exists(privPemKeyFilePath))
                     {
-                        LoggerAccessor.LogWarn($"[SSFW] - MyRemoteCertificateValidationCallback: Private key file not found for cert: {certFileName}");
+                        LoggerAccessor.LogWarn($"[SSFWClass] - MyRemoteCertificateValidationCallback: Private key file not found for cert: {certFileName}");
                         continue;
                     }
 
                     if (CertificateHelper.CertificatesMatch(CertificateHelper.LoadCombinedCertificateAndKeyFromString(pemContent, File.ReadAllText(privPemKeyFilePath)), cert2))
                     {
-                        LoggerAccessor.LogInfo($"[SSFW] - MyRemoteCertificateValidationCallback: Certificate matched known cert: {pemFilePath}");
+                        LoggerAccessor.LogInfo($"[SSFWClass] - MyRemoteCertificateValidationCallback: Certificate matched known cert: {pemFilePath}");
 
                         // All checks passed: cert is valid and verified, chain is good, dates valid, signatures valid
                         return true;
                     }
                 }
 
-                LoggerAccessor.LogError("[SSFW] - MyRemoteCertificateValidationCallback: No matching certificate found in home_certificates.");
+                LoggerAccessor.LogError("[SSFWClass] - MyRemoteCertificateValidationCallback: No matching certificate found in home_certificates.");
                 return false;
             }
 
             // All checks passed: cert is valid, chain is good, dates valid, signatures valid
             return true;
+        }
+
+        private class SSFWSession : HttpsSession
+        {
+            public SSFWSession(HttpsServer server) : base(server) { }
+
+            protected override void OnReceivedRequest(HttpRequest request)
+            {
+                SendResponseAsync(SSFWRequestProcess(request, Response));
+            }
+
+            protected override void OnReceivedRequestError(HttpRequest request, string error)
+            {
+                LoggerAccessor.LogError($"[SSFWProcessor] - Request error: {error}");
+            }
+
+            protected override void OnError(SocketError error)
+            {
+                LoggerAccessor.LogError($"[SSFWProcessor] - Session caught an error: {error}");
+            }
+        }
+
+        private class HttpSSFWSession : HttpSession
+        {
+            public HttpSSFWSession(HttpServer server) : base(server) { }
+
+            protected override void OnReceivedRequest(HttpRequest request)
+            {
+                SendResponseAsync(SSFWRequestProcess(request, Response));
+            }
+
+            protected override void OnReceivedRequestError(HttpRequest request, string error)
+            {
+                LoggerAccessor.LogError($"[SSFWProcessor] - Request error: {error}");
+            }
+
+            protected override void OnError(SocketError error)
+            {
+                LoggerAccessor.LogError($"[SSFWProcessor] - HTTP session caught an error: {error}");
+            }
+        }
+
+        public class SSFWServer : HttpsServer
+        {
+            public SSFWServer(SslContext context, IPAddress address, int port) : base(context, address, port) { }
+
+            protected override SslSession CreateSession() { return new SSFWSession(this); }
+
+            protected override void OnError(SocketError error)
+            {
+                LoggerAccessor.LogError($"[SSFWProcessor] - Server caught an error: {error}");
+            }
+        }
+
+        public class HttpSSFWServer : HttpServer
+        {
+            public HttpSSFWServer(IPAddress address, int port) : base(address, port) { }
+
+            protected override TcpSession CreateSession() { return new HttpSSFWSession(this); }
+
+            protected override void OnError(SocketError error)
+            {
+                LoggerAccessor.LogError($"[SSFWProcessor] - HTTPS session caught an error: {error}");
+            }
         }
     }
 }

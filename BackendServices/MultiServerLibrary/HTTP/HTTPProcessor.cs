@@ -18,7 +18,7 @@ namespace MultiServerLibrary.HTTP
 {
     public partial class HTTPProcessor
     {
-        public static readonly Dictionary<string, string> _mimeTypes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase)
+        public static readonly Dictionary<string, string> MimeTypes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase)
         {
             #region PS3 MimeTypes
 
@@ -812,7 +812,7 @@ namespace MultiServerLibrary.HTTP
                 if (!extension.StartsWith("."))
                     extension = "." + extension;
 
-                return _mimeTypes.TryGetValue(extension, out string mime) ? mime : "application/octet-stream";
+                return MimeTypes.TryGetValue(extension, out string mime) ? mime : "application/octet-stream";
             }
         }
 
@@ -836,7 +836,7 @@ namespace MultiServerLibrary.HTTP
             if (string.IsNullOrEmpty(mimeType))
                 return ".unknown";
             else
-                return _mimeTypes.FirstOrDefault(x => x.Value == mimeType).Key ?? ".unknown";
+                return MimeTypes.FirstOrDefault(x => x.Value == mimeType).Key ?? ".unknown";
         }
 
         public static string GetExtensionFromMime(string mimeType, Dictionary<string, string> mimeTypesDic)

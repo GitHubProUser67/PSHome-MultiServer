@@ -105,29 +105,17 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
 
         public static string GetGlobalPopulationLeaderboard(byte[] PostData, string boundary, string UserID, string WorkPath)
         {
+            // TODO
             return @"<Response>
-                            <Entry>
-                                <DisplayName>AgentDark447</DisplayName>
-                                <GlobalPop>10000</GlobalPop>
-                            </Entry>
-                            <Entry>
-                                <DisplayName>JumpSuitDev</DisplayName>
-                                <GlobalPop>9500</GlobalPop>
-                            </Entry>
+                    <1><DisplayName>Not Implemented yet!</DisplayName><GlobalPop>0</GlobalPop></1>
                     </Response>";
         }
 
         public static string GetGlobalRevenueCollectedLeaderboard(byte[] PostData, string boundary, string UserID, string WorkPath)
         {
+            // TODO
             return @"<Response>
-                            <Entry>
-                                <DisplayName>AgentDark447</DisplayName>
-                                <TotalCollected>10000</TotalCollected>
-                            </Entry>
-                            <Entry>
-                                <DisplayName>JumpSuitDev</DisplayName>
-                                <TotalCollected>9500</TotalCollected>
-                            </Entry>
+                    <1><DisplayName>Not Implemented yet!</DisplayName><TotalCollected>0</TotalCollected></1>
                     </Response>";
         }
     }

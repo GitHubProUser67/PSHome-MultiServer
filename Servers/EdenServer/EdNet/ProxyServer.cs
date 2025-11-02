@@ -9,7 +9,7 @@ namespace EdenServer.EdNet
             { (ushort)ProxyCrcList.TO_PROXY_HEADER, typeof(ToProxy) },
         };
 
-        public ProxyServer(ushort Port, int MaxConcurrentListeners = 10, int awaiterTimeoutInMS = 500) : base(Port, MaxConcurrentListeners, awaiterTimeoutInMS)
+        public ProxyServer() : base()
         {
             
         }

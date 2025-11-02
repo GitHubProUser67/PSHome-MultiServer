@@ -1,17 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using ApacheNet.Models;
+﻿using ApacheNet.Models;
 using CustomLogger;
 using DNS.Protocol;
 using DNSLibrary;
 using MultiServerLibrary.AdBlocker;
 using MultiServerLibrary.Extension;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace ApacheNet
 {
@@ -20,7 +19,9 @@ namespace ApacheNet
         public static AdGuardFilterChecker adChecker = new AdGuardFilterChecker();
         public static DanPollockChecker danChecker = new DanPollockChecker();
 
-        private static readonly UdpClientService udpClientService = new UdpClientService();
+        private static readonly UdpClientService udpClientService = new UdpClientService(
+                    (int)TimeSpan.FromSeconds(5).TotalMilliseconds,
+                    (int)TimeSpan.FromSeconds(15).TotalMilliseconds);
 
         public static async Task<bool> DohRequest(ApacheContext ctx, string Accept, bool get)
         {
@@ -155,49 +156,76 @@ namespace ApacheNet
 
                                     if (!treated && ApacheNetServerConfiguration.DNSAllowUnsafeRequests)
                                     {
+#if DEBUG
+                                        LoggerAccessor.LogInfo($"[HTTPS_DNS] - Issuing mitm request for domain: {fullname}");
+#endif
+                                        bool error = false;
                                         var udpClient = udpClientService.Dequeue();
                                         try
                                         {
-                                            await udpClient.Client.SendAsync(DnsReq, SocketFlags.None);
+                                            await udpClient.Client.SendAsync(DnsReq, SocketFlags.None).ConfigureAwait(false);
 
-                                            var res = await udpClient.ReceiveAsync();
-                                            DnsReq = res.Buffer;
+                                            var res = udpClient.BeginReceive(null, null);
+                                            // begin recieve right after request
+                                            if (res.AsyncWaitHandle.WaitOne(udpClientService.SendTimeoutMs))
+                                            {
+                                                IPEndPoint? remoteEP = udpClient.Client.RemoteEndPoint as IPEndPoint;
+#if DEBUG
+                                                LoggerAccessor.LogInfo($"[HTTPS_DNS] - Recieved message from endpoint:{remoteEP}, returning...");
+#endif
+                                                DnsReq = udpClient.EndReceive(res, ref remoteEP);
+                                            }
+                                            else
+                                            {
+#if DEBUG
+                                                LoggerAccessor.LogWarn($"[HTTPS_DNS] - No Bytes Recieved from UdpRequest.");
+#endif
+                                                DnsReq = null;
+                                            }
                                         }
                                         catch
                                         {
+                                            error = true;
                                             DnsReq = null;
                                         }
                                         finally
                                         {
-                                            udpClientService.ReturnToQueue(udpClient);
+                                            udpClientService.ReturnToQueue(udpClient, error);
                                         }
                                     }
-                                    else if (!string.IsNullOrEmpty(url) && url != "NXDOMAIN")
+                                    else
                                     {
                                         List<IPAddress> Ips = new();
 
-                                        try
+                                        if (!string.IsNullOrEmpty(url) && url != "NXDOMAIN")
                                         {
-                                            if (!IPAddress.TryParse(url, out IPAddress? address))
+                                            try
                                             {
-                                                foreach (var extractedIp in Dns.GetHostEntry(url).AddressList)
+                                                if (!IPAddress.TryParse(url, out IPAddress? address))
                                                 {
-                                                    Ips.Add(extractedIp);
+                                                    foreach (var extractedIp in Dns.GetHostEntry(url).AddressList)
+                                                    {
+                                                        Ips.Add(extractedIp);
+                                                    }
                                                 }
+                                                else Ips.Add(address);
                                             }
-                                            else Ips.Add(address);
+                                            catch
+                                            {
+                                                Ips.Clear();
+                                            }
+#if DEBUG
+                                            LoggerAccessor.LogInfo($"[HTTPS_DNS] - Resolved: {fullname} to: {string.Join(", ", Ips)}");
+#endif
+                                            DnsReq = Response.MakeType0DnsResponsePacket(DnsReq.Trim(), Ips);
                                         }
-                                        catch
+                                        else
                                         {
-                                            Ips.Clear();
+                                            LoggerAccessor.LogWarn($"[HTTPS_DNS] - No domain found for: {fullname}");
+
+                                            DnsReq = Response.MakeType0DnsResponsePacket(DnsReq.Trim(), Ips);
                                         }
-
-                                        LoggerAccessor.LogInfo($"[HTTPS_DNS] - Resolved: {fullname} to: {string.Join(", ", Ips)}");
-
-                                        DnsReq = Response.MakeType0DnsResponsePacket(DnsReq.Trim(), Ips);
                                     }
-                                    else
-                                        DnsReq = Response.MakeType0DnsResponsePacket(DnsReq.Trim(), new List<IPAddress> { });
 
                                     if (DnsReq != null)
                                     {
@@ -328,49 +356,76 @@ namespace ApacheNet
 
                                 if (!treated && ApacheNetServerConfiguration.DNSAllowUnsafeRequests)
                                 {
+#if DEBUG
+                                    LoggerAccessor.LogInfo($"[HTTPS_DNS] - Issuing mitm request for domain: {fullname}");
+#endif
+                                    bool error = false;
                                     var udpClient = udpClientService.Dequeue();
                                     try
                                     {
-                                        await udpClient.Client.SendAsync(DnsReq, SocketFlags.None);
+                                        await udpClient.Client.SendAsync(DnsReq, SocketFlags.None).ConfigureAwait(false);
 
-                                        var res = await udpClient.ReceiveAsync();
-                                        DnsReq = res.Buffer;
+                                        var res = udpClient.BeginReceive(null, null);
+                                        // begin recieve right after request
+                                        if (res.AsyncWaitHandle.WaitOne(udpClientService.SendTimeoutMs))
+                                        {
+                                            IPEndPoint? remoteEP = udpClient.Client.RemoteEndPoint as IPEndPoint;
+#if DEBUG
+                                            LoggerAccessor.LogInfo($"[HTTPS_DNS] - Recieved message from endpoint:{remoteEP}, returning...");
+#endif
+                                            DnsReq = udpClient.EndReceive(res, ref remoteEP);
+                                        }
+                                        else
+                                        {
+#if DEBUG
+                                            LoggerAccessor.LogWarn($"[HTTPS_DNS] - No Bytes Recieved from UdpRequest.");
+#endif
+                                            DnsReq = null;
+                                        }
                                     }
                                     catch
                                     {
+                                        error = true;
                                         DnsReq = null;
                                     }
                                     finally
                                     {
-                                        udpClientService.ReturnToQueue(udpClient);
+                                        udpClientService.ReturnToQueue(udpClient, error);
                                     }
                                 }
-                                else if (!string.IsNullOrEmpty(url) && url != "NXDOMAIN")
+                                else
                                 {
                                     List<IPAddress> Ips = new();
 
-                                    try
+                                    if (!string.IsNullOrEmpty(url) && url != "NXDOMAIN")
                                     {
-                                        if (!IPAddress.TryParse(url, out IPAddress? address))
+                                        try
                                         {
-                                            foreach (var extractedIp in Dns.GetHostEntry(url).AddressList)
+                                            if (!IPAddress.TryParse(url, out IPAddress? address))
                                             {
-                                                Ips.Add(extractedIp);
+                                                foreach (var extractedIp in Dns.GetHostEntry(url).AddressList)
+                                                {
+                                                    Ips.Add(extractedIp);
+                                                }
                                             }
+                                            else Ips.Add(address);
                                         }
-                                        else Ips.Add(address);
+                                        catch
+                                        {
+                                            Ips.Clear();
+                                        }
+#if DEBUG
+                                        LoggerAccessor.LogInfo($"[HTTPS_DNS] - Resolved: {fullname} to: {string.Join(", ", Ips)}");
+#endif
+                                        DnsReq = Response.MakeType0DnsResponsePacket(DnsReq.Trim(), Ips);
                                     }
-                                    catch
+                                    else
                                     {
-                                        Ips.Clear();
+                                        LoggerAccessor.LogWarn($"[HTTPS_DNS] - No domain found for: {fullname}");
+
+                                        DnsReq = Response.MakeType0DnsResponsePacket(DnsReq.Trim(), Ips);
                                     }
-
-                                    LoggerAccessor.LogInfo($"[HTTPS_DNS] - Resolved: {fullname} to: {string.Join(", ", Ips)}");
-
-                                    DnsReq = Response.MakeType0DnsResponsePacket(DnsReq.Trim(), Ips);
                                 }
-                                else
-                                    DnsReq = Response.MakeType0DnsResponsePacket(DnsReq.Trim(), new List<IPAddress> { });
 
                                 if (DnsReq != null)
                                 {

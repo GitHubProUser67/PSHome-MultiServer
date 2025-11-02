@@ -519,7 +519,7 @@ class Program
                     var redirector = createBlazeServer(
                         $"{config.Type} Redirector",
                         new IPEndPoint(IPAddress.Any, config.Port),
-                        BlazeSSLCache.GetVulnerableCustomEaCert(sslDomain, "Global Online Studio", true, true).Item3,
+                        BlazeSSLCache.GetVulnerableCustomEaCert(sslDomain, "Global Online Studio", true).Item3,
                         config.Secure
                     );
 
@@ -545,7 +545,7 @@ class Program
                     var blazeServer = createBlazeServer(
                         config.Game,
                         new IPEndPoint(IPAddress.Any, config.Port),
-                        BlazeSSLCache.GetVulnerableCustomEaCert(sslDomain, EA_OU, true, true).Item3,
+                        BlazeSSLCache.GetVulnerableCustomEaCert(sslDomain, EA_OU, true).Item3,
                         config.Secure
                     );
 

@@ -22,7 +22,7 @@ namespace Horizon.MUIS
         public static IPAddress SERVER_IP = IPAddress.None;
 
         public static MumManager Manager = new();
-        public static MediusPluginsManager Plugins = new(HorizonServerConfiguration.PluginsFolder);
+        public static MediusPluginsManager Plugins = new(HorizonServerConfiguration.MediusPluginsFolder);
 
         public static RSA_KEY? GlobalAuthPublic = null;
 
@@ -38,7 +38,7 @@ namespace Horizon.MUIS
         private static DateTime lastConfigRefresh = DateTimeUtils.GetHighPrecisionUtcTime();
         private static DateTime? _lastSuccessfulDbAuth = null;
 
-        public static bool started = false;
+        public static bool IsStarted = false;
 
         private static async Task TickAsync()
         {
@@ -84,14 +84,14 @@ namespace Horizon.MUIS
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[MuisClass] - TickAsync: An assertion was thrown while ticking servers. (Exception:{ex})");
             }
         }
 
         private static async Task LoopServer()
         {
             // iterate
-            while (started)
+            while (IsStarted)
             {
                 // tick
                 await TickAsync();
@@ -102,7 +102,7 @@ namespace Horizon.MUIS
 
         public static void StopServer()
         {
-            started = false;
+            IsStarted = false;
 
             lock (UniverseInfoServers)
             {
@@ -115,66 +115,79 @@ namespace Horizon.MUIS
 
         private static Task StartServerAsync()
         {
-            string datetime = DateTime.Now.ToString("MMMM/dd/yyyy hh:mm:ss tt");
-
-            LoggerAccessor.LogInfo("**************************************************");
-
-            string gpszVersionString = "3.05.201109161400";
-
-            LoggerAccessor.LogInfo($"* Medius Universe Information Server Version {gpszVersionString}");
-            LoggerAccessor.LogInfo($"* Launched on {datetime}");
-
-            if (HorizonServerConfiguration.Database._settings.SimulatedMode)
-                LoggerAccessor.LogInfo("* Database Disabled Medius Stack");
-            else
-                LoggerAccessor.LogInfo("* Database Enabled Medius Stack");
-
-            LoggerAccessor.LogInfo($"* Enabling MUIS on Server IP = {SERVER_IP} TCP Ports = {string.Join(", ", UniverseInfoServers.Select(server => server.Port))}.");
-
-            //Connecting to Medius Universe Manager 127.0.0.1 10076 1
-            //Connected to Universe Manager server
-
-            foreach (var authServer in UniverseInfoServers)
+            try
             {
-                authServer.Start();
+                string datetime = DateTime.Now.ToString("MMMM/dd/yyyy hh:mm:ss tt");
+
+                LoggerAccessor.LogInfo("**************************************************");
+
+                string gpszVersionString = "3.05.201109161400";
+
+                LoggerAccessor.LogInfo($"* Medius Universe Information Server Version {gpszVersionString}");
+                LoggerAccessor.LogInfo($"* Launched on {datetime}");
+
+                if (HorizonServerConfiguration.Database._settings.SimulatedMode)
+                    LoggerAccessor.LogInfo("* Database Disabled Medius Stack");
+                else
+                    LoggerAccessor.LogInfo("* Database Enabled Medius Stack");
+
+                LoggerAccessor.LogInfo($"* Enabling MUIS on Server IP = {SERVER_IP} TCP Ports = {string.Join(", ", UniverseInfoServers.Select(server => server.Port))}.");
+
+                //Connecting to Medius Universe Manager 127.0.0.1 10076 1
+                //Connected to Universe Manager server
+
+                foreach (var authServer in UniverseInfoServers)
+                {
+                    authServer.Start();
+                }
+
+                LoggerAccessor.LogInfo($"* Server Key Type: {Settings.EncryptMessages}");
+
+                #region Remote Log Viewing
+                if (Settings.RemoteLogViewPort == 0)
+                    //* Remote log viewing setup failure with port %d.
+                    LoggerAccessor.LogInfo("* Remote log viewing disabled.");
+                else if (Settings.RemoteLogViewPort != 0)
+                    LoggerAccessor.LogInfo($"* Remote log viewing enabled at port {Settings.RemoteLogViewPort}.");
+                #endregion
+
+                #region MediusGetVersion
+                if (Settings.MediusServerVersionOverride == true)
+                {
+                    // Use override methods in code to send our own version string from config
+                    LoggerAccessor.LogInfo("Using config input server version");
+                    LoggerAccessor.LogInfo($"MUISVersion Version: {Settings.MUISVersion}");
+
+                }
+                else
+                    // Use hardcoded methods in code to handle specific games server versions
+                    LoggerAccessor.LogInfo("Using game specific server versions");
+
+                #endregion
+
+                //* Diagnostic Profiling Enabled: %d Counts
+
+                LoggerAccessor.LogInfo("**************************************************");
+
+                if (Settings.NATIp == null)
+                    LoggerAccessor.LogError("[MuisClass] - No NAT ip found! Errors can happen.");
+
+                LoggerAccessor.LogInfo($"[MuisClass] - initalized all servers.");
+
+                IsStarted = true;
+
+                _ = Task.Run(LoopServer);
             }
-
-            LoggerAccessor.LogInfo($"* Server Key Type: {Settings.EncryptMessages}");
-
-            #region Remote Log Viewing
-            if (Settings.RemoteLogViewPort == 0)
-                //* Remote log viewing setup failure with port %d.
-                LoggerAccessor.LogInfo("* Remote log viewing disabled.");
-            else if (Settings.RemoteLogViewPort != 0)
-                LoggerAccessor.LogInfo($"* Remote log viewing enabled at port {Settings.RemoteLogViewPort}.");
-            #endregion
-
-            #region MediusGetVersion
-            if (Settings.MediusServerVersionOverride == true)
+            catch (Exception ex)
             {
-                // Use override methods in code to send our own version string from config
-                LoggerAccessor.LogInfo("Using config input server version");
-                LoggerAccessor.LogInfo($"MUISVersion Version: {Settings.MUISVersion}");
+                LoggerAccessor.LogError($"[MuisClass] - Server failed to initialize with error - {ex}");
 
+                try
+                {
+                    StopServer();
+                }
+                catch { }
             }
-            else
-                // Use hardcoded methods in code to handle specific games server versions
-                LoggerAccessor.LogInfo("Using game specific server versions");
-
-            #endregion
-
-            //* Diagnostic Profiling Enabled: %d Counts
-
-            LoggerAccessor.LogInfo("**************************************************");
-
-            if (Settings.NATIp == null)
-                LoggerAccessor.LogError("[MUIS] - No NAT ip found! Errors can happen.");
-
-            LoggerAccessor.LogInfo($"MUIS initalized.");
-
-            started = true;
-
-            _ = Task.Run(LoopServer);
 
             return Task.CompletedTask;
         }
@@ -1204,7 +1217,7 @@ namespace Horizon.MUIS
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[MuisClass] - RefreshAppSettings: An assertion was thrown while loading configuration. (Exception:{ex})");
             }
         }
 

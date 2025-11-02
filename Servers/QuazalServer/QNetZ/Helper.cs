@@ -258,7 +258,7 @@ namespace QuazalServer.QNetZ
                 zoutputStream.Write(data, 0, data.Length);
                 zoutputStream.Close();
                 memoryStream.Close();
-                return memoryStream.ToArray(); // Send OG data if compressed size higher?
+                return memoryStream.ToArray();
             }
         }
 

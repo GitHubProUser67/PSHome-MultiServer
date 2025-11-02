@@ -4,7 +4,6 @@ using System.Diagnostics;
 using Newtonsoft.Json.Linq;
 using Horizon.LIBRARY.Database;
 using System.Runtime;
-using System.Net;
 using System.Security.Principal;
 using System.Security.Cryptography;
 using System.Reflection;
@@ -168,10 +167,14 @@ class Program
 
         MediusDatabaseLoop ??= Task.Run(SVOManager.StartTickPooling);
 
-        if (HttpListener.IsSupported)
-            _SVOServer = new SVOProcessor("*", new System.Security.Cryptography.X509Certificates.X509Certificate2(SVOServerConfiguration.HTTPSCertificateFile, SVOServerConfiguration.HTTPSCertificatePassword), Environment.ProcessorCount);
-        else
-            LoggerAccessor.LogError("Windows XP SP2 or Server 2003 is required to use the HttpListener class, so SVO Server not started!");
+        if (_SVOServer == null)
+            _SVOServer = new SVOProcessor();
+        _SVOServer.Start(
+            "*",
+            new System.Security.Cryptography.X509Certificates.X509Certificate2(SVOServerConfiguration.HTTPSCertificateFile, SVOServerConfiguration.HTTPSCertificatePassword),
+            Environment.ProcessorCount,
+            new CancellationTokenSource().Token
+            );
     }
 
     static void Main()

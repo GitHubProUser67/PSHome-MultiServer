@@ -5,13 +5,13 @@ using System.IO;
 using System;
 using NetHasher;
 using XI5;
-using WebAPIService.GameServices.SSFW;
+using CastleLibrary.Sony.SSFW;
 
 namespace WebAPIService.GameServices.HELLFIRE.Helpers
 {
     public class NPTicket
     {
-        public static string RequestNPTicket(byte[] PostData, string boundary)
+        public static string RequestNPTicket(byte[] PostData, string boundary, bool cross_save = false)
         {
             string userid = string.Empty;
             string sessionid = string.Empty;
@@ -75,39 +75,47 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                 if (!ticket.Valid)
                 {
                     // log to console
-                    LoggerAccessor.LogWarn($"[HFGames] - NovusPrime : User {username} tried to alter their ticket data");
+                    LoggerAccessor.LogWarn($"[HFGames] - Hellfire : User {username} tried to alter their ticket data");
 
                     return null;
                 }
+
+                const string salt = "H0mETyc00n!";
 
                 // RPCN
                 if (ticket.SignatureIdentifier == RPCNSigner)
                 {
-                    // Convert the modified data to a string
-                    resultString = Encoding.ASCII.GetString(extractedData) + "RPCN";
+                    if (!cross_save)
+                    {
+                        // Convert the modified data to a string
+                        resultString = Encoding.ASCII.GetString(extractedData) + RPCNSigner;
 
-                    userid = resultString.Replace(" ", string.Empty);
+                        userid = resultString.Replace(" ", string.Empty);
 
-                    // Calculate the MD5 hash of the result
-                    string hash = DotNetHasher.ComputeMD5String(Encoding.ASCII.GetBytes(resultString + "H0mETyc00n!"));
+                        // Calculate the MD5 hash of the result
+                        string hash = DotNetHasher.ComputeMD5String(Encoding.ASCII.GetBytes(resultString + salt));
 
-                    // Trim the hash to a specific length
-                    hash = hash.Substring(0, 10);
+                        // Trim the hash to a specific length
+                        hash = hash.Substring(0, 10);
 
-                    // Append the trimmed hash to the result
-                    resultString += hash;
+                        // Append the trimmed hash to the result
+                        resultString += hash;
 
-                    sessionid = GuidGenerator.SSFWGenerateGuid(hash, resultString);
+                        sessionid = GuidGenerator.SSFWGenerateGuid(hash, resultString);
+                    }
 
-                    LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on RPCN");
+                    LoggerAccessor.LogInfo($"[HFGames] - Hellfire : User {username} connected at: {DateTime.Now} and is on RPCN");
                 }
                 else if (username.EndsWith($"@{RPCNSigner}"))
                 {
-                    LoggerAccessor.LogError($"[HFGames] - NovusPrime : User {username} was caught using a RPCN suffix while not on it!");
+                    LoggerAccessor.LogError($"[HFGames] - Hellfire : User {username} was caught using a RPCN suffix while not on it!");
 
                     return null;
                 }
                 else
+                    LoggerAccessor.LogInfo($"[HFGames] - Hellfire : User {username} connected at: {DateTime.Now} and is on PSN");
+
+                if (resultString == string.Empty)
                 {
                     // Convert the modified data to a string
                     resultString = Encoding.ASCII.GetString(extractedData);
@@ -115,7 +123,7 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                     userid = resultString.Replace(" ", string.Empty);
 
                     // Calculate the MD5 hash of the result
-                    string hash = DotNetHasher.ComputeMD5String(Encoding.ASCII.GetBytes(resultString + "H0mETyc00n!"));
+                    string hash = DotNetHasher.ComputeMD5String(Encoding.ASCII.GetBytes(resultString + salt));
 
                     // Trim the hash to a specific length
                     hash = hash.Substring(0, 14);
@@ -124,8 +132,6 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                     resultString += hash;
 
                     sessionid = GuidGenerator.SSFWGenerateGuid(hash, resultString);
-
-                    LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on PSN");
                 }
 
                 return $"<response><Thing>{userid};{sessionid}</Thing></response>";

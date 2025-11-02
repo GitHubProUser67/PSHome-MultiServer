@@ -70,6 +70,7 @@
     <Compile Include="$(CommonPath)System\Threading\Tasks\TaskToApm.cs" Link="Common\System\Threading\Tasks\TaskToApm.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CustomServers\HTTPServer.cs" />
     <Compile Include="SR.cs" />
     <Compile Include="System\Net\StreamHelper.cs" />
   </ItemGroup>

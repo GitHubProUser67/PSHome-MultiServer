@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace EndianTools
 {
-    // Massives thanks to TDUWorld for their endian helper class.
+    // Mofified from the TDUWorld solution (massive thanks to them).
     public static class EndianAwareConverter
     {
         public static readonly bool isLittleEndianSystem = BitConverter.IsLittleEndian;
@@ -206,37 +206,38 @@ namespace EndianTools
             }, 0);
         }
 
+        // Does not have the trimming system (beware of the input buffer)
         public static void WriteUInt8(byte[] buf, Endianness endianness, uint address, byte value)
         {
             if (endianness != Endianness.Automatic)
                 throw new ArgumentException("[EndianAwareConverter] - UInt8 writes doesn't have an endianness to resolve to");
 
             byte[] bytes = new byte[] { value };
-            Array.Copy(bytes, 0, buf, address, bytes.Length);
+            CopyToBuffer(buf, bytes, address, false);
         }
 
-        public static void WriteUInt16(byte[] buf, Endianness endianness, uint address, ushort value)
+        public static void WriteUInt16(byte[] buf, Endianness endianness, uint address, ushort value, bool trimAtStart = false)
         {
             byte[] bytes = BitConverter.GetBytes(value);
             if (endianness != (isLittleEndianSystem ? Endianness.LittleEndian : Endianness.BigEndian))
                 Array.Reverse(bytes);
-            Array.Copy(bytes, 0, buf, address, 2);
+            CopyToBuffer(buf, bytes, address, trimAtStart);
         }
 
-        public static void WriteUInt32(byte[] buf, Endianness endianness, uint address, uint value)
+        public static void WriteUInt32(byte[] buf, Endianness endianness, uint address, uint value, bool trimAtStart = false)
         {
             byte[] bytes = BitConverter.GetBytes(value);
             if (endianness != (isLittleEndianSystem ? Endianness.LittleEndian : Endianness.BigEndian))
                 Array.Reverse(bytes);
-            Array.Copy(bytes, 0, buf, address, 4);
+            CopyToBuffer(buf, bytes, address, trimAtStart);
         }
 
-        public static void WriteUInt64(byte[] buf, Endianness endianness, uint address, ulong value)
+        public static void WriteUInt64(byte[] buf, Endianness endianness, uint address, ulong value, bool trimAtStart = false)
         {
             byte[] bytes = BitConverter.GetBytes(value);
             if (endianness != (isLittleEndianSystem ? Endianness.LittleEndian : Endianness.BigEndian))
                 Array.Reverse(bytes);
-            Array.Copy(bytes, 0, buf, address, 8);
+            CopyToBuffer(buf, bytes, address, trimAtStart);
         }
 
         public static void WriteInt8(byte[] buf, Endianness endianness, uint address, sbyte value)
@@ -244,49 +245,55 @@ namespace EndianTools
             if (endianness != Endianness.Automatic)
                 throw new ArgumentException("[EndianAwareConverter] - Int8 writes doesn't have an endianness to resolve to");
 
-            sbyte[] bytes = new sbyte[] { value };
-            Array.Copy(bytes.Select(b => (byte)b).ToArray(), 0, buf, address, bytes.Length);
+            byte[] bytes = new byte[] { (byte)value };
+            CopyToBuffer(buf, bytes, address, false);
         }
 
 
-        public static void WriteInt16(byte[] buf, Endianness endianness, uint address, short value)
+        public static void WriteInt16(byte[] buf, Endianness endianness, uint address, short value, bool trimAtStart = false)
         {
             byte[] bytes = BitConverter.GetBytes(value);
             if (endianness != (isLittleEndianSystem ? Endianness.LittleEndian : Endianness.BigEndian))
                 Array.Reverse(bytes);
-            Array.Copy(bytes, 0, buf, address, 2);
+            CopyToBuffer(buf, bytes, address, trimAtStart);
         }
 
-        public static void WriteInt32(byte[] buf, Endianness endianness, uint address, int value)
+        public static void WriteInt32(byte[] buf, Endianness endianness, uint address, int value, bool trimAtStart = false)
         {
             byte[] bytes = BitConverter.GetBytes(value);
             if (endianness != (isLittleEndianSystem ? Endianness.LittleEndian : Endianness.BigEndian))
                 Array.Reverse(bytes);
-            Array.Copy(bytes, 0, buf, address, 4);
+            CopyToBuffer(buf, bytes, address, trimAtStart);
         }
 
-        public static void WriteInt64(byte[] buf, Endianness endianness, uint address, long value)
+        public static void WriteInt64(byte[] buf, Endianness endianness, uint address, long value, bool trimAtStart = false)
         {
             byte[] bytes = BitConverter.GetBytes(value);
             if (endianness != (isLittleEndianSystem ? Endianness.LittleEndian : Endianness.BigEndian))
                 Array.Reverse(bytes);
-            Array.Copy(bytes, 0, buf, address, 8);
+            CopyToBuffer(buf, bytes, address, trimAtStart);
         }
 
-        public static void WriteSingle(byte[] buf, Endianness endianness, uint address, float value)
+        public static void WriteSingle(byte[] buf, Endianness endianness, uint address, float value, bool trimAtStart = false)
         {
             byte[] bytes = BitConverter.GetBytes(value);
             if (endianness != (isLittleEndianSystem ? Endianness.LittleEndian : Endianness.BigEndian))
                 Array.Reverse(bytes);
-            Array.Copy(bytes, 0, buf, address, 4);
+            CopyToBuffer(buf, bytes, address, trimAtStart);
         }
 
-        public static void WriteDouble(byte[] buf, Endianness endianness, uint address, double value)
+        public static void WriteDouble(byte[] buf, Endianness endianness, uint address, double value, bool trimAtStart = false)
         {
             byte[] bytes = BitConverter.GetBytes(value);
             if (endianness != (isLittleEndianSystem ? Endianness.LittleEndian : Endianness.BigEndian))
                 Array.Reverse(bytes);
-            Array.Copy(bytes, 0, buf, address, 8);
+            CopyToBuffer(buf, bytes, address, trimAtStart);
+        }
+
+        private static void CopyToBuffer(byte[] buf, byte[] bytes, uint address, bool trimAtStart)
+        {
+            long copyLength = Math.Min(bytes.Length, buf.LongLength - address);
+            Array.Copy(bytes, trimAtStart ? bytes.Length - copyLength : 0, buf, address, copyLength);
         }
 
         /// <summary>

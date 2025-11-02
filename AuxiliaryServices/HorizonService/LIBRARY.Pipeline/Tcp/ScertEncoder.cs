@@ -32,7 +32,7 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
 
             // Log
             if (message.CanLog())
-                LoggerAccessor.LogInfo($"SEND {ctx.Channel}: {message}");
+                LoggerAccessor.LogInfo($"[ScertEncoder] - Tcp: SEND {ctx.Channel}: {message}");
 
             if (!ctx.HasAttribute(Constants.SCERT_CLIENT))
                 ctx.GetAttribute(Constants.SCERT_CLIENT).Set(new Attribute.ScertClientAttribute());
@@ -41,9 +41,7 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
             scertClient.OnMessage(message);
 
             // Serialize
-            List<byte[]> msgs = message.Serialize(scertClient.MediusVersion, scertClient.ApplicationID, scertClient.CipherService);
-
-            foreach (byte[] msg in msgs)
+            foreach (byte[] msg in message.Serialize(scertClient.MediusVersion, scertClient.ApplicationID, scertClient.CipherService))
             {
                 IByteBuffer byteBuffer = ctx.Allocator.Buffer(msg.Length);
                 byteBuffer.WriteBytes(msg);
@@ -53,8 +51,8 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
 
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            LoggerAccessor.LogError(exception.ToString());
-            context.CloseAsync();
+            LoggerAccessor.LogError($"[ScertEncoder] - Tcp: An assertion was caught. (Exception:{exception})");
+            _ = context.CloseAsync();
         }
     }
 }

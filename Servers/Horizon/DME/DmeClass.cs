@@ -34,14 +34,14 @@ namespace Horizon.DME
         public static ConcurrentDictionary<int, MPSClient> MPSManagers = new();
         public static ConcurrentDictionary<int, MASClient> MASManagers = new();
         public static TcpServer TcpServer = new();
-        public static MediusPluginsManager Plugins = new(HorizonServerConfiguration.PluginsFolder);
+        public static MediusPluginsManager Plugins = new(HorizonServerConfiguration.DmePluginsFolder);
 
         private static DateTime _timeLastPluginTick = DateTimeUtils.GetHighPrecisionUtcTime();
 
         private static DateTime _lastConfigRefresh = DateTimeUtils.GetHighPrecisionUtcTime();
         private static DateTime? _lastSuccessfulDbAuth = null;
 
-        public static bool started = false;
+        public static bool IsStarted = false;
 
         private static async Task TickAsync()
         {
@@ -129,7 +129,7 @@ namespace Horizon.DME
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DmeClass] - TickAsync: An assertion was thrown while ticking servers. (Exception:{ex})");
             }
         }
 
@@ -208,7 +208,7 @@ namespace Horizon.DME
         private static async Task LoopServer()
         {
             // iterate
-            while (started)
+            while (IsStarted)
             {
                 // tick
                 await TickAsync();
@@ -219,7 +219,7 @@ namespace Horizon.DME
 
         public static async void StopServer()
         {
-            started = false;
+            IsStarted = false;
 
             await TcpServer.Stop();
             await Task.WhenAll(MASManagers.Select(x => x.Value.Stop()));
@@ -257,15 +257,18 @@ namespace Horizon.DME
                     MASManagers.TryAdd(applicationId, new MASClient(applicationId));
                 }
 
-                LoggerAccessor.LogInfo("DME Initalized.");
+                LoggerAccessor.LogInfo("[DmeClass] - Initalized all servers.");
 
-                started = true;
+                IsStarted = true;
 
                 _ = Task.Run(LoopServer);
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[DME] - Server failed to initialize with error - {ex}");
+                LoggerAccessor.LogError($"[DmeClass] - Server failed to initialize with error - {ex}");
+
+                Task.WhenAll(MASManagers.Select(x => x.Value.Stop())).Wait();
+                Task.WhenAll(MPSManagers.Select(x => x.Value.Stop())).Wait();
             }
 
             return Task.CompletedTask;
@@ -363,7 +366,7 @@ namespace Horizon.DME
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DmeClass] - RefreshAppSettings: An assertion was thrown while loading configuration. (Exception:{ex})");
             }
         }
 

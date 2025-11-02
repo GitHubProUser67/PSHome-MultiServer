@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using WebAPIService;
 
@@ -1010,10 +1011,10 @@ namespace HomeWebTools
 
                                 filename = multipartfile.FileName;
 
-                                byte[] cryptoVersionBytesLE = EndianUtils.ReverseArray(ToolsImplementation.CryptoVersionBytesBE);
+                                byte[] cryptoVersionBytesLE = EndianUtils.EndianSwap(ToolsImplementation.CryptoVersionBytesBE);
 
-                                if (buffer.Length > 8 && ByteUtils.FindBytePattern(buffer, ToolsImplementation.BEE5BEE5Header) != -1
-                                     && ByteUtils.FindBytePattern(buffer, cryptoVersionBytesLE, 4) != -1 && version1 == "on")
+                                if (buffer.Length > 8 && ByteUtils.FindBytePattern(buffer, ToolsImplementation.BEE5BEE5Header, 0, 3) != -1
+                                     && ByteUtils.FindBytePattern(buffer, cryptoVersionBytesLE, 4, 7) != -1 && version1 == "on")
                                 {
                                     byte[] ProcessedFileBytes = new byte[buffer.Length - 8];
                                     Buffer.BlockCopy(buffer, 8, ProcessedFileBytes, 0, ProcessedFileBytes.Length);
@@ -1028,8 +1029,8 @@ namespace HomeWebTools
                                 {
                                     byte[] empty = new byte[4];
 
-                                    if (buffer.Length > 8 && ByteUtils.FindBytePattern(buffer, ToolsImplementation.BEE5BEE5Header) != -1
-                                    && ByteUtils.FindBytePattern(buffer, empty, 4) != -1)
+                                    if (buffer.Length > 8 && ByteUtils.FindBytePattern(buffer, ToolsImplementation.BEE5BEE5Header, 0, 3) != -1
+                                    && ByteUtils.FindBytePattern(buffer, empty, 4, 7) != -1)
                                     {
                                         byte[] ProcessedFileBytes = new byte[buffer.Length - 8];
                                         Buffer.BlockCopy(buffer, 8, ProcessedFileBytes, 0, ProcessedFileBytes.Length);
@@ -1112,24 +1113,34 @@ namespace HomeWebTools
 
                                 filename = multipartfile.FileName;
 
-                                if (buffer[0] == 0x00 && buffer[1] == 0x00 && buffer[2] == 0x00 && buffer[3] == 0x01)
+                                if (ByteUtils.FindBytePattern(buffer, EndianUtils.EndianSwap(ToolsImplementation.CryptoVersionBytesBE), 0, 3) != -1)
                                 {
-                                    buffer = ToolsImplementation.RemovePaddingPrefix(buffer);
-
-                                    byte[] decryptedfilebytes = LIBSECURE.Crypt_Decrypt(buffer, ToolsImplementation.MetaDataV1IVA, 8);
+                                    byte[] decryptedfilebytes = LIBSECURE.Crypt_Decrypt(ToolsImplementation.RemovePaddingPrefix(buffer), ToolsImplementation.MetaDataV1IVA, 8);
 
                                     if (decryptedfilebytes != null)
                                         TasksResult.Add((decryptedfilebytes, $"{filename}_Decrypted.bin"));
                                 }
-                                else if (buffer[0] == 0xBE && buffer[1] == 0xE5 && buffer[2] == 0xBE && buffer[3] == 0xE5)
+                                else if (ByteUtils.FindBytePattern(buffer, ToolsImplementation.BEE5BEE5Header, 0, 3) != -1)
                                 {
                                     byte[] encryptedfilebytes = LIBSECURE.Crypt_Decrypt(buffer, ToolsImplementation.MetaDataV1IVA, 8);
 
                                     if (encryptedfilebytes != null)
                                         TasksResult.Add((ToolsImplementation.ApplyPaddingPrefix(encryptedfilebytes, false), $"{filename}_Encrypted.bin"));
                                 }
+                                else
+                                {
+                                    try
+                                    {
+                                        // Check if we have valid text in the INF (older home has it decrypted)
+                                        if (new Utf8Checker().Check(buffer, true))
+                                            TasksResult.Add((buffer, $"{filename}.bin"));
+                                    }
+                                    catch
+                                    {
+                                    }
+                                }
 
-                                i++;
+                                    i++;
                                 filedata.Flush();
                             }
                         }

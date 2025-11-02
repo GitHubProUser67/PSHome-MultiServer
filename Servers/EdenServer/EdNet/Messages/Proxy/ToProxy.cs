@@ -1,3 +1,6 @@
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 using CustomLogger;
 using EdenServer.ClientChallengeService;
 using EdenServer.EdNet.ProxyMessages;
@@ -9,8 +12,6 @@ using EdNetService.CRC;
 using EdNetService.Models;
 using EndianTools;
 using MultiServerLibrary.Extension;
-using System.Net;
-using System.Text;
 
 namespace EdenServer.EdNet.Messages
 {
@@ -58,7 +59,7 @@ namespace EdenServer.EdNet.Messages
         private ushort PayloadSize;
         private byte[]? Payload;
 
-        public override bool Process(AbstractEdenServer server, IPEndPoint endpoint, EdStore store)
+        public override bool Process(UdpClient listener, AbstractEdenServer server, IPEndPoint endpoint, EdStore store)
         {
             if (server is not ProxyServer) return false;
 
@@ -106,7 +107,7 @@ namespace EdenServer.EdNet.Messages
                     ResultBuffer = initResponse.Data;
                     try
                     {
-                        return server.listener?.Send(ResultBuffer, ResultBuffer.Length, endpoint) != -1;
+                        return listener?.Send(ResultBuffer, ResultBuffer.Length, endpoint) != -1;
                     }
                     catch
                     {
@@ -136,7 +137,7 @@ namespace EdenServer.EdNet.Messages
                     store.ExtractUInt8(); // Unk
                     store.ExtractUInt8(); // Unk
 
-                    client = new ClientObject(server.listener, EdenServerConfiguration.EnableEncryption)
+                    client = new ClientObject(listener, EdenServerConfiguration.EnableEncryption)
                     {
                         Question1 = Question1, Question2 = Question2, Question3 = Question3,
                         Answer1 = Answer1, Answer2 = Answer2, Answer3 = Answer3,
@@ -205,7 +206,7 @@ namespace EdenServer.EdNet.Messages
                     ResultBuffer = init2Response.TrimmedData;
                     try
                     {
-                        return server.listener?.Send(ResultBuffer, ResultBuffer.Length, endpoint) != -1;
+                        return listener?.Send(ResultBuffer, ResultBuffer.Length, endpoint) != -1;
                     }
                     catch
                     {
@@ -393,7 +394,7 @@ namespace EdenServer.EdNet.Messages
                         {
                             try
                             {
-                                return server.listener?.Send(ResultBuffer, ResultBuffer.Length, endpoint) != -1;
+                                return listener?.Send(ResultBuffer, ResultBuffer.Length, endpoint) != -1;
                             }
                             catch
                             {

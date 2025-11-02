@@ -11,13 +11,13 @@ namespace WebAPIService.LeaderboardService
                 // --- Classic Cheeses ---
                 "Fromage", "Camembert", "Roquefort", "Brie", "Comte", "Munster",
                 "Reblochon", "SaintNectaire", "Chevre", "Tomme", "Bleu",
-                "Cantal", "Fourme", "PontLevêque", "Maroilles", "Raclette",
+                "Cantal", "Fourme", "PontLeveque", "Maroilles", "Raclette",
                 "OssauIraty", "Abondance", "Livarot", "epoisses", "Chabichou",
 
                 // --- Asterix & Obelix World ---
                 "Asterix", "Obelix", "Idefix", "Panoramix", "Abraracourcix",
                 "Assurancetourix", "Ordralfabetix", "Cetautomatix", "Goudurix",
-                "Falbala", "Jolitorax", "Cleopâtre", "Cesarix",
+                "Falbala", "Jolitorax", "Cleopatre", "Cesarix",
 
                 // --- Pâtisserie / Desserts ---
                 "Croissant", "PainAuChocolat", "eclair", "Macaron", "TarteTatin",

@@ -26,7 +26,7 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError(ex.ToString());
+                LoggerAccessor.LogWarn($"[ScertMultiAppDecoder] - Tcp: Failed to decode a SCERT message. (Exception:{ex})");
             }
         }
     }

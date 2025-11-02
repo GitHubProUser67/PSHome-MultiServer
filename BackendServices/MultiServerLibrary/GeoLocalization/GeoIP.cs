@@ -1,6 +1,5 @@
 using MaxMind.GeoIP2;
 using MaxMind.GeoIP2.Responses;
-using MultiServerLibrary.Extension;
 using MultiServerLibrary.HTTP;
 using System;
 using System.Collections.Generic;
@@ -101,69 +100,76 @@ namespace MultiServerLibrary.GeoLocalization
             string DbPath = $"{directoryPath}/GeoIP2-Country.mmdb";
             string liteDbPath = $"{directoryPath}/GeoLite2-Country.mmdb";
 
-            using (Mutex mutex = new Mutex(false, $"Global\\{nameof(GeoIP)}Lock"))
+            try
             {
-                try
+                using (Mutex mutex = new Mutex(false, $"Global\\{nameof(GeoIP)}Lock"))
                 {
-                    mutex.WaitOne();
-
-                    Directory.CreateDirectory(directoryPath);
-
-                    // We favor premium/paid databases (not has the same update procedure as the lite variant so no auto-update for this one).
-                    if (File.Exists(DbPath))
+                    try
                     {
-                        reader = new DatabaseReader(DbPath);
-#if DEBUG
-                        CustomLogger.LoggerAccessor.LogInfo("[GeoIP] - InitializeInstance() - Loaded GeoIP2-Country.mmdb Database...");
-#endif
-                    }
-                    else if (File.Exists(liteDbPath))
-                    {
-                        if (!string.IsNullOrEmpty(dbUrl))
+                        mutex.WaitOne();
+
+                        Directory.CreateDirectory(directoryPath);
+
+                        // We favor premium/paid databases (not has the same update procedure as the lite variant so no auto-update for this one).
+                        if (File.Exists(DbPath))
                         {
-                            byte[] dbData = HTTPProcessor.RequestFullURLGET(dbUrl, true).data;
-
-                            if (dbData != null && NetHasher.DotNetHasher.ComputeSHA256String(dbData) != NetHasher.DotNetHasher.ComputeSHA256String(File.ReadAllBytes(liteDbPath)))
-                            {
-                                File.WriteAllBytes(liteDbPath, dbData);
+                            reader = new DatabaseReader(DbPath);
 #if DEBUG
-                                CustomLogger.LoggerAccessor.LogInfo($"[GeoIP] - InitializeInstance() - Updated GeoLite2-Country.mmdb Database as of: {DateTime.Now}.");
+                            CustomLogger.LoggerAccessor.LogInfo("[GeoIP] - InitializeInstance() - Loaded GeoIP2-Country.mmdb Database...");
 #endif
-                            }
                         }
-                        reader = new DatabaseReader(liteDbPath);
-#if DEBUG
-                        CustomLogger.LoggerAccessor.LogInfo("[GeoIP] - InitializeInstance() - Loaded GeoLite2-Country.mmdb Database...");
-#endif
-                    }
-                    else if (!string.IsNullOrEmpty(dbUrl))
-                    {
-                        byte[] dbData = HTTPProcessor.RequestFullURLGET(dbUrl, true).data;
-
-                        if (dbData != null)
+                        else if (File.Exists(liteDbPath))
                         {
-                            File.WriteAllBytes(liteDbPath, dbData);
+                            if (!string.IsNullOrEmpty(dbUrl))
+                            {
+                                byte[] dbData = HTTPProcessor.RequestFullURLGET(dbUrl, true).data;
+
+                                if (dbData != null && NetHasher.DotNetHasher.ComputeSHA256String(dbData) != NetHasher.DotNetHasher.ComputeSHA256String(File.ReadAllBytes(liteDbPath)))
+                                {
+                                    File.WriteAllBytes(liteDbPath, dbData);
+#if DEBUG
+                                    CustomLogger.LoggerAccessor.LogInfo($"[GeoIP] - InitializeInstance() - Updated GeoLite2-Country.mmdb Database as of: {DateTime.Now}.");
+#endif
+                                }
+                            }
                             reader = new DatabaseReader(liteDbPath);
 #if DEBUG
                             CustomLogger.LoggerAccessor.LogInfo("[GeoIP] - InitializeInstance() - Loaded GeoLite2-Country.mmdb Database...");
 #endif
                         }
+                        else if (!string.IsNullOrEmpty(dbUrl))
+                        {
+                            byte[] dbData = HTTPProcessor.RequestFullURLGET(dbUrl, true).data;
+
+                            if (dbData != null)
+                            {
+                                File.WriteAllBytes(liteDbPath, dbData);
+                                reader = new DatabaseReader(liteDbPath);
+#if DEBUG
+                                CustomLogger.LoggerAccessor.LogInfo("[GeoIP] - InitializeInstance() - Loaded GeoLite2-Country.mmdb Database...");
+#endif
+                            }
+                            else
+                                reader = null;
+                        }
                         else
                             reader = null;
-                    }
-                    else
-                        reader = null;
 
-                    _instance = new GeoIP(reader);
+                        _instance = new GeoIP(reader);
+                    }
+                    catch (Exception e)
+                    {
+                        CustomLogger.LoggerAccessor.LogError($"[GeoIP] - InitializeInstance() - Failed to initialize GeoIP engine (exception: {e})");
+                    }
+                    finally
+                    {
+                        mutex.ReleaseMutex();
+                    }
                 }
-                catch (Exception e)
-                {
-                    CustomLogger.LoggerAccessor.LogError($"[GeoIP] - InitializeInstance() - Failed to initialize GeoIP engine (exception: {e})");
-                }
-                finally
-                {
-                    mutex.ReleaseMutex();
-                }
+            }
+            catch (Exception e)
+            {
+                CustomLogger.LoggerAccessor.LogError($"[GeoIP] - InitializeInstance() - Failed to get mutex (exception: {e})");
             }
         }
 

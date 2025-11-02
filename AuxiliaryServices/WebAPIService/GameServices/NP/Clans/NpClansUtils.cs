@@ -38,7 +38,6 @@ namespace WebAPIService.GameServices.NP.Clans
             // If key size > block size, hash it first
             if (keySize > blockSize)
             {
-                actualKey = DotNetHasher.ComputeSHA1(key);
                 using (SHA1 sha1 = SHA1.Create())
                     actualKey = sha1.ComputeHash(key, 0, keySize);
             }

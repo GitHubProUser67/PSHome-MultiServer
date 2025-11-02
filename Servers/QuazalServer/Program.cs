@@ -1,10 +1,12 @@
 using CustomLogger;
 using Microsoft.Extensions.Logging;
 using MultiServerLibrary;
+using MultiServerLibrary.CustomServers;
 using MultiServerLibrary.Extension;
 using MultiServerLibrary.SNMP;
 using Newtonsoft.Json.Linq;
-using QuazalServer.ServerProcessors;
+using QuazalServer.QNetZ;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime;
 
@@ -223,8 +225,13 @@ class Program
     private static string configPath = configDir + "QuazalServer.json";
     private static string configMultiServerLibraryPath = configDir + "MultiServerLibrary.json";
     private static SnmpTrapSender? trapSender = null;
-    private static BackendServicesServer? BackendServer;
-    private static RDVServer? RendezVousServer;
+    private static UDPServer? BackendServer;
+    private static UDPServer? RendezVousServer;
+
+    const uint _serverPID = 2;
+
+    private static readonly ConcurrentDictionary<ushort, QPacketHandlerPRUDP> _backendHandlers = new ConcurrentDictionary<ushort, QPacketHandlerPRUDP>();
+    private static readonly ConcurrentDictionary<ushort, QPacketHandlerPRUDP> _rendezvousHandlers = new ConcurrentDictionary<ushort, QPacketHandlerPRUDP>();
 
     private static void StartOrUpdateServer()
     {
@@ -232,16 +239,88 @@ class Program
         RendezVousServer?.Stop();
         QuazalServer.RDVServices.ServiceFactoryRDV.ClearServices();
 
+        _backendHandlers.Clear();
+        _rendezvousHandlers.Clear();
+
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
 
-        BackendServer = new BackendServicesServer();
-        RendezVousServer = new RDVServer();
-        BackendServer.Start(QuazalServerConfiguration.BackendServersList
-                    , 2, new CancellationTokenSource().Token);
-        RendezVousServer.Start(QuazalServerConfiguration.RendezVousServersList
-                    , 2, new CancellationTokenSource().Token);
+        if (QuazalServerConfiguration.BackendServersList != null)
+        {
+            if (BackendServer == null)
+            {
+                BackendServer = new UDPServer
+                {
+                    // Keeps backward compatibility with the Alcatraz loop (race conditions happening overwise).
+                    FireClientAsTask = false
+                };
+            }
+            _ = BackendServer.StartAsync(
+            QuazalServerConfiguration.BackendServersList.Select(x => (ushort)x.Item1),
+            Environment.ProcessorCount,
+            (serverPort) =>
+            {
+                QuazalServer.RDVServices.ServiceFactoryRDV.TryInsertFactory(QuazalServerConfiguration.BackendServersList.First(entry => entry.Item1 == serverPort).Item3);
+            },
+            (serverPort, listener) =>
+            {
+                const string sourceName = "BackendServices";
+                var entry = QuazalServerConfiguration.BackendServersList.First(entry => entry.Item1 == serverPort);
+                QPacketHandlerPRUDP packetHandler = new(listener, _serverPID, serverPort, serverPort, entry.Item2, entry.Item3, sourceName);
+                packetHandler.Updates.Add(() => NetworkPlayers.DropPlayers());
+                _backendHandlers.TryAdd(serverPort, packetHandler);
+            },
+            (serverPort) =>
+            {
+                _backendHandlers[serverPort].Update();
+            },
+            (serverPort, listener, data, remoteEP) =>
+            {
+                _backendHandlers[serverPort].ProcessPacket(data, remoteEP);
+                return null;
+            },
+            new CancellationTokenSource().Token
+            );
+        }
+
+        if (QuazalServerConfiguration.RendezVousServersList != null)
+        {
+            if (RendezVousServer == null)
+            {
+                RendezVousServer = new UDPServer
+                {
+                    // Keeps backward compatibility with the Alcatraz loop (race conditions happening overwise).
+                    FireClientAsTask = false
+                };
+            }
+            _ = RendezVousServer.StartAsync(
+            QuazalServerConfiguration.RendezVousServersList.Select(x => (ushort)x.Item1),
+            Environment.ProcessorCount,
+            (serverPort) =>
+            {
+                QuazalServer.RDVServices.ServiceFactoryRDV.TryInsertFactory(QuazalServerConfiguration.RendezVousServersList.First(entry => entry.Item1 == serverPort).Item4);
+            },
+            (serverPort, listener) =>
+            {
+                const string sourceName = "RendezVous";
+                var entry = QuazalServerConfiguration.RendezVousServersList.First(entry => entry.Item1 == serverPort);
+                QPacketHandlerPRUDP packetHandler = new(listener, _serverPID, serverPort, entry.Item2, entry.Item3, entry.Item4, sourceName);
+                packetHandler.Updates.Add(() => NetworkPlayers.DropPlayers());
+                _rendezvousHandlers.TryAdd(serverPort, packetHandler);
+            },
+            (serverPort) =>
+            {
+                _rendezvousHandlers[serverPort].Update();
+            },
+            (serverPort, listener, data, remoteEP) =>
+            {
+                _rendezvousHandlers[serverPort].ProcessPacket(data, remoteEP);
+                return null;
+            },
+            new CancellationTokenSource().Token
+            );
+        }
     }
 
     static void Main()

@@ -30,7 +30,7 @@ namespace Horizon.SERVER
         public static IPAddress SERVER_IP = IPAddress.None;
 
         public static MumManager Manager = new();
-        public static MediusPluginsManager Plugins = new(HorizonServerConfiguration.PluginsFolder);
+        public static MediusPluginsManager Plugins = new(HorizonServerConfiguration.MediusPluginsFolder);
 
         public SECURITY_MODE eSecurityMode = SECURITY_MODE.MODE_UNKNOWN;
 
@@ -55,7 +55,7 @@ namespace Horizon.SERVER
         private static DateTime _lastConfigRefresh = DateTimeUtils.GetHighPrecisionUtcTime();
         private static DateTime _lastComponentLog = DateTimeUtils.GetHighPrecisionUtcTime();
 
-        public static bool started = false;
+        public static bool IsStarted = false;
 
         private static async Task TickAsync()
         {
@@ -127,14 +127,14 @@ namespace Horizon.SERVER
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[MediusClass] - TickAsync: An assertion was thrown while ticking servers. (Exception:{ex})");
             }
         }
 
         private static async Task LoopServer()
         {
             // iterate
-            while (started)
+            while (IsStarted)
             {
                 // tick
                 await TickAsync();
@@ -145,7 +145,7 @@ namespace Horizon.SERVER
 
         public static async void StopServer()
         {
-            started = false;
+            IsStarted = false;
 
             lock (AuthenticationServers)
             {
@@ -362,7 +362,7 @@ namespace Horizon.SERVER
                 #region NAT
                 //Get NATIp
                 if (string.IsNullOrEmpty(Settings.NATIp))
-                    LoggerAccessor.LogWarn("[MEDIUS] - No NAT ip found! Fallback to Sony's one.");
+                    LoggerAccessor.LogWarn("[MediusClass] - No NAT ip found! Fallback to Sony's one.");
                 #endregion
 
                 //* Diagnostic Profiling Enabled: %d Counts
@@ -489,15 +489,21 @@ namespace Horizon.SERVER
 
                 #endregion
 
-                LoggerAccessor.LogInfo("[Medius] - Initialized all servers.");
+                LoggerAccessor.LogInfo("[MediusClass] - Initialized all servers.");
 
-                started = true;
+                IsStarted = true;
 
                 _ = Task.Run(LoopServer);
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[Medius] - Failed to start with exception : {ex}");
+                LoggerAccessor.LogError($"[MediusClass] - Server failed to initialize with error - {ex}");
+
+                try
+                {
+                    StopServer();
+                }
+                catch { }
             }
         }
 
@@ -680,7 +686,7 @@ namespace Horizon.SERVER
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[MediusClass] - RefreshAppSettings: An assertion was thrown while loading configuration. (Exception:{ex})");
             }
         }
 

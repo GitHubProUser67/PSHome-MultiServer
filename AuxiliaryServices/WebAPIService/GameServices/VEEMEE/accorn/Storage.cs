@@ -3,7 +3,7 @@ using MultiServerLibrary.HTTP;
 using HttpMultipartParser;
 using Newtonsoft.Json.Linq;
 
-namespace WebAPIService.GameServices.VEEMEE
+namespace WebAPIService.GameServices.VEEMEE.accorn
 {
     public static class Storage
     {

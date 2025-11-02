@@ -139,9 +139,7 @@ namespace Horizon.SERVER.Medius
                     LoggerAccessor.LogInfo($"MEDIUS RECV {data?.ClientObject},{channel}: {message}");
             };
 
-            try
-            {
-                var bootstrap = new ServerBootstrap();
+            var bootstrap = new ServerBootstrap();
                 bootstrap
                     .Group(_bossGroup, _workerGroup)
                     .Channel<TcpServerSocketChannel>()
@@ -162,11 +160,6 @@ namespace Horizon.SERVER.Medius
                     .ChildOption(ChannelOption.SoTimeout, 1000 * 60 * 15);
 
                 _boundChannel = new ConcurrentBag<IChannel?> { await bootstrap.BindAsync(TCPPort), (UDPPort != 0) ? await bootstrap.BindAsync(UDPPort) : null };
-            }
-            finally
-            {
-
-            }
         }
 
         public void Log()
@@ -320,9 +313,8 @@ namespace Horizon.SERVER.Medius
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[BaseMediusComponent] - clientChannel ticking thrown an assertion. (Exception:{e})");
                 _forceDisconnectQueue.Enqueue(clientChannel);
-                //await DisconnectClient(clientChannel);
             }
         }
 
@@ -371,7 +363,7 @@ namespace Horizon.SERVER.Medius
                 // close channel
                 await channel.CloseAsync();
             }
-            catch (Exception)
+            catch
             {
                 // Silence exception since the client probably just closed the socket before we could write to it
             }

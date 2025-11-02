@@ -1,11 +1,11 @@
 using System;
-using System.Collections.Generic;
 using MultiServerLibrary.HTTP;
 using CustomLogger;
 using HttpMultipartParser;
 using System.IO;
+using System.Collections.Concurrent;
 
-namespace WebAPIService.GameServices.VEEMEE
+namespace WebAPIService.GameServices.VEEMEE.accorn
 {
     public static class Slot
     {
@@ -210,7 +210,9 @@ namespace WebAPIService.GameServices.VEEMEE
 
     public static class SlotManager
     {
-        private static Dictionary<string, Dictionary<int, string>> instanceData = new Dictionary<string, Dictionary<int, string>>();
+        private const string EMPTY_SLOT = "<EMPTY/>";
+
+        private static readonly ConcurrentDictionary<string, ConcurrentDictionary<int, string>> _instanceData = new ConcurrentDictionary<string, ConcurrentDictionary<int, string>>();
 
         public static string UpdateSlot(string instance_id, int slot_num, string psn_id, bool removemode, int max_slot = 0)
         {
@@ -218,18 +220,16 @@ namespace WebAPIService.GameServices.VEEMEE
 
             try
             {
-                if (!instanceData.ContainsKey(instance_id))
+                if (!_instanceData.ContainsKey(instance_id))
                 {
-                    instanceData[instance_id] = new Dictionary<int, string>();
+                    _instanceData[instance_id] = new ConcurrentDictionary<int, string>();
 
                     // Initialize the dictionary with max_slot number of slots.
                     for (int i = 1; i <= max_slot; i++)
-                    {
-                        instanceData[instance_id][i] = "<unnocupied/>";
-                    }
+                        _instanceData[instance_id][i] = EMPTY_SLOT;
                 }
 
-                var data = instanceData[instance_id];
+                var data = _instanceData[instance_id];
 
                 if (slot_num != 0 && removemode)
                 {
@@ -237,7 +237,7 @@ namespace WebAPIService.GameServices.VEEMEE
                     {
                         if (data[slot_num] == psn_id)
                         {
-                            data[slot_num] = "<unnocupied/>";
+                            data[slot_num] = EMPTY_SLOT;
                             found = true;
                         }
                     }
@@ -252,7 +252,7 @@ namespace WebAPIService.GameServices.VEEMEE
                             if (kvp.Value == psn_id)
                                 return kvp.Key.ToString();
 
-                            if (kvp.Value == "<unnocupied/>")
+                            if (kvp.Value == EMPTY_SLOT)
                             {
                                 data[kvp.Key] = psn_id;
                                 return kvp.Key.ToString();
@@ -262,7 +262,7 @@ namespace WebAPIService.GameServices.VEEMEE
                         {
                             if (kvp.Value == psn_id)
                             {
-                                data[kvp.Key] = "<unnocupied/>";
+                                data[kvp.Key] = EMPTY_SLOT;
                                 found = true;
                             }
                         }

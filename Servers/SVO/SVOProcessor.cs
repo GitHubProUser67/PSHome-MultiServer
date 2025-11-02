@@ -1,9 +1,9 @@
 using CustomLogger;
 using HttpMultipartParser;
-using MultiServerLibrary;
 using MultiServerLibrary.Extension;
 using MultiServerLibrary.HTTP;
 using SpaceWizards.HttpListener;
+using SpaceWizards.HttpListener.CustomServers;
 using SVO.Games.PS3;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
@@ -13,360 +13,258 @@ namespace SVO
 {
     public class SVOProcessor
     {
-        public static bool IsStarted = false;
+        private HTTPServer? _server;
 
-        private X509Certificate2? certificate;
-        private Thread? thread;
-        private volatile bool threadActive;
-
-        private HttpListener? listener;
-
-        private List<Task> HttpClientTasks = new();
-
-        private readonly int AwaiterTimeoutInMS;
-        private int MaxConcurrentListeners;
-
-        private readonly string host;
-
-        public SVOProcessor(string host, X509Certificate2? certificate = null, int MaxConcurrentListeners = 10, int awaiterTimeoutInMS = 500)
+        public SVOProcessor()
         {
-            this.host = host;
-            this.certificate = certificate;
-            this.MaxConcurrentListeners = MaxConcurrentListeners;
-            AwaiterTimeoutInMS = awaiterTimeoutInMS;
-
-            Start();
-        }
-
-        public static bool IsIPBanned(string ipAddress)
-        {
-            if (MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibraryConfiguration.BannedIPs.Contains(ipAddress))
-                return true;
-
-            return false;
-        }
-
-        public void Start()
-        {
-            if (thread != null)
+            if (_server == null)
             {
-                LoggerAccessor.LogWarn("[SVO] - Server already active.");
-                return;
+                _server = new HTTPServer
+                {
+                    PreferHttpSys = false, // low priority TODO, make SVO more dynamic in that aspect (if it really matters...).
+                    FireClientAsTask = false
+                };
             }
-            thread = new Thread(Listen);
-            thread.Start();
-            IsStarted = true;
+        }
+
+        public void Start(string host, X509Certificate2? certificate = null, int MaxConcurrentListeners = 10, CancellationToken token = default)
+        {
+            _server!.Host = host;
+
+            _ = _server.StartAsync(
+                new Dictionary<ushort, bool>() { { 10058, false } }, // Prefer using a single listener (SVO is not performance critical), the rest will be populated later.
+                MaxConcurrentListeners,
+                (serverPort, listener) =>
+                {
+                    if (listener is HttpListener managed)
+                    {
+                        const ushort startingSVOPort = 10060;
+
+                        if (certificate != null)
+                        {
+                            System.Net.IPAddress hostAddr = System.Net.IPAddress.Parse(InternetProtocolUtils.GetFirstActiveIPAddress(host, System.Net.IPAddress.Any.ToString()));
+
+                            managed.SetCertificate(hostAddr, 10061, certificate);
+                            managed.SetCertificate(hostAddr, 10062, certificate);
+                        }
+#pragma warning disable
+                        managed.SslProtocols = SslProtocols.Ssl2 | SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
+#pragma warning restore
+                        for (byte i = 0; i < 3; i++)
+                        {
+                            int port = startingSVOPort + i;
+
+                            if (TCPUtils.IsTCPPortAvailable(port))
+                            {
+                                string prefix = $"http{(i == 0 ? string.Empty : 's')}://{host}:{port}/";
+                                managed.Prefixes.Add(prefix);
+                                LoggerAccessor.LogInfo($"[SVO] - Added supplemental prefix: {prefix}.");
+                            }
+                            else
+                                LoggerAccessor.LogError($"[SVO] - Port:{port} is not available, skipping...");
+                        }
+                    }
+                },
+                null,
+                null,
+                (serverPort, listenerCtx, remoteEP) =>
+                {
+                    _ = ProcessMessagesFromClient((HttpListenerContext)listenerCtx, remoteEP, token);
+                },
+                token
+                );
         }
 
         public void Stop()
         {
-            // stop thread and listener
-            threadActive = false;
-            if (listener != null && listener.IsListening) listener.Stop();
-
-            // wait for thread to finish
-            if (thread != null)
-            {
-                thread.Join();
-                thread = null;
-            }
-
-            // finish closing listener
-            if (listener != null)
-            {
-                RemoveAllPrefixes(listener);
-                listener.Close();
-                listener = null;
-            }
-            IsStarted = false;
+            _server?.Stop();
         }
 
-        private bool RemoveAllPrefixes(HttpListener listener)
-        {
-            try
-            {
-                // Get the prefixes that the Web server is listening to.
-                listener.Prefixes.Clear();
-            }
-            // If the operation failed, return false.
-            catch
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        private void Listen()
-        {
-            threadActive = true;
-
-            object _sync = new();
-
-            // start listener
-            try
-            {
-                System.Net.IPAddress hostAddr = System.Net.IPAddress.Parse(InternetProtocolUtils.GetFirstActiveIPAddress(host, "0.0.0.0"));
-
-                listener = new HttpListener();
-                if (certificate != null)
-                {
-                    listener.SetCertificate(hostAddr, 10061, certificate);
-                    listener.SetCertificate(hostAddr, 10062, certificate);
-                }
-#pragma warning disable
-                listener.SslProtocols = SslProtocols.Ssl2 | SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
-#pragma warning restore
-                listener.Prefixes.Add(string.Format("http://{0}:{1}/", host, 10058));
-                const ushort startingSVOPort = 10060;
-                for (byte i = 0; i < 3; i++)
-                {
-                    if (i == 0)
-                        listener.Prefixes.Add(string.Format("http://{0}:{1}/", host, startingSVOPort));
-                    else
-                        listener.Prefixes.Add(string.Format("https://{0}:{1}/", host, startingSVOPort + i));
-                }
-                listener.Start();
-            }
-            catch (Exception e)
-            {
-                LoggerAccessor.LogError("[SVO] - An Exception Occured while starting the http server: " + e.Message);
-                threadActive = false;
-                return;
-            }
-
-            LoggerAccessor.LogInfo("[SVO] - Server started...");
-
-            // wait for requests
-            while (threadActive)
-            {
-                lock (_sync)
-                {
-                    if (!threadActive)
-                        break;
-                }
-
-                while (HttpClientTasks.Count < MaxConcurrentListeners) //Maximum number of concurrent listeners
-                    HttpClientTasks.Add(listener.GetContextAsync().ContinueWith(t =>
-                    {
-                        HttpListenerContext? client = null;
-                        try
-                        {
-                            if (!t.IsCompleted)
-                                return;
-                            client = t.Result;
-                        }
-                        catch
-                        {
-                        }
-                        _ = ProcessMessagesFromClient(client);
-                    }));
-
-                int RemoveAtIndex = Task.WaitAny(HttpClientTasks.ToArray(), AwaiterTimeoutInMS); //Synchronously Waits up to 500ms for any Task completion
-                if (RemoveAtIndex != -1) //Remove the completed task from the list
-                    HttpClientTasks.RemoveAt(RemoveAtIndex);
-            }
-        }
-
-        #region Protected Functions
-        protected virtual async Task<bool> ProcessMessagesFromClient(HttpListenerContext? ctx)
-        {
-            if (ctx == null)
-                return false;
-#if DEBUG
-            LoggerAccessor.LogInfo($"[SVO] - Connection received (Thread " + Thread.CurrentThread.ManagedThreadId.ToString() + ")");
-#endif
-            ctx.Response.KeepAlive = SVOServerConfiguration.EnableKeepAlive;
-            try
+        private static Task ProcessMessagesFromClient(HttpListenerContext listenerCtx, System.Net.IPEndPoint remoteEP, CancellationToken token) =>
+            Task.Run(async () =>
             {
                 bool isAllowed = false;
-                string fullurl = ctx.Request.Url.ToString();
-                string absolutepath = ctx.Request.Url.AbsolutePath;
-                string clientip = ctx.Request.RemoteEndPoint.Address.ToString();
-                int clientport = ctx.Request.RemoteEndPoint.Port;
 
-                if (IsIPBanned(clientip) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip)))
-                    LoggerAccessor.LogError($"[SECURITY] - Client - {clientip}:{clientport} Requested the SVO server while being banned!");
-                else if (!string.IsNullOrEmpty(absolutepath))
+                try
                 {
-                    string? UserAgent = null;
+                    listenerCtx.Response.KeepAlive = SVOServerConfiguration.EnableKeepAlive;
 
-                    if (!string.IsNullOrEmpty(ctx.Request.UserAgent))
-                        UserAgent = ctx.Request.UserAgent.ToLower();
+                    string absolutepath = listenerCtx.Request.Url.AbsolutePath;
+                    string clientip = remoteEP.Address.ToString();
+                    int clientport = remoteEP.Port;
 
-                    if (!string.IsNullOrEmpty(UserAgent) && UserAgent.Contains("bytespider")) // Get Away TikTok.
-                        LoggerAccessor.LogInfo($"[SVO] - Client - {clientip}:{clientport} Requested the SVO Server while not being allowed!");
-                    else
+                    if (!string.IsNullOrEmpty(absolutepath))
                     {
-                        LoggerAccessor.LogInfo($"[SVO] - Client - {clientip}:{clientport} Requested the SVO Server with URL : {fullurl}");
-                        isAllowed = true;
-                    }
-                }
+                        string? UserAgent = null;
 
-                if (isAllowed)
-                {
-                    if (absolutepath == "/dataloaderweb/queue")
-                    {
-                        switch (ctx.Request.HttpMethod)
+                        if (!string.IsNullOrEmpty(listenerCtx.Request.UserAgent))
+                            UserAgent = listenerCtx.Request.UserAgent.ToLower();
+
+                        if (!string.IsNullOrEmpty(UserAgent) && UserAgent.Contains("bytespider")) // Get Away TikTok.
+                            LoggerAccessor.LogInfo($"[SVO] - Client - {clientip}:{clientport} Requested the SVO Server while not being allowed!");
+                        else
                         {
-                            case "POST":
-                                if (!string.IsNullOrEmpty(ctx.Request.ContentType))
-                                {
-                                    ctx.Response.Headers.Set("Content-Type", "application/xml;charset=UTF-8");
-                                    ctx.Response.Headers.Set("Content-Language", string.Empty);
-                                    string? boundary = HTTPProcessor.ExtractBoundary(ctx.Request.ContentType);
-
-                                    var data = MultipartFormDataParser.Parse(ctx.Request.InputStream, boundary);
-
-                                    byte[] datatooutput = Encoding.UTF8.GetBytes(data.GetParameterValue("body"));
-
-                                    Directory.CreateDirectory($"{SVOServerConfiguration.SVOStaticFolder}/dataloaderweb/queue");
-
-                                    DirectoryInfo directory = new($"{SVOServerConfiguration.SVOStaticFolder}/dataloaderweb/queue");
-
-                                    FileInfo[] files = directory.GetFiles();
-
-                                    if (files.Length > 19)
-                                    {
-                                        FileInfo oldestFile = files.OrderBy(file => file.CreationTime).First();
-                                        LoggerAccessor.LogInfo("[SVO] - Replacing Home Debug log file: " + oldestFile.Name);
-                                        if (File.Exists(oldestFile.FullName))
-                                            File.Delete(oldestFile.FullName);
-                                    }
-
-                                    File.WriteAllBytes($"{SVOServerConfiguration.SVOStaticFolder}/dataloaderweb/queue/{Guid.NewGuid()}.xml", datatooutput);
-
-                                    ctx.Response.StatusCode = (int)System.Net.HttpStatusCode.OK;
-                                    ctx.Response.SendChunked = true;
-
-                                    if (ctx.Response.OutputStream.CanWrite)
-                                    {
-                                        try
-                                        {
-                                            ctx.Response.ContentLength64 = datatooutput.Length;
-                                            ctx.Response.OutputStream.Write(datatooutput, 0, datatooutput.Length);
-                                        }
-                                        catch
-                                        {
-                                            // Not Important.
-                                        }
-                                    }
-                                }
-                                else
-                                    ctx.Response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
-                                break;
-                            default:
-                                ctx.Response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
-                                break;
+                            LoggerAccessor.LogInfo($"[SVO] - Client - {clientip}:{clientport} Requested the SVO Server with absolute URL : {absolutepath}");
+                            isAllowed = true;
                         }
                     }
-                    else if (absolutepath.Contains("/HUBPS3_SVML/"))
-                        await PlayStationHome.Home_SVO(ctx.Request, ctx.Response);
-                    else if (absolutepath.Contains("/WARHAWK_SVML/"))
-                        await Warhawk.Warhawk_SVO(ctx.Request, ctx.Response);
-                    else if (absolutepath.Contains("/MOTORSTORM2PS3_SVML/") || absolutepath.Contains("/MOTORSTORM2PS3_XML/"))
-                        await MotorstormPR2.MotorStormPR_SVO(ctx.Request, ctx.Response);
-                    else if (absolutepath.Contains("/motorstorm3ps3_xml/"))
-                        await MotorStormApocalypse.MSApocalypse_OTG(ctx.Request, ctx.Response);
-                    else if (absolutepath.Contains("/BUZZPS3_SVML/"))
-                        await BuzzQuizGame.BuzzQuizGame_SVO(ctx.Request, ctx.Response);
-                    else if (absolutepath.Contains("/BOURBON_XML/"))
-                        await Starhawk.Starhawk_SVO(ctx.Request, ctx.Response);
-                    else if (absolutepath.Contains("/CONFRONTATION_XML/"))
-                        await SocomConfrontation.SocomConfrontation_SVO(ctx.Request, ctx.Response);
-                    else if (absolutepath.Contains("/SINGSTARPS3_SVML/"))
-                        await SingStar.Singstar_SVO(ctx.Request, ctx.Response);
-                    else if (absolutepath.Contains("/TWISTEDMETALX_XML/"))
-                        await TwistedMetalX.TwistedMetalX_SVO(ctx.Request, ctx.Response);
-                    else if (absolutepath.Contains("/wox_ws/"))
-                        await Wipeout2048.Wipeout2048_OTG(ctx.Request, ctx.Response);
-                    else
+
+                    if (isAllowed)
                     {
-                        // Only meant to be used with fairly small files.
-                        string filePath = Path.Combine(SVOServerConfiguration.SVOStaticFolder, absolutepath[1..]);
-
-                        if (File.Exists(filePath))
+                        if (absolutepath == "/dataloaderweb/queue")
                         {
-                            ctx.Response.StatusCode = (int)System.Net.HttpStatusCode.OK;
-                            ctx.Response.ContentType = HTTPProcessor.GetMimeType(Path.GetExtension(filePath), HTTPProcessor._mimeTypes);
-
-                            ctx.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-                            ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                            ctx.Response.Headers.Add("ETag", Guid.NewGuid().ToString()); // Well, kinda wanna avoid client caching.
-                            ctx.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(filePath).ToString("r"));
-
-                            byte[] FileContent = File.ReadAllBytes(filePath);
-
-                            if (ctx.Response.OutputStream.CanWrite)
+                            switch (listenerCtx.Request.HttpMethod)
                             {
-                                try
-                                {
-                                    ctx.Response.ContentLength64 = FileContent.Length;
-                                    ctx.Response.OutputStream.Write(FileContent, 0, FileContent.Length);
-                                }
-                                catch
-                                {
-                                    // Not Important.
-                                }
+                                case "POST":
+                                    if (!string.IsNullOrEmpty(listenerCtx.Request.ContentType))
+                                    {
+                                        listenerCtx.Response.Headers.Set("Content-Type", "application/xml;charset=UTF-8");
+                                        listenerCtx.Response.Headers.Set("Content-Language", string.Empty);
+                                        string? boundary = HTTPProcessor.ExtractBoundary(listenerCtx.Request.ContentType);
+
+                                        byte[] dataOutput = Encoding.UTF8.GetBytes(MultipartFormDataParser.Parse(listenerCtx.Request.InputStream, boundary).GetParameterValue("body"));
+
+                                        Directory.CreateDirectory($"{SVOServerConfiguration.SVOStaticFolder}/dataloaderweb/queue");
+
+                                        FileInfo[] files = new DirectoryInfo($"{SVOServerConfiguration.SVOStaticFolder}/dataloaderweb/queue").GetFiles();
+
+                                        if (files.Length > 19)
+                                        {
+                                            FileInfo oldestFile = files.OrderBy(file => file.CreationTime).First();
+                                            LoggerAccessor.LogInfo("[SVO] - Replacing Home Debug log file: " + oldestFile.Name);
+                                            if (File.Exists(oldestFile.FullName))
+                                                File.Delete(oldestFile.FullName);
+                                        }
+
+                                        File.WriteAllBytes($"{SVOServerConfiguration.SVOStaticFolder}/dataloaderweb/queue/{Guid.NewGuid()}.xml", dataOutput);
+
+                                        listenerCtx.Response.StatusCode = (int)System.Net.HttpStatusCode.OK;
+                                        listenerCtx.Response.SendChunked = true;
+
+                                        if (listenerCtx.Response.OutputStream.CanWrite)
+                                        {
+                                            try
+                                            {
+                                                listenerCtx.Response.ContentLength64 = dataOutput.Length;
+                                                await listenerCtx.Response.OutputStream.WriteAsync(dataOutput).ConfigureAwait(false);
+                                            }
+                                            catch
+                                            {
+                                                // Not Important.
+                                            }
+                                        }
+                                    }
+                                    else
+                                        listenerCtx.Response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                    break;
+                                default:
+                                    listenerCtx.Response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                    break;
                             }
                         }
+                        else if (absolutepath.Contains("/HUBPS3_SVML/"))
+                            await PlayStationHome.Home_SVO(listenerCtx.Request, listenerCtx.Response).ConfigureAwait(false);
+                        else if (absolutepath.Contains("/WARHAWK_SVML/"))
+                            await Warhawk.Warhawk_SVO(listenerCtx.Request, listenerCtx.Response).ConfigureAwait(false);
+                        else if (absolutepath.Contains("/MOTORSTORM2PS3_SVML/") || absolutepath.Contains("/MOTORSTORM2PS3_XML/"))
+                            await MotorstormPR2.MotorStormPR_SVO(listenerCtx.Request, listenerCtx.Response).ConfigureAwait(false);
+                        else if (absolutepath.Contains("/motorstorm3ps3_xml/"))
+                            await MotorStormApocalypse.MSApocalypse_OTG(listenerCtx.Request, listenerCtx.Response).ConfigureAwait(false);
+                        else if (absolutepath.Contains("/BUZZPS3_SVML/"))
+                            await BuzzQuizGame.BuzzQuizGame_SVO(listenerCtx.Request, listenerCtx.Response).ConfigureAwait(false);
+                        else if (absolutepath.Contains("/BOURBON_XML/"))
+                            await Starhawk.Starhawk_SVO(listenerCtx.Request, listenerCtx.Response).ConfigureAwait(false);
+                        else if (absolutepath.Contains("/CONFRONTATION_XML/"))
+                            await SocomConfrontation.SocomConfrontation_SVO(listenerCtx.Request, listenerCtx.Response).ConfigureAwait(false);
+                        else if (absolutepath.Contains("/SINGSTARPS3_SVML/"))
+                            await SingStar.Singstar_SVO(listenerCtx.Request, listenerCtx.Response).ConfigureAwait(false);
+                        else if (absolutepath.Contains("/TWISTEDMETALX_XML/"))
+                            await TwistedMetalX.TwistedMetalX_SVO(listenerCtx.Request, listenerCtx.Response).ConfigureAwait(false);
+                        else if (absolutepath.Contains("/wox_ws/"))
+                            await Wipeout2048.Wipeout2048_OTG(listenerCtx.Request, listenerCtx.Response).ConfigureAwait(false);
                         else
-                            ctx.Response.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
-                    }
-                }
-                else
-                    ctx.Response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                        {
+                            // Only meant to be used with fairly small files.
+                            string filePath = Path.Combine(SVOServerConfiguration.SVOStaticFolder, absolutepath[1..]);
 
-                if (ctx.Response.StatusCode < 400)
-                    LoggerAccessor.LogInfo($"[SVO] - {clientip}:{clientport} -> {ctx.Response.StatusCode}");
-                else
-                {
-                    switch (ctx.Response.StatusCode)
+                            if (File.Exists(filePath))
+                            {
+                                listenerCtx.Response.StatusCode = (int)System.Net.HttpStatusCode.OK;
+                                listenerCtx.Response.ContentType = HTTPProcessor.GetMimeType(Path.GetExtension(filePath), HTTPProcessor.MimeTypes);
+
+                                listenerCtx.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                                listenerCtx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                                listenerCtx.Response.Headers.Add("ETag", Guid.NewGuid().ToString()); // Well, kinda wanna avoid client caching.
+                                listenerCtx.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(filePath).ToString("r"));
+
+                                byte[] FileContent = await File.ReadAllBytesAsync(filePath).ConfigureAwait(false);
+
+                                if (listenerCtx.Response.OutputStream.CanWrite)
+                                {
+                                    try
+                                    {
+                                        listenerCtx.Response.ContentLength64 = FileContent.Length;
+                                        await listenerCtx.Response.OutputStream.WriteAsync(FileContent).ConfigureAwait(false);
+                                    }
+                                    catch
+                                    {
+                                        // Not Important.
+                                    }
+                                }
+                            }
+                            else
+                                listenerCtx.Response.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
+                        }
+                    }
+                    else
+                        listenerCtx.Response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+
+                    if (listenerCtx.Response.StatusCode < 400)
+                        LoggerAccessor.LogInfo($"[SVO] - {clientip}:{clientport} -> {listenerCtx.Response.StatusCode}");
+                    else
                     {
-                        case (int)System.Net.HttpStatusCode.NotFound:
-                        case (int)System.Net.HttpStatusCode.NotImplemented:
-                        case (int)System.Net.HttpStatusCode.RequestedRangeNotSatisfiable:
-                            LoggerAccessor.LogWarn($"[SVO] - {clientip}:{clientport} -> {ctx.Response.StatusCode}");
-                            break;
+                        switch (listenerCtx.Response.StatusCode)
+                        {
+                            case (int)System.Net.HttpStatusCode.NotFound:
+                            case (int)System.Net.HttpStatusCode.NotImplemented:
+                            case (int)System.Net.HttpStatusCode.RequestedRangeNotSatisfiable:
+                                LoggerAccessor.LogWarn($"[SVO] - {clientip}:{clientport} -> {listenerCtx.Response.StatusCode}");
+                                break;
 
-                        default:
-                            LoggerAccessor.LogError($"[SVO] - {clientip}:{clientport} -> {ctx.Response.StatusCode}");
-                            break;
+                            default:
+                                LoggerAccessor.LogError($"[SVO] - {clientip}:{clientport} -> {listenerCtx.Response.StatusCode}");
+                                break;
+                        }
                     }
                 }
-            }
-            catch (HttpListenerException e)
-            {
-                // Unfortunately, some client side implementation of HTTP (like RPCS3) freeze the interface at regular interval.
-                // This will cause server to throw error 64 (network interface not openned anymore)
-                // In that case, we send internalservererror so client try again.
+                catch (HttpListenerException e)
+                {
+                    // Unfortunately, some client side implementation of HTTP (like RPCS3) freeze the interface at regular interval.
+                    // This will cause server to throw error 64 (network interface not openned anymore)
+                    // In that case, we send internalservererror so client try again.
 
-                int errorCode = e.ErrorCode;
+                    int errorCode = e.ErrorCode;
 
-                if (errorCode != 995 && errorCode != 64) LoggerAccessor.LogError("[SVO] - HttpListenerException ERROR: " + e.Message);
+                    if (errorCode != 995 && errorCode != 64)
+                        LoggerAccessor.LogError("[SVO] - HttpListenerException ERROR: " + e.Message);
 
-                ctx.Response.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
-            }
-            catch (Exception e)
-            {
-                LoggerAccessor.LogError("[SVO] - REQUEST ERROR: " + e.Message);
-                ctx.Response.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
-            }
+                    listenerCtx.Response.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
+                }
+                catch (Exception e)
+                {
+                    LoggerAccessor.LogError("[SVO] - Exception ERROR: " + e.Message);
 
-            try
-            {
-                ctx.Response.OutputStream.Close();
-            }
-            catch
-            {
-            }
-            ctx.Response.Close();
-#if DEBUG
-            LoggerAccessor.LogWarn($"[SVO] - Client disconnected (Thread " + Thread.CurrentThread.ManagedThreadId.ToString() + ")");
-#endif
+                    listenerCtx.Response.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
+                }
 
-            return true;
-        }
-        #endregion
+                try
+                {
+                    listenerCtx.Response.OutputStream.Close();
+                }
+                catch
+                {
+                }
+                listenerCtx.Response.Close();
+            });
     }
 }

@@ -1,165 +1,39 @@
 ﻿using CustomLogger;
-using System.Net.Sockets;
 using System.Net;
 using EndianTools;
+using MultiServerLibrary.CustomServers;
 
 namespace EdenServer.AMHLair
 {
     internal class TDUMasterServer
     {
-        public Thread Thread;
+        private UDPServer _server;
 
-        private static Socket? _socket;
-
-        private readonly ManualResetEvent _reset = new ManualResetEvent(false);
-
-        private EndPoint? senderEndPoint;
-
-        private volatile bool _isRunning = true;
-
-        public TDUMasterServer(IPAddress listen, ushort port)
+        public TDUMasterServer()
         {
-            Thread = new Thread(StartServer)
-            {
-                Name = "AMH MasterServer Retrieving Socket Thread"
-            };
-            Thread.Start(new AddressInfo()
-            {
-                Address = listen,
-                Port = port
-            });
+            if (_server == null)
+                _server = new UDPServer();
         }
 
-        public void Dispose()
+        public void Start(ushort port)
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            try
-            {
-                if (disposing)
+            _ = _server.StartAsync(
+                new List<ushort> { port },
+                Environment.ProcessorCount,
+                null,
+                null,
+                null,
+                (serverPort, listener, data, remoteEP) =>
                 {
-                    _isRunning = false;
-
-                    // Unblock the thread if it’s waiting
-                    _reset.Set();
-
-                    if (_socket != null)
-                    {
-                        try
-                        {
-                            _socket.Close();
-                            _socket.Dispose();
-                        }
-                        catch { /* ignore */ }
-                        _socket = null;
-                    }
-
-                    // Give thread time to exit gracefully
-                    if (Thread != null && Thread.IsAlive)
-                    {
-                        if (!Thread.Join(TimeSpan.FromSeconds(2)))
-                        {
-                            try { Thread.Interrupt(); } catch { }
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                LoggerAccessor.LogError($"[AMHMasterServer] - Error during Dispose: {e}");
-            }
+                    return BuildServerResponse(data);
+                },
+                new CancellationTokenSource().Token
+                );
         }
 
-        ~TDUMasterServer()
+        public void Stop()
         {
-            Dispose(false);
-        }
-
-        private void StartServer(object? parameter)
-        {
-            AddressInfo? info = (AddressInfo?)parameter;
-
-            LoggerAccessor.LogInfo("[AMHMasterServer] - Starting Master Server");
-
-            try
-            {
-                senderEndPoint = new IPEndPoint(info!.Address, info.Port);
-                _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-                _socket.Bind(senderEndPoint);
-            }
-            catch (Exception e)
-            {
-                LoggerAccessor.LogError("[AMHMasterServer] - " + String.Format("Unable to bind Master Server to {0}:{1}", info!.Address, info.Port));
-                LoggerAccessor.LogError("[AMHMasterServer] - " + e.ToString());
-                return;
-            }
-
-            while (_isRunning)
-            {
-                try
-                {
-                    _reset.Reset();
-                    StartReceiving();
-                    _reset.WaitOne();
-                }
-                catch (ObjectDisposedException)
-                {
-                    break;
-                }
-                catch (ThreadInterruptedException)
-                {
-                    break;
-                }
-                catch (Exception e)
-                {
-                    LoggerAccessor.LogError($"[AMHMasterServer] - Server loop error: {e}");
-                }
-            }
-        }
-
-        private void StartReceiving()
-        {
-            if (_socket == null || !_isRunning) return;
-
-            byte[] buffer = new byte[8];
-
-            _socket!.BeginReceiveFrom(buffer, 0, buffer.Length, SocketFlags.None, ref senderEndPoint!, new AsyncCallback(ReceiveCallback), new UdpState { Buffer = buffer, EndPoint = senderEndPoint });
-        }
-
-        private void ReceiveCallback(IAsyncResult ar)
-        {
-            if (_socket == null || !_isRunning) return;
-
-            try
-            {
-                _reset.Set();
-
-                UdpState? state = (UdpState?)ar.AsyncState;
-                if (state == null) return;
-
-                LoggerAccessor.LogInfo("[AMHMasterServer] - " + String.Format("Received client request on EndPoint: {0}:{1}", ((IPEndPoint)state.EndPoint).Address, ((IPEndPoint)state.EndPoint).Port));
-
-                _ = _socket!.EndReceiveFrom(ar, ref state.EndPoint);
-
-                byte[] responseData = BuildServerResponse(state.Buffer);
-
-                LoggerAccessor.LogInfo("[AMHMasterServer] - " + String.Format("Sent {0} byte response to: {1}:{2}", responseData.Length, ((IPEndPoint)state.EndPoint).Address, ((IPEndPoint)state.EndPoint).Port));
-
-                _socket.SendTo(responseData, responseData.Length, SocketFlags.None, state.EndPoint);
-            }
-            catch (ObjectDisposedException)
-            {
-                // Not Important.
-            }
-            catch (Exception e)
-            {
-                LoggerAccessor.LogError("[AMHMasterServer] - Error sending data");
-                LoggerAccessor.LogError("[AMHMasterServer] - " + e.ToString());
-            }
+            _server.Stop();
         }
 
         private static byte[] BuildServerResponse(byte[] input)
@@ -197,12 +71,6 @@ namespace EdenServer.AMHLair
                 LoggerAccessor.LogWarn($"[AMHMasterServer] - BuildServerResponse: unexpected input data received. Falling back to default response...");
 
             return response;
-        }
-
-        private class UdpState
-        {
-            public byte[] Buffer = new byte[8];
-            public EndPoint? EndPoint;
         }
     }
 }

@@ -352,7 +352,7 @@ namespace PS2FloatLibrary
                 current.Sum = csa.Sum << 1;
 		        current.Carry = csa.Carry << 1;
 	        }
-            uint sign = (a ^ b) & 0x80000000;
+            uint sign = (a ^ b) & ps2float.SIGNMASK;
             uint Dvdtexp = Exponent(a);
             uint Dvsrexp = Exponent(b);
             int cexp = (int)Dvdtexp - (int)Dvsrexp + 126;
@@ -420,7 +420,7 @@ namespace PS2FloatLibrary
             {
                 sign = ((result >> 31) & 1) != 0;
                 if (sign)
-                    result ^= 0x80000000;
+                    result ^= ps2float.SIGNMASK;
                 iv = true;
             }
             return result;

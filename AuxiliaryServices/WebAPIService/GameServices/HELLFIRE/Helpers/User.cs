@@ -7,7 +7,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Xml;
+using WebAPIService.GameServices.HELLFIRE.Entities.HomeTycoon;
 using WebAPIService.GameServices.HELLFIRE.Helpers.NovusPrime;
+using WebAPIService.GameServices.HELLFIRE.Helpers.Tycoon;
 using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.HELLFIRE.Helpers
@@ -29,7 +31,9 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
             <Expansions></Expansions>
             <Vehicles></Vehicles>
             <Flags></Flags>
-            <Inventory></Inventory>";
+            <Inventory></Inventory>
+            <InstanceID></InstanceID>
+            <Towns></Towns>";
 
         public const string DefaultNovusPrimeProfile = @"
             <CharData>
@@ -61,28 +65,16 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
         public const string DefaultClearasilSkaterAndSlimJimProfile = "<BestScoreStage1>0</BestScoreStage1><BestScoreStage2>0</BestScoreStage2><LeaderboardScore>0</LeaderboardScore>";
         public const string DefaultPokerProfile = "<Bankroll>1000</Bankroll><NewPlayer>1</NewPlayer>";
 
-        public static string GetUserHomeTycoon(byte[] PostData, string boundary, string UserID, string WorkPath)
-        {
-            string profilePath = $"{WorkPath}/TYCOON/User_Data/{UserID}/Profile.xml";
-
-            string xmlProfile;
-
-            if (File.Exists(profilePath))
-                xmlProfile = File.ReadAllText(profilePath);
-            else
-                xmlProfile = DefaultHomeTycoonProfile;
-
-            return $"<Response>{xmlProfile}</Response>";
-        }
-
-
         public static string UpdateUserHomeTycoon(byte[] PostData, string boundary, string UserID, string WorkPath, string cmd)
         {
             string xmlProfile = string.Empty;
             string updatedXMLProfile = string.Empty;
+            string userDataPath = $"{WorkPath}/HomeTycoon/User_Data/{UserID}";
 
-            // Retrieve the user's JSON profile
-            string profilePath = $"{WorkPath}/TYCOON/User_Data/{UserID}/Profile.xml";
+            Directory.CreateDirectory(userDataPath);
+
+            // Retrieve the user's XML profile
+            string profilePath = $"{userDataPath}/Profile.xml";
 
             if (File.Exists(profilePath))
                 xmlProfile = File.ReadAllText(profilePath);
@@ -107,16 +99,21 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                             case "AddUnlocked":
                                 {
                                     string BuildingName = data.GetParameterValue("BuildingName");
-                                    var userProfileUnlockNode = doc.SelectSingleNode("//Unlocked");
 
-                                    //We check if HomeTycoon sends multiple AddUnlockeds for same building.. we don't need dupe entries.
-                                    if (userProfileUnlockNode.SelectSingleNode(BuildingName) != null)
-                                        return "<Response></Response>";
+                                    var UnlockedNode = doc.SelectSingleNode("//Unlocked");
+                                    if (UnlockedNode != null)
+                                    {
+                                        var existingBuilding = UnlockedNode.SelectSingleNode(BuildingName);
 
-                                    XmlElement BuildingToAddEntry = doc.CreateElement(BuildingName);
-                                    BuildingToAddEntry.InnerText = BuildingName;
-
-                                    userProfileUnlockNode.AppendChild(BuildingToAddEntry);
+                                        if (existingBuilding != null)
+                                            existingBuilding.InnerText = BuildingName;
+                                        else
+                                        {
+                                            XmlElement newBuilding = doc.CreateElement(BuildingName);
+                                            newBuilding.InnerText = BuildingName;
+                                            UnlockedNode.AppendChild(newBuilding);
+                                        }
+                                    }
                                 }
                                 break;
                             case "RemoveUnlocked":
@@ -129,67 +126,106 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
 
                                         var buildingNode = userProfileUnlockNode.SelectSingleNode(buildingName);
                                         if (buildingNode != null)
-                                            doc.DocumentElement.SelectSingleNode("//Unlocked").RemoveChild(buildingNode);
+                                            userProfileUnlockNode.RemoveChild(buildingNode);
                                         else
-                                            LoggerAccessor.LogWarn($"[HELLFIRE] - User - Building not found: {buildingName}");
+                                            LoggerAccessor.LogWarn($"[User] - UpdateUserHomeTycoon: Building not found: {buildingName}");
                                     }
                                     else
-                                        LoggerAccessor.LogWarn($"[HELLFIRE] - User - Unlocked node not found in the XML");
+                                        LoggerAccessor.LogWarn($"[User] - UpdateUserHomeTycoon: Unlocked node not found in the XML");
                                 }
                                 break;
                             case "AddDialog":
                                 {
-                                    string DialogName = data.GetParameterValue("DialogName");
+                                    string dialogName = data.GetParameterValue("DialogName");
 
-                                    var userProfileDialogNode = doc.SelectSingleNode("//Dialogs");
-                                    XmlElement DialogToAdd = doc.CreateElement(DialogName);
-                                    DialogToAdd.InnerText = DialogName;
-                                    userProfileDialogNode.AppendChild(DialogToAdd);
+                                    var dialogsNode = doc.SelectSingleNode("//Dialogs");
+                                    if (dialogsNode != null)
+                                    {
+                                        var existingDialog = dialogsNode.SelectSingleNode(dialogName);
+
+                                        if (existingDialog != null)
+                                            existingDialog.InnerText = dialogName;
+                                        else
+                                        {
+                                            XmlElement newDialog = doc.CreateElement(dialogName);
+                                            newDialog.InnerText = dialogName;
+                                            dialogsNode.AppendChild(newDialog);
+                                        }
+                                    }
                                 }
                                 break;
                             case "CompleteDialog":
                                 {
-                                    doc.DocumentElement.SelectSingleNode("//Dialogs").RemoveChild(
-                                        doc.DocumentElement.SelectSingleNode("//Dialogs").SelectSingleNode(data.GetParameterValue("DialogName")));
+                                    var userProfileDialogs = doc.DocumentElement.SelectSingleNode("//Dialogs");
+                                    var dialogNode = userProfileDialogs.SelectSingleNode(data.GetParameterValue("DialogName"));
+                                    if (dialogNode != null)
+                                        userProfileDialogs.RemoveChild(dialogNode);
                                 }
                                 break;
                             case "AddVehicle":
                                 {
-                                    string VehicleName = data.GetParameterValue("VehicleName");
+                                    string vehicleName = data.GetParameterValue("VehicleName");
 
-                                    // Update the profile values from the provided data
-                                    var userProfileVehicleNode = doc.SelectSingleNode("//Vehicles");
-                                    XmlElement VeicleToAdd = doc.CreateElement(VehicleName);
-                                    VeicleToAdd.InnerText = VehicleName;
-                                    userProfileVehicleNode.AppendChild(VeicleToAdd);
+                                    var vehiclesNode = doc.SelectSingleNode("//Vehicles");
+                                    if (vehiclesNode != null)
+                                    {
+                                        var existingVehicle = vehiclesNode.SelectSingleNode(vehicleName);
+
+                                        if (existingVehicle != null)
+                                            existingVehicle.InnerText = vehicleName;
+                                        else
+                                        {
+                                            XmlElement newVehicle = doc.CreateElement(vehicleName);
+                                            newVehicle.InnerText = vehicleName;
+                                            vehiclesNode.AppendChild(newVehicle);
+                                        }
+                                    }
                                 }
                                 break;
                             case "RemoveVehicle":
                                 {
                                     var userProfileVehicleNode = doc.DocumentElement.SelectSingleNode("//Vehicles");
-                                    var VeicleToRemove = userProfileVehicleNode.SelectSingleNode(data.GetParameterValue("VehicleName"));
-                                    userProfileVehicleNode.RemoveChild(userProfileVehicleNode);
+                                    var vehicleNode = userProfileVehicleNode.SelectSingleNode(data.GetParameterValue("VehicleName"));
+                                    if (vehicleNode != null)
+                                        userProfileVehicleNode.RemoveChild(vehicleNode);
                                 }
                                 break;
                             case "AddInventory":
                                 {
-                                    string BuildingID = data.GetParameterValue("BuildingID");
+                                    string buildingID = data.GetParameterValue("BuildingID");
 
-                                    var userProfileInvNode = doc.SelectSingleNode("//Inventory");
-                                    XmlElement BuildingToAdd = doc.CreateElement(BuildingID);
-                                    BuildingToAdd.InnerText = BuildingID;
-                                    userProfileInvNode.AppendChild(BuildingToAdd);
+                                    var inventoryNode = doc.SelectSingleNode("//Inventory");
+                                    if (inventoryNode != null)
+                                    {
+                                        var existingBuilding = inventoryNode.SelectSingleNode(buildingID);
+                                        if (existingBuilding != null)
+                                            existingBuilding.InnerText = buildingID;
+                                        else
+                                        {
+                                            XmlElement newBuilding = doc.CreateElement(buildingID);
+                                            newBuilding.InnerText = buildingID;
+                                            inventoryNode.AppendChild(newBuilding);
+                                        }
+                                    }
                                 }
                                 break;
                             case "AddActivity":
                                 {
-                                    string ActivityName = data.GetParameterValue("ActivityName");
-                                    var userProfileFlagNode = doc.SelectSingleNode("//Activities");
+                                    string activityName = data.GetParameterValue("ActivityName");
 
-                                    XmlElement BuildingToAddEntry = doc.CreateElement(ActivityName);
-                                    BuildingToAddEntry.InnerText = ActivityName;
-
-                                    userProfileFlagNode.AppendChild(BuildingToAddEntry);
+                                    var activitiesNode = doc.SelectSingleNode("//Activities");
+                                    if (activitiesNode != null)
+                                    {
+                                        var existingActivity = activitiesNode.SelectSingleNode(activityName);
+                                        if (existingActivity != null)
+                                            existingActivity.InnerText = activityName;
+                                        else
+                                        {
+                                            XmlElement newActivity = doc.CreateElement(activityName);
+                                            newActivity.InnerText = activityName;
+                                            activitiesNode.AppendChild(newActivity);
+                                        }
+                                    }
                                 }
                                 break;
                             case "RemoveActivity":
@@ -201,51 +237,60 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
 
                                         var buildingNode = userProfileActivitiesNode.SelectSingleNode(ActivityName);
                                         if (buildingNode != null)
-                                        {
-                                            doc.DocumentElement.SelectSingleNode("//Activities").RemoveChild(buildingNode);
-
-                                            // Save the updated XML back to the file
-                                            File.WriteAllText(profilePath, doc.InnerXml);
-                                        }
+                                            userProfileActivitiesNode.RemoveChild(buildingNode);
                                         else
-                                            LoggerAccessor.LogWarn($"[HELLFIRE] - User - Activity not found: {ActivityName}");
+                                            LoggerAccessor.LogWarn($"[User] - UpdateUserHomeTycoon: Activity not found: {ActivityName}");
                                     }
                                     else
-                                        LoggerAccessor.LogWarn("[HELLFIRE] - User - Activities node not found in the XML.");
+                                        LoggerAccessor.LogWarn("[User] - UpdateUserHomeTycoon: Activities node not found in the XML.");
                                 }
                                 break;
                             case "AddMission":
                                 {
-                                    string MissionName = data.GetParameterValue("MissionName");
+                                    string missionName = data.GetParameterValue("MissionName");
 
-                                    // Update the profile values from the provided data
-                                    var userProfileMissionsNode = doc.SelectSingleNode("//Missions");
-                                    XmlElement MissionToAddEntry = doc.CreateElement(MissionName);
-                                    MissionToAddEntry.InnerText = MissionName;
-                                    userProfileMissionsNode.AppendChild(MissionToAddEntry);
+                                    var missionsNode = doc.SelectSingleNode("//Missions");
+                                    if (missionsNode != null)
+                                    {
+                                        var existingMission = missionsNode.SelectSingleNode(missionName);
+
+                                        if (existingMission != null)
+                                            existingMission.InnerText = missionName;
+                                        else
+                                        {
+                                            XmlElement newMission = doc.CreateElement(missionName);
+                                            newMission.InnerText = missionName;
+                                            missionsNode.AppendChild(newMission);
+                                        }
+                                    }
                                 }
                                 break;
                             case "CompleteMission":
                                 {
-                                    try
-                                    {
-                                        var MissionsNode = doc.DocumentElement.SelectSingleNode("//Missions");
-                                        var userProfileMissionsNode = MissionsNode.SelectSingleNode(data.GetParameterValue("MissionName"));
-                                        MissionsNode.RemoveChild(userProfileMissionsNode);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        LoggerAccessor.LogError($"[HELLFIRE] - User - CompleteMission: Exception caught: {ex}");
-                                    }
+                                    var missionsNode = doc.DocumentElement.SelectSingleNode("//Missions");
+                                    var missionNode = missionsNode.SelectSingleNode(data.GetParameterValue("MissionName"));
+                                    if (missionNode != null)
+                                        missionsNode.RemoveChild(missionNode);
                                 }
                                 break;
                             case "AddMissionToJournal":
                                 {
-                                    // Update the profile values from the provided data
-                                    var userProfileMissionsNode = doc.SelectSingleNode("//Journal");
-                                    XmlElement MissionToAddEntry = doc.CreateElement(data.GetParameterValue("MissionName"));
-                                    MissionToAddEntry.InnerText = data.GetParameterValue("MissionName");
-                                    userProfileMissionsNode.AppendChild(MissionToAddEntry);
+                                    string missionName = data.GetParameterValue("MissionName");
+
+                                    var journalNode = doc.SelectSingleNode("//Journal");
+                                    if (journalNode != null)
+                                    {
+                                        var existingMission = journalNode.SelectSingleNode(missionName);
+
+                                        if (existingMission != null)
+                                            existingMission.InnerText = missionName;
+                                        else
+                                        {
+                                            XmlElement newMission = doc.CreateElement(missionName);
+                                            newMission.InnerText = missionName;
+                                            journalNode.AppendChild(newMission);
+                                        }
+                                    }
                                 }
                                 break;
                             case "RemoveMissionFromJournal":
@@ -257,44 +302,66 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
 
                                         var buildingNode = userProfileActivitiesNode.SelectSingleNode(MissionName);
                                         if (buildingNode != null)
-                                        {
-                                            doc.DocumentElement.SelectSingleNode("//Journal").RemoveChild(buildingNode);
-
-                                            // Save the updated XML back to the file
-                                            File.WriteAllText(profilePath, doc.InnerXml);
-                                        }
+                                            userProfileActivitiesNode.RemoveChild(buildingNode);
                                         else
-                                            LoggerAccessor.LogWarn($"[HELLFIRE] - User - Mission not found: {MissionName}");
+                                            LoggerAccessor.LogWarn($"[User] - UpdateUserHomeTycoon: Mission not found: {MissionName}");
                                     }
                                     else
-                                        LoggerAccessor.LogWarn("[HELLFIRE] - User - Journal node not found in the XML.");
+                                        LoggerAccessor.LogWarn("[User] - UpdateUserHomeTycoon: Journal node not found in the XML.");
+                                }
+                                break;
+                            case "AddExpansion":
+                                {
+                                    string expansionName = data.GetParameterValue("ExpansionName");
+
+                                    var expansionNode = doc.SelectSingleNode("//Expansions");
+                                    if (expansionNode != null)
+                                    {
+                                        var existingMission = expansionNode.SelectSingleNode(expansionName);
+
+                                        if (existingMission != null)
+                                            existingMission.InnerText = expansionName;
+                                        else
+                                        {
+                                            XmlElement newMission = doc.CreateElement(expansionName);
+                                            newMission.InnerText = expansionName;
+                                            expansionNode.AppendChild(newMission);
+                                        }
+                                    }
                                 }
                                 break;
                             case "AddFlag":
                                 {
-                                    var userProfileFlagNode = doc.SelectSingleNode("//Flags");
+                                    string flag = data.GetParameterValue("Flag");
 
-                                    XmlElement FlagEntry = doc.CreateElement(data.GetParameterValue("Flag"));
-                                    FlagEntry.InnerText = data.GetParameterValue("Flag");
+                                    var flagsNode = doc.SelectSingleNode("//Flags");
+                                    if (flagsNode != null)
+                                    {
+                                        var existingFlag = flagsNode.SelectSingleNode(flag);
 
-                                    userProfileFlagNode.AppendChild(FlagEntry);
+                                        if (existingFlag != null)
+                                            existingFlag.InnerText = flag;
+                                        else
+                                        {
+                                            XmlElement newFlag = doc.CreateElement(flag);
+                                            newFlag.InnerText = flag;
+                                            flagsNode.AppendChild(newFlag);
+                                        }
+                                    }
                                 }
                                 break;
-                            case "SpendCoins":
+                            case "SpendCoins": // UNIMPLEMENTED
                                 {
                                     string coinType = data.GetParameterValue("CoinType");
-                                    int NumCoins = Convert.ToInt32(data.GetParameterValue("NumCoins"));
-                                    string TransType = data.GetParameterValue("TransType");
+                                    int NumCoins = (int)double.Parse(data.GetParameterValue("NumCoins"), CultureInfo.InvariantCulture);
                                     string TransParam = data.GetParameterValue("TransParam");
 
-                                    switch (TransType)
+                                    Console.WriteLine(data.GetParameterValue("TransType"));
+
+                                    switch (data.GetParameterValue("TransType"))
                                     {
                                         case "CollectAllRevenue":
                                             {
-                                                int profileGoldCoins = Convert.ToInt32(doc.SelectSingleNode("//GoldCoins").InnerText);
-                                                doc.SelectSingleNode("//GoldCoins").InnerText = Convert.ToString(profileGoldCoins - NumCoins);
-                                                doc.SelectSingleNode("//SilverCoins").InnerText = data.GetParameterValue("SilverCoins") ?? "0";
-
                                                 return $@"<Response>
                                                 <ResponseCode>Success</ResponseCode>
                                                 <TotalSilver>{doc.SelectSingleNode("//SilverCoins").InnerText}</TotalSilver>
@@ -323,6 +390,7 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                                                 <GoldSpent>{NumCoins}</GoldSpent>
                                                 </Response>";
                                             }
+                                        case "BuyVehicle":
                                         case "BuyVehicles":
                                             {
                                                 return $@"<Response>
@@ -374,24 +442,50 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                                                 </Response>";
                                             }
                                     }
-
-
                                 }
                                 break;
-
                             case "SetPrivacy":
                                 {
-                                    string ownID = data.GetParameterValue("TownID");
-                                    string NewSetting = data.GetParameterValue("NewSetting");
+                                    string TownID = data.GetParameterValue("TownID");
+                                    TycoonPrivacySetting NewSetting = (TycoonPrivacySetting)(int)double.Parse(data.GetParameterValue("NewSetting"), CultureInfo.InvariantCulture);
 
                                     var userProfileOptionsNode = doc.DocumentElement.SelectSingleNode("//Options");
 
-                                    userProfileOptionsNode.SelectSingleNode("PrivacySetting").InnerText = NewSetting;
+                                    userProfileOptionsNode.SelectSingleNode("PrivacySetting").InnerText = ((int)NewSetting).ToString();
 
-                                    //Write a server txt for player names we can ban?
+                                    TownProcessor.UpdateTownPrivacy(UserID, TownID, NewSetting, WorkPath);
+
+                                    // Clear visitors (also done locally)
+                                    if (NewSetting == TycoonPrivacySetting.FriendsOnly || NewSetting == TycoonPrivacySetting.Private)
+                                    {
+                                        string townProfile = string.Empty;
+                                        string townVisitorsPath = $"{WorkPath}/HomeTycoon/TownsData/{UserID}/TownVisitors_{TownID}.xml";
+
+                                        if (File.Exists(profilePath))
+                                            townProfile = File.ReadAllText(profilePath);
+
+                                        try
+                                        {
+                                            // Create an XmlDocument
+                                            var visitorsDoc = new XmlDocument();
+                                            visitorsDoc.LoadXml("<xml>" + townProfile + "</xml>");
+                                            if (doc != null)
+                                            {
+                                                doc.DocumentElement.RemoveAll();
+
+                                                // Save the updated profile back to the file
+                                                File.WriteAllText(townVisitorsPath, doc.DocumentElement.InnerXml.Replace("<xml>", string.Empty).Replace("</xml>", string.Empty));
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            LoggerAccessor.LogError($"[User] - UpdateUserHomeTycoon: An assertion was thrown while removing all visitors. (Exception:{ex})");
+                                        }
+                                    }
+
+                                    // Write a server txt for player names we can ban?
                                     return "<Response><Banned>0</Banned></Response>";
                                 }
-                            
                             case "UpdateUser":
                                 {
                                     doc.SelectSingleNode("//TotalCollected").InnerText = data.GetParameterValue("TotalCollected");
@@ -400,8 +494,7 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                                     doc.SelectSingleNode("//GoldCoins").InnerText = data.GetParameterValue("GoldCoins");
                                     doc.SelectSingleNode("//SilverCoins").InnerText = data.GetParameterValue("SilverCoins") ?? "0";
                                     doc.SelectSingleNode("//NewPlayer").InnerText = data.GetParameterValue("NewPlayer") ?? "0";
-                                    var jsonObject = JToken.Parse(data.GetParameterValue("Options"));
-                                    var fieldValues = jsonObject.ToObject<Dictionary<string, object>>();
+                                    var fieldValues = JToken.Parse(data.GetParameterValue("Options")).ToObject<Dictionary<string, object>>();
 
                                     if (fieldValues != null)
                                     {
@@ -409,6 +502,8 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                                         {
                                             if (fieldValue.Key == "MusicVolume" && fieldValue.Value != null)
                                                 doc.SelectSingleNode("//Options/MusicVolume").InnerText = fieldValue.Value.ToString() ?? "1.0";
+                                            else if (fieldValue.Key == "PrivacySetting" && fieldValue.Value != null)
+                                                doc.SelectSingleNode("//Options/PrivacySetting").InnerText = fieldValue.Value.ToString();
                                         }
                                     }
                                 }
@@ -426,7 +521,7 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[HFGAMES] User - An assertion was thrown in UpdateUser : {ex}");
+                LoggerAccessor.LogError($"[User] - UpdateUserHomeTycoon: An assertion was thrown. (Exception:{ex})");
             }
 
             return $"<Response>{updatedXMLProfile}</Response>";
@@ -471,7 +566,7 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[HELLFIRE] - User - An assertion was thrown in UpdateUser : {ex}");
+                LoggerAccessor.LogError($"[User] - UpdateUserClearasilSkater: An assertion was thrown. (Exception:{ex})");
             }
 
             return $"<Response>{updatedXMLProfile}</Response>";
@@ -519,7 +614,7 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[HELLFIRE] - User - An assertion was thrown in UpdateUser : {ex}");
+                LoggerAccessor.LogError($"[User] - UpdateUserSlimJim: An assertion was thrown. (Exception:{ex})");
             }
 
             return $"<Response>{updatedXMLProfile}</Response>";
@@ -532,7 +627,6 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
             string xmlProfile;
             if (File.Exists(profilePath))
             {
-                LoggerAccessor.LogInfo($"[HELLFIRE] - User - Detected existing player data, sending!");
                 xmlProfile = File.ReadAllText(profilePath);
 
                 var doc = new XmlDocument();
@@ -572,10 +666,7 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                 }
             }
             else
-            {
-                LoggerAccessor.LogInfo($"[[HELLFIRE] - User - New player with no player data! Using default!");
                 xmlProfile = DefaultNovusPrimeProfile;
-            }
 
             return $"<Response>{xmlProfile}</Response>";
         }
@@ -590,65 +681,66 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
             else
                 xmlProfile = DefaultNovusPrimeProfile;
 
-            var doc = new XmlDocument();
-
-            doc.LoadXml($"<xml>{xmlProfile}</xml>");
-
-            var userProfileMissionsNode = doc.DocumentElement.SelectSingleNode("//Missions");
-
-            if (userProfileMissionsNode != null)
+            try
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                var doc = new XmlDocument();
+
+                doc.LoadXml($"<xml>{xmlProfile}</xml>");
+
+                var userProfileMissionsNode = doc.DocumentElement.SelectSingleNode("//Missions");
+
+                if (userProfileMissionsNode != null)
                 {
-                    var data = MultipartFormDataParser.Parse(ms, boundary);
-
-                    // Retrieve the new MissionId from the parsed data
-                    string newMissionId = data.GetParameterValue("MissionId");
-
-                    // Check if the MissionId already exists
-                    var MissionNodesList = userProfileMissionsNode.SelectNodes("Mission");
-                    bool missionExists = false;
-
-                    foreach (XmlNode MissionNode in MissionNodesList)
+                    using (MemoryStream ms = new MemoryStream(PostData))
                     {
-                        if (MissionNode.SelectSingleNode("MissionId").InnerText == newMissionId)
+                        var data = MultipartFormDataParser.Parse(ms, boundary);
+
+                        // Retrieve the new MissionId from the parsed data
+                        string newMissionId = data.GetParameterValue("MissionId");
+
+                        // Check if the MissionId already exists
+                        var MissionNodesList = userProfileMissionsNode.SelectNodes("Mission");
+                        bool missionExists = false;
+
+                        foreach (XmlNode MissionNode in MissionNodesList)
                         {
-                            missionExists = true;
-                            break;
+                            if (MissionNode.SelectSingleNode("MissionId").InnerText == newMissionId)
+                            {
+                                missionExists = true;
+                                break;
+                            }
+                        }
+
+                        // If the mission doesn't exist, add a new entry
+                        if (!missionExists)
+                        {
+                            XmlElement newMissionNode = doc.CreateElement("Mission");
+
+                            XmlElement missionIdNode = doc.CreateElement("MissionId");
+                            missionIdNode.InnerText = newMissionId;
+
+                            newMissionNode.AppendChild(missionIdNode);
+
+                            userProfileMissionsNode.AppendChild(newMissionNode);
+
+                            // Save the updated XML to file
+                            File.WriteAllText(profilePath, doc.DocumentElement.InnerXml);
                         }
                     }
-
-                    // If the mission doesn't exist, add a new entry
-                    if (!missionExists)
-                    {
-                        XmlElement newMissionNode = doc.CreateElement("Mission");
-
-                        XmlElement missionIdNode = doc.CreateElement("MissionId");
-                        missionIdNode.InnerText = newMissionId;
-
-                        newMissionNode.AppendChild(missionIdNode);
-
-                        userProfileMissionsNode.AppendChild(newMissionNode);
-
-                        // Save the updated XML to file
-                        File.WriteAllText(profilePath, doc.DocumentElement.InnerXml);
-                    }
                 }
+                else
+                    LoggerAccessor.LogWarn($"[HELLFIRE] - User - Missions node not found in the XML: {profilePath}.");
             }
-            else
-                LoggerAccessor.LogWarn($"[HELLFIRE] - User - Missions node not found in the XML: {profilePath}.");
+            catch (Exception ex)
+            {
+                LoggerAccessor.LogError($"[User] - NovusCompleteMission: An assertion was thrown. (Exception:{ex})");
+            }
 
             return "<Response></Response>";
         }
 
-        public static string UpdateCharacter(byte[] PostData, string boundary, string UserID, string WorkPath, string cmd)
+        public static string UpdateNovusPrimeCharacter(byte[] PostData, string boundary, string UserID, string WorkPath, string cmd)
         {
-            //userId
-            //Experience
-            //Level
-            //Nebulon
-            //TotalNebulonEver
-
             string xmlProfile = string.Empty;
             string updatedXMLProfile = string.Empty;
 
@@ -663,7 +755,6 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
             try
             {
                 var doc = new XmlDocument();
-                var lbDoc = new XmlDocument();
 
                 doc.LoadXml("<root>" + xmlProfile + "</root>"); // Wrap the XML string in a root element
                 if (doc != null && PostData != null && !string.IsNullOrEmpty(boundary))
@@ -685,7 +776,6 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                                     string TotalNebulonEver = doc.SelectSingleNode("//TotalNebulonEver").InnerText;
                                     return $"<Response><Nebulon>{Nebulon}</Nebulon><TotalNebulonEver>{TotalNebulonEver}</TotalNebulonEver><Level>{Level}</Level><Experience>{Experience}</Experience></Response>";
                                 }
-
                             case "UpdateCharacter":
                                 {
                                     doc.SelectSingleNode("//Experience").InnerText = data.GetParameterValue("Experience");
@@ -701,37 +791,9 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                                     int totalNebulonEver = (int)double.Parse(data.GetParameterValue("TotalNebulonEver"), CultureInfo.InvariantCulture);
 
                                     _ = Leaderboards.NovusLeaderboard.UpdateScoreAsync(UserID, totalNebulonEver);
-
-                                    XmlNode userNameExistEntry = lbDoc.SelectSingleNode($"//{UserID}");
-
-                                    if (userNameExistEntry != null)
-                                    {
-                                        XmlNode scoreNode = userNameExistEntry.SelectSingleNode("Score");
-                                        if (scoreNode == null)
-                                        {
-                                            scoreNode = lbDoc.CreateElement("Score");
-                                            userNameExistEntry.AppendChild(scoreNode);
-                                        }
-                                        scoreNode.InnerText = totalNebulonEver.ToString();
-                                    }
-                                    else
-                                    {
-                                        XmlElement userNameElement = lbDoc.CreateElement(UserID);
-                                        XmlElement displayNameElement = lbDoc.CreateElement("DisplayName");
-                                        XmlElement scoreElement = lbDoc.CreateElement("Score");
-
-                                        displayNameElement.InnerText = UserID;
-                                        scoreElement.InnerText = totalNebulonEver.ToString();
-
-                                        userNameElement.AppendChild(displayNameElement);
-                                        userNameElement.AppendChild(scoreElement);
-
-                                        lbDoc.DocumentElement.AppendChild(userNameElement);
-                                    }
                                     #endregion
                                 }
                                 break;
-
                             case "RequestInventory":
                                 {
                                     var inventoryNode = doc.SelectSingleNode("//Inventory");
@@ -804,7 +866,6 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                                     }
                                 }
                                 break;
-
                             case "RequestShipSlots":
                                 {
                                     return $"<Response>{doc.SelectSingleNode("//ShipConfig")}</Response>";
@@ -826,7 +887,6 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                                     shipConfig.SelectSingleNode("PaintJob").InnerText = data.GetParameterValue("PaintJob");
                                 }
                                 break;
-
                         }
 
                         // Get the updated XML string
@@ -834,14 +894,12 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
 #pragma warning restore 8602
                         // Save the updated profile back to the file
                         File.WriteAllText(profilePath, updatedXMLProfile);
-
-                        ms.Flush();
                     }
                 }
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[HELLFIRE] - User - An assertion was thrown in UpdateUser : {ex}");
+                LoggerAccessor.LogError($"[User] - UpdateNovusPrimeCharacter: An assertion was thrown. (Exception:{ex})");
             }
 
             return $"<Response></Response>";
@@ -877,14 +935,12 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                         updatedXMLProfile = doc.DocumentElement.InnerXml.Replace("<root>", string.Empty).Replace("</root>", string.Empty);
 #pragma warning restore 8602
                         File.WriteAllText(profilePath, updatedXMLProfile);
-
-                        ms.Flush();
                     }
                 }
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[HELLFIRE] - User - An assertion was thrown in UpdateUser : {ex}");
+                LoggerAccessor.LogError($"[User] - RequestShipSlots: An assertion was thrown. (Exception:{ex})");
             }
 
             return $"<Response>{updatedXMLProfile}</Response>";
@@ -962,8 +1018,6 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
                     Bankroll = data.GetParameterValue("Bankroll");
                     ms.Flush();
                 }
-
-
             }
 
             string xmlProfile = string.Empty;
@@ -1004,7 +1058,7 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[HELLFIRE] - User - An assertion was thrown in UpdateUser : {ex}");
+                LoggerAccessor.LogError($"[User] - UpdateUserPoker: An assertion was thrown. (Exception:{ex})");
             }
 
             return $"<Response>{updatedXMLProfile}</Response>";

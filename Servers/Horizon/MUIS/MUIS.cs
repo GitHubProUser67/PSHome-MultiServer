@@ -190,7 +190,7 @@ namespace Horizon.MUIS
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[MUIS] - clientChannel ticking thrown an assertion. (Exception:{e})");
             }
         }
 
@@ -210,7 +210,7 @@ namespace Horizon.MUIS
                         {
                             if (data.State > ClientState.HELLO)
                             {
-                                LoggerAccessor.LogError($"Unexpected RT_MSG_CLIENT_HELLO from {clientChannel.RemoteAddress}: {clientHello}");
+                                LoggerAccessor.LogError($"[MUIS] - Unexpected RT_MSG_CLIENT_HELLO from {clientChannel.RemoteAddress}: {clientHello}");
                                 break;
                             }
 
@@ -222,7 +222,7 @@ namespace Horizon.MUIS
                         {
                             if (data.State > ClientState.HANDSHAKE)
                             {
-                                LoggerAccessor.LogError($"Unexpected RT_MSG_CLIENT_CRYPTKEY_PUBLIC from {clientChannel.RemoteAddress}: {clientCryptKeyPublic}");
+                                LoggerAccessor.LogError($"[MUIS] - Unexpected RT_MSG_CLIENT_CRYPTKEY_PUBLIC from {clientChannel.RemoteAddress}: {clientCryptKeyPublic}");
                                 break;
                             }
 
@@ -242,7 +242,7 @@ namespace Horizon.MUIS
                         {
                             if (data.State > ClientState.CONNECT_1)
                             {
-                                LoggerAccessor.LogError($"Unexpected RT_MSG_CLIENT_CONNECT_TCP from {clientChannel.RemoteAddress}: {clientConnectTcp}");
+                                LoggerAccessor.LogError($"[MUIS] - Unexpected RT_MSG_CLIENT_CONNECT_TCP from {clientChannel.RemoteAddress}: {clientConnectTcp}");
                                 break;
                             }
 
@@ -385,7 +385,7 @@ namespace Horizon.MUIS
                         {
                             if (data.State != ClientState.AUTHENTICATED)
                             {
-                                LoggerAccessor.LogError($"Unexpected RT_MSG_CLIENT_APP_TOSERVER from {clientChannel.RemoteAddress}: {clientAppToServer}");
+                                LoggerAccessor.LogError($"[MUIS] - Unexpected RT_MSG_CLIENT_APP_TOSERVER from {clientChannel.RemoteAddress}: {clientAppToServer}");
                                 break;
                             }
 
@@ -457,7 +457,7 @@ namespace Horizon.MUIS
                         // ERROR - Need a session
                         if (data == null)
                         {
-                            LoggerAccessor.LogError($"INVALID OPERATION: {clientChannel} sent {versionServerRequest} without channeldata.");
+                            LoggerAccessor.LogError($"[MUIS] - INVALID OPERATION: {clientChannel} sent {versionServerRequest} without channeldata.");
                             break;
                         }
 
@@ -567,8 +567,9 @@ namespace Horizon.MUIS
                                         #region News
                                         if (getUniverse_ExtraInfoRequest.InfoType.HasFlag(MediusUniverseVariableInformationInfoFilter.INFO_NEWS))
                                         {
-                                            LoggerAccessor.LogInfo("MUIS: News bit set in request");
-
+#if DEBUG
+                                            LoggerAccessor.LogInfo("[MUIS] - News bit set in request");
+#endif
                                             Queue(new RT_MSG_SERVER_APP()
                                             {
                                                 Message = new MediusUniverseNewsResponse()
@@ -582,15 +583,16 @@ namespace Horizon.MUIS
                                         }
                                         #endregion
                                     }
-
+#if DEBUG
                                     LoggerAccessor.LogInfo($"[MUIS] - send univ info (ctr=): [{MuisClass.Settings.Universes.ToArray().Length}]");
+#endif
                                 }
                                 #endregion
                             }
                             else
                             {
                                 LoggerAccessor.LogWarn($"[MUIS] - No universes out there.");
-
+								
                                 Queue(new RT_MSG_SERVER_APP()
                                 {
                                     Message = new MediusUniverseVariableInformationResponse()
@@ -707,8 +709,9 @@ namespace Horizon.MUIS
                                         #region SVOUrl
                                         if (getUniverseInfo.InfoType.HasFlag(MediusUniverseVariableInformationInfoFilter.INFO_SVO_URL))
                                         {
+#if DEBUG
                                             LoggerAccessor.LogInfo($"[MUIS] - send svo info: [{MuisClass.Settings.Universes.ToArray().Length}]");
-
+#endif
                                             Queue(new RT_MSG_SERVER_APP()
                                             {
                                                 Message = new MediusUniverseSvoURLResponse()
@@ -758,8 +761,9 @@ namespace Horizon.MUIS
                                         #region News
                                         if (getUniverseInfo.InfoType.HasFlag(MediusUniverseVariableInformationInfoFilter.INFO_NEWS))
                                         {
-                                            LoggerAccessor.LogInfo("MUIS: News bit set in request");
-
+#if DEBUG
+                                            LoggerAccessor.LogInfo("[MUIS] - News bit set in request");
+#endif
                                             Queue(new RT_MSG_SERVER_APP()
                                             {
                                                 Message = new MediusUniverseNewsResponse()
@@ -773,8 +777,9 @@ namespace Horizon.MUIS
                                         }
                                         #endregion
                                     }
-
+#if DEBUG
                                     LoggerAccessor.LogInfo($"[MUIS] - send univ info: [{MuisClass.Settings.Universes.ToArray().Length}]");
+#endif
                                 }
                             }
                             else
@@ -923,7 +928,7 @@ namespace Horizon.MUIS
 
                 default:
                     {
-                        LoggerAccessor.LogWarn($"UNHANDLED MEDIUS MESSAGE: {message}");
+                        LoggerAccessor.LogWarn($"[MUIS] - UNHANDLED MEDIUS MESSAGE: {message}");
                         break;
                     }
             }

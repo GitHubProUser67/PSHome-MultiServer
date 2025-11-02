@@ -11,11 +11,11 @@ namespace Horizon.NAT
         public static ServerSettings Settings = new();
         public static NAT NATServer = new();
 
-        public static bool started = false;
+        public static bool IsStarted = false;
 
         public static async void StopServer()
         {
-            started = false;
+            IsStarted = false;
 
             await NATServer.Stop();
         }
@@ -26,13 +26,13 @@ namespace Horizon.NAT
             {
                 LoggerAccessor.LogInfo($"Starting NAT on port {NATServer.Port}.");
                 Task.WaitAll(NATServer.Start());
-                LoggerAccessor.LogInfo($"NAT started.");
+                LoggerAccessor.LogInfo($"[NATClass] - Initialized server.");
 
-                started = true;
+                IsStarted = true;
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[NAT] - Server failed to initialize with error - {ex}");
+                LoggerAccessor.LogError($"[NATClass] - Server failed to initialize with error - {ex}");
             }
 
             return Task.CompletedTask;

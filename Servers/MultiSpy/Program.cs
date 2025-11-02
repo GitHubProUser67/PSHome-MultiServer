@@ -4946,7 +4946,7 @@ class Program
         };
 #endif
 
-        _ = GeoIP.Initialize();
+        _ = Task.Run(GeoIP.Initialize);
 
         MultiServerLibraryConfiguration.RefreshVariables(configMultiServerLibraryPath);
 

@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using EndianTools;
+using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace FixedSsl
@@ -57,12 +59,13 @@ namespace FixedSsl
         ///  -4   - Memory allocation failure (not applicable in managed code, but kept for parity)  
         ///  < -4 - Invalid TLS client hello
         /// </returns>
-        public static int ParseTlsHeader(byte[] clientHello, out string hostname, out bool isSslV2, out int maxSslVersion, out List<int> versions)
+        public static int ParseTlsHeader(byte[] clientHello, out string hostname, out bool isSslV2, out int maxSslVersion, out List<int> versions, out List<int> cipherSuites)
         {
             isSslV2 = false;
             maxSslVersion = -1;
             hostname = null;
             versions = new List<int>();
+            cipherSuites = new List<int>();
 
             if (clientHello == null)
                 return -3;
@@ -71,14 +74,14 @@ namespace FixedSsl
                 return -1;
 
             // SSL 2.0 Client Hello
-            if (IsSslV2ClientHello(clientHello, out maxSslVersion, out versions))
+            if (IsSslV2ClientHello(clientHello, out maxSslVersion, out versions, out cipherSuites))
             {
                 isSslV2 = true;
                 // SSLv2 doesn't support SNI, so return -2 (no hostname)
                 return -2;
             }
 
-            maxSslVersion = clientHello[9] << 8 | clientHello[10];
+            maxSslVersion = EndianAwareConverter.ToUInt16(clientHello, Endianness.BigEndian, 9);
 
             byte tlsContentType = clientHello[0];
             if (tlsContentType != TLS_HANDSHAKE_CONTENT_TYPE)
@@ -90,7 +93,7 @@ namespace FixedSsl
             if (tlsVersionMajor < 3)
                 return -2;
 
-            int recordLen = (clientHello[3] << 8) | clientHello[4];
+            int recordLen = EndianAwareConverter.ToUInt16(clientHello, Endianness.BigEndian, 3);
             recordLen += TLS_HEADER_LEN;
 
             if (clientHello.Length < recordLen)
@@ -113,10 +116,7 @@ namespace FixedSsl
             pos += 1 + len;
 
             // Cipher Suites
-            if (pos + 2 > clientHello.Length)
-                return -5;
-            len = (clientHello[pos] << 8) | clientHello[pos + 1];
-            pos += 2 + len;
+            cipherSuites.AddRange(ParseCipherSuites(clientHello, ref pos));
 
             // Compression Methods
             if (pos + 1 > clientHello.Length)
@@ -130,7 +130,7 @@ namespace FixedSsl
             // Extensions
             if (pos + 2 > clientHello.Length)
                 return -5;
-            len = (clientHello[pos] << 8) | clientHello[pos + 1];
+            len = EndianAwareConverter.ToUInt16(clientHello, Endianness.BigEndian, (uint)pos);
             pos += 2;
 
             if (pos + len > clientHello.Length) 
@@ -139,10 +139,11 @@ namespace FixedSsl
             return ParseExtensions(clientHello, pos, len, ref versions, out hostname);
         }
 
-        private static bool IsSslV2ClientHello(byte[] data, out int maxSslVersion, out List<int> versions)
+        private static bool IsSslV2ClientHello(byte[] data, out int maxSslVersion, out List<int> versions, out List<int> cipherSuites)
         {
             maxSslVersion = -1;
             versions = new List<int>();
+            cipherSuites = new List<int>();
 
             // SSLv2 Client Hello format:
             // Bytes 0-1: Length (high bit set, 15-bit length)
@@ -164,19 +165,48 @@ namespace FixedSsl
                 return false;
 
             // Mark the version requested in the hello (can be more than SSLv2 such as in PS2 DNAS)
-            maxSslVersion = (data[3] << 8) | data[4];
+            maxSslVersion = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, 3);
 
-            // *** OPTIONAL: Parse cipher specs to determine additional capabilities ***
-            int cipherSpecLength = (data[5] << 8) | data[6];
-            if (cipherSpecLength > 0 && data.Length >= 11 + cipherSpecLength)
+            // Parse cipher specs to determine additional capabilities
+            int cipherSpecLength = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, 5);
+            int sessionIdLength = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, 7);
+            int challengeLength = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, 9);
+
+            int pos = 11;
+            if (data.Length < pos + cipherSpecLength)
+                return false;
+
+            // SSLv2 cipher specs are 3 bytes each
+            for (int i = 0; i + 2 < cipherSpecLength; i += 3)
             {
-                // SSLv2 cipher specs are 3 bytes each
-                int cipherCount = cipherSpecLength / 3;
-                // You could analyze specific ciphers here if needed for version detection
-                // For now, just confirm we have valid SSLv2 structure
+                int cipher = (data[pos + i] << 16) | (data[pos + i + 1] << 8) | data[pos + i + 2];
+                cipherSuites.Add(cipher);
             }
 
+            versions.Add(maxSslVersion);
             return true;
+        }
+
+        private static int[] ParseCipherSuites(byte[] data, ref int pos)
+        {
+            if (pos + 2 > data.Length)
+                return Array.Empty<int>();
+
+            int len = (data[pos] << 8) | data[pos + 1];
+            pos += 2;
+
+            // Must be even (each cipher is 2 bytes) and within bounds
+            if (len % 2 != 0 || pos + len > data.Length)
+                return Array.Empty<int>();
+
+            int count = len / 2;
+            int[] ciphers = new int[count];
+
+            for (int i = 0; i < count; i++)
+                ciphers[i] = (data[pos + i * 2] << 8) | data[pos + i * 2 + 1];
+
+            pos += len;
+            return ciphers;
         }
 
         private static int ParseExtensions(byte[] data, int offset, int dataLen, ref List<int> versions, out string hostname)

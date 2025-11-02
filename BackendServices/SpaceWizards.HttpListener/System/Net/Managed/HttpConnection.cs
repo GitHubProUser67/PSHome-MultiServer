@@ -92,7 +92,7 @@ namespace SpaceWizards.HttpListener
                     IPEndPoint localEndpoint = (IPEndPoint)sock.LocalEndPoint;
 
                     if (string.IsNullOrEmpty(actualHostName))
-                        _sniDomain = localEndpoint.Address.ToString() ?? "127.0.0.1";
+                        _sniDomain = localEndpoint.Address.ToString() ?? IPAddress.Loopback.ToString();
                     else
                         _sniDomain = actualHostName;
 #if NET5_0_OR_GREATER
@@ -526,6 +526,7 @@ namespace SpaceWizards.HttpListener
             if (_socket != null)
             {
                 Stream st = GetResponseStream();
+                // Dispose the SSL stream (using close to maintain backward compatibility with Mentalis)
                 if (st != null)
                     st.Close();
 
@@ -540,7 +541,7 @@ namespace SpaceWizards.HttpListener
 
                 if (!force && _context.Request.FlushInput())
                 {
-                    if (_chunked && _context.Response.ForceCloseChunked == false)
+                    if (_chunked && !_context.Response.ForceCloseChunked)
                     {
                         // Don't close. Keep working.
                         _reuses++;

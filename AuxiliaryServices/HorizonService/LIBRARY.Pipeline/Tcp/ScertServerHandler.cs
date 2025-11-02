@@ -33,7 +33,7 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
             // Detect when client disconnects
             ctx.Channel.CloseCompletion.ContinueWith((x) =>
             {
-                LoggerAccessor.LogWarn("[TCP] - Channel Closed");
+                LoggerAccessor.LogWarn("[ScertServerHandler] - Tcp: Channel Closed");
                 g?.Remove(ctx.Channel);
                 OnChannelInactive?.Invoke(ctx.Channel);
             });
@@ -50,7 +50,7 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
         {
             IChannelGroup g = Group;
 
-            LoggerAccessor.LogWarn("[TCP] - Client disconnected");
+            LoggerAccessor.LogWarn("[ScertServerHandler] - Tcp: Client disconnected");
 
             // Remove
             g?.Remove(ctx.Channel);
@@ -74,8 +74,8 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
 
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            LoggerAccessor.LogError(exception.ToString());
-            context.CloseAsync();
+            LoggerAccessor.LogError($"[ScertServerHandler] - Tcp: An assertion was caught. (Exception:{exception})");
+            _ = context.CloseAsync();
         }
     }
 }

@@ -1,6 +1,6 @@
-﻿namespace WatsonWebserver.Native
-{
+﻿    using MultiServerLibrary.Extension;
     using System;
+	using System.Net;
     using System.Collections.Generic;
     using System.Collections.Specialized;
     using System.IO;
@@ -10,13 +10,13 @@
     using System.Threading.Tasks;
     using System.Text.Json.Serialization;
     using WatsonWebserver.Core;
-    using MultiServerLibrary.Extension;
-    using System.Net;
-
+	
+namespace WatsonWebserver
+{
     /// <summary>
     /// HTTP response.
     /// </summary>
-    public class HttpResponse : HttpResponseBase
+    public class HttpResponseNative : HttpResponseBase
     {
         #region Public-Members
 
@@ -128,12 +128,12 @@
         /// <summary>
         /// Instantiate the object.
         /// </summary>
-        public HttpResponse()
+        public HttpResponseNative()
         {
 
         }
 
-        internal HttpResponse(
+        internal HttpResponseNative(
             HttpRequestBase req, 
             HttpListenerContext ctx, 
             WebserverSettings settings, 
@@ -237,21 +237,22 @@
 
             try
             {
-                if (chunk == null || chunk.Length < 1) chunk = Array.Empty<byte>();
-                await _OutputStream.WriteAsync(chunk, 0, chunk.Length, token).ConfigureAwait(false);
+                // When SendChunked = true, http.sys expects us to write raw chunk data
+                // and it will handle the chunked encoding format automatically
+                if (chunk != null && chunk.Length > 0)
+                    await _OutputStream.WriteAsync(chunk, 0, chunk.Length, token).ConfigureAwait(false);
+
                 await _OutputStream.FlushAsync(token).ConfigureAwait(false);
 
                 if (isFinal)
                 {
-                    byte[] endChunk = Array.Empty<byte>();
-                    await _OutputStream.WriteAsync(endChunk, 0, endChunk.Length, token).ConfigureAwait(false);
-                    await _OutputStream.FlushAsync(token).ConfigureAwait(false);
-
+                    // For http.sys, we need to close the stream to signal the final chunk
+                    // http.sys will automatically send the "0\r\n\r\n" final chunk marker
                     Close();
                     ResponseSent = true;
                 }
             }
-            catch (Exception)
+            catch
             {
                 return false;
             }
@@ -260,35 +261,30 @@
         }
 
         /// <inheritdoc />
-        public override async Task<bool> SendEvent(string eventData, bool isFinal, CancellationToken token = default)
+        public override async Task<bool> SendEvent(ServerSentEvent sse, bool isFinal, CancellationToken token = default)
         {
             if (!ServerSentEvents) throw new IOException("Response is not configured to use server-sent events.  Set ServerSentEvents to true first, otherwise use Send().");
             if (!_HeadersSet) SendHeaders();
+            if (sse == null) throw new ArgumentNullException(nameof(sse));
 
-            if (!String.IsNullOrEmpty(eventData))
-                ContentLength += eventData.Length;
+            string msg = sse.ToEventString();
+            if (String.IsNullOrEmpty(msg)) throw new ArgumentException("A null or unpopulated server-sent event object was supplied.");
 
             try
             {
-                if (String.IsNullOrEmpty(eventData)) eventData = string.Empty;
-
-                byte[] dataBytes = Encoding.UTF8.GetBytes("data: " + eventData + "\n\n");
-                await _OutputStream.WriteAsync(dataBytes, 0, dataBytes.Length, token).ConfigureAwait(false);
+                byte[] msgBytes = Encoding.UTF8.GetBytes(msg);
+                await _OutputStream.WriteAsync(msgBytes, 0, msgBytes.Length, token).ConfigureAwait(false);
                 await _OutputStream.FlushAsync(token).ConfigureAwait(false);
 
                 if (isFinal)
                 {
-                    byte[] endChunk = Array.Empty<byte>();
-                    await _OutputStream.WriteAsync(endChunk, 0, endChunk.Length, token).ConfigureAwait(false);
-                    await _OutputStream.FlushAsync(token).ConfigureAwait(false);
-
                     Close();
                     ResponseSent = true;
                 }
 
                 return true;
             }
-            catch (Exception)
+            catch
             {
                 return false;
             }
@@ -451,9 +447,9 @@
             _Response.ContentLength64 = ContentLength;
             _Response.StatusCode = StatusCode;
             _Response.StatusDescription = GetStatusDescription(StatusCode);
-            _Response.SendChunked = (ChunkedTransfer || ServerSentEvents);
+            _Response.SendChunked = ChunkedTransfer || ServerSentEvents;
             _Response.ContentType = ContentType;
-            _Response.KeepAlive = false;
+            _Response.KeepAlive = _Settings.IO.EnableKeepAlive;
 
             if (ServerSentEvents)
             {

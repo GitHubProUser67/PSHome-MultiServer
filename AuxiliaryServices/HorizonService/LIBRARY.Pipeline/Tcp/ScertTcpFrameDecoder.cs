@@ -9,7 +9,7 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
 {
     public class ScertTcpFrameDecoder : ByteToMessageDecoder
     {
-        readonly DotNetty.Buffers.ByteOrder byteOrder;
+        readonly ByteOrder byteOrder;
         readonly int maxFrameLength;
         readonly int lengthFieldOffset;
         readonly int lengthFieldLength;
@@ -70,7 +70,7 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
         ///     Defaults to <c>true</c> in other overloads.
         /// </param>
         public ScertTcpFrameDecoder(int maxFrameLength, int lengthFieldOffset, int lengthFieldLength, int lengthAdjustment, int initialBytesToStrip, bool failFast)
-            : this(DotNetty.Buffers.ByteOrder.BigEndian, maxFrameLength, lengthFieldOffset, lengthFieldLength, lengthAdjustment, initialBytesToStrip, failFast)
+            : this(ByteOrder.BigEndian, maxFrameLength, lengthFieldOffset, lengthFieldLength, lengthAdjustment, initialBytesToStrip, failFast)
         {
         }
 
@@ -93,30 +93,20 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
         ///     <see cref="maxFrameLength" /> has been read.
         ///     Defaults to <c>true</c> in other overloads.
         /// </param>
-        public ScertTcpFrameDecoder(DotNetty.Buffers.ByteOrder byteOrderLocal, int maxFrameLengthLocal, int lengthFieldOffsetLocal, int lengthFieldLengthLocal, int lengthAdjustmentLocal, int initialBytesToStripLocal, bool failFastLocal)
+        public ScertTcpFrameDecoder(ByteOrder byteOrderLocal, int maxFrameLengthLocal, int lengthFieldOffsetLocal, int lengthFieldLengthLocal, int lengthAdjustmentLocal, int initialBytesToStripLocal, bool failFastLocal)
         {
             if (maxFrameLengthLocal <= 0)
-            {
-                LoggerAccessor.LogError(nameof(maxFrameLengthLocal), "maxFrameLength must be a positive integer: " + maxFrameLengthLocal);
-                return;
-            }
+                throw new InvalidOperationException(nameof(maxFrameLengthLocal) + " maxFrameLength must be a positive integer: " + maxFrameLengthLocal);
             if (lengthFieldOffsetLocal < 0)
-            {
-                LoggerAccessor.LogError(nameof(lengthFieldOffsetLocal), "lengthFieldOffset must be a non-negative integer: " + lengthFieldOffsetLocal);
-                return;
-            }
+                throw new InvalidOperationException(nameof(lengthFieldOffsetLocal) + " lengthFieldOffset must be a non-negative integer: " + lengthFieldOffsetLocal);
             if (initialBytesToStripLocal < 0)
-            {
-                LoggerAccessor.LogError(nameof(initialBytesToStripLocal), "initialBytesToStrip must be a non-negative integer: " + initialBytesToStripLocal);
-                return;
-            }
+                throw new InvalidOperationException(nameof(initialBytesToStripLocal) + " initialBytesToStrip must be a non-negative integer: " + initialBytesToStripLocal);
             if (lengthFieldOffsetLocal > maxFrameLengthLocal - lengthFieldLengthLocal)
             {
-                LoggerAccessor.LogError(nameof(maxFrameLengthLocal), "maxFrameLength (" + maxFrameLengthLocal + ") " +
+                throw new InvalidOperationException(nameof(maxFrameLengthLocal) + " maxFrameLength (" + maxFrameLengthLocal + ") " +
                     "must be equal to or greater than " +
                     "lengthFieldOffset (" + lengthFieldOffsetLocal + ") + " +
                     "lengthFieldLength (" + lengthFieldLengthLocal + ").");
-                return;
             }
 
             byteOrder = byteOrderLocal;
@@ -138,8 +128,8 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
 
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            LoggerAccessor.LogError(exception.ToString());
-            context.CloseAsync();
+            LoggerAccessor.LogError($"[ScertTcpFrameDecoder] - An assertion was caught. (Exception:{exception})");
+            _ = context.CloseAsync();
         }
 
         /// <summary>
@@ -173,8 +163,7 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
             if (frameLength < 0)
             {
                 input.SkipBytes(lengthFieldEndOffset);
-                LoggerAccessor.LogError("negative pre-adjustment length field: " + frameLength);
-                return null;
+                throw new InvalidOperationException("negative pre-adjustment length field: " + frameLength);
             }
 
             bool signed = input.GetByte(input.ReaderIndex) >= 0x80;
@@ -183,15 +172,13 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
             if (frameLength < lengthFieldEndOffset)
             {
                 input.SkipBytes(lengthFieldEndOffset);
-                LoggerAccessor.LogError("Adjusted frame length (" + frameLength + ") is less " + "than lengthFieldEndOffset: " + lengthFieldEndOffset);
-                return null;
+                throw new InvalidOperationException("Adjusted frame length (" + frameLength + ") is less " + "than lengthFieldEndOffset: " + lengthFieldEndOffset);
             }
 
             if (frameLength > maxFrameLength)
             {
                 int startOff = (int)Math.Min(20, input.ArrayOffset);
-                LoggerAccessor.LogError($"{context.Channel.RemoteAddress} Frame Length exceeds max frame length on buffer: start:{startOff} {BitConverter.ToString(input.Array, input.ArrayOffset - startOff, startOff + input.ReadableBytes)}");
-                return null;
+                throw new InvalidOperationException($"{context.Channel.RemoteAddress} Frame Length exceeds max frame length on buffer: start:{startOff} {BitConverter.ToString(input.Array, input.ArrayOffset - startOff, startOff + input.ReadableBytes)}");
             }
 
             // never overflows because it's less than maxFrameLength
@@ -202,8 +189,7 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
             if (initialBytesToStrip > frameLengthInt)
             {
                 input.SkipBytes(frameLengthInt);
-                LoggerAccessor.LogError("Adjusted frame length (" + frameLength + ") is less " + "than initialBytesToStrip: " + initialBytesToStrip);
-                return null;
+                throw new InvalidOperationException("Adjusted frame length (" + frameLength + ") is less " + "than initialBytesToStrip: " + initialBytesToStrip);
             }
             input.SkipBytes(initialBytesToStrip);
 
@@ -228,7 +214,7 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
         /// <param name="length">The length of the framelenght field. Expected: 1, 2, 3, 4, or 8.</param>
         /// <param name="order">The preferred <see cref="ByteOrder" /> of buffer.</param>
         /// <returns>A long integer that represents the unadjusted length of the next frame.</returns>
-        protected virtual long GetUnadjustedFrameLength(IByteBuffer buffer, int offset, int length, DotNetty.Buffers.ByteOrder order)
+        protected virtual long GetUnadjustedFrameLength(IByteBuffer buffer, int offset, int length, ByteOrder order)
         {
             long frameLength = -1;
             switch (length)
@@ -237,19 +223,19 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
                     frameLength = buffer.GetByte(offset);
                     break;
                 case 2:
-                    frameLength = order == DotNetty.Buffers.ByteOrder.BigEndian ? buffer.GetUnsignedShort(offset) : buffer.GetUnsignedShortLE(offset);
+                    frameLength = order == ByteOrder.BigEndian ? buffer.GetUnsignedShort(offset) : buffer.GetUnsignedShortLE(offset);
                     break;
                 case 3:
-                    frameLength = order == DotNetty.Buffers.ByteOrder.BigEndian ? buffer.GetUnsignedMedium(offset) : buffer.GetUnsignedMediumLE(offset);
+                    frameLength = order == ByteOrder.BigEndian ? buffer.GetUnsignedMedium(offset) : buffer.GetUnsignedMediumLE(offset);
                     break;
                 case 4:
-                    frameLength = order == DotNetty.Buffers.ByteOrder.BigEndian ? buffer.GetInt(offset) : buffer.GetIntLE(offset);
+                    frameLength = order == ByteOrder.BigEndian ? buffer.GetInt(offset) : buffer.GetIntLE(offset);
                     break;
                 case 8:
-                    frameLength = order == DotNetty.Buffers.ByteOrder.BigEndian ? buffer.GetLong(offset) : buffer.GetLongLE(offset);
+                    frameLength = order == ByteOrder.BigEndian ? buffer.GetLong(offset) : buffer.GetLongLE(offset);
                     break;
                 default:
-                    LoggerAccessor.LogError("unsupported lengthFieldLength: " + lengthFieldLength + " (expected: 1, 2, 3, 4, or 8)");
+                    LoggerAccessor.LogError("[ScertTcpFrameDecoder] - unsupported lengthFieldLength: " + lengthFieldLength + " (expected: 1, 2, 3, 4, or 8)");
                     break;
             }
             return frameLength;
@@ -275,20 +261,16 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
                     failFast && firstDetectionOfTooLongFrame)
                     Fail(tooLongFrameLengthLocal);
             }
-            else
-            {
-                // Keep discarding and notify handlers if necessary.
-                if (failFast && firstDetectionOfTooLongFrame)
-                    Fail(tooLongFrameLength);
-            }
+            // Keep discarding and notify handlers if necessary.
+            else if (failFast && firstDetectionOfTooLongFrame)
+                Fail(tooLongFrameLength);
         }
 
         void Fail(long frameLength)
         {
             if (frameLength > 0)
-                LoggerAccessor.LogError("Adjusted frame length exceeds " + maxFrameLength + ": " + frameLength + " - discarded");
-            else
-                LoggerAccessor.LogError("Adjusted frame length exceeds " + maxFrameLength + " - discarding");
+                throw new InvalidOperationException("Adjusted frame length exceeds " + maxFrameLength + ": " + frameLength + " - discarded");
+            throw new InvalidOperationException("Adjusted frame length exceeds " + maxFrameLength + " - discarding");
         }
     }
 }

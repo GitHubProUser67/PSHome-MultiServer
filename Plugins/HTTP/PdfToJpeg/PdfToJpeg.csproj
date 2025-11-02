@@ -31,8 +31,8 @@
 		<FilesExist Condition="Exists(@(FilesToCopy1))">true</FilesExist>
     </PropertyGroup>
 
-    <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(OutDir)\static\plugins\PdfToJpeg\" Condition="$(FilesExist)" />
-	<Copy SourceFiles="@(FilesToCopy1)" DestinationFolder="$(OutDir)\static\plugins\PdfToJpeg\" Condition="$(FilesExist)" />
+    <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(OutDir)\static\apachenet-plugins\PdfToJpeg\" Condition="$(FilesExist)" />
+	<Copy SourceFiles="@(FilesToCopy1)" DestinationFolder="$(OutDir)\static\apachenet-plugins\PdfToJpeg\" Condition="$(FilesExist)" />
 
     <Delete Files="@(FilesToCopy)" Condition="$(FilesExist)" />
 

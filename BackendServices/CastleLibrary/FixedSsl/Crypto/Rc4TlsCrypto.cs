@@ -4,6 +4,7 @@ using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 using System;
 using System.IO;
 using System.Reflection;
+using System.Threading;
 
 namespace FixedSsl.Crypto;
 
@@ -24,10 +25,33 @@ public class Rc4TlsCrypto : BcTlsCrypto
     {
         if (_writeSslKeyLog)
         {
-            byte[] secret = ReflectMasterSecretFromBCTls(cryptoParams.SecurityParameters.MasterSecret) ?? throw new Exception("[Rc4TlsCrypto] - Failed to reflect master secret");
+            byte[] secret = ReflectMasterSecretFromBCTls(cryptoParams.SecurityParameters.MasterSecret) ?? throw new Exception("[Rc4TlsCrypto] - CreateCipher() - Failed to reflect master secret");
 
-            using StreamWriter sw = File.AppendText("sslkeylog.log");
-            sw.WriteLine("CLIENT_RANDOM " + Convert.ToHexString(cryptoParams.SecurityParameters.ClientRandom) + " " + Convert.ToHexString(secret));
+            try
+            {
+                using (Mutex mutex = new Mutex(false, $"Global\\{nameof(Rc4TlsCrypto)}Lock"))
+                {
+                    try
+                    {
+                        mutex.WaitOne(TimeSpan.FromSeconds(60));
+
+                        using StreamWriter sw = File.AppendText("sslkeylog.log");
+                        sw.WriteLine("CLIENT_RANDOM " + Convert.ToHexString(cryptoParams.SecurityParameters.ClientRandom) + " " + Convert.ToHexString(secret));
+                    }
+                    catch (Exception e)
+                    {
+                        CustomLogger.LoggerAccessor.LogError($"[Rc4TlsCrypto] - CreateCipher() - Error while appending data to the keylog file. (Exception:{e})");
+                    }
+                    finally
+                    {
+                        mutex.ReleaseMutex();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                CustomLogger.LoggerAccessor.LogError($"[Rc4TlsCrypto] - CreateCipher() - Failed to get mutex (exception: {e})");
+            }
         }
 
         return encryptionAlgorithm switch

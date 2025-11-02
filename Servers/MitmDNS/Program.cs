@@ -11,6 +11,9 @@ using MultiServerLibrary.Extension;
 using MultiServerLibrary.SNMP;
 using MultiServerLibrary;
 using Microsoft.Extensions.Logging;
+using MultiServerLibrary.CustomServers;
+using System.Collections.Generic;
+using System.Net;
 
 public static class MitmDNSServerConfiguration
 {
@@ -107,8 +110,10 @@ class Program
     private static Task DNSThread = null;
     private static Task DNSRefreshThread = null;
     private static SnmpTrapSender trapSender = null;
-    private static DNSUdpServer Server = null;
+    private static UDPServer Server = null;
     private static readonly FileSystemWatcher dnswatcher = new FileSystemWatcher();
+
+    private static readonly List<ushort> _ports = new List<ushort>() { NetworkPorts.Dns.Udp };
 
     // Event handler for DNS change event
     private static void OnDNSChanged(object source, FileSystemEventArgs e)
@@ -180,9 +185,19 @@ class Program
         _ = InternetProtocolUtils.TryGetServerIP(out DNSResolver.ServerIp);
 
         if (Server == null)
-            Server = new(Environment.ProcessorCount * 4);
-        else
-            Server.Start();
+            Server = new();
+        _ = Server.StartAsync(
+            _ports,
+            Environment.ProcessorCount,
+            null,
+            null,
+            null,
+            (serverPort, listener, data, remoteEP) =>
+            {
+                return DNSResolver.ProcRequest(data).Result;
+            },
+            new CancellationTokenSource().Token
+            );
     }
 
     private static Task RefreshDNS()

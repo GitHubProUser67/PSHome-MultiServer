@@ -38,6 +38,7 @@ namespace ApacheNet.Models
 
         public Task<bool> SendImmediate()
         {
+            Response.ChunkedTransfer = false;
             Response.StatusCode = (int)StatusCode;
             return Response.Send();
         }
@@ -72,15 +73,15 @@ namespace ApacheNet.Models
                     return await Response.SendChunk(Array.Empty<byte>(), true).ConfigureAwait(false);
                 else
                 {
-                    const int buffersize = 16 * 1024;
+                    int bufferSize = bytesLeft > 8000000 && ApacheNetServerConfiguration.BufferSize < 500000 ? 500000 : ApacheNetServerConfiguration.BufferSize;
 
                     bool isNotlastChunk;
                     byte[] buffer;
 
                     while (bytesLeft > 0)
                     {
-                        isNotlastChunk = bytesLeft > buffersize;
-                        buffer = new byte[isNotlastChunk ? buffersize : bytesLeft];
+                        isNotlastChunk = bytesLeft > bufferSize;
+                        buffer = new byte[isNotlastChunk ? bufferSize : bytesLeft];
                         int n = await content.ReadAsync(buffer).ConfigureAwait(false);
 
                         if (isNotlastChunk)
