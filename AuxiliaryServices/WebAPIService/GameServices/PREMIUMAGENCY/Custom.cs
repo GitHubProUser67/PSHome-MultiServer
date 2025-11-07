@@ -5,9 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-
-
-
 #if !NETFRAMEWORK
 using System.Web;
 #endif
@@ -63,7 +60,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - SetUserEventCustom FALLBACK sent for PUBLIC MikuLiveJukebox {eventId}!\nExpected path {MikuLiveJukeboxPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - SetUserEventCustom FALLBACK sent for PUBLIC MikuLiveJukebox {eventId}! Expected path {MikuLiveJukeboxPath}");
 
                         return "<xml>\r\n" +
                              "<result type=\"int\">1</result>\r\n" +
@@ -89,7 +86,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - SetUserEventCustom FALLBACK sent for PUBLIC MikuLiveEvent {eventId}!\nExpected path {mikuLiveEventFilePathPublic}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - SetUserEventCustom FALLBACK sent for PUBLIC MikuLiveEvent {eventId}! Expected path {mikuLiveEventFilePathPublic}");
 
                         return "<xml>\r\n" +
                              "<result type=\"int\">1</result>\r\n" +
@@ -122,7 +119,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - SetUserEventCustom FALLBACK sent for PUBLIC T037HomeSquare {eventId}!\nExpected path {T037HomeSquare}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - SetUserEventCustom FALLBACK sent for PUBLIC T037HomeSquare {eventId}! Expected path {T037HomeSquare}");
 
                         return "<xml>\r\n" +
                              "<result type=\"int\">1</result>\r\n" +
@@ -148,7 +145,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - SetUserEventCustom FALLBACK sent for PUBLIC idolMasters {eventId}!\nExpected path {idolMasters}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - SetUserEventCustom FALLBACK sent for PUBLIC idolMasters {eventId}! Expected path {idolMasters}");
 
                         return "<xml>\r\n" +
                              "<result type=\"int\">1</result>\r\n" +
@@ -174,7 +171,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - SetUserEventCustom FALLBACK sent for PUBLIC LiarGame2 {eventId}!\nExpected path {capcomCollabILNPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - SetUserEventCustom FALLBACK sent for PUBLIC LiarGame2 {eventId}! Expected path {capcomCollabILNPath}");
 
                         return "<xml>\r\n" +
                              "<result type=\"int\">1</result>\r\n" +
@@ -200,7 +197,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - SetUserEventCustom FALLBACK sent for PUBLIC LiarGame2 {eventId}!\nExpected path {j_liargame2Path}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - SetUserEventCustom FALLBACK sent for PUBLIC LiarGame2 {eventId}! Expected path {j_liargame2Path}");
 
                         return "<xml>\r\n" +
                              "<result type=\"int\">1</result>\r\n" +
@@ -225,7 +222,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - SetUserEventCustom FALLBACK sent for PUBLIC SonyAquarium {eventId}!\nExpected path {SonyAquarium}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - SetUserEventCustom FALLBACK sent for PUBLIC SonyAquarium {eventId}! Expected path {SonyAquarium}");
 
                         return "<xml>\r\n" +
                              "<result type=\"int\">1</result>\r\n" +
@@ -282,7 +279,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for LOCAL MikuLiveEvent {eventId}!\nExpected path {mikuLiveEventFilePathQA}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for LOCAL MikuLiveEvent {eventId}! Expected path {mikuLiveEventFilePathQA}");
 
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
@@ -316,7 +313,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for LOCAL MikuLiveEvent {eventId}!\nExpected path {mikuLiveEventFilePathLocal}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for LOCAL MikuLiveEvent {eventId}! Expected path {mikuLiveEventFilePathLocal}");
 
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
@@ -350,7 +347,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for PUBLIC WhiteDay2010 {eventId}!\nExpected path {whiteDay2010FilePathPublic}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for PUBLIC WhiteDay2010 {eventId}! Expected path {whiteDay2010FilePathPublic}");
 
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
@@ -384,7 +381,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for PUBLIC MikuLiveEvent {eventId}!\nExpected path {mikuLiveEventFilePathPublic}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for PUBLIC MikuLiveEvent {eventId}! Expected path {mikuLiveEventFilePathPublic}");
 
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
@@ -418,7 +415,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for PUBLIC Basara {eventId}!\nExpected path {basaraEventFilePathPublic}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for PUBLIC Basara {eventId}! Expected path {basaraEventFilePathPublic}");
 
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
@@ -452,7 +449,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for PUBLIC Christmas 2010 {eventId}!\nExpected path {Christmas2010}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for PUBLIC Christmas 2010 {eventId}! Expected path {Christmas2010}");
 
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
@@ -486,7 +483,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for PUBLIC Rolly Music Survey {eventId}!\nExpected path {rollyMusicSurveyFilePath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for PUBLIC Rolly Music Survey {eventId}! Expected path {rollyMusicSurveyFilePath}");
 
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
@@ -537,7 +534,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for PUBLIC SonyAquarium {eventId}!\nExpected path {SonyAquarium}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for PUBLIC SonyAquarium {eventId}! Expected path {SonyAquarium}");
 
                         return "<xml>\r\n\t" +
                             "<result type=\"int\">1</result>\r\n" +
@@ -591,7 +588,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for PUBLIC SonyAquarium {eventId}!\nExpected path {SonyAquariumVieoConfig}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustom FALLBACK sent for PUBLIC SonyAquarium {eventId}! Expected path {SonyAquariumVieoConfig}");
 
                         return "<xml>\r\n\t" +
                             "<result type=\"int\">1</result>\r\n" +
@@ -681,7 +678,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustomList FALLBACK sent for PUBLIC MikeLiveJukebox {eventId}!\nExpected path {mikuLiveJukeBoxFilePathPublic}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustomList FALLBACK sent for PUBLIC MikeLiveJukebox {eventId}! Expected path {mikuLiveJukeBoxFilePathPublic}");
 
                         return "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -741,7 +738,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustomList FALLBACK sent for PUBLIC MikeLiveJukebox {eventId}!\nExpected path {T037HomeSquare}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustomList FALLBACK sent for PUBLIC MikeLiveJukebox {eventId}! Expected path {T037HomeSquare}");
 
                         return "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -792,7 +789,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustomList FALLBACK sent for PUBLIC Christmas 2010 {eventId}!\nExpected path {Christmas2010}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustomList FALLBACK sent for PUBLIC Christmas 2010 {eventId}! Expected path {Christmas2010}");
 
                         return "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -831,7 +828,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                         return File.ReadAllText($"{workpath}/eventController/Halloween/2010/getUserEventCustomList.xml");
                     } else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustomList FALLBACK sent for Public Halloween 2010 {eventId}!\nExpected path {Halowween2010Path}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetUserEventCustomList FALLBACK sent for Public Halloween 2010 {eventId}! Expected path {Halowween2010Path}");
 
                         return "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">USER_EVENT_CUSTOM_LIST</description>\r\n" +
@@ -856,7 +853,6 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                             $"<update_second type=\"int\">{DateTime.Now.ToString("ss")}</update_second>\r\n" +
                             "</field_list>\r\n";
                     }
-                    break;
                 default:
                     {
                         LoggerAccessor.LogError($"[PREMIUMAGENCY] - GetUserEventCustomList unhandled for eventId {eventId} | POSTDATA: \n{Encoding.UTF8.GetString(PostData)}");

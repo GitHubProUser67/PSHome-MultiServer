@@ -1,12 +1,15 @@
-using System;
-using System.IO;
+using CustomLogger;
 using HttpMultipartParser;
-using System.Text;
-using System.Linq;
-using System.Xml.Linq;
-using System.Text.RegularExpressions;
+using NetHasher;
+using System;
 using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml.Linq;
+using XI5;
 
 namespace WebAPIService.GameServices.THQ
 {
@@ -54,21 +57,36 @@ namespace WebAPIService.GameServices.THQ
 
                         if (ticketData != null)
                         {
-                            // Extract the desired portion of the binary data
-                            byte[] extractedData = new byte[0x63 - 0x54 + 1];
+                            const string RPCNSigner = "RPCN";
 
-                            // Copy it
-                            Array.Copy(ticketData, 0x54, extractedData, 0, extractedData.Length);
+                            // get ticket
+                            XI5Ticket ticket = XI5Ticket.ReadFromBytes(ticketData);
 
-                            // Convert 0x00 bytes to 0x20 so we pad as space.
-                            for (int i = 0; i < extractedData.Length; i++)
+                            // setup username
+                            string username = ticket.Username;
+
+                            // invalid ticket
+                            if (!ticket.Valid)
                             {
-                                if (extractedData[i] == 0x00)
-                                    extractedData[i] = 0x20;
+                                // log to console
+                                LoggerAccessor.LogWarn($"[UFC2010PsHomeClass] - ProcessUFCUserData: User {username} tried to alter their ticket data");
+
+                                return null;
                             }
 
-                            // Convert the modified data to a string
-                            if (id == Encoding.ASCII.GetString(extractedData).Replace(" ", string.Empty))
+                            // RPCN
+                            if (ticket.SignatureIdentifier == RPCNSigner)
+                                LoggerAccessor.LogInfo($"[UFC2010PsHomeClass] - ProcessUFCUserData: User {username} connected at: {DateTime.Now} and is on RPCN");
+                            else if (username.EndsWith($"@{RPCNSigner}"))
+                            {
+                                LoggerAccessor.LogError($"[UFC2010PsHomeClass] - ProcessUFCUserData: User {username} was caught using a RPCN suffix while not on it!");
+
+                                return null;
+                            }
+                            else
+                                LoggerAccessor.LogInfo($"[UFC2010PsHomeClass] - ProcessUFCUserData: User {username} connected at: {DateTime.Now} and is on PSN");
+
+                            if (id == username)
                             {
                                 const string tokensRegex = @"<tokens>(\d+)</tokens>";
                                 string profileDirectoryPah = $"{apiPath}/HOME_THQ/{id}/";
@@ -403,7 +421,7 @@ namespace WebAPIService.GameServices.THQ
                 }
                 catch (Exception ex)
                 {
-                    CustomLogger.LoggerAccessor.LogError($"[UFC2010PsHomeClass] - ProcessUFCUserData thrown an assertion. (Exception: {ex})");
+                    LoggerAccessor.LogError($"[UFC2010PsHomeClass] - ProcessUFCUserData: thrown an assertion. (Exception: {ex})");
 					
                     output = null;
                 }

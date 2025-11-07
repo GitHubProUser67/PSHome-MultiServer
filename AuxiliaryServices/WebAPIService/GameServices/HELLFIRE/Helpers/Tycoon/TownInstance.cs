@@ -395,8 +395,8 @@ namespace WebAPIService.GameServices.HELLFIRE.Helpers.Tycoon
 
         private static string GenerateTycoonId(string input1, string input2)
         {
-            // We must repect a number limit, so we use this CRC method to not get out of bounds.
-            return CRC16.Create(Encoding.ASCII.GetBytes(input1 + "|" + input2)).ToString() + CRC8.Create(Encoding.ASCII.GetBytes(input1));
+            // We must repect a number limit of 65535, so we use this CRC method to not get out of bounds.
+            return CRC16.Create(Encoding.ASCII.GetBytes(input1 + "|" + input2)).ToString();
         }
     }
 }

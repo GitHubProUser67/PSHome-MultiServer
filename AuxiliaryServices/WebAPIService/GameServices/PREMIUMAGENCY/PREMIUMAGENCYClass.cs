@@ -6,11 +6,6 @@ using System.IO;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
-
-
-
-
-
 #if !NETFRAMEWORK
 using System.Web;
 #endif
@@ -18,10 +13,10 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
 {
     public class PREMIUMAGENCYClass
     {
-        private string workpath;
-        private string absolutepath;
-        private string fulluripath;
-        private string method;
+        private readonly string workpath;
+        private readonly string absolutepath;
+        private readonly string fulluripath;
+        private readonly string method;
 
         public PREMIUMAGENCYClass(string method, string absolutepath, string workpath, string fulluripath)
         {

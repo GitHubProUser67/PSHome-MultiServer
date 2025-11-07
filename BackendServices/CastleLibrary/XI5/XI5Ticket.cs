@@ -181,7 +181,7 @@ namespace XI5
 
             if (!isValidTimestamp)
             {
-                LoggerAccessor.LogError($"[XI5Ticket] - Timestamp of the ticket data was invalid, likely an exploit. (IssuedDate:{ticket.IssuedDate} ExpiryDate:{ticket.ExpiryDate} CurrentTime:{validityCheckTime}");
+                LoggerAccessor.LogError($"[XI5Ticket] - Timestamp of the ticket data was invalid, likely an exploit. (IssuedDate:{ticket.IssuedDate} ExpiryDate:{ticket.ExpiryDate} CurrentTime:{validityCheckTime})");
                 return ticket;
             }
 
@@ -189,7 +189,7 @@ namespace XI5
 #if DEBUG
             if (!ticket.Valid)
             {
-                LoggerAccessor.LogWarn($"[XI5Ticket] - Invalid ticket data sent at:{DateTime.Now} with payload:{{{BytesToHex(ticketData)}}}");
+                LoggerAccessor.LogWarn($"[XI5Ticket] - Invalid ticket data sent at:{DateTime.Now} with TitleId:{ticket.TitleId} with payload:{{{BytesToHex(ticketData)}}}");
 
                 var curveCache = new Dictionary<string, ECDomainParameters>();
                 var validPoints = new List<Org.BouncyCastle.Math.EC.ECPoint>();

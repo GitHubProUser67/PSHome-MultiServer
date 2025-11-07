@@ -1,6 +1,6 @@
 using CustomLogger;
-using MultiServerLibrary.HTTP;
 using HttpMultipartParser;
+using MultiServerLibrary.HTTP;
 using System;
 using System.IO;
 using System.Text;
@@ -9,28 +9,26 @@ namespace WebAPIService.GameServices.CDM
 {
     internal class User
     {
-        public static string handleGame(byte[] PostData, string ContentType, string workpath, string absolutePath)
+        public static string HandleGame(byte[] PostData, string ContentType, string workpath, string absolutePath)
         {
             string pubListPath = $"{workpath}/CDM/User";
+            string publisherId = absolutePath.Split("/")[3];
+            string gameId = absolutePath.Split("/")[4];
+            string filePath = $"{pubListPath}/{publisherId}/{gameId}";
+			string gameXMLPath = filePath + "/game.xml";
 
-            Directory.CreateDirectory(pubListPath);
-            string filePath = $"{pubListPath}/game.xml";
-            if (File.Exists(filePath))
+            if (File.Exists(gameXMLPath))
             {
-                string res = File.ReadAllText(filePath);
-
-                string resourceXML = "<xml>\r\n\t" +
+                return "<xml>\r\n\t" +
                     "<status>success</status>\r\n" +
-                    $"{res}\r\n" +
+                    $"{File.ReadAllText(gameXMLPath)}\r\n" +
                     "</xml>";
-
-                return resourceXML;
             }
             else
             {
-                LoggerAccessor.LogWarn($"[CDM] - Publisher Game failed with expected path {filePath}!");
+                LoggerAccessor.LogError($"[CDM] - Publisher Game failed with expected path {filePath}!");
 
-                string resourceXML = "<xml>\r\n\t" +
+                return "<xml>\r\n\t" +
                     "<status>success</status>\r\n" +
                     $"<publisher_game>\r\n" +
                     $"    <publisher_id>14</publisher_id>\r\n" +
@@ -75,65 +73,59 @@ namespace WebAPIService.GameServices.CDM
                     $"    </inventories>\r\n" +
                     $"</publisher_game>\r\n" +
                     "</xml>";
-
-                return resourceXML;
             }
         }
 
-        public static string handleSpace(byte[] PostData, string ContentType, string workpath, string absolutePath)
+        public static string HandleSpace(byte[] PostData, string ContentType, string workpath, string absolutePath)
         {
-            string pubListPath = $"{workpath}/CDM/{absolutePath}";
-
-            Directory.CreateDirectory(pubListPath);
-            string filePath = $"{pubListPath}/space.xml";
-            if (File.Exists(filePath))
+            string pubListPath = $"{workpath}/CDM/space/";
+            string spacePlayerIsIn = absolutePath.Split("/")[5];
+            string region = absolutePath.Split("/")[6];
+            string npAge = absolutePath.Split("/")[8];
+            string filePath = $"{pubListPath}/{spacePlayerIsIn}/{region}";
+			string spaceXML = filePath + "/space.xml";
+						
+            if (File.Exists(spaceXML))
             {
-                string res = File.ReadAllText(filePath);
-
-                string resourceXML = "<xml>\r\n\t" +
+                return "<xml>\r\n\t" +
                     "<status>success</status>\r\n" +
-                    $"{res}\r\n" +
+                    $"{File.ReadAllText(spaceXML)}\r\n" +
                     "</xml>";
-
-                return resourceXML;
             }
             else
-                LoggerAccessor.LogWarn($"[CDM] - User Space failed with expected path {filePath}!");
+                LoggerAccessor.LogError($"[CDM] - User Space failed with expected path {filePath}!");
 
             return "<xml>" +
                 "<status>fail</status>" +
                 "</xml>";
         }
 
-        public static string handleUserSync(byte[] PostData, string ContentType, string workpath, string absolutePath)
+        public static string HandleUserSync(byte[] PostData, string ContentType, string workpath, string absolutePath)
         {
             string status;
             string userSync = string.Empty;
-
             string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+			
             using (MemoryStream ms = new MemoryStream(PostData))
-            {
-                var data = MultipartFormDataParser.Parse(ms, boundary);
+                userSync = MultipartFormDataParser.Parse(ms, boundary).GetParameterValue("sync");
 
-                userSync = data.GetParameterValue("sync");
-
-                ms.Flush();
-            }
-#if DEBUG
-            LoggerAccessor.LogInfo($"[CDM] User Sync - Received: \n{userSync}");
-#endif
             string pubListPath = $"{workpath}/CDM/{absolutePath}";
+			
             Directory.CreateDirectory(pubListPath);
+			
             string filePath = $"{pubListPath}/UserSyncData.json";
 
             try
             {
-                File.WriteAllText(filePath, userSync);
+                File.WriteAllBytes(filePath, Encoding.UTF8.GetBytes(userSync));
                 status = "<xml>\r\n\t" +
                     "<status>success</status>\r\n" +
                     "</xml>";
-            } catch (Exception e) {
-                LoggerAccessor.LogWarn($"[CDM] User Sync JSON write failed with exception {e}");
+            }
+			catch (Exception e)
+			{
+				
+                LoggerAccessor.LogError($"[CDM] User Sync JSON write failed with exception {e}");
 
                 status = "<xml>\r\n\t" +
                     "<status>fail</status>\r\n" +

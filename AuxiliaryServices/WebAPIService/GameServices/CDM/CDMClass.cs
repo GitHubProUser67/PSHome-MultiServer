@@ -55,9 +55,9 @@ namespace WebAPIService.GameServices.CDM
                         case "/publisher/list/":
                             return Publisher.handlePublisherList(PostData, ContentType, workPath, absolutePath);
                         case "/user/game/":
-                            return User.handleGame(PostData, ContentType, workPath, absolutePath);
+                            return User.HandleGame(PostData, ContentType, workPath, absolutePath);
                         case "/user/space/":
-                            return User.handleSpace(PostData, ContentType, workPath, absolutePath);
+                            return User.HandleSpace(PostData, ContentType, workPath, absolutePath);
                         case "/leaderboard/":
                             return Leaderboards.handleLeaderboards(PostData, ContentType, workPath, absolutePath);
                         default:
@@ -69,7 +69,7 @@ namespace WebAPIService.GameServices.CDM
                    switch (endPointURI)
                     {
                         case "/user/sync/":
-                            return User.handleUserSync(PostData, ContentType, workPath, absolutePath);
+                            return User.HandleUserSync(PostData, ContentType, workPath, absolutePath);
                         default:
                             LoggerAccessor.LogWarn($"[CDM] - Unhandled POST endpoint for {endPointURI}");
                             break;

@@ -3,8 +3,6 @@ using MultiServerLibrary.HTTP;
 using CustomLogger;
 using HttpMultipartParser;
 using System.Text;
-
-
 #if !NETFRAMEWORK
 using System.Web;
 #endif
@@ -71,7 +69,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                         }
                         else
                         {
-                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetItemRankingTable FALLBACK sent for PUBLIC HomeSquare T037 {eventId}!\nExpected path {filePath}");
+                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetItemRankingTable FALLBACK sent for PUBLIC HomeSquare T037 {eventId}! Expected path {filePath}");
 
                             return "<xml>\r\n\t" +
                                  "<result type=\"int\">1</result>\r\n\t" +
@@ -100,7 +98,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                         }
                         else
                         {
-                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetItemRankingTable FALLBACK sent for PUBLIC MikuLiveJukebox {eventId}!\nExpected path {MikuLiveJukeboxPath}");
+                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetItemRankingTable FALLBACK sent for PUBLIC MikuLiveJukebox {eventId}! Expected path {MikuLiveJukeboxPath}");
 
                             return "<xml>\r\n\t" +
                                  "<result type=\"int\">1</result>\r\n\t" +
@@ -128,7 +126,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                         }
                         else
                         {
-                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetItemRankingTable FALLBACK sent for PUBLIC LiarGame2 {eventId}!\nExpected path {filePath}");
+                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetItemRankingTable FALLBACK sent for PUBLIC LiarGame2 {eventId}! Expected path {filePath}");
 
                             return "<xml>\r\n\t" +
                                  "<result type=\"int\">1</result>\r\n\t" +
@@ -152,7 +150,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                         }
                         else
                         {
-                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetItemRankingTable FALLBACK sent for PUBLIC Japan Christmas 2010 {eventId}!\nExpected path {filePath}");
+                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetItemRankingTable FALLBACK sent for PUBLIC Japan Christmas 2010 {eventId}! Expected path {filePath}");
                             return "<xml>\r\n\t" +
                                  "<result type=\"int\">1</result>\r\n\t" +
                                  "<description type=\"text\">Success</description>\r\n\t" +
@@ -229,7 +227,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                         }
                         else
                         {
-                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - EntryItemRankingPoints FALLBACK sent for PUBLIC HomeSquare T037 {eventId}!\nExpected path {filePath}");
+                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - EntryItemRankingPoints FALLBACK sent for PUBLIC HomeSquare T037 {eventId}! Expected path {filePath}");
 
                             return "<xml>\r\n\t" +
                                  "<result type=\"int\">1</result>\r\n\t" +
@@ -260,7 +258,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                         }
                         else
                         {
-                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - EntryItemRankingPoints FALLBACK sent for PUBLIC MikuliveJukebox {eventId}!\nExpected path {filePath}");
+                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - EntryItemRankingPoints FALLBACK sent for PUBLIC MikuliveJukebox {eventId}! Expected path {filePath}");
 
                             return "<xml>\r\n\t" +
                                  "<result type=\"int\">1</result>\r\n\t" +
@@ -292,7 +290,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                         }
                         else
                         {
-                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - EntryItemRankingPoints FALLBACK sent for PUBLIC LiarGame2 {eventId}!\nExpected path {filePath}");
+                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - EntryItemRankingPoints FALLBACK sent for PUBLIC LiarGame2 {eventId}! Expected path {filePath}");
 
                             return "<xml>\r\n\t" +
                                  "<result type=\"int\">1</result>\r\n\t" +
@@ -367,7 +365,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                         }
                         else
                         {
-                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetItemRankingTable FALLBACK sent for PUBLIC MikuLiveJukebox {eventId}!\nExpected path {MikuLiveJukeboxPath}");
+                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetItemRankingTable FALLBACK sent for PUBLIC MikuLiveJukebox {eventId}! Expected path {MikuLiveJukeboxPath}");
 
                             return "<xml>\r\n\t" +
                                  "<result type=\"int\">1</result>\r\n\t" +
@@ -395,7 +393,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                         }
                         else
                         {
-                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetItemRankingTable FALLBACK sent for PUBLIC T037HomeSquare {eventId}!\nExpected path {T037HomeSquare}");
+                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetItemRankingTable FALLBACK sent for PUBLIC T037HomeSquare {eventId}! Expected path {T037HomeSquare}");
 
                             return "<xml>\r\n\t" +
                                  "<result type=\"int\">1</result>\r\n\t" +

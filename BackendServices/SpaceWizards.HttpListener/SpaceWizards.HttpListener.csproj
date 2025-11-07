@@ -9,9 +9,11 @@
     <AssemblyName>SpaceWizards.HttpListener</AssemblyName>
     <Version>0.2.0</Version>
   </PropertyGroup>
+  
   <ItemGroup Condition=" '$(TargetFramework)' == 'net461' or '$(TargetFramework)' == 'net462' or '$(TargetFramework)' == 'net472' or '$(TargetFramework)' == 'netstandard2.0' ">
     <PackageReference Include="System.Memory" Version="4.5.5" />
   </ItemGroup>
+  
   <ItemGroup Condition="'$(TargetsAnyOS)' != 'true'">
     <Compile Include="System\Net\BoundaryType.cs" />
     <Compile Include="System\Net\EntitySendFormat.cs" />
@@ -48,6 +50,7 @@
     <Compile Include="System\Net\Windows\CookieExtensions.cs" />
     <Compile Include="$(CommonPath)System\HexConverter.cs" Link="Common\System\HexConverter.cs" />
   </ItemGroup>
+  
   <ItemGroup Condition="'$(TargetsUnix)' == 'true' or '$(ForceManagedImplementation)' == 'true'">
     <Compile Include="System\Net\Managed\HttpEndPointListener.cs" />
     <Compile Include="System\Net\Managed\HttpEndPointManager.cs" />
@@ -69,12 +72,20 @@
     <Compile Include="System\Net\Managed\WebSockets\HttpWebSocket.Managed.cs" />
     <Compile Include="$(CommonPath)System\Threading\Tasks\TaskToApm.cs" Link="Common\System\Threading\Tasks\TaskToApm.cs" />
   </ItemGroup>
+  
   <ItemGroup>
     <Compile Include="CustomServers\HTTPServer.cs" />
     <Compile Include="SR.cs" />
     <Compile Include="System\Net\StreamHelper.cs" />
   </ItemGroup>
+  
   <ItemGroup>
     <ProjectReference Include="..\MultiServerLibrary\MultiServerLibrary.csproj" />
   </ItemGroup>
+  
+  <PropertyGroup>
+    <!--Since Windows 11 24H2, the firewall became crazy and started filtering/preventing httpsys requests being 
+	made from outside of the computer, so prefer using the managed version only in this case -->
+    <!--<DefineConstants>$(DefineConstants);ENABLE_HTTPSYS_CUSTOM_SERVER</DefineConstants>-->
+  </PropertyGroup>
 </Project>

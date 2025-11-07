@@ -74,7 +74,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for QA MikuLiveJack {eventId}!\nExpected path {MikuliveJackQATriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for QA MikuLiveJack {eventId}! Expected path {MikuliveJackQATriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -120,7 +120,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for LOCAL MikuLiveJack {eventId}!\nExpected path {MikuliveJackLOCALTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for LOCAL MikuLiveJack {eventId}! Expected path {MikuliveJackLOCALTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -166,7 +166,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC Rolly Music Survey {eventId}!\nExpected path {RollyJukeboxPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC Rolly Music Survey {eventId}! Expected path {RollyJukeboxPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -212,7 +212,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC MikuLiveJack {eventId}!\nExpected path {MikuliveJackPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC MikuLiveJack {eventId}! Expected path {MikuliveJackPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -258,7 +258,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC MikuLiveJukebox {eventId}!\nExpected path {MikuLiveJukeboxPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC MikuLiveJukebox {eventId}! Expected path {MikuLiveJukeboxPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -304,7 +304,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC PrinnyJack {eventId}!\nExpected path {PrinnyJackPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC PrinnyJack {eventId}! Expected path {PrinnyJackPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -350,7 +350,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC MikuLiveEvent {eventId}!\nExpected path {MikuliveEventPublicTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC MikuLiveEvent {eventId}! Expected path {MikuliveEventPublicTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -396,7 +396,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC Georgia {eventId}!\nExpected path {GeorgiaPUblicTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC Georgia {eventId}! Expected path {GeorgiaPUblicTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -442,7 +442,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC iDOLMASTERs LiveStage {eventId}!\nExpected path {iDOLMASTERSLiveEventPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC iDOLMASTERs LiveStage {eventId}! Expected path {iDOLMASTERSLiveEventPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -488,7 +488,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC THE IDOLM@STER SP Move to special live venue {eventId}!\nExpected path {iDOLMASTERSSPMoveToSpecialVenuePUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC THE IDOLM@STER SP Move to special live venue {eventId}! Expected path {iDOLMASTERSSPMoveToSpecialVenuePUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -534,7 +534,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for QA THE IDOLM@STER SP Move to special live venue {eventId}!\nExpected path {iDOLMASTERSSPMoveToSpecialVenueQATriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for QA THE IDOLM@STER SP Move to special live venue {eventId}! Expected path {iDOLMASTERSSPMoveToSpecialVenueQATriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -580,7 +580,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for LOCAL THE IDOLM@STER SP Move to special live venue {eventId}!\nExpected path {iDOLMASTERSSPMoveToSpecialVenueLOCALTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for LOCAL THE IDOLM@STER SP Move to special live venue {eventId}! Expected path {iDOLMASTERSSPMoveToSpecialVenueLOCALTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -626,7 +626,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for LOCAL RollyCafe1F {eventId}!\nExpected path {homecafeRollyCafe1FLOCALTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for LOCAL RollyCafe1F {eventId}! Expected path {homecafeRollyCafe1FLOCALTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -672,7 +672,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for QA RollyCafe1F {eventId}!\nExpected path {homecafeRollyCafe1FQATriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for QA RollyCafe1F {eventId}! Expected path {homecafeRollyCafe1FQATriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -718,7 +718,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for LOCAL Basara {eventId}!\nExpected path {basaraHomeSquareLOCALTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for LOCAL Basara {eventId}! Expected path {basaraHomeSquareLOCALTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -762,7 +762,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for QA Basara {eventId}!\nExpected path {basaraHomeSquareQATriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for QA Basara {eventId}! Expected path {basaraHomeSquareQATriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -809,7 +809,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC DJMusic {eventId}!\nExpected path {homecafeDJMusicPublicTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC DJMusic {eventId}! Expected path {homecafeDJMusicPublicTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -855,7 +855,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC RollyCafe1F {eventId}!\nExpected path {homecafeRollyCafe1FPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC RollyCafe1F {eventId}! Expected path {homecafeRollyCafe1FPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -901,7 +901,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC Basara {eventId}!\nExpected path {basaraHomeSquarePUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC Basara {eventId}! Expected path {basaraHomeSquarePUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">GET_TRIGGER</description>\r\n" +
@@ -966,7 +966,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC homecafe Gallery {eventId}!\nExpected path {homecafeGalleryPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC homecafe Gallery {eventId}! Expected path {homecafeGalleryPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1012,7 +1012,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for POST evid PUBLIC LiarGame2 {eventId}!\nExpected path {j_liargame2POSTPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for POST evid PUBLIC LiarGame2 {eventId}! Expected path {j_liargame2POSTPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1058,7 +1058,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for CALL evid PUBLIC LiarGame2 {eventId}!\nExpected path {j_liargame2CALLPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for CALL evid PUBLIC LiarGame2 {eventId}! Expected path {j_liargame2CALLPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1104,7 +1104,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for evid PUBLIC Halloween 2010 {eventId}!\nExpected path {halloween2010TriggerPathPublic}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for evid PUBLIC Halloween 2010 {eventId}! Expected path {halloween2010TriggerPathPublic}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1150,7 +1150,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC Sony Aquarium HomeSquare Relocator {eventId}!\nExpected path {SonyAquariumRelocatorPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC Sony Aquarium HomeSquare Relocator {eventId}! Expected path {SonyAquariumRelocatorPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1200,7 +1200,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC Sony Aquarium VideoConfig {eventId}!\nExpected path {SonyAquariumVideoConfigPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC Sony Aquarium VideoConfig {eventId}! Expected path {SonyAquariumVideoConfigPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1246,7 +1246,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for SCEAsia Christmas 2010 OBJ Trigger {eventId}!\nExpected path {SCEAsiaXmasObjTriggerPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for SCEAsia Christmas 2010 OBJ Trigger {eventId}! Expected path {SCEAsiaXmasObjTriggerPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1292,7 +1292,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC SCEAsia Christmas 2010 Snowfall {eventId}!\nExpected path {SCEAsiaXmasSnowFallPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC SCEAsia Christmas 2010 Snowfall {eventId}! Expected path {SCEAsiaXmasSnowFallPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1338,7 +1338,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC Christmas 2010 {eventId}!\nExpected path {JapanChristmas2010PUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTrigger FALLBACK sent for PUBLIC Christmas 2010 {eventId}! Expected path {JapanChristmas2010PUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1414,7 +1414,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTriggerEx FALLBACK for POST evid PUBLIC Spring2013 {eventId}!\nExpected path {Spring2013}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - GetEventTriggerEx FALLBACK for POST evid PUBLIC Spring2013 {eventId}! Expected path {Spring2013}");
 
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
@@ -1506,7 +1506,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for Public UFO 2009 {eventId}!\nExpected path {homesquareUFO09ProdTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for Public UFO 2009 {eventId}! Expected path {homesquareUFO09ProdTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">EVENT_TRIGGER</description>\r\n" +
@@ -1551,7 +1551,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA MikuLiveJack {eventId}!\nExpected path {MikuliveJackQATriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA MikuLiveJack {eventId}! Expected path {MikuliveJackQATriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1593,7 +1593,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA MikuLiveEvent {eventId}!\nExpected path {MikuliveEventQATriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA MikuLiveEvent {eventId}! Expected path {MikuliveEventQATriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1635,7 +1635,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA Rainbow {eventId}!\nExpected path {RainbowEventQATriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA Rainbow {eventId}! Expected path {RainbowEventQATriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1677,7 +1677,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for LOCAL MikuLiveEvent {eventId}!\nExpected path {MikuliveEventLocalTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for LOCAL MikuLiveEvent {eventId}! Expected path {MikuliveEventLocalTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1719,7 +1719,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Rolly Music Survey {eventId}!\nExpected path {RollyJukeboxPublicTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Rolly Music Survey {eventId}! Expected path {RollyJukeboxPublicTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1761,7 +1761,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC MikuLiveJack {eventId}!\nExpected path {MikuliveJackPublicTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC MikuLiveJack {eventId}! Expected path {MikuliveJackPublicTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1803,7 +1803,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC MikuLiveJukebox {eventId}!\nExpected path {MikuLiveJukeboxPublicTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC MikuLiveJukebox {eventId}! Expected path {MikuLiveJukeboxPublicTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1845,7 +1845,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Prinny  {eventId}!\nExpected path {PrinnyJackPublicTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Prinny  {eventId}! Expected path {PrinnyJackPublicTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1887,7 +1887,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC MikuLiveEvent {eventId}!\nExpected path {MikuliveEventPublicTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC MikuLiveEvent {eventId}! Expected path {MikuliveEventPublicTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1929,7 +1929,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Rainbow {eventId}!\nExpected path {RainbowEventPublicTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Rainbow {eventId}! Expected path {RainbowEventPublicTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -1971,7 +1971,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for LOCAL MikuLiveJack {eventId}!\nExpected path {MikuliveJackLocalTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for LOCAL MikuLiveJack {eventId}! Expected path {MikuliveJackLocalTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2013,7 +2013,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Georgia {eventId}!\nExpected path {GeorgiaPublicTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Georgia {eventId}! Expected path {GeorgiaPublicTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2055,7 +2055,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for LOCAL Rainbow {eventId}!\nExpected path {RainbowEventLocalTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for LOCAL Rainbow {eventId}! Expected path {RainbowEventLocalTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2097,7 +2097,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA Free distribution SCEAsia area lounge MiddleFloor {eventId}!\nExpected path {SceasiaDistributionQATriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA Free distribution SCEAsia area lounge MiddleFloor {eventId}! Expected path {SceasiaDistributionQATriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2136,7 +2136,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Free distribution SCEAsia area lounge MiddleFloor {eventId}!\nExpected path {SceasiaDistributionPublicTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Free distribution SCEAsia area lounge MiddleFloor {eventId}! Expected path {SceasiaDistributionPublicTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2178,7 +2178,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC iDOLMASTERs LiveEvent {eventId}!\nExpected path {iDOLMASTERSLiveEventPublicTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC iDOLMASTERs LiveEvent {eventId}! Expected path {iDOLMASTERSLiveEventPublicTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2220,7 +2220,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA iDOLM@STERs Event Shop {eventId}!\nExpected path {iDOLMASTERSEventShopQATriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA iDOLM@STERs Event Shop {eventId}! Expected path {iDOLMASTERSEventShopQATriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2262,7 +2262,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC THE IDOLM@STER SP Move to special live venue {eventId}!\nExpected path {iDOLMASTERSSPMoveToSpecialVenuePUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC THE IDOLM@STER SP Move to special live venue {eventId}! Expected path {iDOLMASTERSSPMoveToSpecialVenuePUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2304,7 +2304,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for LOCAL iDOLM@STERs Event Shop {eventId}!\nExpected path {iDOLMASTERSEventShopLOCALTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for LOCAL iDOLM@STERs Event Shop {eventId}! Expected path {iDOLMASTERSEventShopLOCALTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2346,7 +2346,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC homecafe DJMusic {eventId}!\nExpected path {homecafeDJMusicPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC homecafe DJMusic {eventId}! Expected path {homecafeDJMusicPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2388,7 +2388,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC homecafe Gallery {eventId}!\nExpected path {homecafeGalleryPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC homecafe Gallery {eventId}! Expected path {homecafeGalleryPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2430,7 +2430,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for LOCAL homecafe RollyCafe1F {eventId}!\nExpected path {homecafeRollyCafe1FLOCALTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for LOCAL homecafe RollyCafe1F {eventId}! Expected path {homecafeRollyCafe1FLOCALTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2472,7 +2472,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA homecafe RollyCafe1F {eventId}!\nExpected path {homecafeRollyCafe1FQATriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA homecafe RollyCafe1F {eventId}! Expected path {homecafeRollyCafe1FQATriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2514,7 +2514,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for LOCAL Basara HomeSquare Collab {eventId}!\nExpected path {basaraHomeSquareLOCALTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for LOCAL Basara HomeSquare Collab {eventId}! Expected path {basaraHomeSquareLOCALTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2556,7 +2556,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for LOCAL Macross SS F/Fifa Relocator {eventId}!\nExpected path {MacrossSSFLOCALTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for LOCAL Macross SS F/Fifa Relocator {eventId}! Expected path {MacrossSSFLOCALTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2598,7 +2598,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA Basara HomeSquare Collab {eventId}!\nExpected path {basaraHomeSquareQATriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA Basara HomeSquare Collab {eventId}! Expected path {basaraHomeSquareQATriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2640,7 +2640,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC homecafe RollyCafe1F {eventId}!\nExpected path {homecafeRollyCafe1FPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC homecafe RollyCafe1F {eventId}! Expected path {homecafeRollyCafe1FPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2682,7 +2682,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Basara HomeSquare Collab {eventId}!\nExpected path {basaraHomeSquarePUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Basara HomeSquare Collab {eventId}! Expected path {basaraHomeSquarePUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2724,7 +2724,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA Macross SS F/Fifa Relocator {eventId}!\nExpected path {MacrossSSFQATriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA Macross SS F/Fifa Relocator {eventId}! Expected path {MacrossSSFQATriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2766,7 +2766,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA Macross VF25 HS {eventId}!\nExpected path {MacrossVF25QATriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for QA Macross VF25 HS {eventId}! Expected path {MacrossVF25QATriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2808,7 +2808,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for POST evid PUBLIC LiarGame2 {eventId}!\nExpected path {j_liargame2POSTTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for POST evid PUBLIC LiarGame2 {eventId}! Expected path {j_liargame2POSTTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2850,7 +2850,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for CALL evid PUBLIC LiarGame2 {eventId}!\nExpected path {j_liargame2CALLTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for CALL evid PUBLIC LiarGame2 {eventId}! Expected path {j_liargame2CALLTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2892,7 +2892,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for evid PUBLIC Halloween 2010 {eventId}!\nExpected path {Halloween2010TriggerPathAmbiencePublic}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for evid PUBLIC Halloween 2010 {eventId}! Expected path {Halloween2010TriggerPathAmbiencePublic}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2932,7 +2932,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for evid PUBLIC Halloween 2010 {eventId}!\nExpected path {Halloween2010TriggerPathPublic}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for evid PUBLIC Halloween 2010 {eventId}! Expected path {Halloween2010TriggerPathPublic}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -2974,7 +2974,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Macross Campaign on-site Sales Office {eventId}!\nExpected path {MacrossEventShopPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Macross Campaign on-site Sales Office {eventId}! Expected path {MacrossEventShopPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -3016,7 +3016,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Macross SS F/Fifa Relocator {eventId}!\nExpected path {MacrossSSFPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Macross SS F/Fifa Relocator {eventId}! Expected path {MacrossSSFPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -3058,7 +3058,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Macross VF25 HS {eventId}!\nExpected path {MacrossVF25PUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Macross VF25 HS {eventId}! Expected path {MacrossVF25PUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -3100,7 +3100,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Sony Aquarium VideoScreens {eventId}!\nExpected path {SonyAquariumRelocatorPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Sony Aquarium VideoScreens {eventId}! Expected path {SonyAquariumRelocatorPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -3142,7 +3142,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Sony Aquarium VideoScreens {eventId}!\nExpected path {SonyAquariumVideoConfigPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Sony Aquarium VideoScreens {eventId}! Expected path {SonyAquariumVideoConfigPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -3184,7 +3184,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC SCEAsia Christmas 2010 OBJ Trigger {eventId}!\nExpected path {SCEAsiaXmasOBJTriggerPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC SCEAsia Christmas 2010 OBJ Trigger {eventId}! Expected path {SCEAsiaXmasOBJTriggerPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -3226,7 +3226,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC SCEAsia Christmas 2010 SnowFall 2010 {eventId}!\nExpected path {SCEAsiaXmasSnowFallPUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC SCEAsia Christmas 2010 SnowFall 2010 {eventId}! Expected path {SCEAsiaXmasSnowFallPUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +
@@ -3268,7 +3268,7 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                     }
                     else
                     {
-                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Japan Christmas 2010  {eventId}!\nExpected path {JapanXmas2010PUBLICTriggerPath}");
+                        LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - ConfirmEventTrigger FALLBACK sent for PUBLIC Japan Christmas 2010  {eventId}! Expected path {JapanXmas2010PUBLICTriggerPath}");
                         return "<xml>\r\n" +
                             "<result type=\"int\">1</result>\r\n" +
                             "<description type=\"text\">Success</description>\r\n" +

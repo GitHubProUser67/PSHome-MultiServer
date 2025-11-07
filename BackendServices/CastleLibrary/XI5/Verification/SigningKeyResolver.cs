@@ -19,7 +19,23 @@ namespace XI5.Verification
             { "NPEA00013", new List<ITicketSigningKey> { new HomeClosedBetaSigningKey(), new DefaultSigningKey() } },
 
             // PSHome APIs
-            { "NPUR00071", new List<ITicketSigningKey> { new HellfirePALSigningKey(), new HellfireNTSCSigningKey(), new NovusPrimeNTSC_JSigningKey() } },
+            { "NPUR00071", new List<ITicketSigningKey>
+                {
+                #region hellfire
+                    new HellfirePALSigningKey(),
+                    new HellfireNTSCSigningKey(),
+                    new HellfireNTSC_JSigningKey(),
+                #endregion
+                } 
+            },
+            { "NPUR30111", new List<ITicketSigningKey>
+                {
+                #region UFC2010
+                    new UFCPSHOME2010SigningKey(),
+
+                #endregion
+                }
+            },
 
             // Driver SF
             { "BLUS30536", new List<ITicketSigningKey> { new DriverSFNtscDiscSigningKey() } },

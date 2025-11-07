@@ -1,12 +1,53 @@
 using System.IO;
+using System.Collections.Generic;
 using MultiServerLibrary.HTTP;
 using CustomLogger;
 using HttpMultipartParser;
+using Newtonsoft.Json.Linq;
 
 namespace WebAPIService.GameServices.PREMIUMAGENCY
 {
     public class InfoBoard
     {
+        private static HashSet<string> validLoungesCache = null;
+        private static string loungesJsonPathCache = null;
+
+        private static readonly HashSet<string> DefaultLounges = new HashSet<string>
+        {
+            "HomeSquare",
+            "Cafe",
+            "Theater",
+            "GameSpace",
+            "MarketPlace"
+        };
+
+        private static HashSet<string> LoadValidLounges(string jsonPath)
+        {
+            if (validLoungesCache != null && loungesJsonPathCache == jsonPath)
+                return validLoungesCache;
+
+            if (!File.Exists(jsonPath))
+                return DefaultLounges;
+
+            try
+            {
+                var json = File.ReadAllText(jsonPath);
+                var root = JObject.Parse(json);
+                var loungesSet = new HashSet<string>();
+                foreach (var lounge in root["lounges"])
+                {
+                    loungesSet.Add(lounge.ToString());
+                }
+                validLoungesCache = loungesSet;
+                loungesJsonPathCache = jsonPath;
+                return loungesSet.Count > 0 ? loungesSet : DefaultLounges;
+            }
+            catch
+            {
+                return DefaultLounges;
+            }
+        }
+
         public static string getInformationBoardSchedulePOST(byte[] PostData, string ContentType, string workpath, string eventId)
         {
             string boundary = HTTPProcessor.ExtractBoundary(ContentType);
@@ -21,105 +62,30 @@ namespace WebAPIService.GameServices.PREMIUMAGENCY
                 lounge = data.GetParameterValue("lounge");
                 lang = data.GetParameterValue("lang");
                 regcd = data.GetParameterValue("regcd");
-
-                ms.Flush();
             }
 
-            #region InfoBoard Paths
-
+            // Use the original string interpolation style
             string infoBoardSchedulePath = $"{workpath}/eventController/InfoBoards/Schedule";
+			
+            Directory.CreateDirectory(infoBoardSchedulePath);
 
-            #endregion
+            string filePath = $"{infoBoardSchedulePath}/{lounge}.xml";
 
-            switch (lounge)
+            if (LoadValidLounges($"{infoBoardSchedulePath}/lounges.json").Contains(lounge))
             {
-                case "HomeSquare":
-                    {
-                        Directory.CreateDirectory(infoBoardSchedulePath);
-                        string filePath = $"{infoBoardSchedulePath}/{lounge}.xml";
-                        if (File.Exists(filePath))
-                        {
-                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - InfoBoardSchedule for {lounge} found with {filePath} and sent!");
-                            return File.ReadAllText(filePath);
-                        }
-                        else
-                        {
-                            LoggerAccessor.LogError($"[PREMIUMAGENCY] - Failed to find InfoBoardSchedule for {lounge}\nExpected path {filePath}!");
-                        }
-                        break;
-                    }
-                case "Cafe":
-                    {
-                        Directory.CreateDirectory(infoBoardSchedulePath);
-                        string filePath = $"{infoBoardSchedulePath}/{lounge}.xml";
-                        if (File.Exists(filePath))
-                        {
-                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - InfoBoardSchedule for {lounge} found and sent!");
-                            return File.ReadAllText(filePath);
-                        }
-                        else
-                        {
-                            LoggerAccessor.LogError($"[PREMIUMAGENCY] - Failed to find InfoBoardSchedule for {lounge}\nExpected path {filePath}!");
-                        }
-                        break;
-                    }
-                case "Theater":
-                    {
-                        Directory.CreateDirectory(infoBoardSchedulePath);
-                        string filePath = $"{infoBoardSchedulePath}/{lounge}.xml";
-                        if (File.Exists(filePath))
-                        {
-                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - InfoBoardSchedule for {lounge} found and sent!");
-                            return File.ReadAllText(filePath);
-                        }
-                        else
-                        {
-                            LoggerAccessor.LogError($"[PREMIUMAGENCY] - Failed to find InfoBoardSchedule for {lounge}\nExpected path {filePath}!");
-                        }
-                        break;
-                    }
-                case "GameSpace":
-                    {
-                        Directory.CreateDirectory(infoBoardSchedulePath);
-                        string filePath = $"{infoBoardSchedulePath}/{lounge}.xml";
-                        if (File.Exists(filePath))
-                        {
-                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - InfoBoardSchedule for {lounge} found and sent!");
-                            return File.ReadAllText(filePath);
-                        }
-                        else
-                        {
-                            LoggerAccessor.LogError($"[PREMIUMAGENCY] - Failed to find InfoBoardSchedule for {lounge}\nExpected path {filePath}!");
-                        }
-                        break;
-                    }
-                case "MarketPlace":
-                    {
-                        Directory.CreateDirectory(infoBoardSchedulePath);
-                        string filePath = $"{infoBoardSchedulePath}/{lounge}.xml";
-                        if (File.Exists(filePath))
-                        {
-                            LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - InfoBoardSchedule for {lounge} found and sent!");
-                            return File.ReadAllText(filePath);
-                        }
-                        else
-                        {
-                            LoggerAccessor.LogError($"[PREMIUMAGENCY] - Failed to find InfoBoardSchedule for {lounge}\nExpected path {filePath}!");
-                        }
-                        break;
-                    }
-                default:
-                    {
-                        LoggerAccessor.LogError($"[PREMIUMAGENCY] - Unsupported scene lounge {lounge} found for InfoBoardSchedule");
-                        return null;
-                    }
-
-                    
+                if (File.Exists(filePath))
+                {
+                    LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - InfoBoardSchedule for {lounge} found and sent!");
+                    return File.ReadAllText(filePath);
+                }
+                else
+                    LoggerAccessor.LogError($"[PREMIUMAGENCY] - Failed to find InfoBoardSchedule for {lounge}. Expected path {filePath}!");
             }
-            
+            else
+                LoggerAccessor.LogError($"[PREMIUMAGENCY] - Unsupported scene lounge {lounge} found for InfoBoardSchedule");
+
             return null;
         }
-
-
     }
 }
+

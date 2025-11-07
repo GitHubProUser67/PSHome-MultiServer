@@ -11,10 +11,14 @@ namespace SpaceWizards.HttpListener.CustomServers
 {
     public class HTTPServer
     {
-        private static readonly bool _httpSysCompatible = MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows
+        private static readonly bool _httpSysCompatible =
+#if ENABLE_HTTPSYS_CUSTOM_SERVER
+                MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows
                 && MultiServerLibrary.Extension.Microsoft.Win32API.IsAdministrator()
                 && System.Net.HttpListener.IsSupported;
-
+#else
+                false;
+#endif
         private readonly object _Lock = new object();
 
         public bool FireClientAsTask { get; set; } = true;
