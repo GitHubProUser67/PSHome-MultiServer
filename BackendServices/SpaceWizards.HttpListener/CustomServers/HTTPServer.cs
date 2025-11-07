@@ -243,18 +243,25 @@ namespace SpaceWizards.HttpListener.CustomServers
                                 {
                                     void clientHandler()
                                     {
-                                        IPEndPoint remoteEndPoint = ctx.Request.RemoteEndPoint;
-                                        if (remoteEndPoint != null)
+                                        IPEndPoint remoteEndPoint = null;
+                                        try
                                         {
-#if DEBUG
-                                            LoggerAccessor.LogInfo($"[HTTP Server] - Connection received on port {port} (Thread {Environment.CurrentManagedThreadId})");
-#endif
-                                            string clientip = remoteEndPoint.Address.ToString();
-                                            int? clientport = remoteEndPoint.Port;
-
-                                            if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
-                                                onPacketReceived?.Invoke(port, ctx, remoteEndPoint);
+                                            remoteEndPoint = ctx.Request.RemoteEndPoint;
                                         }
+                                        catch { }
+#if DEBUG
+                                        LoggerAccessor.LogInfo($"[HTTP Server] - Connection received on port {port} (Thread {Environment.CurrentManagedThreadId})");
+#endif
+                                        string clientip = null;
+                                        try
+                                        {
+                                            clientip = remoteEndPoint?.Address.ToString();
+                                        }
+                                        catch { }
+                                        int? clientport = remoteEndPoint?.Port;
+
+                                        if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
+                                            onPacketReceived?.Invoke(port, ctx, remoteEndPoint);
                                     }
                                     if (FireClientAsTask)
                                         _ = Task.Run(clientHandler);
@@ -319,18 +326,25 @@ namespace SpaceWizards.HttpListener.CustomServers
                                 {
                                     void clientHandler()
                                     {
-                                        IPEndPoint remoteEndPoint = ctx.Request.RemoteEndPoint;
-                                        if (remoteEndPoint != null)
+                                        IPEndPoint remoteEndPoint = null;
+                                        try
                                         {
-#if DEBUG
-                                            LoggerAccessor.LogInfo($"[HTTPsys Server] - Connection received on port {port} (Thread {Environment.CurrentManagedThreadId})");
-#endif
-                                            string clientip = remoteEndPoint.Address.ToString();
-                                            int? clientport = remoteEndPoint.Port;
-
-                                            if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
-                                                onPacketReceived?.Invoke(port, ctx, remoteEndPoint);
+                                            remoteEndPoint = ctx.Request.RemoteEndPoint;
                                         }
+                                        catch { }
+#if DEBUG
+                                        LoggerAccessor.LogInfo($"[HTTPsys Server] - Connection received on port {port} (Thread {Environment.CurrentManagedThreadId})");
+#endif
+                                        string clientip = null;
+                                        try
+                                        {
+                                            clientip = remoteEndPoint?.Address.ToString();
+                                        }
+                                        catch { }
+                                        int? clientport = remoteEndPoint?.Port;
+
+                                        if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
+                                            onPacketReceived?.Invoke(port, ctx, remoteEndPoint);
                                     }
                                     if (FireClientAsTask)
                                         _ = Task.Run(clientHandler);

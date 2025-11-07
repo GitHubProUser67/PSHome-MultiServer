@@ -154,35 +154,37 @@ namespace MultiServerLibrary.CustomServers
                                 void clientHandler()
                                 {
                                     IPEndPoint remoteEndPoint = result.RemoteEndPoint;
-                                    if (remoteEndPoint != null)
-                                    {
 #if DEBUG
-                                        LoggerAccessor.LogInfo($"[UDP Server] - Connection received on port {port} (Thread {Environment.CurrentManagedThreadId})");
+                                    LoggerAccessor.LogInfo($"[UDP Server] - Connection received on port {port} (Thread {Environment.CurrentManagedThreadId})");
 #endif
-                                        string clientip = remoteEndPoint.Address.ToString();
-                                        int? clientport = remoteEndPoint.Port;
+                                    string clientip = null;
+                                    try
+                                    {
+                                        clientip = remoteEndPoint.Address.ToString();
+                                    }
+                                    catch { }
+                                    int? clientport = remoteEndPoint.Port;
 
-                                        if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
+                                    if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
+                                    {
+                                        byte[] ResultBuffer = onPacketReceived?.Invoke(port, listener, result.Buffer, remoteEndPoint);
+                                        if (ResultBuffer != null)
                                         {
-                                            byte[] ResultBuffer = onPacketReceived?.Invoke(port, listener, result.Buffer, remoteEndPoint);
-                                            if (ResultBuffer != null)
+                                            try
                                             {
-                                                try
-                                                {
-                                                    _ = listener.SendAsync(ResultBuffer, ResultBuffer.Length, remoteEndPoint);
-                                                }
-                                                catch (SocketException socketException)
-                                                {
-                                                    if (socketException.ErrorCode != 995 &&
-                                                        socketException.SocketErrorCode != SocketError.ConnectionReset &&
-                                                        socketException.SocketErrorCode != SocketError.ConnectionAborted &&
-                                                        socketException.SocketErrorCode != SocketError.Interrupted)
-                                                        LoggerAccessor.LogError($"[UDP Server] - SocketException while sending response to client. (Exception:" + socketException + ")");
-                                                }
-                                                catch (Exception e)
-                                                {
-                                                    LoggerAccessor.LogError("[UDP Server] - Assertion while sending response to client. (Exception:" + e + ")");
-                                                }
+                                                _ = listener.SendAsync(ResultBuffer, ResultBuffer.Length, remoteEndPoint);
+                                            }
+                                            catch (SocketException socketException)
+                                            {
+                                                if (socketException.ErrorCode != 995 &&
+                                                    socketException.SocketErrorCode != SocketError.ConnectionReset &&
+                                                    socketException.SocketErrorCode != SocketError.ConnectionAborted &&
+                                                    socketException.SocketErrorCode != SocketError.Interrupted)
+                                                    LoggerAccessor.LogError($"[UDP Server] - SocketException while sending response to client. (Exception:" + socketException + ")");
+                                            }
+                                            catch (Exception e)
+                                            {
+                                                LoggerAccessor.LogError("[UDP Server] - Assertion while sending response to client. (Exception:" + e + ")");
                                             }
                                         }
                                     }

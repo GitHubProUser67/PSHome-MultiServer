@@ -188,70 +188,77 @@ namespace NetCoreServer
                 // Call the session handshaking handler in the server
                 Server.OnHandshakingInternal(this);
 
-                IPEndPoint remoteEndPoint = (IPEndPoint)Socket.RemoteEndPoint;
-                if (remoteEndPoint != null)
+                IPEndPoint remoteEndPoint = null;
+                try
                 {
+                    remoteEndPoint = (IPEndPoint)Socket.RemoteEndPoint;
+                }
+                catch { }
 #if DEBUG
-                    LoggerAccessor.LogInfo($"[SslSession] - Connection received on NCHTTP TLS (Thread {Environment.CurrentManagedThreadId})");
+                LoggerAccessor.LogInfo($"[SslSession] - Connection received on NCHTTP TLS (Thread {Environment.CurrentManagedThreadId})");
 #endif
-                    string clientip = remoteEndPoint.Address.ToString();
-                    int? clientport = remoteEndPoint.Port;
+                string clientip = null;
+                try
+                {
+                    clientip = remoteEndPoint?.Address.ToString();
+                }
+                catch { }
+                int? clientport = remoteEndPoint?.Port;
 
-                    if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
+                if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
+                {
+                    // Begin the SSL handshake
+                    SslSocket.BeginAuthenticateAsServer(Socket, new SslServerAuthenticationOptions
                     {
-                        // Begin the SSL handshake
-                        SslSocket.BeginAuthenticateAsServer(Socket, new SslServerAuthenticationOptions
+                        ClientCertificateRequired = Server.Context.ClientCertificateRequired,
+                        EnabledSslProtocols = Server.Context.Protocols,
+                        CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
+                        RemoteCertificateValidationCallback = Server.Context.CertificateValidationCallback,
+                        ServerCertificateSelectionCallback = (sender, actualHostName) =>
                         {
-                            ClientCertificateRequired = Server.Context.ClientCertificateRequired,
-                            EnabledSslProtocols = Server.Context.Protocols,
-                            CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
-                            RemoteCertificateValidationCallback = Server.Context.CertificateValidationCallback,
-                            ServerCertificateSelectionCallback = (sender, actualHostName) =>
-                            {
-                                IPEndPoint localEndpoint = (IPEndPoint)Socket.LocalEndPoint;
+                            IPEndPoint localEndpoint = (IPEndPoint)Socket.LocalEndPoint;
 
-                                if (string.IsNullOrEmpty(actualHostName))
-                                    _sniDomain = localEndpoint.Address.ToString() ?? IPAddress.Loopback.ToString();
-                                else
-                                    _sniDomain = actualHostName;
+                            if (string.IsNullOrEmpty(actualHostName))
+                                _sniDomain = localEndpoint.Address.ToString() ?? IPAddress.Loopback.ToString();
+                            else
+                                _sniDomain = actualHostName;
 #if NET5_0_OR_GREATER
-                                // Actually load the certificate
-                                try
+                            // Actually load the certificate
+                            try
+                            {
+                                string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
+                                    , ".mono");
+                                path = Path.Combine(path, "httplistener");
+                                string cert_prefix = _sniDomain + $"-{localEndpoint.Port}";
+                                string cert_file = Path.Combine(path, string.Format("{0}.pem", cert_prefix));
+                                string pvk_file = Path.Combine(path, string.Format("{0}_privkey.pem", cert_prefix));
+                                if (File.Exists(cert_file) && File.Exists(pvk_file))
+                                    return CertificateHelper.LoadCertificate(cert_file, pvk_file);
+                                cert_file = Path.Combine(path, string.Format("{0}.cer", cert_prefix));
+                                pvk_file = Path.Combine(path, string.Format("{0}.pvk", cert_prefix));
+                                if (File.Exists(cert_file) && File.Exists(pvk_file))
+                                    return CertificateHelper.LoadCertificate(cert_file, pvk_file);
+                                string origin_directory = Path.Combine(path, cert_prefix);
+                                if (Directory.Exists(origin_directory))
                                 {
-                                    string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
-                                        , ".mono");
-                                    path = Path.Combine(path, "httplistener");
-                                    string cert_prefix = _sniDomain + $"-{localEndpoint.Port}";
-                                    string cert_file = Path.Combine(path, string.Format("{0}.pem", cert_prefix));
-                                    string pvk_file = Path.Combine(path, string.Format("{0}_privkey.pem", cert_prefix));
+                                    cert_file = Path.Combine(origin_directory, "Origin Certificate");
+                                    pvk_file = Path.Combine(origin_directory, "Private Key");
                                     if (File.Exists(cert_file) && File.Exists(pvk_file))
                                         return CertificateHelper.LoadCertificate(cert_file, pvk_file);
-                                    cert_file = Path.Combine(path, string.Format("{0}.cer", cert_prefix));
-                                    pvk_file = Path.Combine(path, string.Format("{0}.pvk", cert_prefix));
-                                    if (File.Exists(cert_file) && File.Exists(pvk_file))
-                                        return CertificateHelper.LoadCertificate(cert_file, pvk_file);
-                                    string origin_directory = Path.Combine(path, cert_prefix);
-                                    if (Directory.Exists(origin_directory))
-                                    {
-                                        cert_file = Path.Combine(origin_directory, "Origin Certificate");
-                                        pvk_file = Path.Combine(origin_directory, "Private Key");
-                                        if (File.Exists(cert_file) && File.Exists(pvk_file))
-                                            return CertificateHelper.LoadCertificate(cert_file, pvk_file);
-                                    }
                                 }
-                                catch
-                                {
-                                    // ignore errors
-                                }
-#endif
-                                return CertificateHelper.IsCertificateAuthority(Server.Context.Certificate) ? CertificateHelper.MakeChainSignedCert(_sniDomain, Server.Context.Certificate, GetPreferedHashAlgorithm(),
-                                remoteEndPoint.Address, DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now.AddDays(7),
-                                wildcardCertificates) : Server.Context.Certificate;
                             }
-                        }, true, false, ProcessHandshake, _sslStreamId, out _, out _);
+                            catch
+                            {
+                                // ignore errors
+                            }
+#endif
+                            return CertificateHelper.IsCertificateAuthority(Server.Context.Certificate) ? CertificateHelper.MakeChainSignedCert(_sniDomain, Server.Context.Certificate, GetPreferedHashAlgorithm(),
+                            remoteEndPoint.Address, DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now.AddDays(7),
+                            wildcardCertificates) : Server.Context.Certificate;
+                        }
+                    }, true, false, ProcessHandshake, _sslStreamId, out _, out _);
 
-                        return;
-                    }
+                    return;
                 }
             }
             catch

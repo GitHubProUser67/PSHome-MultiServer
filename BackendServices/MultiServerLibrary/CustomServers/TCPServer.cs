@@ -146,17 +146,25 @@ namespace MultiServerLibrary.CustomServers
                             {
                                 void clientHandler()
                                 {
-                                    if (client.Client.RemoteEndPoint is IPEndPoint remoteEndPoint)
+                                    IPEndPoint remoteEndPoint = null;
+                                    try
                                     {
-#if DEBUG
-                                        LoggerAccessor.LogInfo($"[TCP Server] - Connection received on port {port} (Thread {Environment.CurrentManagedThreadId})");
-#endif
-                                        string clientip = remoteEndPoint.Address.ToString();
-                                        int? clientport = remoteEndPoint.Port;
-
-                                        if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
-                                            onPacketReceived?.Invoke(port, client, remoteEndPoint);
+                                        remoteEndPoint = (IPEndPoint)client.Client.RemoteEndPoint;
                                     }
+                                    catch { }
+#if DEBUG
+                                    LoggerAccessor.LogInfo($"[TCP Server] - Connection received on port {port} (Thread {Environment.CurrentManagedThreadId})");
+#endif
+                                    string clientip = null;
+                                    try
+                                    {
+                                        clientip = remoteEndPoint?.Address.ToString();
+                                    }
+                                    catch { }
+                                    int? clientport = remoteEndPoint?.Port;
+
+                                    if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
+                                        onPacketReceived?.Invoke(port, client, remoteEndPoint);
                                 }
                                 if (FireClientAsTask)
                                     _ = Task.Run(clientHandler);
