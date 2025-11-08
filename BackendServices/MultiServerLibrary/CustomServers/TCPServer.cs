@@ -166,8 +166,11 @@ namespace MultiServerLibrary.CustomServers
                                     }
                                     catch { }
                                     int? clientport = remoteEndPoint?.Port;
-
-                                    if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
+                                    bool isEndpointMissing = !clientport.HasValue || string.IsNullOrEmpty(clientip);
+#if DEBUG
+                                    LoggerAccessor.LogInfo($"[TCP Server] - endpoint = {!isEndpointMissing}");
+#endif
+                                    if (!(isEndpointMissing || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
                                         onPacketReceived?.Invoke(port, client, remoteEndPoint);
                                 }
                                 if (FireClientAsTask)

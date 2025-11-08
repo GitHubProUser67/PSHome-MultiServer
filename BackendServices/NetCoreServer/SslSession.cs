@@ -204,8 +204,11 @@ namespace NetCoreServer
                 }
                 catch { }
                 int? clientport = remoteEndPoint?.Port;
-
-                if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
+                bool isEndpointMissing = !clientport.HasValue || string.IsNullOrEmpty(clientip);
+#if DEBUG
+                LoggerAccessor.LogInfo($"[SslSession] - endpoint = {!isEndpointMissing}");
+#endif
+                if (!(isEndpointMissing || IsIPBanned(clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
                 {
                     // Begin the SSL handshake
                     SslSocket.BeginAuthenticateAsServer(Socket, new SslServerAuthenticationOptions

@@ -152,8 +152,11 @@ namespace MultiServerLibrary.CustomServers
                                     }
                                     catch { }
                                     int? clientport = remoteEndPoint.Port;
-
-                                    if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
+                                    bool isEndpointMissing = !clientport.HasValue || string.IsNullOrEmpty(clientip);
+#if DEBUG
+                                    LoggerAccessor.LogInfo($"[UDP Server] - endpoint = {!isEndpointMissing}");
+#endif
+                                    if (!(isEndpointMissing || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
                                     {
                                         byte[] ResultBuffer = onPacketReceived?.Invoke(port, listener, result.Buffer, remoteEndPoint);
                                         if (ResultBuffer != null)
@@ -265,8 +268,11 @@ namespace MultiServerLibrary.CustomServers
                                         }
                                         catch { }
                                         int? clientport = remoteEndPoint.Port;
-
-                                        if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
+                                        bool isEndpointMissing = !clientport.HasValue || string.IsNullOrEmpty(clientip);
+#if DEBUG
+                                        LoggerAccessor.LogInfo($"[UDP Server] - endpoint = {!isEndpointMissing}");
+#endif
+                                        if (!(isEndpointMissing || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
                                         {
                                             byte[] ResultBuffer = onPacketReceived?.Invoke(port, listener, result.Buffer, remoteEndPoint);
                                             if (ResultBuffer != null)

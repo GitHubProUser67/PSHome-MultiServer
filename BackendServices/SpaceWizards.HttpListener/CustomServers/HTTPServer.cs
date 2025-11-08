@@ -12,10 +12,13 @@ namespace SpaceWizards.HttpListener.CustomServers
     public class HTTPServer
     {
         private static readonly bool _httpSysCompatible =
+#if ENABLE_HTTPSYS_CUSTOM_SERVER
                 MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows
                 && MultiServerLibrary.Extension.Microsoft.Win32API.IsAdministrator()
                 && System.Net.HttpListener.IsSupported;
-
+#else
+                false;
+#endif
         private readonly object _Lock = new object();
 
         public bool FireClientAsTask { get; set; } = true;
@@ -260,8 +263,11 @@ namespace SpaceWizards.HttpListener.CustomServers
                                         }
                                         catch { }
                                         int? clientport = remoteEndPoint?.Port;
-
-                                        if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
+                                        bool isEndpointMissing = !clientport.HasValue || string.IsNullOrEmpty(clientip);
+#if DEBUG
+                                        LoggerAccessor.LogInfo($"[HTTP Server] - endpoint = {!isEndpointMissing}");
+#endif
+                                        if (!(isEndpointMissing || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
                                             onPacketReceived?.Invoke(port, ctx, remoteEndPoint);
                                     }
                                     if (FireClientAsTask)
@@ -347,8 +353,11 @@ namespace SpaceWizards.HttpListener.CustomServers
                                         }
                                         catch { }
                                         int? clientport = remoteEndPoint?.Port;
-
-                                        if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
+                                        bool isEndpointMissing = !clientport.HasValue || string.IsNullOrEmpty(clientip);
+#if DEBUG
+                                        LoggerAccessor.LogInfo($"[HTTPsys Server] - endpoint = {!isEndpointMissing}");
+#endif
+                                        if (!(isEndpointMissing || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
                                             onPacketReceived?.Invoke(port, ctx, remoteEndPoint);
                                     }
                                     if (FireClientAsTask)
