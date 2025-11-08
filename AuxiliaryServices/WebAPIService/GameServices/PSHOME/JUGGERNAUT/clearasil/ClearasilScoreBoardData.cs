@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil.Entities;
@@ -11,9 +12,25 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil
     public class ClearasilScoreBoardData
     : ScoreboardService<ClearasilScoreBoardEntry>
     {
+        private string _gameproject;
+
         public ClearasilScoreBoardData(DbContextOptions options, object obj = null)
             : base(options)
         {
+            _gameproject = (string)obj;
+        }
+
+        public override async Task<List<ClearasilScoreBoardEntry>> GetTopScoresAsync(int max = 10)
+        {
+            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            {
+                db.Database.Migrate();
+                return await db.Set<ClearasilScoreBoardEntry>()
+                .Where(x => x.ExtraData1 == _gameproject)
+                .OrderByDescending(e => e.Score)
+                .Take(max)
+                .ToListAsync().ConfigureAwait(false);
+            }
         }
 
         public override async Task UpdateScoreAsync(string playerId, float newScore, List<object> extraData = null)
@@ -27,7 +44,9 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil
                 var set = db.Set<ClearasilScoreBoardEntry>();
                 DateTime now = DateTime.UtcNow; // use UTC for consistency
 
-                var existing = await set.FirstOrDefaultAsync(e =>
+                var existing = await set
+                    .Where(x => x.ExtraData1 == _gameproject)
+                    .FirstOrDefaultAsync(e =>
                     e.PlayerId != null &&
                     e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
 
@@ -46,6 +65,7 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil
                     await set.AddAsync(new ClearasilScoreBoardEntry
                     {
                         Time = "000",
+                        ExtraData1 = _gameproject,
                         PlayerId = playerId,
                         Score = newScore,
                         UpdatedAt = now // set timestamp for new entry
@@ -66,7 +86,9 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil
                 var set = db.Set<ClearasilScoreBoardEntry>();
                 DateTime now = DateTime.UtcNow;
 
-                var existing = await set.FirstOrDefaultAsync(e =>
+                var existing = await set
+                    .Where(x => x.ExtraData1 == _gameproject)
+                    .FirstOrDefaultAsync(e =>
                     e.PsnId != null &&
                     e.PsnId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
 
@@ -81,6 +103,7 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil
                     await set.AddAsync(new ClearasilScoreBoardEntry
                     {
                         PsnId = playerId,
+                        ExtraData1 = _gameproject,
                         Time = time,
                         UpdatedAt = now
                     }).ConfigureAwait(false);

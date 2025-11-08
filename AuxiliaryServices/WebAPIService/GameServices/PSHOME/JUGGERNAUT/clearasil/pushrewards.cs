@@ -6,6 +6,8 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil
 {
     public class pushrewards
     {
+        public const ushort TargetTime = 280;
+
         public static string ProcessPushRewards(IDictionary<string, string> QueryParameters, string apiPath)
         {
             if (QueryParameters != null)
@@ -35,7 +37,7 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil
                     }
                     else
                         File.WriteAllText($"{apiPath}/juggernaut/clearasil/space_access/{user}.xml"
-                                , $"<xml><seconds>500</seconds><phase2>{reward1}</phase2><score>0</score></xml>");
+                                , $"<xml><seconds>{TargetTime}</seconds><phase2>{reward1}</phase2><score>0</score></xml>");
 
                     return string.Empty;
                 }
