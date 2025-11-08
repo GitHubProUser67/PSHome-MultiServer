@@ -65,8 +65,8 @@ namespace HomeTools.PS3_Creator
                             byte[] CID = Encoding.UTF8.GetBytes(cid);
                             byte[] contentID = new byte[48];
                             byte[] contentID2 = new byte[cid2];
-                            ConversionUtils.arraycopy(CID, 0, contentID, 0, CID.Length);
-                            ConversionUtils.arraycopy(CID, 0, contentID2, 0, cid2);
+                            ConversionUtils.Arraycopy(CID, 0, contentID, 0, CID.Length);
+                            ConversionUtils.Arraycopy(CID, 0, contentID2, 0, cid2);
                             string cid3 = Encoding.UTF8.GetString(contentID2);
                             if (path != null)
                             {

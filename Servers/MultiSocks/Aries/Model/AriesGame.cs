@@ -21,10 +21,10 @@ namespace MultiSocks.Aries.Model
         public bool Started = false;
 
         public UserCollection Users = new();
-        private List<AriesUser> UsersCache = new(); // This is necessary to prevent users leaving during a ranked event.
+        private readonly List<AriesUser> UsersCache = new(); // This is necessary to prevent users leaving during a ranked event.
         private ConcurrentDictionary<int, bool> _pIdIsUsed = new();
 
-        private object _ClientIndexlock = new();
+        private readonly object _ClientIndexlock = new();
 
         public AriesGame(int maxSize, int minSize, int id, string? custFlags, string @params,
                 string name, bool priv, string? seed, string sysFlags, string? Pass, int roomId)

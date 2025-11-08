@@ -3,7 +3,7 @@ using System;
 using System.IO;
 using System.Net;
 using WatsonWebserver.Core;
-using WebAPIService.GameServices.OHS;
+using WebAPIService.GameServices.PSHOME.OHS;
 
 namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 {

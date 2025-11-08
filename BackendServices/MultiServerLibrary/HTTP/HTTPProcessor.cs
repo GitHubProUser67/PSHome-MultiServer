@@ -674,9 +674,11 @@ namespace MultiServerLibrary.HTTP
                 }
 #pragma warning restore
             }
-            catch
+            catch (Exception ex)
             {
-                // Not Important.
+#if DEBUG
+                CustomLogger.LoggerAccessor.LogError($"[HTTPProcessor] - RequestURLGET: An assertion was thrown while requesting url:{url}. (Exception:{ex})");
+#endif
             }
 
             return null;
@@ -727,9 +729,11 @@ namespace MultiServerLibrary.HTTP
                 }
 #pragma warning restore
             }
-            catch
+            catch (Exception ex)
             {
-                // Not Important.
+#if DEBUG
+                CustomLogger.LoggerAccessor.LogError($"[HTTPProcessor] - RequestFullURLGET: An assertion was thrown while requesting url:{url}. (Exception:{ex})");
+#endif
             }
 
             return (null, null);
@@ -779,9 +783,11 @@ namespace MultiServerLibrary.HTTP
                 }
 #pragma warning restore
             }
-            catch
+            catch (Exception ex)
             {
-                // Not Important.
+#if DEBUG
+                CustomLogger.LoggerAccessor.LogError($"[HTTPProcessor] - RequestURLPOST: An assertion was thrown while requesting url:{url}. (Exception:{ex})");
+#endif
             }
 
             return null;

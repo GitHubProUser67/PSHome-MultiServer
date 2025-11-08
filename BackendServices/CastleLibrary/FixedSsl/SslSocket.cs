@@ -16,6 +16,9 @@ namespace FixedSsl
     {
         static SslSocket()
         {
+            // Enables wildcards certificate support in WebClient.
+            ServicePointManager.ServerCertificateValidationCallback += ValidateRemoteCertificate;
+
             // TLS1.3 is only compatible with Windows 10 and Windows server 2019, for now I simply allow TLS1.2 to maintain compatibility, enable yourself if there is a need for 1.3 .
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12 /*| SecurityProtocolType.Tls13*/;
         }
@@ -387,6 +390,61 @@ namespace FixedSsl
         public static Stream EndAuthenticateAsServer(IAsyncResult result)
         {
             return ((Task<Stream>)result).Result;
+        }
+
+        /// <summary>
+        /// Certificate validation callback, fixes the ndreams objs endpoint in ApacheNet (usage of wildcard amazon certs).
+        /// </summary>
+        private static bool ValidateRemoteCertificate(
+           object sender,
+           X509Certificate cert,
+           X509Chain chain,
+           SslPolicyErrors errors)
+        {
+            if (errors == SslPolicyErrors.None)
+                return true;
+
+            // Extract CN or SAN hostnames
+            var certName = cert?.Subject?.Split(',')
+                .Select(s => s.Trim())
+                .FirstOrDefault(s => s.StartsWith("CN=", StringComparison.OrdinalIgnoreCase))
+                ?.Substring(3);
+
+            if (string.IsNullOrEmpty(certName))
+                return false;
+
+            // Get requested host from request
+            string requestHost = null;
+            if (sender is HttpWebRequest req)
+                requestHost = req.RequestUri.Host;
+            else if (sender is SslStream sslStream && !string.IsNullOrEmpty(sslStream.TargetHostName))
+                requestHost = sslStream.TargetHostName;
+
+            if (string.IsNullOrEmpty(requestHost))
+                return false;
+
+            // Custom multi-level dot wildcard check
+            if (IsDotWildcardMatch(certName, requestHost))
+                return true;
+
+            CustomLogger.LoggerAccessor.LogError("[SslSocket] - ValidateRemoteCertificate: X509Certificate [{0}] Policy Error: '{1}'",
+                cert.Subject,
+                errors.ToString());
+
+            return false;
+        }
+
+        private static bool IsDotWildcardMatch(string pattern, string host)
+        {
+            if (string.Equals(pattern, host, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // If pattern starts with "*.", allow multi-level match
+            if (pattern.StartsWith("*.", StringComparison.Ordinal))
+                // Example: ".s3.amazonaws.com"
+                return host.EndsWith(pattern.Substring(1), StringComparison.OrdinalIgnoreCase);
+
+            return false;
         }
 
         #region Helpers

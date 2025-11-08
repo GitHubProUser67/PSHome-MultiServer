@@ -82,10 +82,4 @@
   <ItemGroup>
     <ProjectReference Include="..\MultiServerLibrary\MultiServerLibrary.csproj" />
   </ItemGroup>
-  
-  <PropertyGroup>
-    <!--Since Windows 11 24H2, the firewall became crazy and started filtering/preventing httpsys requests being 
-	made from outside of the computer, so prefer using the managed version only in this case -->
-    <!--<DefineConstants>$(DefineConstants);ENABLE_HTTPSYS_CUSTOM_SERVER</DefineConstants>-->
-  </PropertyGroup>
 </Project>

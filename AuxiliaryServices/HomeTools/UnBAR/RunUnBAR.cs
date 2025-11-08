@@ -183,7 +183,7 @@ namespace HomeTools.UnBAR
 
                                 byte[] NumOfFiles = new byte[4];
 
-                                if (isLittleEndian == true)
+                                if (isLittleEndian)
                                     Buffer.BlockCopy(SharcHeader, SharcHeader.Length - 20, NumOfFiles, 0, NumOfFiles.Length);
                                 else
                                     Buffer.BlockCopy(EndianUtils.EndianSwap(SharcHeader), SharcHeader.Length - 20, NumOfFiles, 0, NumOfFiles.Length);

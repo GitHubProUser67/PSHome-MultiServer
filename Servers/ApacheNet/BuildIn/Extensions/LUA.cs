@@ -4,7 +4,7 @@ using System.Collections.Specialized;
 using System.Text;
 using NLua;
 using WatsonWebserver.Core;
-using WebAPIService.GameServices.OHS;
+using WebAPIService.GameServices.PSHOME.OHS;
 
 namespace ApacheNet.BuildIn.Extensions
 {

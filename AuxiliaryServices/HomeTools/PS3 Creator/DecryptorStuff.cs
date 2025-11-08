@@ -6,22 +6,22 @@ namespace HomeTools.PS3_Creator
     abstract class Decryptor
     {
 
-        public virtual void doInit(byte[] key, byte[] iv) { }
+        public virtual void DoInit(byte[] key, byte[] iv) { }
 
-        public virtual void doUpdate(byte[] i, int inOffset, byte[] o, int outOffset, int len) { }
+        public virtual void DoUpdate(byte[] i, int inOffset, byte[] o, int outOffset, int len) { }
     }
 
     class NoCrypt : Decryptor
     {
 
-        public override void doInit(byte[] key, byte[] iv)
+        public override void DoInit(byte[] key, byte[] iv)
         {
             //Do nothing
         }
 
-        public override void doUpdate(byte[] i, int inOffset, byte[] o, int outOffset, int len)
+        public override void DoUpdate(byte[] i, int inOffset, byte[] o, int outOffset, int len)
         {
-            ConversionUtils.arraycopy(i, inOffset, o, outOffset, len);
+            ConversionUtils.Arraycopy(i, inOffset, o, outOffset, len);
         }
     }
 
@@ -29,7 +29,7 @@ namespace HomeTools.PS3_Creator
     {
         Aes c;
         ICryptoTransform ct;
-        public override void doInit(byte[] key, byte[] iv)
+        public override void DoInit(byte[] key, byte[] iv)
         {
             try
             {
@@ -40,18 +40,18 @@ namespace HomeTools.PS3_Creator
                 c.IV = iv;
                 ct = c.CreateDecryptor();
             }
-            catch (Exception)
+            catch
             {
             }
         }
 
-        public override void doUpdate(byte[] i, int inOffset, byte[] o, int outOffset, int len)
+        public override void DoUpdate(byte[] i, int inOffset, byte[] o, int outOffset, int len)
         {
             try
             {
                 ct.TransformBlock(i, inOffset, len, o, outOffset);
             }
-            catch (Exception)
+            catch
             {
             }
         }
@@ -61,7 +61,7 @@ namespace HomeTools.PS3_Creator
     {
         Aes c;
         ICryptoTransform ct;
-        public override void doInit(byte[] key, byte[] iv)
+        public override void DoInit(byte[] key, byte[] iv)
         {
             try
             {
@@ -72,12 +72,12 @@ namespace HomeTools.PS3_Creator
                 c.IV = iv;
                 ct = c.CreateEncryptor();
             }
-            catch (Exception)
+            catch
             {
             }
         }
 
-        public override void doUpdate(byte[] i, int inOffset, byte[] o, int outOffset, int len)
+        public override void DoUpdate(byte[] i, int inOffset, byte[] o, int outOffset, int len)
         {
             ct.TransformBlock(i, inOffset, len, o, outOffset);
         }

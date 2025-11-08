@@ -53,15 +53,15 @@ namespace HomeTools.PS3_Creator
             rifFile.Read(encrif0x40, 0, encrif0x40.Length);
             rifFile.Read(encrif0x50, 0, encrif0x50.Length);
             rifFile.Close();
-            ToolsImpl.aesecbDecrypt(RIFKEY, encrif0x40, 0x00, rif0x40, 0, 0x10);
-            long index = ConversionUtils.be32(rif0x40, 0xC); //
+            ToolsImpl.AesecbDecrypt(RIFKEY, encrif0x40, 0x00, rif0x40, 0, 0x10);
+            long index = ConversionUtils.Be32(rif0x40, 0xC); //
             if (index < 0x80)
             {
                 byte[] actDat = decryptACTDAT(actIn, idps);
                 byte[] datKey = new byte[0x10];
                 result = new byte[0x10];
-                ConversionUtils.arraycopy(actDat, (int)index * 16, datKey, 0, 0x10);
-                ToolsImpl.aesecbDecrypt(datKey, encrif0x50, 0, result, 0, 0x10);
+                ConversionUtils.Arraycopy(actDat, (int)index * 16, datKey, 0, 0x10);
+                ToolsImpl.AesecbDecrypt(datKey, encrif0x50, 0, result, 0, 0x10);
 
             }
             return result;
@@ -76,7 +76,7 @@ namespace HomeTools.PS3_Creator
             actFile.Read(actdat, 0, actdat.Length);
             actFile.Close();
             byte[] key = getPerConsoleKey(IDPSFile);
-            ToolsImpl.aesecbDecrypt(key, actdat, 0, result, 0, actdat.Length);
+            ToolsImpl.AesecbDecrypt(key, actdat, 0, result, 0, actdat.Length);
             return result;
         }
         static byte[] ACTDAT_KEY = { (byte)0x5E, (byte)0x06, (byte)0xE0, (byte)0x4F, (byte)0xD9, (byte)0x4A, (byte)0x71, (byte)0xBF, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x01 };
@@ -88,7 +88,7 @@ namespace HomeTools.PS3_Creator
             raf.Read(idps, 0, idps.Length);
             raf.Close();
             byte[] result = new byte[0x10];
-            ToolsImpl.aesecbEncrypt(idps, ACTDAT_KEY, 0, result, 0, ACTDAT_KEY.Length);
+            ToolsImpl.AesecbEncrypt(idps, ACTDAT_KEY, 0, result, 0, ACTDAT_KEY.Length);
             return result;
         }
 
@@ -160,7 +160,7 @@ namespace HomeTools.PS3_Creator
                 }
 
                 byte[] rk = new byte[0x10];
-                ToolsImpl.aesecbEncrypt(rapKey, intermediate, 0, rk, 0, 0x10);
+                ToolsImpl.AesecbEncrypt(rapKey, intermediate, 0, rk, 0, 0x10);
                 DirectoryInfo di = Directory.CreateDirectory(path + "/raps");
                 FileStream o = File.Open(outFile, FileMode.Create);
                 o.Write(rk, 0, 0x10);
@@ -252,7 +252,7 @@ namespace HomeTools.PS3_Creator
                     outFile = "raps/" + cid + ".rap";
                 }
                 byte[] rk = new byte[0x10];
-                ToolsImpl.aesecbEncrypt(rapKey, intermediate, 0, rk, 0, 0x10);
+                ToolsImpl.AesecbEncrypt(rapKey, intermediate, 0, rk, 0, 0x10);
                 DirectoryInfo di = Directory.CreateDirectory("raps");
                 FileStream o = File.Open(outFile, FileMode.Create);
                 o.Write(rk, 0, 0x10);

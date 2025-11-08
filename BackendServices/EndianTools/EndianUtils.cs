@@ -27,20 +27,10 @@ namespace EndianTools
 
             byte[] reversedArray = new byte[inputLength];
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-            byte chunkSize64 = chunkSize << 1;
-            byte hilo64 = chunkSize << 3;
-
             ReadOnlySpan<byte> inputSpan = dataIn;
             Span<byte> outputSpan = reversedArray;
 
             int i = 0;
-
-            while (i + chunkSize64 <= inputLength)
-            {
-                ulong word64 = BitConverter.ToUInt64(inputSpan.Slice(i, chunkSize64));
-                BitConverter.TryWriteBytes(outputSpan.Slice(i, chunkSize64), ((ulong)BinaryPrimitives.ReverseEndianness((uint)(word64 & uint.MaxValue)) << hilo64) | (BinaryPrimitives.ReverseEndianness((uint)(word64 >> hilo64))));
-                i += chunkSize64;
-            }
 
             while (i + chunkSize <= inputLength)
             {

@@ -5,18 +5,18 @@ namespace HomeTools.PS3_Creator
 {
     public class ConversionUtils
     {
-        public static BigInteger be64(byte[] buffer, int initOffset)
+        public static BigInteger Be64(byte[] buffer, int initOffset)
         {
             BigInteger result = BigInteger.Zero;
             for (int i = initOffset; i < initOffset + 8; i++)
             {
                 result *= new BigInteger(256);
-                result += (new BigInteger(buffer[i] & byte.MaxValue));
+                result += new BigInteger(buffer[i] & byte.MaxValue);
             }
             return result;
         }
 
-        public static long be32(byte[] buffer, int initOffset)
+        public static long Be32(byte[] buffer, int initOffset)
         {
             long result = 0;
             for (int i = initOffset; i < initOffset + 4; i++)
@@ -27,7 +27,7 @@ namespace HomeTools.PS3_Creator
             return result;
         }
 
-        public static int be16(byte[] buffer, int initOffset)
+        public static int Be16(byte[] buffer, int initOffset)
         {
             int result = 0;
             for (int i = initOffset; i < initOffset + 2; i++)
@@ -37,7 +37,7 @@ namespace HomeTools.PS3_Creator
             return result;
         }
 
-        public static void arraycopy(byte[] src, int srcPos, byte[] dest, long destPos, int length)
+        public static void Arraycopy(byte[] src, int srcPos, byte[] dest, long destPos, int length)
         {
             for (int i = 0; i < length; i++)
             {
@@ -45,7 +45,7 @@ namespace HomeTools.PS3_Creator
             }
         }
 
-        public static char[] bytesToChar(byte[] b)
+        public static char[] BytesToChar(byte[] b)
         {
             char[] c = new char[b.Length];
             for (int i = 0; i < b.Length; i++)
@@ -53,7 +53,7 @@ namespace HomeTools.PS3_Creator
             return c;
         }
 
-        public static byte[] reverseByteWithSizeFIX(byte[] b)
+        public static byte[] ReverseByteWithSizeFIX(byte[] b)
         {
 
             byte[] b2;
@@ -66,7 +66,7 @@ namespace HomeTools.PS3_Creator
             return b2;
         }
 
-        public static byte[] charsToByte(char[] b)
+        public static byte[] CharsToByte(char[] b)
         {
             byte[] c = new byte[b.Length];
             for (int i = 0; i < b.Length; i++)
@@ -74,7 +74,7 @@ namespace HomeTools.PS3_Creator
             return c;
         }
 
-        public static byte[] decodeHex(char[] data)
+        public static byte[] DecodeHex(char[] data)
         {
             int len = data.Length;
             if ((len & 0x01) != 0)
@@ -85,9 +85,9 @@ namespace HomeTools.PS3_Creator
             // two characters form the hex value.
             for (int i = 0, j = 0; j < len; i++)
             {
-                int f = toDigit(data[j], j) << 4;
+                int f = ToDigit(data[j], j) << 4;
                 j++;
-                f = f | toDigit(data[j], j);
+                f = f | ToDigit(data[j], j);
                 j++;
                 o[i] = (byte)(f & byte.MaxValue);
             }
@@ -110,7 +110,7 @@ namespace HomeTools.PS3_Creator
         }
 
 
-        protected static int toDigit(char ch, int index)
+        protected static int ToDigit(char ch, int index)
         {
             int digit = GetIntegerValue(ch, 16);
             if (digit == -1)

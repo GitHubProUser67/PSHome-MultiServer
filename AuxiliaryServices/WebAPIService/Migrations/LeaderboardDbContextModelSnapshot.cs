@@ -273,6 +273,9 @@ namespace WebAPIService.Migrations
                     b.Property<float>("Score")
                         .HasColumnType("REAL");
 
+                    b.Property<string>("Time")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 

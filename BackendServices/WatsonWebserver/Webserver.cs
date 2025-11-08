@@ -714,44 +714,10 @@ namespace WatsonWebserver
                     int errorCode = eListener.ErrorCode;
 
                     if (errorCode != 995 && errorCode != 64)
-                    {
-                        System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.InternalServerError;
-                        string htmlPage = await DefaultHTMLPages.GenerateErrorPageAsync(
-                            statusCode,
-                            null,
-                            null,
-                            null,
-                            "Watson Webserver",
-                            "https://github.com/GitHubProUser67/MultiServer3",
-                            ctx.Request.Destination.Port,
-                            eListener).ConfigureAwait(false);
-                        ctx.Response.StatusCode = (int)statusCode;
-                        ctx.Response.ContentType = DefaultPages.Pages[(int)statusCode].ContentType;
-                        if (ctx.Response.ChunkedTransfer)
-                            await ctx.Response.SendChunk(Encoding.UTF8.GetBytes(htmlPage), true).ConfigureAwait(false);
-                        else
-                            await ctx.Response.Send(htmlPage).ConfigureAwait(false);
-                    }
-                    Events.HandleExceptionEncountered(this, new ExceptionEventArgs(ctx, eListener));
+                        Events.HandleExceptionEncountered(this, new ExceptionEventArgs(ctx, eListener));
                 }
                 catch (Exception eInner)
                 {
-                    System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.InternalServerError;
-                    string htmlPage = await DefaultHTMLPages.GenerateErrorPageAsync(
-                        statusCode,
-                        null,
-                        null,
-                        null,
-                        "Watson Webserver",
-                        "https://github.com/GitHubProUser67/MultiServer3",
-                        ctx.Request.Destination.Port,
-                        eInner).ConfigureAwait(false);
-                    ctx.Response.StatusCode = (int)statusCode;
-                    ctx.Response.ContentType = DefaultPages.Pages[(int)statusCode].ContentType;
-                    if (ctx.Response.ChunkedTransfer)
-                        await ctx.Response.SendChunk(Encoding.UTF8.GetBytes(htmlPage), true).ConfigureAwait(false);
-                    else
-                        await ctx.Response.Send(htmlPage).ConfigureAwait(false);
                     Events.HandleExceptionEncountered(this, new ExceptionEventArgs(ctx, eInner));
                 }
                 finally

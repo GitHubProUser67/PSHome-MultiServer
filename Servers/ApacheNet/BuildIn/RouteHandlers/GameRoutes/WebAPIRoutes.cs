@@ -11,33 +11,33 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using WebAPIService.GameServices.CAPONE;
-using WebAPIService.GameServices.CDM;
-using WebAPIService.GameServices.CODEGLUE;
-using WebAPIService.GameServices.COGS;
-using WebAPIService.GameServices.DEMANGLER;
-using WebAPIService.GameServices.DIGITAL_LEISURE;
-using WebAPIService.GameServices.FROMSOFTWARE;
-using WebAPIService.GameServices.HEAVYWATER;
-using WebAPIService.GameServices.HELLFIRE;
-using WebAPIService.GameServices.HOMELEADERBOARDS;
-using WebAPIService.GameServices.HTS;
-using WebAPIService.GameServices.I_Love_Sony;
-using WebAPIService.GameServices.JUGGERNAUT;
-using WebAPIService.GameServices.LOOT;
-using WebAPIService.GameServices.NDREAMS;
-using WebAPIService.GameServices.OHS;
-using WebAPIService.GameServices.OUWF;
-using WebAPIService.GameServices.PREMIUMAGENCY;
-using WebAPIService.GameServices.RCHOME;
-using WebAPIService.GameServices.THQ;
+using WebAPIService.GameServices.PSHOME.CAPONE;
+using WebAPIService.GameServices.PSHOME.CDM;
+using WebAPIService.GameServices.PSHOME.CODEGLUE;
+using WebAPIService.GameServices.PSHOME.COGS;
+using WebAPIService.GameServices.PSHOME.DIGITAL_LEISURE;
+using WebAPIService.GameServices.PSHOME.HEAVYWATER;
+using WebAPIService.GameServices.PSHOME.HELLFIRE;
+using WebAPIService.GameServices.PSHOME.HTS;
+using WebAPIService.GameServices.PSHOME.LOOT;
+using WebAPIService.GameServices.PSHOME.NDREAMS;
+using WebAPIService.GameServices.PSHOME.OHS;
+using WebAPIService.GameServices.PSHOME.OUWF;
+using WebAPIService.GameServices.PSHOME.PREMIUMAGENCY;
+using WebAPIService.GameServices.PSHOME.HOMELEADERBOARDS;
+using WebAPIService.GameServices.PSHOME.JUGGERNAUT;
+using WebAPIService.GameServices.PSHOME.THQ;
+using WebAPIService.GameServices.PSHOME.RCHOME;
+using WebAPIService.GameServices.PSHOME.VEEMEE;
+using WebAPIService.GameServices.PSHOME.TSS;
 using WebAPIService.GameServices.UBISOFT.BuildAPI;
 using WebAPIService.GameServices.UBISOFT.gsconnect;
 using WebAPIService.GameServices.UBISOFT.HERMES_API;
 using WebAPIService.GameServices.UBISOFT.MatchMakingConfig;
 using WebAPIService.GameServices.UBISOFT.OnlineConfigService;
-using WebAPIService.GameServices.VEEMEE;
-using WebAPIService.GameServices.VEEMEE.audi_tech;
+using WebAPIService.GameServices.DEMANGLER;
+using WebAPIService.GameServices.FROMSOFTWARE;
+using WebAPIService.GameServices.I_Love_Sony;
 using XI5;
 
 namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
@@ -91,6 +91,21 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
         #endregion
 
         public static List<Route> frontend = new() {
+                new() {
+                    Name = "Default Home TSS Endpoint",
+                    UrlRegex = @"^/tss/(clientconfig0001|coreHztFmpQrx0002).*",
+                    Method = "GET",
+                    Hosts = null,
+                    Callable = (ctx) => {
+                        if (!File.Exists(ctx.FilePath))
+                        {
+                                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                                ctx.Response.ContentType = "text/xml";
+                                return ctx.Response.Send(Path.GetFileName(ctx.FilePath)?.StartsWith("clientconfig0001") == true ? ClientConfig0001.GenerateXML() : CoreHztFmpQrx0002.GenerateXML()).Result;
+                        }
+                        return false;
+                     }
+                },
                 new() {
                     Name = "Home UniqueInstanceId decypher",
                     UrlRegex = "^/DecryptUniqueInstanceID.php$",
@@ -440,7 +455,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
                     Callable = (ctx) => {
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                             ctx.Response.ContentType = "text/plain";
-                            return ctx.Response.Send(HTTPProcessor.RequestURLGET($"https://s3.amazonaws.com{ctx.Request.Url.RawWithQuery}")).Result;
+                            return ctx.Response.Send(File.Exists(ctx.FilePath) ? File.ReadAllText(ctx.FilePath) : HTTPProcessor.RequestURLGET($"https://{ctx.GetHost()}{ctx.Request.Url.RawWithQuery}")).Result;
                      }
                 }
             };
@@ -1152,7 +1167,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
                          HttpStatusCode statusCode;
                         ctx.Response.ChunkedTransfer = ctx.AcceptChunked;
 
-                               if (ctx.AbsolutePath.EndsWith(".php") && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder) && (File.Exists(ctx.FilePath) || File.Exists(ctx.ApiPath)))
+                                if (ctx.AbsolutePath.EndsWith(".php") && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder) && (File.Exists(ctx.FilePath) || File.Exists(ctx.ApiPath)))
                                 {
                                     // Let main server handler handle it.
                                 }

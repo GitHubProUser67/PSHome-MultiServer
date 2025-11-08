@@ -2,7 +2,7 @@
 {
     public static class EDATKeys
     {
-        public static byte[] npdrm_rap_key = new byte[16]
+        public static readonly byte[] npdrm_rap_key = new byte[16]
         {
            0x86,
            0x9F,
@@ -22,7 +22,7 @@
            0xDF
         };
 
-        public static byte[] npdrm_rap_pbox = new byte[16]
+        public static readonly byte[] npdrm_rap_pbox = new byte[16]
         {
            0x0C,
            0x03,
@@ -42,7 +42,7 @@
            0x09
         };
 
-        public static byte[] npdrm_rap_e1 = new byte[16]
+        public static readonly byte[] npdrm_rap_e1 = new byte[16]
         {
            0xA9,
            0x3E,
@@ -62,7 +62,7 @@
            0xA5
         };
 
-        public static byte[] npdrm_rap_e2 = new byte[16]
+        public static readonly byte[] npdrm_rap_e2 = new byte[16]
         {
            0x67,
            0xD4,
@@ -82,7 +82,7 @@
            0x74
         };
 
-        public static byte[] npdrm_psp_key1 = new byte[16]
+        public static readonly byte[] npdrm_psp_key1 = new byte[16]
         {
            0x2A,
            0x6A,
@@ -102,7 +102,7 @@
            0x2E
         };
 
-        public static byte[] npdrm_psp_key2 = new byte[16]
+        public static readonly byte[] npdrm_psp_key2 = new byte[16]
         {
            0x0D,
            0xB8,
@@ -122,7 +122,7 @@
            0x4F
         };
 
-        public static byte[] npdrm_psx_key = new byte[16]
+        public static readonly byte[] npdrm_psx_key = new byte[16]
         {
            0x52,
            0xC0,
@@ -142,7 +142,7 @@
            0xC1
         };
 
-        public static byte[] npdrm_klic_key = new byte[16]
+        public static readonly byte[] npdrm_klic_key = new byte[16]
         {
            0xF2,
            0xFB,
@@ -162,7 +162,7 @@
            0xEE
         };
 
-        public static byte[] npdrm_omac_key1 = new byte[16]
+        public static readonly byte[] npdrm_omac_key1 = new byte[16]
         {
            0x72,
            0xF9,
@@ -182,7 +182,7 @@
            0x87
         };
 
-        public static byte[] npdrm_omac_key2 = new byte[16]
+        public static readonly byte[] npdrm_omac_key2 = new byte[16]
         {
            107,
            165,
@@ -202,7 +202,7 @@
            107
         };
 
-        public static byte[] npdrm_omac_key3 = new byte[16]
+        public static readonly byte[] npdrm_omac_key3 = new byte[16]
         {
            155,
            81,
@@ -222,7 +222,7 @@
            151
         };
 
-        public static byte[] SDATKEY = new byte[16]
+        public static readonly byte[] SDATKEY = new byte[16]
         {
            13,
            101,
@@ -242,7 +242,7 @@
            51
         };
 
-        public static byte[] EDATKEY0 = new byte[16]
+        public static readonly byte[] EDATKEY0 = new byte[16]
         {
            190,
            149,
@@ -262,7 +262,7 @@
            174
         };
 
-        public static byte[] EDATKEY1 = new byte[16]
+        public static readonly byte[] EDATKEY1 = new byte[16]
         {
            0x4C,
            0xA9,
@@ -282,9 +282,9 @@
            0x81
         };
 
-        public static byte[] EDATIV = new byte[16];
+        public static readonly byte[] EDATIV = new byte[16];
 
-        public static byte[] EDATHASH0 = new byte[16]
+        public static readonly byte[] EDATHASH0 = new byte[16]
         {
            239,
            254,
@@ -304,7 +304,7 @@
            17
         };
 
-        public static byte[] EDATHASH1 = new byte[16]
+        public static readonly byte[] EDATHASH1 = new byte[16]
         {
            0x3D,
            0x92,

@@ -5,7 +5,6 @@ using Horizon.MUM.Models;
 using Horizon.RT.Models;
 using Horizon.SERVER;
 using MultiServerLibrary.Extension;
-using WebAPIService.GameServices.VEEMEE;
 using static Horizon.Extension.PlayStationHome.Models.m_Presence;
 using static Horizon.SERVER.Medius.BaseMediusComponent;
 

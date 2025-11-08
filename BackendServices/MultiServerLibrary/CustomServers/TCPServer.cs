@@ -136,6 +136,10 @@ namespace MultiServerLibrary.CustomServers
                             {
                                 client = await listener.AcceptTcpClientAsync(token).ConfigureAwait(false);
                             }
+                            catch (OperationCanceledException)
+                            {
+
+                            }
                             catch (Exception ex)
                             {
 #if DEBUG

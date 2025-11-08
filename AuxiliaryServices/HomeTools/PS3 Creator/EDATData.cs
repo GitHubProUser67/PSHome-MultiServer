@@ -15,9 +15,9 @@ namespace HomeTools.PS3_Creator
         public static EDATData createEDATData(byte[] data)
         {
             EDATData result = new EDATData();
-            result.flags = ConversionUtils.be32(data, 0);
-            result.blockSize = ConversionUtils.be32(data, 4);
-            result.fileLen = ConversionUtils.be64(data, 0x8);
+            result.flags = ConversionUtils.Be32(data, 0);
+            result.blockSize = ConversionUtils.Be32(data, 4);
+            result.fileLen = ConversionUtils.Be64(data, 0x8);
             return result;
         }
 

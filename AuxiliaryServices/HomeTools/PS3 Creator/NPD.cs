@@ -26,16 +26,16 @@ namespace HomeTools.PS3_Creator
         public static NPD createNPD(byte[] npd)
         {
             NPD result = new NPD();
-            ConversionUtils.arraycopy(npd, 0, result.magic, 0, 4);
-            result.version = ConversionUtils.be32(npd, 4);
-            result.license = ConversionUtils.be32(npd, 8);
-            result.type = ConversionUtils.be32(npd, 0xC);
-            ConversionUtils.arraycopy(npd, 0x10, result.content_id, 0, 0x30);
-            ConversionUtils.arraycopy(npd, 0x40, result.digest, 0, 0x10);
-            ConversionUtils.arraycopy(npd, 0x50, result.titleHash, 0, 0x10);
-            ConversionUtils.arraycopy(npd, 0x60, result.devHash, 0, 0x10);
-            result.unknown3 = ConversionUtils.be64(npd, 0x70);
-            result.unknown4 = ConversionUtils.be64(npd, 0x78);
+            ConversionUtils.Arraycopy(npd, 0, result.magic, 0, 4);
+            result.version = ConversionUtils.Be32(npd, 4);
+            result.license = ConversionUtils.Be32(npd, 8);
+            result.type = ConversionUtils.Be32(npd, 0xC);
+            ConversionUtils.Arraycopy(npd, 0x10, result.content_id, 0, 0x30);
+            ConversionUtils.Arraycopy(npd, 0x40, result.digest, 0, 0x10);
+            ConversionUtils.Arraycopy(npd, 0x50, result.titleHash, 0, 0x10);
+            ConversionUtils.Arraycopy(npd, 0x60, result.devHash, 0, 0x10);
+            result.unknown3 = ConversionUtils.Be64(npd, 0x70);
+            result.unknown4 = ConversionUtils.Be64(npd, 0x78);
             if (!result.validate()) result = null;
             return result;
         }

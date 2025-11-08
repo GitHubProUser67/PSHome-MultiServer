@@ -6,7 +6,7 @@ using Org.BouncyCastle.Crypto.Parameters;
 namespace HomeTools.PS3_Creator
 {
         abstract class Hash {
-            public bool compareBytes(byte[] value1, int offset1, byte[] value2, int offset2, int len)
+            public static bool CompareBytes(byte[] value1, int offset1, byte[] value2, int offset2, int len)
             {
                 for (int i = 0; i < len; i++)
                 {
@@ -18,14 +18,14 @@ namespace HomeTools.PS3_Creator
                 return true;
             }
 
-            public virtual void setHashLen(int len) { }
+            public virtual void SetHashLen(int len) { }
 
-            public virtual void doInit(byte[] key) { }
+            public virtual void DoInit(byte[] key) { }
 
-            public virtual void doUpdate(byte[] i, int inOffset, int len) { }
+            public virtual void DoUpdate(byte[] i, int inOffset, int len) { }
 
-            public virtual bool doFinal(byte[] expectedhash, int hashOffset, bool hashDebug) { return false;  }
-            public virtual bool doFinalButGetHash(byte[] generatedHash) { return false; }
+            public virtual bool DoFinal(byte[] expectedhash, int hashOffset, bool hashDebug) { return false;  }
+            public virtual bool DoFinalButGetHash(byte[] generatedHash) { return false; }
         }
 
         class HMAC : Hash {
@@ -34,7 +34,7 @@ namespace HomeTools.PS3_Creator
             private HMACSHA1 mac;
             private byte[] result;
 
-            public override void setHashLen(int len) {
+            public override void SetHashLen(int len) {
                 if (len == 0x10 || len == 0x14) {
                     hashLen = len;
                     // mac.HashSize = len; needed oO?!?!?!
@@ -43,25 +43,28 @@ namespace HomeTools.PS3_Creator
                 }
             }
 
-            public override void doInit(byte[] key) {
-                try {
+            public override void DoInit(byte[] key) {
+                try 
+                {
                     mac = new HMACSHA1(key);
-                } catch (Exception ex) {
+                } 
+                catch (Exception ex)
+                {
                     throw ex;
                 }
             }
 
-            public override void doUpdate(byte[] i, int inOffset, int len) {
+            public override void DoUpdate(byte[] i, int inOffset, int len) {
                 result = mac.ComputeHash(i, inOffset, len);
             }
 
-            public override bool doFinal(byte[] expectedhash, int hashOffset, bool hashDebug) {
-                return (hashDebug || compareBytes(result, 0, expectedhash, hashOffset, hashLen));
+            public override bool DoFinal(byte[] expectedhash, int hashOffset, bool hashDebug) {
+                return hashDebug || CompareBytes(result, 0, expectedhash, hashOffset, hashLen);
             }
 
-            public override bool doFinalButGetHash(byte[] generatedHash)
+            public override bool DoFinalButGetHash(byte[] generatedHash)
             {
-                ConversionUtils.arraycopy(result, 0, generatedHash, 0, result.Length);
+                ConversionUtils.Arraycopy(result, 0, generatedHash, 0, result.Length);
                 return true;
             }
         }
@@ -74,9 +77,9 @@ namespace HomeTools.PS3_Creator
 
             public CMAC() => hashLen = 16;
 
-            public override void setHashLen(int len) => hashLen = len == 16 ? len : throw new Exception("Hash len must be 0x10");
+            public override void SetHashLen(int len) => hashLen = len == 16 ? len : throw new Exception("Hash len must be 0x10");
 
-            public override void doInit(byte[] key)
+            public override void DoInit(byte[] key)
             {
                 try
                 {
@@ -90,28 +93,28 @@ namespace HomeTools.PS3_Creator
                 }
             }
 
-            public override void doUpdate(byte[] i, int inOffset, int len)
+            public override void DoUpdate(byte[] i, int inOffset, int len)
             {
                 mac.BlockUpdate(i, inOffset, len);
             }
 
-            public override bool doFinal(byte[] expectedhash, int hashOffset, bool hashDebug)
+            public override bool DoFinal(byte[] expectedhash, int hashOffset, bool hashDebug)
             {
                 mac.DoFinal(result, 0);
-                return hashDebug || compareBytes(result, 0, expectedhash, hashOffset, hashLen);
+                return hashDebug || CompareBytes(result, 0, expectedhash, hashOffset, hashLen);
             }
 
-            public override bool doFinalButGetHash(byte[] generatedHash)
+            public override bool DoFinalButGetHash(byte[] generatedHash)
             {
                 mac.DoFinal(result, 0);
-                ConversionUtils.arraycopy(result, 0, generatedHash, 0L, result.Length);
+                ConversionUtils.Arraycopy(result, 0, generatedHash, 0L, result.Length);
                 return true;
             }
         }
 
         abstract class HashGenerator
         {
-            public bool compareBytes(byte[] value1, int offset1, byte[] value2, int offset2, int len)
+            public static bool CompareBytes(byte[] value1, int offset1, byte[] value2, int offset2, int len)
             {
                 for (int i = 0; i < len; i++)
                 {
@@ -123,13 +126,13 @@ namespace HomeTools.PS3_Creator
                 return true;
             }
 
-            public virtual void setHashLen(int len) { }
+            public virtual void SetHashLen(int len) { }
 
-            public virtual void doInit(byte[] key) { }
+            public virtual void DoInit(byte[] key) { }
 
-            public virtual void doUpdate(byte[] i, int inOffset, int len) { }
+            public virtual void DoUpdate(byte[] i, int inOffset, int len) { }
 
-            public virtual bool doFinal(byte[] generateHash) { return false; }
+            public virtual bool DoFinal(byte[] generateHash) { return false; }
         }
 
         class CMACGenerator : HashGenerator
@@ -140,9 +143,9 @@ namespace HomeTools.PS3_Creator
 
             public CMACGenerator() => hashLen = 16;
 
-            public override void setHashLen(int len) => hashLen = len == 16 ? len : throw new Exception("Hash len must be 0x10");
+            public override void SetHashLen(int len) => hashLen = len == 16 ? len : throw new Exception("Hash len must be 0x10");
 
-            public override void doInit(byte[] key)
+            public override void DoInit(byte[] key)
             {
                 try
                 {
@@ -156,15 +159,15 @@ namespace HomeTools.PS3_Creator
                 }
             }
 
-            public override void doUpdate(byte[] i, int inOffset, int len)
+            public override void DoUpdate(byte[] i, int inOffset, int len)
             {
                 mac.BlockUpdate(i, inOffset, len);
             }
 
-            public override bool doFinal(byte[] generatedHash)
+            public override bool DoFinal(byte[] generatedHash)
             {
                 mac.DoFinal(result, 0);
-                ConversionUtils.arraycopy(result, 0, generatedHash, 0L, result.Length);
+                ConversionUtils.Arraycopy(result, 0, generatedHash, 0L, result.Length);
                 return true;
             }
         }
@@ -176,7 +179,7 @@ namespace HomeTools.PS3_Creator
             private HMACSHA1 mac;
             private byte[] result;
 
-            public override void setHashLen(int len)
+            public override void SetHashLen(int len)
             {
                 if (len == 0x10 || len == 0x14)
                 {
@@ -189,7 +192,7 @@ namespace HomeTools.PS3_Creator
                 }
             }
 
-            public override void doInit(byte[] key)
+            public override void DoInit(byte[] key)
             {
                 try
                 {
@@ -201,14 +204,14 @@ namespace HomeTools.PS3_Creator
                 }
             }
 
-            public override void doUpdate(byte[] i, int inOffset, int len)
+            public override void DoUpdate(byte[] i, int inOffset, int len)
             {
                 result = mac.ComputeHash(i, inOffset, len);
             }
 
-            public override bool doFinal(byte[] generatedHash)
+            public override bool DoFinal(byte[] generatedHash)
             {
-                ConversionUtils.arraycopy(result, 0, generatedHash, 0, result.Length);
+                ConversionUtils.Arraycopy(result, 0, generatedHash, 0, result.Length);
                 return true;
             }
         }

@@ -1,14 +1,17 @@
-﻿using MultiServerLibrary;
+﻿using FixedSsl;
+using MultiServerLibrary;
 
 namespace System.Net
 {
     public class FixedWebClient : WebClient
     {
-        private const bool bypassProxyLocalHost = false; /*still use the proxy for local addresses*/
+        private static readonly Type _dummy = typeof(SslSocket); // Dummy type for service point initialization.
 
-        /* WebClient won't automatically decompress compressed data and has no proxy abstraction layer, hence this hack. */
+        private const bool bypassProxyLocalHost = false; // still use the proxy for local addresses
 
-        /* Suppress the WebClient obsolete warning.
+        /* WebClient won't automatically decompress compressed data and has no proxy abstraction layer, hence this hack.
+
+           Suppress the WebClient obsolete warning.
 
            The WebClient help entry says to use HttpClient instead.
            This is awful advice.  HttpClient is "all async, all the time", which

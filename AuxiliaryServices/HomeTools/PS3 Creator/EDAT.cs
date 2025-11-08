@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel;
 using System.IO;
 using System.Numerics;
 using CustomLogger;
@@ -91,7 +90,7 @@ namespace HomeTools.PS3_Creator
 
             o.Seek(0x90, SeekOrigin.Begin);
             AppLoader aa = new AppLoader();
-            aa.doInit(hashFlag, version[0] == 4, 0x00000001, new byte[0x10], new byte[0x10], rifkey);
+            aa.DoInit(hashFlag, version[0] == 4, 0x00000001, new byte[0x10], new byte[0x10], rifkey);
 
             int startoffset = (data.getFlags() & FLAG_SDAT) != 0L ? 32 : 16;
             int numBlocks = (int)((data.getFileLen() + data.getBlockSize() - 1) / data.getBlockSize());
@@ -105,11 +104,11 @@ namespace HomeTools.PS3_Creator
                 byte[] content = new byte[len];
                 byte[] ooo = new byte[len];
                 o.Read(content, 0, content.Length);
-                aa.doUpdate(content, 0, ooo, 0, len);
+                aa.DoUpdate(content, 0, ooo, 0, len);
                 totallength += len;
             }
             byte[] headerHash = new byte[16];
-            aa.doFinalButGetHash(headerHash);
+            aa.DoFinalButGetHash(headerHash);
             o.Seek(144L, 0);
             o.Write(headerHash, 0, headerHash.Length);
             o.Seek(0L, 0);
@@ -118,7 +117,7 @@ namespace HomeTools.PS3_Creator
             o.Read(header, 0, header.Length);
             AppLoaderReverse a = new AppLoaderReverse();
             byte[] generatedHash = new byte[16];
-            a.doAll(hashFlag, version[0] == 4, 1, header, 0, headerODummy, 0, header.Length, new byte[16], new byte[16], rifkey, generatedHash, 0);
+            a.DoAll(hashFlag, version[0] == 4, 1, header, 0, headerODummy, 0, header.Length, new byte[16], new byte[16], rifkey, generatedHash, 0);
             o.Seek(160L, 0);
             o.Write(generatedHash, 0, generatedHash.Length);
             while (o.Length < 256L)
@@ -130,12 +129,12 @@ namespace HomeTools.PS3_Creator
 
         private byte[] createNPDHash1(String filename, byte[] npd)
         {
-            byte[] fileBytes = ConversionUtils.charsToByte(filename.ToCharArray());
+            byte[] fileBytes = ConversionUtils.CharsToByte(filename.ToCharArray());
             byte[] data1 = new byte[0x30 + fileBytes.Length];
-            ConversionUtils.arraycopy(npd, 0x10, data1, 0, 0x30);
-            ConversionUtils.arraycopy(fileBytes, 0x00, data1, 0x30, fileBytes.Length);
+            ConversionUtils.Arraycopy(npd, 0x10, data1, 0, 0x30);
+            ConversionUtils.Arraycopy(fileBytes, 0x00, data1, 0x30, fileBytes.Length);
             byte[] hash1 = ToolsImpl.CMAC128(EDATKeys.npdrm_omac_key3, data1, 0, data1.Length);
-            ConversionUtils.arraycopy(hash1, 0, npd, 0x50, 0x10);
+            ConversionUtils.Arraycopy(hash1, 0, npd, 0x50, 0x10);
             bool result1 = compareBytes(hash1, 0, npd, 0x50, 0x10);
             if (result1)
             {
@@ -149,7 +148,7 @@ namespace HomeTools.PS3_Creator
             byte[] xoredKey = new byte[0x10];
             ToolsImpl.XOR(xoredKey, klicensee, EDATKeys.npdrm_omac_key2);
             byte[] calculated = ToolsImpl.CMAC128(xoredKey, npd, 0, 0x60);
-            ConversionUtils.arraycopy(calculated, 0, npd, 0x60, 0x10);
+            ConversionUtils.Arraycopy(calculated, 0, npd, 0x60, 0x10);
             bool result2 = compareBytes(calculated, 0, npd, 0x60, 0x10);
             if (result2)
             {
@@ -194,18 +193,18 @@ namespace HomeTools.PS3_Creator
 
             //Used to create IV
             //ConversionUtils.arraycopy(npd, 0x40, result.digest, 0, 0x10);
-            byte[] iv = ConversionUtils.charsToByte("FixedLicenseEDAT".ToCharArray());
-            ConversionUtils.arraycopy(iv, 0, npd, 0x40, 0x10);
+            byte[] iv = ConversionUtils.CharsToByte("FixedLicenseEDAT".ToCharArray());
+            ConversionUtils.Arraycopy(iv, 0, npd, 0x40, 0x10);
 
             //I guess it's a full file hash
             //ConversionUtils.arraycopy(npd, 0x50, result.titleHash, 0, 0x10);
             byte[] hash = createNPDHash1(filename, npd);
-            ConversionUtils.arraycopy(hash, 0x00, npd, 0x50, 0x10);
+            ConversionUtils.Arraycopy(hash, 0x00, npd, 0x50, 0x10);
 
             //Used to create Blockkey
             //ConversionUtils.arraycopy(npd, 0x60, result.devHash, 0, 0x10);
             byte[] devHash = createNPDHash2(devKLic, npd);
-            ConversionUtils.arraycopy(devHash, 0, npd, 0x60, 0x10);
+            ConversionUtils.Arraycopy(devHash, 0, npd, 0x60, 0x10);
 
             //NPD EOF?!?!?!
             //result.unknown3 = ConversionUtils.be64(npd, 0x70);
@@ -303,7 +302,7 @@ namespace HomeTools.PS3_Creator
                 if ((data.getFlags() & FLAG_DEBUG) != 0) hashFlag |= 0x01000000;
 
                 //Veryfing header
-                bool result = a.doAll(hashFlag, npd.getVersion() == 4, 0x00000001, header, 0, o, 0, header.Length, new byte[0x10], new byte[0x10], rifKey, expectedHash, 0);
+                bool result = a.DoAll(hashFlag, npd.getVersion() == 4, 0x00000001, header, 0, o, 0, header.Length, new byte[0x10], new byte[0x10], rifKey, expectedHash, 0);
                 if (!result)
                 {
                     LoggerAccessor.LogError("[PS3 Creator] - EDAT - Error verifying header. Is rifKey valid?.");
@@ -315,7 +314,7 @@ namespace HomeTools.PS3_Creator
                     LoggerAccessor.LogInfo("[PS3 Creator] - EDAT - Checking metadata hash:");
 #endif
                     a = new AppLoader();
-                    a.doInit(hashFlag, npd.getVersion() == 4, 0x00000001, new byte[0x10], new byte[0x10], rifKey);
+                    a.DoInit(hashFlag, npd.getVersion() == 4, 0x00000001, new byte[0x10], new byte[0x10], rifKey);
 
                     int sectionSize = ((data.getFlags() & FLAG_COMPRESSED) != 0) ? 0x20 : 0x010;
                     int numBlocks = (int)((data.getFileLen() + data.getBlockSize() - 11) / data.getBlockSize()); //Determine the metadatasection total len
@@ -331,11 +330,11 @@ namespace HomeTools.PS3_Creator
                         byte[] content = new byte[lenToRead];
                         o = new byte[lenToRead];
                         i.Read(content, 0, content.Length);
-                        a.doUpdate(content, 0, o, 0, lenToRead);
+                        a.DoUpdate(content, 0, o, 0, lenToRead);
                         readed += lenToRead;
                         remaining -= lenToRead;
                     }
-                    result = a.doFinal(header, 0x90);
+                    result = a.DoFinal(header, 0x90);
 
                     if (!result)
                     {
@@ -399,7 +398,7 @@ namespace HomeTools.PS3_Creator
             i.Read(npd, 0, npd.Length);
             byte[] extraData = new byte[0x04];
             i.Read(extraData, 0, extraData.Length);
-            long flag = ConversionUtils.be32(extraData, 0);
+            long flag = ConversionUtils.Be32(extraData, 0);
             if ((flag & FLAG_SDAT) != 0)
             {
                 LoggerAccessor.LogInfo("[PS3 Creator] - EDAT - SDAT detected. NPD header is not validated");
@@ -424,10 +423,10 @@ namespace HomeTools.PS3_Creator
 
         private bool checkNPDHash1(String filename, byte[] npd)
         {
-            byte[] fileBytes = ConversionUtils.charsToByte(filename.ToCharArray());
+            byte[] fileBytes = ConversionUtils.CharsToByte(filename.ToCharArray());
             byte[] data1 = new byte[0x30 + fileBytes.Length];
-            ConversionUtils.arraycopy(npd, 0x10, data1, 0, 0x30);
-            ConversionUtils.arraycopy(fileBytes, 0x00, data1, 0x30, fileBytes.Length);
+            ConversionUtils.Arraycopy(npd, 0x10, data1, 0, 0x30);
+            ConversionUtils.Arraycopy(fileBytes, 0x00, data1, 0x30, fileBytes.Length);
             byte[] hash1 = ToolsImpl.CMAC128(EDATKeys.npdrm_omac_key3, data1, 0, data1.Length);
             bool result1 = compareBytes(hash1, 0, npd, 0x50, 0x10);
             if (result1)
@@ -508,23 +507,23 @@ namespace HomeTools.PS3_Creator
                 byte[] key = new byte[16];
                 byte[] hash = new byte[16];
                 byte[] blockKey = calculateBlockKey(i, npd);
-                ToolsImpl.aesecbEncrypt(rifkey, blockKey, 0, key, 0, blockKey.Length);
+                ToolsImpl.AesecbEncrypt(rifkey, blockKey, 0, key, 0, blockKey.Length);
                 if ((data.getFlags() & FLAG_0x10) != 0L)
-                    ToolsImpl.aesecbEncrypt(rifkey, key, 0, hash, 0, key.Length);
+                    ToolsImpl.AesecbEncrypt(rifkey, key, 0, hash, 0, key.Length);
                 else
-                    ConversionUtils.arraycopy(key, 0, hash, 0L, key.Length);
+                    ConversionUtils.Arraycopy(key, 0, hash, 0L, key.Length);
                 int cryptoFlag = 0x10000002;
                 int hashFlag = 0x10000001;
                 AppLoaderReverse a = new AppLoaderReverse();
                 byte[] iv = npd.getDigest();
                 byte[] generatedHash = new byte[20];
-                a.doAll(hashFlag, npd.getVersion() == 4, cryptoFlag, decryptedData, 0, encryptedData, 0, decryptedData.Length, key, iv, hash, generatedHash, 0);
+                a.DoAll(hashFlag, npd.getVersion() == 4, cryptoFlag, decryptedData, 0, encryptedData, 0, decryptedData.Length, key, iv, hash, generatedHash, 0);
                 o.Seek(baseOffset + i * (metadataSectionSize + data.getBlockSize()), 0);
                 byte[] encryptedDataForFile = "555555555555555555555555".HexStringToByteArray();
                 byte[] expectedKeyForFile = new byte[16];
                 byte[] expectedHashForFile = new byte[16];
-                ConversionUtils.arraycopy(generatedHash, 16, expectedHashForFile, 0L, 4);
-                ConversionUtils.arraycopy(encryptedDataForFile, 0, expectedHashForFile, 4L, encryptedDataForFile.Length);
+                ConversionUtils.Arraycopy(generatedHash, 16, expectedHashForFile, 0L, 4);
+                ConversionUtils.Arraycopy(encryptedDataForFile, 0, expectedHashForFile, 4L, encryptedDataForFile.Length);
                 ToolsImpl.XOR(expectedKeyForFile, expectedHashForFile, generatedHash);
                 o.Write(expectedKeyForFile, 0, expectedKeyForFile.Length);
                 o.Write(expectedHashForFile, 0, expectedHashForFile.Length);
@@ -556,10 +555,10 @@ namespace HomeTools.PS3_Creator
                         Array.Copy(metadata, result, metadata.Length);
                     else
                         result = decryptMetadataSection(metadata);
-                    offset = (int)ConversionUtils.be64(result, 0);
-                    len = (int)ConversionUtils.be32(result, 8);
-                    compressionEndBlock = (int)ConversionUtils.be32(result, 0xC);
-                    ConversionUtils.arraycopy(metadata, 0, expectedHash, 0, 0x10);
+                    offset = (int)ConversionUtils.Be64(result, 0);
+                    len = (int)ConversionUtils.Be32(result, 8);
+                    compressionEndBlock = (int)ConversionUtils.Be32(result, 0xC);
+                    ConversionUtils.Arraycopy(metadata, 0, expectedHash, 0, 0x10);
                 }
                 else if ((data.getFlags() & FLAG_0x20) != 0)
                 {
@@ -570,7 +569,7 @@ namespace HomeTools.PS3_Creator
                     {
                         expectedHash[j] = (byte)(metadata[j] ^ metadata[j + 0x10]);
                     }
-                    ConversionUtils.arraycopy(metadata, 16, expectedHash, 16L, 4);
+                    ConversionUtils.Arraycopy(metadata, 16, expectedHash, 16L, 4);
                     offset = baseOffset + i * (metadataSectionSize + data.getBlockSize()) + metadataSectionSize;
                     len = (int)data.getBlockSize();
                     if (i == numBlocks - 1)
@@ -598,16 +597,11 @@ namespace HomeTools.PS3_Creator
                 byte[] key = new byte[0x10];
                 byte[] hash = new byte[0x10];
                 byte[] blockKey = calculateBlockKey(i, npd);
-
-                ToolsImpl.aesecbEncrypt(rifkey, blockKey, 0, key, 0, blockKey.Length);
+                ToolsImpl.AesecbEncrypt(rifkey, blockKey, 0, key, 0, blockKey.Length);
                 if ((data.getFlags() & FLAG_0x10) != 0)
-                {
-                    ToolsImpl.aesecbEncrypt(rifkey, key, 0, hash, 0, key.Length);
-                }
+                    ToolsImpl.AesecbEncrypt(rifkey, key, 0, hash, 0, key.Length);
                 else
-                {
-                    ConversionUtils.arraycopy(key, 0, hash, 0, key.Length);
-                }
+                    ConversionUtils.Arraycopy(key, 0, hash, 0, key.Length);
                 int cryptoFlag = ((data.getFlags() & FLAG_0x02) == 0) ? 0x2 : 0x1;
                 int hashFlag = (data.getFlags() & FLAG_0x10) != 0L ? (data.getFlags() & FLAG_0x20) != 0L ? 1 : 4 : 2;
                 if ((data.getFlags() & FLAG_KEYENCRYPTED) != 0)
@@ -627,10 +621,7 @@ namespace HomeTools.PS3_Creator
                 }
                 else
                 {
-                    AppLoader a = new AppLoader();
-                    byte[] iv = (npd.getVersion() <= 1) ? (new byte[0x10]) : npd.getDigest();
-
-                    a.doAll(hashFlag, npd.getVersion() == 4, cryptoFlag, encryptedData, 0, decryptedData, 0, encryptedData.Length, key, iv, hash, expectedHash, 0);
+                    new AppLoader().DoAll(hashFlag, npd.getVersion() == 4, cryptoFlag, encryptedData, 0, decryptedData, 0, encryptedData.Length, key, (npd.getVersion() <= 1) ? (new byte[0x10]) : npd.getDigest(), hash, expectedHash, 0);
 
                     if ((data.getFlags() & FLAG_COMPRESSED) != 0 && compressionEndBlock != 0)
                         return COMPRESSION_UNSUPPORTED;
@@ -645,7 +636,7 @@ namespace HomeTools.PS3_Creator
         {
             byte[] baseKey = (npd.getVersion() <= 1) ? (new byte[0x10]) : npd.getDevHash();
             byte[] result = new byte[0x10];
-            ConversionUtils.arraycopy(baseKey, 0, result, 0, 0xC);
+            ConversionUtils.Arraycopy(baseKey, 0, result, 0, 0xC);
             result[0xC] = (byte)(blk >> 24 & 0xFF);
             result[0xD] = (byte)(blk >> 16 & 0xFF);
             result[0xE] = (byte)(blk >> 8 & 0xFF);

@@ -13,6 +13,7 @@ namespace MultiServerLibrary.CustomServers
     {
         private readonly object _Lock = new object();
 
+        public bool UseAlcatrazClientLoop { get; set; } = false;
         public bool FireClientAsTask { get; set; } = true;
 
         private List<Task> _AcceptConnections = new();
@@ -121,36 +122,23 @@ namespace MultiServerLibrary.CustomServers
         {
             List<Task> ClientTasks = new();
 
-            try
+            if (UseAlcatrazClientLoop) // Provided for backward compatibility with the Quazal server (the packet handling is in-order and de-facto, not compatible with our approach).
             {
+                Task<UdpReceiveResult> CurrentRecvTask = null;
+
                 while (!token.IsCancellationRequested)
                 {
-                    onUpdate?.Invoke(port);
+                    try
+                    {
+                        onUpdate?.Invoke(port);
 
-                    while (ClientTasks.Count < maxConcurrentListeners) //Maximum number of concurrent listeners
-                        ClientTasks.Add(Task.Run(async () =>
+                        // use non-blocking recieve
+                        if (CurrentRecvTask != null)
                         {
-                            UdpReceiveResult result = default;
-                            try
+                            if (CurrentRecvTask.IsCompleted)
                             {
-                                result = await listener.ReceiveAsync(token).ConfigureAwait(false);
-                            }
-                            catch (SocketException socketException)
-                            {
-                                if (socketException.ErrorCode != 995 &&
-                                    socketException.SocketErrorCode != SocketError.ConnectionReset &&
-                                    socketException.SocketErrorCode != SocketError.ConnectionAborted &&
-                                    socketException.SocketErrorCode != SocketError.Interrupted)
-                                    LoggerAccessor.LogWarn($"[UDP Server] - SocketException while accepting client on {port}. (Exception:" + socketException + ")");
-                            }
-                            catch (Exception ex)
-                            {
-#if DEBUG
-                                LoggerAccessor.LogWarn($"[UDP Server] - Exception while accepting client on {port}. (Exception:" + ex + ")");
-#endif
-                            }
-                            if (result != default)
-                            {
+                                UdpReceiveResult result = CurrentRecvTask.Result;
+                                CurrentRecvTask = null;
                                 void clientHandler()
                                 {
                                     IPEndPoint remoteEndPoint = result.RemoteEndPoint;
@@ -194,24 +182,138 @@ namespace MultiServerLibrary.CustomServers
                                 else
                                     clientHandler();
                             }
-                        }, token));
+                            else if (CurrentRecvTask.IsCanceled || CurrentRecvTask.IsFaulted)
+                                CurrentRecvTask = null;
+                        }
 
-                    int RemoveAtIndex = Task.WaitAny(ClientTasks.ToArray(), 500, token); //Synchronously Waits up 500ms for any Task completion
-                    if (RemoveAtIndex != -1) //Remove the completed task from the list
-                        ClientTasks.RemoveAt(RemoveAtIndex);
+                        if (CurrentRecvTask == null)
+                            CurrentRecvTask = listener.ReceiveAsync(token).AsTask();
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        CurrentRecvTask = null;
+
+                        break;
+                    }
+                    catch (SocketException socketException)
+                    {
+                        if (socketException.ErrorCode != 995 &&
+                            socketException.SocketErrorCode != SocketError.ConnectionReset &&
+                            socketException.SocketErrorCode != SocketError.ConnectionAborted &&
+                            socketException.SocketErrorCode != SocketError.Interrupted)
+                            LoggerAccessor.LogWarn($"[UDP Server] - SocketException while accepting client on {port}. (Exception:" + socketException + ")");
+
+                        CurrentRecvTask = null;
+                    }
+                    catch (Exception ex)
+                    {
+#if DEBUG
+                        LoggerAccessor.LogWarn($"[UDP Server] - Exception while accepting client on {port}. (Exception:" + ex + ")");
+#endif
+                        CurrentRecvTask = null;
+                    }
+
+                    Thread.Sleep(1);
                 }
             }
-            catch (TaskCanceledException)
+            else
             {
+                try
+                {
+                    while (!token.IsCancellationRequested)
+                    {
+                        onUpdate?.Invoke(port);
 
-            }
-            catch (OperationCanceledException)
-            {
+                        while (ClientTasks.Count < maxConcurrentListeners) //Maximum number of concurrent listeners
+                            ClientTasks.Add(Task.Run(async () =>
+                            {
+                                UdpReceiveResult result = default;
+                                try
+                                {
+                                    result = await listener.ReceiveAsync(token).ConfigureAwait(false);
+                                }
+                                catch (OperationCanceledException)
+                                {
 
-            }
-            catch (Exception ex)
-            {
-                LoggerAccessor.LogError($"[UDP Server] - Exception on port {port}: (Exception:" + ex + ")");
+                                }
+                                catch (SocketException socketException)
+                                {
+                                    if (socketException.ErrorCode != 995 &&
+                                        socketException.SocketErrorCode != SocketError.ConnectionReset &&
+                                        socketException.SocketErrorCode != SocketError.ConnectionAborted &&
+                                        socketException.SocketErrorCode != SocketError.Interrupted)
+                                        LoggerAccessor.LogWarn($"[UDP Server] - SocketException while accepting client on {port}. (Exception:" + socketException + ")");
+                                }
+                                catch (Exception ex)
+                                {
+#if DEBUG
+                                    LoggerAccessor.LogWarn($"[UDP Server] - Exception while accepting client on {port}. (Exception:" + ex + ")");
+#endif
+                                }
+                                if (result != default)
+                                {
+                                    void clientHandler()
+                                    {
+                                        IPEndPoint remoteEndPoint = result.RemoteEndPoint;
+#if DEBUG
+                                        LoggerAccessor.LogInfo($"[UDP Server] - Connection received on port {port} (Thread {Environment.CurrentManagedThreadId})");
+#endif
+                                        string clientip = null;
+                                        try
+                                        {
+                                            clientip = remoteEndPoint.Address.ToString();
+                                        }
+                                        catch { }
+                                        int? clientport = remoteEndPoint.Port;
+
+                                        if (!(!clientport.HasValue || string.IsNullOrEmpty(clientip) || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
+                                        {
+                                            byte[] ResultBuffer = onPacketReceived?.Invoke(port, listener, result.Buffer, remoteEndPoint);
+                                            if (ResultBuffer != null)
+                                            {
+                                                try
+                                                {
+                                                    _ = listener.SendAsync(ResultBuffer, ResultBuffer.Length, remoteEndPoint);
+                                                }
+                                                catch (SocketException socketException)
+                                                {
+                                                    if (socketException.ErrorCode != 995 &&
+                                                        socketException.SocketErrorCode != SocketError.ConnectionReset &&
+                                                        socketException.SocketErrorCode != SocketError.ConnectionAborted &&
+                                                        socketException.SocketErrorCode != SocketError.Interrupted)
+                                                        LoggerAccessor.LogError($"[UDP Server] - SocketException while sending response to client. (Exception:" + socketException + ")");
+                                                }
+                                                catch (Exception e)
+                                                {
+                                                    LoggerAccessor.LogError("[UDP Server] - Assertion while sending response to client. (Exception:" + e + ")");
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if (FireClientAsTask)
+                                        _ = Task.Run(clientHandler);
+                                    else
+                                        clientHandler();
+                                }
+                            }, token));
+
+                        int RemoveAtIndex = Task.WaitAny(ClientTasks.ToArray(), 500, token); //Synchronously Waits up 500ms for any Task completion
+                        if (RemoveAtIndex != -1) //Remove the completed task from the list
+                            ClientTasks.RemoveAt(RemoveAtIndex);
+                    }
+                }
+                catch (TaskCanceledException)
+                {
+
+                }
+                catch (OperationCanceledException)
+                {
+
+                }
+                catch (Exception ex)
+                {
+                    LoggerAccessor.LogError($"[UDP Server] - Exception on port {port}: (Exception:" + ex + ")");
+                }
             }
 
             return Task.CompletedTask;

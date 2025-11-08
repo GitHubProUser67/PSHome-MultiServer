@@ -69,7 +69,7 @@ namespace HomeTools.PS3_Creator
             byte[] read = raf.ReadBytes(0x10);
             raf.Close();
             byte[] intermediate = new byte[read.Length];
-            ToolsImpl.aesecbDecrypt(rapKey, read, 0, intermediate, 0, read.Length);
+            ToolsImpl.AesecbDecrypt(rapKey, read, 0, intermediate, 0, read.Length);
             for (int loop = 0; loop < 5; loop++)
             {
 
@@ -112,7 +112,7 @@ namespace HomeTools.PS3_Creator
             actFile.Read(actdat, 0, actdat.Length);
             actFile.Close();
             byte[] key = getPerConsoleKey(IDPSFile);
-            ToolsImpl.aesecbDecrypt(key, actdat, 0, result, 0, actdat.Length);
+            ToolsImpl.AesecbDecrypt(key, actdat, 0, result, 0, actdat.Length);
             return result;
         }
 
@@ -123,7 +123,7 @@ namespace HomeTools.PS3_Creator
             raf.Read(idps, 0, idps.Length);
             raf.Close();
             byte[] result = new byte[0x10];
-            ToolsImpl.aesecbEncrypt(idps, ACTDAT_KEY, 0, result, 0, ACTDAT_KEY.Length);
+            ToolsImpl.AesecbEncrypt(idps, ACTDAT_KEY, 0, result, 0, ACTDAT_KEY.Length);
             return result;
         }
 
@@ -174,11 +174,11 @@ namespace HomeTools.PS3_Creator
                 o.Write(rif_header, 0, 0x08);
                 o.Write(actid, 0, 0x08);
                 byte[] CID = Encoding.UTF8.GetBytes(cid);
-                ConversionUtils.arraycopy(CID, 0, content_id, 0, CID.Length);
+                ConversionUtils.Arraycopy(CID, 0, content_id, 0, CID.Length);
 
                 o.Write(content_id, 0, 0x30);
 
-                ToolsImpl.aesecbEncrypt(RIFKEY, rif0x40, 0x00, encrif0x40, 0, 0x10);
+                ToolsImpl.AesecbEncrypt(RIFKEY, rif0x40, 0x00, encrif0x40, 0, 0x10);
                 o.Write(encrif0x40, 0, 0x10);
                 long index = 0;
                 byte[] actDat = decryptACTDAT(actIn, idps);
@@ -186,8 +186,8 @@ namespace HomeTools.PS3_Creator
                 rif0x50 = new byte[0x10];
                 byte[] signature = new byte[0x28];
 
-                ConversionUtils.arraycopy(actDat, (int)index * 16, datKey, 0, 0x10);
-                ToolsImpl.aesecbEncrypt(datKey, keyFromRif, 0, rif0x50, 0, 0x10);
+                ConversionUtils.Arraycopy(actDat, (int)index * 16, datKey, 0, 0x10);
+                ToolsImpl.AesecbEncrypt(datKey, keyFromRif, 0, rif0x50, 0, 0x10);
                 o.Write(rif0x50, 0, 0x10);
                 o.Write(rif_footer, 0, 0x10);
 

@@ -253,12 +253,13 @@ class Program
                 BackendServer = new UDPServer
                 {
                     // Keeps backward compatibility with the Alcatraz loop (race conditions happening overwise).
+                    UseAlcatrazClientLoop = true,
                     FireClientAsTask = false
                 };
             }
             _ = BackendServer.StartAsync(
             QuazalServerConfiguration.BackendServersList.Select(x => (ushort)x.Item1),
-            Environment.ProcessorCount,
+            0,
             (serverPort) =>
             {
                 QuazalServer.RDVServices.ServiceFactoryRDV.TryInsertFactory(QuazalServerConfiguration.BackendServersList.First(entry => entry.Item1 == serverPort).Item3);
@@ -291,12 +292,13 @@ class Program
                 RendezVousServer = new UDPServer
                 {
                     // Keeps backward compatibility with the Alcatraz loop (race conditions happening overwise).
+                    UseAlcatrazClientLoop = true,
                     FireClientAsTask = false
                 };
             }
             _ = RendezVousServer.StartAsync(
             QuazalServerConfiguration.RendezVousServersList.Select(x => (ushort)x.Item1),
-            Environment.ProcessorCount,
+            0,
             (serverPort) =>
             {
                 QuazalServer.RDVServices.ServiceFactoryRDV.TryInsertFactory(QuazalServerConfiguration.RendezVousServersList.First(entry => entry.Item1 == serverPort).Item4);
