@@ -23,6 +23,12 @@ namespace FixedSsl
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12 /*| SecurityProtocolType.Tls13*/;
         }
 
+        // Some domains are not valid anymore, but we need them, and know they aren't trapped websites...
+        private static readonly string[] _invalidCNBypassList = new string[]
+        {
+            "s3.amazonaws.com"
+        };
+
         private const int SSLv2 = 0x0002;  // SSL 2.0
         private const int SSLv3 = 0x0300;  // SSL 3.0
         private const int TLSv1 = 0x0301;  // TLS 1.0
@@ -425,6 +431,8 @@ namespace FixedSsl
 
             // Custom multi-level dot wildcard check
             if (IsDotWildcardMatch(certName, requestHost))
+                return true;
+            else if (_invalidCNBypassList.Contains(certName))
                 return true;
 
             CustomLogger.LoggerAccessor.LogError("[SslSocket] - ValidateRemoteCertificate: X509Certificate [{0}] Policy Error: '{1}'",
