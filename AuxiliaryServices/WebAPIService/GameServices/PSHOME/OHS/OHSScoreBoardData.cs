@@ -38,7 +38,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 db.Database.Migrate();
                 return await db.Set<OHSScoreboardEntry>()
                 .Where(x => x.ExtraData1 == _gameproject)
-                .OrderByDescending(e => e.Score)
+                .OrderByDescending(e => Math.Abs(e.Score))
                 .Take(max)
                 .ToListAsync().ConfigureAwait(false);
             }
@@ -51,7 +51,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 db.Database.Migrate();
                 return await db.Set<OHSScoreboardEntry>()
                 .Where(x => x.ExtraData1 == _gameproject)
-                .OrderByDescending(e => e.Score)
+                .OrderByDescending(e => Math.Abs(e.Score))
                 .Skip(start - 1) // skip entries before the page
                 .Take(count) // take the requested number
                 .ToListAsync()
@@ -110,13 +110,13 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                     return await db.Set<OHSScoreboardEntry>()
                         .Where(x => x.ExtraData1 == _gameproject)
                         .Where(e => e.UpdatedAt >= today)
-                        .OrderByDescending(e => e.Score)
+                        .OrderByDescending(e => Math.Abs(e.Score))
                         .ToListAsync()
                         .ConfigureAwait(false);
                 return await db.Set<OHSScoreboardEntry>()
                         .Where(x => x.ExtraData1 == _gameproject)
                         .Where(e => e.UpdatedAt >= today)
-                        .OrderByDescending(e => e.Score)
+                        .OrderByDescending(e => Math.Abs(e.Score))
                         .Take(max)
                         .ToListAsync()
                         .ConfigureAwait(false);
@@ -133,12 +133,12 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 if (max == -1)
                     return await db.Set<OHSScoreboardEntry>()
                     .Where(e => e.UpdatedAt >= weekStart)
-                    .OrderByDescending(e => e.Score)
+                    .OrderByDescending(e => Math.Abs(e.Score))
                     .ToListAsync()
                     .ConfigureAwait(false);
                 return await db.Set<OHSScoreboardEntry>()
                     .Where(e => e.UpdatedAt >= weekStart)
-                    .OrderByDescending(e => e.Score)
+                    .OrderByDescending(e => Math.Abs(e.Score))
                     .Take(max)
                     .ToListAsync()
                     .ConfigureAwait(false);
@@ -154,7 +154,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 return await db.Set<OHSScoreboardEntry>()
                         .Where(x => x.ExtraData1 == _gameproject)
                         .Where(e => e.UpdatedAt >= today)
-                        .OrderByDescending(e => e.Score)
+                        .OrderByDescending(e => Math.Abs(e.Score))
                         .Skip(start - 1) // skip entries before the page
                         .Take(count) // take the requested number
                         .ToListAsync()
@@ -173,9 +173,9 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 return await db.Set<OHSScoreboardEntry>()
                        .Where(x => x.ExtraData1 == _gameproject)
                        .Where(e => e.UpdatedAt >= weekStart)
-                       .OrderByDescending(e => e.Score)
+                       .OrderByDescending(e => Math.Abs(e.Score))
                        .Skip(start - 1) // skip entries before the page
-                        .Take(count) // take the requested number
+                       .Take(count) // take the requested number
                        .ToListAsync()
                        .ConfigureAwait(false);
             }
@@ -208,14 +208,19 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             }
         }
 
-        public async Task<string> SerializeToStringEx(string gameName, string user, int max = 20)
+        public async Task<string> SerializeToStringEx(string gameName, string user, int max = 20, bool reverse = false)
         {
             int scoreforuser = 0;
             int i = 1;
 
             Dictionary<int, Dictionary<string, object>> luaTable = new Dictionary<int, Dictionary<string, object>>();
 
-            foreach (var entry in await GetTopScoresAsync(max).ConfigureAwait(false))
+            var entries = await GetTopScoresAsync(max).ConfigureAwait(false);
+
+            if (reverse)
+                entries.Reverse();
+
+            foreach (var entry in entries)
             {
                 luaTable.Add(i, new Dictionary<string, object>
                 {
@@ -232,14 +237,19 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             return $"{{ [\"user\"] = {{ [\"score\"] = {scoreforuser} }}, [\"entries\"] = {FormatScoreBoardLuaTable(luaTable)} }}";
         }
 
-        public async Task<string> SerializeToStringEx(string gameName, string user, int start, int count)
+        public async Task<string> SerializeToStringEx(string gameName, string user, int start, int count, bool reverse = false)
         {
             int scoreForUser = 0;
             int i = 1;
 
             Dictionary<int, Dictionary<string, object>> luaTable = new Dictionary<int, Dictionary<string, object>>();
 
-            foreach (var entry in await GetTopScoresAsyncEx(start, count).ConfigureAwait(false))
+            var entries = await GetTopScoresAsyncEx(start, count).ConfigureAwait(false);
+
+            if (reverse)
+                entries.Reverse();
+
+            foreach (var entry in entries)
             {
                 luaTable.Add(i, new Dictionary<string, object>
                 {
@@ -256,14 +266,19 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             return $"{{ [\"user\"] = {{ [\"score\"] = {scoreForUser} }}, [\"entries\"] = {FormatScoreBoardLuaTable(luaTable)} }}";
         }
 
-        public async Task<string> SerializeToStringDailyEx(string gameName, string user, int start, int count)
+        public async Task<string> SerializeToStringDailyEx(string gameName, string user, int start, int count, bool reverse = false)
         {
             int scoreForUser = 0;
             int i = 1;
 
             Dictionary<int, Dictionary<string, object>> luaTable = new Dictionary<int, Dictionary<string, object>>();
 
-            foreach (var entry in await GetTodayScoresAsyncEx(start, count).ConfigureAwait(false))
+            var entries = await GetTodayScoresAsyncEx(start, count).ConfigureAwait(false);
+
+            if (reverse)
+                entries.Reverse();
+
+            foreach (var entry in entries)
             {
                 luaTable.Add(i, new Dictionary<string, object>
                 {
@@ -280,14 +295,19 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             return $"{{ [\"user\"] = {{ [\"score\"] = {scoreForUser} }}, [\"entries\"] = {FormatScoreBoardLuaTable(luaTable)} }}";
         }
 
-        public async Task<string> SerializeToWeeklyStringEx(string gameName, string user, int start, int count)
+        public async Task<string> SerializeToWeeklyStringEx(string gameName, string user, int start, int count, bool reverse = false)
         {
             int scoreForUser = 0;
             int i = 1;
 
             Dictionary<int, Dictionary<string, object>> luaTable = new Dictionary<int, Dictionary<string, object>>();
 
-            foreach (var entry in await GetCurrentWeekScoresAsyncEx(start, count).ConfigureAwait(false))
+            var entries = await GetCurrentWeekScoresAsyncEx(start, count).ConfigureAwait(false);
+
+            if (reverse)
+                entries.Reverse();
+
+            foreach (var entry in entries)
             {
                 luaTable.Add(i, new Dictionary<string, object>
                 {
