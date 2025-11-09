@@ -35,7 +35,7 @@ namespace Horizon.Extension.PlayStationHome
                     {
                         HubPathernOffset = offset;
 #if DEBUG
-                        LoggerAccessor.LogInfo($"[DME] - TcpServer - Found HUB protocol version: {version} at offset {offset}");
+                        LoggerAccessor.LogInfo($"[DME] - Found HUB protocol version: {version} at offset: {offset}");
 #endif
                         modifyMessagePerClient = (msg, client) =>
                         {
@@ -48,8 +48,10 @@ namespace Horizon.Extension.PlayStationHome
                 if (HubPathernOffset != -1) // Hub command.
                 {
                     string? value;
+                    int messageId = BitConverter.IsLittleEndian ? EndianUtils.ReverseInt(BitConverter.ToInt32(MessagePayload, HubPathernOffset + 4)) : BitConverter.ToInt32(MessagePayload, HubPathernOffset + 4);
+                    var reservedHubMessageId = (ReservedHubMessageId)messageId;
 
-                    switch ((ReservedHubMessageId)(BitConverter.IsLittleEndian ? EndianUtils.ReverseInt(BitConverter.ToInt32(MessagePayload, HubPathernOffset + 4)) : BitConverter.ToInt32(MessagePayload, HubPathernOffset + 4)))
+                    switch (reservedHubMessageId)
                     {
                         case ReservedHubMessageId.HUB_ONLINE_MSG_IGA_FUNCTION:
                             if (!string.IsNullOrEmpty(HomeUserEntry) && MediusClass.Settings.PlaystationHomeUsersServersAccessList.TryGetValue(HomeUserEntry, out value) && !string.IsNullOrEmpty(value))
@@ -60,7 +62,8 @@ namespace Horizon.Extension.PlayStationHome
                                     case "IGA":
                                         break;
                                     default:
-                                        LoggerAccessor.LogError($"[DME] - TcpServer - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED IGA COMMAND) - DmeId:{client.DmeId}");
+                                        LoggerAccessor.LogError($"[DME] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED IGA COMMAND) - DmeId:{client.DmeId}");
+
                                         return true;
                                 }
                             }
@@ -75,7 +78,7 @@ namespace Horizon.Extension.PlayStationHome
                                         break;
                                 }
 
-                                LoggerAccessor.LogError($"[DME] - TcpServer - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED IGA COMMAND - {SupplementalMessage}) - DmeId:{client.DmeId}");
+                                LoggerAccessor.LogError($"[DME] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED IGA COMMAND - {SupplementalMessage}) - DmeId:{client.DmeId}");
 
                                 return true;
                             }
@@ -88,16 +91,28 @@ namespace Horizon.Extension.PlayStationHome
                                     case "ADMIN":
                                         break;
                                     default:
-                                        LoggerAccessor.LogError($"[DME] - TcpServer - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED REXEC COMMAND) - DmeId:{client.DmeId}");
+                                        LoggerAccessor.LogError($"[DME] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED REXEC COMMAND) - DmeId:{client.DmeId}");
+
                                         return true;
                                 }
                             }
                             else
                             {
-                                LoggerAccessor.LogError($"[DME] - TcpServer - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED REXEC COMMAND) - DmeId:{client.DmeId}");
+                                LoggerAccessor.LogError($"[DME] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED REXEC COMMAND) - DmeId:{client.DmeId}");
 
                                 return true;
                             }
+                            break;
+                        default:
+                            if (Enum.IsDefined(typeof(ReservedHubMessageId), messageId))
+                            {
+#if DEBUG
+                                LoggerAccessor.LogInfo($"[DME] - ReservedHubMessageId: {reservedHubMessageId}");
+#endif
+                            }
+                            else
+                                LoggerAccessor.LogWarn($"[DME] - Unknown HubMessageId: {messageId}");
+
                             break;
                     }
                 }
@@ -125,7 +140,7 @@ namespace Horizon.Extension.PlayStationHome
                     {
                         HubPathernOffset = offset;
 #if DEBUG
-                        LoggerAccessor.LogInfo($"[MLS] - Found HUB protocol version: {version} at offset {offset}");
+                        LoggerAccessor.LogInfo($"[MLS] - Found HUB protocol version: {version} at offset: {offset}");
 #endif
                         var target = MediusClass.Manager.GetClientByAccountId(binaryMessage.TargetAccountID, data.ClientObject.ApplicationId);
                         if (target != null)
@@ -137,8 +152,10 @@ namespace Horizon.Extension.PlayStationHome
                 if (HubPathernOffset != -1) // Hub command.
                 {
                     string? value;
+                    int messageId = BitConverter.IsLittleEndian ? EndianUtils.ReverseInt(BitConverter.ToInt32(HubMessagePayload, HubPathernOffset + 4)) : BitConverter.ToInt32(HubMessagePayload, HubPathernOffset + 4);
+                    var reservedHubMessageId = (ReservedHubMessageId)messageId;
 
-                    switch ((ReservedHubMessageId)(BitConverter.IsLittleEndian ? EndianUtils.ReverseInt(BitConverter.ToInt32(HubMessagePayload, HubPathernOffset + 4)) : BitConverter.ToInt32(HubMessagePayload, HubPathernOffset + 4)))
+                    switch (reservedHubMessageId)
                     {
                         case ReservedHubMessageId.HUB_ONLINE_MSG_IGA_FUNCTION:
                             if (MediusClass.Settings.PlaystationHomeUsersServersAccessList.TryGetValue(HomeUserEntry, out value) && !string.IsNullOrEmpty(value))
@@ -149,7 +166,7 @@ namespace Horizon.Extension.PlayStationHome
                                     case "IGA":
                                         break;
                                     default:
-                                        string anticheatMsg = $"[SECURITY] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED IGA COMMAND) - User:{HomeUserEntry} CID:{data.MachineId}";
+                                        string anticheatMsg = $"[MLS] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED IGA COMMAND) - User:{HomeUserEntry} CID:{data.MachineId}";
 
                                         _ = data.ClientObject!.CurrentChannel?.BroadcastSystemMessage(data.ClientObject.CurrentChannel.LocalClients.Where(client => client != data.ClientObject), anticheatMsg, byte.MaxValue);
 
@@ -169,7 +186,7 @@ namespace Horizon.Extension.PlayStationHome
                                         break;
                                 }
 
-                                string anticheatMsg = $"[SECURITY] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED IGA COMMAND - {SupplementalMessage}) - User:{HomeUserEntry} CID:{data.MachineId}";
+                                string anticheatMsg = $"[MLS] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED IGA COMMAND - {SupplementalMessage}) - User:{HomeUserEntry} CID:{data.MachineId}";
 
                                 _ = data.ClientObject!.CurrentChannel?.BroadcastSystemMessage(data.ClientObject.CurrentChannel.LocalClients.Where(client => client != data.ClientObject), anticheatMsg, byte.MaxValue);
 
@@ -186,7 +203,7 @@ namespace Horizon.Extension.PlayStationHome
                                     case "ADMIN":
                                         break;
                                     default:
-                                        string anticheatMsg = $"[SECURITY] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED REXEC COMMAND) - User:{HomeUserEntry} CID:{data.MachineId}";
+                                        string anticheatMsg = $"[MLS] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED REXEC COMMAND) - User:{HomeUserEntry} CID:{data.MachineId}";
 
                                         _ = data.ClientObject!.CurrentChannel?.BroadcastSystemMessage(data.ClientObject.CurrentChannel.LocalClients.Where(client => client != data.ClientObject), anticheatMsg, byte.MaxValue);
 
@@ -197,7 +214,7 @@ namespace Horizon.Extension.PlayStationHome
                             }
                             else
                             {
-                                string anticheatMsg = $"[SECURITY] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED REXEC COMMAND) - User:{HomeUserEntry} CID:{data.MachineId}";
+                                string anticheatMsg = $"[MLS] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORISED REXEC COMMAND) - User:{HomeUserEntry} CID:{data.MachineId}";
 
                                 _ = data.ClientObject!.CurrentChannel?.BroadcastSystemMessage(data.ClientObject.CurrentChannel.LocalClients.Where(client => client != data.ClientObject), anticheatMsg, byte.MaxValue);
 
@@ -205,6 +222,17 @@ namespace Horizon.Extension.PlayStationHome
 
                                 return Task.FromResult(true);
                             }
+                            break;
+                        default:
+                            if (Enum.IsDefined(typeof(ReservedHubMessageId), messageId))
+                            {
+#if DEBUG
+                                LoggerAccessor.LogInfo($"[MLS] - ReservedHubMessageId: {reservedHubMessageId}");
+#endif
+                            }
+                            else
+                                LoggerAccessor.LogWarn($"[MLS] - Unknown HubMessageId: {messageId}");
+
                             break;
                     }
                 }

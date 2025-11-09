@@ -1,6 +1,6 @@
 ﻿namespace HorizonService.PlaystationHomePlugin.Models
 {
-    public enum ReservedHubMessageId : sbyte
+    public enum ReservedHubMessageId : int
     {
         HUB_ONLINE_MSG_IGA_FUNCTION = -0x55,
         HUB_ONLINE_MSG_SILLY_AVATAR = -0x54,
