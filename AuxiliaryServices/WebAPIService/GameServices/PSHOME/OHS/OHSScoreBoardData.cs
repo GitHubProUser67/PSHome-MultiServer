@@ -38,7 +38,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 db.Database.Migrate();
                 return await db.Set<OHSScoreboardEntry>()
                 .Where(x => x.ExtraData1 == _gameproject)
-                .OrderByDescending(e => Math.Abs(e.Score))
+                .OrderByDescending(e => e.Score)
                 .Take(max)
                 .ToListAsync().ConfigureAwait(false);
             }
@@ -51,7 +51,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 db.Database.Migrate();
                 return await db.Set<OHSScoreboardEntry>()
                 .Where(x => x.ExtraData1 == _gameproject)
-                .OrderByDescending(e => Math.Abs(e.Score))
+                .OrderByDescending(e => e.Score)
                 .Skip(start - 1) // skip entries before the page
                 .Take(count) // take the requested number
                 .ToListAsync()
@@ -110,13 +110,13 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                     return await db.Set<OHSScoreboardEntry>()
                         .Where(x => x.ExtraData1 == _gameproject)
                         .Where(e => e.UpdatedAt >= today)
-                        .OrderByDescending(e => Math.Abs(e.Score))
+                        .OrderByDescending(e => e.Score)
                         .ToListAsync()
                         .ConfigureAwait(false);
                 return await db.Set<OHSScoreboardEntry>()
                         .Where(x => x.ExtraData1 == _gameproject)
                         .Where(e => e.UpdatedAt >= today)
-                        .OrderByDescending(e => Math.Abs(e.Score))
+                        .OrderByDescending(e => e.Score)
                         .Take(max)
                         .ToListAsync()
                         .ConfigureAwait(false);
@@ -132,13 +132,15 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 var weekStart = now.Date.AddDays(-((7 + (now.DayOfWeek - DayOfWeek.Monday)) % 7)); // Monday 00:00 UTC
                 if (max == -1)
                     return await db.Set<OHSScoreboardEntry>()
+                    .Where(x => x.ExtraData1 == _gameproject)
                     .Where(e => e.UpdatedAt >= weekStart)
-                    .OrderByDescending(e => Math.Abs(e.Score))
+                    .OrderByDescending(e => e.Score)
                     .ToListAsync()
                     .ConfigureAwait(false);
                 return await db.Set<OHSScoreboardEntry>()
+                    .Where(x => x.ExtraData1 == _gameproject)
                     .Where(e => e.UpdatedAt >= weekStart)
-                    .OrderByDescending(e => Math.Abs(e.Score))
+                    .OrderByDescending(e => e.Score)
                     .Take(max)
                     .ToListAsync()
                     .ConfigureAwait(false);
@@ -154,7 +156,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 return await db.Set<OHSScoreboardEntry>()
                         .Where(x => x.ExtraData1 == _gameproject)
                         .Where(e => e.UpdatedAt >= today)
-                        .OrderByDescending(e => Math.Abs(e.Score))
+                        .OrderByDescending(e => e.Score)
                         .Skip(start - 1) // skip entries before the page
                         .Take(count) // take the requested number
                         .ToListAsync()
@@ -173,7 +175,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 return await db.Set<OHSScoreboardEntry>()
                        .Where(x => x.ExtraData1 == _gameproject)
                        .Where(e => e.UpdatedAt >= weekStart)
-                       .OrderByDescending(e => Math.Abs(e.Score))
+                       .OrderByDescending(e => e.Score)
                        .Skip(start - 1) // skip entries before the page
                        .Take(count) // take the requested number
                        .ToListAsync()

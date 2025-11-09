@@ -15,6 +15,9 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 {
     public class Leaderboard
     {
+        // Skip the filler on said project as they can mess-up the leaderboards (some relies on negative scores).
+        private static string[] _fillerProjectSkip = new string[] { "sodium_racer" };
+
         private static Dictionary<string, OHSScoreBoardData> _leaderboards = new Dictionary<string, OHSScoreBoardData>();
 
         public static string Levelboard_GetAll(string project, int game, bool levelboard)
@@ -308,7 +311,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             OHSScoreBoardData lb;
             lock (_leaderboards)
             {
-                InitializeLeaderboard(tablekey);
+                InitializeLeaderboard(tablekey, !_fillerProjectSkip.Contains(project));
                 lb = _leaderboards[tablekey];
             }
 
@@ -369,7 +372,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
                     lock (_leaderboards)
                     {
-                        InitializeLeaderboard(tablekey);
+                        InitializeLeaderboard(tablekey, !_fillerProjectSkip.Contains(project));
                         hasKey = _leaderboards.ContainsKey(tablekey);
                     }
 
@@ -476,7 +479,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
                     lock (_leaderboards)
                     {
-                        InitializeLeaderboard(tablekey, !(isDaily || isWeekly));
+                        InitializeLeaderboard(tablekey, !_fillerProjectSkip.Contains(project) && !(isDaily || isWeekly));
                         hasKey = _leaderboards.ContainsKey(tablekey);
                     }
 

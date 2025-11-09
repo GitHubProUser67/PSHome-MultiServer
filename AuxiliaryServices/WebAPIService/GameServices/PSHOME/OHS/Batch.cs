@@ -56,7 +56,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
                                 Directory.CreateDirectory(directorypath + $"/{project}/");
 
-                                LoggerAccessor.LogInfo($"[OHS] : Client Requested a /batch/ method, here are the details : method | {method} - project | {project} - data | {data}");
+                                LoggerAccessor.LogInfo($"[OHS] : Client Requested a /batch/ method, here are the details : method[{i}] | {method} - project | {project} - data | {data}");
 
                                 switch (method)
                                 {
