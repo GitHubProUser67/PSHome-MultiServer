@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Net;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 
@@ -87,7 +86,7 @@ namespace MultiServerLibrary.Extension
         /// <returns>A int.</returns>
         public static int GetNextVacantTCPPort(int sourceport, uint attemptcount)
         {
-            if (Environment.OSVersion.Platform == PlatformID.Win32NT || Environment.OSVersion.Platform == PlatformID.Win32S || Environment.OSVersion.Platform == PlatformID.Win32Windows)
+            if (Microsoft.Win32API.IsWindows)
             {
                 if (attemptcount == 0)
                     throw new ArgumentOutOfRangeException("attemptcount");
