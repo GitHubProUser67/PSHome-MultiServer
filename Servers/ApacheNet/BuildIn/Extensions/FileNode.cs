@@ -15,15 +15,15 @@ namespace ApacheNet.BuildIn.Extensions
 {
     public static class FileStructureFormater
     {
-        private static int ProcessorCount = Environment.ProcessorCount;
+        private static readonly int ProcessorCount = Environment.ProcessorCount;
         private static bool IsSingleProcessor => ProcessorCount == 1;
 
-        private static int ProcessorCountLeft = IsSingleProcessor ? ProcessorCount : (int)Math.Floor(ProcessorCount / 2.0);
-        private static int ProcessorCountRight = IsSingleProcessor ? ProcessorCount : ProcessorCount - ProcessorCountLeft;
+        private static readonly int ProcessorCountLeft = IsSingleProcessor ? ProcessorCount : (int)Math.Floor(ProcessorCount / 2.0);
+        private static readonly int ProcessorCountRight = IsSingleProcessor ? ProcessorCount : ProcessorCount - ProcessorCountLeft;
 
-        public static async Task<string> GetFileStructureAsync(string rootDirectory, string rootDirectoryUrl, int ServerPort, bool html, bool allowNestedReports, bool detailedReport, Dictionary<string, string> mimeTypesDic)
+        public static async Task<string?> GetFileStructureAsync(string rootDirectory, string rootDirectoryUrl, int ServerPort, bool html, bool allowNestedReports, bool detailedReport, Dictionary<string, string> mimeTypesDic)
         {
-            FileNode node = null;
+            FileNode? node = null;
 
             try
             {
@@ -46,17 +46,27 @@ namespace ApacheNet.BuildIn.Extensions
             }
             finally
             {
-                if (node != null)
-                {
-                    node.Childrens.Clear();
-                    node.Childrens = null;
-                }
+                DisposeNode(node);
             }
 
             return null;
         }
 
-        private static async Task<FileNode> CreateFileNodeAsync(string directoryPath, string httpdirectoryrequest, bool allowNestedReports, bool detailedReport, Dictionary<string, string> mimeTypesDic)
+        private static void DisposeNode(FileNode? node)
+        {
+            if (node == null) return;
+
+            if (node.Childrens != null)
+            {
+                foreach (var child in node.Childrens)
+                    DisposeNode(child);
+                node.Childrens.Clear();
+            }
+
+            (node as IDisposable)?.Dispose();
+        }
+
+        private static async Task<FileNode?> CreateFileNodeAsync(string directoryPath, string httpdirectoryrequest, bool allowNestedReports, bool detailedReport, Dictionary<string, string> mimeTypesDic)
         {
             try
             {
@@ -72,7 +82,7 @@ namespace ApacheNet.BuildIn.Extensions
                         CreationDate = directoryInfo.CreationTimeUtc,
                         Size = directoryInfo.GetLength(),
                         LastWriteTime = directoryInfo.LastWriteTimeUtc,
-                        Childrens = new ConcurrentList<FileNode>()
+                        Childrens = new ConcurrentList<FileNode?>()
                     };
                 else
                     fileNode = new FileNode()
@@ -83,7 +93,7 @@ namespace ApacheNet.BuildIn.Extensions
                         CreationDate = null,
                         Size = null,
                         LastWriteTime = directoryInfo.LastWriteTimeUtc,
-                        Childrens = new ConcurrentList<FileNode>()
+                        Childrens = new ConcurrentList<FileNode?>()
                     };
 #if NET6_0_OR_GREATER
                 await Task.WhenAll(
@@ -91,41 +101,45 @@ namespace ApacheNet.BuildIn.Extensions
                     {
                         if (!file.IsHidden())
                         {
-                            string ImgLink = null;
-                            string DescriptorText = null;
+                            string? ImgLink = null;
+                            string? DescriptorText = null;
                             string mimetype = HTTPProcessor.GetMimeType(Path.GetExtension(file.FullName), mimeTypesDic);
+                            string? directoryName = Path.GetDirectoryName(file.FullName);
+
+                            if (string.IsNullOrEmpty(directoryName))
+                                return;
 
                             // List of possible web image extensions
                             string[] imageExtensions = new string[] { "jpeg", "jpg", "png", "gif", "bmp", "tiff" };
 
                             foreach (string extension in imageExtensions)
                             {
-                                if (File.Exists(Path.Combine(Path.GetDirectoryName(file.FullName), $"{Path.GetFileNameWithoutExtension(file.FullName)}_pic.{extension}")))
+                                if (File.Exists(Path.Combine(directoryName, $"{Path.GetFileNameWithoutExtension(file.FullName)}_pic.{extension}")))
                                 {
                                     ImgLink = $"{httpdirectoryrequest}/{Path.GetFileNameWithoutExtension(file.FullName)}_pic.{extension}";
                                     break;
                                 }
                             }
 
-                            if (File.Exists(Path.Combine(Path.GetDirectoryName(file.FullName), $"{Path.GetFileNameWithoutExtension(file.FullName)}_description.txt")))
+                            if (File.Exists(Path.Combine(directoryName, $"{Path.GetFileNameWithoutExtension(file.FullName)}_description.txt")))
                                 DescriptorText = await File.ReadAllTextAsync(
-                                    Path.Combine(Path.GetDirectoryName(file.FullName),
+                                    Path.Combine(directoryName,
                                         $"{Path.GetFileNameWithoutExtension(file.FullName)}_description.txt"), cancellationToken).ConfigureAwait(false);
-                            else if (File.Exists(Path.Combine(Path.GetDirectoryName(file.FullName), $"{Path.GetFileNameWithoutExtension(file.FullName)}_description.EdgeZlib")))
+                            else if (File.Exists(Path.Combine(directoryName, $"{Path.GetFileNameWithoutExtension(file.FullName)}_description.EdgeZlib")))
                                 DescriptorText = Encoding.UTF8.GetString(
                                     Zlib.EdgeZlibDecompress(
                                         await File.ReadAllBytesAsync(
-                                            Path.Combine(Path.GetDirectoryName(file.FullName),
+                                            Path.Combine(directoryName,
                                                 $"{Path.GetFileNameWithoutExtension(file.FullName)}_description.EdgeZlib"), cancellationToken).ConfigureAwait(false)));
-                            else if (File.Exists(Path.Combine(Path.GetDirectoryName(file.FullName), $"{Path.GetFileNameWithoutExtension(file.FullName)}_desc.txt")))
+                            else if (File.Exists(Path.Combine(directoryName, $"{Path.GetFileNameWithoutExtension(file.FullName)}_desc.txt")))
                                 DescriptorText = await File.ReadAllTextAsync(
-                                    Path.Combine(Path.GetDirectoryName(file.FullName),
+                                    Path.Combine(directoryName,
                                         $"{Path.GetFileNameWithoutExtension(file.FullName)}_desc.txt"), cancellationToken).ConfigureAwait(false);
-                            else if (File.Exists(Path.Combine(Path.GetDirectoryName(file.FullName), $"{Path.GetFileNameWithoutExtension(file.FullName)}_desc.EdgeZlib")))
+                            else if (File.Exists(Path.Combine(directoryName, $"{Path.GetFileNameWithoutExtension(file.FullName)}_desc.EdgeZlib")))
                                 DescriptorText = Encoding.UTF8.GetString(
                                     Zlib.EdgeZlibDecompress(
                                         await File.ReadAllBytesAsync(
-                                            Path.Combine(Path.GetDirectoryName(file.FullName),
+                                            Path.Combine(directoryName,
                                                 $"{Path.GetFileNameWithoutExtension(file.FullName)}_desc.EdgeZlib"), cancellationToken).ConfigureAwait(false)));
 
                             switch (mimetype)
@@ -206,41 +220,45 @@ namespace ApacheNet.BuildIn.Extensions
                 {
                     if (!file.IsHidden())
                     {
-                        string ImgLink = null;
-                        string DescriptorText = null;
+                        string? ImgLink = null;
+                        string? DescriptorText = null;
                         string mimetype = HTTPProcessor.GetMimeType(Path.GetExtension(file.FullName), mimeTypesDic);
+                        string? directoryName = Path.GetDirectoryName(file.FullName);
+
+                        if (string.IsNullOrEmpty(directoryName))
+                            return;
 
                         // List of possible web image extensions
                         string[] imageExtensions = new string[] { "jpeg", "jpg", "png", "gif", "bmp", "tiff" };
 
                         foreach (string extension in imageExtensions)
                         {
-                            if (File.Exists(Path.Combine(Path.GetDirectoryName(file.FullName), $"{Path.GetFileNameWithoutExtension(file.FullName)}_pic.{extension}")))
+                            if (File.Exists(Path.Combine(directoryName, $"{Path.GetFileNameWithoutExtension(file.FullName)}_pic.{extension}")))
                             {
                                 ImgLink = $"{httpdirectoryrequest}/{Path.GetFileNameWithoutExtension(file.FullName)}_pic.{extension}";
                                 break;
                             }
                         }
 
-                        if (File.Exists(Path.Combine(Path.GetDirectoryName(file.FullName), $"{Path.GetFileNameWithoutExtension(file.FullName)}_description.txt")))
+                        if (File.Exists(Path.Combine(directoryName, $"{Path.GetFileNameWithoutExtension(file.FullName)}_description.txt")))
                             DescriptorText = File.ReadAllText(
-                                Path.Combine(Path.GetDirectoryName(file.FullName),
+                                Path.Combine(directoryName,
                                     $"{Path.GetFileNameWithoutExtension(file.FullName)}_description.txt"));
-                        else if (File.Exists(Path.Combine(Path.GetDirectoryName(file.FullName), $"{Path.GetFileNameWithoutExtension(file.FullName)}_description.EdgeZlib")))
+                        else if (File.Exists(Path.Combine(directoryName, $"{Path.GetFileNameWithoutExtension(file.FullName)}_description.EdgeZlib")))
                             DescriptorText = Encoding.UTF8.GetString(
                                 await CompressionLibrary.Edge.Zlib.EdgeZlibDecompress(
                                     File.ReadAllBytes(
-                                        Path.Combine(Path.GetDirectoryName(file.FullName),
+                                        Path.Combine(directoryName,
                                             $"{Path.GetFileNameWithoutExtension(file.FullName)}_description.EdgeZlib"))).ConfigureAwait(false));
-                        else if (File.Exists(Path.Combine(Path.GetDirectoryName(file.FullName), $"{Path.GetFileNameWithoutExtension(file.FullName)}_desc.txt")))
+                        else if (File.Exists(Path.Combine(directoryName, $"{Path.GetFileNameWithoutExtension(file.FullName)}_desc.txt")))
                             DescriptorText = File.ReadAllText(
-                                Path.Combine(Path.GetDirectoryName(file.FullName),
+                                Path.Combine(directoryName,
                                     $"{Path.GetFileNameWithoutExtension(file.FullName)}_desc.txt"));
-                        else if (File.Exists(Path.Combine(Path.GetDirectoryName(file.FullName), $"{Path.GetFileNameWithoutExtension(file.FullName)}_desc.EdgeZlib")))
+                        else if (File.Exists(Path.Combine(directoryName, $"{Path.GetFileNameWithoutExtension(file.FullName)}_desc.EdgeZlib")))
                             DescriptorText = Encoding.UTF8.GetString(
                                 await CompressionLibrary.Edge.Zlib.EdgeZlibDecompress(
                                     File.ReadAllBytes(
-                                        Path.Combine(Path.GetDirectoryName(file.FullName),
+                                        Path.Combine(directoryName,
                                             $"{Path.GetFileNameWithoutExtension(file.FullName)}_desc.EdgeZlib"))).ConfigureAwait(false));
 
                         switch (mimetype)
@@ -515,7 +533,7 @@ namespace ApacheNet.BuildIn.Extensions
             return sb.ToString();
         }
 
-        private static string GenerateFileNodeHtml(FileNode node, int level, int ServerPort, Dictionary<string, string> mimeTypesDic)
+        private static string GenerateFileNodeHtml(FileNode? node, int level, int ServerPort, Dictionary<string, string> mimeTypesDic)
         {
             if (node == null)
                 return "<h3>FileNode was null!</h3>";
@@ -582,42 +600,45 @@ namespace ApacheNet.BuildIn.Extensions
                 sb.AppendLine($"<pre>{HttpUtility.HtmlEncode(node.Content)}</pre>");
                 sb.AppendLine("</div>");
             }
-            else if (node.Type.StartsWith("image/"))
-                sb.AppendLine($"<img src='{HttpUtility.HtmlEncode(node.Link)}' class='file-image' alt='{HttpUtility.HtmlEncode(node.Name)}'>");
-            else if (node.Type.StartsWith("video/"))
+            else if (!string.IsNullOrEmpty(node.Type))
             {
-                string fileFormat = HTTPProcessor.GetExtensionFromMime(node.Type, mimeTypesDic).Substring(1).ToLower();
-                bool isWebVideoFriendly = fileFormat == "mp4" || fileFormat == "webm";
-                sb.AppendLine("<div class='file-container'>");
-                if (isWebVideoFriendly)
+                if (node.Type.StartsWith("image/"))
+                    sb.AppendLine($"<img src='{HttpUtility.HtmlEncode(node.Link)}' class='file-image' alt='{HttpUtility.HtmlEncode(node.Name)}'>");
+                else if (node.Type.StartsWith("video/"))
                 {
-                    sb.AppendLine("<video controls class='file-video'>");
-                    sb.AppendLine($"<source src='{HttpUtility.HtmlEncode(node.Link)}' type='{node.Type}'>");
-                    sb.AppendLine("Your browser does not support the video tag.");
-                    sb.AppendLine("</video>");
+                    string fileFormat = HTTPProcessor.GetExtensionFromMime(node.Type, mimeTypesDic).Substring(1).ToLower();
+                    bool isWebVideoFriendly = fileFormat == "mp4" || fileFormat == "webm";
+                    sb.AppendLine("<div class='file-container'>");
+                    if (isWebVideoFriendly)
+                    {
+                        sb.AppendLine("<video controls class='file-video'>");
+                        sb.AppendLine($"<source src='{HttpUtility.HtmlEncode(node.Link)}' type='{node.Type}'>");
+                        sb.AppendLine("Your browser does not support the video tag.");
+                        sb.AppendLine("</video>");
+                    }
+                    sb.AppendLine("</div>");
                 }
-                sb.AppendLine("</div>");
-            }
-            else if (node.Type.StartsWith("audio/"))
-            {
-                sb.AppendLine("<div class='file-container'>");
-                sb.AppendLine("<audio controls class='file-audio'>");
-                sb.AppendLine($"<source src='{HttpUtility.HtmlEncode(node.Link)}' type='{node.Type}'>");
-                sb.AppendLine("Your browser does not support the audio tag.");
-                sb.AppendLine("</audio>");
-                sb.AppendLine("</div>");
-            }
-            else if (node.Type == "application/pdf")
-            {
-                sb.AppendLine("<div class='file-container pdf-container'>");
-                sb.AppendLine($"<iframe src='{HttpUtility.HtmlEncode(node.Link)}' class='file-pdf'></iframe>");
-                sb.AppendLine("</div>");
+                else if (node.Type.StartsWith("audio/"))
+                {
+                    sb.AppendLine("<div class='file-container'>");
+                    sb.AppendLine("<audio controls class='file-audio'>");
+                    sb.AppendLine($"<source src='{HttpUtility.HtmlEncode(node.Link)}' type='{node.Type}'>");
+                    sb.AppendLine("Your browser does not support the audio tag.");
+                    sb.AppendLine("</audio>");
+                    sb.AppendLine("</div>");
+                }
+                else if (node.Type == "application/pdf")
+                {
+                    sb.AppendLine("<div class='file-container pdf-container'>");
+                    sb.AppendLine($"<iframe src='{HttpUtility.HtmlEncode(node.Link)}' class='file-pdf'></iframe>");
+                    sb.AppendLine("</div>");
+                }
             }
 
             if (hasChildrens)
             {
-                sb.AppendLine($"<ul id='{nodeId}' class='{(isRoot ? "" : "hidden")}' > ");
-                foreach (var child in node.Childrens.OrderBy(x => x.Name))
+                sb.AppendLine($"<ul id='{nodeId}' class='{(isRoot ? string.Empty: "hidden")}' > ");
+                foreach (var child in node.Childrens!.OrderBy(x => x?.Name))
                 {
                     sb.AppendLine("<li>");
                     sb.Append(GenerateFileNodeHtml(child, level + 1, ServerPort, mimeTypesDic)); // Recursive call for child nodes
@@ -634,16 +655,16 @@ namespace ApacheNet.BuildIn.Extensions
 
     public class FileNode
     {
-        public string Name { get; set; }
-        public string Link { get; set; }
-        public string Image { get; set; }
-        public string Descriptor { get; set; }
-        public string Content { get; set; }
-        public string Type { get; set; }
+        public string? Name { get; set; }
+        public string? Link { get; set; }
+        public string? Image { get; set; }
+        public string? Descriptor { get; set; }
+        public string? Content { get; set; }
+        public string? Type { get; set; }
         public long? Size { get; set; }
         public DateTime? CreationDate { get; set; }
         public DateTime LastWriteTime { get; set; }
-        public ConcurrentList<FileNode> Childrens { get; set; }
+        public ConcurrentList<FileNode?>? Childrens { get; set; }
 
         public override string ToString()
         {
@@ -666,6 +687,6 @@ namespace ApacheNet.BuildIn.Extensions
 
     public class FileStructure
     {
-        public FileNode Root { get; set; }
+        public FileNode? Root { get; set; }
     }
 }

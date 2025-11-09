@@ -96,7 +96,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             return dataforohs;
         }
 
-        public static string Set(byte[] PostData, string ContentType, string directorypath, string batchparams, bool global, int game)
+        public static string Set(byte[] PostData, string ContentType, string directorypath, string batchparams, bool global, int game, bool userSetIfEmpty = false)
         {
             string dataforohs = null;
             string output = null;
@@ -217,8 +217,11 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                                         JToken existingKey = jObject.DescendantsAndSelf().FirstOrDefault(t => t.Path == (string)key);
 
                                         if (existingKey != null && value != null)
-                                            // Update the value of the existing key
-                                            existingKey.Replace(JToken.FromObject(value));
+										{
+											if (!userSetIfEmpty || existingKey.IsEmpty())
+											    // Update the value of the existing key
+                                                existingKey.Replace(JToken.FromObject(value));
+										}
                                         else if (key != null && value != null)
                                         {
                                             JToken KeyEntry = jObject["key"];
@@ -239,13 +242,11 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                                 if (keystring != null && user != null && value != null)
                                 {
                                     // Create a new profile with the key field
-                                    OHSUserProfile newProfile = new OHSUserProfile
+                                    File.WriteAllText(profiledatastring, JsonConvert.SerializeObject(new OHSUserProfile
                                     {
                                         user = user.ToString(),
                                         key = new JObject { { keystring, JToken.FromObject(value) } }
-                                    };
-
-                                    File.WriteAllText(profiledatastring, JsonConvert.SerializeObject(newProfile));
+                                    }));
                                 }
                             }
 
@@ -507,6 +508,10 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                                 {
                                     switch (ohsKey)
                                     {
+                                        case "torchLevel":
+                                            if (directorypath.Contains("uncharted2_torchgame"))
+                                                output = "1";
+                                            break;
                                         case "last_logon":
                                             if (directorypath.Contains("sodium_blimp"))
                                                 output = "\"" + DateTimeUtils.GetCurrentUnixTimestampAsString() + "\"";

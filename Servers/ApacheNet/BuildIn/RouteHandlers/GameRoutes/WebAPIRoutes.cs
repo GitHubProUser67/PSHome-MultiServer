@@ -645,7 +645,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
                                         {
                                             ("/SCEA/op4_", false),
                                             ("/uncharted2", true),
-                                            ("/Infamous/", false),
+                                            ("/SuckerPunch/", false),
                                             ("/warhawk_shooter/", false),
                                             ("/SCEA/WorldDomination/", false)
                                         }

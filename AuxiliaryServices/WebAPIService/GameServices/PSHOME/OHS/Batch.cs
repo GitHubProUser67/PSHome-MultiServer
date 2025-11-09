@@ -94,8 +94,10 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                                         resultfromcommand = User.GetMany(PostData, ContentType, directorypath + $"/{project}/", data, false, game);
                                         break;
                                     case "user/set/":
-                                    case "user/setifempty/":
                                         resultfromcommand = User.Set(PostData, ContentType, directorypath + $"/{project}/", data, false, game);
+                                        break;
+                                    case "user/setifempty/":
+                                        resultfromcommand = User.Set(PostData, ContentType, directorypath + $"/{project}/", data, false, game, true);
                                         break;
                                     case "user/clearentry/":
                                         resultfromcommand = User.ClearEntry(PostData, ContentType, directorypath + $"/{project}/", data, game);

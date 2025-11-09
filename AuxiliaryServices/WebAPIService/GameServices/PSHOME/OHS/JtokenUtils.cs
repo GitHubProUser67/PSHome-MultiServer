@@ -60,5 +60,15 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
             return null;
         }
+
+        public static bool IsEmpty(this JToken token)
+        {
+            return token == null ||
+                   token.Type == JTokenType.Null ||
+                   (token.Type == JTokenType.String && string.IsNullOrWhiteSpace(token.ToString())) ||
+                   (token.Type == JTokenType.Array && !token.HasValues) ||
+                   (token.Type == JTokenType.Object && !token.HasValues) ||
+                   (token.Type == JTokenType.Property && IsEmpty(((JProperty)token).Value));
+        }
     }
 }
