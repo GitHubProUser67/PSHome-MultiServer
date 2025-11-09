@@ -285,8 +285,6 @@ namespace Horizon.DME
         /// </summary>
         private static void RefreshConfig()
         {
-            RefreshServerIp();
-
             // Load settings
             if (File.Exists(CONFIG_FILE))
                 // Populate existing object
@@ -312,6 +310,9 @@ namespace Horizon.DME
 
                 File.WriteAllText(CONFIG_FILE ?? Directory.GetCurrentDirectory() + "/static/dme.json", JsonConvert.SerializeObject(Settings, Formatting.Indented));
             }
+			
+			// Determine server ip
+            RefreshServerIp();
 
             // Update default rsa key
             LIBRARY.Pipeline.Attribute.ScertClientAttribute.DefaultRsaAuthKey = Settings.DefaultKey;
