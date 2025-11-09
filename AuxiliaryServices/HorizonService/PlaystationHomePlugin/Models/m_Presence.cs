@@ -1,6 +1,6 @@
-﻿namespace Horizon.Extension.PlayStationHome.Models
+﻿namespace HorizonService.PlaystationHomePlugin.Models
 {
-    internal class m_Presence
+    public class m_Presence
     {
         public enum ProtocolVersion : byte
         {

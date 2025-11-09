@@ -1,5 +1,4 @@
 using CustomLogger;
-using Horizon.Extension.PlayStationHome.Models;
 using Horizon.HTTPSERVICE;
 using Horizon.LIBRARY.Database.Models;
 using Horizon.LIBRARY.libAntiCheat;
@@ -11,6 +10,7 @@ using Horizon.RT.Models;
 using Horizon.SERVER.Config;
 using Horizon.SERVER.Extension.PlayStationHome;
 using Horizon.SERVER.Medius;
+using HorizonService.PlaystationHomePlugin.Models;
 using MultiServerLibrary.Extension;
 using Newtonsoft.Json;
 using System.Net;

@@ -4,9 +4,10 @@ using Horizon.DME.Models;
 using Horizon.MUM.Models;
 using Horizon.RT.Models;
 using Horizon.SERVER;
+using HorizonService.PlaystationHomePlugin.Models;
 using MultiServerLibrary.Extension;
-using static Horizon.Extension.PlayStationHome.Models.m_Presence;
 using static Horizon.SERVER.Medius.BaseMediusComponent;
+using static HorizonService.PlaystationHomePlugin.Models.m_Presence;
 
 namespace Horizon.Extension.PlayStationHome
 {
@@ -48,9 +49,9 @@ namespace Horizon.Extension.PlayStationHome
                 {
                     string? value;
 
-                    switch (BitConverter.IsLittleEndian ? EndianUtils.ReverseInt(BitConverter.ToInt32(MessagePayload, HubPathernOffset + 4)) : BitConverter.ToInt32(MessagePayload, HubPathernOffset + 4))
+                    switch ((ReservedHubMessageId)(BitConverter.IsLittleEndian ? EndianUtils.ReverseInt(BitConverter.ToInt32(MessagePayload, HubPathernOffset + 4)) : BitConverter.ToInt32(MessagePayload, HubPathernOffset + 4)))
                     {
-                        case -85: // IGA
+                        case ReservedHubMessageId.HUB_ONLINE_MSG_IGA_FUNCTION:
                             if (!string.IsNullOrEmpty(HomeUserEntry) && MediusClass.Settings.PlaystationHomeUsersServersAccessList.TryGetValue(HomeUserEntry, out value) && !string.IsNullOrEmpty(value))
                             {
                                 switch (value)
@@ -79,7 +80,7 @@ namespace Horizon.Extension.PlayStationHome
                                 return true;
                             }
                             break;
-                        case -27: // REXEC
+                        case ReservedHubMessageId.HUB_ONLINE_MSG_COMMON_REXEC:
                             if (!string.IsNullOrEmpty(HomeUserEntry) && MediusClass.Settings.PlaystationHomeUsersServersAccessList.TryGetValue(HomeUserEntry, out value) && !string.IsNullOrEmpty(value))
                             {
                                 switch (value)
@@ -137,9 +138,9 @@ namespace Horizon.Extension.PlayStationHome
                 {
                     string? value;
 
-                    switch (BitConverter.IsLittleEndian ? EndianUtils.ReverseInt(BitConverter.ToInt32(HubMessagePayload, HubPathernOffset + 4)) : BitConverter.ToInt32(HubMessagePayload, HubPathernOffset + 4))
+                    switch ((ReservedHubMessageId)(BitConverter.IsLittleEndian ? EndianUtils.ReverseInt(BitConverter.ToInt32(HubMessagePayload, HubPathernOffset + 4)) : BitConverter.ToInt32(HubMessagePayload, HubPathernOffset + 4)))
                     {
-                        case -85: // IGA
+                        case ReservedHubMessageId.HUB_ONLINE_MSG_IGA_FUNCTION:
                             if (MediusClass.Settings.PlaystationHomeUsersServersAccessList.TryGetValue(HomeUserEntry, out value) && !string.IsNullOrEmpty(value))
                             {
                                 switch (value)
@@ -177,7 +178,7 @@ namespace Horizon.Extension.PlayStationHome
                                 return Task.FromResult(true);
                             }
                             break;
-                        case -27: // REXEC
+                        case ReservedHubMessageId.HUB_ONLINE_MSG_COMMON_REXEC:
                             if (MediusClass.Settings.PlaystationHomeUsersServersAccessList.TryGetValue(HomeUserEntry, out value) && !string.IsNullOrEmpty(value))
                             {
                                 switch (value)

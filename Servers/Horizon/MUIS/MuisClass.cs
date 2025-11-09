@@ -1,11 +1,11 @@
 using CustomLogger;
-using Horizon.Extension.PlayStationHome.Models;
 using Horizon.HTTPSERVICE;
 using Horizon.LIBRARY.Database.Models;
 using Horizon.MUIS.Config;
 using Horizon.MUM;
 using Horizon.PluginManager;
 using Horizon.RT.Models;
+using HorizonService.PlaystationHomePlugin.Models;
 using MultiServerLibrary.Extension;
 using Newtonsoft.Json;
 using System.Net;

@@ -8,7 +8,7 @@ using Horizon.RT.Models;
 using System.Collections.Concurrent;
 using System.Net;
 using MultiServerLibrary.Extension;
-using Horizon.Extension.PlayStationHome.Models;
+using HorizonService.PlaystationHomePlugin.Models;
 
 namespace Horizon.MUM.Models
 {
