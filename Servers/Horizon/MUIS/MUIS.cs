@@ -172,7 +172,7 @@ namespace Horizon.MUIS
                         }
                         catch (Exception e)
                         {
-                            LoggerAccessor.LogError(e);
+                            LoggerAccessor.LogError($"[BaseMediusComponent] - clientChannel ticking thrown an assertion while processing the message queue. (Exception:{e})");
                         }
                     }
 

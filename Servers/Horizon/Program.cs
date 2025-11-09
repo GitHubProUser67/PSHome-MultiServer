@@ -196,7 +196,7 @@ class Program
     private static MumServerHandler? MUMServer;
     private static MetricServer? metricsServer;
 
-    private static Task HorizonStarter()
+    private static async Task HorizonStarter()
     {
         metricsServer?.Dispose();
 
@@ -237,9 +237,12 @@ class Program
             Horizon.MUIS.MuisClass.StartServer();
 
         if (HorizonServerConfiguration.EnableDME)
-            Horizon.DME.DmeClass.StartServer();
-
-        return Task.CompletedTask;
+		{
+           // Wait a bit of time for medius to properly start.
+           await Task.Delay(5000).ConfigureAwait(false);
+		   
+           Horizon.DME.DmeClass.StartServer();
+		}
     }
 
     private static void StartOrUpdateServer()

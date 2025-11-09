@@ -125,7 +125,7 @@ namespace Horizon.DME
 
                         if (numOfRetries == maxNumOfRetries)
                         {
-                            LoggerAccessor.LogError("[DMEMediusManager] - Start() - Failed to authenticate with the MAS server within 6 seconds, aborting client...");
+                            LoggerAccessor.LogError("[MASClient] - Start() - Failed to authenticate with the MAS server within 6 seconds, aborting client...");
                             await Stop();
                             return;
                         }
@@ -145,11 +145,11 @@ namespace Horizon.DME
                 }
                 catch (OperationCanceledException)
                 {
-                    LoggerAccessor.LogWarn("[DMEMediusManager] - Start() - MPS Queing Task was canceled.");
+                    LoggerAccessor.LogWarn("[MASClient] - Start() - MPS Queing Task was canceled.");
                 }
                 catch (Exception ex)
                 {
-                    LoggerAccessor.LogError($"[DMEMediusManager] - Start() - MPS Queing Task thrown an assertion: {ex}");
+                    LoggerAccessor.LogError($"[MASClient] - Start() - MPS Queing Task thrown an assertion: {ex}");
                 }
             }, ctsMPSQueue.Token);
         }
@@ -181,7 +181,7 @@ namespace Horizon.DME
             if (_masState == MASConnectionState.FAILED ||
                 (_masState != MASConnectionState.AUTHENTICATED && (DateTimeUtils.GetHighPrecisionUtcTime() - _utcConnectionState).TotalSeconds > 30))
             {
-                LoggerAccessor.LogError("[DMEMediusManager] - HandleIncomingMessages() - MAS server is not authenticated!");
+                LoggerAccessor.LogError("[MASClient] - HandleIncomingMessages() - MAS server is not authenticated!");
                 TimeLostConnection = DateTimeUtils.GetHighPrecisionUtcTime();
                 Stop().Wait();
                 return false;
@@ -206,13 +206,13 @@ namespace Horizon.DME
                     }
                     catch (Exception e)
                     {
-                        LoggerAccessor.LogError(e);
+                        LoggerAccessor.LogError($"[MASClient] - HandleIncomingMessages() - Error while Processing incoming messages: {e}");
                     }
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[MASClient] - HandleIncomingMessages() - Error while Handling incoming messages: {e}");
             }
         }
 
@@ -238,7 +238,7 @@ namespace Horizon.DME
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[MASClient] - HandleOutgoingMessages() - Error while Handling outgoing messages: {e}");
             }
         }
 
@@ -252,9 +252,9 @@ namespace Horizon.DME
                 if (_bootstrap != null)
                     _masChannel = await _bootstrap.ConnectAsync(new IPEndPoint(IPAddress.Parse(DmeClass.Settings.MAS.Ip) ?? MediusClass.SERVER_IP, DmeClass.Settings.MAS.Port));
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError($"Failed to connect to MAS");
+                LoggerAccessor.LogError($"[MASClient] - Failed to connect to MAS. (Exception:{e})");
                 TimeLostConnection = DateTimeUtils.GetHighPrecisionUtcTime();
                 return;
             }

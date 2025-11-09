@@ -6,7 +6,6 @@ using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
 using Horizon.RT.Common;
 using Horizon.RT.Models;
-using Horizon.LIBRARY.Common;
 using Horizon.RT.Cryptography.RC;
 using Horizon.SERVER.PluginArgs;
 using Horizon.LIBRARY.Pipeline.Tcp;
@@ -271,8 +270,7 @@ namespace Horizon.SERVER.Medius
                         }
                         catch (Exception e)
                         {
-                            LoggerAccessor.LogError(e);
-                            LoggerAccessor.LogError($"FORCE DISCONNECTING CLIENT 1 {data} || {data.ClientObject}");
+                            LoggerAccessor.LogError($"[BaseMediusComponent] - clientChannel ticking thrown an assertion while processing the message queue, FORCE DISCONNECTING CLIENT {data} || {data.ClientObject}. (Exception:{e})");
                             _ = ForceDisconnectClient(clientChannel);
                             data.Ignore = true;
                         }

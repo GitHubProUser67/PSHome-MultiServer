@@ -185,7 +185,7 @@ namespace Horizon.DME
             if (_mpsState == MPSConnectionState.FAILED ||
                 (_mpsState != MPSConnectionState.AUTHENTICATED && (DateTimeUtils.GetHighPrecisionUtcTime() - _utcConnectionState).TotalSeconds > 30))
             {
-                LoggerAccessor.LogError("[DMEMediusManager] - HandleIncomingMessages() - MPS server is not authenticated!");
+                LoggerAccessor.LogError("[MPSClient] - HandleIncomingMessages() - MPS server is not authenticated!");
                 TimeLostConnection = DateTimeUtils.GetHighPrecisionUtcTime();
                 Stop().Wait();
                 return false;
@@ -210,7 +210,7 @@ namespace Horizon.DME
                     }
                     catch (Exception e)
                     {
-                        LoggerAccessor.LogError(e);
+                        LoggerAccessor.LogError($"[MPSClient] - HandleIncomingMessages() - Error while Processing incoming messages: {e}");
                     }
                 }
 
@@ -219,7 +219,7 @@ namespace Horizon.DME
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[MPSClient] - HandleIncomingMessages() - Error while Handling incoming messages: {e}");
             }
         }
 
@@ -252,7 +252,7 @@ namespace Horizon.DME
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[MPSClient] - HandleOutgoingMessages() - Error while Handling outgoing messages: {e}");
             }
         }
 
@@ -266,9 +266,9 @@ namespace Horizon.DME
                 if (_bootstrap != null)
                     _mpsChannel = await _bootstrap.ConnectAsync(new IPEndPoint(IPAddress.Parse(DmeClass.Settings.MPS.Ip) ?? MediusClass.SERVER_IP, DmeClass.Settings.MPS.Port));
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError($"Failed to connect to MPS");
+                LoggerAccessor.LogError($"[MPSClient] - Failed to connect to MPS. (Exception:{e})");
                 TimeLostConnection = DateTimeUtils.GetHighPrecisionUtcTime();
                 return;
             }
