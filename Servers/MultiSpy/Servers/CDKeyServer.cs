@@ -108,8 +108,7 @@ namespace MultiSpy.Servers
 			try {
 				IPEndPoint? remote = (IPEndPoint?)e.RemoteEndPoint;
 
-				string receivedData = Encoding.UTF8.GetString(e.Buffer, e.Offset, e.BytesTransferred);
-				string decrypted = XorEncoding.Xor(receivedData);
+				string decrypted = XorEncoding.Xor(Encoding.UTF8.GetString(e.Buffer, e.Offset, e.BytesTransferred));
 
 				// known messages
 				// \ka\ = keep alive from the game server every 20s, we don't care about this

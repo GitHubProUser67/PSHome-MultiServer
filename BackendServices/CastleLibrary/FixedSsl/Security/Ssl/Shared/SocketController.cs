@@ -53,7 +53,7 @@ namespace Org.Mentalis.Security.Ssl.Shared
 			m_Compatibility = new CompatibilityLayer(this, options);
 			//			m_RecordLayer = new RecordLayer(this, options);
 			try {
-				m_Socket.BeginReceive(m_ReceiveBuffer, 0, m_ReceiveBufferLength, SocketFlags.None, new AsyncCallback(this.OnReceive), null);
+				m_Socket.BeginReceive(m_ReceiveBuffer, 0, m_ReceiveBufferLength, SocketFlags.None, new AsyncCallback(OnReceive), null);
 			} catch (Exception e) {
 				CloseConnection(e);
 			}
@@ -122,7 +122,7 @@ namespace Org.Mentalis.Security.Ssl.Shared
 						int sent = m_Socket.EndSend(ar);
 						m_ActiveSend.Transferred += sent;
 						if (m_ActiveSend.Transferred != m_ActiveSend.Size) {
-							m_Socket.BeginSend(m_ActiveSend.Buffer, m_ActiveSend.Offset + m_ActiveSend.Transferred, m_ActiveSend.Size - m_ActiveSend.Transferred, SocketFlags.None, new AsyncCallback(this.OnSent), null);
+							m_Socket.BeginSend(m_ActiveSend.Buffer, m_ActiveSend.Offset + m_ActiveSend.Transferred, m_ActiveSend.Size - m_ActiveSend.Transferred, SocketFlags.None, new AsyncCallback(OnSent), null);
 						} else {
 							m_IsSending = false;
 							if (m_ActiveSend.AsyncResult != null) {

@@ -163,8 +163,7 @@ namespace MultiSpy.Servers
 						IPAddress address;
 						if (IPAddress.TryParse(x, out address))
 							return address;
-						else
-							return null;
+						return null;
 					}).Where(x => x != null).ToArray();
 				} else {
 					PlasmaServers = new IPAddress[0];

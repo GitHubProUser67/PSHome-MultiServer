@@ -1,4 +1,3 @@
-using DNS.Protocol.Utils;
 using MultiServerLibrary.Extension;
 using System;
 using System.Collections.Generic;
@@ -58,24 +57,11 @@ namespace ApacheNet.BuildIn.Extensions
                 TheProcess.StartInfo.EnvironmentVariables.Add("CONTENT_LENGTH", PostData.Length.ToString());
 
             // Set environment variables for PHP
-            if (MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows)
-            {
-                TheProcess.StartInfo.EnvironmentVariables["SYSTEMROOT"] = Environment.GetEnvironmentVariable("SYSTEMROOT");
-                TheProcess.StartInfo.EnvironmentVariables["WINDIR"] = Environment.GetEnvironmentVariable("WINDIR");
-                TheProcess.StartInfo.EnvironmentVariables["COMSPEC"] = Environment.GetEnvironmentVariable("COMSPEC");
-                TheProcess.StartInfo.EnvironmentVariables["TMPDIR"] = Environment.GetEnvironmentVariable("TMPDIR");
-                TheProcess.StartInfo.EnvironmentVariables["TEMP"] = Environment.GetEnvironmentVariable("TEMP");
-            }
-            else
-            {
-                const string usrDir = "/usr";
-                const string tmpDir = "/tmp";
-                TheProcess.StartInfo.EnvironmentVariables["SYSTEMROOT"] = usrDir;
-                TheProcess.StartInfo.EnvironmentVariables["WINDIR"] = usrDir;
-                TheProcess.StartInfo.EnvironmentVariables["COMSPEC"] = "/bin/sh";
-                TheProcess.StartInfo.EnvironmentVariables["TMPDIR"] = tmpDir;
-                TheProcess.StartInfo.EnvironmentVariables["TEMP"] = tmpDir;
-            }
+            TheProcess.StartInfo.EnvironmentVariables["SYSTEMROOT"] = Environment.GetEnvironmentVariable("SYSTEMROOT");
+            TheProcess.StartInfo.EnvironmentVariables["WINDIR"] = Environment.GetEnvironmentVariable("WINDIR");
+            TheProcess.StartInfo.EnvironmentVariables["COMSPEC"] = Environment.GetEnvironmentVariable("COMSPEC");
+            TheProcess.StartInfo.EnvironmentVariables["TMPDIR"] = Environment.GetEnvironmentVariable("TMPDIR");
+            TheProcess.StartInfo.EnvironmentVariables["TEMP"] = Environment.GetEnvironmentVariable("TEMP");
             TheProcess.StartInfo.EnvironmentVariables["PATH"] = Environment.GetEnvironmentVariable("PATH");
             TheProcess.StartInfo.EnvironmentVariables.Add("GATEWAY_INTERFACE", "CGI/1.1");
             TheProcess.StartInfo.EnvironmentVariables.Add("SERVER_PROTOCOL", $"HTTP/{ApacheNetServerConfiguration.HttpVersion}");

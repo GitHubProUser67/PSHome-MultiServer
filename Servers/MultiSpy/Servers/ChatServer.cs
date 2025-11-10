@@ -43,19 +43,26 @@ namespace MultiSpy.Servers
 
                 if (File.Exists(scriptPath))
                 {
-                    StringBuilder sb = new StringBuilder();
+                    string pythonScriptContent = File.ReadAllText(scriptPath);
 
-                    foreach (var kvp in MultiSpyServerConfiguration.GamesKey)
+                    // Detect the indentation of __gamekeys line
+                    var match = Regex.Match(pythonScriptContent, @"^(\s*)__gamekeys\s*=\s*\{", RegexOptions.Multiline);
+                    string indent = match.Success ? match.Groups[1].Value : "    "; // fallback 4 spaces
+
+                    // Build dictionary entries with proper indentation
+                    string newDictContent = string.Join(",\n", MultiSpyServerConfiguration.GamesKey.Select(kvp =>
                     {
-                        // Convert string to bytes (UTF-8) and encode as Python byte escape sequences
                         var bytes = Encoding.UTF8.GetBytes(kvp.Value);
                         var safeValue = string.Concat(bytes.Select(b => $"\\x{b:X2}"));
+                        return $"{indent}    \"{kvp.Key}\": b\"{safeValue}\"";  // 1 extra indent level inside dict
+                    }));
 
-                        sb.AppendLine($"        \"{kvp.Key}\": b\"{safeValue}\",");
-                    }
+                    // Replacement with proper indentation for closing brace
+                    const string pattern = @"(__gamekeys\s*=\s*\{)[\s\S]*?(\})";
 
-                    // Replace the dictionary contents inside the Python class string
-                    File.WriteAllText(scriptPath, Regex.Replace(File.ReadAllText(scriptPath), @"(__gamekeys\s*=\s*\{)[\s\S]*?(\})", $"$1\n{sb}    $2"));
+                    string updatedScript = Regex.Replace(pythonScriptContent, pattern, $"$1\n{newDictContent}\n{indent}$2", RegexOptions.Multiline);
+
+                    File.WriteAllText(scriptPath, updatedScript);
                 }
                 else
                 {
@@ -94,9 +101,11 @@ namespace MultiSpy.Servers
                             LoggerAccessor.LogError("[ChatServer] - Error terminating the python process: " + ex);
                         }
                     }
+
+                    pythonProcess = null;
                 }
             }
-            catch (Exception)
+            catch
             {
             }
         }
@@ -116,7 +125,7 @@ namespace MultiSpy.Servers
                 StartInfo = new ProcessStartInfo
                 {
                     WorkingDirectory = Path.GetDirectoryName(scriptPath),
-                    FileName = Path.Combine(pythonPath, "python.exe"),
+                    FileName = Path.Combine(pythonPath!, MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows ? "python.exe" : "python3"),
 #if DEBUG
                     Arguments = $"\"{scriptPath}\" --debug",
 #else
@@ -200,7 +209,7 @@ namespace MultiSpy.Servers
             }
             else if (Directory.Exists(pythonPath))
             {
-                string pythonExePath = pythonPath + ((pythonPath.EndsWith("\\") || pythonPath.EndsWith("/")) ? "python.exe" : "/python.exe");
+                string pythonExePath = Path.Combine(pythonPath, MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows ? "python.exe" : "python3");
                 if (File.Exists(pythonExePath))
                     pythonPath = pythonExePath;
                 else
