@@ -33,7 +33,7 @@ public class Rc4TlsCrypto : BcTlsCrypto
                 {
                     try
                     {
-                        mutex.WaitOne(TimeSpan.FromSeconds(60));
+                        mutex.WaitOne(TimeSpan.FromSeconds(10));
 
                         using StreamWriter sw = File.AppendText("sslkeylog.log");
                         sw.WriteLine("CLIENT_RANDOM " + Convert.ToHexString(cryptoParams.SecurityParameters.ClientRandom) + " " + Convert.ToHexString(secret));
