@@ -22,58 +22,59 @@ namespace MultiSpy.Servers
         public ChatServer()
         {
             if (string.IsNullOrEmpty(pythonPath))
-            {
                 LoggerAccessor.LogError("[ChatServer] - Python installation invalid, please make sure to install python with the PATH option selected, quitting the engine...");
-                return;
-            }
-
-            scriptPath = MultiSpyServerConfiguration.ChatServerPath;
-
-            if (!string.IsNullOrEmpty(scriptPath))
+            else
             {
-                const string edgeZlibExtension = ".EdgeZlib";
+                LoggerAccessor.LogInfo($"[ChatServer] - Using python engine from path:{pythonPath}...");
 
-                string zlibFilePath = scriptPath + edgeZlibExtension;
+                scriptPath = MultiSpyServerConfiguration.ChatServerPath;
 
-                if (File.Exists(zlibFilePath) && !File.Exists(scriptPath))
+                if (!string.IsNullOrEmpty(scriptPath))
                 {
-                    File.WriteAllBytes(scriptPath.Replace(edgeZlibExtension, string.Empty), Zlib.EdgeZlibDecompress(File.ReadAllBytes(zlibFilePath)));
-                    File.Move(zlibFilePath, zlibFilePath + ".old");
-                }
+                    const string edgeZlibExtension = ".EdgeZlib";
 
-                if (File.Exists(scriptPath))
-                {
-                    string pythonScriptContent = File.ReadAllText(scriptPath);
+                    string zlibFilePath = scriptPath + edgeZlibExtension;
 
-                    // Detect the indentation of __gamekeys line
-                    var match = Regex.Match(pythonScriptContent, @"^(\s*)__gamekeys\s*=\s*\{", RegexOptions.Multiline);
-                    string indent = match.Success ? match.Groups[1].Value : "    "; // fallback 4 spaces
-
-                    // Build dictionary entries with proper indentation
-                    string newDictContent = string.Join(",\n", MultiSpyServerConfiguration.GamesKey.Select(kvp =>
+                    if (File.Exists(zlibFilePath) && !File.Exists(scriptPath))
                     {
-                        var bytes = Encoding.UTF8.GetBytes(kvp.Value);
-                        var safeValue = string.Concat(bytes.Select(b => $"\\x{b:X2}"));
-                        return $"{indent}    \"{kvp.Key}\": b\"{safeValue}\"";  // 1 extra indent level inside dict
-                    }));
+                        File.WriteAllBytes(scriptPath.Replace(edgeZlibExtension, string.Empty), Zlib.EdgeZlibDecompress(File.ReadAllBytes(zlibFilePath)));
+                        File.Move(zlibFilePath, zlibFilePath + ".old");
+                    }
 
-                    // Replacement with proper indentation for closing brace
-                    const string pattern = @"(__gamekeys\s*=\s*\{)[\s\S]*?(\})";
+                    if (File.Exists(scriptPath))
+                    {
+                        string pythonScriptContent = File.ReadAllText(scriptPath);
 
-                    string updatedScript = Regex.Replace(pythonScriptContent, pattern, $"$1\n{newDictContent}\n{indent}$2", RegexOptions.Multiline);
+                        // Detect the indentation of __gamekeys line
+                        var match = Regex.Match(pythonScriptContent, @"^(\s*)__gamekeys\s*=\s*\{", RegexOptions.Multiline);
+                        string indent = match.Success ? match.Groups[1].Value : "    "; // fallback 4 spaces
 
-                    File.WriteAllText(scriptPath, updatedScript);
+                        // Build dictionary entries with proper indentation
+                        string newDictContent = string.Join(",\n", MultiSpyServerConfiguration.GamesKey.Select(kvp =>
+                        {
+                            var bytes = Encoding.UTF8.GetBytes(kvp.Value);
+                            var safeValue = string.Concat(bytes.Select(b => $"\\x{b:X2}"));
+                            return $"{indent}    \"{kvp.Key}\": b\"{safeValue}\"";  // 1 extra indent level inside dict
+                        }));
+
+                        // Replacement with proper indentation for closing brace
+                        const string pattern = @"(__gamekeys\s*=\s*\{)[\s\S]*?(\})";
+
+                        string updatedScript = Regex.Replace(pythonScriptContent, pattern, $"$1\n{newDictContent}\n{indent}$2", RegexOptions.Multiline);
+
+                        File.WriteAllText(scriptPath, updatedScript);
+                    }
+                    else
+                    {
+                        LoggerAccessor.LogError("[ChatServer] - Python script not found, quitting the engine...");
+                        return;
+                    }
+
+                    StartServer();
                 }
                 else
-                {
-                    LoggerAccessor.LogError("[ChatServer] - Python script not found, quitting the engine...");
-                    return;
-                }
-
-                StartServer();
+                    LoggerAccessor.LogError("[ChatServer] - Python script path was invalid, quitting the engine...");
             }
-            else
-                LoggerAccessor.LogError("[ChatServer] - Python script path was invalid, quitting the engine...");
         }
 
         public void Dispose()

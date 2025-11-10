@@ -9,14 +9,12 @@ namespace Horizon.MUM
 {
     public class MumServerHandler
     {
-        private Webserver? _Server;
-        private string ip;
-        private int port;
+        private readonly Webserver? _server;
+        private readonly int _port;
 
         public MumServerHandler(string ip, int port, string certpath = "")
         {
-            this.ip = ip;
-            this.port = port;
+            _port = port;
 
             WebserverSettings settings = new()
             {
@@ -31,29 +29,28 @@ namespace Horizon.MUM
                 settings.Ssl.Enable = true;
             }
 
-            _Server = new Webserver(settings, DefaultRoute);
+            _server = new Webserver(settings, DefaultRoute);
 
             StartServer();
         }
 
         public void StopServer()
         {
-            _Server?.Stop();
-            _Server?.Dispose();
+            _server?.Dispose();
 
-            LoggerAccessor.LogWarn($"MumHandler Server on port: {port} stopped...");
+            LoggerAccessor.LogWarn($"MumHandler Server on port: {_port} stopped...");
         }
 
         public void StartServer()
         {
-            if (_Server != null && !_Server.IsListening)
+            if (_server != null && !_server.IsListening)
             {
-                _Server.Events.Logger = LoggerAccessor.LogInfo;
-                _Server.Events.ExceptionEncountered += ExceptionEncountered;
-                _Server.Settings.Debug.Responses = true;
-                _Server.Settings.Debug.Routing = true;
+                _server.Events.Logger = LoggerAccessor.LogInfo;
+                _server.Events.ExceptionEncountered += ExceptionEncountered;
+                _server.Settings.Debug.Responses = true;
+                _server.Settings.Debug.Routing = true;
 
-                _Server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/GetChannelsJson/", async (HttpContextBase ctx) =>
+                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/GetChannelsJson/", async (HttpContextBase ctx) =>
                 {
                     string userAgent = ctx.Request.Useragent;
 
@@ -121,7 +118,7 @@ namespace Horizon.MUM
                     }
                 });
 
-                _Server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/GetChannelsXML/", async (HttpContextBase ctx) =>
+                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/GetChannelsXML/", async (HttpContextBase ctx) =>
                 {
                     string userAgent = ctx.Request.Useragent;
 
@@ -189,7 +186,7 @@ namespace Horizon.MUM
                     }
                 });
 
-                _Server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/GetChannelsCRC/", async (HttpContextBase ctx) =>
+                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/GetChannelsCRC/", async (HttpContextBase ctx) =>
                 {
                     string userAgent = ctx.Request.Useragent;
 
@@ -235,7 +232,7 @@ namespace Horizon.MUM
                     }
                 });
 
-                _Server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/favicon.ico", async (HttpContextBase ctx) =>
+                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/favicon.ico", async (HttpContextBase ctx) =>
                 {
                     string userAgent = ctx.Request.Useragent;
 
@@ -290,9 +287,9 @@ namespace Horizon.MUM
                     }
                 });
 
-                _Server.Start();
+                _server.Start();
 
-                LoggerAccessor.LogInfo($"MumHandler Server initiated on port:{port}...");
+                LoggerAccessor.LogInfo($"MumHandler Server initiated on port:{_port}...");
             }
         }
 

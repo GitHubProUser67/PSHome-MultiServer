@@ -13,7 +13,7 @@ namespace SVO
 {
     public class SVOProcessor
     {
-        private HTTPServer? _server;
+        private readonly HTTPServer? _server;
 
         public SVOProcessor()
         {

@@ -33,13 +33,13 @@ namespace ApacheNet
 
         private static readonly string serverRevision = Assembly.GetExecutingAssembly().GetName().Name + " " + Assembly.GetExecutingAssembly().GetName().Version;
 
-        private Webserver? _Server;
-        private readonly ushort port;
-        private Thread? StarterThread;
+        private readonly Webserver? _server;
+        private readonly ushort _port;
+        private readonly Thread? _starterThread;
 
         public ApacheNetProcessor(string certpath, string certpass, string ip, ushort port, bool secure, int MaxConcurrentListeners)
         {
-            this.port = port;
+            _port = port;
             WebserverSettings settings = new()
             {
                 Hostname = ip,
@@ -53,7 +53,7 @@ namespace ApacheNet
                 settings.Ssl.PfxCertificatePassword = certpass;
                 settings.Ssl.Enable = true;
             }
-            _Server = new Webserver(settings, DefaultRoute, MaxConcurrentListeners)
+            _server = new Webserver(settings, DefaultRoute, MaxConcurrentListeners)
             {
 #if !DEBUG
                 LogResponseSentMsg = false,
@@ -61,11 +61,11 @@ namespace ApacheNet
                 KeepAliveResponseData = false
             };
 
-            StarterThread = new Thread(StartServer)
+            _starterThread = new Thread(StartServer)
             {
                 Name = "Server Starter"
             };
-            StarterThread.Start();
+            _starterThread.Start();
         }
 
         private static void SetCorsHeaders(HttpContextBase ctx)
@@ -122,33 +122,26 @@ namespace ApacheNet
 
         public void StopServer()
         {
-            try
-            {
-                _Server?.Dispose();
-				
-                LoggerAccessor.LogWarn($"{(port.ToString().EndsWith("443") ? "HTTPS" : "HTTP")} Server on port: {port} stopped...");
-            }
-            catch (Exception ex)
-            {
-                LoggerAccessor.LogError($"{(port.ToString().EndsWith("443") ? "HTTPS" : "HTTP")} Server on port: {port} stopped unexpectedly! (Exception: {ex})");
-            }
+            _server?.Dispose();
+
+            LoggerAccessor.LogWarn($"{(_port.ToString().EndsWith("443") ? "HTTPS" : "HTTP")} Server on port: {_port} stopped...");
         }
 
         public void StartServer()
         {
-            if (_Server != null && !_Server.IsListening)
+            if (_server != null && !_server.IsListening)
             {
-                _Server.Routes.AuthenticateRequest = AuthorizeConnection;
-                _Server.Events.ExceptionEncountered += ExceptionEncountered;
-                _Server.Events.Logger = LoggerAccessor.LogInfo;
+                _server.Routes.AuthenticateRequest = AuthorizeConnection;
+                _server.Events.ExceptionEncountered += ExceptionEncountered;
+                _server.Events.Logger = LoggerAccessor.LogInfo;
 #if DEBUG
-                _Server.Settings.Debug.Responses = true;
-                _Server.Settings.Debug.Routing = true;
+                _server.Settings.Debug.Responses = true;
+                _server.Settings.Debug.Routing = true;
 #endif
-                PostAuthParameters.Build(_Server);
+                PostAuthParameters.Build(_server);
 
-                _Server.Start();
-                LoggerAccessor.LogInfo($"{(port.ToString().EndsWith("443") ? "HTTPS" : "HTTP")} Server initiated on port: {port}...");
+                _server.Start();
+                LoggerAccessor.LogInfo($"{(_port.ToString().EndsWith("443") ? "HTTPS" : "HTTP")} Server initiated on port: {_port}...");
             }
         }
 
@@ -1047,7 +1040,7 @@ namespace ApacheNet
 
         private void ExceptionEncountered(object? sender, ExceptionEventArgs args)
         {
-            LoggerAccessor.LogError($"[{(port.ToString().EndsWith("443") ? "HTTPS" : "HTTP")}] - Exception Encountered: {args.Exception}");
+            LoggerAccessor.LogError($"[{(_port.ToString().EndsWith("443") ? "HTTPS" : "HTTP")}] - Exception Encountered: {args.Exception}");
         }
     }
 }

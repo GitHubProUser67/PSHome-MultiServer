@@ -2,21 +2,21 @@ using CustomLogger;
 using EdenServer.AMHLair;
 using EdenServer.Database;
 using EdenServer.EdNet;
+using EdenServer.TelnetDebugger;
 using Microsoft.Extensions.Logging;
 using MultiServerLibrary;
 using MultiServerLibrary.Extension;
 using MultiServerLibrary.GeoLocalization;
 using MultiServerLibrary.SNMP;
-using System.Net;
 using System.Reflection;
 using System.Runtime;
-using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
 public static partial class EdenServerConfiguration
 {
+    public static bool EnableTelnet { get; set; } = false;
     public static string ProxyServerAddress { get; set; } = "0.0.0.0";
     public static ushort ProxyServerPort { get; set; } = 0;
     public static string ORBServerAddress { get; set; } = InternetProtocolUtils.TryGetServerIP(out string ip).Result ? ip : ip;
@@ -96,6 +96,10 @@ public static partial class EdenServerConfiguration
             var configObject = new
             {
                 config_version = (ushort)2,
+                telnet = new
+                {
+                    enable = EnableTelnet,
+                },
                 database = new
                 {
                     login = LoginDatabasePath
@@ -159,6 +163,9 @@ public static partial class EdenServerConfiguration
 
                 if (config_version >= 2)
                 {
+                    if (config.TryGetProperty("telnet", out JsonElement telnetElement) &&
+                    telnetElement.TryGetProperty("enable", out JsonElement enableElement))
+                        EnableTelnet = enableElement.GetBoolean();
                     if (config.TryGetProperty("amh", out JsonElement amhElement))
                     {
                         AMHProxyServerAddress = GetValueOrDefault(amhElement, "proxy_server_address", AMHProxyServerAddress);
@@ -248,14 +255,16 @@ class Program
     private static TDUMasterServer? amhTDUMasterServer = null;
     private static ProxyServer? proxyServer = null;
     private static ORBServer? orbServer = null;
+    private static TelnetServer? telnetServer = null;
     private static SnmpTrapSender? trapSender = null;
-    private static EventHandler? _closeHandler;
+    private static readonly EventHandler? _closeHandler;
 
     private static void StartOrUpdateServer()
     {
         proxyServer?.Stop();
         orbServer?.Stop();
         amhTDUMasterServer?.Stop();
+        telnetServer?.Stop();
 
         GC.Collect();
         GC.WaitForPendingFinalizers();
@@ -272,6 +281,13 @@ class Program
         if (amhTDUMasterServer == null)
             amhTDUMasterServer = new();
         amhTDUMasterServer.Start(EdenServerConfiguration.AMHMasterServerPort);
+
+        if (EdenServerConfiguration.EnableTelnet)
+        {
+            if (telnetServer == null)
+                telnetServer = new();
+            telnetServer.Start(23);
+        }
     }
 
     private static void ConsoleExitHandler(object sender, ConsoleCancelEventArgs args)
