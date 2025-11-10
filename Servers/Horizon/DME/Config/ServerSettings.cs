@@ -87,7 +87,7 @@ namespace Horizon.DME.Config
         /// be multi-threaded.For most development, running the server as a single
         /// thread (setting DmeServerWorldsPerThread to "0") is recommended.
         /// </summary>
-        public bool EnableSleeps = Environment.OSVersion.Platform == PlatformID.Win32NT || Environment.OSVersion.Platform == PlatformID.Win32S || Environment.OSVersion.Platform == PlatformID.Win32Windows; // (DEFAULT: 1 for Win32; 0 for Linux)
+        public bool EnableSleeps = MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows; // (DEFAULT: 1 for Win32; 0 for Linux)
         public bool UseThread = true; // (DEFAULT: 0)
 
         public bool EnableMedius = true; // (DEFAULT: 1)

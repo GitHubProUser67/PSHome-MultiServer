@@ -16,7 +16,7 @@ namespace Horizon.SERVER.Config
         /// <summary>
         /// IP of the MEDIUS.
         /// </summary>
-        public string MEDIUSIp { get; set; } = InternetProtocolUtils.TryGetServerIP(out _).Result ? InternetProtocolUtils.GetPublicIPAddress() : InternetProtocolUtils.GetLocalIPAddresses().First().ToString();
+        public string MEDIUSIp { get; set; } = InternetProtocolUtils.TryGetServerIP(out string serverIP).Result ? serverIP : serverIP;
         #endregion
 
         #region PublicIp
@@ -152,7 +152,7 @@ namespace Horizon.SERVER.Config
         /// Provide the IP of the SCE-RT NAT Service
         /// Default is: natservice.pdonline.scea.com:10070
         /// </summary>
-        public string? NATIp { get; set; } = InternetProtocolUtils.TryGetServerIP(out _).Result ? InternetProtocolUtils.GetPublicIPAddress() : InternetProtocolUtils.GetLocalIPAddresses().First().ToString();
+        public string? NATIp { get; set; } = InternetProtocolUtils.TryGetServerIP(out string serverIP).Result ? serverIP : serverIP;
 
         /// <summary>
         /// Port of the NAT server.

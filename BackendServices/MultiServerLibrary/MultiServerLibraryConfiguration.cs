@@ -12,7 +12,7 @@ namespace MultiServerLibrary
     public static class MultiServerLibraryConfiguration
     {
         public static bool EnableServerIpAutoNegotiation { get; set; } = true;
-        public static bool UsePublicIp { get; set; } = false; // Safer approach to default to local network.
+        public static bool UsePublicIp { get; set; } = true;
         public static bool EnableSNMPReports { get; set; } = false;
         public static string ProxyUserName { get; set; } = string.Empty;
         public static string ProxyPassword { get; set; } = string.Empty;
