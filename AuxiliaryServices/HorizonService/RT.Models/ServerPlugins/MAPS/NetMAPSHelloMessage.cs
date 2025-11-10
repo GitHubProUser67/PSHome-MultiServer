@@ -36,18 +36,18 @@ namespace HorizonService.RT.Models.ServerPlugins.MAPS
         {
             int BitIndex = 0;
             int statusBitIndex = 0;
-            byte[] buffer = new byte[64 + 4 + 4];
+            byte[] buffer = new byte[72];
             byte[] statusBuffer = new byte[4];
 
             BufferImpl.WritePrimitive(statusBuffer, m_success ? (byte)1 : (byte)0, ref statusBitIndex, debug);
             BufferImpl.WritePrimitive(statusBuffer, m_isOnline ? (byte)1 : (byte)0, ref statusBitIndex, debug);
 
-            BufferImpl.WritePrimitive(buffer, EndianAwareConverter.ToInt32(statusBuffer, Endianness.LittleEndian, 0), ref BitIndex, debug);
+            BufferImpl.WritePrimitive(buffer, EndianAwareConverter.ToInt32(statusBuffer, Endianness.BigEndian, 0), ref BitIndex, debug);
             BufferImpl.WritePrimitive(buffer, m_availableFactions.m_bitArray, ref BitIndex, debug);
 
             // serialize rsa modulus
-            // this is sent in server hello at offset 0x194
-            // we're going to overwrite the cert at that offset to store the rsa modulus
+            // this is sent in maps hello
+            // we're going to write the rsa key
             var rsakey = RsaPublicKey.ToByteArrayUnsigned();
 
             // fix to 64 bytes (512 bit)
