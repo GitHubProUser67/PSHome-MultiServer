@@ -84,13 +84,13 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                         else if (absolutepath.Contains(Commands[20]))
                             res = UserInventory.GetUserInventory(PostData, ContentType, directoryPath, string.Empty, game);
                         else if (absolutepath.Contains(Commands[21]))
-                            res = Leaderboard.Leaderboard_RequestByUsers(PostData, ContentType, Path.GetFileName(directoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)), string.Empty, game);
+                            res = Leaderboard.Leaderboard_RequestByUsers(directoryPath, PostData, ContentType, Path.GetFileName(directoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)), string.Empty, game);
                         else if (absolutepath.Contains(Commands[22]))
-                            res = Leaderboard.Leaderboard_RequestByRank(PostData, ContentType, Path.GetFileName(directoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)), string.Empty, game);
+                            res = Leaderboard.Leaderboard_RequestByRank(directoryPath, PostData, ContentType, Path.GetFileName(directoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)), string.Empty, game);
                         else if (absolutepath.Contains(Commands[23]))
-                            res = Leaderboard.Leaderboard_Update(PostData, ContentType, Path.GetFileName(directoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)), string.Empty, game, false);
+                            res = Leaderboard.Leaderboard_Update(directoryPath, PostData, ContentType, Path.GetFileName(directoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)), string.Empty, game, false);
                         else if (absolutepath.Contains(Commands[24]))
-                            res = Leaderboard.Leaderboard_UpdatesSameEntry(PostData, ContentType, Path.GetFileName(directoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)), string.Empty, game, false);
+                            res = Leaderboard.Leaderboard_UpdatesSameEntry(directoryPath, PostData, ContentType, Path.GetFileName(directoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)), string.Empty, game, false);
                         else if (absolutepath.Contains(Commands[25]))
                             res = Statistic.Set(PostData, ContentType);
                         else if (absolutepath.Contains(Commands[26]))

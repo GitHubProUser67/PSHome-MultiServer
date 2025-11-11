@@ -1,7 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using NetHasher.CRC;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using WebAPIService.GameServices.PSHOME.OHS.Entities;
@@ -13,6 +17,8 @@ namespace WebAPIService.GameServices.PSHOME.OHS
     : ScoreboardService<OHSScoreboardEntry>
     {
         private string _gameproject;
+        private object _Lock = new object();
+        private HashSet<ushort> _performedMigrations = new HashSet<ushort>();
 
         public OHSScoreBoardData(DbContextOptions options, object obj = null)
             : base(options)
@@ -324,6 +330,35 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             }
 
             return $"{{ [\"user\"] = {{ [\"score\"] = {scoreForUser} }}, [\"entries\"] = {FormatScoreBoardLuaTable(luaTable)} }}";
+        }
+
+        public Task PerformMigrationAsync(string jsonPath)
+        {
+            ushort crc = CRC16.Create(Encoding.UTF8.GetBytes(jsonPath));
+
+            lock (_Lock)
+            {
+                if (!_performedMigrations.Contains(crc))
+                {
+                    if (File.Exists(jsonPath))
+                    {
+                        foreach (JsonNode entry in JsonNode.Parse(File.ReadAllText(jsonPath))["Entries"].AsArray())
+                        {
+                            string name = entry["Name"]?.ToString();
+                            int? score = entry["Score"]?.GetValue<int>();
+
+                            if (!string.IsNullOrEmpty(name) && score.HasValue)
+                                _ = UpdateScoreAsync(name, score.Value);
+                        }
+
+                        File.Move(jsonPath, jsonPath + ".old");
+                    }
+
+                    _performedMigrations.Add(crc);
+                }
+            }
+
+            return Task.CompletedTask;
         }
 
         public static string FormatScoreBoardLuaTable(Dictionary<int, Dictionary<string, object>> luaTable)

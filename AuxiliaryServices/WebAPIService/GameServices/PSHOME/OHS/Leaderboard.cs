@@ -30,7 +30,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             return dataforohs;
         }
 
-        public static string Leaderboard_RequestByUsers(byte[] PostData, string ContentType, string project, string batchparams, int game)
+        public static string Leaderboard_RequestByUsers(string directorypath, byte[] PostData, string ContentType, string project, string batchparams, int game)
         {
             string dataforohs = null;
 
@@ -44,13 +44,13 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                     {
                         var data = MultipartFormDataParser.Parse(ms, boundary);
                         LoggerAccessor.LogInfo($"[OHS] : Client Version - {data.GetParameterValue("version")}");
-                        dataforohs = RequestByUsers(JaminProcessor.JaminDeFormat(data.GetParameterValue("data"), true, game), project, false);
+                        dataforohs = RequestByUsers(directorypath, JaminProcessor.JaminDeFormat(data.GetParameterValue("data"), true, game), project, false);
                         ms.Flush();
                     }
                 }
             }
             else
-                dataforohs = RequestByUsers(batchparams, project, false);
+                dataforohs = RequestByUsers(directorypath, batchparams, project, false);
 
             if (!string.IsNullOrEmpty(batchparams))
             {
@@ -70,7 +70,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             return dataforohs;
         }
 
-        public static string Leaderboard_RequestByRank(byte[] PostData, string ContentType, string project, string batchparams, int game)
+        public static string Leaderboard_RequestByRank(string directorypath, byte[] PostData, string ContentType, string project, string batchparams, int game)
         {
             string dataforohs = null;
 
@@ -84,13 +84,13 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                     {
                         var data = MultipartFormDataParser.Parse(ms, boundary);
                         LoggerAccessor.LogInfo($"[OHS] : Client Version - {data.GetParameterValue("version")}");
-                        dataforohs = RequestByRank(JaminProcessor.JaminDeFormat(data.GetParameterValue("data"), true, game), project, false);
+                        dataforohs = RequestByRank(directorypath, JaminProcessor.JaminDeFormat(data.GetParameterValue("data"), true, game), project, false);
                         ms.Flush();
                     }
                 }
             }
             else
-                dataforohs = RequestByRank(batchparams, project, false);
+                dataforohs = RequestByRank(directorypath, batchparams, project, false);
 
             if (!string.IsNullOrEmpty(batchparams))
             {
@@ -110,7 +110,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             return dataforohs;
         }
 
-        public static string Leaderboard_Update(byte[] PostData, string ContentType, string project, string batchparams, int game, bool levelboard)
+        public static string Leaderboard_Update(string directorypath, byte[] PostData, string ContentType, string project, string batchparams, int game, bool levelboard)
         {
             string dataforohs = null;
             string writekey = "11111111";
@@ -164,7 +164,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 #endif
                         }
 
-                        dataforohs = UpdateScoreboard(user, score, project, key, levelboard, extraData);
+                        dataforohs = UpdateScoreboard(directorypath, user, score, project, key, levelboard, extraData);
                     }
                     else
                         dataforohs = null;
@@ -193,7 +193,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             return dataforohs;
         }
 
-        public static string Leaderboard_UpdatesSameEntry(byte[] PostData, string ContentType, string project, string batchparams, int game, bool levelboard)
+        public static string Leaderboard_UpdatesSameEntry(string directorypath, byte[] PostData, string ContentType, string project, string batchparams, int game, bool levelboard)
         {
             string dataforohs = null;
             string writekey = "11111111";
@@ -254,9 +254,9 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                             foreach (string key in keys)
                             {
                                 if (resultBuilder.Length == 0)
-                                    resultBuilder.Append(UpdateScoreboard(user, score, project, key, levelboard, extraData));
+                                    resultBuilder.Append(UpdateScoreboard(directorypath, user, score, project, key, levelboard, extraData));
                                 else
-                                    resultBuilder.Append(", " + UpdateScoreboard(user, score, project, key, levelboard, extraData));
+                                    resultBuilder.Append(", " + UpdateScoreboard(directorypath, user, score, project, key, levelboard, extraData));
                             }
                         }
                     }
@@ -289,21 +289,30 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             return dataforohs;
         }
 
-        public static void InitializeLeaderboard(string tablekey, bool fillResults = true)
+        public static void InitializeLeaderboard(string directorypath, string tablekey, bool fillResults = true)
         {
             if (!_leaderboards.ContainsKey(tablekey))
             {
-                if (_leaderboards.TryAdd(tablekey, new OHSScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, tablekey)) && fillResults)
+                OHSScoreBoardData scoreBoard = new OHSScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, tablekey);
+                if (_leaderboards.TryAdd(tablekey, scoreBoard))
                 {
-                    for (int j = 1; j < 11; j++)
+                    string[] tableParams = tablekey.Split('|');
+                    string key = tableParams[1];
+
+                    _ = scoreBoard.PerformMigrationAsync(directorypath + $"/{tableParams[0]}/{(tableParams.Last().EndsWith("levelboard") ? $"Levelboard_Data/levelboard_{key}.json" : $"Leaderboard_Data/scoreboard_{key}.json")}");
+
+                    if (fillResults)
                     {
-                        _ = _leaderboards[tablekey].UpdateScoreAsync(FrenchNameGenerator.GetRandomWord(), 0);
+                        for (int j = 1; j < 11; j++)
+                        {
+                            _ = _leaderboards[tablekey].UpdateScoreAsync(FrenchNameGenerator.GetRandomWord(), 0);
+                        }
                     }
                 }
             }
         }
 
-        public static string UpdateScoreboard(string playerId, int newScore, string project, string key, bool levelboard, string extraData = null)
+        public static string UpdateScoreboard(string directorypath, string playerId, int newScore, string project, string key, bool levelboard, string extraData = null)
         {
             string scoreboarddata = string.Empty;
             string tablekey = levelboard ? project + $"|{key}" + "|levelboard" : project + $"|{key}";
@@ -311,7 +320,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             OHSScoreBoardData lb;
             lock (_leaderboards)
             {
-                InitializeLeaderboard(tablekey, !_fillerProjectSkip.Contains(project));
+                InitializeLeaderboard(directorypath, tablekey, !_fillerProjectSkip.Contains(project));
                 lb = _leaderboards[tablekey];
             }
 
@@ -356,7 +365,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             return returnvalue;
         }
 
-        public static string RequestByUsers(string jsontable, string project, bool levelboard)
+        public static string RequestByUsers(string directorypath, string jsontable, string project, bool levelboard)
         {
             string returnvalue = "{ [\"entries\"] = { }, [\"user\"] = { [\"score\"] = 0 } }";
 
@@ -372,7 +381,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
                     lock (_leaderboards)
                     {
-                        InitializeLeaderboard(tablekey, !_fillerProjectSkip.Contains(project));
+                        InitializeLeaderboard(directorypath, tablekey, !_fillerProjectSkip.Contains(project));
                         hasKey = _leaderboards.ContainsKey(tablekey);
                     }
 
@@ -439,7 +448,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             return returnvalue;
         }
 
-        public static string RequestByRank(string jsontable, string project, bool levelboard)
+        public static string RequestByRank(string directorypath, string jsontable, string project, bool levelboard)
         {
             try
             {
@@ -479,7 +488,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
                     lock (_leaderboards)
                     {
-                        InitializeLeaderboard(tablekey, !_fillerProjectSkip.Contains(project) && !(isDaily || isWeekly));
+                        InitializeLeaderboard(directorypath, tablekey, !_fillerProjectSkip.Contains(project) && !(isDaily || isWeekly));
                         hasKey = _leaderboards.ContainsKey(tablekey);
                     }
 
