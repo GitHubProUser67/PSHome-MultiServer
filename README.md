@@ -122,11 +122,15 @@ Only ApacheNet, MitmDNS, Horizon, SSFW ( v1.70 and onward ), and SVO are needed 
 ApacheNet can be used as a stand alone web server for hosting.
 MitmDNS can be used as a stand alone DNS.
 
-# 1) ApacheNet --> A minimalistic C# reimplementation of the infamous Apache web server, with support for both HTTP and HTTPS ( SSL ). It utilizes parts of WatsonWebServer and Spacewizard's HTTPListener.
+# 1) ApacheNet -->
+
+A minimalistic C# reimplementation of the infamous Apache web server, with support for both HTTP and HTTPS ( SSL ). It utilizes parts of WatsonWebServer and Spacewizard's HTTPListener.
 
 For HTTPS, it can generate self-signed certificates for a wide array of dead domains, or optionally import your own. This includes CA-validated Edge certificates to enable verified padlock icons in modern browsers, as well as Origin certificates for authenticating game traffic.
 
-# 2) MitmDNS --> Man-In-The-Middle DNS Server. UDP Server intended to redirect dead domains to a IPv4 or IPv6 address typically. It utilizes parts of Kapetan's DNSLibrary.
+# 2) MitmDNS -->
+
+Man-In-The-Middle DNS Server. UDP Server intended to redirect dead domains to a IPv4 or IPv6 address typically. It utilizes parts of Kapetan's DNSLibrary.
 
 # 3 ) Horizon -->
 
@@ -152,7 +156,9 @@ NAT --> Proprietary port hole-punch through for Medius.
 
 BWPS --> Bandwidth Probe Server for measuring client metrics to ensure stable connections as peer to peer host on Medius.
  
-# 4) SVO --> Sports View Online, or SCE-RT View Online as it was rebranded under Sony after the 2002 buyout.
+# 4) SVO -->
+
+Sports View Online, or SCE-RT View Online as it was rebranded under Sony after the 2002 buyout.
 
 Below are two quotes from a Warhawk HTML sample DEMO file that describe SVO :
 
@@ -165,24 +171,34 @@ Below are two quotes from a Warhawk HTML sample DEMO file that describe SVO :
 Used heavily in older versions of PlayStation®Home from 1.65 and below; The transition from SVO to SSFW migration started in version 1.65.
 Used heavily in Buzz Quiz Player, Starhawk, Socom: Confrontation, Warhawk, Killzone series
 
-# 5) SSFW --> JSON HTTP / HTTPS web server that handles PlayStation®Home's save data services including user settings, avatar layouts, wardrobe saves, clans, apartment layouts, rewards, and save data generated from the save data LUA libraries. This replaced SVO entirely from 1.70 and onward.
+# 5) SSFW --> 
+
+JSON HTTP / HTTPS web server that handles PlayStation®Home's save data services including user settings, avatar layouts, wardrobe saves, clans, apartment layouts, rewards, and save data generated from the save data LUA libraries. This replaced SVO entirely from 1.70 and onward.
 
 # Misc Servers
 
-# 6) QuazalServer -> Ubisoft Revival Server; Based on ReHamster’s AlcatrazServer and co-developed with the Quazal research discord group (Halvors). Network protocol is simply referred to as "Quazal". Quazal has an internal protocol called Spark that some games utilize. Quazal Technologies was an independent company before Ubisoft bought it.
+# 6) QuazalServer ->
+
+Ubisoft Revival Server; Based on ReHamster’s AlcatrazServer and co-developed with the Quazal research discord group (Halvors). Network protocol is simply referred to as "Quazal". Quazal has an internal protocol called Spark that some games utilize. Quazal Technologies was an independent company before Ubisoft bought it.
 
 Games such as Driver: San Francisco, Ghost Recon Future Soldier, Dirt 2, Assassin's Creed (2, 3, Brotherhood, Revelations)
 Games such as Blacksite Area 51, Overlord II, Operation Flashpoint: Dragon Rising, Ghostbusters TVG, Top Gun use Quazal + Spark
 
-# 7) MultiSpy --> GameSpy Revival Server; Based on civ4-mp's fork of PRMasterServer. Network protocol is simply referred to as "GameSpy". Developed by the IGN dev team. It was often integrated with other network protocols such as Aries. 
+# 7) MultiSpy -->
+
+GameSpy Revival Server; Based on civ4-mp's fork of PRMasterServer. Network protocol is simply referred to as "GameSpy". Developed by the IGN dev team. It was often integrated with other network protocols such as Aries. 
 
 Games such as Star Wars Battlefront, Test Drive Unlimited (Integrated with EdNet)
 
-# 8) MultiSocks --> EA Revival Server consisting of two network protocols : Blaze (EA), DirtySocks (EA; The Aries protocol was built on top of DirtySocks; Same tech). m4kill’s BlazeSDK is utilized for Blaze.
+# 8) MultiSocks -->
+
+EA Revival Server consisting of two network protocols : Blaze (EA), DirtySocks (EA; The Aries protocol was built on top of DirtySocks; Same tech). m4kill’s BlazeSDK is utilized for Blaze.
 
 Games such as Mass Effect 3 (Blaze), Crysis 3 Open Beta (Blaze), Army of Two: The Devil's Cartel (Blaze), Need For Speed Underground (Aries), Tiger Woods PGA Tour 06 (Aries), Burnout Paradise (Aries), Lord of the Rings: Conquest (Aries)
 
-# 9) EdenServer -->  Eden Games Revival Server; Network protocol is called EdNet. Specifically for Test Drive Unlimited ( TDU ). 
+# 9) EdenServer --> 
+
+Eden Games Revival Server; Network protocol is called EdNet. Specifically for Test Drive Unlimited ( TDU ). 
 
 # How to compile and run (Winows only for now, Linux compatible very soon.)
 
