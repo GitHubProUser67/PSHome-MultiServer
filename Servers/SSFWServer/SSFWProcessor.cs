@@ -184,106 +184,108 @@ namespace SSFWServer
                         {
                             case "GET":
 
-                                #region LayoutService
-                                if (absolutepath.Contains($"/LayoutService/{env}/person/") && IsSSFWRegistered(sessionid))
+                                if (IsSSFWRegistered(sessionid))
                                 {
-                                    string? res = null;
+                                    #region LayoutService
+                                    if (absolutepath.Contains($"/LayoutService/{env}/person/"))
+                                    {
+                                        string? res = null;
 
-                                    if (LayoutGetOverrides.ContainsKey(sessionid))
-                                        LayoutGetOverrides.Remove(sessionid, out res);
-                                    else
-                                        res = layout.HandleLayoutServiceGET(directoryPath, filePath);
+                                        if (LayoutGetOverrides.ContainsKey(sessionid))
+                                            LayoutGetOverrides.Remove(sessionid, out res);
+                                        else
+                                            res = layout.HandleLayoutServiceGET(directoryPath, filePath);
 
-                                    if (res == null)
+                                        if (res == null)
+                                        {
+                                            Response.Clear();
+                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                            Response.SetBody();
+                                        }
+                                        else if (res == string.Empty)
+                                        {
+                                            Response.Clear();
+                                            Response.SetBegin((int)HttpStatusCode.NotFound);
+                                            Response.SetBody();
+                                        }
+                                        else
+                                            Response.MakeGetResponse(res, "application/json");
+                                    }
+                                    #endregion
+
+                                    #region AdminObjectService
+                                    else if (absolutepath.Contains("/AdminObjectService/start"))
                                     {
                                         Response.Clear();
-                                        Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                        if (new SSFWAdminObjectService(sessionid, _legacykey).HandleAdminObjectService(UserAgent))
+                                            Response.SetBegin((int)HttpStatusCode.OK);
+                                        else
+                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
                                         Response.SetBody();
                                     }
-                                    else if (res == string.Empty)
+                                    #endregion
+
+                                    #region SaveDataService
+                                    else if (absolutepath.Contains($"/SaveDataService/{env}/{segments.LastOrDefault()}"))
                                     {
-                                        Response.Clear();
-                                        Response.SetBegin((int)HttpStatusCode.NotFound);
-                                        Response.SetBody();
+                                        string? res = SSFWGetFileList.SSFWSaveDataDebugGetFileList(directoryPath, segments.LastOrDefault());
+                                        if (res != null)
+                                            Response.MakeGetResponse(res, "application/json");
+                                        else
+                                            Response.MakeErrorResponse();
                                     }
-                                    else
-                                        Response.MakeGetResponse(res, "application/json");
-                                }
-                                #endregion
+                                    #endregion
 
-                                #region AdminObjectService
-                                else if (absolutepath.Contains("/AdminObjectService/start") && IsSSFWRegistered(sessionid))
-                                {
-                                    Response.Clear();
-                                    if (new SSFWAdminObjectService(sessionid, _legacykey).HandleAdminObjectService(UserAgent))
-                                        Response.SetBegin((int)HttpStatusCode.OK);
                                     else
-                                        Response.SetBegin((int)HttpStatusCode.Forbidden);
-                                    Response.SetBody();
-                                }
-                                #endregion
-
-                                #region SaveDataService
-                                else if (absolutepath.Contains($"/SaveDataService/{env}/{segments.LastOrDefault()}") && IsSSFWRegistered(sessionid))
-                                {
-                                    string? res = SSFWGetFileList.SSFWSaveDataDebugGetFileList(directoryPath, segments.LastOrDefault());
-                                    if (res != null)
-                                        Response.MakeGetResponse(res, "application/json");
-                                    else
-                                        Response.MakeErrorResponse();
-                                }
-                                #endregion
-
-                                else if (IsSSFWRegistered(sessionid))
-                                {
-                                    //First check if this is a Inventory request
-                                    if (absolutepath.Contains($"/RewardsService/") && absolutepath.Contains("counts"))
                                     {
-                                        //Detect if existing inv exists
-                                        if (File.Exists(filePath + ".json"))
+                                        //First check if this is a Inventory request
+                                        if (absolutepath.Contains($"/RewardsService/") && absolutepath.Contains("counts"))
                                         {
-                                            string? res = FileHelper.ReadAllText(filePath + ".json", _legacykey);
-
-                                            if (!string.IsNullOrEmpty(res))
+                                            //Detect if existing inv exists
+                                            if (File.Exists(filePath + ".json"))
                                             {
-                                                if (GetHeaderValue(Headers, "Accept") == "application/json")
-                                                    Response.MakeGetResponse(res, "application/json");
-                                                else
-                                                    Response.MakeGetResponse(res);
-                                            }
-                                            else
-                                                Response.MakeErrorResponse();
-                                        }
-                                        else //fallback default 
-                                            Response.MakeGetResponse(@"{ ""00000000-00000000-00000000-00000001"": 1 } ", "application/json");
-                                    }
-                                    //Check for specifically the Tracking GUID
-                                    else if (absolutepath.Contains($"/RewardsService/") && absolutepath.Contains("object/00000000-00000000-00000000-00000001"))
-                                    {
-                                        //Detect if existing inv exists
-                                        if (File.Exists(filePath + ".json"))
-                                        {
-                                            string? res = FileHelper.ReadAllText(filePath + ".json", _legacykey);
+                                                string? res = FileHelper.ReadAllText(filePath + ".json", _legacykey);
 
-                                            if (!string.IsNullOrEmpty(res))
-                                            {
-                                                if (GetHeaderValue(Headers, "Accept") == "application/json")
-                                                    Response.MakeGetResponse(res, "application/json");
+                                                if (!string.IsNullOrEmpty(res))
+                                                {
+                                                    if (GetHeaderValue(Headers, "Accept") == "application/json")
+                                                        Response.MakeGetResponse(res, "application/json");
+                                                    else
+                                                        Response.MakeGetResponse(res);
+                                                }
                                                 else
-                                                    Response.MakeGetResponse(res);
+                                                    Response.MakeErrorResponse();
                                             }
-                                            else
-                                                Response.MakeErrorResponse();
+                                            else //fallback default 
+                                                Response.MakeGetResponse(@"{ ""00000000-00000000-00000000-00000001"": 1 } ", "application/json");
                                         }
-                                        else //fallback default 
+                                        //Check for specifically the Tracking GUID
+                                        else if (absolutepath.Contains($"/RewardsService/") && absolutepath.Contains("object/00000000-00000000-00000000-00000001"))
                                         {
+                                            //Detect if existing inv exists
+                                            if (File.Exists(filePath + ".json"))
+                                            {
+                                                string? res = FileHelper.ReadAllText(filePath + ".json", _legacykey);
+
+                                                if (!string.IsNullOrEmpty(res))
+                                                {
+                                                    if (GetHeaderValue(Headers, "Accept") == "application/json")
+                                                        Response.MakeGetResponse(res, "application/json");
+                                                    else
+                                                        Response.MakeGetResponse(res);
+                                                }
+                                                else
+                                                    Response.MakeErrorResponse();
+                                            }
+                                            else //fallback default 
+                                            {
 #if DEBUG
-                                            LoggerAccessor.LogWarn($"[SSFWProcessor] : {UserAgent} Non-existent inventories detected, using defaults!");
+                                                LoggerAccessor.LogWarn($"[SSFWProcessor] : {UserAgent} Non-existent inventories detected, using defaults!");
 #endif
-                                            if (absolutepath.Contains("p4t-cprod"))
-                                            {
-                                                #region Quest for Greatness
-                                                Response.MakeGetResponse(@"{
+                                                if (absolutepath.Contains("p4t-cprod"))
+                                                {
+                                                    #region Quest for Greatness
+                                                    Response.MakeGetResponse(@"{
                                                       ""result"": 0,
                                                       ""rewards"": {
                                                         ""00000000-00000000-00000000-00000001"": {
@@ -292,12 +294,12 @@ namespace SSFWServer
                                                         }
                                                       }
                                                     }", "application/json");
-                                                #endregion
-                                            }
-                                            else
-                                            {
-                                                #region Pottermore
-                                                Response.MakeGetResponse(@"{
+                                                    #endregion
+                                                }
+                                                else
+                                                {
+                                                    #region Pottermore
+                                                    Response.MakeGetResponse(@"{
                                                       ""result"": 0,
                                                       ""rewards"": [
                                                         {
@@ -308,49 +310,50 @@ namespace SSFWServer
                                                         }
                                                       ]
                                                     }", "application/json");
-                                                #endregion
+                                                    #endregion
+                                                }
+
                                             }
-
                                         }
-                                    }
-                                    else if (File.Exists(filePath + ".json"))
-                                    {
-                                        string? res = FileHelper.ReadAllText(filePath + ".json", _legacykey);
-
-                                        if (!string.IsNullOrEmpty(res))
+                                        else if (File.Exists(filePath + ".json"))
                                         {
-                                            if (GetHeaderValue(Headers, "Accept") == "application/json")
-                                                Response.MakeGetResponse(res, "application/json");
+                                            string? res = FileHelper.ReadAllText(filePath + ".json", _legacykey);
+
+                                            if (!string.IsNullOrEmpty(res))
+                                            {
+                                                if (GetHeaderValue(Headers, "Accept") == "application/json")
+                                                    Response.MakeGetResponse(res, "application/json");
+                                                else
+                                                    Response.MakeGetResponse(res);
+                                            }
                                             else
-                                                Response.MakeGetResponse(res);
+                                                Response.MakeErrorResponse();
+                                        }
+                                        else if (File.Exists(filePath + ".bin"))
+                                        {
+                                            byte[]? res = FileHelper.ReadAllBytes(filePath + ".bin", _legacykey);
+
+                                            if (res != null)
+                                                Response.MakeGetResponse(res, "application/octet-stream");
+                                            else
+                                                Response.MakeErrorResponse();
+                                        }
+                                        else if (File.Exists(filePath + ".jpeg"))
+                                        {
+                                            byte[]? res = FileHelper.ReadAllBytes(filePath + ".jpeg", _legacykey);
+
+                                            if (res != null)
+                                                Response.MakeGetResponse(res, "image/jpeg");
+                                            else
+                                                Response.MakeErrorResponse();
                                         }
                                         else
-                                            Response.MakeErrorResponse();
-                                    }
-                                    else if (File.Exists(filePath + ".bin"))
-                                    {
-                                        byte[]? res = FileHelper.ReadAllBytes(filePath + ".bin", _legacykey);
-
-                                        if (res != null)
-                                            Response.MakeGetResponse(res, "application/octet-stream");
-                                        else
-                                            Response.MakeErrorResponse();
-                                    }
-                                    else if (File.Exists(filePath + ".jpeg"))
-                                    {
-                                        byte[]? res = FileHelper.ReadAllBytes(filePath + ".jpeg", _legacykey);
-
-                                        if (res != null)
-                                            Response.MakeGetResponse(res, "image/jpeg");
-                                        else
-                                            Response.MakeErrorResponse();
-                                    }
-                                    else
-                                    {
-                                        LoggerAccessor.LogWarn($"[SSFWProcessor] : {UserAgent} Requested a non-existent file - {filePath}");
-                                        Response.Clear();
-                                        Response.SetBegin((int)HttpStatusCode.NotFound);
-                                        Response.SetBody();
+                                        {
+                                            LoggerAccessor.LogWarn($"[SSFWProcessor] : {UserAgent} Requested a non-existent file - {filePath}");
+                                            Response.Clear();
+                                            Response.SetBegin((int)HttpStatusCode.NotFound);
+                                            Response.SetBody();
+                                        }
                                     }
                                 }
                                 else if (absolutepath.Contains($"/SaveDataService/avatar/{env}/") && absolutepath.EndsWith(".jpg"))
@@ -441,71 +444,73 @@ namespace SSFWServer
                                     }
                                     #endregion
 
-                                    #region AvatarLayoutService
-                                    else if (absolutepath.Contains($"/AvatarLayoutService/{env}/") && IsSSFWRegistered(sessionid))
-                                    {
-                                        Response.Clear();
-                                        if (avatarLayout.HandleAvatarLayout(postbuffer, directoryPath, filePath, absolutepath, false))
-                                            Response.SetBegin((int)HttpStatusCode.OK);
-                                        else
-                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
-                                        Response.SetBody();
-                                    }
-                                    #endregion
-
-                                    #region LayoutService
-                                    else if (absolutepath.Contains($"/LayoutService/{env}/person/") && IsSSFWRegistered(sessionid))
-                                    {
-                                        Response.Clear();
-                                        if (layout.HandleLayoutServicePOST(postbuffer, directoryPath, absolutepath))
-                                            Response.SetBegin((int)HttpStatusCode.OK);
-                                        else
-                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
-                                        Response.SetBody();
-                                    }
-                                    #endregion
-
-                                    #region RewardsService
-                                    else if (absolutepath.Contains($"/RewardsService/{env}/rewards/") && IsSSFWRegistered(sessionid))
-                                        Response.MakeGetResponse(rewardSvc.HandleRewardServicePOST(postbuffer, directoryPath, filePath, absolutepath), "application/json");
-                                    else if (absolutepath.Contains($"/RewardsService/trunks-{env}/trunks/") && absolutepath.Contains("/setpartial") && IsSSFWRegistered(sessionid))
-                                    {
-                                        rewardSvc.HandleRewardServiceTrunksPOST(postbuffer, directoryPath, filePath, absolutepath, env, SSFWUserSessionManager.GetIdBySessionId(sessionid));
-                                        Response.MakeOkResponse();
-                                    }
-                                    else if (absolutepath.Contains($"/RewardsService/trunks-{env}/trunks/") && absolutepath.Contains("/set") && IsSSFWRegistered(sessionid))
-                                    {
-                                        rewardSvc.HandleRewardServiceTrunksEmergencyPOST(postbuffer, directoryPath, absolutepath);
-                                        Response.MakeOkResponse();
-                                    }
-                                    else if (
-                                        (absolutepath.Contains($"/RewardsService/pm_{env}_inv/")
-                                        || absolutepath.Contains($"/RewardsService/pmcards/")
-                                        || absolutepath.Contains($"/RewardsService/p4t-{env}/"))
-                                        && IsSSFWRegistered(sessionid))
-                                        Response.MakeGetResponse(rewardSvc.HandleRewardServiceInvPOST(postbuffer, directoryPath, filePath, absolutepath), "application/json");
-                                    #endregion
-
                                     else if (IsSSFWRegistered(sessionid))
                                     {
-                                        LoggerAccessor.LogWarn($"[SSFWProcessor] : Host requested a POST method I don't know about! - Report it to GITHUB with the request : {absolutepath}");
-                                        if (postbuffer != null)
+                                        #region AvatarLayoutService
+                                        if (absolutepath.Contains($"/AvatarLayoutService/{env}/"))
                                         {
-                                            Directory.CreateDirectory(directoryPath);
-                                            switch (GetHeaderValue(Headers, "Content-type", false))
-                                            {
-                                                case "image/jpeg":
-                                                    File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.jpeg", postbuffer);
-                                                    break;
-                                                case "application/json":
-                                                    File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.json", postbuffer);
-                                                    break;
-                                                default:
-                                                    File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.bin", postbuffer);
-                                                    break;
-                                            }
+                                            Response.Clear();
+                                            if (avatarLayout.HandleAvatarLayout(postbuffer, directoryPath, filePath, absolutepath, false))
+                                                Response.SetBegin((int)HttpStatusCode.OK);
+                                            else
+                                                Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                            Response.SetBody();
                                         }
-                                        Response.MakeOkResponse();
+                                        #endregion
+
+                                        #region LayoutService
+                                        else if (absolutepath.Contains($"/LayoutService/{env}/person/"))
+                                        {
+                                            Response.Clear();
+                                            if (layout.HandleLayoutServicePOST(postbuffer, directoryPath, absolutepath))
+                                                Response.SetBegin((int)HttpStatusCode.OK);
+                                            else
+                                                Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                            Response.SetBody();
+                                        }
+                                        #endregion
+
+                                        #region RewardsService
+                                        else if (absolutepath.Contains($"/RewardsService/{env}/rewards/"))
+                                            Response.MakeGetResponse(rewardSvc.HandleRewardServicePOST(postbuffer, directoryPath, filePath, absolutepath), "application/json");
+                                        else if (absolutepath.Contains($"/RewardsService/trunks-{env}/trunks/") && absolutepath.Contains("/setpartial"))
+                                        {
+                                            rewardSvc.HandleRewardServiceTrunksPOST(postbuffer, directoryPath, filePath, absolutepath, env, SSFWUserSessionManager.GetIdBySessionId(sessionid));
+                                            Response.MakeOkResponse();
+                                        }
+                                        else if (absolutepath.Contains($"/RewardsService/trunks-{env}/trunks/") && absolutepath.Contains("/set"))
+                                        {
+                                            rewardSvc.HandleRewardServiceTrunksEmergencyPOST(postbuffer, directoryPath, absolutepath);
+                                            Response.MakeOkResponse();
+                                        }
+                                        else if (
+                                            absolutepath.Contains($"/RewardsService/pm_{env}_inv/")
+                                            || absolutepath.Contains($"/RewardsService/pmcards/")
+                                            || absolutepath.Contains($"/RewardsService/p4t-{env}/"))
+                                            Response.MakeGetResponse(rewardSvc.HandleRewardServiceInvPOST(postbuffer, directoryPath, filePath, absolutepath), "application/json");
+                                        #endregion
+
+                                        else
+                                        {
+                                            LoggerAccessor.LogWarn($"[SSFWProcessor] : Host requested a POST method I don't know about! - Report it to GITHUB with the request : {absolutepath}");
+                                            if (postbuffer != null)
+                                            {
+                                                Directory.CreateDirectory(directoryPath);
+                                                switch (GetHeaderValue(Headers, "Content-type", false))
+                                                {
+                                                    case "image/jpeg":
+                                                        File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.jpeg", postbuffer);
+                                                        break;
+                                                    case "application/json":
+                                                        File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.json", postbuffer);
+                                                        break;
+                                                    default:
+                                                        File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.bin", postbuffer);
+                                                        break;
+                                                }
+                                            }
+                                            Response.MakeOkResponse();
+                                        }
                                     }
                                     else
                                     {
@@ -591,50 +596,53 @@ namespace SSFWServer
                                 break;
                             case "DELETE":
 
-                                #region AvatarLayoutService
-                                if (absolutepath.Contains($"/AvatarLayoutService/{env}/") && IsSSFWRegistered(sessionid))
+                                if (IsSSFWRegistered(sessionid))
                                 {
-                                    if (request.BodyLength <= Array.MaxLength)
+                                    #region AvatarLayoutService
+                                    if (absolutepath.Contains($"/AvatarLayoutService/{env}/"))
                                     {
-                                        Response.Clear();
-                                        if (avatarLayout.HandleAvatarLayout(request.BodyBytes, directoryPath, filePath, absolutepath, true))
-                                            Response.SetBegin((int)HttpStatusCode.OK);
+                                        if (request.BodyLength <= Array.MaxLength)
+                                        {
+                                            Response.Clear();
+                                            if (avatarLayout.HandleAvatarLayout(request.BodyBytes, directoryPath, filePath, absolutepath, true))
+                                                Response.SetBegin((int)HttpStatusCode.OK);
+                                            else
+                                                Response.SetBegin((int)HttpStatusCode.Forbidden);
+                                            Response.SetBody();
+                                        }
                                         else
-                                            Response.SetBegin((int)HttpStatusCode.Forbidden);
-                                        Response.SetBody();
+                                        {
+                                            Response.Clear();
+                                            Response.SetBegin(400);
+                                            Response.SetBody();
+                                        }
                                     }
-                                    else
-                                    {
-                                        Response.Clear();
-                                        Response.SetBegin(400);
-                                        Response.SetBody();
-                                    }
-                                }
-                                #endregion
+                                    #endregion
 
-                                else if (IsSSFWRegistered(sessionid))
-                                {
-                                    if (File.Exists(filePath + ".json"))
-                                    {
-                                        File.Delete(filePath + ".json");
-                                        Response.MakeOkResponse();
-                                    }
-                                    else if (File.Exists(filePath + ".bin"))
-                                    {
-                                        File.Delete(filePath + ".bin");
-                                        Response.MakeOkResponse();
-                                    }
-                                    else if (File.Exists(filePath + ".jpeg"))
-                                    {
-                                        File.Delete(filePath + ".jpeg");
-                                        Response.MakeOkResponse();
-                                    }
                                     else
                                     {
-                                        LoggerAccessor.LogError($"[SSFWProcessor] : {UserAgent} Requested a file to delete that doesn't exist - {filePath}");
-                                        Response.Clear();
-                                        Response.SetBegin((int)HttpStatusCode.NotFound);
-                                        Response.SetBody();
+                                        if (File.Exists(filePath + ".json"))
+                                        {
+                                            File.Delete(filePath + ".json");
+                                            Response.MakeOkResponse();
+                                        }
+                                        else if (File.Exists(filePath + ".bin"))
+                                        {
+                                            File.Delete(filePath + ".bin");
+                                            Response.MakeOkResponse();
+                                        }
+                                        else if (File.Exists(filePath + ".jpeg"))
+                                        {
+                                            File.Delete(filePath + ".jpeg");
+                                            Response.MakeOkResponse();
+                                        }
+                                        else
+                                        {
+                                            LoggerAccessor.LogError($"[SSFWProcessor] : {UserAgent} Requested a file to delete that doesn't exist - {filePath}");
+                                            Response.Clear();
+                                            Response.SetBegin((int)HttpStatusCode.NotFound);
+                                            Response.SetBody();
+                                        }
                                     }
                                 }
                                 else
