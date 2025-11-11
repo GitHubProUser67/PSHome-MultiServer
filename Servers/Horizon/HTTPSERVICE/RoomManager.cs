@@ -89,6 +89,13 @@ namespace Horizon.HTTPSERVICE
                         room = new Room
                         {
                             AppId = appIdStr,
+                            PlayerSkillLevel = channel.PlayerSkillLevel,
+                            GenericField1 = channel.GenericField1,
+                            GenericField2 = channel.GenericField2,
+                            GenericField3 = channel.GenericField3,
+                            GenericField4 = channel.GenericField4,
+                            WorldStatus = (int)channel.WorldStatus,
+                            RulesSet = channel.RulesSet,
                             Worlds = new List<World>()
                         };
                         rooms.Add(room);
@@ -107,17 +114,17 @@ namespace Horizon.HTTPSERVICE
                         room.Worlds!.Add(world);
                     }
 
-                    var incomingGames = channel._games
+                    var incomingGames = channel.Games
                         .Select(g => g.MediusWorldId)
                         .ToList();
 
-                    incomingGames.AddRange(channel._parties
+                    incomingGames.AddRange(channel.Parties
                         .Select(g => g.MediusWorldId)
                         .ToList());
 
                     world.GameSessions!.RemoveAll(p => !incomingGames.Contains(p.DmeWorldId));
 
-                    foreach (var game in channel._games)
+                    foreach (var game in channel.Games)
                     {
                         GameClient[] gameClients = game.LocalClients.ToArray();
 
@@ -165,7 +172,7 @@ namespace Horizon.HTTPSERVICE
                         }
                     }
 
-                    foreach (var party in channel._parties)
+                    foreach (var party in channel.Parties)
                     {
                         PartyClient[] partyClients = party.LocalClients.ToArray();
 
@@ -260,6 +267,13 @@ namespace Horizon.HTTPSERVICE
     public class Room
     {
         public string? AppId { get; set; }
+        public int PlayerSkillLevel { get; set; }
+        public int RulesSet { get; set; }
+        public ulong GenericField1 { get; set; }
+        public ulong GenericField2 { get; set; }
+        public ulong GenericField3 { get; set; }
+        public ulong GenericField4 { get; set; }
+        public int WorldStatus { get; set; }
         public List<World>? Worlds { get; set; }
     }
 

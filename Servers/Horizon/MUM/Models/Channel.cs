@@ -26,9 +26,9 @@ namespace Horizon.MUM.Models
         [JsonIgnore]
         public ConcurrentList<ClientObject> LocalClients = new();
         [JsonIgnore]
-        public ConcurrentList<Game> _games = new();
+        public ConcurrentList<Game> Games = new();
         [JsonIgnore]
-        public ConcurrentList<Party> _parties = new();
+        public ConcurrentList<Party> Parties = new();
 
         public ConcurrentList<Channel> LocalChannels = new();
 
@@ -62,8 +62,8 @@ namespace Horizon.MUM.Models
 
         public virtual bool ReadyToDestroy => Type == ChannelType.Game && (_removeChannel || ((DateTimeUtils.GetHighPrecisionUtcTime() - _timeCreated).TotalSeconds > MediusClass.GetAppSettingsOrDefault(ApplicationId).GameTimeoutSeconds) && GameCount == 0 && PartyCount == 0);
         public virtual int PlayerCount => LocalClients.Count;
-        public virtual int GameCount => _games.Count;
-        public virtual int PartyCount => _parties.Count;
+        public virtual int GameCount => Games.Count;
+        public virtual int PartyCount => Parties.Count;
 
         private static bool InitializeAppId(int ApplicationId, bool Pre108)
         {
@@ -305,16 +305,16 @@ namespace Horizon.MUM.Models
         public virtual void RegisterParty(Party party)
         {
             _removeChannel = false; // If an other thread removed party but channel not closed yet.
-            _parties.Add(party);
+            Parties.Add(party);
         }
 
         public virtual void UnregisterParty(Party party)
         {
             // Remove Party
-            _parties.Remove(party);
+            Parties.Remove(party);
 
             // If empty, just end channel
-            if (_parties.Count == 0)
+            if (Parties.Count == 0)
                 _removeChannel = true;
         }
         #endregion
@@ -323,16 +323,16 @@ namespace Horizon.MUM.Models
         public virtual void RegisterGame(Game game)
         {
             _removeChannel = false; // If an other thread removed game but channel not closed yet.
-            _games.Add(game);
+            Games.Add(game);
         }
 
         public virtual void UnregisterGame(Game game)
         {
             // Remove game
-            _games.Remove(game);
+            Games.Remove(game);
 
             // If empty, just end channel
-            if (_games.Count == 0)
+            if (Games.Count == 0)
                 _removeChannel = true;
         }
         #endregion

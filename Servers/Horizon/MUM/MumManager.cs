@@ -330,7 +330,7 @@ namespace Horizon.MUM
 
             foreach (Channel channel in channels)
             {
-                foreach (Game game in channel._games)
+                foreach (Game game in channel.Games)
                 {
                     if (game.MediusWorldId == gameId)
                         Games.Add(game);
@@ -364,7 +364,7 @@ namespace Horizon.MUM
 
             foreach (Channel channel in channels)
             {
-                foreach (Game game in channel._games)
+                foreach (Game game in channel.Games)
                 {
                     if (game.GameName == gameName)
                         Games.Add(game);
