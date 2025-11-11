@@ -1,6 +1,6 @@
 {
   "solution": {
-    "path": "MultiServer4.sln",
+    "path": "PSHMultiServer.sln",
     "projects": [
       "AuxiliaryServices\\AlcatrazService\\AlcatrazService.csproj",
       "AuxiliaryServices\\EdNetService\\EdNetService.csproj",

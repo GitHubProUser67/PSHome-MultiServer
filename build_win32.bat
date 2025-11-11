@@ -1,5 +1,5 @@
 @echo off
-@echo MultiServer build script 23/08/2025
+@echo MultiServer build script 11/11/2025
 @echo.
 
 @echo Cleaning up directories:
@@ -8,10 +8,10 @@
 
 :Build
 @echo Building MultiServer...
-dotnet restore MultiServer4.sln
-dotnet clean MultiServer4.sln
-dotnet build MultiServer4.sln --configuration Debug --property WarningLevel=0
-dotnet build MultiServer4.sln --configuration Release --property WarningLevel=0
+dotnet restore PSHMultiServer.sln
+dotnet clean PSHMultiServer.sln
+dotnet build PSHMultiServer.sln --configuration Debug --property WarningLevel=0
+dotnet build PSHMultiServer.sln --configuration Release --property WarningLevel=0
 
 @echo Copying build output to ~BuildOutput...
 xcopy /E /Y /I "Servers/Horizon/bin" "~BuildOutput"

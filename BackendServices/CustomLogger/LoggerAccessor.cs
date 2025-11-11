@@ -64,7 +64,7 @@ namespace CustomLogger
 
             }
 
-            RenderFiggle(FiggleFonts.Banner3D, project);
+            RenderFiggle(FiggleFonts.IsometricSmall, project);
 
             ILoggerFactory factory = LoggerFactory.Create(builder =>
             {

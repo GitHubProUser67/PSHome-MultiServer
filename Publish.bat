@@ -1,5 +1,5 @@
 @echo off
-@echo MultiServer publisher script 23/08/2025
+@echo MultiServer publisher script 11/11/2025
 @echo.
 
 @echo Make sure to download and install the latest Powershell revision here: https://github.com/PowerShell/PowerShell
@@ -10,8 +10,8 @@
 @echo.
 
 :Build
-dotnet restore MultiServer4.slnf
-dotnet clean MultiServer4.slnf
+dotnet restore PSHMultiServer.slnf
+dotnet clean PSHMultiServer.slnf
 dotnet build "Plugins/HTTP/HomeWebTools/HomeWebTools.csproj" --configuration Debug --property WarningLevel=0
 dotnet build "Plugins/HTTP/HomeWebTools/HomeWebTools.csproj" --configuration Release --property WarningLevel=0
 dotnet build "Plugins/HTTP/EdNetCRCCalculator/EdNetCRCCalculator.csproj" --configuration Debug --property WarningLevel=0
@@ -33,8 +33,8 @@ set params=-p:PublishReadyToRun=true -p:DebugType=None -p:DebugSymbols=false --p
 
 for %%r in (%RIDs%) do (
     @echo Publishing MultiServer for %%r ...
-    dotnet publish MultiServer4.slnf -r %%r -c Debug %params%
-    dotnet publish MultiServer4.slnf -r %%r -c Release %params%
+    dotnet publish PSHMultiServer.slnf -r %%r -c Debug %params%
+    dotnet publish PSHMultiServer.slnf -r %%r -c Release %params%
 	
 	@echo Copying %%r build output to ~PublishOutput...
 	xcopy /E /Y /I "Servers/Horizon/bin/Debug/net6.0/%%r/publish" "~PublishOutput/%%r/Debug"

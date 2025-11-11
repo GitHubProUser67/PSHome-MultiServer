@@ -9,9 +9,9 @@ namespace QuazalServer.QNetZ.DDL
     public class DDLSerializer
 	{
         // Function to get property values
-        public static object[] ReadPropertyValues(Type[] typeList, Stream str)
+        public static object?[] ReadPropertyValues(Type[] typeList, Stream str)
         {
-            var paramsInstances = new List<object>();
+            var paramsInstances = new List<object?>();
 
             foreach (Type? type in typeList)
             {
