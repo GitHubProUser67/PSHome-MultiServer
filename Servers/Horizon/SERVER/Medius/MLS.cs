@@ -69,19 +69,32 @@ namespace Horizon.SERVER.Medius
                     }
                 case RT_MSG_CLIENT_CONNECT_TCP clientConnectTcp:
                     {
+                        int appid = clientConnectTcp.AppId;
+
                         #region Compatible AppId
-                        if (!MediusClass.Manager.IsAppIdSupported(clientConnectTcp.AppId))
+                        if (appid < 0)
                         {
-                            LoggerAccessor.LogError($"Client {clientChannel.RemoteAddress} attempting to authenticate with incompatible app id {clientConnectTcp.AppId}");
+                            LoggerAccessor.LogError($"[MLS] - Client Connected {clientChannel.RemoteAddress} with an invalid connect payload!");
+                            break;
+                        }
+                        else if (!MediusClass.Manager.IsAppIdSupported(appid))
+                        {
+                            LoggerAccessor.LogError($"[MLS] - Client {clientChannel.RemoteAddress} attempting to authenticate with incompatible app id {appid}");
                             await clientChannel.CloseAsync();
                             return;
                         }
                         #endregion
 
+                        if (clientConnectTcp.Key == RSA_KEY.Empty)
+                        {
+                            LoggerAccessor.LogError($"[MLS] - Client Connected {clientChannel.RemoteAddress} with an empty key!");
+                            break;
+                        }
+
                         List<int> pre108ServerComplete = new() { 10114, 10130, 10164, 10190, 10124, 10284, 10330, 10334, 10414, 10421, 10442, 10538, 10540, 10550, 10582, 10584, 10680, 10681, 10683, 10684, 10984, 10724 };
 
-                        data.ApplicationId = clientConnectTcp.AppId;
-                        scertClient.ApplicationID = clientConnectTcp.AppId;
+                        data.ApplicationId = appid;
+                        scertClient.ApplicationID = appid;
 
                         Channel? targetChannel = MediusClass.Manager.GetChannelByChannelId(clientConnectTcp.TargetWorldId, data.ApplicationId);
 
@@ -105,9 +118,9 @@ namespace Horizon.SERVER.Medius
                          * I decided to generalize it in case an other buggy beta does it. */
                         await Task.Delay(500);
 
-                        data.ClientObject = MediusClass.Manager.GetClientByAccessToken(clientConnectTcp.AccessToken, clientConnectTcp.AppId);
+                        data.ClientObject = MediusClass.Manager.GetClientByAccessToken(clientConnectTcp.AccessToken, appid);
                         if (data.ClientObject == null)
-                            data.ClientObject = MediusClass.Manager.GetClientBySessionKey(clientConnectTcp.SessionKey, clientConnectTcp.AppId);
+                            data.ClientObject = MediusClass.Manager.GetClientBySessionKey(clientConnectTcp.SessionKey, appid);
 
                         #region Client Object Null?
                         //If Client Object is null, then ignore or create a guest.
@@ -117,13 +130,13 @@ namespace Horizon.SERVER.Medius
                             {
                                 string clientIP = ((IPEndPoint)clientChannel.RemoteAddress).Address.ToString().Trim(new char[] { ':', 'f', '{', '}' });
 
-                                data.ClientObject = MediusClass.Manager.GetClientsByIp(clientIP, clientConnectTcp.AppId)?.FirstOrDefault();
+                                data.ClientObject = MediusClass.Manager.GetClientsByIp(clientIP, appid)?.FirstOrDefault();
 
                                 if (data.ClientObject == null)
                                 {
                                     data.ClientObject = new(scertClient.MediusVersion ?? 0, clientConnectTcp.SessionKey, clientConnectTcp.AccessToken)
                                     {
-                                        ApplicationId = clientConnectTcp.AppId,
+                                        ApplicationId = appid,
                                     };
                                     data.ClientObject.OnConnected();
                                     data.ClientObject.SetIp(clientIP);
@@ -156,7 +169,7 @@ namespace Horizon.SERVER.Medius
                         else
                         {
                             data.ClientObject.MediusVersion = scertClient.MediusVersion ?? 0;
-                            data.ClientObject.ApplicationId = clientConnectTcp.AppId;
+                            data.ClientObject.ApplicationId = appid;
                             data.ClientObject.OnConnected();
                         }
                         #endregion

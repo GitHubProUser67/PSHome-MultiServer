@@ -60,7 +60,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.State > ClientState.HELLO)
                         {
-                            LoggerAccessor.LogError($"Unexpected RT_MSG_CLIENT_HELLO from {clientChannel.RemoteAddress}: {clientHello}");
+                            LoggerAccessor.LogError($"[MPS] - Unexpected RT_MSG_CLIENT_HELLO from {clientChannel.RemoteAddress}: {clientHello}");
                             break;
                         }
 
@@ -72,7 +72,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.State > ClientState.HANDSHAKE)
                         {
-                            LoggerAccessor.LogError($"Unexpected RT_MSG_CLIENT_CRYPTKEY_PUBLIC from {clientChannel.RemoteAddress}: {clientCryptKeyPublic}");
+                            LoggerAccessor.LogError($"[MPS] - Unexpected RT_MSG_CLIENT_CRYPTKEY_PUBLIC from {clientChannel.RemoteAddress}: {clientCryptKeyPublic}");
                             break;
                         }
 
@@ -89,14 +89,30 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.State > ClientState.CONNECT_1)
                         {
-                            LoggerAccessor.LogError($"Unexpected RT_MSG_CLIENT_CONNECT_TCP from {clientChannel.RemoteAddress}: {clientConnectTcp}");
+                            LoggerAccessor.LogError($"[MPS] - Unexpected RT_MSG_CLIENT_CONNECT_TCP from {clientChannel.RemoteAddress}: {clientConnectTcp}");
+                            break;
+                        }
+
+                        int appid = clientConnectTcp.AppId;
+
+                        #region Compatible AppId
+                        if (appid < 0)
+                        {
+                            LoggerAccessor.LogError($"[MPS] - Client Connected {clientChannel.RemoteAddress} with an invalid connect payload!");
+                            break;
+                        }
+                        #endregion
+
+                        if (clientConnectTcp.Key == RSA_KEY.Empty)
+                        {
+                            LoggerAccessor.LogError($"[MPS] - Client Connected {clientChannel.RemoteAddress} with an empty key!");
                             break;
                         }
 
                         List<int> pre108ServerComplete = new() { 10114, 10164, 10190, 10124, 10130, 10164, 10284, 10330, 10334, 10414, 10421, 10442, 10538, 10540, 10550, 10582, 10584, 10680, 10681, 10683, 10684, 10724 };
 
-                        data.ApplicationId = clientConnectTcp.AppId;
-                        scertClient.ApplicationID = clientConnectTcp.AppId;
+                        data.ApplicationId = appid;
+                        scertClient.ApplicationID = appid;
 
                         Channel? targetChannel = MediusClass.Manager.GetChannelByChannelId(clientConnectTcp.TargetWorldId, data.ApplicationId);
 
@@ -118,9 +134,9 @@ namespace Horizon.SERVER.Medius
                         // If booth are null, it means MAS client wants a new object.
                         if (!string.IsNullOrEmpty(clientConnectTcp.AccessToken) && !string.IsNullOrEmpty(clientConnectTcp.SessionKey))
                         {
-                            data.ClientObject = MediusClass.Manager.GetClientByAccessToken(clientConnectTcp.AccessToken, clientConnectTcp.AppId);
+                            data.ClientObject = MediusClass.Manager.GetClientByAccessToken(clientConnectTcp.AccessToken, appid);
                             if (data.ClientObject == null)
-                                data.ClientObject = MediusClass.Manager.GetClientBySessionKey(clientConnectTcp.SessionKey, clientConnectTcp.AppId);
+                                data.ClientObject = MediusClass.Manager.GetClientBySessionKey(clientConnectTcp.SessionKey, appid);
 
                             if (data.ClientObject != null)
                                 LoggerAccessor.LogInfo($"[MPS] - Client Connected {clientChannel.RemoteAddress}!");
@@ -132,7 +148,7 @@ namespace Horizon.SERVER.Medius
                             }
 
                             data.ClientObject.MediusVersion = scertClient.MediusVersion ?? 0;
-                            data.ClientObject.ApplicationId = clientConnectTcp.AppId;
+                            data.ClientObject.ApplicationId = appid;
                             data.ClientObject.OnConnected();
                         }
                         else // MAG uses MPS directly to register a ClientObject.
@@ -141,7 +157,7 @@ namespace Horizon.SERVER.Medius
 
                             data.ClientObject = new(scertClient.MediusVersion ?? 0)
                             {
-                                ApplicationId = clientConnectTcp.AppId
+                                ApplicationId = appid
                             };
                             data.ClientObject.OnConnected();
 
@@ -228,7 +244,7 @@ namespace Horizon.SERVER.Medius
                     {
                         if (data.State != ClientState.AUTHENTICATED)
                         {
-                            LoggerAccessor.LogError($"Unexpected RT_MSG_CLIENT_APP_TOSERVER from {clientChannel.RemoteAddress}: {clientAppToServer}");
+                            LoggerAccessor.LogError($"[MPS] - Unexpected RT_MSG_CLIENT_APP_TOSERVER from {clientChannel.RemoteAddress}: {clientAppToServer}");
                             break;
                         }
 
@@ -259,7 +275,7 @@ namespace Horizon.SERVER.Medius
                     }
                 default:
                     {
-                        LoggerAccessor.LogWarn($"UNHANDLED RT MESSAGE: {message}");
+                        LoggerAccessor.LogWarn($"[MPS] - UNHANDLED RT MESSAGE: {message}");
                         break;
                     }
             }
@@ -1081,7 +1097,7 @@ namespace Horizon.SERVER.Medius
 
                 default:
                     {
-                        LoggerAccessor.LogWarn($"Unhandled Medius Message: {message}");
+                        LoggerAccessor.LogWarn($"[MPS] - Unhandled Medius Message: {message}");
                         break;
                     }
             }

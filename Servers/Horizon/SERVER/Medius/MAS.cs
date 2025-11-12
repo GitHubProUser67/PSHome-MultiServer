@@ -70,14 +70,27 @@ namespace Horizon.SERVER.Medius
                     }
                 case RT_MSG_CLIENT_CONNECT_TCP clientConnectTcp:
                     {
+                        int appid = clientConnectTcp.AppId;
+
                         #region Check if AppId from Client matches Server
-                        if (!MediusClass.Manager.IsAppIdSupported(clientConnectTcp.AppId))
+                        if (appid < 0)
                         {
-                            LoggerAccessor.LogError($"Client {clientChannel.RemoteAddress} attempting to authenticate with incompatible app id {clientConnectTcp.AppId}");
+                            LoggerAccessor.LogError($"[MAS] - Client Connected {clientChannel.RemoteAddress} with an invalid connect payload!");
+                            break;
+                        }
+                        else if (!MediusClass.Manager.IsAppIdSupported(appid))
+                        {
+                            LoggerAccessor.LogError($"[MAS] - Client {clientChannel.RemoteAddress} attempting to authenticate with incompatible app id {appid}");
                             await clientChannel.CloseAsync();
                             return;
                         }
                         #endregion
+
+                        if (clientConnectTcp.Key == RSA_KEY.Empty)
+                        {
+                            LoggerAccessor.LogError($"[MAS] - Client Connected {clientChannel.RemoteAddress} with an empty key!");
+                            break;
+                        }
 
                         List<int> pre108ServerComplete = new() { 10114, 10130, 10164, 10190, 10124, 10284, 10330, 10334, 10414, 10421, 10442, 10538, 10540, 10550, 10582, 10584, 10680, 10681, 10683, 10684, 10724 };
 
@@ -87,8 +100,8 @@ namespace Horizon.SERVER.Medius
                         /// </summary>
                         List<int> post108ServerComplete = new() { 10694 };
 
-                        data.ApplicationId = clientConnectTcp.AppId;
-                        scertClient.ApplicationID = clientConnectTcp.AppId;
+                        data.ApplicationId = appid;
+                        scertClient.ApplicationID = appid;
 
                         Channel? targetChannel = MediusClass.Manager.GetChannelByChannelId(clientConnectTcp.TargetWorldId, data.ApplicationId);
 
@@ -110,9 +123,9 @@ namespace Horizon.SERVER.Medius
                         // If booth are null, it means MAS client wants a new object.
                         if (!string.IsNullOrEmpty(clientConnectTcp.AccessToken) && !string.IsNullOrEmpty(clientConnectTcp.SessionKey))
                         {
-                            data.ClientObject = MediusClass.Manager.GetClientByAccessToken(clientConnectTcp.AccessToken, clientConnectTcp.AppId);
+                            data.ClientObject = MediusClass.Manager.GetClientByAccessToken(clientConnectTcp.AccessToken, appid);
                             if (data.ClientObject == null)
-                                data.ClientObject = MediusClass.Manager.GetClientBySessionKey(clientConnectTcp.SessionKey, clientConnectTcp.AppId);
+                                data.ClientObject = MediusClass.Manager.GetClientBySessionKey(clientConnectTcp.SessionKey, appid);
 
                             if (data.ClientObject != null)
                                 LoggerAccessor.LogInfo($"[MAS] - Client Connected {clientChannel.RemoteAddress}!");
@@ -124,7 +137,7 @@ namespace Horizon.SERVER.Medius
                             }
 
                             data.ClientObject.MediusVersion = scertClient.MediusVersion ?? 0;
-                            data.ClientObject.ApplicationId = clientConnectTcp.AppId;
+                            data.ClientObject.ApplicationId = appid;
                             data.ClientObject.OnConnected();
                         }
                         else
@@ -133,7 +146,7 @@ namespace Horizon.SERVER.Medius
 
                             data.ClientObject = new(scertClient.MediusVersion ?? 0)
                             {
-                                ApplicationId = clientConnectTcp.AppId
+                                ApplicationId = appid
                             };
                             data.ClientObject.OnConnected();
 

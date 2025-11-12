@@ -350,10 +350,24 @@ namespace Horizon.DME
                     }
                 case RT_MSG_CLIENT_CONNECT_TCP_AUX_UDP clientConnectTcpAuxUdp:
                     {
+                        int appid = clientConnectTcpAuxUdp.AppId;
+
+                        if (appid < 0)
+                        {
+                            LoggerAccessor.LogError($"[DME] - TcpServer - Client Connected {clientChannel.RemoteAddress} with an invalid connect payload!");
+                            break;
+                        }
+
+                        if (clientConnectTcpAuxUdp.Key == RSA_KEY.Empty)
+                        {
+                            LoggerAccessor.LogError($"[DME] - TcpServer - Client Connected {clientChannel.RemoteAddress} with an empty key!");
+                            break;
+                        }
+
                         ClientObject? mumClient;
 
-                        data.ApplicationId = clientConnectTcpAuxUdp.AppId;
-                        scertClient.ApplicationID = clientConnectTcpAuxUdp.AppId;
+                        data.ApplicationId = appid;
+                        scertClient.ApplicationID = appid;
 
                         Channel? targetChannel = MediusClass.Manager.GetChannelByChannelId(clientConnectTcpAuxUdp.TargetWorldId, data.ApplicationId);
 
@@ -375,9 +389,9 @@ namespace Horizon.DME
                         // If booth are null, it means DME client wants a new object.
                         if (!string.IsNullOrEmpty(clientConnectTcpAuxUdp.AccessToken) && !string.IsNullOrEmpty(clientConnectTcpAuxUdp.SessionKey))
                         {
-                            mumClient = MediusClass.Manager.GetClientByAccessToken(clientConnectTcpAuxUdp.AccessToken, clientConnectTcpAuxUdp.AppId);
+                            mumClient = MediusClass.Manager.GetClientByAccessToken(clientConnectTcpAuxUdp.AccessToken, appid);
                             if (mumClient == null)
-                                mumClient = MediusClass.Manager.GetClientBySessionKey(clientConnectTcpAuxUdp.SessionKey, clientConnectTcpAuxUdp.AppId);
+                                mumClient = MediusClass.Manager.GetClientBySessionKey(clientConnectTcpAuxUdp.SessionKey, appid);
 
                             if (mumClient != null)
                                 LoggerAccessor.LogInfo($"[DME] - TcpServer - Client Connected {clientChannel.RemoteAddress}:{data.DMEObject}: {clientChannel}");
@@ -389,7 +403,7 @@ namespace Horizon.DME
                             }
 
                             mumClient.MediusVersion = scertClient.MediusVersion ?? 0;
-                            mumClient.ApplicationId = clientConnectTcpAuxUdp.AppId;
+                            mumClient.ApplicationId = appid;
                             mumClient.OnConnected();
                         }
                         else // MAG uses DME directly to register a ClientObject.
@@ -398,7 +412,7 @@ namespace Horizon.DME
 
                             mumClient = new(scertClient.MediusVersion ?? 0)
                             {
-                                ApplicationId = clientConnectTcpAuxUdp.AppId
+                                ApplicationId = appid
                             };
                             mumClient.OnConnected();
 
@@ -429,7 +443,7 @@ namespace Horizon.DME
                             data.DMEObject = new DMEObject(clientConnectTcpAuxUdp.SessionKey);
                         }
 
-                        data.DMEObject.ApplicationId = clientConnectTcpAuxUdp.AppId;
+                        data.DMEObject.ApplicationId = appid;
                         data.DMEObject.OnTcpConnected(clientChannel);
                         data.DMEObject.ScertId = GenerateNewScertClientId();
                         data.DMEObject.MediusVersion = scertClient.MediusVersion;
@@ -490,10 +504,24 @@ namespace Horizon.DME
                     }
                 case RT_MSG_CLIENT_CONNECT_TCP clientConnectTcp:
                     {
+                        int appid = clientConnectTcp.AppId;
+
+                        if (appid < 0)
+                        {
+                            LoggerAccessor.LogError($"[DME] - TcpServer - Client Connected {clientChannel.RemoteAddress} with an invalid connect payload!");
+                            break;
+                        }
+
+                        if (clientConnectTcp.Key == RSA_KEY.Empty)
+                        {
+                            LoggerAccessor.LogError($"[DME] - TcpServer - Client Connected {clientChannel.RemoteAddress} with an empty key!");
+                            break;
+                        }
+
                         ClientObject? mumClient;
 
-                        data.ApplicationId = clientConnectTcp.AppId;
-                        scertClient.ApplicationID = clientConnectTcp.AppId;
+                        data.ApplicationId = appid;
+                        scertClient.ApplicationID = appid;
 
                         Channel? targetChannel = MediusClass.Manager.GetChannelByChannelId(clientConnectTcp.TargetWorldId, data.ApplicationId);
 
@@ -515,9 +543,9 @@ namespace Horizon.DME
                         // If booth are null, it means DME client wants a new object.
                         if (!string.IsNullOrEmpty(clientConnectTcp.AccessToken) && !string.IsNullOrEmpty(clientConnectTcp.SessionKey))
                         {
-                            mumClient = MediusClass.Manager.GetClientByAccessToken(clientConnectTcp.AccessToken, clientConnectTcp.AppId);
+                            mumClient = MediusClass.Manager.GetClientByAccessToken(clientConnectTcp.AccessToken, appid);
                             if (mumClient == null)
-                                mumClient = MediusClass.Manager.GetClientBySessionKey(clientConnectTcp.SessionKey, clientConnectTcp.AppId);
+                                mumClient = MediusClass.Manager.GetClientBySessionKey(clientConnectTcp.SessionKey, appid);
 
                             if (mumClient != null)
                                 LoggerAccessor.LogInfo($"[DME] - TcpServer - Client Connected {clientChannel.RemoteAddress}:{data.DMEObject}: {clientChannel}");
@@ -529,7 +557,7 @@ namespace Horizon.DME
                             }
 
                             mumClient.MediusVersion = scertClient.MediusVersion ?? 0;
-                            mumClient.ApplicationId = clientConnectTcp.AppId;
+                            mumClient.ApplicationId = appid;
                             mumClient.OnConnected();
                         }
                         else // MAG uses DME directly to register a ClientObject.
@@ -538,7 +566,7 @@ namespace Horizon.DME
 
                             mumClient = new(scertClient.MediusVersion ?? 0)
                             {
-                                ApplicationId = clientConnectTcp.AppId
+                                ApplicationId = appid
                             };
                             mumClient.OnConnected();
 
@@ -569,7 +597,7 @@ namespace Horizon.DME
                             data.DMEObject = new DMEObject(clientConnectTcp.SessionKey);
                         }
 
-                        data.DMEObject.ApplicationId = clientConnectTcp.AppId;
+                        data.DMEObject.ApplicationId = appid;
                         data.DMEObject.OnTcpConnected(clientChannel);
                         data.DMEObject.ScertId = GenerateNewScertClientId();
                         data.DMEObject.MediusVersion = scertClient.MediusVersion;
