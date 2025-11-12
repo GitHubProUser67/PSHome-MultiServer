@@ -190,7 +190,7 @@ LoggerAccessor.LogInfo($"[MMS] - MMS RECV {channel}: {message}");
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[MMS] - clientChannel ticking thrown an assertion. (Exception:{e})");
             }
         }
 
@@ -222,19 +222,32 @@ LoggerAccessor.LogInfo($"[MMS] - MMS RECV {channel}: {message}");
                     }
                 case RT_MSG_CLIENT_CONNECT_TCP clientConnectTcp:
                     {
+                        int appid = clientConnectTcp.AppId;
+
                         #region Compatible AppId
-                        if (!MediusClass.Manager.IsAppIdSupported(clientConnectTcp.AppId))
+                        if (appid < 0)
                         {
-LoggerAccessor.LogError($"[MMS] - Client {clientChannel.RemoteAddress} attempting to authenticate with incompatible app id {clientConnectTcp.AppId}");
+                            LoggerAccessor.LogError($"[MMS] - Client Connected {clientChannel.RemoteAddress} with an invalid connect payload!");
+                            break;
+                        }
+                        else if (!MediusClass.Manager.IsAppIdSupported(appid))
+                        {
+LoggerAccessor.LogError($"[MMS] - Client {clientChannel.RemoteAddress} attempting to authenticate with incompatible app id {appid}");
                             await clientChannel.CloseAsync();
                             return;
                         }
                         #endregion
 
+                        if (clientConnectTcp.Key == RSA_KEY.Empty)
+                        {
+                            LoggerAccessor.LogError($"[MMS] - Client Connected {clientChannel.RemoteAddress} with an empty key!");
+                            break;
+                        }
+
                         List<int> pre108ServerComplete = new() { 10114, 10130, 10164, 10190, 10124, 10284, 10330, 10334, 10414, 10421, 10442, 10538, 10540, 10550, 10582, 10584, 10680, 10681, 10683, 10684, 10984, 10724 };
 
-                        data.ApplicationId = clientConnectTcp.AppId;
-                        scertClient.ApplicationID = clientConnectTcp.AppId;
+                        data.ApplicationId = appid;
+                        scertClient.ApplicationID = appid;
 
                         Channel? targetChannel = MediusClass.Manager.GetChannelByChannelId(clientConnectTcp.TargetWorldId, data.ApplicationId);
 
@@ -253,9 +266,9 @@ LoggerAccessor.LogError($"[MMS] - Client {clientChannel.RemoteAddress} attemptin
                             }
                         }
 
-                        data.ClientObject = MediusClass.Manager.GetClientByAccessToken(clientConnectTcp.AccessToken, clientConnectTcp.AppId);
+                        data.ClientObject = MediusClass.Manager.GetClientByAccessToken(clientConnectTcp.AccessToken, appid);
                         if (data.ClientObject == null)
-                            data.ClientObject = MediusClass.Manager.GetClientBySessionKey(clientConnectTcp.SessionKey, clientConnectTcp.AppId);
+                            data.ClientObject = MediusClass.Manager.GetClientBySessionKey(clientConnectTcp.SessionKey, appid);
 
                         #region Client Object Null?
                         if (data.ClientObject == null)
@@ -267,7 +280,7 @@ LoggerAccessor.LogError($"[MMS] - Client {clientChannel.RemoteAddress} attemptin
                         else
                         {
                             data.ClientObject.MediusVersion = scertClient.MediusVersion ?? 0;
-                            data.ClientObject.ApplicationId = clientConnectTcp.AppId;
+                            data.ClientObject.ApplicationId = appid;
                             data.ClientObject.OnConnected();
 
                             LoggerAccessor.LogInfo($"[MMS] - Client Connected {clientChannel.RemoteAddress}!");

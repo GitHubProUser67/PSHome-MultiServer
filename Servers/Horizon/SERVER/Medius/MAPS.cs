@@ -72,17 +72,30 @@ namespace Horizon.SERVER.Medius
                     }
                 case RT_MSG_CLIENT_CONNECT_TCP clientConnectTcp:
                     {
+                        int appid = clientConnectTcp.AppId;
+
                         #region Check if AppId from Client matches Server
-                        if (!MediusClass.Manager.IsAppIdSupported(clientConnectTcp.AppId))
+                        if (appid < 0)
                         {
-LoggerAccessor.LogError($"[MAPS] - Client {clientChannel.RemoteAddress} attempting to authenticate with incompatible app id {clientConnectTcp.AppId}");
+                            LoggerAccessor.LogError($"[MAPS] - Client Connected {clientChannel.RemoteAddress} with an invalid connect payload!");
+                            break;
+                        }
+                        else if (!MediusClass.Manager.IsAppIdSupported(appid))
+                        {
+LoggerAccessor.LogError($"[MAPS] - Client {clientChannel.RemoteAddress} attempting to authenticate with incompatible app id {appid}");
                             await clientChannel.CloseAsync();
                             return;
                         }
                         #endregion
 
-                        data.ApplicationId = clientConnectTcp.AppId;
-                        scertClient.ApplicationID = clientConnectTcp.AppId;
+                        if (clientConnectTcp.Key == RSA_KEY.Empty)
+                        {
+                            LoggerAccessor.LogError($"[MAPS] - Client Connected {clientChannel.RemoteAddress} with an empty key!");
+                            break;
+                        }
+
+                        data.ApplicationId = appid;
+                        scertClient.ApplicationID = appid;
 
                         Channel? targetChannel = MediusClass.Manager.GetChannelByChannelId(clientConnectTcp.TargetWorldId, data.ApplicationId);
 
@@ -104,9 +117,9 @@ LoggerAccessor.LogError($"[MAPS] - Client {clientChannel.RemoteAddress} attempti
                         // If booth are null, it means MAS client wants a new object.
                         if (!string.IsNullOrEmpty(clientConnectTcp.AccessToken) && !string.IsNullOrEmpty(clientConnectTcp.SessionKey))
                         {
-                            data.ClientObject = MediusClass.Manager.GetClientByAccessToken(clientConnectTcp.AccessToken, clientConnectTcp.AppId);
+                            data.ClientObject = MediusClass.Manager.GetClientByAccessToken(clientConnectTcp.AccessToken, appid);
                             if (data.ClientObject == null)
-                                data.ClientObject = MediusClass.Manager.GetClientBySessionKey(clientConnectTcp.SessionKey, clientConnectTcp.AppId);
+                                data.ClientObject = MediusClass.Manager.GetClientBySessionKey(clientConnectTcp.SessionKey, appid);
                         }
 
                         if (data.ClientObject != null)
@@ -117,7 +130,7 @@ LoggerAccessor.LogError($"[MAPS] - Client {clientChannel.RemoteAddress} attempti
 
                             data.ClientObject = new(scertClient.MediusVersion ?? 0)
                             {
-                                ApplicationId = clientConnectTcp.AppId
+                                ApplicationId = appid
                             };
                             data.ClientObject.OnConnected();
 
@@ -125,7 +138,7 @@ LoggerAccessor.LogError($"[MAPS] - Client {clientChannel.RemoteAddress} attempti
                         }
 
                         data.ClientObject.MediusVersion = scertClient.MediusVersion ?? 0;
-                        data.ClientObject.ApplicationId = clientConnectTcp.AppId;
+                        data.ClientObject.ApplicationId = appid;
                         data.ClientObject.OnConnected();
 
                         await data.ClientObject.JoinChannel(targetChannel);

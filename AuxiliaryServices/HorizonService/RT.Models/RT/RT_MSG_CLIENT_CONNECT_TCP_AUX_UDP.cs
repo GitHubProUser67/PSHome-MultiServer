@@ -52,7 +52,7 @@ namespace Horizon.RT.Models
             else
                 writer.Write(TargetWorldId);
             writer.Write(AppId);
-            writer.Write(Key);
+            writer.Write(Key ?? RSA_KEY.Empty);
             writer.Write(SessionKey, Constants.SESSIONKEY_MAXLEN);
             writer.Write(AccessToken, Constants.NET_ACCESS_KEY_LEN);
         }
