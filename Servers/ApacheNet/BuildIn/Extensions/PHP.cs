@@ -1,4 +1,3 @@
-using MultiServerLibrary.Extension;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using MultiServerLibrary.Extension;
 using WatsonWebserver.Core;
 
 namespace ApacheNet.BuildIn.Extensions
@@ -22,12 +22,12 @@ namespace ApacheNet.BuildIn.Extensions
         private Thread? ReadOutputThread;
         private Thread? ReadErrorOutputThread;
 
-        private (byte[], Dictionary<string, string>) StandardOutput;
-        private byte[]? ErrorOutput;
+        private (int, byte[], Dictionary<string, string>) StandardOutput;
 
+        private byte[]? ErrorOutput;
         private byte[]? PostData = null;
 
-        public (byte[]?, Dictionary<string, string>) ProcessPHPPage(string FilePath, string PHPPath, string PHPVer, HttpContextBase ctx, bool secure)
+        public (int, byte[]?, Dictionary<string, string>) ProcessPHPPage(string FilePath, string PHPPath, string PHPVer, HttpContextBase ctx, bool secure)
         {
             int index = ctx.Request.Url.RawWithQuery.IndexOf("?");
             string? queryString = index == -1 ? string.Empty : ctx.Request.Url.RawWithQuery[(index + 1)..];
@@ -102,7 +102,7 @@ namespace ApacheNet.BuildIn.Extensions
             ReadErrorOutputThread.Join();
 
             if (ApacheNetServerConfiguration.PHPDebugErrors && ErrorOutput != null && ErrorOutput.Length > 0)
-                return (ErrorOutput, StandardOutput.Item2);
+                return (StandardOutput.Item1, ErrorOutput, StandardOutput.Item3);
             return StandardOutput;
         }
 
@@ -153,6 +153,7 @@ namespace ApacheNet.BuildIn.Extensions
         private void ReadOutput()
         {
             bool HeadersEnd = false;
+            int statusCode = 200;
             List<byte> lineBuffer = new List<byte>();
             Dictionary<string, string> headers = new Dictionary<string, string>();
 
@@ -193,7 +194,24 @@ namespace ApacheNet.BuildIn.Extensions
                                         {
                                             int index = line.IndexOf(':');
                                             if (index != -1)
-                                                headers[line.Substring(0, index)] = line.Substring(index + 1).Trim();
+                                            {
+                                                string headerKey = line.Substring(0, index);
+                                                string headerValue = line.Substring(index + 1).Trim();
+                                                if (headerKey == "Status") // Extract the PHP result status code.
+                                                {
+                                                    var parts = headerValue.Split(' ');
+                                                    if (int.TryParse(parts[0], out statusCode))
+                                                    {
+#if DEBUG
+                                                        CustomLogger.LoggerAccessor.LogInfo($"[PHP] - Custom status-code: {statusCode} assigned to result.");
+#endif
+                                                    }
+                                                    else
+                                                        CustomLogger.LoggerAccessor.LogWarn($"[PHP] - Unknown status-code format, falling back to OK response.");
+                                                }
+                                                else
+                                                    headers[headerKey] = headerValue;
+                                            }
                                         }
                                         else
                                             HeadersEnd = true;
@@ -215,7 +233,7 @@ namespace ApacheNet.BuildIn.Extensions
 
                 stream?.Dispose();
 
-                StandardOutput = (ms.ToArray(), headers);
+                StandardOutput = (statusCode, ms.ToArray(), headers);
             }
         }
 

@@ -67,8 +67,6 @@ namespace MultiServerLibrary.Extension
                 throw new ArgumentOutOfRangeException(nameof(BufferSize), "[StreamUtils] - CopyStream() - Buffer size must be greater than zero.");
             else if (numOfBytes < 0)
                 throw new ArgumentOutOfRangeException(nameof(numOfBytes), "[StreamUtils] - CopyStream() - Number of bytes to copy must be non-negative.");
-            else if (numOfBytes == 0)
-                return;
 
             int bytesRead;
             long bytesCopied = 0;
@@ -152,8 +150,6 @@ namespace MultiServerLibrary.Extension
                 throw new ArgumentOutOfRangeException(nameof(BufferSize), "[StreamUtils] - CopyStreamAsync() - Buffer size must be greater than zero.");
             else if (numOfBytes < 0)
                 throw new ArgumentOutOfRangeException(nameof(numOfBytes), "[StreamUtils] - CopyStreamAsync() - Number of bytes to copy must be non-negative.");
-            else if (numOfBytes == 0)
-                return;
 
             int bytesRead;
             long bytesCopied = 0;
