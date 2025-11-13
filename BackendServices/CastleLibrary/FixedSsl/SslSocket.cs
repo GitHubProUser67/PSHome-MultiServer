@@ -35,6 +35,11 @@ namespace FixedSsl
 
         private static readonly Org.Mentalis.Security.Ssl.SecureProtocol legacyProtocols = Org.Mentalis.Security.Ssl.SecureProtocol.Ssl3 | Org.Mentalis.Security.Ssl.SecureProtocol.Tls1;
 
+        public static List<string> ClientCertificateCNBypassList = new List<string>()
+        {
+            // Add server CN in which we don't want to validate client certificates.
+        };
+
         public static async Task<Stream> AuthenticateAsServerAsync(SslProtocols protocols, Socket socket, X509Certificate2 certificate, bool forceSsl, bool ownSocket)
         {
             // no certificate, no ssl
@@ -334,22 +339,32 @@ namespace FixedSsl
 
             int[] clientCertErr = null;
             X509Certificate2 clientCert = null;
+            bool bypassClientCertValidation = ClientCertificateCNBypassList.Contains(hostname);
 
-            SslStream sslStream = new SslStream(new NetworkStream(socket, ownSocket), false, authOptions.RemoteCertificateValidationCallback == null ? (t, c, ch, e) =>
+            if (bypassClientCertValidation || authOptions.RemoteCertificateValidationCallback == null)
             {
-                if (c == null)
+                authOptions.RemoteCertificateValidationCallback = (t, c, ch, e) =>
+                {
+                    if (c == null)
+                        return true;
+
+                    X509Certificate2 c2 = c as X509Certificate2;
+                    c2 ??= new X509Certificate2(c.GetRawCertData());
+
+                    clientCert = c2;
+                    clientCertErr = new int[] { (int)e };
                     return true;
+                };
+            }
 
-                X509Certificate2 c2 = c as X509Certificate2;
-                c2 ??= new X509Certificate2(c.GetRawCertData());
-
-                clientCert = c2;
-                clientCertErr = new int[] { (int)e };
-                return true;
-            } : authOptions.RemoteCertificateValidationCallback);
+            SslStream sslStream = new SslStream(new NetworkStream(socket, ownSocket), false, authOptions.RemoteCertificateValidationCallback);
 
             // Shortcut
             authOptions.ServerCertificateSelectionCallback = (sender, host) => certificate;
+
+            // Avoids the client cert popup if we don't need it.
+            if (authOptions.ClientCertificateRequired && bypassClientCertValidation)
+                authOptions.ClientCertificateRequired = false;
 
             clientCertificate = clientCert;
             clientCertificateErrors = clientCertErr;
