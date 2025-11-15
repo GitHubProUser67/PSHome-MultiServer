@@ -1,7 +1,6 @@
 ﻿using System;
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
 using System.Buffers.Binary;
-using System.Linq;
 #endif
 
 namespace EndianTools
@@ -10,7 +9,140 @@ namespace EndianTools
     public static class EndianAwareConverter
     {
         public static readonly bool isLittleEndianSystem = BitConverter.IsLittleEndian;
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+        public static byte ToUInt8(ReadOnlySpan<byte> buf, Endianness endianness, uint address)
+        {
+            if (endianness != Endianness.Automatic)
+                throw new ArgumentException("[EndianAwareConverter] - UInt8 reads doesn't have an endianness to resolve to");
 
+            return buf[(int)address];
+        }
+
+        public static ushort ToUInt16(ReadOnlySpan<byte> buf, Endianness endianness, uint address)
+        {
+            ReadOnlySpan<byte> span = buf.Slice((int)address, 2);
+            return endianness == Endianness.LittleEndian
+                ? BinaryPrimitives.ReadUInt16LittleEndian(span)
+                : BinaryPrimitives.ReadUInt16BigEndian(span);
+        }
+
+        public static int ToUInt24(ReadOnlySpan<byte> buf, Endianness endianness, uint address)
+        {
+            int addressInt = (int)address;
+            if (endianness == Endianness.LittleEndian)
+                return buf[addressInt] | (buf[addressInt + 1] << 8) | (buf[addressInt + 2] << 16);
+            return (buf[addressInt] << 16) | (buf[addressInt + 1] << 8) | buf[addressInt + 2];
+        }
+
+        public static uint ToUInt32(ReadOnlySpan<byte> buf, Endianness endianness, uint address)
+        {
+            ReadOnlySpan<byte> span = buf.Slice((int)address, 4);
+            return endianness == Endianness.LittleEndian
+                ? BinaryPrimitives.ReadUInt32LittleEndian(span)
+                : BinaryPrimitives.ReadUInt32BigEndian(span);
+        }
+
+        public static uint[] ToUInt32(ReadOnlySpan<byte> buf, Endianness endianness)
+        {
+            // Note chars must be within ISO-8859-1 (with Unicode code-point < 256) to fit 4/uint
+            uint[] l = new uint[(int)Math.Ceiling((double)buf.Length / 4)];
+
+            // Create an array of uint, each holding the data of 4 characters
+            // If the last block is less than 4 characters in length, fill with ascii null values
+            for (int i = 0; i < l.Length; i++)
+            {
+                byte b0 = (i * 4) < buf.Length ? buf[i * 4] : (byte)0;
+                byte b1 = (i * 4 + 1) < buf.Length ? buf[i * 4 + 1] : (byte)0;
+                byte b2 = (i * 4 + 2) < buf.Length ? buf[i * 4 + 2] : (byte)0;
+                byte b3 = (i * 4 + 3) < buf.Length ? buf[i * 4 + 3] : (byte)0;
+
+                if (endianness == Endianness.LittleEndian)
+                    // Little-endian: Least significant byte first
+                    l[i] = (uint)(b0 | (b1 << 8) | (b2 << 16) | (b3 << 24));
+                else
+                    // Big-endian: Most significant byte first
+                    l[i] = (uint)(b3 | (b2 << 8) | (b1 << 16) | (b0 << 24));
+            }
+
+            return l;
+        }
+
+        public static ulong ToUInt64(ReadOnlySpan<byte> buf, Endianness endianness, uint address)
+        {
+            ReadOnlySpan<byte> span = buf.Slice((int)address, 8);
+            return endianness == Endianness.LittleEndian
+                ? BinaryPrimitives.ReadUInt64LittleEndian(span)
+                : BinaryPrimitives.ReadUInt64BigEndian(span);
+        }
+
+        public static sbyte ToInt8(ReadOnlySpan<byte> buf, Endianness endianness, uint address)
+        {
+            if (endianness != Endianness.Automatic)
+                throw new ArgumentException("[EndianAwareConverter] - Int8 reads doesn't have an endianness to resolve to");
+
+            return (sbyte)buf[(int)address];
+        }
+
+        public static short ToInt16(ReadOnlySpan<byte> buf, Endianness endianness, uint address)
+        {
+            ReadOnlySpan<byte> span = buf.Slice((int)address, 2);
+            return endianness == Endianness.LittleEndian
+                ? BinaryPrimitives.ReadInt16LittleEndian(span)
+                : BinaryPrimitives.ReadInt16BigEndian(span);
+        }
+
+        public static int ToInt32(ReadOnlySpan<byte> buf, Endianness endianness, uint address)
+        {
+            ReadOnlySpan<byte> span = buf.Slice((int)address, 4);
+            return endianness == Endianness.LittleEndian
+                ? BinaryPrimitives.ReadInt32LittleEndian(span)
+                : BinaryPrimitives.ReadInt32BigEndian(span);
+        }
+
+        public static long ToInt64(ReadOnlySpan<byte> buf, Endianness endianness, uint address)
+        {
+            ReadOnlySpan<byte> span = buf.Slice((int)address, 8);
+            return endianness == Endianness.LittleEndian
+                ? BinaryPrimitives.ReadInt64LittleEndian(span)
+                : BinaryPrimitives.ReadInt64BigEndian(span);
+        }
+
+        public static float ToSingle(ReadOnlySpan<byte> buf, Endianness endianness, uint address)
+        {
+            int addressInt = (int)address;
+            Span<byte> temp = stackalloc byte[4];
+            if (endianness == Endianness.LittleEndian)
+                buf.Slice(addressInt, 4).CopyTo(temp);
+            else
+            {
+                temp[0] = buf[addressInt + 3];
+                temp[1] = buf[addressInt + 2];
+                temp[2] = buf[addressInt + 1];
+                temp[3] = buf[addressInt];
+            }
+            return BitConverter.ToSingle(temp);
+        }
+
+        public static double ToDouble(ReadOnlySpan<byte> buf, Endianness endianness, uint address)
+        {
+            int addressInt = (int)address;
+            Span<byte> temp = stackalloc byte[8];
+            if (endianness == Endianness.LittleEndian)
+                buf.Slice(addressInt, 8).CopyTo(temp);
+            else
+            {
+                temp[0] = buf[addressInt + 7];
+                temp[1] = buf[addressInt + 6];
+                temp[2] = buf[addressInt + 5];
+                temp[3] = buf[addressInt + 4];
+                temp[4] = buf[addressInt + 3];
+                temp[5] = buf[addressInt + 2];
+                temp[6] = buf[addressInt + 1];
+                temp[7] = buf[addressInt];
+            }
+            return BitConverter.ToDouble(temp);
+        }
+#endif
         public static byte ToUInt8(byte[] buf, Endianness endianness, uint address)
         {
             if (endianness != Endianness.Automatic)
@@ -35,6 +167,13 @@ namespace EndianTools
                 buf[(int)address]
             }, 0);
 #endif
+        }
+
+        public static int ToUInt24(byte[] buf, Endianness endianness, uint address)
+        {
+            if (endianness == Endianness.LittleEndian)
+                return buf[address] | (buf[address + 1] << 8) | (buf[address + 2] << 16);
+            return (buf[address] << 16) | (buf[address + 1] << 8) | buf[address + 2];
         }
 
         public static uint ToUInt32(byte[] buf, Endianness endianness, uint address)

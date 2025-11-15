@@ -131,7 +131,9 @@ namespace FixedSsl
             }
 
             int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out bool isSslV2, out int maxSslVersion, out List<int> versions, out List<int> cipherSuites);
-
+#if DEBUG
+            CustomLogger.LoggerAccessor.LogInfo($"[SslSocket] - ClientHello (status:{parseResult}) params: Hostname:{hostname} IsSSLV2:{isSslV2} MaxSSLVersion:{maxSslVersion} Versions:{(versions.Count > 0 ? string.Join(", ", versions.Select(v => $"0x{v:X4}")) : "none")} CipherSuites:{(cipherSuites.Count > 0 ? string.Join(", ", cipherSuites.Select(cs => $"0x{cs:X4}")) : "none")}");
+#endif
             var allowedProtocols = protocols.GetEnabledProtocols();
 #pragma warning disable            // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
             if (
@@ -279,7 +281,9 @@ namespace FixedSsl
             }
 
             int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out bool isSslV2, out int maxSslVersion, out List<int> versions, out List<int> cipherSuites);
-
+#if DEBUG
+            CustomLogger.LoggerAccessor.LogInfo($"[SslSocket] - ClientHello (status:{parseResult}) params: Hostname:{hostname} IsSSLV2:{isSslV2} MaxSSLVersion:{maxSslVersion} Versions:{(versions.Count > 0 ? string.Join(", ", versions.Select(v => $"0x{v:X4}")) : "none")} CipherSuites:{(cipherSuites.Count > 0 ? string.Join(", ", cipherSuites.Select(cs => $"0x{cs:X4}")) : "none")}");
+#endif
             X509Certificate2 certificate = (X509Certificate2)authOptions.ServerCertificateSelectionCallback?.Invoke(socket, hostname);
             if (certificate == null)
             {

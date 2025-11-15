@@ -1,6 +1,7 @@
 ﻿using EndianTools;
 using System;
 using System.Collections.Generic;
+using System.Net.Security;
 using System.Text;
 
 namespace FixedSsl
@@ -39,7 +40,6 @@ namespace FixedSsl
 
     public static class TlsParser
     {
-        private const int SERVER_NAME_LEN = 256;
         private const int TLS_HEADER_LEN = 5;
         private const byte TLS_HANDSHAKE_CONTENT_TYPE = 0x16;
         private const byte TLS_HANDSHAKE_TYPE_CLIENT_HELLO = 0x01;
@@ -136,7 +136,29 @@ namespace FixedSsl
             if (pos + len > clientHello.Length) 
                 return -5;
 
+            // Prefer using a modified version of the NETCORE 2.1 SNI parser (more accurate)
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+            try
+            {
+                var sniHelperRes = SniHelper.GetServerName(clientHello, versions);
+
+                if (sniHelperRes.Item1 != 0)
+                    return sniHelperRes.Item1;
+
+                hostname = sniHelperRes.Item2;
+                return hostname.Length;
+            }
+            catch (Exception ex)
+            {
+#if DEBUG
+                CustomLogger.LoggerAccessor.LogWarn($"[TlsParser] - DotNet SniHelper failed to parse attributes, falling back to managed implementation. (Exception:{ex})");
+#endif
+            }
+
             return ParseExtensions(clientHello, pos, len, ref versions, out hostname);
+#else
+            return ParseExtensions(clientHello, pos, len, ref versions, out hostname);
+#endif
         }
 
         private static bool IsSslV2ClientHello(byte[] data, out int maxSslVersion, out List<int> versions, out List<int> cipherSuites)
@@ -176,12 +198,9 @@ namespace FixedSsl
             if (data.Length < pos + cipherSpecLength)
                 return false;
 
-            // SSLv2 cipher specs are 3 bytes each
+            // SSLv2 cipher specs are of type Uint24
             for (int i = 0; i + 2 < cipherSpecLength; i += 3)
-            {
-                int cipher = (data[pos + i] << 16) | (data[pos + i + 1] << 8) | data[pos + i + 2];
-                cipherSuites.Add(cipher);
-            }
+                cipherSuites.Add(EndianAwareConverter.ToUInt24(data, Endianness.BigEndian, (uint)(pos + i)));
 
             versions.Add(maxSslVersion);
             return true;
@@ -203,7 +222,7 @@ namespace FixedSsl
             int[] ciphers = new int[count];
 
             for (int i = 0; i < count; i++)
-                ciphers[i] = (data[pos + i * 2] << 8) | data[pos + i * 2 + 1];
+                ciphers[i] = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, (uint)(pos + i * 2));
 
             pos += len;
             return ciphers;
@@ -216,8 +235,8 @@ namespace FixedSsl
 
             while (pos + 4 <= dataLen)
             {
-                int extType = (data[offset + pos] << 8) | data[offset + pos + 1];
-                int len = (data[offset + pos + 2] << 8) | data[offset + pos + 3];
+                int extType = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, (uint)(offset + pos));
+                int len = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, (uint)(offset + pos + 2));
 
                 if (extType == 0x0000) // Server Name extension
                 {
@@ -228,12 +247,8 @@ namespace FixedSsl
                 }
                 else if (extType == 0x002B) // Supported Versions extension
                 {
-                    int listLen = data[offset + pos + 4];
-                    for (int i = 0; i < listLen; i += 2)
-                    {
-                        int ver = (data[offset + pos + 5 + i] << 8) | data[offset + pos + 5 + i + 1];
-                        versions.Add(ver);
-                    }
+                    for (int i = 0; i < data[offset + pos + 4]; i += 2)
+                        versions.Add(EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, (uint)(offset + pos + 5 + i)));
                     break;
                 }
 
@@ -254,7 +269,7 @@ namespace FixedSsl
             while (pos + 3 < dataLen)
             {
                 int nameType = data[offset + pos];
-                int len = (data[offset + pos + 1] << 8) | data[offset + pos + 2];
+                int len = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, (uint)(offset + pos + 1));
 
                 if (pos + 3 + len > dataLen)
                     return -5;
