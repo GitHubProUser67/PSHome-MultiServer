@@ -1134,6 +1134,24 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
                     }
                 },
                 new() {
+                    Name = "XI Status API",
+                    Hosts = new string[] { "www.bigbenuk.com" },
+                    UrlRegex = "^/status/status.xml$",
+                    Callable = (ctx) => {
+                                ctx.Response.ChunkedTransfer = ctx.AcceptChunked;
+
+                                string res = WebAPIService.GameServices.PSHOME.NDREAMS.Xi1.StatusBuilder.BuildStatusXml();
+                                ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                                ctx.Response.ContentType = "text/xml";
+
+                                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                                if (ctx.Response.ChunkedTransfer)
+                                    return ctx.Response.SendChunk(!string.IsNullOrEmpty(res) ? Encoding.UTF8.GetBytes(res) : null, true).Result;
+                                else
+                                    return ctx.Response.Send(res).Result;
+                     }
+                },
+                new() {
                     Name = "ILoveSony API",
                     Hosts = ILoveSonyDomains.ToArray(),
                     Callable = (ctx) => {

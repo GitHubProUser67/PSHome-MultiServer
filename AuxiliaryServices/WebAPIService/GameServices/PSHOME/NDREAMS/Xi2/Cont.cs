@@ -6,7 +6,6 @@ using System.Xml.Serialization;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
-using WebAPIService.GameServices.PSHOME.NDREAMS;
 using WebAPIService.GameServices.PSHOME.NDREAMS.Aurora;
 
 namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
