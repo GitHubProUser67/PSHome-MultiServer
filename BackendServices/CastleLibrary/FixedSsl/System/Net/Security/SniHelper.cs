@@ -2,6 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+#if NET6_0_OR_GREATER
+using static System.Net.Security.TlsFrameHelper;
+#endif
 using EndianTools;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,6 +30,18 @@ namespace System.Net.Security
 
         private static (int, string) GetFromSslPlainText(ReadOnlySpan<byte> sslPlainText, List<int> versions)
         {
+#if NET6_0_OR_GREATER
+            // More accurate packet reader (from NET8).
+            TlsFrameInfo info = default;
+            if (!TryGetFrameInfo(sslPlainText, ref info))
+                return (-5, null);
+            string ret = info.TargetName;
+            foreach (int version in info.SupportedVersions ?? new List<int>())
+            {
+                versions.Add(version);
+            }
+            return (ret == null ? -2 : 0, ret);
+#else
             // https://tools.ietf.org/html/rfc6101#section-5.2.1
             // struct {
             //     ContentType type; // enum with max value 255
@@ -47,6 +62,7 @@ namespace System.Net.Security
                 return (-5, null);
 
             return GetFromSslHandshake(sslHandshake, versions);
+#endif
         }
 
         private static (int, string) GetFromSslHandshake(ReadOnlySpan<byte> sslHandshake, List<int> versions)
@@ -210,7 +226,7 @@ namespace System.Net.Security
             ReadOnlySpan<byte> serverVersions = serverVersionsList.Slice(0, serverVersionsListLength);
 
             for (int i = 0; i < serverVersions[0]; i += 2)
-                output.Add((serverVersions[i + 1] << 8) | serverVersions[i + 2]);
+                output.Add(EndianAwareConverter.ToUInt16(serverVersions, Endianness.BigEndian, (uint)(i + 1)));
 
             invalid = false;
             return output;

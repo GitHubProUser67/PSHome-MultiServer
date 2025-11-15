@@ -32,6 +32,7 @@ namespace FixedSsl
         private const int SSLv2 = 0x0002;  // SSL 2.0
         private const int SSLv3 = 0x0300;  // SSL 3.0
         private const int TLSv1 = 0x0301;  // TLS 1.0
+        private const int TLSv11 = 0x0302;  // TLS 1.1
 
         private static readonly Org.Mentalis.Security.Ssl.SecureProtocol legacyProtocols = Org.Mentalis.Security.Ssl.SecureProtocol.Ssl3 | Org.Mentalis.Security.Ssl.SecureProtocol.Tls1;
 
@@ -59,7 +60,12 @@ namespace FixedSsl
             int received = socket.Receive(header, SocketFlags.Peek);
 #endif
             if (received != 5)
+            {
+#if DEBUG
+                CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid header peek.");
+#endif
                 return null;
+            }
 
             bool ssl = header[0] == 0x16; // content type needs to be handshake (0x16)
             bool sslV2 = (header[0] & 0x80) != 0 || header[0] == 0x80; // SSLv2 Client Hello indicator
@@ -67,7 +73,12 @@ namespace FixedSsl
             if (!ssl && !sslV2)
             {
                 if (forceSsl)
+                {
+#if DEBUG
+                    CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid header data.");
+#endif
                     return null;
+                }
                 return new NetworkStream(socket, ownSocket);
             }
 
@@ -78,17 +89,29 @@ namespace FixedSsl
             {
                 // TLS: header[3..4] = record length
                 if (received < 5)
+                {
+#if DEBUG
+                    CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid header data.");
+#endif
                     return null;
+                }
 
+                received = 0;
+
+                int r;
                 int recordLength = (header[3] << 8) | header[4];
                 totalLength = 5 + recordLength;
 
                 clientHello = new byte[totalLength];
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
-                received = await socket.ReceiveAsync(clientHello, SocketFlags.Peek).ConfigureAwait(false);
-#else
-                received = socket.Receive(clientHello, SocketFlags.Peek);
-#endif
+
+                while (received < totalLength)
+                {
+                    r = socket.Receive(clientHello, received, totalLength - received, SocketFlags.Peek);
+                    if (r == 0)
+                        break;
+                    received += r;
+                }
+
                 if (received < totalLength)
                     return null;
 
@@ -96,37 +119,65 @@ namespace FixedSsl
                 if (clientHello[5] != 0x01)
                 {
                     if (forceSsl)
+                    {
+#if DEBUG
+                        CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid clientHello data.");
+#endif
                         return null;
+                    }
                     return new NetworkStream(socket, ownSocket);
                 }
             }
             else if (sslV2)
             {
+                received = 0;
+
+                int r;
+
                 // SSLv2 header: first 2 bytes = 15-bit length
                 int v2Length = ((header[0] & 0x7F) << 8) | header[1];
                 totalLength = v2Length + 2; // SSLv2 header length
 
                 clientHello = new byte[totalLength];
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
-                received = await socket.ReceiveAsync(clientHello, SocketFlags.Peek).ConfigureAwait(false);
-#else
-                received = socket.Receive(clientHello, SocketFlags.Peek);
-#endif
+
+                while (received < totalLength)
+                {
+                    r = socket.Receive(clientHello, received, totalLength - received, SocketFlags.Peek);
+                    if (r == 0)
+                        break;
+                    received += r;
+                }
+
                 if (received < totalLength)
+                {
+#if DEBUG
+                    CustomLogger.LoggerAccessor.LogError($"[SslSocket] - Socket error while picking clientHello data (Excpected:{totalLength} Received:{received}).");
+#endif
                     return null;
+                }
 
                 // SSLv2 Client Hello validation
                 if (clientHello[2] != 0x01) // Message type must be Client Hello
                 {
                     if (forceSsl)
+                    {
+#if DEBUG
+                        CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid clientHello data.");
+#endif
                         return null;
+                    }
                     return new NetworkStream(socket, ownSocket);
                 }
             }
             else
             {
                 if (forceSsl)
+                {
+#if DEBUG
+                    CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid header data.");
+#endif
                     return null;
+                }
                 return new NetworkStream(socket, ownSocket);
             }
 
@@ -137,11 +188,12 @@ namespace FixedSsl
             var allowedProtocols = protocols.GetEnabledProtocols();
 #pragma warning disable            // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
             if (
-                    (allowedProtocols.Contains(SslProtocols.Ssl3) || allowedProtocols.Contains(SslProtocols.Tls)) &&
+                    (allowedProtocols.Contains(SslProtocols.Ssl3) || allowedProtocols.Contains(SslProtocols.Tls) || allowedProtocols.Contains(SslProtocols.Tls11)) &&
                     (
                         maxSslVersion == SSLv3 ||
                         maxSslVersion == TLSv1 ||
-                        (!certificate.Verify() && versions.Any(v => v == SSLv3 || v == TLSv1))
+                        maxSslVersion == TLSv11 ||
+                        (!certificate.Verify() && versions.Any(v => v == SSLv3 || v == TLSv1 || v == TLSv11))
                     )
                 )
             {
@@ -213,7 +265,12 @@ namespace FixedSsl
             byte[] header = new byte[5];
             int received = socket.Receive(header, SocketFlags.Peek);
             if (received != 5)
+            {
+#if DEBUG
+                CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid header peek.");
+#endif
                 return null;
+            }
 
             bool ssl = header[0] == 0x16; // content type needs to be handshake (0x16)
             bool sslV2 = (header[0] & 0x80) != 0 || header[0] == 0x80; // SSLv2 Client Hello indicator
@@ -221,7 +278,12 @@ namespace FixedSsl
             if (!ssl && !sslV2)
             {
                 if (forceSsl)
+                {
+#if DEBUG
+                    CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid header data.");
+#endif
                     return null;
+                }
                 return new NetworkStream(socket, ownSocket);
             }
 
@@ -232,14 +294,28 @@ namespace FixedSsl
             {
                 // TLS: header[3..4] = record length
                 if (received < 5)
+                {
+#if DEBUG
+                    CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid header data.");
+#endif
                     return null;
+                }
 
+                received = 0;
+
+                int r;
                 int recordLength = (header[3] << 8) | header[4];
                 totalLength = 5 + recordLength;
 
                 clientHello = new byte[totalLength];
 
-                received = socket.Receive(clientHello, SocketFlags.Peek);
+                while (received < totalLength)
+                {
+                    r = socket.Receive(clientHello, received, totalLength - received, SocketFlags.Peek);
+                    if (r == 0)
+                        break;
+                    received += r;
+                }
 
                 if (received < totalLength)
                     return null;
@@ -248,35 +324,65 @@ namespace FixedSsl
                 if (clientHello[5] != 0x01)
                 {
                     if (forceSsl)
+                    {
+#if DEBUG
+                        CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid clientHello data.");
+#endif
                         return null;
+                    }
                     return new NetworkStream(socket, ownSocket);
                 }
             }
             else if (sslV2)
             {
+                received = 0;
+
+                int r;
+
                 // SSLv2 header: first 2 bytes = 15-bit length
                 int v2Length = ((header[0] & 0x7F) << 8) | header[1];
                 totalLength = v2Length + 2; // SSLv2 header length
 
                 clientHello = new byte[totalLength];
 
-                received = socket.Receive(clientHello, SocketFlags.Peek);
+                while (received < totalLength)
+                {
+                    r = socket.Receive(clientHello, received, totalLength - received, SocketFlags.Peek);
+                    if (r == 0)
+                        break;
+                    received += r;
+                }
 
                 if (received < totalLength)
+                {
+#if DEBUG
+                    CustomLogger.LoggerAccessor.LogError($"[SslSocket] - Socket error while picking clientHello data (Excpected:{totalLength} Received:{received}).");
+#endif
                     return null;
+                }
 
                 // SSLv2 Client Hello validation
                 if (clientHello[2] != 0x01) // Message type must be Client Hello
                 {
                     if (forceSsl)
+                    {
+#if DEBUG
+                        CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid clientHello data.");
+#endif
                         return null;
+                    }
                     return new NetworkStream(socket, ownSocket);
                 }
             }
             else
             {
                 if (forceSsl)
+                {
+#if DEBUG
+                    CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid header data.");
+#endif
                     return null;
+                }
                 return new NetworkStream(socket, ownSocket);
             }
 
@@ -288,7 +394,12 @@ namespace FixedSsl
             if (certificate == null)
             {
                 if (forceSsl)
+                {
+#if DEBUG
+                    CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid certificate from callback.");
+#endif
                     return null;
+                }
                 return new NetworkStream(socket, ownSocket);
             }
 
@@ -296,11 +407,12 @@ namespace FixedSsl
 #pragma warning disable
             // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
             if (
-                    (allowedProtocols.Contains(SslProtocols.Ssl3) || allowedProtocols.Contains(SslProtocols.Tls)) &&
+                    (allowedProtocols.Contains(SslProtocols.Ssl3) || allowedProtocols.Contains(SslProtocols.Tls) || allowedProtocols.Contains(SslProtocols.Tls11)) &&
                     (
                         maxSslVersion == SSLv3 ||
                         maxSslVersion == TLSv1 ||
-                        (!certificate.Verify() && versions.Any(v => v == SSLv3 || v == TLSv1))
+                        maxSslVersion == TLSv11 ||
+                        (!certificate.Verify() && versions.Any(v => v == SSLv3 || v == TLSv1 || v == TLSv11))
                     )
                 )
             {

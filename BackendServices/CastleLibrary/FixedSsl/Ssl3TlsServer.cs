@@ -33,7 +33,8 @@ public class Ssl3TlsServer : DefaultTlsServer
     private static readonly ProtocolVersion[] _supportedVersions = new ProtocolVersion[]
     {
         ProtocolVersion.SSLv3,
-        ProtocolVersion.TLSv10
+        ProtocolVersion.TLSv10,
+        ProtocolVersion.TLSv11
     };
 
     public override ProtocolVersion GetServerVersion()

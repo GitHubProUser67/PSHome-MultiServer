@@ -127,23 +127,15 @@ namespace FixedSsl
             if (pos == clientHello.Length && tlsVersionMajor == 3 && tlsVersionMinor == 0)
                 return -2; // SSL 3.0 without extensions
 
-            // Extensions
-            if (pos + 2 > clientHello.Length)
-                return -5;
-            len = EndianAwareConverter.ToUInt16(clientHello, Endianness.BigEndian, (uint)pos);
-            pos += 2;
-
-            if (pos + len > clientHello.Length) 
-                return -5;
-
             // Prefer using a modified version of the NETCORE 2.1 SNI parser
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
             try
             {
                 var sniHelperRes = SniHelper.GetServerName(clientHello, versions);
+                int statusCode = sniHelperRes.Item1;
 
-                if (sniHelperRes.Item1 != 0)
-                    return sniHelperRes.Item1;
+                if (statusCode != 0)
+                    return statusCode;
 
                 hostname = sniHelperRes.Item2;
                 return hostname.Length;
@@ -155,9 +147,9 @@ namespace FixedSsl
 #endif
             }
 
-            return ParseExtensions(clientHello, pos, len, ref versions, out hostname);
+            return ParseExtensions(clientHello, pos, ref versions, out hostname);
 #else
-            return ParseExtensions(clientHello, pos, len, ref versions, out hostname);
+            return ParseExtensions(clientHello, pos, ref versions, out hostname);
 #endif
         }
 
@@ -228,9 +220,19 @@ namespace FixedSsl
             return ciphers;
         }
 
-        private static int ParseExtensions(byte[] data, int offset, int dataLen, ref List<int> versions, out string hostname)
+        private static int ParseExtensions(byte[] data, int offset, ref List<int> versions, out string hostname)
         {
             hostname = null;
+
+            // Extensions
+            if (offset + 2 > data.Length)
+                return -5;
+            int dataLen = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, (uint)offset);
+            offset += 2;
+
+            if (offset + dataLen > data.Length)
+                return -5;
+
             int pos = 0;
 
             while (pos + 4 <= dataLen)
