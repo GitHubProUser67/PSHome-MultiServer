@@ -1,6 +1,7 @@
 ﻿using EndianTools;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Security;
 using System.Text;
 
@@ -127,15 +128,28 @@ namespace FixedSsl
             if (pos == clientHello.Length && tlsVersionMajor == 3 && tlsVersionMinor == 0)
                 return -2; // SSL 3.0 without extensions
 
+            int statusCode;
+#if DEBUG
+            const string badCHDirName = "bad_ssl_clienthello";
+#endif
             // Prefer using a modified version of the NETCORE 2.1 SNI parser
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
             try
             {
                 var sniHelperRes = SniHelper.GetServerName(clientHello, versions);
-                int statusCode = sniHelperRes.Item1;
+                statusCode = sniHelperRes.Item1;
 
                 if (statusCode != 0)
+                {
+#if DEBUG
+                    if (statusCode == -5) // Bad ClientHello data.
+                    {
+                        Directory.CreateDirectory(badCHDirName);
+                        File.WriteAllBytes($"{badCHDirName}/" + DateTime.Now.Ticks + ".bin", clientHello);
+                    }
+#endif
                     return statusCode;
+                }
 
                 hostname = sniHelperRes.Item2;
                 return hostname.Length;
@@ -147,10 +161,18 @@ namespace FixedSsl
 #endif
             }
 
-            return ParseExtensions(clientHello, pos, ref versions, out hostname);
+            statusCode = ParseExtensions(clientHello, pos, ref versions, out hostname);
 #else
-            return ParseExtensions(clientHello, pos, ref versions, out hostname);
+            statusCode = ParseExtensions(clientHello, pos, ref versions, out hostname);
 #endif
+#if DEBUG
+            if (statusCode == -5) // Bad ClientHello data.
+            {
+                Directory.CreateDirectory(badCHDirName);
+                File.WriteAllBytes($"{badCHDirName}/" + DateTime.Now.Ticks + ".bin", clientHello);
+            }
+#endif
+            return statusCode;
         }
 
         private static bool IsSslV2ClientHello(byte[] data, out int maxSslVersion, out List<int> versions, out List<int> cipherSuites)
