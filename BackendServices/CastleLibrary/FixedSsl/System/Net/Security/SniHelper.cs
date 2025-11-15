@@ -4,19 +4,21 @@
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
 using EndianTools;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
+#endif
+using System.Globalization;
 using System.Text;
 
 namespace System.Net.Security
 {
     internal class SniHelper
     {
+        private readonly static IdnMapping s_idnMapping = CreateIdnMapping();
+        private readonly static Encoding s_encoding = CreateEncoding();
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         private const int ProtocolVersionSize = 2;
         private const int UInt24Size = 3;
         private const int RandomSize = 32;
-        private readonly static IdnMapping s_idnMapping = CreateIdnMapping();
-        private readonly static Encoding s_encoding = CreateEncoding();
 
         public static (int, string) GetServerName(byte[] clientHello, List<int> versions)
         {
@@ -299,7 +301,64 @@ namespace System.Net.Security
             return DecodeString(hostName);
         }
 
-        private static string DecodeString(ReadOnlySpan<byte> bytes)
+        private static ReadOnlySpan<byte> SkipBytes(ReadOnlySpan<byte> bytes, int numberOfBytesToSkip)
+        {
+            return (numberOfBytesToSkip < bytes.Length) ? bytes.Slice(numberOfBytesToSkip) : ReadOnlySpan<byte>.Empty;
+        }
+
+        // Opaque type is of structure:
+        //   - length (minimum number of bytes to hold the max value)
+        //   - data (length bytes)
+        // We will only use opaque types which are of max size: 255 (length = 1) or 2^16-1 (length = 2).
+        // We will call them SkipOpaqueType`length`
+        private static ReadOnlySpan<byte> SkipOpaqueType1(ReadOnlySpan<byte> bytes)
+        {
+            const int OpaqueTypeLengthSize = sizeof(byte);
+            if (bytes.Length < OpaqueTypeLengthSize)
+                return ReadOnlySpan<byte>.Empty;
+            return SkipBytes(bytes, OpaqueTypeLengthSize + bytes[0]);
+        }
+
+        private static ReadOnlySpan<byte> SkipOpaqueType2(ReadOnlySpan<byte> bytes, out bool invalid)
+        {
+            const int OpaqueTypeLengthSize = sizeof(ushort);
+            if (bytes.Length < OpaqueTypeLengthSize)
+            {
+                invalid = true;
+                return ReadOnlySpan<byte>.Empty;
+            }
+
+            int totalBytes = OpaqueTypeLengthSize + EndianAwareConverter.ToUInt16(bytes, Endianness.BigEndian, 0);
+
+            invalid = bytes.Length < totalBytes;
+            if (invalid)
+                return ReadOnlySpan<byte>.Empty;
+
+            return bytes.Slice(totalBytes);
+        }
+
+        private enum ContentType : byte
+        {
+            Handshake = 0x16
+        }
+
+        private enum HandshakeType : byte
+        {
+            ClientHello = 0x01
+        }
+
+        private enum ExtensionType : ushort
+        {
+            ServerName = 0x00,
+            SupportedVersions = 0x002B
+        }
+
+        private enum NameType : byte
+        {
+            HostName = 0x00
+        }
+
+        public static string DecodeString(ReadOnlySpan<byte> bytes)
         {
             // https://tools.ietf.org/html/rfc3546#section-3.1
             // Per spec:
@@ -337,41 +396,44 @@ namespace System.Net.Security
                 return idnEncodedString;
             }
         }
-
-        private static ReadOnlySpan<byte> SkipBytes(ReadOnlySpan<byte> bytes, int numberOfBytesToSkip)
+#endif
+        public static string DecodeString(byte[] bytes)
         {
-            return (numberOfBytesToSkip < bytes.Length) ? bytes.Slice(numberOfBytesToSkip) : ReadOnlySpan<byte>.Empty;
-        }
+            // https://tools.ietf.org/html/rfc3546#section-3.1
+            // Per spec:
+            //   If the hostname labels contain only US-ASCII characters, then the
+            //   client MUST ensure that labels are separated only by the byte 0x2E,
+            //   representing the dot character U+002E (requirement 1 in section 3.1
+            //   of [IDNA] notwithstanding). If the server needs to match the HostName
+            //   against names that contain non-US-ASCII characters, it MUST perform
+            //   the conversion operation described in section 4 of [IDNA], treating
+            //   the HostName as a "query string" (i.e. the AllowUnassigned flag MUST
+            //   be set). Note that IDNA allows labels to be separated by any of the
+            //   Unicode characters U+002E, U+3002, U+FF0E, and U+FF61, therefore
+            //   servers MUST accept any of these characters as a label separator.  If
+            //   the server only needs to match the HostName against names containing
+            //   exclusively ASCII characters, it MUST compare ASCII names case-
+            //   insensitively.
 
-        // Opaque type is of structure:
-        //   - length (minimum number of bytes to hold the max value)
-        //   - data (length bytes)
-        // We will only use opaque types which are of max size: 255 (length = 1) or 2^16-1 (length = 2).
-        // We will call them SkipOpaqueType`length`
-        private static ReadOnlySpan<byte> SkipOpaqueType1(ReadOnlySpan<byte> bytes)
-        {
-            const int OpaqueTypeLengthSize = sizeof(byte);
-            if (bytes.Length < OpaqueTypeLengthSize)
-                return ReadOnlySpan<byte>.Empty;
-            return SkipBytes(bytes, OpaqueTypeLengthSize + bytes[0]);
-        }
-
-        private static ReadOnlySpan<byte> SkipOpaqueType2(ReadOnlySpan<byte> bytes, out bool invalid)
-        {
-            const int OpaqueTypeLengthSize = sizeof(ushort);
-            if (bytes.Length < OpaqueTypeLengthSize)
+            string idnEncodedString;
+            try
             {
-                invalid = true;
-                return ReadOnlySpan<byte>.Empty;
+                idnEncodedString = s_encoding.GetString(bytes, 0, bytes.Length);
+            }
+            catch (DecoderFallbackException)
+            {
+                return null;
             }
 
-            int totalBytes = OpaqueTypeLengthSize + EndianAwareConverter.ToUInt16(bytes, Endianness.BigEndian, 0);
-
-            invalid = bytes.Length < totalBytes;
-            if (invalid)
-                return ReadOnlySpan<byte>.Empty;
-
-            return bytes.Slice(totalBytes);
+            try
+            {
+                return s_idnMapping.GetUnicode(idnEncodedString);
+            }
+            catch (ArgumentException)
+            {
+                // client has not done IDN mapping
+                return idnEncodedString;
+            }
         }
 
         private static IdnMapping CreateIdnMapping()
@@ -387,27 +449,5 @@ namespace System.Net.Security
         {
             return Encoding.GetEncoding("utf-8", new EncoderExceptionFallback(), new DecoderExceptionFallback());
         }
-
-        private enum ContentType : byte
-        {
-            Handshake = 0x16
-        }
-
-        private enum HandshakeType : byte
-        {
-            ClientHello = 0x01
-        }
-
-        private enum ExtensionType : ushort
-        {
-            ServerName = 0x00,
-            SupportedVersions = 0x002B
-        }
-
-        private enum NameType : byte
-        {
-            HostName = 0x00
-        }
     }
 }
-#endif

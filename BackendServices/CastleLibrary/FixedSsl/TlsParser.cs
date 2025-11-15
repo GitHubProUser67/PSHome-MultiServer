@@ -136,7 +136,7 @@ namespace FixedSsl
             if (pos + len > clientHello.Length) 
                 return -5;
 
-            // Prefer using a modified version of the NETCORE 2.1 SNI parser (more accurate)
+            // Prefer using a modified version of the NETCORE 2.1 SNI parser
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
             try
             {
@@ -276,7 +276,9 @@ namespace FixedSsl
 
                 if (nameType == 0x00) // host_name
                 {
-                    hostname = Encoding.ASCII.GetString(data, offset + pos + 3, len);
+                    byte[] hostnameBytes = new byte[len];
+                    Array.Copy(data, offset + pos + 3, hostnameBytes, 0, len);
+                    hostname = SniHelper.DecodeString(hostnameBytes);
                     return hostname.Length;
                 }
 
