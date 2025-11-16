@@ -145,11 +145,8 @@ namespace System.Net.Security
                             {
                                 if (hasSniSet)
                                     return (-5, null); // Not RFC compliant (exploit?).
-                                else
-                                {
-                                    hasSniSet = true;
-                                    ret = extensionParams.Item2;
-                                }
+                                hasSniSet = true;
+                                ret = extensionParams.Item2;
                             }
                             break;
                         case ExtensionType.SupportedVersions:

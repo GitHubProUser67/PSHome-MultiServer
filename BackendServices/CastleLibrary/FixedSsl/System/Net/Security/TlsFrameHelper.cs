@@ -463,6 +463,7 @@ namespace System.Net.Security
         {
             const int ExtensionHeader = 4;
             bool isComplete = true;
+            bool hasSniSet = false; // (RFC 6066 §3)
             int ushortSizeOf = sizeof(ushort);
 
             while (extensions.Length >= ExtensionHeader)
@@ -474,7 +475,8 @@ namespace System.Net.Security
                 extensions = SkipBytes(extensions, ushortSizeOf);
                 if (extensions.Length < extensionLength)
                 {
-                    isComplete = false;
+                    // If we have SNI, we don't need any more data even if fragmented.
+                    isComplete = hasSniSet;
                     break;
                 }
 
@@ -486,7 +488,10 @@ namespace System.Net.Security
                     if (!TryGetSniFromServerNameList(extensionData, out string sni))
                         return false;
 
-                    info.TargetName = sni!;
+                    if (hasSniSet)
+                        return false; // Not RFC compliant (exploit?).
+                    hasSniSet = true;
+                    info.TargetName = sni;
                 }
                 else if (extensionType == ExtensionType.SupportedVersions && (options == ProcessingOptions.All ||
                           (options & ProcessingOptions.Versions) == ProcessingOptions.Versions))
@@ -497,7 +502,7 @@ namespace System.Net.Security
                     info.SupportedProtocols |= versions;
                 }
                 else if (extensionType == ExtensionType.ApplicationProtocols && (options == ProcessingOptions.All ||
-                          (options.HasFlag(ProcessingOptions.ApplicationProtocol) || options.HasFlag(ProcessingOptions.RawApplicationProtocol))))
+                          options.HasFlag(ProcessingOptions.ApplicationProtocol) || options.HasFlag(ProcessingOptions.RawApplicationProtocol)))
                 {
                     if (!TryGetApplicationProtocolsFromExtension(extensionData, out ApplicationProtocolInfo alpn))
                         return false;

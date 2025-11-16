@@ -141,7 +141,7 @@ namespace FixedSsl
 
                 if (statusCode != 0)
                 {
-#if DEBUG
+#if WRITE_TEMP_BAD_CLIENTHELLO_DATA
                     if (statusCode < -4) // Bad ClientHello data.
                     {
                         Directory.CreateDirectory(badCHDirName);
@@ -165,7 +165,7 @@ namespace FixedSsl
 #else
             statusCode = ParseExtensions(clientHello, pos, ref versions, out hostname);
 #endif
-#if DEBUG
+#if WRITE_TEMP_BAD_CLIENTHELLO_DATA
             if (statusCode < -4) // Bad ClientHello data.
             {
                 Directory.CreateDirectory(badCHDirName);
