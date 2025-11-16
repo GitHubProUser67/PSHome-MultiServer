@@ -760,7 +760,7 @@ namespace SSFWServer
                                             if (Directory.Exists(LayoutDirectoryPath))
                                             {
                                                 string? matchingDirectory = null;
-                                                string? username = SSFWUserSessionManager.GetUsernameBySessionId(sessionId);
+                                                string? username = SSFWUserSessionManager.GetUsernameBySessionId(SSFWUserSessionManager.GetSessionIdByUsername(targetUserName, isRpcnUser));
                                                 string? clientVersion = username?.Substring(username.Length - 6, 6);
 
                                                 if (!string.IsNullOrEmpty(clientVersion))
@@ -799,17 +799,27 @@ namespace SSFWServer
 
                                             } // if the dir not exists, we return 403.
 
+                                            string errmesg;
+
                                             if (res == null)
                                             {
+                                                errmesg = $"Override set for {sessionId}, but no layout was found for this scene.";
+#if DEBUG
+                                                LoggerAccessor.LogWarn($"[SSFWProcessor] - " + errmesg);
+#endif
                                                 Response.Clear();
                                                 Response.SetBegin((int)HttpStatusCode.Forbidden);
-                                                Response.SetBody($"Override set for {sessionId}, but no layout was found for this scene.", encoding, GetHeaderValue(Headers, "Origin"));
+                                                Response.SetBody(errmesg, encoding, GetHeaderValue(Headers, "Origin"));
                                             }
                                             else if (res == string.Empty)
                                             {
+                                                errmesg = $"Override set for {sessionId}, but layout data was empty.";
+#if DEBUG
+                                                LoggerAccessor.LogWarn($"[SSFWProcessor] - " + errmesg);
+#endif
                                                 Response.Clear();
                                                 Response.SetBegin((int)HttpStatusCode.NotFound);
-                                                Response.SetBody($"Override set for {sessionId}, but layout data was empty.", encoding, GetHeaderValue(Headers, "Origin"));
+                                                Response.SetBody(errmesg, encoding, GetHeaderValue(Headers, "Origin"));
                                             }
                                             else
                                             {

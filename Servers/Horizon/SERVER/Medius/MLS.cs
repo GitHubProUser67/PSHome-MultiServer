@@ -341,6 +341,7 @@ LoggerAccessor.LogWarn($"[MLS] - GuestLogin: User {data.ClientObject.AccountName
                                             }
                                             break;
                                         case "Online Debug":
+                                        case "Online Debug (QA)":
                                             switch (data.ClientObject.ClientHomeData.Version)
                                             {
                                                 case "01.83.12":
@@ -530,10 +531,11 @@ LoggerAccessor.LogWarn($"[MLS] - GuestLogin: User {data.ClientObject.AccountName
                                                                 }
                                                                 break;
                                                             case "Online Debug":
+                                                            case "Online Debug (QA)":
                                                                 switch (data.ClientObject.ClientHomeData.Version)
                                                                 {
                                                                     case "01.83.12":
-                                                                        CheatQuery(0x10244439, 36, clientChannel, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY, int.MinValue);
+                                                                        CheatQuery(0x10244438, 36, clientChannel, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY, int.MinValue);
 
                                                                         if (MediusClass.Settings.PokePatchOn)
                                                                         {
@@ -5258,120 +5260,16 @@ LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {gameL
                             break;
                         }
 
-                        if ((rClient.ApplicationId == 20371 || rClient.ApplicationId == 20374) && !string.IsNullOrEmpty(rClient.LobbyKeyOverride))
+                        if (HomeGuestJoiningSystem.ProcessGJSQueue(gameListRequest, rClient, (int patchedLobbyId) =>
                         {
-                            string requestedLobbyKey = rClient.LobbyKeyOverride;
-                            rClient.LobbyKeyOverride = null;
-                            bool foundLobby = false;
-
-                            foreach (Game homeLobby in MediusClass.Manager.GetAllGamesByAppId(rClient.ApplicationId))
-                            {
-                                if (homeLobby.Host != null && !string.IsNullOrEmpty(homeLobby.GameName) && homeLobby.GameName.StartsWith("AP|") && homeLobby.GameName.Split('|').Length >= 5)
-                                {
-                                    string LobbyName = homeLobby.GameName!.Split('|')[5];
-
-                                    if (HomeGuestJoiningSystem.GetGJSCRC(homeLobby.Host.AccountName!, LobbyName + "H3m0", homeLobby.utcTimeCreated) == requestedLobbyKey)
-                                    {
-                                        foundLobby = true;
-
-                                        rClient.Queue(new MediusGameListResponse()
-                                        {
-                                            MessageID = gameListRequest.MessageID,
-                                            StatusCode = MediusCallbackStatus.MediusSuccess,
-
-                                            MediusWorldID = homeLobby.MediusWorldId,
-                                            GameName = homeLobby.GameName,
-                                            WorldStatus = homeLobby.WorldStatus,
-                                            GameHostType = homeLobby.GameHostType,
-                                            PlayerCount = (ushort)homeLobby.PlayerCount,
-                                            EndOfList = true
-                                        });
-
-                                        if (rClient.WorldCorePointer != 0 && rClient.ClientHomeData != null)
-                                        {
-                                            const uint guestPtrPrefix = 0x00020000;
-
-                                            switch (rClient.ClientHomeData.Type)
-                                            {
-                                                case "HDK With Offline":
-                                                    switch (rClient.ClientHomeData.Version)
-                                                    {
-                                                        case "01.86.09":
-                                                            rClient.WorldCoreSpaceTypePointer = rClient.WorldCorePointer + guestPtrPrefix - 0x6194;
-                                                            break;
-                                                        default:
-                                                            break;
-                                                    }
-                                                    break;
-                                                case "HDK Online Only":
-                                                    switch (rClient.ClientHomeData.Version)
-                                                    {
-                                                        default:
-                                                            break;
-                                                    }
-                                                    break;
-                                                case "HDK Online Only (Dbg Symbols)":
-                                                    switch (rClient.ClientHomeData.Version)
-                                                    {
-                                                        case "01.82.09":
-                                                            rClient.WorldCoreSpaceTypePointer = rClient.WorldCorePointer + guestPtrPrefix - 0x61a8;
-                                                            break;
-                                                        default:
-                                                            break;
-                                                    }
-                                                    break;
-                                                case "Online Debug":
-                                                    switch (rClient.ClientHomeData.Version)
-                                                    {
-                                                        case "01.83.12":
-                                                            rClient.WorldCoreSpaceTypePointer = rClient.WorldCorePointer + guestPtrPrefix - 0x6194;
-                                                            break;
-                                                        case "01.86.09":
-                                                            rClient.WorldCoreSpaceTypePointer = rClient.WorldCorePointer + guestPtrPrefix - 0x6194;
-                                                            break;
-                                                        default:
-                                                            break;
-                                                    }
-                                                    break;
-                                                case "Retail":
-                                                    switch (rClient.ClientHomeData.Version)
-                                                    {
-                                                        case "01.86.09":
-                                                            rClient.WorldCoreSpaceTypePointer = rClient.WorldCorePointer + guestPtrPrefix - 0x62a4;
-                                                            break;
-                                                        default:
-                                                            break;
-                                                    }
-                                                    break;
-                                            }
-
-                                            if (rClient.WorldCoreSpaceTypePointer != 0)
-                                            {
-                                                int patchedLobbyId = homeLobby.MediusWorldId;
-
-                                                rClient.TryAddTask("GJS GUEST BRUTEFORCE", () =>
-                                                {
-                                                    while (true)
-                                                    {
-                                                        if (rClient.IsInGame && patchedLobbyId == rClient.CurrentGame!.MediusWorldId)
-                                                            CheatQuery(rClient.WorldCoreSpaceTypePointer, 4, clientChannel, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY, unchecked((int)0xDEADBEEF) + 1);
-
-                                                        Thread.Sleep(6000);
-                                                    }
-                                                });
-                                            }
-                                        }
-
-                                        break;
-                                    }
-                                }
+                            while (true)
+                            { 
+                                if (rClient.IsInGame && patchedLobbyId == rClient.CurrentGame!.MediusWorldId)
+                                    CheatQuery(rClient.WorldCoreSpaceTypePointer, 4, clientChannel, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY, unchecked((int)0xDEADBEEF) + 1); 
+                                Thread.Sleep(6000);
                             }
-
-                            if (foundLobby)
-                                break;
-                            else if (!string.IsNullOrEmpty(rClient.SSFWid))
-                                MultiServerLibrary.HTTP.HTTPProcessor.RequestURLPOST($"{HorizonServerConfiguration.SSFWUrl}/WebService/R3moveLayoutOverride/", new Dictionary<string, string>() { { "sessionid", rClient.SSFWid } }, string.Empty, "text/plain");
-                        }
+                        }))
+                            break;
 
                         if (rClient.ApplicationId == 10538 || rClient.ApplicationId == 10190)
                         {
@@ -5411,6 +5309,12 @@ LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {gameL
                         }
                         else
                         {
+#if DEBUG
+                            foreach (var filter in rClient.GameListFilters)
+                            {
+                                LoggerAccessor.LogInfo($"[MLS] - MediusGameListRequest: GameListFilter:{filter}");
+                            }
+#endif
                             var gameList = MediusClass.Manager.GetGameList(
                                rClient.ApplicationId,
                                gameListRequest.PageID,

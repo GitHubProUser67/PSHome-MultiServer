@@ -213,6 +213,7 @@ namespace Horizon.SERVER.Extension.PlayStationHome
                         }
                         break;
                     case "Online Debug":
+                    case "Online Debug (QA)":
                         switch (client.ClientHomeData.Version)
                         {
                             case "01.83.12":
@@ -492,6 +493,7 @@ namespace Horizon.SERVER.Extension.PlayStationHome
                         }
                         break;
                     case "Online Debug":
+                    case "Online Debug (QA)":
                         switch (client.ClientHomeData.Version)
                         {
                             case "01.83.12":

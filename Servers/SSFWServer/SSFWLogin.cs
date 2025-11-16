@@ -21,6 +21,25 @@ namespace SSFWServer
                 LoggerAccessor.LogError($"[UserSessionManager] - Failed to register User '{userName}' with SessionId '{sessionid}'.");
         }
 
+        public static string? GetSessionIdByUsername(string? userName, bool rpcn)
+        {
+            if (string.IsNullOrEmpty(userName))
+                return null;
+
+            foreach (var kvp in userSessions)
+            {
+                string sessionId = kvp.Key;
+                var (realSize, session, _) = kvp.Value;
+
+                string? realUsername = session.Username?.Substring(0, realSize);
+
+                if (string.Equals(realUsername + (rpcn ? "@RPCN" : string.Empty), userName, StringComparison.Ordinal))
+                    return sessionId;
+            }
+
+            return null;
+        }
+
         public static string? GetUsernameBySessionId(string? sessionId)
         {
             if (string.IsNullOrEmpty(sessionId))
@@ -133,7 +152,6 @@ namespace SSFWServer
         private string? homeClientVersion;
         private string? xsignature;
         private string? key;
-        private bool disposedValue;
 
         public SSFWLogin(string XHomeClientVersion, string generalsecret, string homeClientVersion, string? xsignature, string? key)
         {

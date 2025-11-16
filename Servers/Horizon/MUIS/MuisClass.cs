@@ -724,7 +724,7 @@ namespace Horizon.MUIS
                             SvoURL = $"http://{iptofile}:10060/HUBPS3_SVML/unity/start.jsp ",
                             UniverseBilling = "SCEA",
                             BillingSystemName = "Sony Computer Entertainment America, Inc. Billing System",
-                            ExtendedInfo = $"01.86 http://{iptofile}/dev.01.86/",
+                            ExtendedInfo = $"* http://{iptofile}/dev.01.86/",
                             Port = 10075,
                             UniverseId = 1
                         }
@@ -741,7 +741,7 @@ namespace Horizon.MUIS
                             UserCount = 1,
                             MaxUsers = 15000,
                             SvoURL = $"http://{iptofile}:10060/HUBPS3_SVML/unity/start.jsp ",
-                            ExtendedInfo = $"01.86 http://{iptofile}/01.86/",
+                            ExtendedInfo = $"* http://{iptofile}/01.86/",
                             UniverseBilling = "SCEA",
                             BillingSystemName = "Sony Computer Entertainment America, Inc. Billing System",
                             Port = 10075,

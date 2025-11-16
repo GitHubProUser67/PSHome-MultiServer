@@ -342,6 +342,7 @@ LoggerAccessor.LogError($"[MAS] - Client {clientChannel.RemoteAddress} attemptin
                                             }
                                             break;
                                         case "Online Debug":
+                                        case "Online Debug (QA)":
                                             switch (data.ClientObject.ClientHomeData.Version)
                                             {
                                                 case "01.83.12":
@@ -491,10 +492,11 @@ LoggerAccessor.LogError($"[MAS] - Client {clientChannel.RemoteAddress} attemptin
                                                                 }
                                                                 break;
                                                             case "Online Debug":
+                                                            case "Online Debug (QA)":
                                                                 switch (data.ClientObject.ClientHomeData.Version)
                                                                 {
                                                                     case "01.83.12":
-                                                                        CheatQuery(0x10244439, 36, clientChannel, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY, int.MinValue);
+                                                                        CheatQuery(0x10244438, 36, clientChannel, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY, int.MinValue);
                                                                         break;
                                                                     case "01.86.09":
                                                                         CheatQuery(0x10244428, 36, clientChannel, CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY, int.MinValue);
@@ -2939,6 +2941,7 @@ LoggerAccessor.LogWarn($"[MAS] - Unhandled Medius Message: {message}");
                         }
                         break;
                     case "Online Debug":
+                    case "Online Debug (QA)":
                         switch (data.ClientObject.ClientHomeData.Version)
                         {
                             case "01.83.12":

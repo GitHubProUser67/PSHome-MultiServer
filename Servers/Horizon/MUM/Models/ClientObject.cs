@@ -1001,6 +1001,14 @@ namespace Horizon.MUM.Models
             return Tasks.TryAdd(taskIdent, Task.Factory.StartNew(actionToAddToAdd, TaskCreationOptions.LongRunning));
         }
 
+        public bool TryAddTask(string taskIdent, Action<int> actionToAddToAdd, int value)
+        {
+            return Tasks.TryAdd(
+                    taskIdent,
+                    Task.Factory.StartNew(() => actionToAddToAdd(value), TaskCreationOptions.LongRunning)
+                );
+        }
+
         public bool ContainsTaskWithIdent(string taskIdent)
         {
             return Tasks.ContainsKey(taskIdent);
