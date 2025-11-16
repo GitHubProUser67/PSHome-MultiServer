@@ -142,7 +142,7 @@ namespace FixedSsl
                 if (statusCode != 0)
                 {
 #if DEBUG
-                    if (statusCode == -5) // Bad ClientHello data.
+                    if (statusCode < -4) // Bad ClientHello data.
                     {
                         Directory.CreateDirectory(badCHDirName);
                         File.WriteAllBytes($"{badCHDirName}/" + DateTime.Now.Ticks + ".bin", clientHello);
@@ -166,7 +166,7 @@ namespace FixedSsl
             statusCode = ParseExtensions(clientHello, pos, ref versions, out hostname);
 #endif
 #if DEBUG
-            if (statusCode == -5) // Bad ClientHello data.
+            if (statusCode < -4) // Bad ClientHello data.
             {
                 Directory.CreateDirectory(badCHDirName);
                 File.WriteAllBytes($"{badCHDirName}/" + DateTime.Now.Ticks + ".bin", clientHello);

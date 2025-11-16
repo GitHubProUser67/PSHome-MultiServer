@@ -475,8 +475,9 @@ namespace FixedSsl
 
             SslStream sslStream = new SslStream(new NetworkStream(socket, ownSocket), false, authOptions.RemoteCertificateValidationCallback);
 
-            // Shortcut
-            authOptions.ServerCertificateSelectionCallback = (sender, host) => certificate;
+            // Shortcut if status-code is at least -3 or upper
+            if (parseResult > -4)
+                authOptions.ServerCertificateSelectionCallback = (sender, host) => certificate;
 
             // Avoids the client cert popup if we don't need it.
             if (authOptions.ClientCertificateRequired && bypassClientCertValidation)
