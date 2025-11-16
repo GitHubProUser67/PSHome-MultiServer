@@ -11,6 +11,10 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Xml;
+using WebAPIService.GameServices.DEMANGLER;
+using WebAPIService.GameServices.FROMSOFTWARE;
+using WebAPIService.GameServices.I_Love_Sony;
 using WebAPIService.GameServices.PSHOME.CAPONE;
 using WebAPIService.GameServices.PSHOME.CDM;
 using WebAPIService.GameServices.PSHOME.CODEGLUE;
@@ -18,26 +22,23 @@ using WebAPIService.GameServices.PSHOME.COGS;
 using WebAPIService.GameServices.PSHOME.DIGITAL_LEISURE;
 using WebAPIService.GameServices.PSHOME.HEAVYWATER;
 using WebAPIService.GameServices.PSHOME.HELLFIRE;
+using WebAPIService.GameServices.PSHOME.HOMELEADERBOARDS;
 using WebAPIService.GameServices.PSHOME.HTS;
+using WebAPIService.GameServices.PSHOME.JUGGERNAUT;
 using WebAPIService.GameServices.PSHOME.LOOT;
 using WebAPIService.GameServices.PSHOME.NDREAMS;
 using WebAPIService.GameServices.PSHOME.OHS;
 using WebAPIService.GameServices.PSHOME.OUWF;
 using WebAPIService.GameServices.PSHOME.PREMIUMAGENCY;
-using WebAPIService.GameServices.PSHOME.HOMELEADERBOARDS;
-using WebAPIService.GameServices.PSHOME.JUGGERNAUT;
-using WebAPIService.GameServices.PSHOME.THQ;
 using WebAPIService.GameServices.PSHOME.RCHOME;
-using WebAPIService.GameServices.PSHOME.VEEMEE;
+using WebAPIService.GameServices.PSHOME.THQ;
 using WebAPIService.GameServices.PSHOME.TSS;
+using WebAPIService.GameServices.PSHOME.VEEMEE;
 using WebAPIService.GameServices.UBISOFT.BuildAPI;
 using WebAPIService.GameServices.UBISOFT.gsconnect;
 using WebAPIService.GameServices.UBISOFT.HERMES_API;
 using WebAPIService.GameServices.UBISOFT.MatchMakingConfig;
 using WebAPIService.GameServices.UBISOFT.OnlineConfigService;
-using WebAPIService.GameServices.DEMANGLER;
-using WebAPIService.GameServices.FROMSOFTWARE;
-using WebAPIService.GameServices.I_Love_Sony;
 using XI5;
 
 namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
@@ -676,7 +677,15 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
                                 }
                                 else
                                 {
-                                    res = $"<ohs>{res}</ohs>";
+                                    using (var sw = new StringWriter())
+                                    using (var xw = XmlWriter.Create(sw, new XmlWriterSettings { OmitXmlDeclaration = true }))
+                                    {
+                                        xw.WriteStartElement("ohs");
+                                        xw.WriteCData(res); // Uses CDATA (natively handled by the Home client) to properly insert crypto data.
+                                        xw.WriteEndElement();
+                                        xw.Flush();
+                                        res = sw.ToString();
+                                    }
                                     ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
                                     ctx.Response.ContentType = "application/xml;charset=UTF-8";
                                     statusCode = HttpStatusCode.OK;
@@ -1146,7 +1155,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
 
                                 ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                                 if (ctx.Response.ChunkedTransfer)
-                                    return ctx.Response.SendChunk(!string.IsNullOrEmpty(res) ? Encoding.UTF8.GetBytes(res) : null, true).Result;
+                                    return ctx.Response.SendChunk(Encoding.UTF8.GetBytes(res), true).Result;
                                 else
                                     return ctx.Response.Send(res).Result;
                      }
