@@ -129,7 +129,7 @@ namespace FixedSsl
                 return -2; // SSL 3.0 without extensions
 
             int statusCode;
-#if DEBUG
+#if WRITE_TEMP_BAD_CLIENTHELLO_DATA
             const string badCHDirName = "bad_ssl_clienthello";
 #endif
             // Prefer using a modified version of the NETCORE 2.1 SNI parser
