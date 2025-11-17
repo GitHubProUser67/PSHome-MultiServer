@@ -45,7 +45,7 @@ namespace MultiServerLibrary.CustomServers
 
                 foreach (ushort port in ports)
                 {
-                    if (Extension.TCPUtils.IsTCPPortAvailable(port))
+                    if (Extension.TcpUdpUtils.IsTCPPortAvailable(port))
                         StartListener(port, maxConcurrentListeners, onPrepareListener, onInitalizedListener, onUpdate, onPacketReceived);
                     else
                         LoggerAccessor.LogError($"[TCP Server] - Port:{port} is not available, skipping...");

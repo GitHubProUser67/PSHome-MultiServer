@@ -350,21 +350,5 @@ namespace MultiServerLibrary.Extension
                 Array.Reverse(bytes);
             return new IPAddress(bytes);
         }
-
-        public static long GetIPAddressAsLong(IPAddress ip)
-        {
-            byte[] bytes = ip.GetAddressBytes();
-
-            if (bytes.Length != 4)
-                throw new ArgumentException("[InternetProtocolUtils] - GetIPAddressAsLong: Only IPv4 addresses are supported.");
-
-            long value = 0;
-            for (int i = 0; i < bytes.Length; i++)
-            {
-                value = (value << 8) + bytes[i];
-            }
-
-            return value;
-        }
     }
 }

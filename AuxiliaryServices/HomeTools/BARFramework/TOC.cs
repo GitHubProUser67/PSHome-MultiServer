@@ -167,7 +167,7 @@ namespace HomeTools.BARFramework
             return memoryStream.ToArray();
         }
 
-        public byte[] GetBytesVersion2(string key, byte[] IV, Endianness endian)
+        public byte[] GetBytesVersion2(byte[] key, byte[] IV, Endianness endian)
         {
             MemoryStream memoryStream = new MemoryStream();
             BinaryWriter binaryWriter = new BinaryWriter(memoryStream);
@@ -191,7 +191,7 @@ namespace HomeTools.BARFramework
                 binaryWriter.Write(tocentry.IV);
             }
             binaryWriter.Close();
-            return ToolsImplementation.ProcessCrypt_Decrypt(memoryStream.ToArray(), key.IsBase64().Item2, IV, 2);
+            return ToolsImplementation.ProcessCrypt_Decrypt(memoryStream.ToArray(), key, IV, 2);
         }
 
         public uint Version1Size

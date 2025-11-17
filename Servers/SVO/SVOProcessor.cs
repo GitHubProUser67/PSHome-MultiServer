@@ -54,7 +54,7 @@ namespace SVO
                         {
                             int port = startingSVOPort + i;
 
-                            if (TCPUtils.IsTCPPortAvailable(port))
+                            if (TcpUdpUtils.IsTCPPortAvailable(port))
                             {
                                 string prefix = $"http{(i == 0 ? string.Empty : 's')}://{host}:{port}/";
                                 managed.Prefixes.Add(prefix);

@@ -36,13 +36,13 @@ namespace ApacheNet.BuildIn.Extensions
             string? documentRootPath = Path.GetDirectoryName(FilePath);
             string? scriptFilePath = Path.GetFullPath(FilePath);
             string? scriptFileName = Path.GetFileName(FilePath);
+            string phpFullPath = $"{PHPPath}/{PHPVer}/";
 
             PostData = ctx.Request.DataAsBytes;
 
-            TheProcess.StartInfo.FileName = $"{PHPPath}/{PHPVer}/php-cgi";
+            TheProcess.StartInfo.FileName = $"{phpFullPath}php-cgi";
 
-            TheProcess.StartInfo.Arguments = $"-q -c \"{$"{PHPPath}/{PHPVer}/php.ini"}\" -d \"error_reporting=E_ALL\" -d \"display_errors={ApacheNetServerConfiguration.PHPDebugErrors}\" -d \"expose_php=Off\" -d \"include_path='{documentRootPath}'\" " +
-                         $"-d \"extension_dir='{$"{PHPPath}/{PHPVer}/ext/"}'\" \"{FilePath}\"";
+            TheProcess.StartInfo.Arguments = $"-q -c \"{$"{phpFullPath}php.ini"}\" -d \"error_reporting=E_ALL\" -d \"display_errors={ApacheNetServerConfiguration.PHPDebugErrors}\" -d \"expose_php=Off\" -d \"include_path='{documentRootPath}'\" \"{FilePath}\"";
 
             TheProcess.StartInfo.CreateNoWindow = true;
             TheProcess.StartInfo.UseShellExecute = false;
@@ -60,8 +60,8 @@ namespace ApacheNet.BuildIn.Extensions
             TheProcess.StartInfo.EnvironmentVariables["SYSTEMROOT"] = Environment.GetEnvironmentVariable("SYSTEMROOT");
             TheProcess.StartInfo.EnvironmentVariables["WINDIR"] = Environment.GetEnvironmentVariable("WINDIR");
             TheProcess.StartInfo.EnvironmentVariables["COMSPEC"] = Environment.GetEnvironmentVariable("COMSPEC");
-            TheProcess.StartInfo.EnvironmentVariables["TMPDIR"] = Environment.GetEnvironmentVariable("TMPDIR");
-            TheProcess.StartInfo.EnvironmentVariables["TEMP"] = Environment.GetEnvironmentVariable("TEMP");
+            TheProcess.StartInfo.EnvironmentVariables["TMPDIR"] = Environment.GetEnvironmentVariable("TMPDIR") ?? Path.GetTempPath();
+            TheProcess.StartInfo.EnvironmentVariables["TEMP"] = Environment.GetEnvironmentVariable("TEMP") ?? Path.GetTempPath();
             TheProcess.StartInfo.EnvironmentVariables["PATH"] = Environment.GetEnvironmentVariable("PATH");
             TheProcess.StartInfo.EnvironmentVariables.Add("GATEWAY_INTERFACE", "CGI/1.1");
             TheProcess.StartInfo.EnvironmentVariables.Add("SERVER_PROTOCOL", $"HTTP/{ApacheNetServerConfiguration.HttpVersion}");
@@ -145,8 +145,19 @@ namespace ApacheNet.BuildIn.Extensions
             catch (Exception ex)
             {
                 CustomLogger.LoggerAccessor.LogWarn($"[PHP] - Killing bad process. (Exception:{ex})");
-                TheProcess.Kill();
-                TheProcess.WaitForExit();
+
+                try
+                {
+                    if (TheProcess != null && !TheProcess.HasExited)
+                    {
+                        TheProcess.Kill();
+                        TheProcess.WaitForExit();
+                    }
+                }
+                catch (Exception innerEx)
+                {
+                    CustomLogger.LoggerAccessor.LogError($"[PHP] - Failed to kill process. (Exception:{innerEx})");
+                }
             }
         }
 

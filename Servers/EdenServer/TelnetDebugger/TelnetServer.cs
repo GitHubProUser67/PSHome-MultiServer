@@ -64,7 +64,7 @@ namespace EdenServer.TelnetDebugger
 
                                     int startIndex = 0;
                                     // Skip Telnet negotiation bytes (255, etc.)
-                                    while (startIndex < bytesRead && buffer[startIndex] == 255)
+                                    while (startIndex < bytesRead && buffer[startIndex] == byte.MaxValue)
                                         startIndex += 3; // Telnet sequences are 3 bytes
 
                                     if (startIndex >= bytesRead)

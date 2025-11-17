@@ -17,16 +17,14 @@ namespace Horizon.HTTPSERVICE
 {
     public class CrudServerHandler
     {
-        private static Counter clientsRequests = Metrics.CreateCounter("medius_crud_requests_total", "Total number of Medius CRUD API requests.");
+        private static readonly Counter _clientsRequests = Metrics.CreateCounter("medius_crud_requests_total", "Total number of Medius CRUD API requests.");
 
-        private Webserver? _Server;
-        private string ip;
-        private int port;
+        private readonly Webserver? _server;
+        private readonly int _port;
 
         public CrudServerHandler(string ip, int port, string certpath = "", string certpass = "")
         {
-            this.ip = ip;
-            this.port = port;
+            _port = port;
 
             WebserverSettings settings = new()
             {
@@ -41,9 +39,9 @@ namespace Horizon.HTTPSERVICE
                 settings.Ssl.Enable = true;
             }
 
-            _Server = new Webserver(settings, DefaultRoute);
+            _server = new Webserver(settings, DefaultRoute);
 #if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-            _Server.SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
+            _server.SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
 #else
             _Server.SslProtocols = SslProtocols.Tls12;
 #endif
@@ -52,7 +50,7 @@ namespace Horizon.HTTPSERVICE
 
         private static async Task AuthorizeConnection(HttpContextBase ctx)
         {
-            clientsRequests.Inc();
+            _clientsRequests.Inc();
 
             string IpToBan = ctx.Request.Source.IpAddress;
             if (!"::1".Equals(IpToBan) && !"127.0.0.1".Equals(IpToBan) && !"localhost".Equals(IpToBan, StringComparison.InvariantCultureIgnoreCase))
@@ -68,24 +66,23 @@ namespace Horizon.HTTPSERVICE
 
         public void StopServer()
         {
-            _Server?.Stop();
-            _Server?.Dispose();
+            _server?.Dispose();
 
-            LoggerAccessor.LogWarn($"CrudHandler Server on port: {port} stopped...");
+            LoggerAccessor.LogWarn($"CrudHandler Server on port: {_port} stopped...");
         }
 
         public void StartServer()
         {
-            if (_Server != null && !_Server.IsListening)
+            if (_server != null && !_server.IsListening)
             {
-                _Server.Routes.AuthenticateRequest = AuthorizeConnection;
-                _Server.Events.ExceptionEncountered += ExceptionEncountered;
-                _Server.Events.Logger = LoggerAccessor.LogInfo;
+                _server.Routes.AuthenticateRequest = AuthorizeConnection;
+                _server.Events.ExceptionEncountered += ExceptionEncountered;
+                _server.Events.Logger = LoggerAccessor.LogInfo;
 #if DEBUG
-                _Server.Settings.Debug.Responses = true;
-                _Server.Settings.Debug.Routing = true;
+                _server.Settings.Debug.Responses = true;
+                _server.Settings.Debug.Routing = true;
 #endif
-                _Server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/GetRooms/", async (HttpContextBase ctx) =>
+                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/GetRooms/", async (HttpContextBase ctx) =>
                 {
                     string userAgent = ctx.Request.Useragent;
                     string clientip = ctx.Request.Source.IpAddress;
@@ -135,7 +132,7 @@ namespace Horizon.HTTPSERVICE
                     }
                 });
 
-                _Server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/GetCIDsList/", async (HttpContextBase ctx) =>
+                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/GetCIDsList/", async (HttpContextBase ctx) =>
                 {
                     string userAgent = ctx.Request.Useragent;
                     string clientip = ctx.Request.Source.IpAddress;
@@ -188,7 +185,7 @@ namespace Horizon.HTTPSERVICE
                     }
                 });
 
-                _Server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/HomeIGA/{command}/", async (HttpContextBase ctx) =>
+                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/HomeIGA/{command}/", async (HttpContextBase ctx) =>
                 {
                     string? Command = ctx.Request.Url.Parameters["command"];
                     string userAgent = ctx.Request.Useragent;
@@ -364,7 +361,7 @@ namespace Horizon.HTTPSERVICE
                     }
                 });
 
-                _Server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/HomeAdminMessage/{region_code}/{message}/", async (HttpContextBase ctx) =>
+                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/HomeAdminMessage/{region_code}/{message}/", async (HttpContextBase ctx) =>
                 {
                     string? region_code = ctx.Request.Url.Parameters["region_code"];
                     string? message = HTTPProcessor.DecodeUrl(ctx.Request.Url.Parameters["message"]);
@@ -432,7 +429,7 @@ namespace Horizon.HTTPSERVICE
                     }
                 });
 
-                _Server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/HomeLogOff/{region_code}/{user_name}/", async (HttpContextBase ctx) =>
+                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/HomeLogOff/{region_code}/{user_name}/", async (HttpContextBase ctx) =>
                 {
                     string? region_code = ctx.Request.Url.Parameters["region_code"];
                     string? user_name = HTTPProcessor.DecodeUrl(ctx.Request.Url.Parameters["user_name"]);
@@ -491,7 +488,7 @@ namespace Horizon.HTTPSERVICE
                     }
                 });
 
-                _Server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/HomeRTM/{command}/", async (HttpContextBase ctx) =>
+                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/HomeRTM/{command}/", async (HttpContextBase ctx) =>
                 {
                     string? Command = ctx.Request.Url.Parameters["command"];
                     string userAgent = ctx.Request.Useragent;
@@ -597,7 +594,7 @@ namespace Horizon.HTTPSERVICE
                     }
                 });
 
-                _Server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/HomeSSFW/{command}/", async (HttpContextBase ctx) =>
+                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/HomeSSFW/{command}/", async (HttpContextBase ctx) =>
                 {
                     string? Command = ctx.Request.Url.Parameters["command"];
                     string userAgent = ctx.Request.Useragent;
@@ -689,7 +686,7 @@ namespace Horizon.HTTPSERVICE
                     }
                 });
 
-                _Server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/HomeGJS/{command}/", async (HttpContextBase ctx) =>
+                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/HomeGJS/{command}/", async (HttpContextBase ctx) =>
                 {
                     string? Command = ctx.Request.Url.Parameters["command"];
                     string userAgent = ctx.Request.Useragent;
@@ -769,7 +766,7 @@ namespace Horizon.HTTPSERVICE
                     }
                 });
 
-                _Server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/favicon.ico", async (HttpContextBase ctx) =>
+                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/favicon.ico", async (HttpContextBase ctx) =>
                 {
                     string userAgent = ctx.Request.Useragent;
                     string clientip = ctx.Request.Source.IpAddress;
@@ -826,9 +823,9 @@ namespace Horizon.HTTPSERVICE
                     }
                 });
 
-                _Server.Start();
+                _server.Start();
 
-                LoggerAccessor.LogInfo($"CrudHandler Server initiated on port:{port}...");
+                LoggerAccessor.LogInfo($"CrudHandler Server initiated on port:{_port}...");
             }
         }
 

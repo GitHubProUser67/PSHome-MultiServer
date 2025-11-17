@@ -45,7 +45,7 @@ namespace MultiServerLibrary.CustomServers
 
                 foreach (ushort port in ports)
                 {
-                    if (Extension.UDPUtils.IsUDPPortAvailable(port))
+                    if (Extension.TcpUdpUtils.IsUDPPortAvailable(port))
                         StartListener(port, maxConcurrentListeners, onPrepareListener, onInitalizedListener, onUpdate, onPacketReceived);
                     else
                         LoggerAccessor.LogError($"[UDP Server] - Port:{port} is not available, skipping...");

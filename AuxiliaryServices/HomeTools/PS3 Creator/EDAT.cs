@@ -8,7 +8,6 @@ namespace HomeTools.PS3_Creator
 {
     public class EDAT
     {
-        public static sbyte COMPRESSION_UNSUPPORTED = sbyte.MinValue;
         public static sbyte STATUS_ERROR_OUPUTFILE_IO = -101;
         public static sbyte STATUS_ERROR_INPUTFILE_IO = -100;
         public static sbyte STATUS_ERROR_HASHTITLEIDNAME = -1;
@@ -18,7 +17,7 @@ namespace HomeTools.PS3_Creator
         public static sbyte STATUS_ERROR_DECRYPTING = -5;
         public static sbyte STATUS_ERROR_INCORRECT_FLAGS = -6;
         public static sbyte STATUS_ERROR_INCORRECT_VERSION = -7;
-        public static sbyte STATUS_OK = 0;
+        public static byte STATUS_OK = 0;
         public static long FLAG_COMPRESSED = 0x00000001L;
         public static long FLAG_0x02 = 0x00000002L;
         public static long FLAG_KEYENCRYPTED = 0x00000008L;
@@ -536,7 +535,8 @@ namespace HomeTools.PS3_Creator
 
         private int decryptData(FileStream ii, FileStream o, NPD npd, EDATData data, byte[] rifkey)
         {
-            int numBlocks = (int)((data.getFileLen() + data.getBlockSize() - 1) / data.getBlockSize());
+            BigInteger fileLen = data.getFileLen();
+            int numBlocks = (int)((fileLen + data.getBlockSize() - 1) / data.getBlockSize());
             int metadataSectionSize = ((data.getFlags() & FLAG_COMPRESSED) != 0 || (data.getFlags() & FLAG_0x20) != 0) ? 0x20 : 0x10;
             int baseOffset = 0x100;
             for (int i = 0; i < numBlocks; i++)
@@ -545,7 +545,7 @@ namespace HomeTools.PS3_Creator
                 byte[] expectedHash = new byte[20];
                 long offset;
                 int len;
-                int compressionEndBlock = 0;
+                bool compressionEnd = false;
                 if ((data.getFlags() & FLAG_COMPRESSED) != 0)
                 {
                     byte[] result = new byte[0x20];
@@ -557,7 +557,7 @@ namespace HomeTools.PS3_Creator
                         result = decryptMetadataSection(metadata);
                     offset = (int)ConversionUtils.Be64(result, 0);
                     len = (int)ConversionUtils.Be32(result, 8);
-                    compressionEndBlock = (int)ConversionUtils.Be32(result, 0xC);
+                    compressionEnd = (int)ConversionUtils.Be32(result, 0xC) != 0;
                     ConversionUtils.Arraycopy(metadata, 0, expectedHash, 0, 0x10);
                 }
                 else if ((data.getFlags() & FLAG_0x20) != 0)
@@ -574,7 +574,7 @@ namespace HomeTools.PS3_Creator
                     len = (int)data.getBlockSize();
                     if (i == numBlocks - 1)
                     {
-                        int calclen = (int)(data.getFileLen() % new BigInteger(data.getBlockSize()));
+                        int calclen = (int)(fileLen % new BigInteger(data.getBlockSize()));
                         len = calclen > 0 ? calclen : len;
                     }
                 }
@@ -585,11 +585,11 @@ namespace HomeTools.PS3_Creator
                     len = (int)data.getBlockSize();
                     if (i == numBlocks - 1)
                     {
-                        len = (int)(data.getFileLen() % (new BigInteger(data.getBlockSize())));
+                        len = (int)(fileLen % (new BigInteger(data.getBlockSize())));
                     }
                 }
                 int realLen = len + 15 & -16;
-                LoggerAccessor.LogDebug("[PS3 Creator] - EDAT - Offset: %016X, len: %08X, realLen: %08X, endCompress: %d\r\n", offset, len, realLen, compressionEndBlock);
+                LoggerAccessor.LogDebug("[PS3 Creator] - EDAT - Offset: %016X, len: %08X, realLen: %08X, Compressed: %d\r\n", offset, len, realLen, compressionEnd);
                 ii.Seek(offset, SeekOrigin.Begin);
                 byte[] encryptedData = new byte[realLen];
                 byte[] decryptedData = new byte[realLen];
@@ -614,8 +614,30 @@ namespace HomeTools.PS3_Creator
                     cryptoFlag |= 0x01000000;
                     hashFlag |= 0x01000000;
 
-                    if ((data.getFlags() & FLAG_COMPRESSED) != 0L && compressionEndBlock != 0)
-                        return COMPRESSION_UNSUPPORTED;
+                    if ((data.getFlags() & FLAG_COMPRESSED) != 0L && compressionEnd)
+                    {
+                        uint fileLenUint = (uint)fileLen;
+                        byte[] output = new byte[fileLenUint];
+                        int res = LZ.Decompress(output, encryptedData, fileLenUint);
+#if DEBUG
+                        LoggerAccessor.LogInfo("[EDAT] - Compressed block size: " + fileLen);
+                        LoggerAccessor.LogInfo("[EDAT] - Decompressed block size: " + res);
+#endif
+                        fileLenUint -= (uint)res;
+
+                        if (fileLenUint == 0)
+                        {
+                            if (res < 0)
+                            {
+                                LoggerAccessor.LogError("[EDAT] - EDAT/SDAT decompression failed!");
+                                return STATUS_ERROR_DECRYPTING;
+                            }
+                            else
+                                LoggerAccessor.LogInfo("[EDAT] - EDAT/SDAT successfully decompressed!");
+                        }
+
+                        o.Write(output, 0, output.Length);
+                    }
                     else
                         o.Write(encryptedData, 0, realLen);
                 }
@@ -623,8 +645,30 @@ namespace HomeTools.PS3_Creator
                 {
                     new AppLoader().DoAll(hashFlag, npd.getVersion() == 4, cryptoFlag, encryptedData, 0, decryptedData, 0, encryptedData.Length, key, (npd.getVersion() <= 1) ? (new byte[0x10]) : npd.getDigest(), hash, expectedHash, 0);
 
-                    if ((data.getFlags() & FLAG_COMPRESSED) != 0 && compressionEndBlock != 0)
-                        return COMPRESSION_UNSUPPORTED;
+                    if ((data.getFlags() & FLAG_COMPRESSED) != 0 && compressionEnd)
+                    {
+                        uint fileLenUint = (uint)fileLen;
+                        byte[] output = new byte[fileLenUint];
+                        int res = LZ.Decompress(output, decryptedData, fileLenUint);
+#if DEBUG
+                        LoggerAccessor.LogInfo("[EDAT] - Compressed block size: " + fileLen);
+                        LoggerAccessor.LogInfo("[EDAT] - Decompressed block size: " + res);
+#endif
+                        fileLenUint -= (uint)res;
+
+                        if (fileLenUint == 0)
+                        {
+                            if (res < 0)
+                            {
+                                LoggerAccessor.LogError("[EDAT] - EDAT/SDAT decompression failed!");
+                                return STATUS_ERROR_DECRYPTING;
+                            }
+                            else
+                                LoggerAccessor.LogInfo("[EDAT] - EDAT/SDAT successfully decompressed!");
+                        }
+
+                        o.Write(output, 0, output.Length);
+                    }
                     else
                         o.Write(decryptedData, 0, realLen);
                 }

@@ -38,7 +38,7 @@ public static class ApacheNetServerConfiguration
     public static string ImageMagickPath { get; set; } = $"{Directory.GetCurrentDirectory()}/static/ImageMagick";
     public static string ASPNETRedirectUrl { get; set; } = string.Empty;
     public static string PHPRedirectUrl { get; set; } = string.Empty;
-    public static string PHPVersion { get; set; } = "8.4.14";
+    public static string PHPVersion { get; set; } = "xampp";
     public static string PHPStaticFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/PHP";
     public static bool PHPDebugErrors { get; set; } = false;
     public static int BufferSize { get; set; } = 4096;

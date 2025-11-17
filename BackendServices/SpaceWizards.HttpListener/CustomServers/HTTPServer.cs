@@ -57,7 +57,7 @@ namespace SpaceWizards.HttpListener.CustomServers
                 {
                     ushort port = portConfig.Key;
 
-                    if (MultiServerLibrary.Extension.TCPUtils.IsTCPPortAvailable(port))
+                    if (MultiServerLibrary.Extension.TcpUdpUtils.IsTCPPortAvailable(port))
                         StartListener(portConfig, maxConcurrentListeners, onPrepareListener, onInitalizedListener, onUpdate, onPacketReceived);
                     else
                         LoggerAccessor.LogError($"[HTTP Server] - Port:{port} is not available, skipping...");

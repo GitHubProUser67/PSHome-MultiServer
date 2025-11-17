@@ -285,7 +285,7 @@ namespace HomeTools.AFS
                 {
                     _ = Task.Run(() =>
                     {
-                        MappedAFSHashesCache.Clear();
+                        MappedAFSHashesCache?.Clear();
                         MappedAFSHashesCache = null;
                     });
                 }

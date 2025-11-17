@@ -15,6 +15,7 @@ using Newtonsoft.Json.Linq;
 using System.Net;
 using System.Reflection;
 using System.Runtime;
+using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 
 public static class MultiSocksServerConfiguration
@@ -359,8 +360,8 @@ public static class MultiSocksServerConfiguration
 class Program
 {
     public static string configDir = Directory.GetCurrentDirectory() + "/static/";
-    private static string configPath = configDir + "MultiSocks.json";
-    private static string configMultiServerLibraryPath = configDir + "MultiServerLibrary.json";
+    private static readonly string configPath = configDir + "MultiSocks.json";
+    private static readonly string configMultiServerLibraryPath = configDir + "MultiServerLibrary.json";
     private static SnmpTrapSender? trapSender = null;
 
     public static IDatabase? DirtySocksDatabase = null;
@@ -368,7 +369,7 @@ class Program
     private static readonly Dictionary<string, object> AriesServers = new();
     private static readonly Dictionary<string, BlazeServer> BlazeServers = new();
 
-    private static VulnerableCertificateGenerator BlazeSSLCache = new();
+    private static readonly VulnerableCertificateGenerator BlazeSSLCache = new();
 
     private static void StartOrUpdateServer()
     {
@@ -501,8 +502,11 @@ class Program
 
     private static void InitializeBlaze(ServerConfig config)
     {
-        string blazeVersion = config.Type.ToLower();
         const string defaultSslDomain = "gosredirector.ea.com";
+        const string EA_OU = "Global Online Studio";
+        const string componentsClassPrefix = "MultiSocks.Blaze.";
+
+        string blazeVersion = config.Type.ToLower();
         string sslDomain = config.CN ?? defaultSslDomain;
 
         // Factory selector for Blaze2 (defaults to Blaze3)
@@ -532,6 +536,64 @@ class Program
                     break;
                 }
 
+            case "mitm":
+                {
+                    if (string.IsNullOrEmpty(config.Game))
+                    {
+                        LoggerAccessor.LogWarn($"[{blazeVersion.ToUpper()}] Missing 'game' field for Blaze mitm server on port {config.Port}");
+                        return;
+                    }
+
+                    Func<string, string, string, ushort, uint, IPEndPoint, int, X509Certificate2?, bool, bool, dynamic> createBlazeMitmServer = blazeVersion switch
+                    {
+                        _ => (name, target_ip, target_hostname, target_port, encryption_key, endpoint, ssl_protocols, cert, write_to_file, secure) => Blaze3.CreateBlazeMitmServer(name, target_ip, target_hostname, target_port, encryption_key, endpoint, (SslProtocols)ssl_protocols, cert, write_to_file, secure)
+                    };
+
+                    var blazeServer = createBlazeMitmServer(
+                        config.Game,
+                        config.TargetIP ?? "127.0.0.1",
+                        config.TargetHostname ?? "127.0.0.1",
+                        config.TargetPort ?? 0,
+                        config.StorageEncryptionKey,
+                        new IPEndPoint(IPAddress.Any, config.Port),
+                        config.SSLProtocols,
+                        BlazeSSLCache.GetVulnerableCustomEaCert(sslDomain, EA_OU, true).Item3,
+                        config.WriteClientReportToFile,
+                        config.Secure
+                    );
+
+                    if (config.Components != null)
+                    {
+                        foreach (var compName in config.Components)
+                        {
+                            try
+                            {
+                                var type = Type.GetType(compName.StartsWith(componentsClassPrefix) ? compName : componentsClassPrefix + compName, throwOnError: false);
+                                if (type != null)
+                                {
+                                    blazeServer.AddComponent(type);
+                                    LoggerAccessor.LogInfo($"[{blazeVersion.ToUpper()}] Added component: {compName}");
+                                }
+                                else
+                                {
+                                    LoggerAccessor.LogWarn($"[{blazeVersion.ToUpper()}] Component not found: {compName}");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                LoggerAccessor.LogError($"[{blazeVersion.ToUpper()}] Failed to add component '{compName}': {ex}");
+                            }
+                        }
+                    }
+
+                    _ = blazeServer.Start(-1).ConfigureAwait(false);
+
+                    BlazeServers[$"{config.Type}_{config.Game}"] = blazeServer;
+
+                    LoggerAccessor.LogInfo($"[{blazeVersion.ToUpper()}] Mitm server '{config.Game}' running on port {config.Port}");
+                    break;
+                }
+
             case "main":
                 {
                     if (string.IsNullOrEmpty(config.Game))
@@ -539,8 +601,6 @@ class Program
                         LoggerAccessor.LogWarn($"[{blazeVersion.ToUpper()}] Missing 'game' field for Blaze main server on port {config.Port}");
                         return;
                     }
-
-                    const string EA_OU = "Global Online Studio";
 
                     var blazeServer = createBlazeServer(
                         config.Game,
@@ -551,13 +611,11 @@ class Program
 
                     if (config.Components != null)
                     {
-                        const string classPrefix = "MultiSocks.Blaze.";
-
                         foreach (var compName in config.Components)
                         {
                             try
                             {
-                                var type = Type.GetType(compName.StartsWith(classPrefix) ? compName : classPrefix + compName, throwOnError: false);
+                                var type = Type.GetType(compName.StartsWith(componentsClassPrefix) ? compName : componentsClassPrefix + compName, throwOnError: false);
                                 if (type != null)
                                 {
                                     blazeServer.AddComponent(type);

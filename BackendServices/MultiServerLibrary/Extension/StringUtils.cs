@@ -347,9 +347,7 @@ namespace MultiServerLibrary.Extension
             else if (element.ValueKind == JsonValueKind.Array)
             {
                 foreach (JsonElement nestedArrayItem in element.EnumerateArray())
-                {
                     FindPropertyValuesNested(nestedArrayItem, output, property);
-                }
             }
         }
     }

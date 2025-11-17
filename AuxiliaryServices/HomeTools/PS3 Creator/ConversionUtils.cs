@@ -1,5 +1,4 @@
-﻿using System;
-using System.Numerics;
+﻿using System.Numerics;
 
 namespace HomeTools.PS3_Creator
 {
@@ -20,10 +19,7 @@ namespace HomeTools.PS3_Creator
         {
             long result = 0;
             for (int i = initOffset; i < initOffset + 4; i++)
-            {
                 result = result * 256 + (buffer[i] & byte.MaxValue);
-            }
-
             return result;
         }
 
@@ -31,18 +27,14 @@ namespace HomeTools.PS3_Creator
         {
             int result = 0;
             for (int i = initOffset; i < initOffset + 2; i++)
-            {
                 result = result * 256 + (buffer[i] & byte.MaxValue);
-            }
             return result;
         }
 
         public static void Arraycopy(byte[] src, int srcPos, byte[] dest, long destPos, int length)
         {
             for (int i = 0; i < length; i++)
-            {
                 dest[destPos + i] = src[srcPos + i];
-            }
         }
 
         public static char[] BytesToChar(byte[] b)
@@ -72,50 +64,6 @@ namespace HomeTools.PS3_Creator
             for (int i = 0; i < b.Length; i++)
                 c[i] = (byte)b[i];
             return c;
-        }
-
-        public static byte[] DecodeHex(char[] data)
-        {
-            int len = data.Length;
-            if ((len & 0x01) != 0)
-                throw new Exception("Odd number of characters.");
-
-            byte[] o = new byte[len >> 1];
-
-            // two characters form the hex value.
-            for (int i = 0, j = 0; j < len; i++)
-            {
-                int f = ToDigit(data[j], j) << 4;
-                j++;
-                f = f | ToDigit(data[j], j);
-                j++;
-                o[i] = (byte)(f & byte.MaxValue);
-            }
-
-            return o;
-        }
-
-        private static int GetIntegerValue(char c, int radix)
-        {
-            int val = -1;
-            if (char.IsDigit(c))
-                val = (int)(c - '0');
-            else if (char.IsLower(c))
-                val = (int)(c - 'a') + 10;
-            else if (char.IsUpper(c))
-                val = (int)(c - 'A') + 10;
-            if (val >= radix)
-                val = -1;
-            return val;
-        }
-
-
-        protected static int ToDigit(char ch, int index)
-        {
-            int digit = GetIntegerValue(ch, 16);
-            if (digit == -1)
-                throw new Exception("Illegal hexadecimal character " + ch + " at index " + index);
-            return digit;
         }
     }
 }

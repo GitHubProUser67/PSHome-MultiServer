@@ -46,7 +46,7 @@ namespace HomeTools.BARFramework
 
         private ushort cdnMode = 0;
 
-        private string version2key = string.Empty;
+        private byte[] version2key;
 
         private string convertersfolder = null;
 #if NET6_0_OR_GREATER
@@ -74,7 +74,10 @@ namespace HomeTools.BARFramework
                 this.encrypt = true;
             if (!string.IsNullOrEmpty(version2key))
             {
-                this.version2key = version2key;
+                var base64Decode = version2key.IsBase64();
+                if (!base64Decode.Item1)
+                    throw new InvalidDataException("[BARArchive] - version2key is expected to be of base64 type.");
+                this.version2key = base64Decode.Item2;
                 m_header.Version = 512;
             }
 #if NET6_0_OR_GREATER
@@ -632,12 +635,12 @@ namespace HomeTools.BARFramework
                 if (m_endian == Endianness.BigEndian) // This data is always little endian.
                 {
                     writer.Write(EndianUtils.EndianSwap(IV));
-                    writer.Write(EndianUtils.EndianSwap(ToolsImplementation.ProcessCrypt_Decrypt(CipheredHeaderData, version2key.IsBase64().Item2, IV, 2)));
+                    writer.Write(EndianUtils.EndianSwap(ToolsImplementation.ProcessCrypt_Decrypt(CipheredHeaderData, version2key, IV, 2)));
                 }
                 else
                 {
                     writer.Write(IV);
-                    writer.Write(ToolsImplementation.ProcessCrypt_Decrypt(CipheredHeaderData, version2key.IsBase64().Item2, IV, 2));
+                    writer.Write(ToolsImplementation.ProcessCrypt_Decrypt(CipheredHeaderData, version2key, IV, 2));
                 }
             }
             else

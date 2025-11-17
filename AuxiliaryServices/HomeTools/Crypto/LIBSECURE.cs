@@ -41,7 +41,7 @@ namespace HomeTools.Crypto
 
                     // Encrypt the plaintext
                     byte[] ciphertextBytes = new byte[cipher.GetOutputSize(FileBytes.Length)];
-                    int ciphertextLength = cipher.ProcessBytes(memxor ? new byte[FileBytes.Length] : EndianUtils.EndianSwap(FileBytes), 0, FileBytes.Length, ciphertextBytes, 0); // Little optimization for nulled bytes array, no need to endian swap a bunch of nulls.
+                    int ciphertextLength = cipher.ProcessBytes(memxor ? new byte[FileBytes.Length] : EndianUtils.EndianSwap(FileBytes), 0, FileBytes.Length, ciphertextBytes, 0);
                     cipher.DoFinal(ciphertextBytes, ciphertextLength);
 
                     return memxor ? Crypt_Decrypt(FileBytes, EndianUtils.EndianSwap(ciphertextBytes), 8) : EndianUtils.EndianSwap(ciphertextBytes);
@@ -219,7 +219,7 @@ namespace HomeTools.Crypto
             if (CipheredFileBytes.Length > fileBytes.Length)
             {
                 byte[] ResultTrimmedArray = new byte[fileBytes.Length];
-                Buffer.BlockCopy(CipheredFileBytes, 0, ResultTrimmedArray, 0, ResultTrimmedArray.Length);
+                Array.Copy(CipheredFileBytes, 0, ResultTrimmedArray, 0, ResultTrimmedArray.Length);
                 return ResultTrimmedArray;
             }
             else if (CipheredFileBytes.Length < fileBytes.Length)
@@ -248,10 +248,10 @@ namespace HomeTools.Crypto
                 }
 
                 Array.Copy(ISO97971, 0, block, block.Length - BytesToFill, BytesToFill);
-
-                Buffer.BlockCopy(CipheredFileBytes, 0, ResultAppendedArray, 0, CipheredFileBytes.Length);
-                Buffer.BlockCopy(MemXOR(ivBlk.ToHexString(),
+                Array.Copy(CipheredFileBytes, 0, ResultAppendedArray, 0, CipheredFileBytes.Length);
+                Array.Copy(MemXOR(ivBlk.ToHexString(),
                     block.ToHexString(), blockSize).HexStringToByteArray(), 0, ResultAppendedArray, CipheredFileBytes.Length, difference);
+
                 return ResultAppendedArray;
             }
 

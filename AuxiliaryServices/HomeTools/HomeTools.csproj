@@ -16,6 +16,7 @@
   
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);SERVER_MODE</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
 </Project>

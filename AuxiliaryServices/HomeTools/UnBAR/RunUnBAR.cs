@@ -52,37 +52,7 @@ namespace HomeTools.UnBAR
             {
                 int ExitCode = new EDAT().decryptFile(sdatfilePath, datfilePath, new byte[16], null);
 
-                if (ExitCode == sbyte.MinValue)
-                {
-                    string makeNpExePath = converterPath + "/make_npdata/" + (!MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows ? "make_npdata_win32.exe" : "make_npdata");
-
-                    if (File.Exists(makeNpExePath))
-                    {
-                        using (Process process = Process.Start(new ProcessStartInfo()
-                        {
-                            FileName = makeNpExePath,
-                            Arguments = $"-d \"{sdatfilePath}\" \"{datfilePath}\" 0",
-                            RedirectStandardOutput = true,
-                            RedirectStandardError = true,
-                            UseShellExecute = false,
-                            WorkingDirectory = converterPath, // Can load various config files.
-                            CreateNoWindow = true
-                        }))
-                        {
-                            process.WaitForExit();
-
-                            ExitCode = process.ExitCode;
-
-                            if (ExitCode != 0)
-                                LoggerAccessor.LogError($"[RunUnBAR] - RunDecrypt failed with makenpdata process status code : {ExitCode}");
-                            else
-                                await RunExtract(datfilePath, outDir, cdnMode);
-                        }
-                    }
-                    else
-                        LoggerAccessor.LogError($"[RunUnBAR] - RunDecrypt dectected LZ compressed data, but no makenpdata executable were found at path: {makeNpExePath}");
-                }
-                else if (ExitCode != 0)
+                if (ExitCode != 0)
                     LoggerAccessor.LogError($"[RunUnBAR] - RunDecrypt failed with status code : {ExitCode}");
                 else
                     await RunExtract(datfilePath, outDir, cdnMode);
@@ -138,6 +108,11 @@ namespace HomeTools.UnBAR
                     {
                         try
                         {
+                            var base64Data = options.IsBase64();
+
+                            if (!base64Data.Item1)
+                                throw new InvalidDataException("[RunUnBAR] - options is expected to be of base64 type.");
+
                             byte[] HeaderIV = new byte[16];
 
                             Buffer.BlockCopy(RawBarData, 8, HeaderIV, 0, HeaderIV.Length);
@@ -150,7 +125,7 @@ namespace HomeTools.UnBAR
                                 Buffer.BlockCopy(RawBarData, 24, SharcHeader, 0, SharcHeader.Length);
 
                                 SharcHeader = ToolsImplementation.ProcessCrypt_Decrypt(SharcHeader,
-                                 options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2);
+                                 base64Data.Item2, HeaderIV.ShadowCopy(), 2);
 
                                 if (SharcHeader == null)
                                     return; // Sharc Header failed to decrypt.
@@ -161,7 +136,7 @@ namespace HomeTools.UnBAR
                                     Buffer.BlockCopy(RawBarData, 24, SharcHeader, 0, SharcHeader.Length);
 
                                     SharcHeader = ToolsImplementation.ProcessCrypt_Decrypt(SharcHeader,
-                                     options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2);
+                                     base64Data.Item2, HeaderIV.ShadowCopy(), 2);
 
                                     if (SharcHeader == null)
                                         return; // Sharc Header failed to decrypt.
@@ -172,7 +147,7 @@ namespace HomeTools.UnBAR
                                         Buffer.BlockCopy(RawBarData, 24, SharcHeader, 0, SharcHeader.Length);
 
                                         SharcHeader = ToolsImplementation.ProcessCrypt_Decrypt(SharcHeader,
-                                         options.IsBase64().Item2, HeaderIV.ShadowCopy(), 2);
+                                         base64Data.Item2, HeaderIV.ShadowCopy(), 2);
 
                                         if (SharcHeader == null)
                                             return; // Sharc Header failed to decrypt.
@@ -203,7 +178,7 @@ namespace HomeTools.UnBAR
 
                                     ToolsImplementation.IncrementIVBytes(HeaderIV, 1); // Increment IV by one (supposed to be the continuation of the header cypher context).
 
-                                    SharcTOC = ToolsImplementation.ProcessCrypt_Decrypt(SharcTOC, options.IsBase64().Item2, HeaderIV, 2);
+                                    SharcTOC = ToolsImplementation.ProcessCrypt_Decrypt(SharcTOC, base64Data.Item2, HeaderIV, 2);
 
                                     if (SharcTOC != null)
                                     {

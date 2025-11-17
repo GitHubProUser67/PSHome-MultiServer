@@ -326,12 +326,116 @@ namespace Horizon.MUM.Models
         public virtual bool IsLoggedIn => !_logoutTime.HasValue && _loginTime.HasValue && IsConnected;
         public virtual bool IsInGame => (CurrentParty != null || CurrentGame != null) && CurrentChannel != null && CurrentChannel.Type == ChannelType.Game;
         public virtual bool IsActiveServer => _hasServerSession;
-        public virtual bool Timedout => (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds > TimeoutSeconds;
-        public virtual bool LongTimedout => (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds > LongTimeoutSeconds;
+        public virtual bool Timedout
+        {
+            get
+            {
+                const int expirationDelay = 2;
+                double deltaSec = (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds;
+                int timeoutThreshold = TimeoutSeconds;
+
+                if (deltaSec > timeoutThreshold + expirationDelay)
+                {
+                    if (!_timedout)
+                    {
+                        _missedEchos++;
+                        // Ignore our DME and not logged clients in the log.
+                        if (AccountId != -1)
+                            LoggerAccessor.LogError(
+                                $"[ClientObject] - TIMEOUT - Client {AccountName} missed echo #{_missedEchos}. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
+                            );
+
+                        if (_missedEchos > expirationDelay)
+                        {
+                            _missedEchos = 0;
+                            _timedout = true;
+                        }
+                    }
+                }
+                else
+                {
+                    if (_timedout)
+                    {
+                        _timedout = false;
+
+                        LoggerAccessor.LogInfo(
+                            $"[ClientObject] - RECOVERED - Client {AccountName} recovered. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
+                        );
+                    }
+
+                    _missedEchos = 0;
+                }
+
+                return _timedout;
+            }
+        }
+        public virtual bool LongTimedout
+        {
+            get
+            {
+                const int expirationDelay = 2;
+                double deltaSec = (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds;
+                int timeoutThreshold = LongTimeoutSeconds;
+
+                if (deltaSec > timeoutThreshold + expirationDelay)
+                {
+                    if (!_long_timedout)
+                    {
+                        _missedLongEchos++;
+                        // Ignore our DME and not logged clients in the log.
+                        if (AccountId != -1)
+                            LoggerAccessor.LogError(
+                                $"[ClientObject] - LONG_TIMEOUT - Client {AccountName} missed echo #{_missedLongEchos}. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
+                            );
+
+                        if (_missedLongEchos > expirationDelay)
+                        {
+                            _missedLongEchos = 0;
+                            _long_timedout = true;
+                        }
+                    }
+                }
+                else
+                {
+                    if (_long_timedout)
+                    {
+                        _long_timedout = false;
+
+                        LoggerAccessor.LogInfo(
+                            $"[ClientObject] - LONG_RECOVERED - Client {AccountName} recovered. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
+                        );
+                    }
+
+                    _missedLongEchos = 0;
+                }
+
+                return _long_timedout;
+            }
+        }
         public virtual bool IsConnected => KeepAlive || (_hasSocket && !PlayerReportTimedout && !LongTimedout);
         public bool KeepAlive => _keepAliveTime.HasValue && (DateTimeUtils.GetHighPrecisionUtcTime() - _keepAliveTime).Value.TotalSeconds < MediusClass.GetAppSettingsOrDefault(ApplicationId).KeepAliveGracePeriodSeconds;
         public bool PlayerReportTimedout => UtcLastPlayerReportReceived.HasValue && (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastPlayerReportReceived).Value.TotalSeconds > MediusClass.GetAppSettingsOrDefault(ApplicationId).PlayerReportTimeoutSeconds;
-        
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected int _missedEchos;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected int _missedLongEchos;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected bool _timedout;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected bool _long_timedout;
+
         /// <summary>
         /// 
         /// </summary>
@@ -438,11 +542,12 @@ namespace Horizon.MUM.Models
         public void OnRecvServerEcho(RT_MSG_SERVER_ECHO echo)
         {
             DateTime echoTime = echo.UnixTimestamp.ToUtcDateTime();
-            if (echoTime > _lastServerEchoValue)
-            {
-                _lastServerEchoValue = echoTime;
-                LatencyMs = (uint)(DateTimeUtils.GetHighPrecisionUtcTime() - echoTime).TotalMilliseconds;
-            }
+            double latencyMs = (DateTimeUtils.GetHighPrecisionUtcTime() - echoTime).TotalMilliseconds;
+
+            if (latencyMs >= 0 && latencyMs < 10000)
+                LatencyMs = (uint)latencyMs;
+
+            _lastServerEchoValue = echoTime;
         }
 
         public void OnRecvClientEcho(RT_MSG_CLIENT_ECHO echo)

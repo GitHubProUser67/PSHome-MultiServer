@@ -176,6 +176,13 @@ namespace EndianTools
             return (buf[address] << 16) | (buf[address + 1] << 8) | buf[address + 2];
         }
 
+        public static unsafe uint ToUInt32(byte* buf, Endianness endianness, uint address)
+        {
+            return endianness == Endianness.LittleEndian
+                ? (uint)(buf[address] | (buf[address + 1] << 8) | (buf[address + 2] << 16) | (buf[address + 3] << 24))
+                : (uint)((buf[address] << 24) | (buf[address + 1] << 16) | (buf[address + 2] << 8) | buf[address + 3]);
+        }
+
         public static uint ToUInt32(byte[] buf, Endianness endianness, uint address)
         {
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
