@@ -98,6 +98,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
         public static string Set(byte[] PostData, string ContentType, string directorypath, string batchparams, bool global, int game, bool userSetIfEmpty = false)
         {
+            bool betaOhs = false;
             string dataforohs = null;
             string output = null;
             string writekey = null;
@@ -112,7 +113,15 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                     {
                         var data = MultipartFormDataParser.Parse(ms, boundary);
                         LoggerAccessor.LogInfo($"[OHS] : Client Version - {data.GetParameterValue("version")}");
+                        // Some older OHS APIs expected a write key for Set (beta OHS could maintain a leaderboard for the userSet function.
                         if (directorypath.EndsWith("/SCEA/WorldDomination"))
+                        {
+                            (string, string) dualresult = JaminProcessor.JaminDeFormatWithWriteKey(data.GetParameterValue("data"), true, game);
+                            writekey = dualresult.Item1;
+                            dataforohs = dualresult.Item2;
+                            betaOhs = true;
+                        }
+                        else if (directorypath.Contains("/uncharted2"))
                         {
                             (string, string) dualresult = JaminProcessor.JaminDeFormatWithWriteKey(data.GetParameterValue("data"), true, game);
                             writekey = dualresult.Item1;
@@ -143,7 +152,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
                     if (!global)
                     {
-                        if (!string.IsNullOrEmpty(writekey))
+                        if (betaOhs) // User Set was the leaderboard update of the beta OHS.
                         {
                             string leaderboardDirectoryPath = directorypath + $"/Leaderboards";
 
@@ -193,9 +202,11 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                                     st.Length -= 2;
                                     st.Append(" }");
                                     writer.Write(st);
-                                    output = $"{{ [\"writeKey\"] = \"{writekey}\" }}";
                                 }
                             }
+							
+                            if (!string.IsNullOrEmpty(writekey))
+                                output = $"{{ [\"writeKey\"] = \"{writekey}\" }}";
                         }
                         else
                         {
@@ -250,7 +261,9 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                                 }
                             }
 
-                            if (value != null)
+                            if (!string.IsNullOrEmpty(writekey))
+                                output = $"{{ [\"writeKey\"] = \"{writekey}\" }}";
+                            else if (value != null)
                                 output = LuaUtils.ConvertJTokenToLuaTable(JToken.FromObject(value), true);
                         }
                     }

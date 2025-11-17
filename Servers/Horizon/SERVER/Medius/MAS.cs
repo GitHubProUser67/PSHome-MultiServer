@@ -2890,7 +2890,7 @@ LoggerAccessor.LogWarn($"[MAS] - Unhandled Medius Message: {message}");
             {
                 if (data.ClientObject.IsOnRPCN && data.ClientObject.ClientHomeData.VersionAsDouble >= 01.82)
                 {
-                    if (!string.IsNullOrEmpty(data.ClientObject.ClientHomeData.Type) && (data.ClientObject.ClientHomeData.Type.Contains("HDK") || data.ClientObject.ClientHomeData.Type == "Online Debug"))
+                    if (!string.IsNullOrEmpty(data.ClientObject.ClientHomeData.Type) && (data.ClientObject.ClientHomeData.Type.Contains("HDK") || data.ClientObject.ClientHomeData.Type.Contains("Online Debug")))
                         _ = Task.Delay(4000).ContinueWith(r => HomeRTMTools.SendRemoteCommand(data.ClientObject, "lc Debug.System( 'mlaaenable 0' )"));
                     else
                         _ = Task.Delay(4000).ContinueWith(r => HomeRTMTools.SendRemoteCommand(data.ClientObject, "mlaaenable 0"));
