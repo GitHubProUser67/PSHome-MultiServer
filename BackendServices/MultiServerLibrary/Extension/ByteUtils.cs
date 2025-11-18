@@ -36,28 +36,6 @@ namespace MultiServerLibrary.Extension
         }
 
         /// <summary>
-        /// Transform a Span byte array to it's hexadecimal representation.
-        /// <para>Obtenir un tableau de Span bytes dans sa représentation hexadecimale.</para>
-        /// <param name="bytes">The Span byte array to transform.</param>
-        /// </summary>
-        /// <returns>A string.</returns>
-        public unsafe static string ToHexString(this Span<byte> bytes)
-        {
-            uint* lookupP = _lookup32UnsafeP;
-            char[] result = new char[bytes.Length * 2];
-            fixed (byte* bytesP = bytes)
-            fixed (char* resultP = result)
-            {
-                uint* resultP2 = (uint*)resultP;
-                for (int i = 0; i < bytes.Length; i++)
-                {
-                    resultP2[i] = lookupP[bytesP[i]];
-                }
-            }
-            return new string(result);
-        }
-
-        /// <summary>
         /// Transform a byte array to it's hexadecimal representation.
         /// <para>Obtenir un tableau de bytes dans sa représentation hexadecimale.</para>
         /// <param name="bytes">The byte array to transform.</param>

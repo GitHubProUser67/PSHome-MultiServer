@@ -1,4 +1,5 @@
 ﻿using S22.Imap;
+using System;
 using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
@@ -7,7 +8,7 @@ namespace MultiServerLibrary.ManagedMail
 {
     public abstract class EmailProcessor
     {
-        private const int mailRetrieverDelay = 6000;
+        public int MailRetrieverDelay { get; set; } = 6000;
 
         public string smtpAddress;
 
@@ -59,27 +60,59 @@ namespace MultiServerLibrary.ManagedMail
             {
                 while (listenThreadActive)
                 {
-                    foreach (uint oid in imapClient.Search(SearchCondition.Unseen()))
-                        OnNewEmail(imapClient.GetMessage(oid));
+                    try
+                    {
+                        foreach (uint oid in imapClient.Search(SearchCondition.Unseen()))
+                        {
+                            try
+                            {
+                                OnNewEmail(imapClient.GetMessage(oid));
+                            }
+                            catch (Exception ex)
+                            {
+                                CustomLogger.LoggerAccessor.LogError($"[Emailprocessor] - Error while reading unseen mail with oid:{oid}. (Exception:{ex})");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        CustomLogger.LoggerAccessor.LogError($"[Emailprocessor] - Error while searching unseen mails. (Exception:{ex})");
+                    }
 
-                    await Task.Delay(mailRetrieverDelay).ConfigureAwait(false);
+                    await Task.Delay(MailRetrieverDelay).ConfigureAwait(false);
                 }
             }
             else
             {
                 while (listenThreadActive)
                 {
-                    foreach (uint oid in imapClient.Search(SearchCondition.All()))
-                        OnNewEmail(imapClient.GetMessage(oid));
+                    try
+                    {
+                        foreach (uint oid in imapClient.Search(SearchCondition.All()))
+                        {
+                            try
+                            {
+                                OnNewEmail(imapClient.GetMessage(oid));
+                            }
+                            catch (Exception ex)
+                            {
+                                CustomLogger.LoggerAccessor.LogError($"[Emailprocessor] - Error while reading mail with oid:{oid}. (Exception:{ex})");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        CustomLogger.LoggerAccessor.LogError($"[Emailprocessor] - Error while searching mails. (Exception:{ex})");
+                    }
 
-                    await Task.Delay(mailRetrieverDelay).ConfigureAwait(false);
+                    await Task.Delay(MailRetrieverDelay).ConfigureAwait(false);
                 }
             }
         }
 
         public void SendEmail(string fromEmail, string passwordFromEmail, string toEmail, string subject, string body)
         {
-            using (var client = new SmtpClient(smtpAddress, smtpReceiverPort))
+            using (SmtpClient client = new SmtpClient(smtpAddress, smtpSenderPort))
             {
                 client.EnableSsl = secure;
                 client.Credentials = new NetworkCredential(fromEmail, passwordFromEmail);

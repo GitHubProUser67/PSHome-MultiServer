@@ -12,47 +12,15 @@ namespace MultiServerLibrary.Extension
     {
         public const string ASCIIChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-        public enum FileShareMode
-        {
-            //
-            // Résumé :
-            //     Declines sharing of the current file. Any request to open the file (by this process
-            //     or another process) will fail until the file is closed.
-            None = 0,
-            //
-            // Résumé :
-            //     Allows subsequent opening of the file for reading. If this flag is not specified,
-            //     any request to open the file for reading (by this process or another process)
-            //     will fail until the file is closed. However, even if this flag is specified,
-            //     additional permissions might still be needed to access the file.
-            Read = 1,
-            //
-            // Résumé :
-            //     Allows subsequent opening of the file for writing. If this flag is not specified,
-            //     any request to open the file for writing (by this process or another process)
-            //     will fail until the file is closed. However, even if this flag is specified,
-            //     additional permissions might still be needed to access the file.
-            Write = 2,
-            //
-            // Résumé :
-            //     Allows subsequent opening of the file for reading or writing. If this flag is
-            //     not specified, any request to open the file for reading or writing (by this process
-            //     or another process) will fail until the file is closed. However, even if this
-            //     flag is specified, additional permissions might still be needed to access the
-            //     file.
-            ReadWrite = 3,
-            //
-            // Résumé :
-            //     Allows subsequent deleting of a file.
-            Delete = 4,
-            //
-            // Résumé :
-            //     Makes the file handle inheritable by child processes. This is not directly supported
-            //     by Win32.
-            Inheritable = 16
-        }
-
         private const FileAttributes hiddenAttribute = FileAttributes.Hidden;
+
+        // Define a set of valid extensions for media quick lookup
+        public static HashSet<string> ValidM3UExtensions { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        { 
+            ".mp3",
+            ".aac",
+            ".ts"
+        };
 
         public static IEnumerable<FileSystemInfo> AllFilesAndFolders(this DirectoryInfo directory)
         {
@@ -79,14 +47,11 @@ namespace MultiServerLibrary.Extension
 
         public static IEnumerable<string> GetMediaFilesList(string directoryPath)
         {
-            if (!Directory.Exists(directoryPath))
+            if (string.IsNullOrEmpty(directoryPath) || !Directory.Exists(directoryPath))
                 return null;
-
-            // Define a set of valid extensions for media quick lookup
-            HashSet<string> validExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".mp3", ".aac", ".ts" };
-
+           
             return Directory.EnumerateFiles(directoryPath, "*.*")
-                            .Where(s => validExtensions.Contains(Path.GetExtension(s)) && !File.GetAttributes(s)
+                            .Where(s => ValidM3UExtensions.Contains(Path.GetExtension(s)) && !File.GetAttributes(s)
                             .HasFlag(hiddenAttribute));
         }
 
@@ -106,13 +71,13 @@ namespace MultiServerLibrary.Extension
         }
 
         // https://stackoverflow.com/questions/24279882/file-open-hangs-and-freezes-thread-when-accessing-a-local-file
-        public static async Task<bool> IsLocked(this FileInfo file, FileShareMode mode)
+        public static async Task<bool> IsLocked(this FileInfo file, FileShare mode)
         {
             Task<bool> checkTask = Task.Run(() =>
             {
                 try
                 {
-                    using (file.Open(FileMode.Open, FileAccess.Read, (FileShare)mode)) { }
+                    using (file.Open(FileMode.Open, FileAccess.Read, mode)) { }
                     return false;
                 }
                 catch
@@ -134,7 +99,7 @@ namespace MultiServerLibrary.Extension
             return true;
         }
 
-        public static async Task<FileStream> TryOpen(string filePath, FileShareMode mode, int AwaiterTimeoutInMS = -1)
+        public static async Task<FileStream> TryOpen(string filePath, FileShare mode, int AwaiterTimeoutInMS = -1)
         {
             if (AwaiterTimeoutInMS != -1)
             {
@@ -159,12 +124,11 @@ namespace MultiServerLibrary.Extension
             }
             try
             {
-                return new FileStream(filePath, FileMode.Open, FileAccess.Read, (FileShare)mode);
+                return new FileStream(filePath, FileMode.Open, FileAccess.Read, mode);
             }
             catch
             {
             }
-
             return null;
         }
 
@@ -202,7 +166,7 @@ namespace MultiServerLibrary.Extension
         /// <param name="filePath">The path of the desired file.</param>
         /// <param name="bytesToRead">The amount of desired fragment data.</param>
         /// <returns>A byte array.</returns>
-        public static byte[] TryReadFileChunck(string filePath, int bytesToRead, FileShareMode mode, int AwaiterTimeoutInMS = -1)
+        public static byte[] TryReadFileChunck(string filePath, int bytesToRead, FileShare mode, int AwaiterTimeoutInMS = -1)
         {
             if (bytesToRead <= 0)
                 throw new ArgumentOutOfRangeException(nameof(bytesToRead), "[FileSystemUtils] - ReadFileChunck() - Number of bytes to read must be greater than zero.");
@@ -215,7 +179,7 @@ namespace MultiServerLibrary.Extension
 #endif
             try
             {
-                using (FileStream fileStream = TryOpen(filePath, mode, AwaiterTimeoutInMS).GetAwaiter().GetResult())
+                using (FileStream fileStream = TryOpen(filePath, mode, AwaiterTimeoutInMS).Result)
                 {
 #if NET5_0_OR_GREATER
                     bytesRead = fileStream.Read(result);
@@ -236,6 +200,7 @@ namespace MultiServerLibrary.Extension
             }
             catch
             {
+                // Failed to read file, returning nulled out array (function is not expected to return the data everytime, hence the Try, but it should be very rare).
             }
 
             return result.ToArray();

@@ -259,17 +259,17 @@ namespace FixedSsl
 
             while (pos + 4 <= dataLen)
             {
-                int extType = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, (uint)(offset + pos));
+                ushort extType = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, (uint)(offset + pos));
                 int len = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, (uint)(offset + pos + 2));
 
-                if (extType == 0x0000) // Server Name extension
+                if (extType == (ushort)SniHelper.ExtensionType.ServerName) // Server Name extension
                 {
                     if (pos + 4 + len > dataLen)
                         return -5;
 
                     return ParseServerNameExtension(data, offset + pos + 4, len, out hostname);
                 }
-                else if (extType == 0x002B) // Supported Versions extension
+                else if (extType == (ushort)SniHelper.ExtensionType.SupportedVersions) // Supported Versions extension
                 {
                     for (int i = 0; i < data[offset + pos + 4]; i += 2)
                         versions.Add(EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, (uint)(offset + pos + 5 + i)));

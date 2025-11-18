@@ -201,8 +201,11 @@ namespace Org.Mentalis.Security.Ssl
 				return;
 			EndPoint ep = LocalEndpoint;
 			m_Server = new SecureSocket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp, this.SecurityOptions);
-			Server.Bind(ep);
-			Server.Listen(int.MaxValue);
+			if (Server != null)
+			{
+                Server.Bind(ep);
+                Server.Listen(int.MaxValue);
+            }
 		}
 		/// <summary>
 		/// Closes the listener.

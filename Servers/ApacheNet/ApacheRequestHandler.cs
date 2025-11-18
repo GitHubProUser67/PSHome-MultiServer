@@ -13,14 +13,14 @@ namespace ApacheNet
         public static Task<bool> HandleHEAD(ApacheContext ctx)
         {
             FileInfo? fileInfo = new(ctx.FilePath ?? string.Empty);
-            if (fileInfo.Exists)
+            if (fileInfo != null && fileInfo.Exists)
             {
                 string ContentType = HTTPProcessor.GetMimeType(Path.GetExtension(ctx.FilePath), ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor.MimeTypes);
                 if (ContentType == "application/octet-stream")
                 {
                     bool matched = false;
-                    byte[] VerificationChunck = FileSystemUtils.TryReadFileChunck(ctx.FilePath, 10, FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs);
-                    foreach (var entry in HTTPProcessor._PathernDictionary)
+                    byte[] VerificationChunck = FileSystemUtils.TryReadFileChunck(ctx.FilePath, 10, FileShare.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs);
+                    foreach (var entry in HTTPProcessor.PathernDictionary)
                     {
                         if (ByteUtils.FindBytePattern(VerificationChunck, entry.Value) != -1)
                         {
@@ -53,11 +53,13 @@ namespace ApacheNet
         {
             if (File.Exists(ctx.FilePath))
             {
+                const string httpVerIdent = "HTTP/";
+
                 string ContentType = HTTPProcessor.GetMimeType(Path.GetExtension(ctx.FilePath), ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor.MimeTypes);
                 if (ContentType == "application/octet-stream")
                 {
-                    byte[] VerificationChunck = FileSystemUtils.TryReadFileChunck(ctx.FilePath, 10, FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs);
-                    foreach (var entry in HTTPProcessor._PathernDictionary)
+                    byte[] VerificationChunck = FileSystemUtils.TryReadFileChunck(ctx.FilePath, 10, FileShare.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs);
+                    foreach (var entry in HTTPProcessor.PathernDictionary)
                     {
                         if (ByteUtils.FindBytePattern(VerificationChunck, entry.Value) != -1)
                         {
@@ -67,6 +69,7 @@ namespace ApacheNet
                     }
                 }
 
+                string httpVer = ApacheNetServerConfiguration.HttpVersion;
                 string serverIP = ctx.ServerIP;
 
                 if (serverIP.Length > 15)
@@ -81,7 +84,7 @@ namespace ApacheNet
                     " <a:response>\r\n" +
                     $"   <a:href>{(ctx.Secure ? "https" : "http")}://{serverIP}:{ctx.ServerPort}{ctx.AbsolutePath}</a:href>\r\n" +
                     "   <a:propstat>\r\n" +
-                    "    <a:status>HTTP/1.1 200 OK</a:status>\r\n" +
+                    $"    <a:status>{(httpVer.StartsWith(httpVerIdent, StringComparison.InvariantCultureIgnoreCase) ? httpVer : httpVerIdent + httpVer)} {(int)HttpStatusCode.OK} OK</a:status>\r\n" +
                     "       <a:prop>\r\n" +
                     $"        <a:getcontenttype>{ContentType}</a:getcontenttype>\r\n" +
                     $"        <a:getcontentlength b:dt=\"int\">{new FileInfo(ctx.FilePath).Length}</a:getcontentlength>\r\n" +

@@ -17,7 +17,7 @@ namespace WebAPIService.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.20");
 
-            modelBuilder.Entity("WebAPIService.GameServices.CODEGLUE.Entities.WipeoutShooterScoreboardEntry", b =>
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.CODEGLUE.Entities.WipeoutShooterScoreboardEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -61,7 +61,7 @@ namespace WebAPIService.Migrations
                     b.ToTable("WipeoutShooterScoreboardEntry", (string)null);
                 });
 
-            modelBuilder.Entity("WebAPIService.GameServices.COGS.Entities.CogsScoreboardEntry", b =>
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.COGS.Entities.CogsScoreboardEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -105,7 +105,7 @@ namespace WebAPIService.Migrations
                     b.ToTable("CogsScoreboardEntry", (string)null);
                 });
 
-            modelBuilder.Entity("WebAPIService.GameServices.HEAVYWATER.Entities.HexxScoreboardEntry", b =>
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.HEAVYWATER.Entities.HexxScoreboardEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -149,7 +149,7 @@ namespace WebAPIService.Migrations
                     b.ToTable("HexxScoreboardEntry", (string)null);
                 });
 
-            modelBuilder.Entity("WebAPIService.GameServices.HELLFIRE.Entities.NovusPrime.InterGalacticScoreboardEntry", b =>
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.HELLFIRE.Entities.NovusPrime.InterGalacticScoreboardEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -193,7 +193,7 @@ namespace WebAPIService.Migrations
                     b.ToTable("InterGalacticScoreboardEntry", (string)null);
                 });
 
-            modelBuilder.Entity("WebAPIService.GameServices.HOMELEADERBOARDS.Entities.HomeScoreboardEntry", b =>
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.HOMELEADERBOARDS.Entities.HomeScoreboardEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -237,7 +237,7 @@ namespace WebAPIService.Migrations
                     b.ToTable("HomeScoreboardEntry", (string)null);
                 });
 
-            modelBuilder.Entity("WebAPIService.GameServices.JUGGERNAUT.clearasil.Entities.ClearasilScoreBoardEntry", b =>
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil.Entities.ClearasilScoreBoardEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -284,7 +284,7 @@ namespace WebAPIService.Migrations
                     b.ToTable("ClearasilScoreBoardEntry", (string)null);
                 });
 
-            modelBuilder.Entity("WebAPIService.GameServices.NDREAMS.Aurora.Entities.OrbrunnerScoreBoardEntry", b =>
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.NDREAMS.Aurora.Entities.OrbrunnerScoreBoardEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -328,7 +328,98 @@ namespace WebAPIService.Migrations
                     b.ToTable("OrbrunnerScoreBoardEntry", (string)null);
                 });
 
-            modelBuilder.Entity("WebAPIService.GameServices.OHS.Entities.OHSScoreboardEntry", b =>
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.NDREAMS.Espionage9.Entities.Espionage9ScoreBoardEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ExtraData1")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExtraData2")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExtraData3")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExtraData4")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExtraData5")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlayerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PsnId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<float>("Score")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Espionage9ScoreBoardEntity", (string)null);
+                });
+
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.NDREAMS.Xi2.Entities.BattleContScoreBoardEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ExtraData1")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExtraData2")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExtraData3")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExtraData4")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExtraData5")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlayerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PsnId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<float>("Score")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Wins")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BattleContScoreBoardEntity", (string)null);
+                });
+
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.OHS.Entities.OHSScoreboardEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -375,7 +466,7 @@ namespace WebAPIService.Migrations
                     b.ToTable("OHSScoreboardEntry", (string)null);
                 });
 
-            modelBuilder.Entity("WebAPIService.GameServices.RCHOME.Entities.FiringRangeScoreBoardEntry", b =>
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.RCHOME.Entities.FiringRangeScoreBoardEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -419,7 +510,7 @@ namespace WebAPIService.Migrations
                     b.ToTable("FiringRangeScoreBoardEntry", (string)null);
                 });
 
-            modelBuilder.Entity("WebAPIService.GameServices.VEEMEE.audi_sled.Entities.SledMpScoreboardEntry", b =>
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.VEEMEE.audi_sled.Entities.SledMpScoreboardEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -466,7 +557,7 @@ namespace WebAPIService.Migrations
                     b.ToTable("SledMpScoreboardEntry", (string)null);
                 });
 
-            modelBuilder.Entity("WebAPIService.GameServices.VEEMEE.audi_sled.Entities.SledScoreboardEntry", b =>
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.VEEMEE.audi_sled.Entities.SledScoreboardEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -510,7 +601,7 @@ namespace WebAPIService.Migrations
                     b.ToTable("SledScoreboardEntry", (string)null);
                 });
 
-            modelBuilder.Entity("WebAPIService.GameServices.VEEMEE.audi_vrun.Entities.VrunScoreboardEntry", b =>
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.VEEMEE.audi_vrun.Entities.VrunScoreboardEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -557,7 +648,7 @@ namespace WebAPIService.Migrations
                     b.ToTable("VrunScoreboardEntry", (string)null);
                 });
 
-            modelBuilder.Entity("WebAPIService.GameServices.VEEMEE.goalie_sfrgbt.Entities.GSScoreboardEntry", b =>
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.VEEMEE.goalie_sfrgbt.Entities.GSScoreboardEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -607,7 +698,7 @@ namespace WebAPIService.Migrations
                     b.ToTable("GSScoreboardEntry", (string)null);
                 });
 
-            modelBuilder.Entity("WebAPIService.GameServices.VEEMEE.gofish.Entities.GFScoreboardEntry", b =>
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.VEEMEE.gofish.Entities.GFScoreboardEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -660,7 +751,7 @@ namespace WebAPIService.Migrations
                     b.ToTable("GFScoreboardEntry", (string)null);
                 });
 
-            modelBuilder.Entity("WebAPIService.GameServices.VEEMEE.olm.Entities.OLMScoreboardEntry", b =>
+            modelBuilder.Entity("WebAPIService.GameServices.PSHOME.VEEMEE.olm.Entities.OLMScoreboardEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()

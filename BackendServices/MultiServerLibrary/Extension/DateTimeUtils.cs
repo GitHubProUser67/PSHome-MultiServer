@@ -5,8 +5,8 @@ namespace MultiServerLibrary.Extension
 {
     public static class DateTimeUtils
     {
-        private static Stopwatch _swTicker = Stopwatch.StartNew();
-        private static long _swTickerInitialTicks = DateTime.UtcNow.Ticks;
+        private static readonly Stopwatch _swTicker = Stopwatch.StartNew();
+        private static readonly long _swTickerInitialTicks = DateTime.UtcNow.Ticks;
 
         #region Time
 

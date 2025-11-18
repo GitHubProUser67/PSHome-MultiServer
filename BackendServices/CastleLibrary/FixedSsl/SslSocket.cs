@@ -197,7 +197,6 @@ namespace FixedSsl
                     )
                 )
             {
-#if !FORCE_MENTALIS_SSL_SERVER
                 if (!isSslV2 && (cipherSuites.Exists(c => Ssl3TlsServer.AESCipherSuites.Contains(c)) || cipherSuites.Exists(c => Ssl3TlsServer.RC4CipherSuites.Contains(c))))
                 {
                     BCSSLCertificate bcCertificate = null;
@@ -227,12 +226,10 @@ namespace FixedSsl
                         return serverProtocol.Stream;
                     }
                 }
-#endif
+
                 return new Org.Mentalis.Security.Ssl.SecureNetworkStream(new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server)), ownSocket);
             }
-            else if (allowedProtocols.Contains(SslProtocols.Ssl2) && maxSslVersion == SSLv2)
 #pragma warning restore
-                throw new NotSupportedException($"[SslSocket] - Client tried to initialize a SSLv2 connection which is not supported yet, invalidating the request...");
 
             SslStream sslStream = new SslStream(new NetworkStream(socket, ownSocket), false);
 
@@ -416,7 +413,6 @@ namespace FixedSsl
                     )
                 )
             {
-#if !FORCE_MENTALIS_SSL_SERVER
                 if (!isSslV2 && (cipherSuites.Exists(c => Ssl3TlsServer.AESCipherSuites.Contains(c)) || cipherSuites.Exists(c => Ssl3TlsServer.RC4CipherSuites.Contains(c))))
                 {
                     BCSSLCertificate bcCertificate = null;
@@ -446,12 +442,10 @@ namespace FixedSsl
                         return serverProtocol.Stream;
                     }
                 }
-#endif
+
                 return new Org.Mentalis.Security.Ssl.SecureNetworkStream(new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server)), ownSocket);
             }
-            else if (allowedProtocols.Contains(SslProtocols.Ssl2) && maxSslVersion == SSLv2)
 #pragma warning restore
-                throw new NotSupportedException($"[SslSocket] - Client tried to initialize a SSLv2 connection which is not supported yet, invalidating the request...");
 
             int[] clientCertErr = null;
             X509Certificate2 clientCert = null;
@@ -473,7 +467,7 @@ namespace FixedSsl
                 };
             }
 
-            SslStream sslStream = new SslStream(new NetworkStream(socket, ownSocket), false, authOptions.RemoteCertificateValidationCallback);
+            SslStream sslStream = new SslStream(new NetworkStream(socket, ownSocket), false);
 
             // Shortcut if status-code is at least -3 or upper
             if (parseResult > -4)

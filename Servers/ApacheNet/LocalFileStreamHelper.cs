@@ -54,7 +54,7 @@ namespace ApacheNet
 
                 try
                 {
-                    st = ImageOptimizer.OptimizeImage(ApacheNetServerConfiguration.ImageMagickPath, filePath, extension, ImageOptimizer.defaultOptimizerParams);
+                    st = ImageOptimizer.OptimizeImage(ApacheNetServerConfiguration.MediaConvertersFolder, Path.Combine(ApacheNetServerConfiguration.MediaConvertersFolder, "ImageMagick"), filePath, extension, ImageOptimizer.defaultOptimizerParams);
 
                     if (compressionSettingEnabled && !noCompressCacheControl && !string.IsNullOrEmpty(encoding) && st.Length <= compressionSizeLimit)
                     {
@@ -103,18 +103,18 @@ namespace ApacheNet
                                 if (encoding.Contains("gzip"))
                                 {
                                     ctx.Response.Headers.Add("Content-Encoding", "gzip");
-                                    st = HTTPProcessor.GzipCompressStream(await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileShareMode.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
+                                    st = HTTPProcessor.GzipCompressStream(await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
                                 }
                                 else if (encoding.Contains("deflate"))
                                 {
                                     ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                    st = HTTPProcessor.DeflateStream(await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileShareMode.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
+                                    st = HTTPProcessor.DeflateStream(await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
                                 }
                                 else
-                                    st = await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileShareMode.ReadWrite, FileLockAwaitMs).ConfigureAwait(false);
+                                    st = await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false);
                             }
                             else
-                                st = await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileShareMode.ReadWrite, FileLockAwaitMs).ConfigureAwait(false);
+                                st = await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false);
 
                             goto sendImmediate;
                         default:
@@ -283,28 +283,28 @@ namespace ApacheNet
                     if (encoding.Contains("zstd"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "zstd");
-                        st = HTTPProcessor.ZstdCompressStream(await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileShareMode.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
+                        st = HTTPProcessor.ZstdCompressStream(await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
                     }
                     else if (encoding.Contains("br"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "br");
-                        st = HTTPProcessor.BrotliCompressStream(await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileShareMode.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
+                        st = HTTPProcessor.BrotliCompressStream(await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
                     }
                     else if (encoding.Contains("gzip"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "gzip");
-                        st = HTTPProcessor.GzipCompressStream(await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileShareMode.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
+                        st = HTTPProcessor.GzipCompressStream(await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
                     }
                     else if (encoding.Contains("deflate"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                        st = HTTPProcessor.DeflateStream(await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileShareMode.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
+                        st = HTTPProcessor.DeflateStream(await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
                     }
                     else
-                        st = await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileShareMode.ReadWrite, FileLockAwaitMs).ConfigureAwait(false);
+                        st = await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false);
                 }
                 else
-                    st = await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileShareMode.ReadWrite, FileLockAwaitMs).ConfigureAwait(false);
+                    st = await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false);
             }
 sendImmediate:
             if (st == null)
@@ -345,7 +345,7 @@ sendImmediate:
             {
                 try
                 {
-                    FileStream fs = await FileSystemUtils.TryOpen(filePath, FileSystemUtils.FileShareMode.ReadWrite, FileLockAwaitMs).ConfigureAwait(false);
+                    FileStream fs = await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false);
 
                     if (fs != null)
                     {

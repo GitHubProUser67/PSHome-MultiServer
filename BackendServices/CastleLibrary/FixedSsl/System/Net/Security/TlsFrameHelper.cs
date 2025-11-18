@@ -167,10 +167,6 @@ namespace System.Net.Security
         private const int ProtocolVersionSize = 2;
         private const int ProtocolVersionTlsMajorValue = 3;
 
-        // Per spec "AllowUnassigned flag MUST be set". See comment above DecodeString() for more details.
-        private static readonly IdnMapping s_idnMapping = new IdnMapping() { AllowUnassigned = true };
-        private static readonly Encoding s_encoding = Encoding.GetEncoding("utf-8", new EncoderExceptionFallback(), new DecoderExceptionFallback());
-
         public static bool TryGetFrameHeader(ReadOnlySpan<byte> frame, ref TlsFrameHeader header)
         {
             if (frame.Length < HeaderSize)
@@ -400,16 +396,16 @@ namespace System.Net.Security
             //     Extension client_hello_extension_list<0..2^16-1>;
             // } ClientHello;
 
-            ReadOnlySpan<byte> p = SkipBytes(clientHello, ProtocolVersionSize + RandomSize);
+            ReadOnlySpan<byte> p = SniHelper.SkipBytes(clientHello, ProtocolVersionSize + RandomSize);
 
             // Skip SessionID (max size 32 => size fits in 1 byte)
-            p = SkipOpaqueType1(p);
+            p = SniHelper.SkipOpaqueType1(p);
 
             // Skip cipher suites (max size 2^16-1 => size fits in 2 bytes)
-            p = SkipOpaqueType2(p);
+            p = SniHelper.SkipOpaqueType2(p, out _);
 
             // Skip compression methods (max size 2^8-1 => size fits in 1 byte)
-            p = SkipOpaqueType1(p);
+            p = SniHelper.SkipOpaqueType1(p);
 
             // no extensions
             if (p.IsEmpty)
@@ -417,7 +413,7 @@ namespace System.Net.Security
 
             // client_hello_extension_list (max size 2^16-1 => size fits in 2 bytes)
             int extensionListLength = EndianAwareConverter.ToUInt16(p, Endianness.BigEndian, 0);
-            p = SkipBytes(p, sizeof(ushort));
+            p = SniHelper.SkipBytes(p, sizeof(ushort));
             if (extensionListLength != p.Length)
                 return false;
 
@@ -440,10 +436,10 @@ namespace System.Net.Security
             const int CipherSuiteLength = 2;
             const int CompressionMethiodLength = 1;
 
-            ReadOnlySpan<byte> p = SkipBytes(serverHello, ProtocolVersionSize + RandomSize);
+            ReadOnlySpan<byte> p = SniHelper.SkipBytes(serverHello, ProtocolVersionSize + RandomSize);
             // Skip SessionID (max size 32 => size fits in 1 byte)
-            p = SkipOpaqueType1(p);
-            p = SkipBytes(p, CipherSuiteLength + CompressionMethiodLength);
+            p = SniHelper.SkipOpaqueType1(p);
+            p = SniHelper.SkipBytes(p, CipherSuiteLength + CompressionMethiodLength);
 
             // is invalid structure or no extensions?
             if (p.IsEmpty)
@@ -451,7 +447,7 @@ namespace System.Net.Security
 
             // client_hello_extension_list (max size 2^16-1 => size fits in 2 bytes)
             int extensionListLength = EndianAwareConverter.ToUInt16(p, Endianness.BigEndian, 0);
-            p = SkipBytes(p, sizeof(ushort));
+            p = SniHelper.SkipBytes(p, sizeof(ushort));
             if (extensionListLength != p.Length)
                 return false;
 
@@ -469,10 +465,10 @@ namespace System.Net.Security
             while (extensions.Length >= ExtensionHeader)
             {
                 ExtensionType extensionType = (ExtensionType)EndianAwareConverter.ToUInt16(extensions, Endianness.BigEndian, 0);
-                extensions = SkipBytes(extensions, ushortSizeOf);
+                extensions = SniHelper.SkipBytes(extensions, ushortSizeOf);
 
                 ushort extensionLength = EndianAwareConverter.ToUInt16(extensions, Endianness.BigEndian, 0);
-                extensions = SkipBytes(extensions, ushortSizeOf);
+                extensions = SniHelper.SkipBytes(extensions, ushortSizeOf);
                 if (extensions.Length < extensionLength)
                 {
                     // If we have SNI, we don't need any more data even if fragmented.
@@ -603,7 +599,7 @@ namespace System.Net.Security
             // } ServerName;
             // ServerName is an opaque type (length of sufficient size for max data length is prepended)
             const int NameTypeOffset = 0;
-            const int HostNameStructOffset = NameTypeOffset + sizeof(NameType);
+            const int HostNameStructOffset = NameTypeOffset + sizeof(SniHelper.NameType);
             if (serverName.Length < HostNameStructOffset)
             {
                 invalid = true;
@@ -611,34 +607,15 @@ namespace System.Net.Security
             }
 
             // Following can underflow but it is ok due to equality check below
-            NameType nameType = (NameType)serverName[NameTypeOffset];
+            SniHelper.NameType nameType = (SniHelper.NameType)serverName[NameTypeOffset];
             ReadOnlySpan<byte> hostNameStruct = serverName.Slice(HostNameStructOffset);
-            if (nameType != NameType.HostName)
+            if (nameType != SniHelper.NameType.HostName)
             {
                 invalid = true;
                 return null;
             }
 
-            return GetSniFromHostNameStruct(hostNameStruct, out invalid);
-        }
-
-        private static string GetSniFromHostNameStruct(ReadOnlySpan<byte> hostNameStruct, out bool invalid)
-        {
-            // https://tools.ietf.org/html/rfc3546#section-3.1
-            // HostName is an opaque type (length of sufficient size for max data length is prepended)
-            const int HostNameLengthOffset = 0;
-            const int HostNameOffset = HostNameLengthOffset + sizeof(ushort);
-
-            int hostNameLength = EndianAwareConverter.ToUInt16(hostNameStruct, Endianness.BigEndian, 0);
-            ReadOnlySpan<byte> hostName = hostNameStruct.Slice(HostNameOffset);
-            if (hostNameLength != hostName.Length)
-            {
-                invalid = true;
-                return null;
-            }
-
-            invalid = false;
-            return DecodeString(hostName);
+            return SniHelper.GetSniFromHostNameStruct(hostNameStruct, out invalid);
         }
 
         private static bool TryGetSupportedVersionsFromExtension(ReadOnlySpan<byte> extensionData, out SslProtocols protocols, out List<int> versions)
@@ -743,88 +720,6 @@ namespace System.Net.Security
 #pragma warning restore 0618
                 _ => SslProtocols.None,
             };
-        }
-
-        private static string DecodeString(ReadOnlySpan<byte> bytes)
-        {
-            // https://tools.ietf.org/html/rfc3546#section-3.1
-            // Per spec:
-            //   If the hostname labels contain only US-ASCII characters, then the
-            //   client MUST ensure that labels are separated only by the byte 0x2E,
-            //   representing the dot character U+002E (requirement 1 in section 3.1
-            //   of [IDNA] notwithstanding). If the server needs to match the HostName
-            //   against names that contain non-US-ASCII characters, it MUST perform
-            //   the conversion operation described in section 4 of [IDNA], treating
-            //   the HostName as a "query string" (i.e. the AllowUnassigned flag MUST
-            //   be set). Note that IDNA allows labels to be separated by any of the
-            //   Unicode characters U+002E, U+3002, U+FF0E, and U+FF61, therefore
-            //   servers MUST accept any of these characters as a label separator.  If
-            //   the server only needs to match the HostName against names containing
-            //   exclusively ASCII characters, it MUST compare ASCII names case-
-            //   insensitively.
-
-            string idnEncodedString;
-            try
-            {
-                idnEncodedString = s_encoding.GetString(bytes);
-            }
-            catch (DecoderFallbackException)
-            {
-                return null;
-            }
-
-            try
-            {
-                return s_idnMapping.GetUnicode(idnEncodedString);
-            }
-            catch (ArgumentException)
-            {
-                // client has not done IDN mapping
-                return idnEncodedString;
-            }
-        }
-
-        private static ReadOnlySpan<byte> SkipBytes(ReadOnlySpan<byte> bytes, int numberOfBytesToSkip)
-        {
-            return (numberOfBytesToSkip < bytes.Length) ? bytes.Slice(numberOfBytesToSkip) : ReadOnlySpan<byte>.Empty;
-        }
-
-        // Opaque type is of structure:
-        //   - length (minimum number of bytes to hold the max value)
-        //   - data (length bytes)
-        // We will only use opaque types which are of max size: 255 (length = 1) or 2^16-1 (length = 2).
-        // We will call them SkipOpaqueType`length`
-        private static ReadOnlySpan<byte> SkipOpaqueType1(ReadOnlySpan<byte> bytes)
-        {
-            const int OpaqueTypeLengthSize = sizeof(byte);
-            if (bytes.Length < OpaqueTypeLengthSize)
-            {
-                return ReadOnlySpan<byte>.Empty;
-            }
-
-            byte length = bytes[0];
-            int totalBytes = OpaqueTypeLengthSize + length;
-
-            return SkipBytes(bytes, totalBytes);
-        }
-
-        private static ReadOnlySpan<byte> SkipOpaqueType2(ReadOnlySpan<byte> bytes)
-        {
-            const int OpaqueTypeLengthSize = sizeof(ushort);
-            if (bytes.Length < OpaqueTypeLengthSize)
-            {
-                return ReadOnlySpan<byte>.Empty;
-            }
-
-            ushort length = EndianAwareConverter.ToUInt16(bytes, Endianness.BigEndian, 0);
-            int totalBytes = OpaqueTypeLengthSize + length;
-
-            return SkipBytes(bytes, totalBytes);
-        }
-
-        private enum NameType : byte
-        {
-            HostName = 0x00
         }
     }
 }

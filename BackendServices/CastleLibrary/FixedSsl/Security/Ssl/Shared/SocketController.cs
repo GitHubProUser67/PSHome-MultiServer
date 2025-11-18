@@ -310,22 +310,24 @@ namespace Org.Mentalis.Security.Ssl.Shared
 					m_Socket.Shutdown(SocketShutdown.Both);
 				} catch {}
 				m_Socket.Close();
-				if (m_ActiveSend != null) {
-					if (m_ActiveSend.AsyncResult != null) {
-						m_SentList.Add(m_ActiveSend);
-						m_ActiveSend.AsyncResult.Notify(e);
-					}
-				}
-				Exception f = e;
+                if (m_ActiveSend?.AsyncResult != null)
+                {
+                    m_SentList.Add(m_ActiveSend);
+                    m_ActiveSend.AsyncResult.Notify(e);
+                }
+                Exception f = e;
 				if (f == null)
 					f = new SslException(AlertDescription.UnexpectedMessage, "The bytes could not be sent because the connection has been closed.");
 				for(int i = 0; i < m_ToSendList.Count; i++) {
 					m_ActiveSend = (TransferItem)m_ToSendList[i];
-					m_SentList.Add(m_ActiveSend);
-					m_ActiveSend.AsyncResult.Notify(f);
-				}
-				m_ToSendList.Clear();
-				if (m_ActiveReceive != null && m_ActiveReceive.AsyncResult != null) {
+                    if (m_ActiveSend?.AsyncResult != null)
+					{
+                        m_SentList.Add(m_ActiveSend);
+                        m_ActiveSend.AsyncResult.Notify(f);
+                    }
+                }
+                m_ToSendList.Clear();
+				if (m_ActiveReceive?.AsyncResult != null) {
 					m_ActiveReceive.AsyncResult.Notify(e);
 				}
 				if (m_ShutdownCallback != null) {

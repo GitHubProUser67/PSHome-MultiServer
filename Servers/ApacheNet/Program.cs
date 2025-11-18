@@ -35,7 +35,7 @@ public static class ApacheNetServerConfiguration
     public static string APIStaticFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/wwwapiroot";
     public static string HTTPStaticFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/wwwroot";
     public static string HTTPSPutFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/wwwtemp";
-    public static string ImageMagickPath { get; set; } = $"{Directory.GetCurrentDirectory()}/static/ImageMagick";
+    public static string MediaConvertersFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/MediaConverters";
     public static string ASPNETRedirectUrl { get; set; } = string.Empty;
     public static string PHPRedirectUrl { get; set; } = string.Empty;
     public static string PHPVersion { get; set; } = "xampp";
@@ -140,7 +140,7 @@ public static class ApacheNetServerConfiguration
 
             // Write the JObject to a file
             File.WriteAllText(configPath, new JObject(
-                new JProperty("config_version", (ushort)3),
+                new JProperty("config_version", (ushort)4),
                 new JProperty("doh_enabled", DNSOverEthernetEnabled),
                 new JProperty("online_routes_config", DNSOnlineConfig),
                 new JProperty("routes_config", DNSConfig),
@@ -162,7 +162,7 @@ public static class ApacheNetServerConfiguration
                 new JProperty("http_version", HttpVersion),
                 SerializeMimeTypes(),
                 new JProperty("https_dns_list", HTTPSDNSList ?? Array.Empty<string>()),
-                new JProperty("image_magick_path", ImageMagickPath),
+                new JProperty("media_converters_folder", MediaConvertersFolder),
                 new JProperty("buffer_size", BufferSize),
                 new JProperty("certificate_file", HTTPSCertificateFile),
                 new JProperty("certificate_password", HTTPSCertificatePassword),
@@ -212,9 +212,14 @@ public static class ApacheNetServerConfiguration
                 BufferSize = GetValueOrDefault(config, "buffer_size", BufferSize);
                 HttpVersion = GetValueOrDefault(config, "http_version", HttpVersion);
                 if (config_version < 3)
-                    ImageMagickPath = GetValueOrDefault(config, "converters_folder", ImageMagickPath);
+                    MediaConvertersFolder = GetValueOrDefault(config, "converters_folder", MediaConvertersFolder);
                 else
-                    ImageMagickPath = GetValueOrDefault(config, "image_magick_path", ImageMagickPath);
+                {
+                    if (config_version > 3)
+                        MediaConvertersFolder = GetValueOrDefault(config, "media_converters_folder", MediaConvertersFolder);
+                    else
+                        MediaConvertersFolder = GetValueOrDefault(config, "image_magick_path", MediaConvertersFolder);
+                }
                 HTTPSCertificateFile = GetValueOrDefault(config, "certificate_file", HTTPSCertificateFile);
                 HTTPSCertificatePassword = GetValueOrDefault(config, "certificate_password", HTTPSCertificatePassword);
                 HTTPSCertificateHashingAlgorithm = new HashAlgorithmName(GetValueOrDefault(config, "certificate_hashing_algorithm", HTTPSCertificateHashingAlgorithm.Name));

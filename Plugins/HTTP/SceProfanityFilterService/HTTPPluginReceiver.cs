@@ -107,7 +107,7 @@ namespace SonyCdnReroute
                             string pfEbinPath = pfApiPath + $"{match.Groups["uuid"].Value}/{match.Groups["filename"].Value}";
                             ctx.StatusCode = HttpStatusCode.OK;
                             ctx.Response.ContentType = "application/octet-stream";
-                            using (FileStream st = await FileSystemUtils.TryOpen(pfEbinPath, FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs).ConfigureAwait(false))
+                            using (FileStream st = await FileSystemUtils.TryOpen(pfEbinPath, FileShare.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs).ConfigureAwait(false))
                                 return await ctx.SendImmediate(EncryptAES(st, pfKey, pfIV), ctx.AcceptChunked).ConfigureAwait(false);
                         }
                     }

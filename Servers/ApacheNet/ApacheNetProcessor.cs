@@ -317,7 +317,7 @@ namespace ApacheNet
                                                 }
                                                 else
                                                 {
-                                                    using FileStream stream = await FileSystemUtils.TryOpen(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}", FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs).ConfigureAwait(false);
+                                                    using FileStream stream = await FileSystemUtils.TryOpen(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}", FileShare.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs).ConfigureAwait(false);
                                                     byte[]? buffer = null;
 
                                                     using (MemoryStream ms = new())
@@ -488,7 +488,7 @@ namespace ApacheNet
                                                         }
                                                         else
                                                         {
-                                                            using FileStream stream = await FileSystemUtils.TryOpen(apacheContext.FilePath + indexFile, FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs).ConfigureAwait(false);
+                                                            using FileStream stream = await FileSystemUtils.TryOpen(apacheContext.FilePath + indexFile, FileShare.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs).ConfigureAwait(false);
                                                             byte[]? buffer = null;
 
                                                             using (MemoryStream ms = new())
@@ -571,8 +571,8 @@ namespace ApacheNet
                                             string ContentType = HTTPProcessor.GetMimeType(Path.GetExtension(apacheContext.FilePath), ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor.MimeTypes);
                                             if (ContentType == "application/octet-stream")
                                             {
-                                                byte[] VerificationChunck = FileSystemUtils.TryReadFileChunck(apacheContext.FilePath, 10, FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs);
-                                                foreach (var entry in HTTPProcessor._PathernDictionary)
+                                                byte[] VerificationChunck = FileSystemUtils.TryReadFileChunck(apacheContext.FilePath, 10, FileShare.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs);
+                                                foreach (var entry in HTTPProcessor.PathernDictionary)
                                                 {
                                                     if (ByteUtils.FindBytePattern(VerificationChunck, entry.Value) != -1)
                                                     {
@@ -701,7 +701,7 @@ namespace ApacheNet
                                                 }
                                                 else
                                                 {
-                                                    using FileStream stream = await FileSystemUtils.TryOpen(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}", FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs).ConfigureAwait(false);
+                                                    using FileStream stream = await FileSystemUtils.TryOpen(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}", FileShare.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs).ConfigureAwait(false);
                                                     byte[]? buffer = null;
 
                                                     using (MemoryStream ms = new())
@@ -865,7 +865,7 @@ namespace ApacheNet
                                                         }
                                                         else
                                                         {
-                                                            using FileStream stream = await FileSystemUtils.TryOpen(apacheContext.FilePath + indexFile, FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs).ConfigureAwait(false);
+                                                            using FileStream stream = await FileSystemUtils.TryOpen(apacheContext.FilePath + indexFile, FileShare.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs).ConfigureAwait(false);
                                                             byte[]? buffer = null;
 
                                                             using (MemoryStream ms = new())
@@ -948,8 +948,8 @@ namespace ApacheNet
 
                                             if (ContentType == "application/octet-stream")
                                             {
-                                                byte[] VerificationChunck = FileSystemUtils.TryReadFileChunck(apacheContext.FilePath, 10, FileSystemUtils.FileShareMode.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs);
-                                                foreach (var entry in HTTPProcessor._PathernDictionary)
+                                                byte[] VerificationChunck = FileSystemUtils.TryReadFileChunck(apacheContext.FilePath, 10, FileShare.ReadWrite, LocalFileStreamHelper.FileLockAwaitMs);
+                                                foreach (var entry in HTTPProcessor.PathernDictionary)
                                                 {
                                                     if (ByteUtils.FindBytePattern(VerificationChunck, entry.Value) != -1)
                                                     {

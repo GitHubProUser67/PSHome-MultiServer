@@ -20,7 +20,7 @@ namespace MultiServerLibrary.HTTP
     {
         public static readonly Dictionary<string, string> MimeTypes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase)
         {
-            #region PS3 MimeTypes
+            #region PS MimeTypes
 
             {".divx", "video/divx"},
             {".ptf", "application/x-psp-theme"},
@@ -609,7 +609,7 @@ namespace MultiServerLibrary.HTTP
             #endregion
         };
 
-        public static readonly Dictionary<string, byte[]> _PathernDictionary = new Dictionary<string, byte[]>()
+        public static readonly Dictionary<string, byte[]> PathernDictionary = new Dictionary<string, byte[]>()
         {
             // Add more entries as needed
             { "text/html", new byte[] { 0x3C, 0x21, 0x44, 0x4F, 0x43, 0x54, 0x59, 0x50, 0x45, 0x20 } },
@@ -1117,7 +1117,11 @@ namespace MultiServerLibrary.HTTP
             {
                 try
                 {
+#if NET6_0_OR_GREATER
+                    if (input.Length > Array.MaxLength)
+#else
                     if (input.Length > 0x7FFFFFC7)
+#endif
                         outMemoryStream = new HugeMemoryStream();
                     else
                         outMemoryStream = new MemoryStream();
@@ -1146,7 +1150,11 @@ namespace MultiServerLibrary.HTTP
             {
                 try
                 {
+#if NET6_0_OR_GREATER
+                    if (input.Length > Array.MaxLength)
+#else
                     if (input.Length > 0x7FFFFFC7)
+#endif
                         outMemoryStream = new HugeMemoryStream();
                     else
                         outMemoryStream = new MemoryStream();
@@ -1175,7 +1183,11 @@ namespace MultiServerLibrary.HTTP
             {
                 try
                 {
+#if NET6_0_OR_GREATER
+                    if (input.Length > Array.MaxLength)
+#else
                     if (input.Length > 0x7FFFFFC7)
+#endif
                         outMemoryStream = new HugeMemoryStream();
                     else
                         outMemoryStream = new MemoryStream();
@@ -1201,7 +1213,11 @@ namespace MultiServerLibrary.HTTP
             {
                 try
                 {
+#if NET6_0_OR_GREATER
+                    if (input.Length > Array.MaxLength)
+#else
                     if (input.Length > 0x7FFFFFC7)
+#endif
                         outMemoryStream = new HugeMemoryStream();
                     else
                         outMemoryStream = new MemoryStream();

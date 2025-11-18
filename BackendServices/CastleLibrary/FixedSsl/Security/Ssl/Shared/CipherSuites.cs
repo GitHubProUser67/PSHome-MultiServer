@@ -121,6 +121,7 @@ namespace Org.Mentalis.Security.Ssl.Shared
 			}
 			throw new SslException(AlertDescription.IllegalParameter, "The cipher suite is unknown.");
 		}
+#pragma warning disable
 		private static CipherDefinition[] Definitions = new CipherDefinition[] {
 				new CipherDefinition(SslAlgorithms.RSA_RC4_128_MD5, typeof(ARCFourManaged), 16, 0, 16, typeof(MD5CryptoServiceProvider), HashType.MD5, 16, false),
 				new CipherDefinition(SslAlgorithms.RSA_RC4_128_SHA, typeof(ARCFourManaged), 16, 0, 16, typeof(SHA1CryptoServiceProvider), HashType.SHA1, 20, false),
@@ -132,6 +133,7 @@ namespace Org.Mentalis.Security.Ssl.Shared
 				new CipherDefinition(SslAlgorithms.RSA_AES_128_SHA, typeof(RijndaelManaged), 16, 16, 16, typeof(SHA1CryptoServiceProvider), HashType.SHA1, 20, false),
 				new CipherDefinition(SslAlgorithms.RSA_AES_256_SHA, typeof(RijndaelManaged), 32, 16, 32, typeof(SHA1CryptoServiceProvider), HashType.SHA1, 20, false)
 			};
+#pragma warning restore
 	}
 	internal class CipherSuite {
 		public ICryptoTransform Decryptor;

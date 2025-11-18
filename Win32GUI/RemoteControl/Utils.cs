@@ -20,7 +20,7 @@ namespace RemoteControl
             {
                 string fileName = ofd.FileName;
 
-                if (Encoding.ASCII.GetString(FileSystemUtils.TryReadFileChunck(fileName, 2, FileSystemUtils.FileShareMode.ReadWrite)) == "MZ")
+                if (Encoding.ASCII.GetString(FileSystemUtils.TryReadFileChunck(fileName, 2, FileShare.ReadWrite)) == "MZ")
                 {
                     textBox.Text = fileName;
                     return fileName;

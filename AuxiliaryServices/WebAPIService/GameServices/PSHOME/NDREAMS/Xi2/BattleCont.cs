@@ -1,17 +1,17 @@
-using MultiServerLibrary.HTTP;
 using HttpMultipartParser;
-using System.IO;
+using Microsoft.EntityFrameworkCore;
+using MultiServerLibrary.HTTP;
 using System;
+using System.IO;
 using System.Xml.Serialization;
-using System.Text;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
 {
     public class BattleCont
     {
+        private static BattleContScoreBoardData _leaderboard = null;
+
         public static string ProcessBattleCont(DateTime CurrentDate, byte[] PostData, string ContentType, string apipath)
         {
             string func = null;
@@ -82,7 +82,14 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
                                     {
                                         BattleContProfileData profileData = BattleContProfileData.DeserializeProfileData(profilePath);
                                         if (win.Equals("true"))
+                                        {
                                             profileData.Wins++;
+
+                                            if (_leaderboard == null)
+                                                _leaderboard = new BattleContScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                                            _ = _leaderboard.UpdateWinsAsync(name, profileData.Wins);
+                                        }
                                         profileData.Quits++;
                                         profileData.SerializeProfileData(profilePath);
 
@@ -137,9 +144,23 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
                                     {
                                         BattleContProfileData profileData = BattleContProfileData.DeserializeProfileData(profilePath);
                                         if (win.Equals("true"))
+                                        {
                                             profileData.Wins++;
+
+                                            if (_leaderboard == null)
+                                                _leaderboard = new BattleContScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                                            _ = _leaderboard.UpdateWinsAsync(name, profileData.Wins);
+                                        }
                                         if (int.TryParse(score, out int integerScore))
+                                        {
                                             profileData.Packs = integerScore;
+
+                                            if (_leaderboard == null)
+                                                _leaderboard = new BattleContScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                                            _ = _leaderboard.UpdateScoreAsync(name, profileData.Packs);
+                                        }
                                         profileData.SerializeProfileData(profilePath);
 
                                         return $"<xml><success>true</success><result><Success>true</Success><Wins>{profileData.Wins}</Wins><Lost>{profileData.Losses}</Lost><Best>{profileData.Best}</Best><Avg>{profileData.Average}</Avg>" +
@@ -180,9 +201,23 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
                                         profileData.SaveData = SaveData;
                                         profileData.Hash = hash;
                                         if (win.Equals("true"))
+                                        {
                                             profileData.Wins++;
+
+                                            if (_leaderboard == null)
+                                                _leaderboard = new BattleContScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                                            _ = _leaderboard.UpdateWinsAsync(name, profileData.Wins);
+                                        }
                                         if (int.TryParse(score, out int integerScore))
+                                        {
                                             profileData.Packs = integerScore;
+
+                                            if (_leaderboard == null)
+                                                _leaderboard = new BattleContScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                                            _ = _leaderboard.UpdateScoreAsync(name, profileData.Packs);
+                                        }
                                         profileData.SerializeProfileData(profilePath);
 
                                         return $"<xml><success>true</success><result><Success>true</Success><Data>{profileData.SaveData}</Data><Hash>{profileData.Hash}</Hash><Missions>{profileData.Completed}</Missions><Packs>{profileData.Packs}</Packs>" +
@@ -228,42 +263,10 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
 
                                 if (ExpectedHash.Equals(key))
                                 {
-                                    StringBuilder sb = new StringBuilder("<xml><success>true</success><result><Success>true</Success>");
-                                    List<(string, BattleContProfileData)> battleContProfiles = ReadBattleContFiles(apipath + $"/NDREAMS/Xi2/PlayersInventory");
+                                    if (_leaderboard == null)
+                                        _leaderboard = new BattleContScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
-                                    if (battleContProfiles.Count > 0)
-                                    {
-                                        byte i = 1;
-                                        string BattleContRegexPathern = @"[\\/]+([^\\/]+)[\\/]+BattleCont\.xml";
-
-                                        foreach ((string, BattleContProfileData) ResultScore in battleContProfiles.OrderByDescending(x => x.Item2.Best).Take(10))
-                                        {
-                                            // Define the regular expression to capture the player name before "/BattleCont.xml"
-                                            Match match = Regex.Match(ResultScore.Item1, BattleContRegexPathern);
-
-                                            if (match.Success)
-                                            {
-                                                sb.Append($"<Scores name=\"{match.Groups[1].Value}\" rank=\"{i}\" score=\"{ResultScore.Item2.Best}\"/>");
-                                                i++;
-                                            }
-                                        }
-
-                                        i = 1;
-
-                                        foreach ((string, BattleContProfileData) ResultScore in battleContProfiles.OrderByDescending(x => x.Item2.Wins).Take(10))
-                                        {
-                                            // Define the regular expression to capture the player name before "/BattleCont.xml"
-                                            Match match = Regex.Match(ResultScore.Item1, BattleContRegexPathern);
-
-                                            if (match.Success)
-                                            {
-                                                sb.Append($"<Wins name=\"{match.Groups[1].Value}\" rank=\"{i}\" wins=\"{ResultScore.Item2.Wins}\"/>");
-                                                i++;
-                                            }
-                                        }
-                                    }
-
-                                    return sb.ToString() + "</result></xml>";
+                                    return _leaderboard.SerializeToString(null, 10).Result;
                                 }
                                 else
                                 {
@@ -279,26 +282,6 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
             }
 
             return null;
-        }
-
-        private static List<(string, BattleContProfileData)> ReadBattleContFiles(string directoryPath)
-        {
-            List<(string, BattleContProfileData)> battleContList = new List<(string, BattleContProfileData)>();
-
-            try
-            {
-                foreach (string filePath in Directory.GetFiles(directoryPath, "BattleCont.xml", SearchOption.AllDirectories))
-                {
-                    battleContList.Add((filePath, BattleContProfileData.DeserializeProfileData(filePath)));
-                }
-            }
-            catch (Exception ex)
-            {
-                CustomLogger.LoggerAccessor.LogError($"[Xi2] - BattleCont - ReadBattleContFiles: An error occurred while reading profiles in directory: {directoryPath} ({ex})");
-                battleContList.Clear();
-            }
-
-            return battleContList;
         }
     }
 

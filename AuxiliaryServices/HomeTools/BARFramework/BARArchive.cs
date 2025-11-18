@@ -864,7 +864,7 @@ namespace HomeTools.BARFramework
 #if NET6_0_OR_GREATER
             if (optimizeassets && (ContentType.StartsWith("image/") || (!string.IsNullOrEmpty(extension) && extension.Equals(".dds", StringComparison.InvariantCultureIgnoreCase))))
             {
-                using (Stream stream = ImageOptimizer.OptimizeImage(convertersfolder, filePath, extension, m_imparams))
+                using (Stream stream = ImageOptimizer.OptimizeImage(convertersfolder, Path.Combine(convertersfolder, "ImageMagick"), filePath, extension, m_imparams))
                 {
                     try
                     {
@@ -932,7 +932,7 @@ namespace HomeTools.BARFramework
             string ContentType = HTTPProcessor.GetMimeType(extension);
 #if NET6_0_OR_GREATER
             if (optimizeassets && (ContentType.StartsWith("image/") || (!string.IsNullOrEmpty(extension) && extension.Equals(".dds", StringComparison.InvariantCultureIgnoreCase))))
-                inStream = ImageOptimizer.OptimizeImage(convertersfolder, filePath, extension, m_imparams);
+                inStream = ImageOptimizer.OptimizeImage(convertersfolder, Path.Combine(convertersfolder, "ImageMagick"), filePath, extension, m_imparams);
             else
 #endif
                 inStream = File.OpenRead(filePath);

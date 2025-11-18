@@ -386,8 +386,8 @@ namespace MultiServerLibrary.SSL
                 using (RSA rsa = RSA.Create())
                 {
                     IPAddress Loopback = IPAddress.Loopback;
-                    IPAddress PublicServerIP = IPAddress.Parse(InternetProtocolUtils.GetPublicIPAddress());
                     IPAddress LocalServerIP = InternetProtocolUtils.GetLocalIPAddresses().First();
+                    IPAddress PublicServerIP = InternetProtocolUtils.TryGetServerIP(out string publicIP).Result ? IPAddress.Parse(publicIP) : LocalServerIP;
 
                     SubjectAlternativeNameBuilder sanBuilder = new SubjectAlternativeNameBuilder();
 

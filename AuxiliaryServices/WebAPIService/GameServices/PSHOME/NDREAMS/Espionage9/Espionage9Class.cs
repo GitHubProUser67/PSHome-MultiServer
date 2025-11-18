@@ -1,18 +1,17 @@
 ﻿using HttpMultipartParser;
+using Microsoft.EntityFrameworkCore;
 using MultiServerLibrary.HTTP;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
-using System.Text;
 using System.Xml.Serialization;
-using System.Linq;
-using WebAPIService.GameServices.PSHOME.NDREAMS;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.PSHOME.NDREAMS.Espionage9
 {
     public class Espionage9Class
     {
+        private static Espionage9ScoreBoardData _leaderboard = null;
+
         public static string ProcessPhpRequest(DateTime CurrentDate, byte[] PostData, string ContentType, string apipath)
         {
             string func = null;
@@ -95,7 +94,14 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Espionage9
                                         Espionage9ProfileData profileData = Espionage9ProfileData.DeserializeProfileData(profilePath);
                                         profileData.score = scoreInt;
                                         if ("1".Equals(win))
+                                        {
+                                            if (_leaderboard == null)
+                                                _leaderboard = new Espionage9ScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+
+                                            _ = _leaderboard.UpdateScoreAsync(name, scoreInt);
+
                                             profileData.wins++;
+                                        }
                                         profileData.flag1 = "1".Equals(flag1);
                                         profileData.flag2 = "1".Equals(flag2);
 
@@ -142,28 +148,10 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Espionage9
                                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessPhpRequest</function></xml>";
                                 }
                             case "high":
-                                StringBuilder sb = new StringBuilder("<xml><success>true</success>");
-                                List<(string, Espionage9ProfileData)> espionage9Profiles = ReadEspionage9Files(apipath + $"/NDREAMS/Espionage9/PlayersInventory");
+                                if (_leaderboard == null)
+                                    _leaderboard = new Espionage9ScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
 
-                                if (espionage9Profiles.Count > 0)
-                                {
-                                    byte i = 1;
-                                    string BattleContRegexPathern = @"[\\/]+([^\\/]+)[\\/]+SecretAgentData\.xml";
-
-                                    foreach ((string, Espionage9ProfileData) ResultScore in espionage9Profiles.OrderByDescending(x => x.Item2.score).Take(10))
-                                    {
-                                        // Define the regular expression to capture the player name before "/SecretAgentData.xml"
-                                        Match match = Regex.Match(ResultScore.Item1, BattleContRegexPathern);
-
-                                        if (match.Success)
-                                        {
-                                            sb.Append($"<high name=\"{match.Groups[1].Value}\" pos=\"{i}\" score=\"{ResultScore.Item2.score}\"/>");
-                                            i++;
-                                        }
-                                    }
-                                }
-
-                                return sb.ToString() + "</xml>";
+                                return _leaderboard.SerializeToString(null, 10).Result;
                         }
                     }
 
@@ -172,26 +160,6 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Espionage9
             }
 
             return null;
-        }
-
-        private static List<(string, Espionage9ProfileData)> ReadEspionage9Files(string directoryPath)
-        {
-            List<(string, Espionage9ProfileData)> espionage9ProfilesList = new List<(string, Espionage9ProfileData)>();
-
-            try
-            {
-                foreach (string filePath in Directory.GetFiles(directoryPath, "SecretAgentData.xml", SearchOption.AllDirectories))
-                {
-                    espionage9ProfilesList.Add((filePath, Espionage9ProfileData.DeserializeProfileData(filePath)));
-                }
-            }
-            catch (Exception ex)
-            {
-                CustomLogger.LoggerAccessor.LogError($"[Espionage9] - PhpRequest - ReadEspionage9Files: An error occurred while reading profiles in directory: {directoryPath} ({ex})");
-                espionage9ProfilesList.Clear();
-            }
-
-            return espionage9ProfilesList;
         }
     }
 

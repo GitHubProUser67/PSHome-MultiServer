@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using WebAPIService.GameServices.PSHOME.NDREAMS;
 using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
@@ -291,11 +290,8 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                                 if (scoreExtraction.Any())
                                 {
                                     HighestScore = (scoreExtraction.First().PsnId, (int)scoreExtraction.First().Score);
-                                    if (HighestScore != null && !string.IsNullOrEmpty(HighestScore.Value.Item1))
-                                    {
-                                        best = HighestScore.Value.Item2;
-                                        high = $"{HighestScore.Value.Item1},{best}";
-                                    }
+                                    best = HighestScore.Value.Item2;
+                                    high = $"{HighestScore.Value.Item1},{best}";
                                 }
                             }
 
@@ -316,7 +312,7 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
 
                             _ = _leaderboard.UpdateScoreAsync("EatFlammingDeath", 50000);
                         }
-                        return $"<xml><success>true</success><result><high>{_leaderboard?.SerializeToString(null, 20).Result ?? string.Empty}</high></result></xml>";
+                        return $"<xml><success>true</success><result><high>{_leaderboard.SerializeToString(null, 20).Result ?? string.Empty}</high></result></xml>";
                 }
             }
 

@@ -31,7 +31,7 @@ namespace System.Net.Security
         private static (int, string) GetFromSslPlainText(ReadOnlySpan<byte> sslPlainText, List<int> versions)
         {
 #if NET6_0_OR_GREATER
-            // More accurate packet reader (from NET8).
+            // More accurate packet reader (from NET10).
             TlsFrameInfo info = default;
             if (!TryGetFrameInfo(sslPlainText, ref info))
                 return (-5, null);
@@ -295,7 +295,43 @@ namespace System.Net.Security
             return GetSniFromHostNameStruct(hostNameStruct, out invalid);
         }
 
-        private static string GetSniFromHostNameStruct(ReadOnlySpan<byte> hostNameStruct, out bool invalid)
+        public static ReadOnlySpan<byte> SkipBytes(ReadOnlySpan<byte> bytes, int numberOfBytesToSkip)
+        {
+            return (numberOfBytesToSkip < bytes.Length) ? bytes.Slice(numberOfBytesToSkip) : ReadOnlySpan<byte>.Empty;
+        }
+		
+		// Opaque type is of structure:
+        //   - length (minimum number of bytes to hold the max value)
+        //   - data (length bytes)
+        // We will only use opaque types which are of max size: 255 (length = 1) or 2^16-1 (length = 2).
+        // We will call them SkipOpaqueType`length`
+        public static ReadOnlySpan<byte> SkipOpaqueType1(ReadOnlySpan<byte> bytes)
+        {
+            const int OpaqueTypeLengthSize = sizeof(byte);
+            if (bytes.Length < OpaqueTypeLengthSize)
+                return ReadOnlySpan<byte>.Empty;
+            return SkipBytes(bytes, OpaqueTypeLengthSize + bytes[0]);
+        }
+
+        public static ReadOnlySpan<byte> SkipOpaqueType2(ReadOnlySpan<byte> bytes, out bool invalid)
+        {
+            const int OpaqueTypeLengthSize = sizeof(ushort);
+            if (bytes.Length < OpaqueTypeLengthSize)
+            {
+                invalid = true;
+                return ReadOnlySpan<byte>.Empty;
+            }
+
+            int totalBytes = OpaqueTypeLengthSize + EndianAwareConverter.ToUInt16(bytes, Endianness.BigEndian, 0);
+
+            invalid = bytes.Length < totalBytes;
+            if (invalid)
+                return ReadOnlySpan<byte>.Empty;
+
+            return bytes.Slice(totalBytes);
+        }
+
+        public static string GetSniFromHostNameStruct(ReadOnlySpan<byte> hostNameStruct, out bool invalid)
         {
             // https://tools.ietf.org/html/rfc3546#section-3.1
             // HostName is an opaque type (length of sufficient size for max data length is prepended)
@@ -314,42 +350,6 @@ namespace System.Net.Security
             return DecodeString(hostName);
         }
 
-        private static ReadOnlySpan<byte> SkipBytes(ReadOnlySpan<byte> bytes, int numberOfBytesToSkip)
-        {
-            return (numberOfBytesToSkip < bytes.Length) ? bytes.Slice(numberOfBytesToSkip) : ReadOnlySpan<byte>.Empty;
-        }
-
-        // Opaque type is of structure:
-        //   - length (minimum number of bytes to hold the max value)
-        //   - data (length bytes)
-        // We will only use opaque types which are of max size: 255 (length = 1) or 2^16-1 (length = 2).
-        // We will call them SkipOpaqueType`length`
-        private static ReadOnlySpan<byte> SkipOpaqueType1(ReadOnlySpan<byte> bytes)
-        {
-            const int OpaqueTypeLengthSize = sizeof(byte);
-            if (bytes.Length < OpaqueTypeLengthSize)
-                return ReadOnlySpan<byte>.Empty;
-            return SkipBytes(bytes, OpaqueTypeLengthSize + bytes[0]);
-        }
-
-        private static ReadOnlySpan<byte> SkipOpaqueType2(ReadOnlySpan<byte> bytes, out bool invalid)
-        {
-            const int OpaqueTypeLengthSize = sizeof(ushort);
-            if (bytes.Length < OpaqueTypeLengthSize)
-            {
-                invalid = true;
-                return ReadOnlySpan<byte>.Empty;
-            }
-
-            int totalBytes = OpaqueTypeLengthSize + EndianAwareConverter.ToUInt16(bytes, Endianness.BigEndian, 0);
-
-            invalid = bytes.Length < totalBytes;
-            if (invalid)
-                return ReadOnlySpan<byte>.Empty;
-
-            return bytes.Slice(totalBytes);
-        }
-
         private enum ContentType : byte
         {
             Handshake = 0x16
@@ -360,13 +360,7 @@ namespace System.Net.Security
             ClientHello = 0x01
         }
 
-        private enum ExtensionType : ushort
-        {
-            ServerName = 0x00,
-            SupportedVersions = 0x002B
-        }
-
-        private enum NameType : byte
+        public enum NameType : byte
         {
             HostName = 0x00
         }
@@ -461,6 +455,12 @@ namespace System.Net.Security
         private static Encoding CreateEncoding()
         {
             return Encoding.GetEncoding("utf-8", new EncoderExceptionFallback(), new DecoderExceptionFallback());
+        }
+
+        public enum ExtensionType : ushort
+        {
+            ServerName = 0x00,
+            SupportedVersions = 0x002B
         }
     }
 }

@@ -1,13 +1,15 @@
 ﻿#if NET6_0_OR_GREATER
-using CustomLogger;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using System.Drawing;
+using CustomLogger;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace MultiServerLibrary.Upscalers;
 
@@ -15,16 +17,90 @@ public static class ImageOptimizer
 {
     public const string defaultOptimizerParams = "-filter Catrom -quality 92 -modulate 105,103 -sigmoidal-contrast 3,50%";
 
-    private static string tmpDir = $"{Path.GetTempPath()}/ImageOptimizer";
+    private static readonly string tmpDir = $"{Path.GetTempPath()}/ImageOptimizer";
 
-    public static Stream OptimizeImage(string convertersDir, string imagePath,
-        string extension, string CommandLineParametersConvert,
+    public static Stream OptimizeImagesToPdf(
+        string convertersDir,
+        IEnumerable<string> imagePaths,
+        string CommandLineParametersConvert,
         string CommandLineParametersFsr = "-QualityMode UltraQuality -Scale 2x 2x",
         bool PreferFSR = true)
     {
         if (string.IsNullOrEmpty(convertersDir) || !Directory.Exists(convertersDir))
+            throw new DirectoryNotFoundException($"[ImageOptimizer] - Converters directory not found: {convertersDir}.");
+        string imageMagickDir = Path.Combine(convertersDir, "ImageMagick");
+        string convertFilePath = null;
+        switch (RuntimeInformation.OSArchitecture)
+        {
+            case Architecture.X86:
+                convertFilePath = "32";
+                break;
+            case Architecture.X64:
+                convertFilePath = "64";
+                break;
+            case Architecture.Arm64:
+                convertFilePath = "ARM";
+                break;
+        }
+        if (string.IsNullOrEmpty(convertFilePath) ||
+            !Directory.Exists(imageMagickDir) ||
+            Directory.GetFiles(imageMagickDir, $"convert{convertFilePath}*").Length == 0)
+            throw new FileNotFoundException("[ImageOptimizer] - ImageMagick convert binary not found for this architecture.");
+        convertFilePath = $"{imageMagickDir}/convert{convertFilePath}";
+        Directory.CreateDirectory(tmpDir);
+        string outputPdfPath = Path.Combine(tmpDir, $"{Guid.NewGuid()}.pdf");
+        List<string> optimizedFiles = new List<string>();
+        try
+        {
+            foreach (string img in imagePaths)
+            {
+                string ext = Path.GetExtension(img);
+                using Stream optimizedStream = OptimizeImage(
+                    convertersDir, imageMagickDir, img, ext, CommandLineParametersConvert, CommandLineParametersFsr, PreferFSR);
+                string tmpOut = Path.Combine(tmpDir, $"{Guid.NewGuid()}{ext}");
+                using FileStream fs = File.Create(tmpOut);
+                optimizedStream.CopyTo(fs);
+                optimizedFiles.Add(tmpOut);
+            }
+            using (Process pdfProc = Process.Start(new ProcessStartInfo
+            {
+                FileName = convertFilePath,
+                Arguments = string.Join(" ", optimizedFiles.Select(f => $"\"{f}\"")) + $" \"{outputPdfPath}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            }))
+            {
+                pdfProc?.WaitForExit();
+
+                if (pdfProc?.ExitCode is not 0)
+                {
+                    LoggerAccessor.LogError($"[ImageOptimizer] - PDF creation failed. Error: {pdfProc?.StandardError.ReadToEnd()}");
+                    return null;
+                }
+            }
+            return new MemoryStream(File.ReadAllBytes(outputPdfPath));
+        }
+        finally
+        {
+            Task.Run(() =>
+            {
+                foreach (string file in optimizedFiles)
+                    if (File.Exists(file)) File.Delete(file);
+                if (File.Exists(outputPdfPath))
+                    File.Delete(outputPdfPath);
+            });
+        }
+    }
+
+    public static Stream OptimizeImage(string convertersDir, string imageMagickDir, string imagePath,
+        string extension, string CommandLineParametersConvert,
+        string CommandLineParametersFsr = "-QualityMode UltraQuality -Scale 2x 2x",
+        bool PreferFSR = true)
+    {
+        if (string.IsNullOrEmpty(convertersDir) || string.IsNullOrEmpty(imageMagickDir) || !Directory.Exists(convertersDir) || !Directory.Exists(imageMagickDir))
             return File.OpenRead(imagePath);
-        string magickDirPath = $"{convertersDir}/ImageMagick/";
         string sourcefilePath = Path.Combine(tmpDir, $"{Guid.NewGuid()}{extension}");
         string tempfilePath = Path.Combine(tmpDir, $"{Guid.NewGuid()}_tmp{extension}");
         string tempScaledfilePath = Path.Combine(tmpDir, $"{Guid.NewGuid()}_Scaled{extension}");
@@ -43,9 +119,9 @@ public static class ImageOptimizer
                 convertFilePath = "ARM";
                 break;
         }
-        if (!string.IsNullOrEmpty(convertFilePath) && Directory.Exists(magickDirPath) && Directory.GetFiles(magickDirPath, $"convert{convertFilePath}*").Length > 0)
+        if (!string.IsNullOrEmpty(convertFilePath) && Directory.GetFiles(imageMagickDir, $"convert{convertFilePath}*").Length > 0)
         {
-            convertFilePath = $"{convertersDir}/ImageMagick/convert{convertFilePath}";
+            convertFilePath = $"{imageMagickDir}/convert{convertFilePath}";
             try
             {
                 extension = extension.Substring(1).ToLower();
@@ -222,13 +298,14 @@ public static class ImageOptimizer
                                 // ffmpeg can't output a DDS, only convert "from" a DDS is supported.
                                 break;
                             default:
-                                if (Directory.GetFiles(convertersDir, $"ffmpeg.*").Length > 0)
+                                string ffmpegDir = Path.Combine(convertersDir, "ffmpeg");
+                                if (Directory.Exists(ffmpegDir) && Directory.GetFiles(ffmpegDir, $"ffmpeg.*").Length > 0)
                                 {
                                     try
                                     {
                                         using (Process sharpenProc = Process.Start(new ProcessStartInfo
                                         {
-                                            FileName = $"{convertersDir}/ffmpeg",
+                                            FileName = $"{ffmpegDir}/ffmpeg",
                                             Arguments = $"-i \"{tempfilePath}\" -filter_complex \"[0:v]split=2[fg][alpha];[fg]cas=0.3[fg];[alpha]alphaextract[alpha];[fg][alpha]alphamerge\" \"{tempSharpenedfilePath}\"",
                                             RedirectStandardOutput = true,
                                             RedirectStandardError = true,
