@@ -177,9 +177,8 @@ namespace ApacheNet
                                             }
                                             else
                                             {
-#if DEBUG
                                                 LoggerAccessor.LogWarn($"[HTTPS_DNS] - No Bytes Recieved from UdpRequest.");
-#endif
+
                                                 DnsReq = null;
                                             }
                                         }
@@ -377,9 +376,8 @@ namespace ApacheNet
                                         }
                                         else
                                         {
-#if DEBUG
                                             LoggerAccessor.LogWarn($"[HTTPS_DNS] - No Bytes Recieved from UdpRequest.");
-#endif
+
                                             DnsReq = null;
                                         }
                                     }

@@ -126,9 +126,8 @@ namespace MitmDNS
                             }
                             else
                             {
-#if DEBUG
                                 LoggerAccessor.LogWarn($"[DNSResolver] - No Bytes Recieved from UdpRequest.");
-#endif
+
                                 DnsReq = null;
                             }
                         }
