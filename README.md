@@ -128,6 +128,16 @@ A minimalistic C# reimplementation of the infamous Apache web server, with suppo
 
 For HTTPS, it can generate self-signed certificates for a wide array of dead domains, or optionally import your own. This includes CA-validated Edge certificates to enable verified padlock icons in modern browsers, as well as Origin certificates for authenticating game traffic.
 
+It also includes some bonus features such as:
+
+- Built-in PHP support via an integrated PHP-CGI handler, allowing it to execute PHP scripts using latest versions of PHP,
+
+- Dynamic .DLL-based C# plugin system, allowing additional services to be loaded at runtime. Home Laboratory’s HomeWebTools is a great example of this,
+
+- Flexible redirect engine that mimics the Apache-style redirect system, with support for HTTP status redirects, regex matching, and conditional rewrites,
+
+- Optional built-in upscaler for web-served images using top of the line technologies (ImageMagick/ffmpeg/FSR1.0).
+
 # 2) MitmDNS -->
 
 Man-In-The-Middle DNS Server. UDP Server intended to redirect dead domains to a IPv4 or IPv6 address typically. It utilizes parts of Kapetan's DNSLibrary.
