@@ -159,38 +159,44 @@ namespace ApacheNet
 #if DEBUG
                                         LoggerAccessor.LogInfo($"[HTTPS_DNS] - Issuing mitm request for domain: {fullname}");
 #endif
-                                        bool error = false;
-                                        var udpClient = udpClientService.Dequeue();
-                                        try
+                                        var queueRes = udpClientService.Dequeue();
+                                        if (queueRes.Item1)
                                         {
-                                            await udpClient.Client.SendAsync(DnsReq, SocketFlags.None).ConfigureAwait(false);
-
-                                            var res = udpClient.BeginReceive(null, null);
-                                            // begin recieve right after request
-                                            if (res.AsyncWaitHandle.WaitOne(udpClientService.SendTimeoutMs))
+                                            bool error = false;
+                                            var udpClient = queueRes.Item2;
+                                            try
                                             {
-                                                IPEndPoint? remoteEP = udpClient.Client.RemoteEndPoint as IPEndPoint;
+                                                await udpClient.Client.SendAsync(DnsReq, SocketFlags.None).ConfigureAwait(false);
+
+                                                var res = udpClient.BeginReceive(null, null);
+                                                // begin recieve right after request
+                                                if (res.AsyncWaitHandle.WaitOne(udpClientService.SendTimeoutMs))
+                                                {
+                                                    IPEndPoint? remoteEP = udpClient.Client.RemoteEndPoint as IPEndPoint;
 #if DEBUG
-                                                LoggerAccessor.LogInfo($"[HTTPS_DNS] - Recieved message from endpoint:{remoteEP}, returning...");
+                                                    LoggerAccessor.LogInfo($"[HTTPS_DNS] - Recieved message from endpoint:{remoteEP}, returning...");
 #endif
-                                                DnsReq = udpClient.EndReceive(res, ref remoteEP);
-                                            }
-                                            else
-                                            {
-                                                LoggerAccessor.LogWarn($"[HTTPS_DNS] - No Bytes Recieved from UdpRequest.");
+                                                    DnsReq = udpClient.EndReceive(res, ref remoteEP);
+                                                }
+                                                else
+                                                {
+                                                    LoggerAccessor.LogWarn($"[HTTPS_DNS] - No Bytes Recieved from UdpRequest.");
 
+                                                    DnsReq = null;
+                                                }
+                                            }
+                                            catch
+                                            {
+                                                error = true;
                                                 DnsReq = null;
                                             }
+                                            finally
+                                            {
+                                                udpClientService.ReturnToQueue(udpClient, error);
+                                            }
                                         }
-                                        catch
-                                        {
-                                            error = true;
+                                        else
                                             DnsReq = null;
-                                        }
-                                        finally
-                                        {
-                                            udpClientService.ReturnToQueue(udpClient, error);
-                                        }
                                     }
                                     else
                                     {
@@ -358,38 +364,44 @@ namespace ApacheNet
 #if DEBUG
                                     LoggerAccessor.LogInfo($"[HTTPS_DNS] - Issuing mitm request for domain: {fullname}");
 #endif
-                                    bool error = false;
-                                    var udpClient = udpClientService.Dequeue();
-                                    try
+                                    var queueRes = udpClientService.Dequeue();
+                                    if (queueRes.Item1)
                                     {
-                                        await udpClient.Client.SendAsync(DnsReq, SocketFlags.None).ConfigureAwait(false);
-
-                                        var res = udpClient.BeginReceive(null, null);
-                                        // begin recieve right after request
-                                        if (res.AsyncWaitHandle.WaitOne(udpClientService.SendTimeoutMs))
+                                        bool error = false;
+                                        var udpClient = queueRes.Item2;
+                                        try
                                         {
-                                            IPEndPoint? remoteEP = udpClient.Client.RemoteEndPoint as IPEndPoint;
+                                            await udpClient.Client.SendAsync(DnsReq, SocketFlags.None).ConfigureAwait(false);
+
+                                            var res = udpClient.BeginReceive(null, null);
+                                            // begin recieve right after request
+                                            if (res.AsyncWaitHandle.WaitOne(udpClientService.SendTimeoutMs))
+                                            {
+                                                IPEndPoint? remoteEP = udpClient.Client.RemoteEndPoint as IPEndPoint;
 #if DEBUG
-                                            LoggerAccessor.LogInfo($"[HTTPS_DNS] - Recieved message from endpoint:{remoteEP}, returning...");
+                                                LoggerAccessor.LogInfo($"[HTTPS_DNS] - Recieved message from endpoint:{remoteEP}, returning...");
 #endif
-                                            DnsReq = udpClient.EndReceive(res, ref remoteEP);
-                                        }
-                                        else
-                                        {
-                                            LoggerAccessor.LogWarn($"[HTTPS_DNS] - No Bytes Recieved from UdpRequest.");
+                                                DnsReq = udpClient.EndReceive(res, ref remoteEP);
+                                            }
+                                            else
+                                            {
+                                                LoggerAccessor.LogWarn($"[HTTPS_DNS] - No Bytes Recieved from UdpRequest.");
 
+                                                DnsReq = null;
+                                            }
+                                        }
+                                        catch
+                                        {
+                                            error = true;
                                             DnsReq = null;
                                         }
+                                        finally
+                                        {
+                                            udpClientService.ReturnToQueue(udpClient, error);
+                                        }
                                     }
-                                    catch
-                                    {
-                                        error = true;
-                                        DnsReq = null;
-                                    }
-                                    finally
-                                    {
-                                        udpClientService.ReturnToQueue(udpClient, error);
-                                    }
+                                    else
+                                        DnsReq = null;                                   
                                 }
                                 else
                                 {

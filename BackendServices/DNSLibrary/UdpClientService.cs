@@ -63,23 +63,16 @@ namespace DNSLibrary
             AddToClientQueue(MaxConcurrentListeners);
         }
 
-        public UdpClient Dequeue()
+        public (bool, UdpClient) Dequeue(int maxRetries = 5)
         {
-            UdpClient client = null;
-            bool found = false;
-
-            do
+            for (int attempt = 0; attempt <= maxRetries; attempt++)
             {
                 if (UdpClientQueue.TryDequeue(out UdpClient selectedClient))
-                {
-                    client = selectedClient;
-                    found = true;
-                }
-                else
-                    Thread.Sleep(1); // sleep for a milisecond
-            } while (!found);
+                    return (true, selectedClient);
+                Thread.Sleep(1); // sleep for a milisecond
+            }
 
-            return client;
+            return (false, null);
         }
 
         /// <summary>
