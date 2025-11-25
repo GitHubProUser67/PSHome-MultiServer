@@ -40,15 +40,15 @@ namespace HomeTools.BARFramework
             return m_header;
         }
 
-        private bool encrypt = false;
+        private readonly bool m_encrypt = false;
 
-        private bool optimizeassets = false;
+        private readonly bool m_optimizeassets = false;
 
-        private ushort cdnMode = 0;
+        private readonly ushort m_cdnMode = 0;
 
-        private byte[] version2key;
+        private readonly byte[] m_version2key;
 
-        private string convertersfolder = null;
+        private readonly string m_convertersfolder = null;
 #if NET6_0_OR_GREATER
         private string m_imparams = ImageOptimizer.defaultOptimizerParams;
 #endif
@@ -61,27 +61,50 @@ namespace HomeTools.BARFramework
             m_allowWhitespaceInFilenames = true;
         }
 
-        public BARArchive(string ConvertersFolder, string sourceFilePath, string resourceRoot, ushort cdnMode = 0, int UserData = 0, bool encrypt = false, bool bigendian = false, string version2key = "", bool optimizeassets = false) : this()
+        public BARArchive(string sourceFilePath, string resourceRoot, ushort cdnMode = 0, int UserData = 0, bool encrypt = false, bool bigendian = false, string version2key = "", bool optimizeassets = false) : this()
         {
-            convertersfolder = ConvertersFolder;
             m_sourceFile = sourceFilePath;
             m_resourceRoot = resourceRoot;
-            this.cdnMode = cdnMode;
+            m_cdnMode = cdnMode;
             m_header.UserData = UserData;
             if (bigendian)
                 m_endian = Endianness.BigEndian;
             if (encrypt)
-                this.encrypt = true;
+                m_encrypt = true;
             if (!string.IsNullOrEmpty(version2key))
             {
                 var base64Decode = version2key.IsBase64();
                 if (!base64Decode.Item1)
                     throw new InvalidDataException("[BARArchive] - version2key is expected to be of base64 type.");
-                this.version2key = base64Decode.Item2;
+                m_version2key = base64Decode.Item2;
                 m_header.Version = 512;
             }
 #if NET6_0_OR_GREATER
-            this.optimizeassets = optimizeassets;
+            m_optimizeassets = optimizeassets;
+#endif
+        }
+
+        public BARArchive(string ConvertersFolder, string sourceFilePath, string resourceRoot, ushort cdnMode = 0, int UserData = 0, bool encrypt = false, bool bigendian = false, string version2key = "", bool optimizeassets = false) : this()
+        {
+            m_convertersfolder = ConvertersFolder;
+            m_sourceFile = sourceFilePath;
+            m_resourceRoot = resourceRoot;
+            m_cdnMode = cdnMode;
+            m_header.UserData = UserData;
+            if (bigendian)
+                m_endian = Endianness.BigEndian;
+            if (encrypt)
+                m_encrypt = true;
+            if (!string.IsNullOrEmpty(version2key))
+            {
+                var base64Decode = version2key.IsBase64();
+                if (!base64Decode.Item1)
+                    throw new InvalidDataException("[BARArchive] - version2key is expected to be of base64 type.");
+                m_version2key = base64Decode.Item2;
+                m_header.Version = 512;
+            }
+#if NET6_0_OR_GREATER
+            m_optimizeassets = optimizeassets;
 #endif
         }
 
@@ -197,7 +220,9 @@ namespace HomeTools.BARFramework
         {
             bool result = true;
             if (options == BARAddFileOptions.ForceCompress)
-                result = true;
+            {
+
+            }
             else if (options == BARAddFileOptions.ForceUncompress)
                 result = false;
             else if (options == BARAddFileOptions.Default)
@@ -635,12 +660,12 @@ namespace HomeTools.BARFramework
                 if (m_endian == Endianness.BigEndian) // This data is always little endian.
                 {
                     writer.Write(EndianUtils.EndianSwap(IV));
-                    writer.Write(EndianUtils.EndianSwap(ToolsImplementation.ProcessCrypt_Decrypt(CipheredHeaderData, version2key, IV, 2)));
+                    writer.Write(EndianUtils.EndianSwap(ToolsImplementation.ProcessCrypt_Decrypt(CipheredHeaderData, m_version2key, IV, 2)));
                 }
                 else
                 {
                     writer.Write(IV);
-                    writer.Write(ToolsImplementation.ProcessCrypt_Decrypt(CipheredHeaderData, version2key, IV, 2));
+                    writer.Write(ToolsImplementation.ProcessCrypt_Decrypt(CipheredHeaderData, m_version2key, IV, 2));
                 }
             }
             else
@@ -726,7 +751,7 @@ namespace HomeTools.BARFramework
                     tocEntry.RawData = array2;
                 }
             }
-            else if (m_header.Version != 512 && encrypt)
+            else if (m_header.Version != 512 && m_encrypt)
             {
                 bool isvalid = true;
                 if (inStream.Length == 0L)
@@ -862,9 +887,9 @@ namespace HomeTools.BARFramework
             }
             string ContentType = HTTPProcessor.GetMimeType(extension);
 #if NET6_0_OR_GREATER
-            if (optimizeassets && (ContentType.StartsWith("image/") || (!string.IsNullOrEmpty(extension) && extension.Equals(".dds", StringComparison.InvariantCultureIgnoreCase))))
+            if (m_optimizeassets && (ContentType.StartsWith("image/") || (!string.IsNullOrEmpty(extension) && extension.Equals(".dds", StringComparison.InvariantCultureIgnoreCase))))
             {
-                using (Stream stream = ImageOptimizer.OptimizeImage(convertersfolder, Path.Combine(convertersfolder, "ImageMagick"), filePath, extension, m_imparams))
+                using (Stream stream = ImageOptimizer.OptimizeImage(m_convertersfolder, Path.Combine(m_convertersfolder, "ImageMagick"), filePath, extension, m_imparams))
                 {
                     try
                     {
@@ -931,8 +956,8 @@ namespace HomeTools.BARFramework
             }
             string ContentType = HTTPProcessor.GetMimeType(extension);
 #if NET6_0_OR_GREATER
-            if (optimizeassets && (ContentType.StartsWith("image/") || (!string.IsNullOrEmpty(extension) && extension.Equals(".dds", StringComparison.InvariantCultureIgnoreCase))))
-                inStream = ImageOptimizer.OptimizeImage(convertersfolder, Path.Combine(convertersfolder, "ImageMagick"), filePath, extension, m_imparams);
+            if (m_optimizeassets && (ContentType.StartsWith("image/") || (!string.IsNullOrEmpty(extension) && extension.Equals(".dds", StringComparison.InvariantCultureIgnoreCase))))
+                inStream = ImageOptimizer.OptimizeImage(m_convertersfolder, Path.Combine(m_convertersfolder, "ImageMagick"), filePath, extension, m_imparams);
             else
 #endif
                 inStream = File.OpenRead(filePath);
@@ -1017,7 +1042,7 @@ namespace HomeTools.BARFramework
                 byte[] IV = new byte[16];
                 Buffer.BlockCopy(m_header.IV, 0, IV, 0, m_header.IV.Length);
                 ToolsImplementation.IncrementIVBytes(IV, 1); // Increment IV by one (supposed to be the continuation of the header cypher context).
-                array = m_toc.GetBytesVersion2(version2key, IV, m_endian);
+                array = m_toc.GetBytesVersion2(m_version2key, IV, m_endian);
             }
             else
                 array = m_toc.GetBytesVersion1();
@@ -1071,7 +1096,7 @@ namespace HomeTools.BARFramework
                     ToolsImplementation.IncrementIVBytes(SignatureIV, 3);
                     byte[] FileBytes = new byte[(int)tocentry.CompressedSize - 28];
                     Buffer.BlockCopy(tocentry.RawData, 28, FileBytes, 0, FileBytes.Length);
-                    switch (cdnMode)
+                    switch (m_cdnMode)
                     {
                         case 2:
                             FileBytes = ToolsImplementation.ProcessCrypt_Decrypt(FileBytes, ToolsImplementation.HDKBlowfishKey, SignatureIV, 1);
@@ -1090,7 +1115,7 @@ namespace HomeTools.BARFramework
                         Buffer.BlockCopy(SHA1Data, 0, tocentry.RawData, 4, SHA1Data.Length);
                         Buffer.BlockCopy(FileBytes, 0, tocentry.RawData, 28, FileBytes.Length);
                         Buffer.BlockCopy(tocentry.RawData, 4, SignatureHeader, 0, SignatureHeader.Length);
-                        switch (cdnMode)
+                        switch (m_cdnMode)
                         {
                             case 2:
                                 SignatureHeader = ToolsImplementation.ProcessCrypt_Decrypt(SignatureHeader, ToolsImplementation.HDKSignatureKey, OriginalSigntureIV, 1);
