@@ -253,7 +253,7 @@ namespace ApacheNet
                     UserAgent = string.IsNullOrEmpty(apacheContext.Request.Useragent) ? string.Empty : apacheContext.Request.Useragent,
                     ClientAddress = apacheContext.ClientIP + ":" + apacheContext.ClientPort,
 #if false // Serve as a HTTP json debugging.
-                    Body = request.ContentLength >= 0 ? Convert.ToBase64String(apacheContext.Request.DataAsBytes) : string.Empty
+                    Body = apacheContext.Request.ContentLength > 0 ? Convert.ToBase64String(apacheContext.Request.DataAsBytes) : string.Empty
 #endif
                 }, Formatting.Indented) + ") (" + ctx.Timestamp.TotalMs + "ms)");
 #else

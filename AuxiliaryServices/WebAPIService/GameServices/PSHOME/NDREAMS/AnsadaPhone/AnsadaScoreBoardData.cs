@@ -4,30 +4,30 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using WebAPIService.GameServices.PSHOME.RCHOME.Entities;
+using WebAPIService.GameServices.PSHOME.NDREAMS.AnsadaPhone.Entities;
 using WebAPIService.LeaderboardService;
 
-namespace WebAPIService.GameServices.PSHOME.RCHOME
+namespace WebAPIService.GameServices.PSHOME.NDREAMS.AnsadaPhone
 {
-    internal class FiringRangeScoreBoardData
-    : ScoreboardService<FiringRangeScoreBoardEntry>
+    internal class AnsadaScoreBoardData
+    : ScoreboardService<AnsadaScoreBoardEntry>
     {
-        private string _gameproject;
+        private readonly string _gameproject;
 
-        public FiringRangeScoreBoardData(DbContextOptions options, object obj = null)
+        public AnsadaScoreBoardData(DbContextOptions options, object obj = null)
             : base(options)
         {
             _gameproject = (string)obj;
         }
 
-        public override async Task<List<FiringRangeScoreBoardEntry>> GetTopScoresAsync(int max = 10)
+        public override async Task<List<AnsadaScoreBoardEntry>> GetTopScoresAsync(int max = 10)
         {
             using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
             {
                 db.Database.Migrate();
-                return await db.Set<FiringRangeScoreBoardEntry>()
+                return await db.Set<AnsadaScoreBoardEntry>()
                 .Where(x => x.ExtraData1 == _gameproject)
-                .OrderByDescending(e => e.Score)
+                .OrderBy(e => e.Score)
                 .Take(max)
                 .ToListAsync().ConfigureAwait(false);
             }
@@ -38,10 +38,12 @@ namespace WebAPIService.GameServices.PSHOME.RCHOME
             if (string.IsNullOrEmpty(playerId))
                 return;
 
+            string time = (string)extraData[0];
+
             using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
             {
                 db.Database.Migrate();
-                var set = db.Set<FiringRangeScoreBoardEntry>();
+                var set = db.Set<AnsadaScoreBoardEntry>();
                 DateTime now = DateTime.UtcNow; // use UTC for consistency
 
                 var existing = await set
@@ -52,9 +54,10 @@ namespace WebAPIService.GameServices.PSHOME.RCHOME
 
                 if (existing != null)
                 {
-                    if (newScore > existing.Score)
+                    if (newScore <= existing.Score)
                     {
                         existing.Score = newScore;
+                        existing.Time = time;
                         existing.UpdatedAt = now; // update timestamp
                         db.Update(existing);
                         await db.SaveChangesAsync().ConfigureAwait(false);
@@ -62,11 +65,12 @@ namespace WebAPIService.GameServices.PSHOME.RCHOME
                 }
                 else
                 {
-                    await set.AddAsync(new FiringRangeScoreBoardEntry
+                    await set.AddAsync(new AnsadaScoreBoardEntry
                     {
                         ExtraData1 = _gameproject,
                         PlayerId = playerId,
                         Score = newScore,
+                        Time = time,
                         UpdatedAt = now // set timestamp for new entry
                     }).ConfigureAwait(false);
                     await db.SaveChangesAsync().ConfigureAwait(false);
@@ -76,15 +80,19 @@ namespace WebAPIService.GameServices.PSHOME.RCHOME
 
         public override async Task<string> SerializeToString(string gameName, int max = 10)
         {
+            int i = 1;
             XElement xmlScoreboard = new XElement(gameName);
 
             foreach (var entry in await GetTopScoresAsync(max).ConfigureAwait(false))
             {
-                XElement xmlEntry = new XElement("row",
-                    new XElement("c", entry.PsnId),
-                    new XElement("c", entry.Score.ToString().Replace(",", ".")));
+                XElement xmlEntry = new XElement("entry",
+                    new XElement("position", i),
+                    new XElement("name", entry.PsnId),
+                    new XElement("score", entry.Score.ToString().Replace(",", ".")));
 
                 xmlScoreboard.Add(xmlEntry);
+
+                i++;
             }
 
             return xmlScoreboard.ToString();

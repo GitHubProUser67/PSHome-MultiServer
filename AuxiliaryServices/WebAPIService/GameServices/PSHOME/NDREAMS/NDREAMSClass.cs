@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using CustomLogger;
+using WebAPIService.GameServices.PSHOME.NDREAMS.AnsadaPhone;
 using WebAPIService.GameServices.PSHOME.NDREAMS.Aurora;
 using WebAPIService.GameServices.PSHOME.NDREAMS.BlueprintHome;
 using WebAPIService.GameServices.PSHOME.NDREAMS.Espionage9;
@@ -44,6 +45,8 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS
                 case "POST":
                     switch (absolutepath)
                     {
+                        case "/scores/ScoreHandler.php":
+                            return AnsadaScoreHandler.ProcessScore(PostData, ContentType);
                         case "/skyhub/espionage.php":
                             return Espionage9Class.ProcessPhpRequest(currentdate, PostData, ContentType, apipath);
                         case "/fubar/fisi.php":

@@ -16,9 +16,9 @@ namespace WebAPIService.GameServices.PSHOME.OHS
     internal class OHSScoreBoardData
     : ScoreboardService<OHSScoreboardEntry>
     {
-        private string _gameproject;
-        private object _Lock = new object();
-        private HashSet<ushort> _performedMigrations = new HashSet<ushort>();
+        private readonly string _gameproject;
+        private readonly object _Lock = new object();
+        private readonly HashSet<uint> _performedMigrations = new HashSet<uint>();
 
         public OHSScoreBoardData(DbContextOptions options, object obj = null)
             : base(options)
@@ -334,7 +334,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
         public Task PerformMigrationAsync(string jsonPath)
         {
-            ushort crc = CRC16.Create(Encoding.UTF8.GetBytes(jsonPath));
+            uint crc = CRC32.Create(Encoding.UTF8.GetBytes(jsonPath));
 
             lock (_Lock)
             {

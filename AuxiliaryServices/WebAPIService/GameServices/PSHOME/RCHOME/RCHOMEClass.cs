@@ -13,7 +13,7 @@ namespace WebAPIService.GameServices.PSHOME.RCHOME
 {
     public class RCHOMEClass
     {
-        private static Dictionary<string, FiringRangeScoreBoardData> _leaderboards = new Dictionary<string, FiringRangeScoreBoardData>();
+        private static readonly Dictionary<string, FiringRangeScoreBoardData> _leaderboards = new Dictionary<string, FiringRangeScoreBoardData>();
 
         private string absolutepath;
         private string workpath;
@@ -84,9 +84,9 @@ namespace WebAPIService.GameServices.PSHOME.RCHOME
 
                                         if (hash == expectedHash)
                                         {
-                                            lock (_leaderboards)
+                                            if (!string.IsNullOrEmpty(gameName))
                                             {
-                                                if (!string.IsNullOrEmpty(gameName))
+                                                lock (_leaderboards)
                                                 {
                                                     if (!_leaderboards.ContainsKey(gameName))
                                                         _leaderboards.Add(gameName, new FiringRangeScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, gameName));
