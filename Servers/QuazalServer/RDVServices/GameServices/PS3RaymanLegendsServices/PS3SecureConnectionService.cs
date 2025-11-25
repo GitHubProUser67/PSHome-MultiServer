@@ -5,7 +5,7 @@ using QuazalServer.QNetZ.DDL;
 using QuazalServer.QNetZ.Interfaces;
 using QuazalServer.QNetZ.Connection;
 using MultiServerLibrary.Extension;
-using XI5;
+using CastleLibrary.Sony.XI5;
 
 namespace QuazalServer.RDVServices.GameServices.PS3RaymanLegendsServices
 {
@@ -59,8 +59,6 @@ namespace QuazalServer.RDVServices.GameServices.PS3RaymanLegendsServices
         {
             if (hCustomData.data != null && hCustomData.data.ticket != null && hCustomData.data.ticket.data != null && hCustomData.data.ticket.length > 188 && Context != null && Context.Client.PlayerInfo != null)
             {
-                const string RPCNSigner = "RPCN";
-
                 // change address
                 StationURL rdvConnectionUrl = new(vecMyURLs.Last().ToString())
                 {
@@ -89,9 +87,9 @@ namespace QuazalServer.RDVServices.GameServices.PS3RaymanLegendsServices
                 }
 
                 // RPCN
-                if (ticket.SignatureIdentifier == RPCNSigner)
+                if (ticket.IsSignedByRPCN)
                     LoggerAccessor.LogInfo($"[PS3SecureConnectionService] - User {username} connected at: {DateTime.Now} and is on RPCN");
-                else if (username.EndsWith($"@{RPCNSigner}"))
+                else if (username.EndsWith($"@{XI5Ticket.RPCNSigner}"))
                 {
                     LoggerAccessor.LogError($"[PS3SecureConnectionService] - User {username} was caught using a RPCN suffix while not on it!");
 

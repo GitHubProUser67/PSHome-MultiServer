@@ -1,9 +1,9 @@
 using CustomLogger;
 using System.Text;
 using System.Collections.Concurrent;
-using XI5;
 using NetHasher;
 using CastleLibrary.Sony.SSFW;
+using CastleLibrary.Sony.XI5;
 
 namespace SSFWServer
 {
@@ -166,8 +166,6 @@ namespace SSFWServer
         {
             if (ticketBuffer != null)
             {
-                const string RPCNSigner = "RPCN";
-
                 bool IsRPCN = false;
                 string salt = string.Empty;
                 string? RPCNsessionIdFallback = null;
@@ -201,13 +199,13 @@ namespace SSFWServer
                 }
 
                 // RPCN
-                if (ticket.SignatureIdentifier == RPCNSigner)
+                if (ticket.IsSignedByRPCN)
                 {
                     LoggerAccessor.LogInfo($"[SSFW] : User {username.Replace("H", string.Empty)} connected at: {DateTime.Now} and is on RPCN");
 
                     IsRPCN = true;
                 }
-                else if (username.EndsWith($"@{RPCNSigner}"))
+                else if (username.EndsWith($"@{XI5Ticket.RPCNSigner}"))
                 {
                     LoggerAccessor.LogError($"[SSFW] : User {username.Replace("H", string.Empty)} was caught using a RPCN suffix while not on it!");
 
@@ -244,7 +242,7 @@ namespace SSFWServer
                 if (IsRPCN)
                 {
                     // Convert the modified data to a string
-                    UserNames.Item1 = ResultStrings.Item1 = username + "RPCN" + homeClientVersion;
+                    UserNames.Item1 = ResultStrings.Item1 = username + XI5Ticket.RPCNSigner + homeClientVersion;
 
                     // Calculate the MD5 hash of the result
                     if (!string.IsNullOrEmpty(xsignature))

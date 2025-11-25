@@ -89,13 +89,6 @@ namespace Horizon.HTTPSERVICE
                         room = new Room
                         {
                             AppId = appIdStr,
-                            PlayerSkillLevel = channel.PlayerSkillLevel,
-                            GenericField1 = channel.GenericField1,
-                            GenericField2 = channel.GenericField2,
-                            GenericField3 = channel.GenericField3,
-                            GenericField4 = channel.GenericField4,
-                            WorldStatus = (int)channel.WorldStatus,
-                            RulesSet = channel.RulesSet,
                             Worlds = new List<World>()
                         };
                         rooms.Add(room);
@@ -114,9 +107,16 @@ namespace Horizon.HTTPSERVICE
                         room.Worlds!.Add(world);
                     }
 
+                    world.PlayerSkillLevel = channel.PlayerSkillLevel;
+                    world.GenericField1 = channel.GenericField1;
+                    world.GenericField2 = channel.GenericField2;
+                    world.GenericField3 = channel.GenericField3;
+                    world.GenericField4 = channel.GenericField4;
+                    world.WorldStatus = (int)channel.WorldStatus;
+
                     var incomingGames = channel.Games
-                        .Select(g => g.MediusWorldId)
-                        .ToList();
+                            .Select(g => g.MediusWorldId)
+                            .ToList();
 
                     incomingGames.AddRange(channel.Parties
                         .Select(g => g.MediusWorldId)
@@ -267,6 +267,12 @@ namespace Horizon.HTTPSERVICE
     public class Room
     {
         public string? AppId { get; set; }
+        public List<World>? Worlds { get; set; }
+    }
+
+    public class World
+    {
+        public string? WorldId { get; set; }
         public int PlayerSkillLevel { get; set; }
         public int RulesSet { get; set; }
         public ulong GenericField1 { get; set; }
@@ -274,12 +280,6 @@ namespace Horizon.HTTPSERVICE
         public ulong GenericField3 { get; set; }
         public ulong GenericField4 { get; set; }
         public int WorldStatus { get; set; }
-        public List<World>? Worlds { get; set; }
-    }
-
-    public class World
-    {
-        public string? WorldId { get; set; }
         public List<GameList>? GameSessions { get; set; }
     }
 

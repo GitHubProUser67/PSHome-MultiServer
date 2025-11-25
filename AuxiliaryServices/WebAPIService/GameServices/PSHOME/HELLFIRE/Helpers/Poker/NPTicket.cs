@@ -4,8 +4,8 @@ using System.Text;
 using System.IO;
 using System;
 using NetHasher;
-using XI5;
 using CastleLibrary.Sony.SSFW;
+using CastleLibrary.Sony.XI5;
 
 namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Poker
 {
@@ -63,8 +63,6 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Poker
                         extractedData[i] = 0x20;
                 }
 
-                const string RPCNSigner = "RPCN";
-
                 // get ticket
                 XI5Ticket ticket = XI5Ticket.ReadFromBytes(ticketData);
 
@@ -81,10 +79,10 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Poker
                 }
 
                 // RPCN
-                if (ticket.SignatureIdentifier == RPCNSigner)
+                if (ticket.IsSignedByRPCN)
                 {
                     // Convert the modified data to a string
-                    resultString = Encoding.ASCII.GetString(extractedData) + "RPCN";
+                    resultString = Encoding.ASCII.GetString(extractedData) + XI5Ticket.RPCNSigner;
 
                     userid = resultString.Replace(" ", string.Empty);
 
@@ -101,7 +99,7 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Poker
 
                     LoggerAccessor.LogInfo($"[HFGames] - Poker : User {username} connected at: {DateTime.Now} and is on RPCN");
                 }
-                else if (username.EndsWith($"@{RPCNSigner}"))
+                else if (username.EndsWith($"@{XI5Ticket.RPCNSigner}"))
                 {
                     LoggerAccessor.LogError($"[HFGames] - Poker : User {username} was caught using a RPCN suffix while not on it!");
 

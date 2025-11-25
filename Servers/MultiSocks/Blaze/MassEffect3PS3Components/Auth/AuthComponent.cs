@@ -5,7 +5,7 @@ using CustomLogger;
 using MultiSocks.Blaze.MassEffect3PS3Components.Model;
 using MultiServerLibrary.Extension;
 using System.Text;
-using XI5;
+using CastleLibrary.Sony.XI5;
 
 namespace MultiSocks.Blaze.MassEffect3PS3Components.Auth
 {
@@ -21,8 +21,6 @@ namespace MultiSocks.Blaze.MassEffect3PS3Components.Auth
             LoggerAccessor.LogInfo($"[Blaze] - Auth: XI5Ticket Size      : {request.mPS3Ticket.Length}");
 #endif
             uint unixTimeStamp = (uint)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
-
-            const string RPCNSigner = "RPCN";
 
             // get ticket
             XI5Ticket ticket = XI5Ticket.ReadFromBytes(request.mPS3Ticket);
@@ -40,13 +38,13 @@ namespace MultiSocks.Blaze.MassEffect3PS3Components.Auth
             }
 
             // RPCN
-            if (ticket.SignatureIdentifier == RPCNSigner)
+            if (ticket.IsSignedByRPCN)
             {
                 LoggerAccessor.LogInfo($"[[Blaze] - Auth: User {username} connected at: {DateTime.Now} and is on RPCN");
 
-                username += $"@{RPCNSigner}";
+                username += $"@{XI5Ticket.RPCNSigner}";
             }
-            else if (username.EndsWith($"@{RPCNSigner}"))
+            else if (username.EndsWith($"@{XI5Ticket.RPCNSigner}"))
             {
                 LoggerAccessor.LogError($"[Blaze] - Auth: User {username} was caught using a RPCN suffix while not on it!");
 

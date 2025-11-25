@@ -8,7 +8,7 @@ using System.Text;
 using WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.NovusPrime;
 using WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers;
 using WebAPIService.LeaderboardService;
-using XI5;
+using CastleLibrary.Sony.XI5;
 
 namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
 {
@@ -63,8 +63,6 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
 
                     if (ticketData != null && ticketData.Length > 188)
                     {
-                        const string RPCNSigner = "RPCN";
-
                         // get ticket
                         XI5Ticket ticket = XI5Ticket.ReadFromBytes(ticketData);
 
@@ -81,9 +79,9 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                         }
 
                         // RPCN
-                        if (ticket.SignatureIdentifier == RPCNSigner)
+                        if (ticket.IsSignedByRPCN)
                             LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on RPCN");
-                        else if (username.EndsWith($"@{RPCNSigner}"))
+                        else if (username.EndsWith($"@{XI5Ticket.RPCNSigner}"))
                         {
                             LoggerAccessor.LogError($"[HFGames] - NovusPrime : User {username} was caught using a RPCN suffix while not on it!");
 

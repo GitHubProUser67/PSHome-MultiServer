@@ -1,3 +1,4 @@
+using CastleLibrary.Sony.XI5;
 using CustomLogger;
 using HttpMultipartParser;
 using NetHasher;
@@ -9,7 +10,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using XI5;
 
 namespace WebAPIService.GameServices.PSHOME.THQ
 {
@@ -57,8 +57,6 @@ namespace WebAPIService.GameServices.PSHOME.THQ
 
                         if (ticketData != null)
                         {
-                            const string RPCNSigner = "RPCN";
-
                             // get ticket
                             XI5Ticket ticket = XI5Ticket.ReadFromBytes(ticketData);
 
@@ -75,9 +73,9 @@ namespace WebAPIService.GameServices.PSHOME.THQ
                             }
 
                             // RPCN
-                            if (ticket.SignatureIdentifier == RPCNSigner)
+                            if (ticket.IsSignedByRPCN)
                                 LoggerAccessor.LogInfo($"[UFC2010PsHomeClass] - ProcessUFCUserData: User {username} connected at: {DateTime.Now} and is on RPCN");
-                            else if (username.EndsWith($"@{RPCNSigner}"))
+                            else if (username.EndsWith($"@{XI5Ticket.RPCNSigner}"))
                             {
                                 LoggerAccessor.LogError($"[UFC2010PsHomeClass] - ProcessUFCUserData: User {username} was caught using a RPCN suffix while not on it!");
 

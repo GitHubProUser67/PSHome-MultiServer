@@ -12,7 +12,6 @@ using Horizon.PluginManager;
 using Horizon.LIBRARY.Database.Models;
 using Newtonsoft.Json.Linq;
 using MultiServerLibrary.Extension;
-using XI5;
 using EndianTools;
 using Horizon.MUM.Models;
 using System.Text.RegularExpressions;
@@ -21,6 +20,7 @@ using System.Globalization;
 using System.Text;
 using System.Buffers;
 using MultiServerLibrary;
+using CastleLibrary.Sony.XI5;
 
 namespace Horizon.SERVER.Medius
 {
@@ -2019,8 +2019,6 @@ LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {ticke
                             break;
                         }
 
-                        const string RPCNSigner = "RPCN";
-
                         // get ticket
                         XI5Ticket ticket = XI5Ticket.ReadFromBytes(ByteUtils.CombineByteArrays(BitConverter.GetBytes(
                             BitConverter.IsLittleEndian ? EndianUtils.ReverseUint(ticketLoginRequest.Version) : ticketLoginRequest.Version), BitConverter.GetBytes(
@@ -2045,14 +2043,14 @@ LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {ticke
                         }
 
                         // RPCN
-                        if (ticket.SignatureIdentifier == RPCNSigner)
+                        if (ticket.IsSignedByRPCN)
                         {
                             LoggerAccessor.LogInfo($"[MAS] - MediusTicketLoginRequest : User {username} connected at: {DateTime.Now} and is on RPCN");
 
                             data.ClientObject.IsOnRPCN = true;
-                            username += $"@{RPCNSigner}";
+                            username += $"@{XI5Ticket.RPCNSigner}";
                         }
-                        else if (username.EndsWith($"@{RPCNSigner}"))
+                        else if (username.EndsWith($"@{XI5Ticket.RPCNSigner}"))
                         {
                             LoggerAccessor.LogError($"[MAS] - MediusTicketLoginRequest : User {username} was caught using a RPCN suffix while not on it!");
 

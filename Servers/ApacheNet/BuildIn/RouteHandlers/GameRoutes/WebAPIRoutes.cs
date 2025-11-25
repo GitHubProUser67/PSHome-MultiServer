@@ -1,4 +1,5 @@
 ﻿using ApacheNet.Models;
+using CastleLibrary.Sony.XI5;
 using CustomLogger;
 using MultiServerLibrary.Extension;
 using MultiServerLibrary.GeoLocalization;
@@ -39,7 +40,6 @@ using WebAPIService.GameServices.UBISOFT.gsconnect;
 using WebAPIService.GameServices.UBISOFT.HERMES_API;
 using WebAPIService.GameServices.UBISOFT.MatchMakingConfig;
 using WebAPIService.GameServices.UBISOFT.OnlineConfigService;
-using XI5;
 
 namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
 {
@@ -927,8 +927,6 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
 
                                         if (base64Data.Item1)
                                         {
-                                            const string RPCNSigner = "RPCN";
-
                                             // get ticket
                                             XI5Ticket ticket = XI5Ticket.ReadFromBytes(base64Data.Item2);
 
@@ -949,9 +947,9 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
                                             }
 
                                             // RPCN
-                                            if (ticket.SignatureIdentifier == RPCNSigner)
+                                            if (ticket.IsSignedByRPCN)
                                                 LoggerAccessor.LogInfo($"[HERMES] - User {username} connected at: {DateTime.Now} and is on RPCN");
-                                            else if (username.EndsWith($"@{RPCNSigner}"))
+                                            else if (username.EndsWith($"@{XI5Ticket.RPCNSigner}"))
                                             {
                                                 LoggerAccessor.LogError($"[HERMES] - User {username} was caught using a RPCN suffix while not on it!");
 

@@ -3,7 +3,7 @@ using HttpMultipartParser;
 using System.Text;
 using System.IO;
 using System;
-using XI5;
+using CastleLibrary.Sony.XI5;
 
 namespace WebAPIService.GameServices.PSHOME.HTS.Helpers
 {
@@ -49,8 +49,6 @@ namespace WebAPIService.GameServices.PSHOME.HTS.Helpers
 
             if (ticketData != null && ticketData.Length > 188)
             {
-                const string RPCNSigner = "RPCN";
-
                 #region Region
                 // Extract part of the byte array from the specific index
                 byte[] ticketRegion = new byte[4];
@@ -73,9 +71,9 @@ namespace WebAPIService.GameServices.PSHOME.HTS.Helpers
                 }
 
                 // RPCN
-                if (ticket.SignatureIdentifier == RPCNSigner)
+                if (ticket.IsSignedByRPCN)
                     LoggerAccessor.LogInfo($"[HTS] - User {username} connected at: {DateTime.Now} and is on RPCN");
-                else if (username.EndsWith($"@{RPCNSigner}"))
+                else if (username.EndsWith($"@{XI5Ticket.RPCNSigner}"))
                 {
                     LoggerAccessor.LogError($"[HTS] - User {username} was caught using a RPCN suffix while not on it!");
 

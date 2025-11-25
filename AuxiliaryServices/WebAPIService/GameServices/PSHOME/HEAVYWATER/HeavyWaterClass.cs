@@ -1,4 +1,5 @@
 ﻿using CastleLibrary.Sony.SSFW;
+using CastleLibrary.Sony.XI5;
 using CustomLogger;
 using HttpMultipartParser;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +16,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using WebAPIService.GameServices.PSHOME.HEAVYWATER.Entities;
 using WebAPIService.LeaderboardService;
-using XI5;
 
 namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
 {
@@ -280,8 +280,6 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
 
                                         if (isValidBase64Data.Item1)
                                         {
-                                            const string RPCNSigner = "RPCN";
-
                                             // get ticket
                                             XI5Ticket ticket = XI5Ticket.ReadFromBytes(isValidBase64Data.Item2);
 
@@ -298,9 +296,9 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                                             }
 
                                             // RPCN
-                                            if (ticket.SignatureIdentifier == RPCNSigner)
+                                            if (ticket.IsSignedByRPCN)
                                                 LoggerAccessor.LogInfo($"[HeavyWaterClass] : User {username} connected at: {DateTime.Now} and is on RPCN");
-                                            else if (username.EndsWith($"@{RPCNSigner}"))
+                                            else if (username.EndsWith($"@{XI5Ticket.RPCNSigner}"))
                                             {
                                                 LoggerAccessor.LogError($"[HeavyWaterClass] : User {username} was caught using a RPCN suffix while not on it!");
 

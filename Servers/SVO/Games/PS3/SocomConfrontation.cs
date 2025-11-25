@@ -1,9 +1,9 @@
+using CastleLibrary.Sony.XI5;
 using CustomLogger;
 using MultiServerLibrary.Extension;
 using SpaceWizards.HttpListener;
 using System.Text;
 using System.Web;
-using XI5;
 
 namespace SVO.Games.PS3
 {
@@ -264,8 +264,6 @@ namespace SVO.Games.PS3
                                             // Read the contents of the memory stream into the byte array
                                             ms.Read(buffer, 0, contentLength);
 
-                                            const string RPCNSigner = "RPCN";
-
                                             // get ticket
                                             XI5Ticket ticket = XI5Ticket.ReadFromBytes(buffer);
 
@@ -283,13 +281,13 @@ namespace SVO.Games.PS3
                                             }
 
                                             // RPCN
-                                            if (ticket.SignatureIdentifier == RPCNSigner)
+                                            if (ticket.IsSignedByRPCN)
                                             {
                                                 LoggerAccessor.LogInfo($"[SVO] - User {psnname} connected at: {DateTime.Now} and is on RPCN");
 
-                                                psnname += $"@{RPCNSigner}";
+                                                psnname += $"@{XI5Ticket.RPCNSigner}";
                                             }
-                                            else if (psnname.EndsWith($"@{RPCNSigner}"))
+                                            else if (psnname.EndsWith($"@{XI5Ticket.RPCNSigner}"))
                                             {
                                                 LoggerAccessor.LogError($"[SVO] - User {psnname} was caught using a RPCN suffix while not on it!");
 

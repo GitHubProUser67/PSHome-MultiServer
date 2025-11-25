@@ -1,9 +1,9 @@
+using CastleLibrary.Sony.XI5;
 using CustomLogger;
 using MultiServerLibrary.Extension;
 using SpaceWizards.HttpListener;
 using System.Text;
 using System.Text.RegularExpressions;
-using XI5;
 
 namespace SVO.Games.PS3
 {
@@ -699,8 +699,6 @@ namespace SVO.Games.PS3
                             switch (method)
                             {
                                 case "POST":
-                                    const string RPCNSigner = "RPCN";
-
                                     response.SendChunked = true;
 
                                     string signature = string.Empty;
@@ -776,13 +774,13 @@ namespace SVO.Games.PS3
                                         }
 
                                         // RPCN
-                                        if (ticket.SignatureIdentifier == RPCNSigner)
+                                        if (ticket.IsSignedByRPCN)
                                         {
                                             LoggerAccessor.LogInfo($"[OTG] - Wipeout2048 : User {psnname} connected at: {DateTime.Now} and is on RPCN");
 
-                                            psnname += $"@{RPCNSigner}";
+                                            psnname += $"@{XI5Ticket.RPCNSigner}";
                                         }
-                                        else if (psnname.EndsWith($"@{RPCNSigner}"))
+                                        else if (psnname.EndsWith($"@{XI5Ticket.RPCNSigner}"))
                                         {
                                             LoggerAccessor.LogError($"[OTG] - Wipeout2048 : User {psnname} was caught using a RPCN suffix while not on it!");
 
@@ -814,7 +812,7 @@ namespace SVO.Games.PS3
                                     }
 
                                     response.AddHeader("Set-Cookie", $"id=ddb4fac6-f908-33e5-80f9-febd2e2ef58f; Path=/");
-                                    response.AppendHeader("Set-Cookie", $"name={(psnname.EndsWith($"@{RPCNSigner}") ? psnname.Replace($"@{RPCNSigner}", string.Empty) : psnname)}; Path=/");
+                                    response.AppendHeader("Set-Cookie", $"name={(psnname.EndsWith($"@{XI5Ticket.RPCNSigner}") ? psnname.Replace($"@{XI5Ticket.RPCNSigner}", string.Empty) : psnname)}; Path=/");
                                     response.AppendHeader("Set-Cookie", $"authKey=2b8e1723-9e40-41e6-a740-05ddefacfe94; Path=/");
                                     response.AppendHeader("Set-Cookie", $"timeZone=GMT; Path=/");
                                     response.AppendHeader("Set-Cookie", $"signature=ghpE-ws_dBmIY-WNbkCQb1NnamA; Path=/");
