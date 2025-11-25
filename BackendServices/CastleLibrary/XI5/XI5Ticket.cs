@@ -151,7 +151,19 @@ namespace XI5
                 ticket.SignatureIdentifier = reader.ReadTicketStringData(TicketDataType.Binary);
                 ticket.SignatureData = reader.ReadTicketBinaryData();
 
-                if (ticket.SignatureData.Length == 56)
+                if ("RPCN".Equals(ticket.SignatureIdentifier, StringComparison.OrdinalIgnoreCase))
+                {
+#if NET6_0_OR_GREATER
+                    ticket.Message = ticketData.AsSpan().Slice((int)bodyStart, ticket.BodySection.Length + 4).ToArray();
+#else
+                    ticket.Message = new byte[ticket.BodySection.Length + 4];
+                    Array.Copy(ticketData, (int)bodyStart, ticket.Message, 0, ticket.BodySection.Length + 4);
+#endif
+                    ticket.HashedMessage = NetHasher.DotNetHasher.ComputeSHA224(ticket.Message);
+                    ticket.HashName = "SHA224";
+                    ticket.CurveName = "secp224k1";
+                }
+                else if (ticket.SignatureData.Length == 56)
                 {
 #if NET6_0_OR_GREATER
                     ticket.Message = ticketData.AsSpan()[..ticketData.AsSpan().IndexOf(ticket.SignatureData)].ToArray();
@@ -168,19 +180,7 @@ namespace XI5
                     ticket.HashName = "SHA1";
                     ticket.CurveName = "secp192r1";
                 }
-                else if (ticket.SignatureData.Length == 63)
-                {
-#if NET6_0_OR_GREATER
-                    ticket.Message = ticketData.AsSpan().Slice((int)bodyStart, ticket.BodySection.Length + 4).ToArray();
-#else
-                    ticket.Message = new byte[ticket.BodySection.Length + 4];
-                    Array.Copy(ticketData, (int)bodyStart, ticket.Message, 0, ticket.BodySection.Length + 4);
-#endif
-                    ticket.HashedMessage = NetHasher.DotNetHasher.ComputeSHA224(ticket.Message);
-                    ticket.HashName = "SHA224";
-                    ticket.CurveName = "secp224k1";
-                }
-                else if (ticket.SignatureData.Length == 32 && isVer40) // TODO, figuring out the 4.0 hash algorithm.
+                else if (isVer40) // TODO, figuring out the 4.0 hash algorithm.
                 {
                     // unhandled!!!
                 }
