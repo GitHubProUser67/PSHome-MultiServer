@@ -46,10 +46,10 @@ namespace XI5.Reader
 
         internal TicketVersion ReadTicketVersion() => new TicketVersion((byte)(ReadByte() >> 4), ReadByte());
 
-        internal ushort ReadTicketHeader()
+        internal uint ReadTicketHeader(bool ver40)
         {
             ReadBytes(4);           // header
-            return ReadUInt16();    // ticket length
+            return ver40 ? ReadUInt32() : ReadUInt16();    // ticket length
         }
 
         internal TicketDataSection ReadTicketSectionHeader()

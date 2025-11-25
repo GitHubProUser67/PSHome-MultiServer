@@ -1,8 +1,9 @@
-﻿using XI5.Reader;
+﻿// From: https://github.com/hallofmeat/Skateboard3Server/blob/master/src/Skateboard3Server.Blaze/Tickets/Ps3TicketParser.cs
+using XI5.Reader;
 
 namespace XI5.Types.Parsers
 {
-    internal static class TicketParser21
+    internal static class TicketParser20
     {
         internal static void ParseTicket(XI5Ticket ticket, TicketReader reader)
         {
@@ -27,8 +28,9 @@ namespace XI5.Types.Parsers
             ticket.Age = reader.ReadUInt16();
             ticket.Status = reader.ReadUInt16();
 
-            ticket.StatusDuration = reader.ReadUInt32();
-            ticket.Dob = reader.ReadUInt32();
+            //TODO ???
+            //unknown
+            reader.SkipTicketEmptyData(2);
         }
     }
 }

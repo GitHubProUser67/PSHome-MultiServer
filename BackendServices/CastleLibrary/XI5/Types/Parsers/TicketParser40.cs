@@ -1,12 +1,15 @@
-﻿using System;
+﻿// From: https://github.com/hallofmeat/Skateboard3Server/blob/master/src/Skateboard3Server.Blaze/Tickets/Ps3TicketParser.cs
+using System;
 using XI5.Reader;
 
 namespace XI5.Types.Parsers
 {
-    internal static class TicketParser30
+    internal static class TicketParser40
     {
         internal static void ParseTicket(XI5Ticket ticket, TicketReader reader)
         {
+            ticket.UnkHeader = reader.ReadUInt16();
+
             ticket.SerialId = reader.ReadTicketStringData(TicketDataType.Binary);
 
             ticket.IssuerId = reader.ReadTicketUInt32Data();
@@ -45,6 +48,15 @@ namespace XI5.Types.Parsers
             }
 
             reader.SkipTicketEmptyData();
+
+            //unknown
+            ticket.Unk = reader.ReadUInt32();
+
+            //unknown String (8)
+            ticket.Unk0 = reader.ReadTicketBinaryData();
+
+            //unknown String (64)
+            ticket.Unk1 = reader.ReadTicketBinaryData();
         }
     }
 }

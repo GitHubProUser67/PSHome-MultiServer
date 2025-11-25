@@ -26,6 +26,7 @@ namespace XI5
 
         // fields
         public TicketVersion Version { get; set; }
+        public ushort UnkHeader { get; set; }
         public string SerialId { get; set; }
         public uint IssuerId { get; set; }
 
@@ -41,8 +42,15 @@ namespace XI5
         public string ServiceId { get; set; }
         public string TitleId { get; set; }
 
-        public uint Status { get; set; }
-        public ushort TicketLength { get; set; }
+        public uint StatusHeader { get; set; }
+        public ushort Age { get; set; }
+        public ushort Status { get; set; }
+        public uint StatusDuration { get; set; }
+        public uint Dob { get; set; }
+        public uint Unk { get; set; }
+        public byte[] Unk0 { get; set; }
+        public byte[] Unk1 { get; set; }
+        public uint TicketLength { get; set; }
         public TicketDataSection BodySection { get; set; }
 
         public string SignatureIdentifier { get; set; }
@@ -68,7 +76,9 @@ namespace XI5
         public static XI5Ticket ReadFromStream(Stream ticketStream)
         {
             // ticket version (2 bytes), header (4 bytes), ticket length (2 bytes) = 8 bytes
-            const int headerLength = 8;
+            const byte headerLength = 8;
+            // ticket version (2 bytes), header (4 bytes), ticket length (4 bytes) = 10 bytes
+            const byte headerLengthVer40 = 10;
 
             byte[] ticketData;
             if (ticketStream is MemoryStream ms && ms.TryGetBuffer(out ArraySegment<byte> buffer))
@@ -90,37 +100,42 @@ namespace XI5
             using (TicketReader reader = new TicketReader(ticketStream))
             {
                 ticket.Version = reader.ReadTicketVersion();
-                ticket.TicketLength = reader.ReadTicketHeader();
+
+                bool isVer40 = ticket.Version.Major == 4 && ticket.Version.Minor == 0;
+
+                uint ticketLength = ticket.TicketLength = reader.ReadTicketHeader(isVer40);
 
                 long bodyStart = reader.BaseStream.Position;
 
-                long actualLength = ticketStream.Length - headerLength;
-                if (ticket.TicketLength > actualLength)
+                long actualLength = ticketStream.Length - (isVer40 ? headerLengthVer40 : headerLength);
+                if (ticketLength > actualLength)
+                    throw new FormatException($"[XI5Ticket] - Expected ticket length to be at least {ticketLength} bytes, but was {actualLength} bytes.");
+                else if (ticketLength < actualLength)
                 {
-                    LoggerAccessor.LogError($"[XI5Ticket] - Expected ticket length to be at least {ticket.TicketLength} bytes, but was {actualLength} bytes.");
-                    return null;
-                }
-                else if (ticket.TicketLength < actualLength)
-                {
-                    byte[] trimmedTicket = new byte[ticket.TicketLength + headerLength];
+                    byte[] trimmedTicket = new byte[ticketLength + (isVer40 ? headerLengthVer40 : headerLength)];
                     Array.Copy(ticketData, 0, trimmedTicket, 0, trimmedTicket.Length);
                     return ReadFromBytes(trimmedTicket);
                 }
 
                 ticket.BodySection = reader.ReadTicketSectionHeader();
                 if (ticket.BodySection.Type != TicketDataSectionType.Body)
-                {
-                    LoggerAccessor.LogError($"[XI5Ticket] - Expected first section to be {nameof(TicketDataSectionType.Body)}, but was {ticket.BodySection.Type} ({(int)ticket.BodySection.Type}).");
-                    return null;
-                }
+                    throw new FormatException($"[XI5Ticket] - Expected first section to be {nameof(TicketDataSectionType.Body)}, but was {ticket.BodySection.Type} ({(int)ticket.BodySection.Type}).");
+
+                // ticket 2.0
+                if (ticket.Version.Major == 2 && ticket.Version.Minor == 0)
+                    TicketParser20.ParseTicket(ticket, reader);
 
                 // ticket 2.1
-                if (ticket.Version.Major == 2 && ticket.Version.Minor == 1)
+                else if (ticket.Version.Major == 2 && ticket.Version.Minor == 1)
                     TicketParser21.ParseTicket(ticket, reader);
 
                 // ticket 3.0
                 else if (ticket.Version.Major == 3 && ticket.Version.Minor == 0)
                     TicketParser30.ParseTicket(ticket, reader);
+
+                // ticket 4.0
+                else if (isVer40)
+                    TicketParser40.ParseTicket(ticket, reader);
 
                 // unhandled ticket version
                 else
@@ -153,7 +168,7 @@ namespace XI5
                     ticket.HashName = "SHA1";
                     ticket.CurveName = "secp192r1";
                 }
-                else
+                else if (ticket.SignatureData.Length == 63)
                 {
 #if NET6_0_OR_GREATER
                     ticket.Message = ticketData.AsSpan().Slice((int)bodyStart, ticket.BodySection.Length + 4).ToArray();
@@ -165,14 +180,24 @@ namespace XI5
                     ticket.HashName = "SHA224";
                     ticket.CurveName = "secp224k1";
                 }
+                else if (ticket.SignatureData.Length == 32 && isVer40) // TODO, figuring out the 4.0 hash algorithm.
+                {
+                    // unhandled!!!
+                }
+                else
+                    throw new FormatException($"[XI5Ticket] - Unknown Signature data.");
             }
 
             DateTimeOffset validityCheckTime = DateTimeOffset.UtcNow;
             bool isValidTimestamp = ticket.IssuedDate <= validityCheckTime && ticket.ExpiryDate > validityCheckTime;
 
-            var signingKeys = SigningKeyResolver.GetSigningKeys(ticket.SignatureIdentifier, ticket.TitleId);
+            List<ITicketSigningKey> signingKeys = null;
 
-            // verify ticket signature or skip them depending the compiler options
+            // only verify if we need to
+            if (!string.IsNullOrEmpty(ticket.HashName))
+                signingKeys = SigningKeyResolver.GetSigningKeys(ticket.SignatureIdentifier, ticket.TitleId);
+
+            // verify ticket signature or skip them depending the compiler options and/or the current ticket version
             if (signingKeys == null)
                 ticket.Valid = isValidTimestamp;
             else
@@ -297,6 +322,7 @@ namespace XI5
             var sb = new StringBuilder();
 
             sb.AppendLine($"Version: {Version}");
+            sb.AppendLine($"UnkHeader: {UnkHeader}");
             sb.AppendLine($"SerialId: {SerialId}");
             sb.AppendLine($"IssuerId: {IssuerId}");
             sb.AppendLine($"IssuedDate: {IssuedDate}");
@@ -307,7 +333,14 @@ namespace XI5
             sb.AppendLine($"Domain: {Domain}");
             sb.AppendLine($"ServiceId: {ServiceId}");
             sb.AppendLine($"TitleId: {TitleId}");
+            sb.AppendLine($"StatusHeader: {StatusHeader}");
+            sb.AppendLine($"Age: {Age}");
             sb.AppendLine($"Status: {Status}");
+            sb.AppendLine($"StatusDuration: {StatusDuration}");
+            sb.AppendLine($"Dob: {Dob}");
+            sb.AppendLine($"Unk: {Unk}");
+            sb.AppendLine($"Unk0: {(Unk0 != null ? BitConverter.ToString(Unk0).Replace("-", string.Empty) : "null")}");
+            sb.AppendLine($"Unk1: {(Unk1 != null ? BitConverter.ToString(Unk1).Replace("-", string.Empty) : "null")}");
             sb.AppendLine($"TicketLength: {TicketLength}");
             sb.AppendLine($"SignatureIdentifier: {SignatureIdentifier}");
             sb.AppendLine($"SignatureData: {(SignatureData != null ? BitConverter.ToString(SignatureData).Replace("-", string.Empty) : "null")}");
