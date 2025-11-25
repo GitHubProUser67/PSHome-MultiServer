@@ -381,9 +381,9 @@ class Program
         GC.Collect();
 
         if (ApacheNetServerConfiguration.EnableAdguardFiltering)
-            _ = DOHRequestHandler.adChecker.DownloadAndParseFilterListAsync();
+            _ = DOHRequestHandler.AdChecker.DownloadAndParseFilterListAsync();
         if (ApacheNetServerConfiguration.EnableDanPollockHosts)
-            _ = DOHRequestHandler.danChecker.DownloadAndParseFilterListAsync();
+            _ = DOHRequestHandler.DanChecker.DownloadAndParseFilterListAsync();
 
         WebAPIService.WebServices.WebArchive.WebArchiveRequest.ArchiveDateLimit = ApacheNetServerConfiguration.NotFoundWebArchiveDateLimit;
 

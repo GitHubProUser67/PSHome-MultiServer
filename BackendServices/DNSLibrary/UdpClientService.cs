@@ -63,7 +63,7 @@ namespace DNSLibrary
             AddToClientQueue(MaxConcurrentListeners);
         }
 
-        public (bool, UdpClient) Dequeue(int maxRetries = 5)
+        public (bool, UdpClient) Dequeue(int maxRetries = 20)
         {
             for (int attempt = 0; attempt <= maxRetries; attempt++)
             {

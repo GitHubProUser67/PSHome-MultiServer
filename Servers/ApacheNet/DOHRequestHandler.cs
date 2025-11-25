@@ -16,12 +16,13 @@ namespace ApacheNet
 {
     public static class DOHRequestHandler
     {
-        public static AdGuardFilterChecker adChecker = new AdGuardFilterChecker();
-        public static DanPollockChecker danChecker = new DanPollockChecker();
+        public static AdGuardFilterChecker AdChecker { get; set; } = new AdGuardFilterChecker();
+        public static DanPollockChecker DanChecker { get; set; } = new DanPollockChecker();
 
-        private static readonly UdpClientService udpClientService = new UdpClientService(
+        private static readonly UdpClientService _udpClientService = new UdpClientService(
                     (int)TimeSpan.FromSeconds(5).TotalMilliseconds,
-                    (int)TimeSpan.FromSeconds(15).TotalMilliseconds);
+                    (int)TimeSpan.FromSeconds(15).TotalMilliseconds,
+                    Environment.ProcessorCount * 4);
 
         public static async Task<bool> DohRequest(ApacheContext ctx, string Accept, bool get)
         {
@@ -114,14 +115,14 @@ namespace ApacheNet
                                     }
                                     else
                                     {
-                                        if (ApacheNetServerConfiguration.EnableAdguardFiltering && adChecker.isLoaded && adChecker.IsDomainRefused(fullname))
+                                        if (ApacheNetServerConfiguration.EnableAdguardFiltering && AdChecker.isLoaded && AdChecker.IsDomainRefused(fullname))
                                         {
                                             url = "0.0.0.0";
                                             treated = true;
                                         }
-                                        else if (ApacheNetServerConfiguration.EnableDanPollockHosts && danChecker.isLoaded)
+                                        else if (ApacheNetServerConfiguration.EnableDanPollockHosts && DanChecker.isLoaded)
                                         {
-                                            IPAddress danAddr = danChecker.GetDomainIP(fullname);
+                                            IPAddress danAddr = DanChecker.GetDomainIP(fullname);
                                             if (danAddr != null)
                                             {
                                                 url = danAddr.ToString();
@@ -159,18 +160,18 @@ namespace ApacheNet
 #if DEBUG
                                         LoggerAccessor.LogInfo($"[HTTPS_DNS] - Issuing mitm request for domain: {fullname}");
 #endif
-                                        var queueRes = udpClientService.Dequeue();
+                                        var queueRes = _udpClientService.Dequeue();
                                         if (queueRes.Item1)
                                         {
                                             bool error = false;
                                             var udpClient = queueRes.Item2;
                                             try
                                             {
-                                                await udpClient.Client.SendAsync(DnsReq, SocketFlags.None).ConfigureAwait(false);
+                                                await udpClient.SendAsync(DnsReq, DnsReq.Length).ConfigureAwait(false);
 
                                                 var res = udpClient.BeginReceive(null, null);
                                                 // begin recieve right after request
-                                                if (res.AsyncWaitHandle.WaitOne(udpClientService.SendTimeoutMs))
+                                                if (res.AsyncWaitHandle.WaitOne(_udpClientService.SendTimeoutMs))
                                                 {
                                                     IPEndPoint? remoteEP = udpClient.Client.RemoteEndPoint as IPEndPoint;
 #if DEBUG
@@ -192,7 +193,7 @@ namespace ApacheNet
                                             }
                                             finally
                                             {
-                                                udpClientService.ReturnToQueue(udpClient, error);
+                                                _udpClientService.ReturnToQueue(udpClient, error);
                                             }
                                         }
                                         else
@@ -319,14 +320,14 @@ namespace ApacheNet
                                 }
                                 else
                                 {
-                                    if (ApacheNetServerConfiguration.EnableAdguardFiltering && adChecker.isLoaded && adChecker.IsDomainRefused(fullname))
+                                    if (ApacheNetServerConfiguration.EnableAdguardFiltering && AdChecker.isLoaded && AdChecker.IsDomainRefused(fullname))
                                     {
                                         url = "0.0.0.0";
                                         treated = true;
                                     }
-                                    else if (ApacheNetServerConfiguration.EnableDanPollockHosts && danChecker.isLoaded)
+                                    else if (ApacheNetServerConfiguration.EnableDanPollockHosts && DanChecker.isLoaded)
                                     {
-                                        IPAddress danAddr = danChecker.GetDomainIP(fullname);
+                                        IPAddress danAddr = DanChecker.GetDomainIP(fullname);
                                         if (danAddr != null)
                                         {
                                             url = danAddr.ToString();
@@ -364,18 +365,18 @@ namespace ApacheNet
 #if DEBUG
                                     LoggerAccessor.LogInfo($"[HTTPS_DNS] - Issuing mitm request for domain: {fullname}");
 #endif
-                                    var queueRes = udpClientService.Dequeue();
+                                    var queueRes = _udpClientService.Dequeue();
                                     if (queueRes.Item1)
                                     {
                                         bool error = false;
                                         var udpClient = queueRes.Item2;
                                         try
                                         {
-                                            await udpClient.Client.SendAsync(DnsReq, SocketFlags.None).ConfigureAwait(false);
+                                            await udpClient.SendAsync(DnsReq, DnsReq.Length).ConfigureAwait(false);
 
                                             var res = udpClient.BeginReceive(null, null);
                                             // begin recieve right after request
-                                            if (res.AsyncWaitHandle.WaitOne(udpClientService.SendTimeoutMs))
+                                            if (res.AsyncWaitHandle.WaitOne(_udpClientService.SendTimeoutMs))
                                             {
                                                 IPEndPoint? remoteEP = udpClient.Client.RemoteEndPoint as IPEndPoint;
 #if DEBUG
@@ -397,7 +398,7 @@ namespace ApacheNet
                                         }
                                         finally
                                         {
-                                            udpClientService.ReturnToQueue(udpClient, error);
+                                            _udpClientService.ReturnToQueue(udpClient, error);
                                         }
                                     }
                                     else

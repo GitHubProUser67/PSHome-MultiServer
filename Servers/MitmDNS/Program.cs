@@ -155,9 +155,9 @@ class Program
         GC.Collect();
 
         if (MitmDNSServerConfiguration.EnableAdguardFiltering)
-            _ = DNSResolver.adChecker.DownloadAndParseFilterListAsync();
+            _ = DNSResolver.AdChecker.DownloadAndParseFilterListAsync();
         if (MitmDNSServerConfiguration.EnableDanPollockHosts)
-            _ = DNSResolver.danChecker.DownloadAndParseFilterListAsync();
+            _ = DNSResolver.DanChecker.DownloadAndParseFilterListAsync();
 
         dnswatcher.Path = Path.GetDirectoryName(MitmDNSServerConfiguration.DNSConfig) ?? configDir;
         dnswatcher.Filter = Path.GetFileName(MitmDNSServerConfiguration.DNSConfig);

@@ -423,7 +423,9 @@ namespace ApacheNet
                                                 apacheContext.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
                                                 apacheContext.Response.ContentType = isHtmlCompatible ? "text/html" : "application/json" + ";charset=utf-8";
                                                 byte[] reportOutputBytes = Encoding.UTF8.GetBytes(await FileStructureFormater.GetFileStructureAsync(endsWithSlash ? apacheContext.FilePath[..^1] : apacheContext.FilePath, $"{(apacheContext.Secure ? "https" : "http")}://{Host}{(endsWithSlash ? absolutepath[..^1] : absolutepath)}",
-                                                    apacheContext.ServerPort, isHtmlCompatible, ApacheNetServerConfiguration.NestedDirectoryReporting, apacheContext.Request.RetrieveQueryValue("properties") == "on", ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor.MimeTypes));
+                                                    apacheContext.ServerPort, isHtmlCompatible, ApacheNetServerConfiguration.NestedDirectoryReporting, apacheContext.Request.RetrieveQueryValue("properties") == "on", ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor.MimeTypes).ConfigureAwait(false)
+                                                     ?? await DefaultHTMLPages.GenerateErrorPageAsync(HttpStatusCode.InternalServerError, absolutepath, $"{(apacheContext.Secure ? "https" : "http")}://{Host}",
+                                                            ApacheNetServerConfiguration.HTTPStaticFolder, serverRevision, Host, apacheContext.ServerPort).ConfigureAwait(false));
                                                 if (ApacheNetServerConfiguration.EnableHTTPCompression && !noCompressCacheControl && !string.IsNullOrEmpty(encoding))
                                                 {
                                                     if (encoding.Contains("zstd"))
@@ -801,7 +803,9 @@ namespace ApacheNet
                                                 apacheContext.StatusCode = HttpStatusCode.OK;
                                                 apacheContext.Response.ContentType = isHtmlCompatible ? "text/html" : "application/json" + ";charset=utf-8";
                                                 byte[] reportOutputBytes = Encoding.UTF8.GetBytes(await FileStructureFormater.GetFileStructureAsync(endsWithSlash ? apacheContext.FilePath[..^1] : apacheContext.FilePath, $"{(apacheContext.Secure ? "https" : "http")}://{Host}{(endsWithSlash ? absolutepath[..^1] : absolutepath)}",
-                                                    apacheContext.ServerPort, isHtmlCompatible, ApacheNetServerConfiguration.NestedDirectoryReporting, apacheContext.Request.RetrieveQueryValue("properties") == "on", ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor.MimeTypes));
+                                                    apacheContext.ServerPort, isHtmlCompatible, ApacheNetServerConfiguration.NestedDirectoryReporting, apacheContext.Request.RetrieveQueryValue("properties") == "on", ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor.MimeTypes).ConfigureAwait(false)
+                                                    ?? await DefaultHTMLPages.GenerateErrorPageAsync(HttpStatusCode.InternalServerError, absolutepath, $"{(apacheContext.Secure ? "https" : "http")}://{Host}",
+                                                            ApacheNetServerConfiguration.HTTPStaticFolder, serverRevision, Host, apacheContext.ServerPort).ConfigureAwait(false));
                                                 if (ApacheNetServerConfiguration.EnableHTTPCompression && !noCompressCacheControl && !string.IsNullOrEmpty(encoding))
                                                 {
                                                     if (encoding.Contains("zstd"))
