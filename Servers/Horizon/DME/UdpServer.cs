@@ -103,7 +103,7 @@ namespace Horizon.DME
 
                 // Log if id is set
                 if (message.CanLog())
-                    LoggerAccessor.LogInfo($"DME_UDP RECV {channel}: {message}");
+                    LoggerAccessor.LogTrace($"DME_UDP RECV {channel}: {message}");
             };
 
             var bootstrap = new Bootstrap();

@@ -32,7 +32,7 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
 
             // Log
             if (message.CanLog())
-                LoggerAccessor.LogInfo($"[ScertEncoder] - Tcp: SEND {ctx.Channel}: {message}");
+                LoggerAccessor.LogTrace($"[ScertEncoder] - Tcp: SEND {ctx.Channel}: {message}");
 
             if (!ctx.HasAttribute(Constants.SCERT_CLIENT))
                 ctx.GetAttribute(Constants.SCERT_CLIENT).Set(new Attribute.ScertClientAttribute());

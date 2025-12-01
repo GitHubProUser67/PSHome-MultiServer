@@ -115,7 +115,7 @@ namespace Horizon.DME
 
                 // Log if id is set
                 if (message.CanLog())
-                    LoggerAccessor.LogDebug($"DME_TCP {data?.DMEObject},{channel}: {message}");
+                    LoggerAccessor.LogTrace($"DME_TCP {data?.DMEObject},{channel}: {message}");
             };
 
             var bootstrap = new ServerBootstrap();
