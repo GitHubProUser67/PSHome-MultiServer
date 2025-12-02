@@ -428,6 +428,11 @@ namespace Horizon.SERVER.Config
         public bool PlaystationHomeAntiCheat { get; set; } = false;
 
         /// <summary>
+        /// Enables home account whitelist.
+        /// </summary>
+        public List<string> PlaystationHomeWhitelistAccounts { get; set; } = new();
+
+        /// <summary>
         /// Enables home ForceInvite mitigation fixes.
         /// </summary>
         public bool PlaystationHomeForceInviteExploitPatch { get; set; } = false;

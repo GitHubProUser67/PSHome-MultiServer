@@ -2204,8 +2204,12 @@ LoggerAccessor.LogError($"[MAS] - INVALID OPERATION: {clientChannel} sent {ticke
                             (data.ClientObject.ApplicationId == 20371 || data.ClientObject.ApplicationId == 20374) &&
                             data.ClientObject.ClientHomeData == null;
 
+                        // If the player is whitelisted, ignore.
+                        LoggerAccessor.LogInfo("[MAS] - MediusTicketLoginRequest: Checking if user is exempt: " + username.ToLower().Trim());
+                        bool isExempt = MediusClass.Settings.PlaystationHomeWhitelistAccounts.Contains(username.ToLower().Trim());
+
                         // account disabled poking in the eboot
-                        if (isAntiPoke)
+                        if (isAntiPoke && !isExempt)
                         {
                             LoggerAccessor.LogWarn($"[MAS] - MediusTicketLoginRequest: User {username} tried to login while using an anti Poke/Query eboot");
 
