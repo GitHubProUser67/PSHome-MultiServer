@@ -351,9 +351,9 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                     var scoreEntry = scoreEntries.First();
 
                     if (returnvalue.Length != 0)
-                        returnvalue += $", [\"{kvp.Key.Split('|')[1]}\"] = {{ [\"score\"] = {(int)scoreEntry.Score}, [\"user\"] = \"{scoreEntry.PsnId}\" }}";
+                        returnvalue += $", [\"{kvp.Key.Split('|')[1]}\"] = {{ [\"score\"] = {(int)scoreEntry.Score}, [\"user\"] = \"{scoreEntry.PsnId}\", [\"rank\"] = 1 }}";
                     else
-                        returnvalue = $"{{ [\"{kvp.Key.Split('|')[1]}\"] = {{ [\"score\"] = {(int)scoreEntry.Score}, [\"user\"] = \"{scoreEntry.PsnId}\" }}";
+                        returnvalue = $"{{ [\"{kvp.Key.Split('|')[1]}\"] = {{ [\"score\"] = {(int)scoreEntry.Score}, [\"user\"] = \"{scoreEntry.PsnId}\", [\"rank\"] = 1 }}";
                 }
             }
 
@@ -401,6 +401,25 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
                         if (scoreEntries.Any())
                         {
+                            Dictionary<string, int> ranks = new Dictionary<string, int>();
+                            Dictionary<int, Dictionary<string, object>> luaTable = new Dictionary<int, Dictionary<string, object>>();
+
+                            int i = 1;
+
+                            foreach (var entry in scoreEntries.Where(entry => data.Users.Contains(entry.PsnId)).OrderByDescending(entry => entry.Score))
+                            {
+                                ranks.TryAdd(entry.PsnId, i);
+
+                                luaTable.Add(i, new Dictionary<string, object>
+                                                        {
+                                                            { "[\"user\"]", $"\"{entry.PsnId}\"" },
+                                                            { "[\"score\"]", $"{(int)entry.Score}" },
+                                                            { "[\"rank\"]", $"{i}" }
+                                                        });
+
+                                i++;
+                            }
+
                             StringBuilder resultBuilder = new StringBuilder();
 
                             foreach (string user in data.Users)
@@ -410,30 +429,15 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                                     if (entry.PsnId == user)
                                     {
                                         if (resultBuilder.Length == 0)
-                                            resultBuilder.Append($"[\"user\"] = {{ [\"score\"] = {(int)entry.Score} }}");
+                                            resultBuilder.Append($"[\"user\"] = {{ [\"score\"] = {(int)entry.Score}, [\"rank\"] = {ranks[user]} }}");
                                         else
-                                            resultBuilder.Append($", [\"user\"] = {{ [\"score\"] = {(int)entry.Score} }}");
+                                            resultBuilder.Append($", [\"user\"] = {{ [\"score\"] = {(int)entry.Score}, [\"rank\"] = {ranks[user]} }}");
                                     }
                                 }
                             }
 
                             if (resultBuilder.Length == 0)
-                                resultBuilder.Append($"[\"user\"] = {{ [\"score\"] = 0 }}");
-
-                            Dictionary<int, Dictionary<string, object>> luaTable = new Dictionary<int, Dictionary<string, object>>();
-
-                            int i = 1;
-
-                            foreach (var entry in scoreEntries.Where(entry => data.Users.Contains(entry.PsnId)).OrderByDescending(entry => entry.Score))
-                            {
-                                luaTable.Add(i, new Dictionary<string, object>
-                                                        {
-                                                            { "[\"user\"]", $"\"{entry.PsnId}\"" },
-                                                            { "[\"score\"]", $"{(int)entry.Score}" }
-                                                        });
-
-                                i++;
-                            }
+                                resultBuilder.Append($"[\"user\"] = {{ [\"score\"] = 0, [\"rank\"] = 0 }}");
 
                             returnvalue = "{ [\"entries\"] = " + OHSScoreBoardData.FormatScoreBoardLuaTable(luaTable) + ", " + resultBuilder.ToString() + " }";
                         }
@@ -508,7 +512,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 LoggerAccessor.LogError($"[Leaderboard] - RequestByRank failed - {ex}");
             }
 
-            return $"{{ [\"user\"] = {{ [\"score\"] = 0 }}, [\"entries\"] = {{ }} }}";
+            return $"{{ [\"user\"] = {{ [\"score\"] = 0, [\"rank\"] = 0 }}, [\"entries\"] = {{ }} }}";
         }
 
         public class Scoreboard

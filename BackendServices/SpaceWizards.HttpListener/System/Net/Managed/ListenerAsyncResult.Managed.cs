@@ -33,9 +33,10 @@
 
 using System;
 using System.Net;
-using System.Runtime.ExceptionServices;
 using System.Threading;
-
+#if NETCOREAPP1_0_OR_GREATER
+using System.Runtime.ExceptionServices;
+#endif
 namespace SpaceWizards.HttpListener
 {
     internal sealed class ListenerAsyncResult : IAsyncResult
@@ -197,7 +198,7 @@ namespace SpaceWizards.HttpListener
 
             if (_exception != null)
             {
-#if NETCORE1_0_OR_GREATER
+#if NETCOREAPP1_0_OR_GREATER
                 ExceptionDispatchInfo.Throw(_exception);
 #else
                 throw _exception;

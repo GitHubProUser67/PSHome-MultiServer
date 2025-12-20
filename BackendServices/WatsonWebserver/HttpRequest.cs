@@ -343,49 +343,7 @@ namespace WatsonWebserver
 
         #region Private-Methods
 
-        private byte[] StreamToBytes(Stream input)
-        {
-            if (input == null) throw new ArgumentNullException(nameof(input));
-            if (!input.CanRead) throw new InvalidOperationException("Input stream is not readable");
-
-            byte[] buffer = new byte[16 * 1024];
-            using (MemoryStream ms = new MemoryStream())
-            {
-                int read;
-
-                while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
-                {
-                    ms.Write(buffer, 0, read);
-                }
-
-                return ms.ToArray();
-            }
-        }
-
-        private void ReadStreamFully()
-        {
-            if (Data == null) return;
-            if (!Data.CanRead) return;
-
-            if (_DataAsBytes == null)
-            {
-                if (!ChunkedTransfer)
-                {
-                    _DataAsBytes = StreamToBytes(Data);
-                }
-                else
-                {
-                    while (true)
-                    {
-                        Chunk chunk = ReadChunk().Result;
-                        if (chunk.Data != null && chunk.Data.Length > 0) _DataAsBytes = ByteUtils.CombineByteArray(_DataAsBytes, chunk.Data);
-                        if (chunk.IsFinal) break;
-                    }
-                }
-            }
-        }
-
-        private byte[] ReadStreamFully(Stream input)
+        private static byte[] ReadStreamFully(Stream input)
         {
             if (input == null) throw new ArgumentNullException(nameof(input));
             if (!input.CanRead) throw new InvalidOperationException("Input stream is not readable");

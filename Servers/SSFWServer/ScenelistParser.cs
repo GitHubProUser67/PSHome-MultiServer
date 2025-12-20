@@ -1,4 +1,4 @@
-using HomeTools.ChannelID;
+using SSFWServer.ChannelID;
 using System.Collections.Concurrent;
 using System.Xml;
 
@@ -77,11 +77,7 @@ namespace SSFWServer
                                                     }
                                                 }
                                             }
-                                            catch (SceneKeyException)
-                                            {
-                                                // Not Important
-                                            }
-                                            catch (Exception)
+                                            catch
                                             {
                                                 // Not Important
                                             }

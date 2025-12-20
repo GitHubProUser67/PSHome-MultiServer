@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace MultiServerLibrary.Extension
 {
@@ -7,6 +8,12 @@ namespace MultiServerLibrary.Extension
         public static T[] AddElementToArray<T>(this T[] array, T newElement)
         {
             return array.Concat(new[] { newElement }).ToArray();
+        }
+
+        public static T[] RemoveElementFromArray<T>(this T[] array, T elementToRemove)
+        {
+            return array.Where(item => !EqualityComparer<T>.Default.Equals(item, elementToRemove))
+                        .ToArray();
         }
     }
 }

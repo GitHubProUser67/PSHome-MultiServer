@@ -1,8 +1,6 @@
 ﻿// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
-using Tommunism.SoftFloat;
-
 namespace PS2FloatLibrary
 {
     //****************************************************************
@@ -11,20 +9,6 @@ namespace PS2FloatLibrary
     //****************************************************************
     public class BoothMultiplier
     {
-        private static bool _fastMul = true; // Uses an hardware multiply for most of the multiplication (accurate) when set to true.
-
-        public static bool FastMul
-        {
-            get
-            {
-                return _fastMul;
-            }
-            set
-            {
-                _fastMul = value;
-            }
-        }
-
         private struct BoothRecode
         {
             public uint data;
@@ -58,14 +42,8 @@ namespace PS2FloatLibrary
 
         public static ulong MulMantissa(uint a, uint b)
         {
-            ulong full;
-            if (_fastMul)
-                full = (ulong)a * (ulong)b;
-            else
-            {
-                Wallace wallace = new Wallace(a, b);
-                full = Float64.FromBitsUI64(wallace.fs_multiplier).RawMantissa + Float64.FromBitsUI64(wallace.ft_multiplier).RawMantissa;
-            }
+            ulong full = (ulong)a * (ulong)b;
+
             BoothRecode b0 = Booth(a, b, 0);
             BoothRecode b1 = Booth(a, b, 1);
             BoothRecode b2 = Booth(a, b, 2);

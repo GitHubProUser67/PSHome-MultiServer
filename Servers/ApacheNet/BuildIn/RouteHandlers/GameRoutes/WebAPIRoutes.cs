@@ -68,7 +68,8 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
                                     "pshome.ndreams.net",
                                     "www.ndreamshs.com",
                                     "www.ndreamsportal.com",
-                                    "nDreams-multiserver-cdn"
+                                    "nDreams-multiserver-cdn",
+                                    "www.ndreamsgateway.com"
                                 };
 
         private readonly static List<string> HellFireGamesDomains = new()

@@ -7,7 +7,6 @@ using WebAPIService.GameServices.PSHOME.NDREAMS.AnsadaPhone;
 using WebAPIService.GameServices.PSHOME.NDREAMS.Aurora;
 using WebAPIService.GameServices.PSHOME.NDREAMS.BlueprintHome;
 using WebAPIService.GameServices.PSHOME.NDREAMS.Espionage9;
-using WebAPIService.GameServices.PSHOME.NDREAMS.Fubar;
 using WebAPIService.GameServices.PSHOME.NDREAMS.Xi2;
 
 namespace WebAPIService.GameServices.PSHOME.NDREAMS
@@ -49,8 +48,6 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS
                             return AnsadaScoreHandler.ProcessScore(PostData, ContentType);
                         case "/skyhub/espionage.php":
                             return Espionage9Class.ProcessPhpRequest(currentdate, PostData, ContentType, apipath);
-                        case "/fubar/fisi.php":
-                            return fisi.fisiProcess(PostData, ContentType);
                         case "/Teaser/beans.php":
                             return Teaser.ProcessBeans(PostData, ContentType);
                         case "/aurora/visit.php":

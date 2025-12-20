@@ -39,23 +39,43 @@ namespace MultiSocks.Aries.Messages
                 client.QuickJoinTask = Task.Run(() => {
 
                     byte retry = 4;
-                    AriesGame? game;
+                    IEnumerable<AriesGame> MatchingList;
 
                     while (!token.IsCancellationRequested && !client.Disconnected && retry > 0)
                     {
-                        game = mc.Games.GamesSessions.Values.Where(game => !game.Started && !game.Priv && string.IsNullOrEmpty(game.pass) && (game.Users?.Count() + 1) <= game.MaxSize).FirstOrDefault();
+                        MatchingList = mc.Games.GamesSessions.Values.Where(game => !game.Started && !game.Priv && string.IsNullOrEmpty(game.pass) && (game.Users?.Count()) < game.MaxSize);
 
-                        if (game != null)
+                        // A handfull of games does custom filtering on top for specific lobbies fetching.
+                        if ("BURNOUT5".Equals(context.Project))
                         {
-                            game.AddUser(user);
+                            List<AriesGame> filteredBurnoutGames = new List<AriesGame>();
 
-                            user.CurrentGame = game;
+                            foreach (var game in MatchingList)
+                            {
+                                // Friends only.
+                                if (game.GPSHost != null && game.MatchesCustFlags("1", "1") && user.Friends.Contains(game.GPSHost.Username))
+                                    filteredBurnoutGames.Add(game);
+                                // Not private.
+                                else if (!game.MatchesCustFlags("2", "2"))
+                                    filteredBurnoutGames.Add(game);
+                            }
 
-                            client.SendMessage(game.GetGameDetails(_Name));
+                            MatchingList = filteredBurnoutGames;
+                        }
+
+                        AriesGame? filteredGame = MatchingList.FirstOrDefault();
+
+                        if (filteredGame != null)
+                        {
+                            filteredGame.AddUser(user);
+
+                            user.CurrentGame = filteredGame;
+
+                            client.SendMessage(filteredGame.GetGameDetails(_Name));
 
                             user.SendPlusWho(user, context.Project);
 
-                            game.BroadcastPopulation(mc);
+                            filteredGame.BroadcastPopulation(mc);
 
                             return;
                         }

@@ -16,7 +16,7 @@ This tool provides a versatile developer-oriented environment to restore online 
 Local and public server hosting,
 Support for custom content and modding,
 Seemsless integration with the supported platforms,
-Tools for asset handling and databases management,
+Tools for databases management,
 Up to date security standards and backward compatible with a wide range of configurations,
 Open-source and community-driven preservation efforts
 
@@ -132,7 +132,7 @@ It also includes some bonus features such as:
 
 - Built-in PHP support via an integrated PHP-CGI handler, allowing it to execute PHP scripts using latest versions of PHP,
 
-- Dynamic .DLL-based C# plugin system, allowing additional services to be loaded at runtime. Home Laboratory’s HomeWebTools is a great example of this,
+- Dynamic .DLL-based C# plugin system, allowing additional services to be loaded at runtime,
 
 - Flexible redirect engine that mimics the Apache-style redirect system, with support for HTTP status redirects, regex matching, and conditional rewrites,
 

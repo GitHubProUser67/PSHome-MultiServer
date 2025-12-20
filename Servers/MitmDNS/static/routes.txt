@@ -87,6 +87,7 @@ ndreams.stats.s3.amazonaws.com,Redirect,IP
 ndreamshs.com,Redirect,IP
 ndreamsportal.com,Redirect,IP
 nDreams.blueprint.s3.amazonaws.com,Redirect,IP
+ndreamsgateway.com,Redirect,IP
 
 ;Digital Leisure
 root.pshomecasino.com,Redirect,IP

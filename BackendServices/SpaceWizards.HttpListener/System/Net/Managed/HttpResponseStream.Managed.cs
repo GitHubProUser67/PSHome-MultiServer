@@ -32,13 +32,11 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Net.Sockets;
 using System.Text;
-using System.Runtime.ExceptionServices;
-using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
-
+#if NETCOREAPP1_0_OR_GREATER
+using System.Runtime.ExceptionServices;
+#endif
 namespace SpaceWizards.HttpListener
 {
     internal sealed partial class HttpResponseStream : Stream
@@ -316,7 +314,7 @@ namespace SpaceWizards.HttpListener
                     // wrap the whole thing in an HttpListenerException.  This is all to match Windows behavior.
                     if (ex.InnerException is ArgumentException || ex.InnerException is InvalidOperationException)
                     {
-#if NETCORE1_0_OR_GREATER
+#if NETCOREAPP1_0_OR_GREATER
                         ExceptionDispatchInfo.Throw(ex.InnerException);
 #else
                         throw ex.InnerException;

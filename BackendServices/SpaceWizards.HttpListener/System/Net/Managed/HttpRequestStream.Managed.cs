@@ -33,12 +33,9 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
-using System.Net.Sockets;
+#if NETCOREAPP1_0_OR_GREATER
 using System.Runtime.ExceptionServices;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-
+#endif
 namespace SpaceWizards.HttpListener
 {
     internal partial class HttpRequestStream : Stream
@@ -198,7 +195,7 @@ namespace SpaceWizards.HttpListener
             }
             catch (IOException e) when (e.InnerException is ArgumentException || e.InnerException is InvalidOperationException)
             {
-#if NETCORE1_0_OR_GREATER
+#if NETCOREAPP1_0_OR_GREATER
                 ExceptionDispatchInfo.Throw(e.InnerException);
 #else
                 throw e.InnerException;

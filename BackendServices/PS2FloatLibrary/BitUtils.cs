@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 #if NETCOREAPP3_0_OR_GREATER
 using System.Numerics;
 #endif
@@ -19,27 +18,6 @@ namespace PS2FloatLibrary
         };
 #endif
         public static readonly byte[] normalizeAmounts = InitNormalizationTable();
-		
-        public static long CombineTo64Bit(int left, int right)
-        {
-            // Combine left (high 32 bits) and right (low 32 bits) into a single 64-bit signed value
-            return (long)left << 32 | (long)(uint)right;
-        }
-
-        public static ulong ConvertToUInt64(this uint[] array)
-        {
-            if (array.Length != 8)
-                throw new ArgumentException("Array must contain exactly 8 elements.");
-
-            ulong result = 0;
-
-            for (int i = 0; i < 8; i++)
-            {
-                result |= ((ulong)array[i] & byte.MaxValue) << (8 * i);
-            }
-
-            return result;
-        }
 
         /// <summary>
         /// Returns the leading zero count of the given 32-bit integer

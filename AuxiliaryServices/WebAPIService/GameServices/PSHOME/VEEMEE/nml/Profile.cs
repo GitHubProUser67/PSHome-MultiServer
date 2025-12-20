@@ -1,6 +1,5 @@
 using System.IO;
 using MultiServerLibrary.HTTP;
-using CustomLogger;
 using HttpMultipartParser;
 using System.Collections.Specialized;
 using System.Net;
@@ -26,9 +25,6 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.nml
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 					
-					LoggerAccessor.LogInfo($"[VEEMEE] - Verify Details: POSTDATA: \n{Encoding.UTF8.GetString(PostData)}");
-
-
                     ms.Flush();
                 }
 
@@ -49,8 +45,6 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.nml
                 using (MemoryStream ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
-
-                    LoggerAccessor.LogInfo($"[VEEMEE] - Reward POSTDATA: {Encoding.UTF8.GetString(PostData)}");
 
                     ms.Flush();
                 }
@@ -78,12 +72,10 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.nml
 
                     if (File.Exists($"{apiPath}/VEEMEE/nml/User_Data/{psnid}.xml"))
                     {
-
                         // Load the XML string into an XmlDocument
                         XmlDocument xmlDoc = new XmlDocument();
                         xmlDoc.LoadXml($"{File.ReadAllText($"{apiPath}/VEEMEE/nml/User_Data/{psnid}.xml")}");
 
-                        ms.Flush();
                         xmlProfile = xmlDoc.OuterXml;
                     }
                     else
@@ -91,9 +83,6 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.nml
                         string XmlData = $"<profiles>\r\n\t<player psnid_id=\"{RandomNumberGenerator.Create(psnid)}\" />\r\n\t<game game_id=\"{game}\" /><variable name=\"init\" type=\"bool\">false</variable>\r\n</profiles>";
                         File.WriteAllText($"{apiPath}/VEEMEE/nml/User_Data/{psnid}.xml", XmlData);
 
-
-
-                        ms.Flush();
                         xmlProfile = XmlData;
                     }
 
@@ -109,8 +98,6 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.nml
 
             if (ContentType == "application/x-www-form-urlencoded" && PostData != null)
             {
-                LoggerAccessor.LogInfo($"[VEEMEE] SetProfile - PSOTDATA: \n{Encoding.UTF8.GetString(PostData)}");
-
                 var data = HTTPProcessor.ExtractAndSortUrlEncodedPOSTData(PostData);
 
                 string psnid = data["psnid"].First();
@@ -121,11 +108,8 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.nml
 
                 if (File.Exists(apiPath))
                 {
-                    LoggerAccessor.LogInfo("Attempting to load profile xml from API...");
-
                     // Create an XDocument from the XML content
                     XDocument xmlDoc = XDocument.Parse($"{File.ReadAllText(profilePath)}");
-
 
                     // Decode the URL-encoded string
                     string xmlContent = WebUtility.UrlDecode(Encoding.UTF8.GetString(PostData));
@@ -143,14 +127,10 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.nml
                         string guidValue = string.Empty;
                         XmlNodeList XmlNodeList = variableNode.SelectNodes("///value");
                         foreach (XmlNode valueNode in variableNode)
-                        {
                             guidValue = valueNode.Value;
-                        }
 
                         if (name == xmlContent.Contains($"name={name}").ToString())
-                        {
                             variableNode.Attributes["value"].Value = name;
-                        }
                         else // Add new variable
                         {
                             XmlElement newVariable = doc.CreateElement("variable");
@@ -169,14 +149,10 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.nml
                         string guidValue = string.Empty;
                         XmlNodeList XmlNodeList = listNode.SelectNodes("///value");
                         foreach(XmlNode valueNode in listNode)
-                        {
                             guidValue = valueNode.Value;
-                        }
 
                         if (name == xmlContent.Contains($"name={name}").ToString())
-                        {
                             listNode.Attributes["value"].Value = name;
-                        }
                         else // Add new variable
                         {
                             XmlElement newVariable = doc.CreateElement("variable");
@@ -192,8 +168,6 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.nml
                 }
                 else
                 {
-
-                    LoggerAccessor.LogInfo("File does not exist. Creating a new file...");
 
                     // Decode the URL-encoded string
                     string xmlContent = WebUtility.UrlDecode(Encoding.UTF8.GetString(PostData));
@@ -268,7 +242,6 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.nml
 #endif
             // Save the XML to file
             xmlDoc.Save(fileName);
-            LoggerAccessor.LogInfo("New XML file created with the entry.");
             return xmlDoc.OuterXml;
         }
     }

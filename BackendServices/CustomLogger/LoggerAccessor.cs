@@ -95,11 +95,6 @@ namespace CustomLogger
             Logger = factory.CreateLogger(project);
         }
 
-        private static void RenderFiggle(object graffiti, string project)
-        {
-            throw new NotImplementedException();
-        }
-
         private static void RenderFiggle(FiggleFont font, string s, int? smushOverride = null)
         {
             Console.WriteLine(font.Render(s, smushOverride));

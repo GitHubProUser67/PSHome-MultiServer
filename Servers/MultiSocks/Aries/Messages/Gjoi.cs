@@ -38,7 +38,7 @@ namespace MultiSocks.Aries.Messages
 
                     if (game != null)
                     {
-                        if ((game.Users?.Count() + 1) > game.MaxSize)
+                        if ((game.Users?.Count()) >= game.MaxSize)
                             client.SendMessage(new GjoiFull());
                         else
                         {
@@ -63,7 +63,7 @@ namespace MultiSocks.Aries.Messages
 
                     if (game != null)
                     {
-                        if ((game.Users?.Count() + 1) > game.MaxSize)
+                        if ((game.Users?.Count()) >= game.MaxSize)
                             client.SendMessage(new GjoiFull());
                         else
                         {

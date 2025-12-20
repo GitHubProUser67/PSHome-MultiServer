@@ -73,7 +73,7 @@ namespace ApacheNet.Models
                     return await Response.SendChunk(Array.Empty<byte>(), true).ConfigureAwait(false);
                 else
                 {
-                    int bufferSize = bytesLeft > 8000000 && ApacheNetServerConfiguration.BufferSize < 500000 ? 500000 : ApacheNetServerConfiguration.BufferSize;
+                    int bufferSize = ApacheNetServerConfiguration.BufferSize;
 
                     bool isNotlastChunk;
                     byte[] buffer;

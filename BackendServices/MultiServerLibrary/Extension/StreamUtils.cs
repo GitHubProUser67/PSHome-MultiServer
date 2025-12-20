@@ -127,7 +127,7 @@ namespace MultiServerLibrary.Extension
                 {
                     try
                     {
-                        await output.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
+                        await output.WriteAsync(buffer.AsMemory(0, bytesRead), token).ConfigureAwait(false);
                     }
                     catch { }
                 }

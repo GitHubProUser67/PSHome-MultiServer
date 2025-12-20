@@ -32,7 +32,12 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\AuxiliaryServices\HomeTools\HomeTools.csproj" />
+    <Content Include="home_certificates\**\*.*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>  
+  </ItemGroup>
+  
+  <ItemGroup>
     <ProjectReference Include="..\..\BackendServices\MultiServerLibrary\MultiServerLibrary.csproj" />
     <ProjectReference Include="..\..\BackendServices\NetCoreServer\NetCoreServer.csproj" />
 	<ProjectReference Include="..\..\BackendServices\TechnitiumLibrary.Net.Firewall\TechnitiumLibrary.Net.Firewall.csproj" />

@@ -46,17 +46,13 @@ namespace WebAPIService.GameServices.PSHOME.CAPONE
                         }
                     }
 
-                    ms.Flush();
                     return "<xml></xml>";
                 }
                 catch (Exception e)
                 {
                     return $"InternalServerError with exception {e}";
                 }
-
-
             }
-
         }
 
         public static string caponeReportCollectorSubmit(byte[] PostData, string ContentType, string workPath)

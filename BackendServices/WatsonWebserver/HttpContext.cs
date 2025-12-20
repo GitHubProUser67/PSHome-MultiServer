@@ -45,11 +45,13 @@ namespace WatsonWebserver
 
             if (listenerCtx is System.Net.HttpListenerContext nativeCtx)
             {
+                nativeCtx.Response.KeepAlive = settings.IO.EnableKeepAlive;
                 Request = new HttpRequestNative(nativeCtx, serializer);
                 Response = new HttpResponseNative(Request, nativeCtx, settings, events, serializer, KeepAliveResponseData);
             }
             else if (listenerCtx is HttpListenerContext managedCtx)
             {
+                managedCtx.Response.KeepAlive = settings.IO.EnableKeepAlive;
                 Request = new HttpRequest(managedCtx, serializer);
                 Response = new HttpResponse(Request, managedCtx, settings, events, serializer, KeepAliveResponseData);
             }

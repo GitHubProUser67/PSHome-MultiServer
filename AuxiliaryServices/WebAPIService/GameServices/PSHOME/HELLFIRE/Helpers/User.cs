@@ -350,13 +350,23 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
                                     }
                                 }
                                 break;
-                            case "SpendCoins": // UNIMPLEMENTED
+                            case "SpendCoins":
                                 {
-                                    string coinType = data.GetParameterValue("CoinType");
-                                    int NumCoins = (int)double.Parse(data.GetParameterValue("NumCoins"), CultureInfo.InvariantCulture);
+                                    bool isSilverCoin = int.Parse(data.GetParameterValue("CoinType")) == 1;
+                                    double NumCoinsDouble = double.Parse(data.GetParameterValue("NumCoins"), CultureInfo.InvariantCulture);
+                                    int NumCoins = (int)NumCoinsDouble;
                                     string TransParam = data.GetParameterValue("TransParam");
 
-                                    Console.WriteLine(data.GetParameterValue("TransType"));
+                                    if (isSilverCoin)
+                                    {
+                                        var node = doc.SelectSingleNode("//SilverCoins");
+                                        node.InnerText = Math.Max(0, double.Parse(node.InnerText, CultureInfo.InvariantCulture) - NumCoinsDouble).ToString(CultureInfo.InvariantCulture);
+                                    }
+                                    else
+                                    {
+                                        var node = doc.SelectSingleNode("//GoldCoins");
+                                        node.InnerText = Math.Max(0, double.Parse(node.InnerText, CultureInfo.InvariantCulture) - NumCoinsDouble).ToString(CultureInfo.InvariantCulture);
+                                    }
 
                                     switch (data.GetParameterValue("TransType"))
                                     {
@@ -366,8 +376,8 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
                                                 <ResponseCode>Success</ResponseCode>
                                                 <TotalSilver>{doc.SelectSingleNode("//SilverCoins").InnerText}</TotalSilver>
                                                 <TotalGold>{doc.SelectSingleNode("//GoldCoins").InnerText}</TotalGold>
-                                                <SilverSpent>0</SilverSpent>
-                                                <GoldSpent>{NumCoins}</GoldSpent>
+                                                <SilverSpent>{(isSilverCoin ? NumCoins : 0)}</SilverSpent>
+                                                <GoldSpent>{(!isSilverCoin ? NumCoins : 0)}</GoldSpent>
                                                 </Response>";
                                             }
                                         case "BuyBuilding":
@@ -376,8 +386,8 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
                                                 <ResponseCode>Success</ResponseCode>
                                                 <TotalSilver>{doc.SelectSingleNode("//SilverCoins").InnerText}</TotalSilver>
                                                 <TotalGold>{doc.SelectSingleNode("//GoldCoins").InnerText}</TotalGold>
-                                                <SilverSpent>0</SilverSpent>
-                                                <GoldSpent>{NumCoins}</GoldSpent>
+                                                <SilverSpent>{(isSilverCoin ? NumCoins : 0)}</SilverSpent>
+                                                <GoldSpent>{(!isSilverCoin ? NumCoins : 0)}</GoldSpent>
                                                 </Response>";
                                             }
                                         case "BuyWorkers":
@@ -386,8 +396,8 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
                                                 <ResponseCode>Success</ResponseCode>
                                                 <TotalSilver>{doc.SelectSingleNode("//SilverCoins").InnerText}</TotalSilver>
                                                 <TotalGold>{doc.SelectSingleNode("//GoldCoins").InnerText}</TotalGold>
-                                                <SilverSpent>0</SilverSpent>
-                                                <GoldSpent>{NumCoins}</GoldSpent>
+                                                <SilverSpent>{(isSilverCoin ? NumCoins : 0)}</SilverSpent>
+                                                <GoldSpent>{(!isSilverCoin ? NumCoins : 0)}</GoldSpent>
                                                 </Response>";
                                             }
                                         case "BuyVehicle":
@@ -397,8 +407,8 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
                                                 <ResponseCode>Success</ResponseCode>
                                                 <TotalSilver>{doc.SelectSingleNode("//SilverCoins").InnerText}</TotalSilver>
                                                 <TotalGold>{doc.SelectSingleNode("//GoldCoins").InnerText}</TotalGold>
-                                                <SilverSpent>0</SilverSpent>
-                                                <GoldSpent>{NumCoins}</GoldSpent>
+                                                <SilverSpent>{(isSilverCoin ? NumCoins : 0)}</SilverSpent>
+                                                <GoldSpent>{(!isSilverCoin ? NumCoins : 0)}</GoldSpent>
                                                 </Response>";
                                             }
                                         case "BuyExpansion":
@@ -407,8 +417,8 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
                                                 <ResponseCode>Success</ResponseCode>
                                                 <TotalSilver>{doc.SelectSingleNode("//SilverCoins").InnerText}</TotalSilver>
                                                 <TotalGold>{doc.SelectSingleNode("//GoldCoins").InnerText}</TotalGold>
-                                                <SilverSpent>0</SilverSpent>
-                                                <GoldSpent>{NumCoins}</GoldSpent>
+                                                <SilverSpent>{(isSilverCoin ? NumCoins : 0)}</SilverSpent>
+                                                <GoldSpent>{(!isSilverCoin ? NumCoins : 0)}</GoldSpent>
                                                 </Response>";
                                             }
                                         case "BuyDollars":
@@ -417,8 +427,8 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
                                                 <ResponseCode>Success</ResponseCode>
                                                 <TotalSilver>{doc.SelectSingleNode("//SilverCoins").InnerText}</TotalSilver>
                                                 <TotalGold>{doc.SelectSingleNode("//GoldCoins").InnerText}</TotalGold>
-                                                <SilverSpent>0</SilverSpent>
-                                                <GoldSpent>{NumCoins}</GoldSpent>
+                                                <SilverSpent>{(isSilverCoin ? NumCoins : 0)}</SilverSpent>
+                                                <GoldSpent>{(!isSilverCoin ? NumCoins : 0)}</GoldSpent>
                                                 </Response>";
                                             }
                                         case "BuySuburb":
@@ -427,8 +437,8 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
                                                 <ResponseCode>Success</ResponseCode>
                                                 <TotalSilver>{doc.SelectSingleNode("//SilverCoins").InnerText}</TotalSilver>
                                                 <TotalGold>{doc.SelectSingleNode("//GoldCoins").InnerText}</TotalGold>
-                                                <SilverSpent>0</SilverSpent>
-                                                <GoldSpent>{NumCoins}</GoldSpent>
+                                                <SilverSpent>{(isSilverCoin ? NumCoins : 0)}</SilverSpent>
+                                                <GoldSpent>{(!isSilverCoin ? NumCoins : 0)}</GoldSpent>
                                                 </Response>";
                                             }
                                         case "BuyTimeOfDay":
@@ -437,8 +447,8 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
                                                 <ResponseCode>Success</ResponseCode>
                                                 <TotalSilver>{doc.SelectSingleNode("//SilverCoins").InnerText}</TotalSilver>
                                                 <TotalGold>{doc.SelectSingleNode("//GoldCoins").InnerText}</TotalGold>
-                                                <SilverSpent>0</SilverSpent>
-                                                <GoldSpent>{NumCoins}</GoldSpent>
+                                                <SilverSpent>{(isSilverCoin ? NumCoins : 0)}</SilverSpent>
+                                                <GoldSpent>{(!isSilverCoin ? NumCoins : 0)}</GoldSpent>
                                                 </Response>";
                                             }
                                     }

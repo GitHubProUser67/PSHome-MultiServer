@@ -29,7 +29,7 @@ namespace MultiSocks.Aries.Messages
                 string? PLAYERS = GetInputCacheValue("PLAYERS");
 
                 IEnumerable<AriesGame> MatchingList = mc.Games.GamesSessions.Values
-                    .Where(game => !game.Started &&  game.MatchesSysFlags(GetInputCacheValue("SYSFLAGS"), GetInputCacheValue("SYSMASK")) && game.MatchesCustFlags(GetInputCacheValue("CUSTFLAGS"), GetInputCacheValue("CUSTMASK")))
+                    .Where(game => !game.Started &&  game.MatchesSysFlags(GetInputCacheValue("SYSMASK"), GetInputCacheValue("SYSFLAGS")) && game.MatchesCustFlags(GetInputCacheValue("CUSTMASK"), GetInputCacheValue("CUSTFLAGS")))
                     .Skip(start - 1) // Adjusting for 1-based indexing
                     .Take(count);
 
@@ -39,14 +39,29 @@ namespace MultiSocks.Aries.Messages
                 if (!string.IsNullOrEmpty(context.Project))
                 {
                     // A handfull of games does custom filtering on top for specific lobbies fetching.
+                    if ("BURNOUT5".Equals(context.Project))
+                    {
+                        List<AriesGame> filteredBurnoutGames = new List<AriesGame>();
 
-                    if (context.Project.Equals("DPR-09"))
+                        foreach (var game in MatchingList)
+                        {
+                            // Friends only.
+                            if (game.GPSHost != null && game.MatchesCustFlags("1", "1") && user.Friends.Contains(game.GPSHost.Username))
+                                filteredBurnoutGames.Add(game);
+                            // Not private.
+                            else if (!game.MatchesCustFlags("2", "2"))
+                                filteredBurnoutGames.Add(game);
+                        }
+
+                        MatchingList = filteredBurnoutGames;
+                    }
+                    else if ("DPR-09".Equals(context.Project))
                     {
                         string? LANG = GetInputCacheValue("LANG");
                         if (!string.IsNullOrEmpty(LANG) && LANG != "-1")
                             MatchingList = MatchingList.Where(game => game.Params.Contains($"LANG%3d{LANG}") && game.Params.Contains($"VER%3d{GetInputCacheValue("VER")}"));
                     }
-                    else if (context.Project.Equals("NASCAR09") && context.SKU == "PS3")
+                    else if ("NASCAR09".Equals(context.Project) && context.SKU == "PS3")
                     {
                         List<AriesGame> filteredNascarGames = new List<AriesGame>();
 

@@ -233,7 +233,8 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 luaTable.Add(i, new Dictionary<string, object>
                 {
                     { "[\"user\"]", $"\"{entry.PsnId}\"" },
-                    { "[\"score\"]", $"{entry.Score}" }
+                    { "[\"score\"]", $"{entry.Score}" },
+                    { "[\"rank\"]", $"{i}" }
                 });
 
                 if (entry.PsnId == user)
@@ -262,7 +263,8 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 luaTable.Add(i, new Dictionary<string, object>
                 {
                     { "[\"user\"]", $"\"{entry.PsnId}\"" },
-                    { "[\"score\"]", $"{entry.Score}" }
+                    { "[\"score\"]", $"{entry.Score}" },
+                    { "[\"rank\"]", $"{i}" }
                 });
 
                 if (entry.PsnId == user)
@@ -291,7 +293,8 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 luaTable.Add(i, new Dictionary<string, object>
                 {
                     { "[\"user\"]", $"\"{entry.PsnId}\"" },
-                    { "[\"score\"]", $"{entry.Score}" }
+                    { "[\"score\"]", $"{entry.Score}" },
+                    { "[\"rank\"]", $"{i}" }
                 });
 
                 if (entry.PsnId == user)
@@ -320,7 +323,8 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 luaTable.Add(i, new Dictionary<string, object>
                 {
                     { "[\"user\"]", $"\"{entry.PsnId}\"" },
-                    { "[\"score\"]", $"{entry.Score}" }
+                    { "[\"score\"]", $"{entry.Score}" },
+                    { "[\"rank\"]", $"{i}" }
                 });
 
                 if (entry.PsnId == user)

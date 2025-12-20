@@ -154,9 +154,15 @@ LoggerAccessor.LogError($"[MLS] - Client {clientChannel.RemoteAddress} attemptin
                                     {
                                         ApplicationId = appid,
                                     };
-                                    data.ClientObject.OnConnected();
                                     data.ClientObject.SetIp(clientIP);
                                 }
+                                else
+                                {
+                                    data.ClientObject.MediusVersion = scertClient.MediusVersion ?? 0;
+                                    data.ClientObject.ApplicationId = appid;
+                                }
+
+                                data.ClientObject.OnConnected();
 
                                 // get client ip
                                 IPAddress clientIp = data.ClientObject.IP;
@@ -6489,19 +6495,18 @@ LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {world
                                        && (!MediusClass.Settings.PlaystationHomeUsersServersAccessList.ContainsKey(HomeUserEntry)
                                            || string.IsNullOrEmpty(MediusClass.Settings.PlaystationHomeUsersServersAccessList[HomeUserEntry])
                                            || (MediusClass.Settings.PlaystationHomeUsersServersAccessList[HomeUserEntry] != "ADMIN")))
-                                    _ = Parallel.ForEachAsync(
-                                        homeAntiCheatPlugin.ProcessAntiCheatRequest(data.ClientObject, HomeUserEntry),
-                                        (requestParameters, cancellationToken) =>
-                                        {
-                                            CheatQuery(
+                                {
+                                    foreach (var requestParameters in homeAntiCheatPlugin.ProcessAntiCheatRequest(data.ClientObject, HomeUserEntry))
+                                    {
+                                        CheatQuery(
                                                 requestParameters.Item1,
                                                 requestParameters.Item2,
                                                 clientChannel,
                                                 requestParameters.Item3,
                                                 requestParameters.Item4
                                             );
-                                            return ValueTask.CompletedTask;
-                                        });
+                                    }
+                                }
                             }
 
                             await data.ClientObject.CurrentGame.OnWorldReport(worldReport, data.ClientObject.ApplicationId);

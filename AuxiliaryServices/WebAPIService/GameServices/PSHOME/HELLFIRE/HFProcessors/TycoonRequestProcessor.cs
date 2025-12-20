@@ -121,7 +121,6 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                     {
                         // Not Important.
                     }
-                    ms.Flush();
                 }
 
                 if (!string.IsNullOrEmpty(Command))
@@ -133,6 +132,10 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
 #if DEBUG
                     LoggerAccessor.LogInfo($"[TycoonRequestProcessor] - Client issued command:{Command}.");
 #endif
+
+                    // Ensure the town Instance lookup is initialized before doing anything.
+                    TownInstance.EnsureIndexLoadedAsync(WorkPath).Wait();
+
                     switch (Command)
                     {
                         case "VersionCheck":
@@ -867,6 +870,22 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                                     </SCEE>
                                     <SCEJ type=""table"">
                                         <UUID>F7C99A22-80904B69-95754823-CC2051F8</UUID>
+                                    </SCEJ>
+                                </Reward>
+								
+								<Reward>
+                                    <Name>Traffic_Cone_Hat</Name>
+                                    <SCEA type=""table"">
+                                        <UUID>763AE6B4-9F954624-B9A3ED23-9E008FBA</UUID>
+										<UUID>6D256C0C-6C9D445C-A2BA531E-C6602A11</UUID>
+                                    </SCEA>
+                                    <SCEE type=""table"">
+                                        <UUID>763AE6B4-9F954624-B9A3ED23-9E008FBA</UUID>
+										<UUID>6D256C0C-6C9D445C-A2BA531E-C6602A11</UUID>
+                                    </SCEE>
+                                    <SCEJ type=""table"">
+                                        <UUID>763AE6B4-9F954624-B9A3ED23-9E008FBA</UUID>
+										<UUID>6D256C0C-6C9D445C-A2BA531E-C6602A11</UUID>
                                     </SCEJ>
                                 </Reward>
 

@@ -13,15 +13,10 @@ namespace WebAPIService.GameServices.PSHOME.CDM
             string filePath = $"{pubListPath}/list.xml";
             if (File.Exists(filePath))
             {
-                LoggerAccessor.LogInfo($"[CDM] - Publisher List found and sent!");
-                string res = File.ReadAllText(filePath);
-
-                string resourceXML = "<xml>\r\n\t" +
+                return "<xml>\r\n\t" +
                     "<status>success</status>\r\n" +
-                    $"{res}\r\n" +
+                    $"{File.ReadAllText(filePath)}\r\n" +
                     "</xml>";
-
-                return resourceXML;
             }
             else
                 LoggerAccessor.LogError($"[CDM] - Failed to find publisher list with expected path {filePath}!");

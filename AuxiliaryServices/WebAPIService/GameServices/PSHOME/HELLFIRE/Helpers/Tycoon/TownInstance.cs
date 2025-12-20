@@ -4,18 +4,26 @@ using MultiServerLibrary.Extension;
 using NetHasher;
 using NetHasher.CRC;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Xml;
 using WebAPIService.GameServices.PSHOME.HELLFIRE.Entities.HomeTycoon;
-using WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers;
 
 namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Tycoon
 {
     internal class TownInstance
     {
         private static object _Lock = new object();
+
+        // Instance index: InstanceID -> (TownName, UserID)
+        private static readonly ConcurrentDictionary<string, (string townName, string userId)> InstanceIndex
+        = new ConcurrentDictionary<string, (string, string)>();
+
+        private static int _indexInitialized = 0;
 
         public const ushort gridSize = 256;
 
@@ -152,6 +160,8 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Tycoon
                 File.WriteAllText(profilePath,
                     doc.DocumentElement.InnerXml.Replace("<root>", string.Empty).Replace("</root>", string.Empty));
 
+                InstanceIndex[InstanceID] = (TownName, UserID);
+
                 return InstanceID;
             }
             catch (Exception ex)
@@ -218,6 +228,8 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Tycoon
                     File.WriteAllText(profilePath,
                     doc.DocumentElement.InnerXml.Replace("<root>", string.Empty).Replace("</root>", string.Empty));
 
+                    InstanceIndex[InstanceID] = (newTownName, UserID);
+
                     return $"<Response><TownID>{TownID}</TownID></Response>";
                 }
             }
@@ -272,10 +284,20 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Tycoon
 
         public static (string, string)? RequestTownNameByInstanceID(string InstanceID, string WorkPath)
         {
+            if (InstanceIndex.ContainsKey(InstanceID))
+                return InstanceIndex[InstanceID];
+            
+            return null;
+        }
+
+        private static void PrepareInitialTownNameByInstanceIDLookup(string WorkPath)
+        {
             string searchDir = $"{WorkPath}/HomeTycoon/User_Data";
 
             try
             {
+                Directory.CreateDirectory(searchDir);
+
                 var doc = new XmlDocument();
 
                 lock (_Lock)
@@ -292,11 +314,11 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Tycoon
                                 foreach (XmlNode townNode in townsNode.ChildNodes)
                                 {
                                     var instanceNode = townNode.SelectSingleNode("InstanceID");
-                                    if (instanceNode != null && instanceNode.InnerText == InstanceID)
+                                    if (instanceNode != null)
                                     {
                                         var nameNode = townNode.SelectSingleNode("Name");
                                         if (nameNode != null)
-                                            return (nameNode.InnerText, Path.GetFileName(Path.GetDirectoryName(profilePath)));
+                                            InstanceIndex[instanceNode.InnerText] = (nameNode.InnerText, Path.GetFileName(Path.GetDirectoryName(profilePath)));
                                     }
                                 }
                             }
@@ -306,10 +328,14 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Tycoon
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[TownInstance] - RequestTownName: An assertion was thrown while grabbing user Cities name. (Exception:{ex})");
+                LoggerAccessor.LogError($"[TownInstance] - PrepareInitialTownNameByInstanceIDLookup: An assertion was thrown while grabbing user Cities name. (Exception:{ex})");
             }
+        }
 
-            return null;
+        public static async Task EnsureIndexLoadedAsync(string WorkPath)
+        {
+            if (Interlocked.CompareExchange(ref _indexInitialized, 1, 0) == 0)
+                await Task.Run(() => PrepareInitialTownNameByInstanceIDLookup(WorkPath)).ConfigureAwait(false);
         }
 
         public static string RequestTowns(byte[] PostData, string boundary, string UserID, string DisplayName, string WorkPath)

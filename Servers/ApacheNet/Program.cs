@@ -1,13 +1,3 @@
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
-using System.Net;
-using System.Reflection;
-using System.Runtime;
-using System.Security.Cryptography;
-using System.Threading;
-using System.Threading.Tasks;
 using ApacheNet;
 using ApacheNet.PluginManager;
 using CustomLogger;
@@ -18,6 +8,17 @@ using MultiServerLibrary.GeoLocalization;
 using MultiServerLibrary.HTTP;
 using MultiServerLibrary.SNMP;
 using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Reflection;
+using System.Runtime;
+using System.Security.Authentication;
+using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
 
 public static class ApacheNetServerConfiguration
 {
@@ -34,20 +35,28 @@ public static class ApacheNetServerConfiguration
     public static string HttpVersion { get; set; } = "1.1";
     public static string APIStaticFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/wwwapiroot";
     public static string HTTPStaticFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/wwwroot";
-    public static string HTTPSPutFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/wwwtemp";
     public static string MediaConvertersFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/MediaConverters";
     public static string ASPNETRedirectUrl { get; set; } = string.Empty;
-    public static string PHPRedirectUrl { get; set; } = string.Empty;
-    public static string PHPVersion { get; set; } = "xampp";
+    public static string PHPVersion { get; set; } = "8.4.6";
     public static string PHPStaticFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/PHP";
     public static bool PHPDebugErrors { get; set; } = false;
+    public static int PHPTimeoutMilliseconds { get; set; } = 60000;
+    public static int SslVersions { get; set; } = (int)(
+#pragma warning disable
+#if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+
+            SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13
+#else
+            SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12
+#endif
+#pragma warning restore
+    );
     public static int BufferSize { get; set; } = 4096;
     public static string HTTPSCertificateFile { get; set; } = $"{Directory.GetCurrentDirectory()}/static/SSL/MultiServer.pfx";
     public static string HTTPSCertificatePassword { get; set; } = "qwerty";
     public static HashAlgorithmName HTTPSCertificateHashingAlgorithm { get; set; } = HashAlgorithmName.SHA384;
     public static bool RangeHandling { get; set; } = false;
     public static bool ChunkedTransfers { get; set; } = false;
-    public static bool NestedDirectoryReporting { get; set; } = false;
     public static bool NotFoundWebArchive { get; set; } = false;
     public static int NotFoundWebArchiveDateLimit { get; set; } = 0;
     public static bool EnableHTTPCompression { get; set; } = false;
@@ -115,7 +124,8 @@ public static class ApacheNetServerConfiguration
             "nDreams-multiserver-cdn",
             "secure.cpreprod.homeps3.online.scee.com",
             "secure.heavyh2o.net",
-            "game.hellfiregames.com"
+            "game.hellfiregames.com",
+            "www.ndreamsgateway.com"
         };
     public static List<ushort>? Ports { get; set; } = new() { NetworkPorts.Http.Tcp, NetworkPorts.Http.Ssl, 3074, 3658, 9090, 10010, 26004, 33000 };
     public static List<string>? RedirectRules { get; set; }
@@ -140,7 +150,7 @@ public static class ApacheNetServerConfiguration
 
             // Write the JObject to a file
             File.WriteAllText(configPath, new JObject(
-                new JProperty("config_version", (ushort)4),
+                new JProperty("config_version", (ushort)6),
                 new JProperty("doh_enabled", DNSOverEthernetEnabled),
                 new JProperty("online_routes_config", DNSOnlineConfig),
                 new JProperty("routes_config", DNSConfig),
@@ -151,25 +161,24 @@ public static class ApacheNetServerConfiguration
                 new JProperty("enable_keep_alive", EnableKeepAlive),
                 new JProperty("aspnet_redirect_url", ASPNETRedirectUrl),
                 new JProperty("php", new JObject(
-                    new JProperty("redirect_url", PHPRedirectUrl),
                     new JProperty("version", PHPVersion),
                     new JProperty("static_folder", PHPStaticFolder),
-                    new JProperty("debug_errors", PHPDebugErrors)
+                    new JProperty("debug_errors", PHPDebugErrors),
+                    new JProperty("timeout_milliseconds", PHPTimeoutMilliseconds)
                 )),
                 new JProperty("api_static_folder", APIStaticFolder),
                 new JProperty("https_static_folder", HTTPStaticFolder),
-                new JProperty("https_put_folder", HTTPSPutFolder),
                 new JProperty("http_version", HttpVersion),
                 SerializeMimeTypes(),
                 new JProperty("https_dns_list", HTTPSDNSList ?? Array.Empty<string>()),
                 new JProperty("media_converters_folder", MediaConvertersFolder),
+                new JProperty("ssl_versions", SslVersions),
                 new JProperty("buffer_size", BufferSize),
                 new JProperty("certificate_file", HTTPSCertificateFile),
                 new JProperty("certificate_password", HTTPSCertificatePassword),
                 new JProperty("certificate_hashing_algorithm", HTTPSCertificateHashingAlgorithm.Name),
                 new JProperty("default_plugins_port", DefaultPluginsPort),
                 new JProperty("plugins_folder", PluginsFolder),
-                new JProperty("nested_directory_reporting", NestedDirectoryReporting),
                 new JProperty("404_not_found_web_archive", NotFoundWebArchive),
                 new JProperty("404_not_found_web_archive_date_limit", NotFoundWebArchiveDateLimit),
                 new JProperty("enable_range_handling", RangeHandling),
@@ -203,13 +212,15 @@ public static class ApacheNetServerConfiguration
                 EnableKeepAlive = GetValueOrDefault(config, "enable_keep_alive", EnableKeepAlive);
                 APIStaticFolder = GetValueOrDefault(config, "api_static_folder", APIStaticFolder);
                 ASPNETRedirectUrl = GetValueOrDefault(config, "aspnet_redirect_url", ASPNETRedirectUrl);
-                PHPRedirectUrl = GetValueOrDefault(config.php, "redirect_url", PHPRedirectUrl);
                 PHPVersion = GetValueOrDefault(config.php, "version", PHPVersion);
                 PHPStaticFolder = GetValueOrDefault(config.php, "static_folder", PHPStaticFolder);
                 PHPDebugErrors = GetValueOrDefault(config.php, "debug_errors", PHPDebugErrors);
+                if (config_version > 5)
+                    PHPTimeoutMilliseconds = GetValueOrDefault(config.php, "timeout_milliseconds", PHPTimeoutMilliseconds);
                 HTTPStaticFolder = GetValueOrDefault(config, "https_static_folder", HTTPStaticFolder);
-                HTTPSPutFolder = GetValueOrDefault(config, "https_put_folder", HTTPSPutFolder);
                 BufferSize = GetValueOrDefault(config, "buffer_size", BufferSize);
+                if (config_version > 4)
+                    SslVersions = GetValueOrDefault(config, "ssl_versions", SslVersions);
                 HttpVersion = GetValueOrDefault(config, "http_version", HttpVersion);
                 if (config_version < 3)
                     MediaConvertersFolder = GetValueOrDefault(config, "converters_folder", MediaConvertersFolder);
@@ -224,7 +235,6 @@ public static class ApacheNetServerConfiguration
                 HTTPSCertificatePassword = GetValueOrDefault(config, "certificate_password", HTTPSCertificatePassword);
                 HTTPSCertificateHashingAlgorithm = new HashAlgorithmName(GetValueOrDefault(config, "certificate_hashing_algorithm", HTTPSCertificateHashingAlgorithm.Name));
                 PluginsFolder = GetValueOrDefault(config, "plugins_folder", PluginsFolder);
-                NestedDirectoryReporting = GetValueOrDefault(config, "nested_directory_reporting", NestedDirectoryReporting);
                 DefaultPluginsPort = GetValueOrDefault(config, "default_plugins_port", DefaultPluginsPort);
                 NotFoundWebArchive = GetValueOrDefault(config, "404_not_found_web_archive", NotFoundWebArchive);
                 NotFoundWebArchiveDateLimit = GetValueOrDefault(config, "404_not_found_web_archive_date_limit", NotFoundWebArchiveDateLimit);
@@ -446,11 +456,15 @@ class Program
 
     private static void WarmUpServers()
     {
+        int i = 0;
+
+        int[] tasksDispatch = ProcessUtils.AssignCoresToTasks(ApacheNetServerConfiguration.Ports!.Count);
+
         HTTPBag = new();
 
         lock (HTTPBag)
         {
-            foreach (ushort port in ApacheNetServerConfiguration.Ports!)
+            foreach (ushort port in ApacheNetServerConfiguration.Ports)
             {
                 HTTPBag.Add(new ApacheNetProcessor(
                     ApacheNetServerConfiguration.HTTPSCertificateFile,
@@ -458,7 +472,9 @@ class Program
                     "*",
                     port,
                     port.ToString().EndsWith("443"),
-                    Environment.ProcessorCount));
+                    tasksDispatch[i]));
+
+                i++;
             }
         }
     }
@@ -557,7 +573,31 @@ class Program
 #endif
             }
         }
+#if false
+        LoggerAccessor.RegisterPostLogAction(LogLevel.Information, (msg, args) =>
+        {
+            Console.WriteLine($"[RessourcesLogger] - CPU Usage: {RessourcesLoggerWin32.GetCurrentCpuUsage():0.00}%");
+        });
 
+        LoggerAccessor.RegisterPostLogAction(LogLevel.Warning, (msg, args) =>
+        {
+            Console.WriteLine($"[RessourcesLogger] - CPU Usage: {RessourcesLoggerWin32.GetCurrentCpuUsage():0.00}%");
+        });
+
+        LoggerAccessor.RegisterPostLogAction(LogLevel.Error, (msg, args) =>
+        {
+            Console.WriteLine($"[RessourcesLogger] - CPU Usage: {RessourcesLoggerWin32.GetCurrentCpuUsage():0.00}%");
+        });
+
+        LoggerAccessor.RegisterPostLogAction(LogLevel.Critical, (msg, args) =>
+        {
+            Console.WriteLine($"[RessourcesLogger] - CPU Usage: {RessourcesLoggerWin32.GetCurrentCpuUsage():0.00}%");
+        });
+        LoggerAccessor.RegisterPostLogAction(LogLevel.Debug, (msg, args) =>
+        {
+            Console.WriteLine($"[RessourcesLogger] - CPU Usage: {RessourcesLoggerWin32.GetCurrentCpuUsage():0.00}%");
+        });
+#endif
         ApacheNetServerConfiguration.RefreshVariables(configPath);
 
         StartOrUpdateServer();

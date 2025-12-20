@@ -530,8 +530,7 @@ namespace WatsonWebserver
                 {
                     if (stream != null && stream.CanRead)
                     {
-                        // We override the bufferSize for large content, else, we murder the CPU.
-                        int bufferSize = ContentLength > 8000000 && _Settings.IO.StreamBufferSize < 500000 ? 500000 : _Settings.IO.StreamBufferSize;
+                        int bufferSize = _Settings.IO.StreamBufferSize;
 
                         // Some clients might cut the connection while the data is being copied, this is expected, so we simply ignore failed writes.
                         if (ContentLength > 0)

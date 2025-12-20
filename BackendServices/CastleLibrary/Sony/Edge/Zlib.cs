@@ -21,11 +21,11 @@ namespace CastleLibrary.Sony.Edge
 
                 using (MemoryStream memoryStream = new MemoryStream(inData))
                 {
-                    byte[] array = new byte[ChunkHeader.SizeOf];
+                    byte[] array = new byte[ZlibChunkHeader.sizeOf];
                     while (memoryStream.Position < memoryStream.Length)
                     {
                         memoryStream.Read(array, 0, array.Length);
-                        ChunkHeader header = ChunkHeader.FromBytes(EndianUtils.EndianSwap(array));
+                        ZlibChunkHeader header = ZlibChunkHeader.FromBytes(EndianUtils.EndianSwap(array));
                         int compressedSize = header.CompressedSize;
                         byte[] array2 = new byte[compressedSize];
                         memoryStream.Read(array2, 0, compressedSize);
@@ -78,7 +78,7 @@ namespace CastleLibrary.Sony.Edge
             }).GetAwaiter().GetResult(); // Keep the exception handling intact for backward compatibility.
         }
 
-        private static async Task<byte[]> DecompressEdgeZlibChunk(byte[] InData, ChunkHeader header)
+        private static async Task<byte[]> DecompressEdgeZlibChunk(byte[] InData, ZlibChunkHeader header)
         {
             await zlibSema.WaitAsync().ConfigureAwait(false);
 
@@ -125,62 +125,16 @@ namespace CastleLibrary.Sony.Edge
                     compressedData = zlibPayload;
                 byte[] finalOuput = new byte[compressedData.Length + 4];
                 Array.Copy(compressedData, 0, finalOuput, 4, compressedData.Length);
-                ChunkHeader chunkHeader = default;
+                ZlibChunkHeader chunkHeader = default;
                 chunkHeader.SourceSize = (ushort)InData.Length;
                 chunkHeader.CompressedSize = (ushort)compressedData.Length;
-                Array.Copy(EndianUtils.EndianSwap(chunkHeader.GetBytes()), 0, finalOuput, 0, ChunkHeader.SizeOf);
+                Array.Copy(EndianUtils.EndianSwap(chunkHeader.GetBytes()), 0, finalOuput, 0, ZlibChunkHeader.sizeOf);
                 return finalOuput;
             }
             finally
             {
                 zlibSema.Release();
             }
-        }
-
-        internal struct ChunkHeader
-        {
-#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
-            internal readonly byte[] GetBytes()
-#else
-            internal byte[] GetBytes()
-#endif
-            {
-                byte[] array = new byte[4];
-                Array.Copy(BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUshort(SourceSize) : SourceSize), 0, array, 2, 2);
-                Array.Copy(BitConverter.GetBytes(!BitConverter.IsLittleEndian ? EndianUtils.ReverseUshort(CompressedSize) : CompressedSize), 0, array, 0, 2);
-                return array;
-            }
-
-            internal static byte SizeOf
-            {
-                get
-                {
-                    return 4;
-                }
-            }
-
-            internal static ChunkHeader FromBytes(byte[] inData)
-            {
-                ChunkHeader result = default;
-                byte[] array = inData;
-
-                if (inData.Length > SizeOf)
-                {
-                    array = new byte[4];
-                    Array.Copy(inData, array, 4);
-                }
-
-                if (!BitConverter.IsLittleEndian)
-                    Array.Reverse(array);
-
-                result.SourceSize = BitConverter.ToUInt16(array, 2);
-                result.CompressedSize = BitConverter.ToUInt16(array, 0);
-                return result;
-            }
-
-            internal ushort SourceSize;
-
-            internal ushort CompressedSize;
         }
     }
 }

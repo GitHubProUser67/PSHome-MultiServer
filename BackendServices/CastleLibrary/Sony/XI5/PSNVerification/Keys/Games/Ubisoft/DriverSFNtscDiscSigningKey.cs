@@ -1,0 +1,8 @@
+﻿namespace CastleLibrary.Sony.XI5.PSNVerification.Keys.Games.Ubisoft
+{
+    public class DriverSFNtscDiscSigningKey : PsnLegacyPublicSigningKey
+    {
+        public override string Xhex => "f2a4ae0d8815740e0d8e7a6c50a30ca539658f07c3d49192";
+        public override string Yhex => "643fa0e449b98c20d6cf97af3a7639e8ba1c95c78bf78588";
+    }
+}

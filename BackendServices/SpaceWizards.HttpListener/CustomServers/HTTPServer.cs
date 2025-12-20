@@ -1,11 +1,12 @@
-﻿using System;
+﻿using CustomLogger;
+using MultiServerLibrary;
+using MultiServerLibrary.Extension;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using CustomLogger;
-using MultiServerLibrary;
 
 namespace SpaceWizards.HttpListener.CustomServers
 {
@@ -57,7 +58,7 @@ namespace SpaceWizards.HttpListener.CustomServers
                 {
                     ushort port = portConfig.Key;
 
-                    if (MultiServerLibrary.Extension.TcpUdpUtils.IsTCPPortAvailable(port))
+                    if (TcpUdpUtils.IsTCPPortAvailable(port))
                         StartListener(portConfig, maxConcurrentListeners, onPrepareListener, onInitalizedListener, onUpdate, onPacketReceived);
                     else
                         LoggerAccessor.LogError($"[HTTP Server] - Port:{port} is not available, skipping...");
@@ -178,7 +179,7 @@ namespace SpaceWizards.HttpListener.CustomServers
             _listeners.Add(listener);
             LoggerAccessor.LogInfo($"[HTTP Server] - Listening on port {port}...");
 
-            _AcceptConnections.Add(Task.Run(() => AcceptConnections(port, maxConcurrentListeners, listener, onUpdate, onPacketReceived, _cts.Token), _cts.Token));
+            _AcceptConnections.Add(Task.Factory.StartNew(() => AcceptConnections(port, maxConcurrentListeners, listener, onUpdate, onPacketReceived, _cts.Token), TaskCreationOptions.LongRunning));
         }
 
         private void StartHttpSysListener(KeyValuePair<ushort, bool> portConfiguration, int maxConcurrentListeners, Action<ushort, object> onPrepareListener, Action<ushort, object> onInitalizedListener, Func<ushort, bool> onUpdate, Action<ushort, object, IPEndPoint> onPacketReceived)
@@ -206,7 +207,7 @@ namespace SpaceWizards.HttpListener.CustomServers
             _listeners.Add(listener);
             LoggerAccessor.LogInfo($"[HTTPsys Server] - Listening on port {port}...");
 
-            _AcceptConnections.Add(Task.Run(() => AcceptHttpSysConnections(port, maxConcurrentListeners, listener, onUpdate, onPacketReceived, _cts.Token), _cts.Token));
+            _AcceptConnections.Add(Task.Factory.StartNew(() => AcceptHttpSysConnections(port, maxConcurrentListeners, listener, onUpdate, onPacketReceived, _cts.Token), TaskCreationOptions.LongRunning));
         }
 
         private Task AcceptConnections(
@@ -225,7 +226,7 @@ namespace SpaceWizards.HttpListener.CustomServers
                 {
                     if (onUpdate == null || onUpdate.Invoke(port))
                     {
-                        while (ClientTasks.Count < maxConcurrentListeners) //Maximum number of concurrent listeners
+                        while (ClientTasks.Count < maxConcurrentListeners) // Maximum number of concurrent listeners
                             ClientTasks.Add(Task.Run(async () =>
                             {
                                 HttpListenerContext ctx = null;
@@ -278,9 +279,13 @@ namespace SpaceWizards.HttpListener.CustomServers
                             }, token));
                     }
 
-                    int RemoveAtIndex = Task.WaitAny(ClientTasks.ToArray(), 500, token); //Synchronously Waits up 500ms for any Task completion
-                    if (RemoveAtIndex != -1) //Remove the completed task from the list
+                    int RemoveAtIndex = Task.WaitAny(ClientTasks.ToArray(), ProcessUtils.CustomServersLoopWaitTimeMs, token); // Synchronously Waits up for any Task completion
+                    if (RemoveAtIndex != -1) // Remove the completed task from the list and burn a very few cycles to not burn our CPU.
+                    {
                         ClientTasks.RemoveAt(RemoveAtIndex);
+
+                        Thread.Sleep(1);
+                    }
                 }
             }
             catch (TaskCanceledException)
@@ -315,7 +320,7 @@ namespace SpaceWizards.HttpListener.CustomServers
                 {
                     if (onUpdate == null || onUpdate.Invoke(port))
                     {
-                        while (ClientTasks.Count < maxConcurrentListeners) //Maximum number of concurrent listeners
+                        while (ClientTasks.Count < maxConcurrentListeners) // Maximum number of concurrent listeners
                             ClientTasks.Add(Task.Run(async () =>
                             {
                                 System.Net.HttpListenerContext ctx = null;
@@ -368,9 +373,13 @@ namespace SpaceWizards.HttpListener.CustomServers
                             }, token));
                     }
 
-                    int RemoveAtIndex = Task.WaitAny(ClientTasks.ToArray(), 500, token); //Synchronously Waits up 500ms for any Task completion
-                    if (RemoveAtIndex != -1) //Remove the completed task from the list
+                    int RemoveAtIndex = Task.WaitAny(ClientTasks.ToArray(), ProcessUtils.CustomServersLoopWaitTimeMs, token); // Synchronously Waits up for any Task completion
+                    if (RemoveAtIndex != -1) // Remove the completed task from the list and burn a very few cycles to not burn our CPU.
+                    {
                         ClientTasks.RemoveAt(RemoveAtIndex);
+
+                        Thread.Sleep(1);
+                    }
                 }
             }
             catch (TaskCanceledException)

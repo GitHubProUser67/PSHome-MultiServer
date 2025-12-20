@@ -1,4 +1,5 @@
 ﻿using CustomLogger;
+using MultiServerLibrary.Extension;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -109,7 +110,7 @@ namespace MultiServerLibrary.CustomServers
             _listeners.Add(listener);
             LoggerAccessor.LogInfo($"[UDP Server] - Listening on port {port}...");
 
-            _AcceptConnections.Add(Task.Run(() => AcceptConnections(port, maxConcurrentListeners, listener, onUpdate, onPacketReceived, _cts.Token), _cts.Token));
+            _AcceptConnections.Add(Task.Factory.StartNew(() => AcceptConnections(port, maxConcurrentListeners, listener, onUpdate, onPacketReceived, _cts.Token), TaskCreationOptions.LongRunning));
         }
 
         private Task AcceptConnections(
@@ -227,7 +228,7 @@ namespace MultiServerLibrary.CustomServers
                     {
                         onUpdate?.Invoke(port);
 
-                        while (ClientTasks.Count < maxConcurrentListeners) //Maximum number of concurrent listeners
+                        while (ClientTasks.Count < maxConcurrentListeners) // Maximum number of concurrent listeners
                             ClientTasks.Add(Task.Run(async () =>
                             {
                                 UdpReceiveResult result = default;
@@ -303,9 +304,13 @@ namespace MultiServerLibrary.CustomServers
                                 }
                             }, token));
 
-                        int RemoveAtIndex = Task.WaitAny(ClientTasks.ToArray(), 500, token); //Synchronously Waits up 500ms for any Task completion
-                        if (RemoveAtIndex != -1) //Remove the completed task from the list
+                        int RemoveAtIndex = Task.WaitAny(ClientTasks.ToArray(), ProcessUtils.CustomServersLoopWaitTimeMs, token); // Synchronously Waits up for any Task completion
+                        if (RemoveAtIndex != -1) // Remove the completed task from the list and burn a very few cycles to not burn our CPU.
+                        {
                             ClientTasks.RemoveAt(RemoveAtIndex);
+
+                            Thread.Sleep(1);
+                        }
                     }
                 }
                 catch (TaskCanceledException)

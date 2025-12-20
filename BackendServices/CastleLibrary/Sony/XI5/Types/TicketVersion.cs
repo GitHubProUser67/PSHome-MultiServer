@@ -5,10 +5,10 @@
         public byte Major { get; }
         public byte Minor { get; }
 
-        internal TicketVersion(byte major, byte minor)
+        internal TicketVersion(ushort val)
         {
-            Major = major;
-            Minor = minor;
+            Major = (byte)(((byte)(val >> 8)) >> 4);
+            Minor = (byte)(val & byte.MaxValue);
         }
 
         public override string ToString()

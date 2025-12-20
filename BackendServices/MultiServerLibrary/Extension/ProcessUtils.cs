@@ -7,24 +7,63 @@ namespace MultiServerLibrary.Extension
 {
     public static class ProcessUtils
     {
+        public const int CustomServersLoopWaitTimeMs = 500; // Defines for how many ms we are awaiting a task result in the async loops.
+
+        public static int[] AssignCoresToTasks(int taskCount)
+        {
+            if (taskCount <= 0)
+                return Array.Empty<int>();
+
+            int cores = Environment.ProcessorCount;
+
+            int baseCores = cores / taskCount; // floor
+            int remainder = cores % taskCount; // leftover cores
+
+            int[] result = new int[taskCount];
+
+            for (int i = 0; i < taskCount; i++)
+            {
+                result[i] = baseCores;
+
+                // Spread the remainder across the first tasks
+                if (i < remainder)
+                    result[i] += 1;
+
+                // Ensure each task has at least 1 core
+                if (result[i] < 1)
+                    result[i] = 1;
+            }
+
+            return result;
+        }
+
         /// <summary>
         /// Check a process for idle state (long period of no CPU load) and kill if it's idle.
         /// </summary>
-        /// <param name="Proc">The process.</param>
-        /// <param name="AverageLoad">Average CPU load by the process.</param>
-        public static void PreventProcessIdle(ref Process Proc, ref float AverageLoad)
+        /// <param name="process">The process.</param>
+        /// <param name="averageLoad">Average CPU load by the process.</param>
+        public static bool PreventProcessIdle(ref Process process, ref float averageLoad)
         {
-            AverageLoad = (float)(AverageLoad + GetUsage(Proc)) / 2;
+            averageLoad = (float)(averageLoad + GetUsage(process)) / 2;
 
-            if (!Proc.HasExited)
-                if (Math.Round(AverageLoad, 6) <= 0 && !Proc.HasExited)
+            if (Math.Round(averageLoad, 6) <= 0)
+            {
+                //the process is counting crows. Fire!
+                try
                 {
-                    //the process is counting crows. Fire!
-                    Proc.Kill();
-                    if (Console.CursorLeft > 0)
-                        Console.WriteLine();
-                    LoggerAccessor.LogWarn("[PreventProcessIdle] - Idle process {0} killed.", Proc.ProcessName);
+                    process.Kill();
+
+                    LoggerAccessor.LogWarn("[PreventProcessIdle] - Idle process {0} killed.", process.ProcessName);
+
+                    return true;
                 }
+                catch (Exception ex)
+                {
+                    LoggerAccessor.LogError($"[PreventProcessIdle] - Failed to kill idle process. Exception: {ex}");
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

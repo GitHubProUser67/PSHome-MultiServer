@@ -130,7 +130,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 LoggerAccessor.LogInfo($"[OHS] - JaminFormat Input Data: {dataforohs}");
 #endif
                 // Execute the Lua script and get the result
-                object[] returnValues = LuaUtils.ExecuteLuaScript(LUAJaminCode.LUAJaminEncryptor.Replace("PUT_TABLEINPUT_HERE", dataforohs));
+                object[] returnValues = LuaUtils.ExecuteLuaScript(LUAJaminCode.LUAJaminEncryptor.Replace("PUT_TABLEINPUT_HERE", LuaUtils.ToLiteral(dataforohs)));
 
                 string LuaReturn = returnValues[0].ToString();
 

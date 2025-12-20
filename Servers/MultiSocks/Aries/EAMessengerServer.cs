@@ -90,6 +90,8 @@ namespace MultiSocks.Aries
                 Connection = client,
                 ID = user.ID,
                 Personas = personas,
+                Friends = user.Friends,
+                Rivals = user.Rivals,
                 Username = user.Username,
                 ADDR = client.ADDR,
                 LADDR = client.LADDR,

@@ -12,8 +12,6 @@
 :Build
 dotnet restore PSHMultiServer.slnf
 dotnet clean PSHMultiServer.slnf
-dotnet build "Plugins/HTTP/HomeWebTools/HomeWebTools.csproj" --configuration Debug --property WarningLevel=0
-dotnet build "Plugins/HTTP/HomeWebTools/HomeWebTools.csproj" --configuration Release --property WarningLevel=0
 dotnet build "Plugins/HTTP/EdNetCRCCalculator/EdNetCRCCalculator.csproj" --configuration Debug --property WarningLevel=0
 dotnet build "Plugins/HTTP/EdNetCRCCalculator/EdNetCRCCalculator.csproj" --configuration Release --property WarningLevel=0
 dotnet build "Plugins/HTTP/PdfToJpeg/PdfToJpeg.csproj" --configuration Debug --property WarningLevel=0
@@ -55,12 +53,6 @@ for %%r in (%RIDs%) do (
 	xcopy /E /Y /I "Servers/ApacheNet/bin/Release/net6.0/%%r/publish" "~PublishOutput/%%r/Release"
 	xcopy /E /Y /I "Servers/MitmDNS/bin/Release/net6.0/%%r/publish" "~PublishOutput/%%r/Release"
 	xcopy /E /Y /I "Servers/EdenServer/bin/Release/net6.0/%%r/publish" "~PublishOutput/%%r/Release"
-	if exist "Plugins/HTTP/HomeWebTools/bin/Debug/net6.0/static" (
-		xcopy /E /Y /I "Plugins/HTTP/HomeWebTools/bin/Debug/net6.0/static" "~PublishOutput/%%r/Debug/static"
-	)
-	if exist "Plugins/HTTP/HomeWebTools/bin/Release/net6.0/static" (
-		xcopy /E /Y /I "Plugins/HTTP/HomeWebTools/bin/Release/net6.0/static" "~PublishOutput/%%r/Release/static"
-	)
 	if exist "Plugins/HTTP/EdNetCRCCalculator/bin/Debug/net6.0/static" (
 		xcopy /E /Y /I "Plugins/HTTP/EdNetCRCCalculator/bin/Debug/net6.0/static" "~PublishOutput/%%r/Debug/static"
 	)

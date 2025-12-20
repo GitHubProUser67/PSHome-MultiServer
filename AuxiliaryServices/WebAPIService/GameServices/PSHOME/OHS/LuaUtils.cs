@@ -153,7 +153,9 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
                     if (postData != null)
                         lua["postData"] = postData;
-
+#if !DEBUG
+                    lua["debug"] = null;
+#endif
                     // Execute the Lua script
                     returnValues = lua.DoString(luaScript);
 

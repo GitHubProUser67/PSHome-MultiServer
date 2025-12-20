@@ -465,7 +465,7 @@ sendImmediate:
                                         ms.Write(contentRangeBytes, 0, contentRangeBytes.Length);
                                         ms.Write(Separator, 0, Separator.Length);
                                         ms.Write(Separator, 0, Separator.Length);
-                                        while (totalBytesCopied < TotalBytes && (bytesRead = await fs.ReadAsync(buffer, 0, rangebuffersize).ConfigureAwait(false)) > 0)
+                                        while (totalBytesCopied < TotalBytes && (bytesRead = await fs.ReadAsync(buffer.AsMemory(0, rangebuffersize)).ConfigureAwait(false)) > 0)
                                         {
                                             int bytesToWrite = (int)Math.Min(TotalBytes - totalBytesCopied, bytesRead);
                                             ms.Write(buffer, 0, bytesToWrite);
@@ -585,7 +585,7 @@ sendImmediate:
                                     if (TotalBytes == 0)
                                         return await ctx.Response.SendChunk(Array.Empty<byte>(), true).ConfigureAwait(false);
 
-                                    int bufferSize = TotalBytes > 8000000 && ApacheNetServerConfiguration.BufferSize < 500000 ? 500000 : ApacheNetServerConfiguration.BufferSize;
+                                    int bufferSize = ApacheNetServerConfiguration.BufferSize;
 
                                     bool isNotlastChunk;
                                     byte[] buffer;
@@ -594,7 +594,7 @@ sendImmediate:
                                     {
                                         isNotlastChunk = TotalBytes > bufferSize;
                                         buffer = new byte[isNotlastChunk ? bufferSize : TotalBytes];
-                                        int n = await fs.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
+                                        int n = await fs.ReadAsync(buffer).ConfigureAwait(false);
 
                                         if (isNotlastChunk)
                                             await ctx.Response.SendChunk(buffer, false).ConfigureAwait(false);

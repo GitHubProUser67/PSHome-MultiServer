@@ -16,7 +16,9 @@ namespace MultiSocks.Aries.Model
         public string Flags = "0";
         public string LOC = "frFR";
         public string MAC = string.Empty;
-        public string?[] Personas = new string[4];
+        public string[] Personas = new string[4];
+        public List<string> Friends = new List<string>();
+        public List<string> Rivals = new List<string>();
         public string Auxiliary = string.Empty;
         private string[] Parameters = new string[] { "PUSMC01?????", string.Empty, string.Empty, "-1", "-1", string.Empty, "d" };
 

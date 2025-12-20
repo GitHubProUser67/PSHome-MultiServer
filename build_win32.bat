@@ -27,12 +27,6 @@ xcopy /E /Y /I "Win32GUI/RemoteControl/bin/Debug/net6.0-windows" "~BuildOutput/D
 xcopy /E /Y /I "Win32GUI/RemoteControl/bin/Release/net6.0-windows" "~BuildOutput/Release"
 xcopy /E /Y /I "Win32GUI/Json Editor/bin/Debug/net6.0-windows" "~BuildOutput/Debug"
 xcopy /E /Y /I "Win32GUI/Json Editor/bin/Release/net6.0-windows" "~BuildOutput/Release"
-if exist "Plugins/HTTP/HomeWebTools/bin/Debug/net6.0/static" (
-    xcopy /E /Y /I "Plugins/HTTP/HomeWebTools/bin/Debug/net6.0/static" "~BuildOutput/Debug/net6.0/static"
-)
-if exist "Plugins/HTTP/HomeWebTools/bin/Release/net6.0/static" (
-    xcopy /E /Y /I "Plugins/HTTP/HomeWebTools/bin/Release/net6.0/static" "~BuildOutput/Release/net6.0/static"
-)
 if exist "Plugins/HTTP/EdNetCRCCalculator/bin/Debug/net6.0/static" (
     xcopy /E /Y /I "Plugins/HTTP/EdNetCRCCalculator/bin/Debug/net6.0/static" "~BuildOutput/Debug/net6.0/static"
 )

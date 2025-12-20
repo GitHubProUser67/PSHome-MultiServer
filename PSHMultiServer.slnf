@@ -4,7 +4,6 @@
     "projects": [
       "AuxiliaryServices\\AlcatrazService\\AlcatrazService.csproj",
       "AuxiliaryServices\\EdNetService\\EdNetService.csproj",
-      "AuxiliaryServices\\HomeTools\\HomeTools.csproj",
       "AuxiliaryServices\\HorizonService\\HorizonService.csproj",
       "AuxiliaryServices\\MultiSpyService\\MultiSpyService.csproj",
       "AuxiliaryServices\\WebAPIService\\WebAPIService.csproj",
@@ -24,7 +23,6 @@
       "BlazeSDK\\BlazeCommon\\BlazeCommon.csproj",
       "BlazeSDK\\Tdf\\Tdf.csproj",
       "Plugins\\HTTP\\EdNetCRCCalculator\\EdNetCRCCalculator.csproj",
-      "Plugins\\HTTP\\HomeWebTools\\HomeWebTools.csproj",
       "Plugins\\HTTP\\PdfToJpeg\\PdfToJpeg.csproj",
       "Plugins\\HTTP\\SceProfanityFilterService\\SceProfanityFilterService.csproj",
       "Plugins\\HTTP\\SonyCdnReroute\\SonyCdnReroute.csproj",

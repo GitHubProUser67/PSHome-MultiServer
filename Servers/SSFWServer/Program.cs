@@ -7,7 +7,6 @@ using System.Security.Cryptography;
 using MultiServerLibrary.SNMP;
 using MultiServerLibrary;
 using Microsoft.Extensions.Logging;
-using HomeTools.Crypto;
 using MultiServerLibrary.Extension;
 
 public static class SSFWServerConfiguration
@@ -245,8 +244,6 @@ class Program
         }
 
         SSFWServerConfiguration.RefreshVariables(configPath);
-
-        LoggerAccessor.LogInfo($"[Program] - Home client certificate challenges exporting to disk {(ToolsImplementation.ClientsCertificatesWrittenToDisk ? "was successful" : "failed, challenges check will be disabled")}.");
 
         StartOrUpdateServer();
 

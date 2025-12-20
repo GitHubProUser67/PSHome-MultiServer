@@ -205,38 +205,5 @@ namespace MultiServerLibrary.Extension
 
             return result.ToArray();
         }
-
-        public static string GetM3UStreamFromDirectory(string directoryPath, string httpdirectoryrequest)
-        {
-            try
-            {
-                IEnumerable<string> MediaPaths = GetMediaFilesList(directoryPath);
-
-                if (MediaPaths != null && MediaPaths.Any())
-                {
-                    StringBuilder builder = new StringBuilder();
-
-                    // Add M3U header
-                    builder.AppendLine("#EXTM3U");
-
-                    foreach (string mediaPath in MediaPaths)
-                    {
-                        string fileName = Path.GetFileName(mediaPath);
-
-                        // Add the song path to the playlist
-                        builder.AppendLine($"#EXTINF:,-1,{fileName}");
-                        builder.AppendLine(httpdirectoryrequest + $"/{fileName}");
-                    }
-
-                    return builder.ToString();
-                }
-            }
-            catch (Exception ex)
-            {
-                LoggerAccessor.LogError($"[GetM3UStreamFromDirectory] - Errored out with exception - {ex}");
-            }
-
-            return null;
-        }
     }
 }

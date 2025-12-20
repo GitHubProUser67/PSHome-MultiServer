@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -11,7 +11,7 @@ using WatsonWebserver.Core;
 
 namespace ApacheNet.BuildIn.Extensions
 {
-    public class PHP
+    public class PHP : IDisposable
     {
         private bool ThreadsActive = true;
         private bool OutputStreamHooked = false;
@@ -22,13 +22,31 @@ namespace ApacheNet.BuildIn.Extensions
         private Thread? ReadOutputThread;
         private Thread? ReadErrorOutputThread;
 
+        private CancellationToken CancellationToken;
+
         private (int, byte[], Dictionary<string, string>) StandardOutput;
 
         private byte[]? ErrorOutput;
         private byte[]? PostData = null;
 
-        public (int, byte[]?, Dictionary<string, string>) ProcessPHPPage(string FilePath, string PHPPath, string PHPVer, HttpContextBase ctx, bool secure)
+        private bool IsProcessAlive => TheProcess != null && !TheProcess.HasExited;
+
+        public void Dispose()
         {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+                TheProcess.Dispose();
+        }
+
+        public (int, byte[]?, Dictionary<string, string>) ProcessPHPPage(string FilePath, string PHPPath, string PHPVer, HttpContextBase ctx, bool secure, CancellationToken cancellationToken = default)
+        {
+            CancellationToken = cancellationToken;
+
             int index = ctx.Request.Url.RawWithQuery.IndexOf("?");
             string? queryString = index == -1 ? string.Empty : ctx.Request.Url.RawWithQuery[(index + 1)..];
 
@@ -87,11 +105,12 @@ namespace ApacheNet.BuildIn.Extensions
             }
 
             ReadOutputThread = new Thread(new ThreadStart(ReadOutput));
-            ReadErrorOutputThread = new Thread(new ThreadStart(ReadErrorOutput));
+            if (ApacheNetServerConfiguration.PHPDebugErrors)
+                ReadErrorOutputThread = new Thread(new ThreadStart(ReadErrorOutput));
             RunProcessThread = new Thread(new ThreadStart(RunProcess));
 
             ReadOutputThread.Start();
-            ReadErrorOutputThread.Start();
+            ReadErrorOutputThread?.Start();
             RunProcessThread.Start();
 
             RunProcessThread.Join();
@@ -99,9 +118,9 @@ namespace ApacheNet.BuildIn.Extensions
             ThreadsActive = false;
 
             ReadOutputThread.Join();
-            ReadErrorOutputThread.Join();
+            ReadErrorOutputThread?.Join();
 
-            if (ApacheNetServerConfiguration.PHPDebugErrors && ErrorOutput != null && ErrorOutput.Length > 0)
+            if (ErrorOutput != null && ErrorOutput.Length > 0)
                 return (StandardOutput.Item1, ErrorOutput, StandardOutput.Item3);
             return StandardOutput;
         }
@@ -110,7 +129,30 @@ namespace ApacheNet.BuildIn.Extensions
         {
             try
             {
+                // Combine external cancellation with configured timeout
+                using CancellationTokenSource ctsTimeout = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
+                if (ApacheNetServerConfiguration.PHPTimeoutMilliseconds > 0)
+                    // schedule cancellation after timeout
+                    ctsTimeout.CancelAfter(ApacheNetServerConfiguration.PHPTimeoutMilliseconds);
+
                 TheProcess.Start();
+
+                // Register cancellation → kill process when token is triggered
+                using CancellationTokenRegistration ctr = ctsTimeout.Token.Register(() =>
+                {
+                    try
+                    {
+                        if (IsProcessAlive)
+                        {
+                            CustomLogger.LoggerAccessor.LogWarn("[PHP] - Timeout/cancellation triggered, killing process.");
+                            TheProcess.Kill();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        CustomLogger.LoggerAccessor.LogError($"[PHP] - Failed to cancel process. (Exception:{ex})");
+                    }
+                });
 
                 // Calculate approximately end time
                 DateTime EndTime = DateTime.Now.AddSeconds(5);
@@ -121,7 +163,7 @@ namespace ApacheNet.BuildIn.Extensions
                     float PhpCpuLoad = 0;
                     try
                     {
-                        while (TheProcess != null && !TheProcess.HasExited)
+                        while (IsProcessAlive)
                         {
                             Thread.Sleep(1000);
                             ProcessUtils.PreventProcessIdle(ref TheProcess, ref PhpCpuLoad);
@@ -133,11 +175,13 @@ namespace ApacheNet.BuildIn.Extensions
                     }
                 }).Start();
 
-                if (PostData != null)
+                // prepare tasks: write stdin, read stdout (binary), read stderr (string)
+                if (PostData != null && PostData.Length > 0)
+                    _ = WriteToStdinAsync(TheProcess.StandardInput.BaseStream, PostData, ctsTimeout.Token);
+                else
                 {
-                    // Write request body to standard input
-                    using StreamWriter? sw = TheProcess.StandardInput;
-                    sw.BaseStream.Write(PostData, 0, PostData.Length);
+                    // ensure we close stdin if no data - some CGI implementations expect EOF
+                    try { TheProcess.StandardInput.Close(); } catch { }
                 }
 
                 TheProcess.WaitForExit();
@@ -148,11 +192,8 @@ namespace ApacheNet.BuildIn.Extensions
 
                 try
                 {
-                    if (TheProcess != null && !TheProcess.HasExited)
-                    {
+                    if (IsProcessAlive)
                         TheProcess.Kill();
-                        TheProcess.WaitForExit();
-                    }
                 }
                 catch (Exception innerEx)
                 {
@@ -277,6 +318,21 @@ namespace ApacheNet.BuildIn.Extensions
                 output.Flush();
 
                 ErrorOutput = ms.ToArray();
+            }
+        }
+
+        private static async Task WriteToStdinAsync(Stream stdinStream, byte[] data, CancellationToken ct)
+        {
+            try
+            {
+                await stdinStream.WriteAsync(data, ct).ConfigureAwait(false);
+                await stdinStream.FlushAsync(ct).ConfigureAwait(false);
+                stdinStream.Close(); // signal EOF
+            }
+            catch (OperationCanceledException) { /* cancellation/timeout */ }
+            catch
+            {
+                try { stdinStream.Close(); } catch { }
             }
         }
 

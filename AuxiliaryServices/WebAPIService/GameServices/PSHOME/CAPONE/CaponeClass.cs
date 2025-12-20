@@ -48,7 +48,6 @@ namespace WebAPIService.GameServices.PSHOME.CAPONE
 
                             
                     }
-                    break;
                 default:
                     break;
             }

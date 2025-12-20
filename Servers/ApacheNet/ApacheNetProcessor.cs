@@ -58,7 +58,8 @@ namespace ApacheNet
 #if !DEBUG
                 LogResponseSentMsg = false,
 #endif
-                KeepAliveResponseData = false
+                KeepAliveResponseData = false,
+                SslProtocols = (System.Security.Authentication.SslProtocols)ApacheNetServerConfiguration.SslVersions
             };
 
             _starterThread = new Thread(StartServer)
@@ -68,7 +69,7 @@ namespace ApacheNet
             _starterThread.Start();
         }
 
-        private static void SetCorsHeaders(HttpContextBase ctx)
+        private static bool SetCorsHeaders(HttpContextBase ctx)
         {
             const string originHeader = "Origin";
             string origin = ctx.Request.RetrieveHeaderValue(originHeader);
@@ -82,12 +83,14 @@ namespace ApacheNet
             else
             {
                 ctx.Response.Headers.Add("Access-Control-Deny-Origin", origin);
-                return;
+                return false;
             }
 
             ctx.Response.Headers.Add("Access-Control-Allow-Methods", allowedMethods);
             ctx.Response.Headers.Add("Access-Control-Allow-Headers", "*");
             ctx.Response.Headers.Add("Access-Control-Expose-Headers", string.Empty);
+
+            return true;
         }
 
         private static async Task AuthorizeConnection(HttpContextBase ctx)
@@ -213,10 +216,17 @@ namespace ApacheNet
             string absolutepath = apacheContext.AbsolutePath;
 
             SetHttpVersion(apacheContext.Response);
-            SetCorsHeaders(ctx);
+            if (!SetCorsHeaders(ctx))
+            {
+                apacheContext.StatusCode = HttpStatusCode.Forbidden;
+                sent = await apacheContext.SendImmediate().ConfigureAwait(false);
+                return;
+            }
 
             if (!string.IsNullOrEmpty(apacheContext.Request.Useragent) && apacheContext.Request.Useragent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase)) // Get Away TikTok.
                 LoggerAccessor.LogInfo($"[{loggerprefix}] - {apacheContext.ClientIP}:{apacheContext.ClientPort} Requested the {loggerprefix} Server with a ByteDance crawler!");
+			else if (!string.IsNullOrEmpty(apacheContext.Request.Useragent) && apacheContext.Request.Useragent.Contains("libredtail-http", StringComparison.InvariantCultureIgnoreCase)) // Get Away libredtail bot.
+                LoggerAccessor.LogInfo($"[{loggerprefix}] - {apacheContext.ClientIP}:{apacheContext.ClientPort} Requested the {loggerprefix} Server with a libredtail crawler!");
             else if (fullurl != string.Empty)
             {
                 string SuplementalMessage = string.Empty;
@@ -257,7 +267,7 @@ namespace ApacheNet
 #endif
                 }, Formatting.Indented) + ") (" + ctx.Timestamp.TotalMs + "ms)");
 #else
-                    LoggerAccessor.LogInfo($"[{loggerprefix}] - {apacheContext.ClientIP}:{apacheContext.ClientPort}{SuplementalMessage} Requested the {loggerprefix} Server with URL : {fullurl} (" + ctx.Timestamp.TotalMs + "ms)");
+                LoggerAccessor.LogInfo($"[{loggerprefix}] - {apacheContext.ClientIP}:{apacheContext.ClientPort}{SuplementalMessage} Requested the {loggerprefix} Server with URL : {fullurl} (" + ctx.Timestamp.TotalMs + "ms)");
 #endif
                 isAllowed = true;
             }
@@ -306,14 +316,17 @@ namespace ApacheNet
 
                                                 if (indexFile.EndsWith(".php") && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder))
                                                 {
-                                                    var CollectPHP = new PHP().ProcessPHPPage(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}", ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, apacheContext.Secure);
-                                                    foreach (var innerArray in CollectPHP.Item3)
-                                                        apacheContext.Response.Headers.Add(innerArray.Key, innerArray.Value);
-                                                    apacheContext.StatusCode = (HttpStatusCode)CollectPHP.Item1;
-                                                    apacheContext.Response.ContentType = "text/html";
-                                                    apacheContext.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                                    apacheContext.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}").ToString("r"));
-                                                    sent = await apacheContext.SendImmediate(CollectPHP.Item2 ?? Array.Empty<byte>(), apacheContext.AcceptChunked).ConfigureAwait(false);
+                                                    using (PHP php = new PHP())
+                                                    {
+                                                        var CollectPHP = php.ProcessPHPPage(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}", ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, apacheContext.Secure);
+                                                        foreach (var innerArray in CollectPHP.Item3)
+                                                            apacheContext.Response.Headers.Add(innerArray.Key, innerArray.Value);
+                                                        apacheContext.StatusCode = (HttpStatusCode)CollectPHP.Item1;
+                                                        apacheContext.Response.ContentType = "text/html";
+                                                        apacheContext.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                                                        apacheContext.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}").ToString("r"));
+                                                        sent = await apacheContext.SendImmediate(CollectPHP.Item2 ?? Array.Empty<byte>(), apacheContext.AcceptChunked).ConfigureAwait(false);
+                                                    }
                                                 }
                                                 else
                                                 {
@@ -417,56 +430,6 @@ namespace ApacheNet
                                                 }
                                                 sent = await apacheContext.SendImmediate(movedPayloadBytes, apacheContext.AcceptChunked).ConfigureAwait(false);
                                             }
-                                            else if (apacheContext.Request.RetrieveQueryValue("directory") == "on")
-                                            {
-                                                apacheContext.StatusCode = HttpStatusCode.OK;
-                                                apacheContext.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                                apacheContext.Response.ContentType = isHtmlCompatible ? "text/html" : "application/json" + ";charset=utf-8";
-                                                byte[] reportOutputBytes = Encoding.UTF8.GetBytes(await FileStructureFormater.GetFileStructureAsync(endsWithSlash ? apacheContext.FilePath[..^1] : apacheContext.FilePath, $"{(apacheContext.Secure ? "https" : "http")}://{Host}{(endsWithSlash ? absolutepath[..^1] : absolutepath)}",
-                                                    apacheContext.ServerPort, isHtmlCompatible, ApacheNetServerConfiguration.NestedDirectoryReporting, apacheContext.Request.RetrieveQueryValue("properties") == "on", ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor.MimeTypes).ConfigureAwait(false)
-                                                     ?? await DefaultHTMLPages.GenerateErrorPageAsync(HttpStatusCode.InternalServerError, absolutepath, $"{(apacheContext.Secure ? "https" : "http")}://{Host}",
-                                                            ApacheNetServerConfiguration.HTTPStaticFolder, serverRevision, Host, apacheContext.ServerPort).ConfigureAwait(false));
-                                                if (ApacheNetServerConfiguration.EnableHTTPCompression && !noCompressCacheControl && !string.IsNullOrEmpty(encoding))
-                                                {
-                                                    if (encoding.Contains("zstd"))
-                                                    {
-                                                        apacheContext.Response.Headers.Add("Content-Encoding", "zstd");
-                                                        reportOutputBytes = HTTPProcessor.CompressZstd(reportOutputBytes);
-                                                    }
-                                                    else if (encoding.Contains("br"))
-                                                    {
-                                                        apacheContext.Response.Headers.Add("Content-Encoding", "br");
-                                                        reportOutputBytes = HTTPProcessor.CompressBrotli(reportOutputBytes);
-                                                    }
-                                                    else if (encoding.Contains("gzip"))
-                                                    {
-                                                        apacheContext.Response.Headers.Add("Content-Encoding", "gzip");
-                                                        reportOutputBytes = HTTPProcessor.CompressGzip(reportOutputBytes);
-                                                    }
-                                                    else if (encoding.Contains("deflate"))
-                                                    {
-                                                        apacheContext.Response.Headers.Add("Content-Encoding", "deflate");
-                                                        reportOutputBytes = HTTPProcessor.Deflate(reportOutputBytes);
-                                                    }
-                                                }
-                                                sent = await apacheContext.SendImmediate(reportOutputBytes, apacheContext.AcceptChunked).ConfigureAwait(false);
-
-                                            }
-                                            else if (apacheContext.Request.RetrieveQueryValue("m3u") == "on")
-                                            {
-                                                string? m3ufile = FileSystemUtils.GetM3UStreamFromDirectory(endsWithSlash ? apacheContext.FilePath[..^1] : apacheContext.FilePath, $"{(apacheContext.Secure ? "https" : "http")}://{Host}{(endsWithSlash ? absolutepath[..^1] : absolutepath)}");
-                                                if (!string.IsNullOrEmpty(m3ufile))
-                                                {
-                                                    apacheContext.StatusCode = HttpStatusCode.OK;
-                                                    apacheContext.Response.ContentType = "audio/x-mpegurl";
-                                                    sent = await apacheContext.SendImmediate(m3ufile, apacheContext.AcceptChunked).ConfigureAwait(false);
-                                                }
-                                                else
-                                                {
-                                                    apacheContext.StatusCode = HttpStatusCode.NoContent;
-                                                    sent = await apacheContext.SendImmediate().ConfigureAwait(false);
-                                                }
-                                            }
                                             else
                                             {
                                                 bool handled = false;
@@ -479,14 +442,17 @@ namespace ApacheNet
 
                                                         if (indexFile.EndsWith(".php") && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder))
                                                         {
-                                                            var CollectPHP = new PHP().ProcessPHPPage(apacheContext.FilePath + indexFile, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, apacheContext.Secure);
-                                                            foreach (var innerArray in CollectPHP.Item3)
-                                                                apacheContext.Response.Headers.Add(innerArray.Key, innerArray.Value);
-                                                            apacheContext.StatusCode = (HttpStatusCode)CollectPHP.Item1;
-                                                            apacheContext.Response.ContentType = "text/html";
-                                                            apacheContext.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                                            apacheContext.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(apacheContext.FilePath + indexFile).ToString("r"));
-                                                            sent = await apacheContext.SendImmediate(CollectPHP.Item2 ?? Array.Empty<byte>(), apacheContext.AcceptChunked).ConfigureAwait(false);
+                                                            using (PHP php = new PHP())
+                                                            {
+                                                                var CollectPHP = php.ProcessPHPPage(apacheContext.FilePath + indexFile, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, apacheContext.Secure);
+                                                                foreach (var innerArray in CollectPHP.Item3)
+                                                                    apacheContext.Response.Headers.Add(innerArray.Key, innerArray.Value);
+                                                                apacheContext.StatusCode = (HttpStatusCode)CollectPHP.Item1;
+                                                                apacheContext.Response.ContentType = "text/html";
+                                                                apacheContext.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                                                                apacheContext.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(apacheContext.FilePath + indexFile).ToString("r"));
+                                                                sent = await apacheContext.SendImmediate(CollectPHP.Item2 ?? Array.Empty<byte>(), apacheContext.AcceptChunked).ConfigureAwait(false);
+                                                            }
                                                         }
                                                         else
                                                         {
@@ -546,27 +512,24 @@ namespace ApacheNet
                                             apacheContext.StatusCode = HttpStatusCode.PermanentRedirect;
                                             sent = await apacheContext.SendImmediate().ConfigureAwait(false);
                                         }
-                                        else if (absolutepath.EndsWith(".php", StringComparison.InvariantCultureIgnoreCase) && !string.IsNullOrEmpty(ApacheNetServerConfiguration.PHPRedirectUrl))
-                                        {
-                                            apacheContext.Response.Headers.Add("Location", $"{ApacheNetServerConfiguration.PHPRedirectUrl}{HttpUtility.UrlEncode(apacheContext.FullUrl)}");
-                                            apacheContext.StatusCode = HttpStatusCode.PermanentRedirect;
-                                            sent = await apacheContext.SendImmediate().ConfigureAwait(false);
-                                        }
                                         else if (absolutepath.EndsWith(".php", StringComparison.InvariantCultureIgnoreCase) && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder) && (File.Exists(apacheContext.FilePath) || File.Exists(apacheContext.ApiPath)))
                                         {
-                                            (int, byte[]?, Dictionary<string, string>) CollectPHP;
-                                            bool isOnWWWRoot = File.Exists(apacheContext.FilePath);
-                                            if (isOnWWWRoot)
-                                                CollectPHP = new PHP().ProcessPHPPage(apacheContext.FilePath, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, apacheContext.Secure);
-                                            else
-                                                CollectPHP = new PHP().ProcessPHPPage(apacheContext.ApiPath, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, apacheContext.Secure);
-                                            foreach (var innerArray in CollectPHP.Item3)
-                                                apacheContext.Response.Headers.Add(innerArray.Key, innerArray.Value);
-                                            apacheContext.StatusCode = (HttpStatusCode)CollectPHP.Item1;
-                                            apacheContext.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                            apacheContext.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(apacheContext.FilePath).ToString("r"));
-                                            apacheContext.Response.ContentType = "text/html";
-                                            sent = await apacheContext.SendImmediate(CollectPHP.Item2 ?? Array.Empty<byte>(), apacheContext.AcceptChunked).ConfigureAwait(false);
+                                            using (PHP php = new PHP())
+                                            {
+                                                (int, byte[]?, Dictionary<string, string>) CollectPHP;
+                                                bool isOnWWWRoot = File.Exists(apacheContext.FilePath);
+                                                if (isOnWWWRoot)
+                                                    CollectPHP = php.ProcessPHPPage(apacheContext.FilePath, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, apacheContext.Secure);
+                                                else
+                                                    CollectPHP = php.ProcessPHPPage(apacheContext.ApiPath, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, apacheContext.Secure);
+                                                foreach (var innerArray in CollectPHP.Item3)
+                                                    apacheContext.Response.Headers.Add(innerArray.Key, innerArray.Value);
+                                                apacheContext.StatusCode = (HttpStatusCode)CollectPHP.Item1;
+                                                apacheContext.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                                                apacheContext.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(apacheContext.FilePath).ToString("r"));
+                                                apacheContext.Response.ContentType = "text/html";
+                                                sent = await apacheContext.SendImmediate(CollectPHP.Item2 ?? Array.Empty<byte>(), apacheContext.AcceptChunked).ConfigureAwait(false);
+                                            }                                            
                                         }
                                         else if (File.Exists(apacheContext.FilePath))
                                         {
@@ -692,14 +655,17 @@ namespace ApacheNet
 
                                                 if (indexFile.EndsWith(".php") && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder))
                                                 {
-                                                    var CollectPHP = new PHP().ProcessPHPPage(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}", ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, apacheContext.Secure);
-                                                    foreach (var innerArray in CollectPHP.Item3)
-                                                        apacheContext.Response.Headers.Add(innerArray.Key, innerArray.Value);
-                                                    apacheContext.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                                    apacheContext.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}").ToString("r"));
-                                                    apacheContext.StatusCode = (HttpStatusCode)CollectPHP.Item1;
-                                                    apacheContext.Response.ContentType = "text/html";
-                                                    sent = await apacheContext.SendImmediate(CollectPHP.Item2 ?? Array.Empty<byte>(), apacheContext.AcceptChunked).ConfigureAwait(false);
+                                                    using (PHP php = new PHP())
+                                                    {
+                                                        var CollectPHP = php.ProcessPHPPage(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}", ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, apacheContext.Secure);
+                                                        foreach (var innerArray in CollectPHP.Item3)
+                                                            apacheContext.Response.Headers.Add(innerArray.Key, innerArray.Value);
+                                                        apacheContext.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                                                        apacheContext.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}").ToString("r"));
+                                                        apacheContext.StatusCode = (HttpStatusCode)CollectPHP.Item1;
+                                                        apacheContext.Response.ContentType = "text/html";
+                                                        sent = await apacheContext.SendImmediate(CollectPHP.Item2 ?? Array.Empty<byte>(), apacheContext.AcceptChunked).ConfigureAwait(false);
+                                                    }
                                                 }
                                                 else
                                                 {
@@ -797,55 +763,6 @@ namespace ApacheNet
                                                 }
                                                 sent = await apacheContext.SendImmediate(movedPayloadBytes, apacheContext.AcceptChunked).ConfigureAwait(false);
                                             }
-                                            else if (apacheContext.Request.RetrieveQueryValue("directory") == "on")
-                                            {
-                                                apacheContext.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                                apacheContext.StatusCode = HttpStatusCode.OK;
-                                                apacheContext.Response.ContentType = isHtmlCompatible ? "text/html" : "application/json" + ";charset=utf-8";
-                                                byte[] reportOutputBytes = Encoding.UTF8.GetBytes(await FileStructureFormater.GetFileStructureAsync(endsWithSlash ? apacheContext.FilePath[..^1] : apacheContext.FilePath, $"{(apacheContext.Secure ? "https" : "http")}://{Host}{(endsWithSlash ? absolutepath[..^1] : absolutepath)}",
-                                                    apacheContext.ServerPort, isHtmlCompatible, ApacheNetServerConfiguration.NestedDirectoryReporting, apacheContext.Request.RetrieveQueryValue("properties") == "on", ApacheNetServerConfiguration.MimeTypes ?? HTTPProcessor.MimeTypes).ConfigureAwait(false)
-                                                    ?? await DefaultHTMLPages.GenerateErrorPageAsync(HttpStatusCode.InternalServerError, absolutepath, $"{(apacheContext.Secure ? "https" : "http")}://{Host}",
-                                                            ApacheNetServerConfiguration.HTTPStaticFolder, serverRevision, Host, apacheContext.ServerPort).ConfigureAwait(false));
-                                                if (ApacheNetServerConfiguration.EnableHTTPCompression && !noCompressCacheControl && !string.IsNullOrEmpty(encoding))
-                                                {
-                                                    if (encoding.Contains("zstd"))
-                                                    {
-                                                        apacheContext.Response.Headers.Add("Content-Encoding", "zstd");
-                                                        reportOutputBytes = HTTPProcessor.CompressZstd(reportOutputBytes);
-                                                    }
-                                                    else if (encoding.Contains("br"))
-                                                    {
-                                                        apacheContext.Response.Headers.Add("Content-Encoding", "br");
-                                                        reportOutputBytes = HTTPProcessor.CompressBrotli(reportOutputBytes);
-                                                    }
-                                                    else if (encoding.Contains("gzip"))
-                                                    {
-                                                        apacheContext.Response.Headers.Add("Content-Encoding", "gzip");
-                                                        reportOutputBytes = HTTPProcessor.CompressGzip(reportOutputBytes);
-                                                    }
-                                                    else if (encoding.Contains("deflate"))
-                                                    {
-                                                        apacheContext.Response.Headers.Add("Content-Encoding", "deflate");
-                                                        reportOutputBytes = HTTPProcessor.Deflate(reportOutputBytes);
-                                                    }
-                                                }
-                                                sent = await apacheContext.SendImmediate(reportOutputBytes, apacheContext.AcceptChunked).ConfigureAwait(false);
-                                            }
-                                            else if (apacheContext.Request.RetrieveQueryValue("m3u") == "on")
-                                            {
-                                                string? m3ufile = FileSystemUtils.GetM3UStreamFromDirectory(endsWithSlash ? apacheContext.FilePath[..^1] : apacheContext.FilePath, $"{(apacheContext.Secure ? "https" : "http")}://{Host}{(endsWithSlash ? absolutepath[..^1] : absolutepath)}");
-                                                if (!string.IsNullOrEmpty(m3ufile))
-                                                {
-                                                    apacheContext.StatusCode = HttpStatusCode.OK;
-                                                    apacheContext.Response.ContentType = "audio/x-mpegurl";
-                                                    sent = await apacheContext.SendImmediate(m3ufile, apacheContext.AcceptChunked).ConfigureAwait(false);
-                                                }
-                                                else
-                                                {
-                                                    apacheContext.StatusCode = HttpStatusCode.NoContent;
-                                                    sent = await apacheContext.SendImmediate().ConfigureAwait(false);
-                                                }
-                                            }
                                             else
                                             {
                                                 bool handled = false;
@@ -858,14 +775,17 @@ namespace ApacheNet
 
                                                         if (indexFile.EndsWith(".php") && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder))
                                                         {
-                                                            var CollectPHP = new PHP().ProcessPHPPage(apacheContext.FilePath + indexFile, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, apacheContext.Secure);
-                                                            foreach (var innerArray in CollectPHP.Item3)
-                                                                apacheContext.Response.Headers.Add(innerArray.Key, innerArray.Value);
-                                                            apacheContext.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                                            apacheContext.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(apacheContext.FilePath + indexFile).ToString("r"));
-                                                            apacheContext.StatusCode = (HttpStatusCode)CollectPHP.Item1;
-                                                            apacheContext.Response.ContentType = "text/html";
-                                                            sent = await apacheContext.SendImmediate(CollectPHP.Item2 ?? Array.Empty<byte>(), apacheContext.AcceptChunked).ConfigureAwait(false);
+                                                            using (PHP php = new PHP())
+                                                            {
+                                                                var CollectPHP = php.ProcessPHPPage(apacheContext.FilePath + indexFile, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, apacheContext.Secure);
+                                                                foreach (var innerArray in CollectPHP.Item3)
+                                                                    apacheContext.Response.Headers.Add(innerArray.Key, innerArray.Value);
+                                                                apacheContext.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                                                                apacheContext.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(apacheContext.FilePath + indexFile).ToString("r"));
+                                                                apacheContext.StatusCode = (HttpStatusCode)CollectPHP.Item1;
+                                                                apacheContext.Response.ContentType = "text/html";
+                                                                sent = await apacheContext.SendImmediate(CollectPHP.Item2 ?? Array.Empty<byte>(), apacheContext.AcceptChunked).ConfigureAwait(false);
+                                                            }
                                                         }
                                                         else
                                                         {
@@ -924,27 +844,24 @@ namespace ApacheNet
                                             sent = await apacheContext.SendImmediate().ConfigureAwait(false);
 
                                         }
-                                        else if (absolutepath.EndsWith(".php", StringComparison.InvariantCultureIgnoreCase) && !string.IsNullOrEmpty(ApacheNetServerConfiguration.PHPRedirectUrl))
-                                        {
-                                            apacheContext.Response.Headers.Add("Location", $"{ApacheNetServerConfiguration.PHPRedirectUrl}{HttpUtility.UrlEncode(apacheContext.FullUrl)}");
-                                            apacheContext.StatusCode = HttpStatusCode.PermanentRedirect;
-                                            sent = await apacheContext.SendImmediate().ConfigureAwait(false);
-                                        }
                                         else if (absolutepath.EndsWith(".php", StringComparison.InvariantCultureIgnoreCase) && Directory.Exists(ApacheNetServerConfiguration.PHPStaticFolder) && (File.Exists(apacheContext.FilePath) || File.Exists(apacheContext.ApiPath)))
                                         {
-                                            (int, byte[]?, Dictionary<string, string>) CollectPHP;
-                                            bool isOnWWWRoot = File.Exists(apacheContext.FilePath);
-                                            if (isOnWWWRoot)
-                                                CollectPHP = new PHP().ProcessPHPPage(apacheContext.FilePath, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, apacheContext.Secure);
-                                            else
-                                                CollectPHP = new PHP().ProcessPHPPage(apacheContext.ApiPath, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, apacheContext.Secure);
-                                            foreach (var innerArray in CollectPHP.Item3)
-                                                apacheContext.Response.Headers.Add(innerArray.Key, innerArray.Value);
-                                            apacheContext.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                            apacheContext.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(apacheContext.FilePath).ToString("r"));
-                                            apacheContext.StatusCode = (HttpStatusCode)CollectPHP.Item1;
-                                            apacheContext.Response.ContentType = "text/html";
-                                            sent = await apacheContext.SendImmediate(CollectPHP.Item2 ?? Array.Empty<byte>(), apacheContext.AcceptChunked).ConfigureAwait(false);
+                                            using (PHP php = new PHP())
+                                            {
+                                                (int, byte[]?, Dictionary<string, string>) CollectPHP;
+                                                bool isOnWWWRoot = File.Exists(apacheContext.FilePath);
+                                                if (isOnWWWRoot)
+                                                    CollectPHP = php.ProcessPHPPage(apacheContext.FilePath, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, apacheContext.Secure);
+                                                else
+                                                    CollectPHP = php.ProcessPHPPage(apacheContext.ApiPath, ApacheNetServerConfiguration.PHPStaticFolder, ApacheNetServerConfiguration.PHPVersion, ctx, apacheContext.Secure);
+                                                foreach (var innerArray in CollectPHP.Item3)
+                                                    apacheContext.Response.Headers.Add(innerArray.Key, innerArray.Value);
+                                                apacheContext.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                                                apacheContext.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(apacheContext.FilePath).ToString("r"));
+                                                apacheContext.StatusCode = (HttpStatusCode)CollectPHP.Item1;
+                                                apacheContext.Response.ContentType = "text/html";
+                                                sent = await apacheContext.SendImmediate(CollectPHP.Item2 ?? Array.Empty<byte>(), apacheContext.AcceptChunked).ConfigureAwait(false);
+                                            }                                            
                                         }
                                         else if (File.Exists(apacheContext.FilePath))
                                         {

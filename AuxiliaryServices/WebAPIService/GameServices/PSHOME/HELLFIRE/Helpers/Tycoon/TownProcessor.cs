@@ -43,9 +43,8 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Tycoon
                     if (match.Success)
                     {
                         long CurrentTime = DateTimeUtils.GetUnixTime();
-                        string gridContent = match.Groups[1].Value;
 
-                        if (gridContent == "0")
+                        if (match.Groups[1].Value == "0")
                             userTown = userTown.Replace(match.Value, $@"<{Index}><TimeBuilt>{CurrentTime}</TimeBuilt><Orientation>{Orientation}</Orientation><Index>{Index}</Index><Type>{Type}</Type></{Index}>");
                         else
                         {
@@ -86,33 +85,48 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Tycoon
 
                 if (File.Exists(filePath))
                 {
-                    List<BuildingData> buildingDataList = JsonConvert.DeserializeObject<List<BuildingData>>(BuildingDataEncoded);
+                    string userTown = File.ReadAllText(filePath);
 
-                    foreach (var BuildingData in buildingDataList)
+                    foreach (var BuildingData in JsonConvert.DeserializeObject<List<BuildingData>>(BuildingDataEncoded))
                     {
-                        string BuildingIndex = BuildingData.Index;
-                        string bIdxAppend = BuildingIndex + ".000000";
-                        string pattern = $@"<({bIdxAppend})>.*?<TimeBuilt>(.*?)</TimeBuilt>.*?<Orientation>(.*?)</Orientation>.*?<Index>(.*?)</Index>.*?<Type>(.*?)</Type>.*?</{bIdxAppend}>";
+                        string bIdx = BuildingData.Index + ".000000";
 
-                        string userTown = File.ReadAllText(filePath);
-                        var match = Regex.Match(userTown, pattern, RegexOptions.Singleline);
+                        var match = Regex.Match(userTown, $@"<{bIdx}>(.*?)</{bIdx}>", RegexOptions.Singleline);
 
-                        if (match.Success)
+                        if (!match.Success)
                         {
-                            string tileIndex = match.Groups[1].Value;
-                            string timeBuilt = match.Groups[2].Value;
-                            string orientation = match.Groups[3].Value;
-                            string index = match.Groups[4].Value;
-                            string type = match.Groups[5].Value;
-
-                            // Build the updated XML
-                            string updatedXml = $@"<{tileIndex}><TimeBuilt>{timeBuilt}</TimeBuilt><Orientation>{orientation}</Orientation><Index>{index}</Index><Type>{(string.IsNullOrEmpty(BuildingData.Type) ? type : BuildingData.Type)}</Type><WorkersSpent>{BuildingData.WorkersSpent}</WorkersSpent><Money>{BuildingData.Money.ToString().Replace(",", ".")}</Money><Population>{BuildingData.Population.ToString().Replace(",", ".")}</Population></{tileIndex}>";
-
-                            File.WriteAllText(filePath, userTown.Replace(match.Value, updatedXml));
+                            LoggerAccessor.LogWarn($"[TownProcessor] - No building match found for index {bIdx} in file {filePath}.");
+                            continue;
                         }
-                        else
-                            LoggerAccessor.LogWarn($"[TownProcessor] - No building match found for file: {filePath}.");
+
+                        string innerContent = match.Groups[1].Value.Trim();
+
+                        string timeBuilt = "0";
+                        string orientation = "0";
+                        string type = BuildingData.Type;
+
+                        if (innerContent != "0")
+                        {
+                            timeBuilt = Regex.Match(innerContent, @"<TimeBuilt>(.*?)</TimeBuilt>").Groups[1].Value;
+                            orientation = Regex.Match(innerContent, @"<Orientation>(.*?)</Orientation>").Groups[1].Value;
+
+                            var typeMatch = Regex.Match(innerContent, @"<Type>(.*?)</Type>");
+                            if (typeMatch.Success)
+                                type = string.IsNullOrEmpty(type) ? typeMatch.Groups[1].Value : type;
+                        }
+
+                        userTown = userTown.Replace(match.Value, $"<{bIdx}>" +
+                            $"<TimeBuilt>{timeBuilt}</TimeBuilt>" +
+                            $"<Orientation>{orientation}</Orientation>" +
+                            $"<Index>{bIdx}</Index>" +
+                            $"<Type>{type}</Type>" +
+                            $"<WorkersSpent>{BuildingData.WorkersSpent}</WorkersSpent>" +
+                            $"<Money>{BuildingData.Money.ToString().Replace(",", ".")}</Money>" +
+                            $"<Population>{BuildingData.Population.ToString().Replace(",", ".")}</Population>" +
+                            $"</{bIdx}>");
                     }
+
+                    File.WriteAllText(filePath, userTown);
                 }
             }
 

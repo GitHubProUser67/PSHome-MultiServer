@@ -1293,9 +1293,7 @@ do
 
 end
 
-local decrypttableandreturn = Jamin.decode(PUT_FORMATEDJAMINVALUE_HERE)
-
-return json.encode(decrypttableandreturn)
+return json.encode(Jamin.decode(PUT_FORMATEDJAMINVALUE_HERE))
 
 -------------------- End Custom code for PSMultiServer";
 
@@ -1822,9 +1820,14 @@ end
 
 -------------------- Custom code for PSMultiServer
 
-local TableFromInput = PUT_TABLEINPUT_HERE
+local function parse_lua_table(str)
+    local env = {}  -- empty sandbox
+    local chunk, err = load(""return "" .. str, ""userinput"", ""t"", env)
+    if not chunk then error(""Invalid table literal: "" .. err) end
+    return chunk()
+end
 
-return Jamin.encode(TableFromInput)
+return Jamin.encode(parse_lua_table(PUT_TABLEINPUT_HERE))
 
 -------------------- End Custom code for PSMultiServer";
     }
