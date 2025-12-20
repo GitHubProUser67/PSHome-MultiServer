@@ -264,6 +264,22 @@ namespace Horizon.MUIS
 
                             List<int> pre108ServerComplete = new() { 10130, 10334, 10421, 10442, 10538, 10540, 10550, 10582, 10584, 10724 };
 
+                            int appid = clientConnectTcp.AppId;
+
+                            #region Compatible AppId
+                            if (appid < 0)
+                            {
+                                LoggerAccessor.LogError($"[MUIS] - Client Connected {clientChannel.RemoteAddress} with an invalid connect payload!");
+                                break;
+                            }
+                            #endregion
+
+                            if (clientConnectTcp.Key == RSA_KEY.Empty)
+                            {
+                                LoggerAccessor.LogError($"[MUIS] - Client Connected {clientChannel.RemoteAddress} with an empty key!");
+                                break;
+                            }
+
                             // No need to apply the connection delay, MUIS is expected to be a One-Shot server.
 
                             data.ApplicationId = appid;
