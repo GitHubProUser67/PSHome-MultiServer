@@ -1,0 +1,19 @@
+{
+  "profiles": {
+    "Docker Compose": {
+      "commandName": "DockerCompose",
+      "commandVersion": "1.0",
+      "serviceActions": {
+		"apachenet": "StartDebugging",
+		"edenserver": "StartDebugging",
+        "horizon": "StartDebugging",
+		"mitmdns": "StartDebugging",
+        "multisocks": "StartDebugging",
+        "multispy": "StartDebugging",
+		"quazalserver": "StartDebugging",
+        "ssfwserver": "StartDebugging",
+        "svo": "StartDebugging",
+      }
+    }
+  }
+}

@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <OutputType>Library</OutputType>
+	<IsPublishable>false</IsPublishable>
+	<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\AuxiliaryServices\EdNetService\EdNetService.csproj" />
+    <ProjectReference Include="..\..\..\Servers\ApacheNet\ApacheNet.csproj" />
+	<PackageReference Include="System.Text.Json" Version="8.0.5" />
+	<PackageReference Include="Costura.Fody" Version="6.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <!--<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>-->
+    </PackageReference>
+  </ItemGroup>
+
+  <Target Name="CopyFilesTargetName" AfterTargets="AfterBuild">
+    <ItemGroup>
+        <FilesToCopy Include="$(OutDir)EdNetCRCCalculator.pdb" />
+        <FilesToCopy Include="$(OutDir)EdNetCRCCalculator.deps.json" />
+        <FilesToCopy Include="$(OutDir)EdNetCRCCalculator.dll" />
+		<FilesToCopy1 Include="$(OutDir)WatsonWebserver.Core.dll" />
+    </ItemGroup>
+
+    <PropertyGroup>
+        <FilesExist Condition="Exists(@(FilesToCopy))">true</FilesExist>
+		<FilesExist Condition="Exists(@(FilesToCopy1))">true</FilesExist>
+    </PropertyGroup>
+
+    <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(OutDir)\static\apachenet-plugins\EdNetCRCCalculator\" Condition="$(FilesExist)" />
+	<Copy SourceFiles="@(FilesToCopy1)" DestinationFolder="$(OutDir)\static\apachenet-plugins\EdNetCRCCalculator\" Condition="$(FilesExist)" />
+	
+    <Delete Files="@(FilesToCopy)" Condition="$(FilesExist)" />
+  </Target>
+  
+  <ItemGroup>
+    <Content Include="static\**\*.*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>  
+  </ItemGroup>
+
+</Project>

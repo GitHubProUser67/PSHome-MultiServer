@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+		<IsPublishable>false</IsPublishable>
+		<IsTrimmable Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net6.0'))">true</IsTrimmable>
+		<Version>6.2.0</Version>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Watson.Core" Version="6.4.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\MultiServerLibrary\MultiServerLibrary.csproj" />
+	  <ProjectReference Include="..\SpaceWizards.HttpListener\SpaceWizards.HttpListener.csproj" />
+	</ItemGroup>
+
+</Project>

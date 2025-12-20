@@ -1,0 +1,61 @@
+version: '3.4'
+
+services:
+  apachenet:
+    image: ${DOCKER_REGISTRY-}apachenet
+    build:
+      context: .
+      dockerfile: Servers/ApacheNet/Dockerfile
+    network_mode: "bridge"  # Needed for SSL Handling
+
+  edenserver:
+    image: ${DOCKER_REGISTRY-}edenserver
+    build:
+      context: .
+      dockerfile: Servers/EdenServer/Dockerfile
+
+  horizon:
+    image: ${DOCKER_REGISTRY-}horizon
+    build:
+      context: .
+      dockerfile: Servers/Horizon/Dockerfile
+    network_mode: "bridge"  # Needed for SSL Handling
+
+  mitmdns:
+    image: ${DOCKER_REGISTRY-}mitmdns
+    build:
+      context: .
+      dockerfile: Servers/MitmDNS/Dockerfile
+
+  multisocks:
+    image: ${DOCKER_REGISTRY-}multisocks
+    build:
+      context: .
+      dockerfile: Servers/MultiSocks/Dockerfile
+    network_mode: "bridge"  # Needed for SSL Handling
+    
+  multispy:
+    image: ${DOCKER_REGISTRY-}multispy
+    build:
+      context: .
+      dockerfile: Servers/MultiSpy/Dockerfile
+    
+  quazalserver:
+    image: ${DOCKER_REGISTRY-}quazalserver
+    build:
+      context: .
+      dockerfile: Servers/QuazalServer/Dockerfile
+
+  ssfwserver:
+    image: ${DOCKER_REGISTRY-}ssfwserver
+    build:
+      context: .
+      dockerfile: Servers/SSFWServer/Dockerfile
+    network_mode: "bridge"  # Needed for SSL Handling
+
+  svo:
+    image: ${DOCKER_REGISTRY-}svo
+    build:
+      context: .
+      dockerfile: Servers/SVO/Dockerfile
+    network_mode: "bridge"  # Needed for SSL Handling

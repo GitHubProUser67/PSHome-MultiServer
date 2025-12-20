@@ -1,0 +1,11 @@
+namespace Blaze3SDK.Blaze
+{
+	public enum GameNetworkTopology : int
+	{
+		CLIENT_SERVER_PEER_HOSTED = 0,
+		CLIENT_SERVER_DEDICATED = 1,
+		PEER_TO_PEER_FULL_MESH = 130,
+		PEER_TO_PEER_PARTIAL_MESH = 131,
+		PEER_TO_PEER_DIRTYCAST_FAILOVER = 132,
+	}
+}

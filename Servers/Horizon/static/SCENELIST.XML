@@ -1,0 +1,66 @@
+<SCENELIST>
+	<!--
+		ChannelIDs are used to tie a scene to a chat channel when we actually go online. The only requirement is that the id is
+		a unique positive number. When adding a new scene, please let me know so that I can get a chat channel set up for it on the server.
+			Adrian
+	//-->
+
+	<!-- These are the scenes currently being used for the GDC demo -->
+	<SCENE ID="Central Lobby" PACKAGE="TRUE" Type="PublicLobby" config="Environments/The_Hub/The_hub_scene_config.xml" ChannelID="1"/>
+	<SCENE ID="Games Room" PACKAGE="TRUE" Type="PublicLobby" config="Environments/Bowling_arcade/Bowling_scene_config.xml" ChannelID="2"/>
+	<SCENE ID="homesports" Type="PublicLobby" config="Environments/Home_Sports/home_sports_scene_config.xml" ChannelID="4"/>
+	<SCENE ID="hall of fame" Type="TrophyRoom" config="Environments/Hall_Of_Fame/Hall_Of_Fame_scene_config.xml" ChannelID="8"/>
+	
+	<SCENE ID="Cinema" PACKAGE="TRUE" Type="PublicLobby" config="Environments/Cinema/Cinema_scene_config.xml" ChannelID="16"/>
+	<SCENE ID="Cinema Auditorium1" PACKAGE="TRUE" Type="CinemaAuditorium" config="Environments/Cinema/Cinema_Auditorium1_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="Cinema Auditorium2" Type="CinemaAuditorium" config="Environments/Cinema/Cinema_Auditorium2_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="Cinema Auditorium3" Type="CinemaAuditorium" config="Environments/Cinema/Cinema_Auditorium3_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="Cinema Auditorium4" Type="CinemaAuditorium" config="Environments/Cinema/Cinema_Auditorium4_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="Cinema Auditorium5" Type="CinemaAuditorium" config="Environments/Cinema/Cinema_Auditorium5_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="Cinema Auditorium6" Type="CinemaAuditorium" config="Environments/Cinema/Cinema_Auditorium6_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="Cinema Auditorium7" Type="CinemaAuditorium" config="Environments/Cinema/Cinema_Auditorium7_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="Cinema Auditorium8" Type="CinemaAuditorium" config="Environments/Cinema/Cinema_Auditorium8_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="Cinema Auditorium9" Type="CinemaAuditorium" config="Environments/Cinema/Cinema_Auditorium9_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="Cinema Auditorium10" Type="CinemaAuditorium" config="Environments/Cinema/Cinema_Auditorium10_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="Cinema Auditorium11" Type="CinemaAuditorium" config="Environments/Cinema/Cinema_Auditorium11_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="Cinema Auditorium12" Type="CinemaAuditorium" config="Environments/Cinema/Cinema_Auditorium12_scene_config.xml" ChannelID="32"/>
+	
+	<SCENE ID="DemoApartmentBasic" Type="Home" HOMEUID="1" config="Environments/Personal_Space_GOM_TWO/Personal_Space_GOM_TWO_scene_config.xml" ChannelID="64"/>
+	<SCENE ID="DemoApartmentMed" Type="Home" HOMEUID="2" config="Environments/Personal_Space_GOM_ONE/Personal_Space_GOM_ONE_scene_config.xml" ChannelID="64"/>
+	<SCENE ID="DemoApartmentPosh" Type="Home" HOMEUID="3" config="Environments/Penthouse_Apartment/Penthouse_Apartment_scene_config.xml" ChannelID="64"/>
+
+	<!-- these scenes are for the closed beta -->
+	<SCENE ID="Apartment" PACKAGE="TRUE" Type="Home" HOMEUID="0" config="Environments/Personal_Space/Personal_Space_scene_config.xml" ChannelID="64"/>
+
+	<!-- these are new underconstruction scenes -->
+	<SCENE ID="Home Square Hill" Type="HomeSquareHill" config="Environments/Home_Square/Home_Square_Hill_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="Home Square all" Type="HomeSquare" config="Environments/Home_Square/Home_Square_all_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="Home Square previs1" Type="HomeSquare" config="Environments/Home_Square/Home_Square_previs1_config.xml" ChannelID="32"/>
+	<SCENE ID="Home Square previs2" Type="HomeSquare" config="Environments/Home_Square/Home_Square_previs2_config.xml" ChannelID="32"/>
+	<SCENE ID="Home Square previs3" Type="HomeSquare" config="Environments/Home_Square/Home_Square_previs3_config.xml" ChannelID="32"/>
+	<SCENE ID="Home Square previs4" Type="HomeSquare" config="Environments/Home_Square/Home_Square_previs4_config.xml" ChannelID="32"/>
+	<SCENE ID="Home Square previs5" Type="HomeSquare" config="Environments/Home_Square/Home_Square_previs5_config.xml" ChannelID="32"/>
+	<SCENE ID="Home Square previs5a" Type="HomeSquare" config="Environments/Home_Square/Home_Square_previs5a_config.xml" ChannelID="32"/>
+	<SCENE ID="Home Square previs6" Type="HomeSquare" config="Environments/Home_Square/Home_Square_previs6_config.xml" ChannelID="32"/>
+	<SCENE ID="Home Square homesquare" Type="HomeSquare" config="Environments/Home_Square/Home_Square_homesquare_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="Home Square previs9" Type="HomeSquare" config="Environments/Home_Square/Home_Square_previs9_config.xml" ChannelID="32"/>
+	<SCENE ID="Home Square previs10" Type="HomeSquare" config="Environments/Home_Square/Home_Square_previs10_config.xml" ChannelID="32"/>
+	<SCENE ID="Home Square Test" Type="HomeSquareTest" HOMEUID="4" config="Environments/Home_Square/Home_Square_Test_scene_config.xml" ChannelID="64"/>
+	<SCENE ID="Cinema Facade" Type="CinemaFacade" HOMEUID="4" config="Environments/Home_Square/Cinema_Facade/Cinema_Facade_scene_config.xml" ChannelID="64"/>
+
+	
+	<!-- these scenes are old or only used for testing etc -->
+	<SCENE ID="japanese" Type="Home" config="Environments/JapaneseHouse/JapaneseHouse_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="manhattan" Type="Home" config="Environments/Manhattan_Appartment/Manhattan_Appartment_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="cabin" Type="Home" config="Environments/log_cabin/log_cabin_scene_config.xml" ChannelID="32"/>
+	<SCENE ID="beachhouse" Type="Home" config="Environments/Californian_Beach_House/Californian_Beach_House_scene_config.xml" ChannelID="32"/>
+
+	<SCENE ID="EALounge" Type="PublicLobby" config="Environments/EA/ea_whole_scene_config.xml" ChannelID="32"/>
+ 	<SCENE ID="trophy room" Type="TrophyRoom" config="Environments/Hall_Of_Fame/Hall_Of_Fame_scene_config.xml" ChannelID="8"/>
+	<SCENE ID="testroom" Type="Home" HOMEUID="4" config="Environments/testroom/testroom_scene_config.xml" ChannelID="64"/>
+
+
+	<!-- -------------------------------------------------------------------------------- -->
+	<SCENE ID="Flyby Lobby" Type="FrontEndLobby" config="Environments/Attract_Loading_Lobby_1/AttractLobby1_scene_config.xml" ChannelID="64"/>
+		
+</SCENELIST>

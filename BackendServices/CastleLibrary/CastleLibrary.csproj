@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	<!-- In case we disable signing for local builds, ignore identity mismatch with baseline version. -->
+    <NoWarn Condition="'$(SignAssembly)' != 'true'">$(NoWarn);CP0003</NoWarn>
+
+	<!--
+	  We added Span-based variant methods to several APIs. Code that uses those methods or implements the
+	  affected interfaces (or abstract classes) will not be backward compatible. There are also several
+	  methods in DotNetUtilities dealing with ECDsa which is only available from net47.
+
+	  TODO: Use suppressions for each individual case of version-dependent methods.
+    -->
+    <NoWarn>$(NoWarn);CP0002;CP0005;CP0006</NoWarn>
+    <RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
+	<DefineConstants />
+    <Optimize>True</Optimize>
+	<IsPublishable>false</IsPublishable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Lextm.SharpSnmpLib" Version="12.5.5" />
+    <PackageReference Include="Microsoft.TSS" Version="2.1.1" />
+    <PackageReference Include="SharpCompress" Version="0.40.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CustomLogger\CustomLogger.csproj" />
+    <ProjectReference Include="..\EndianTools\EndianTools.csproj" />
+  </ItemGroup>
+  
+  <PropertyGroup>
+    <!--For now disable the PSN ticket verification as many keys are still undocumented -->
+    <DefineConstants>$(DefineConstants);DISABLE_PSN_XI5_VERIFICATION</DefineConstants>
+  </PropertyGroup>
+
+</Project>

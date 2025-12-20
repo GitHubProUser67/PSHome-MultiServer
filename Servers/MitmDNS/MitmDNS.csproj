@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+	<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+	<DockerfileRunArguments>-p 53:53 -p 65535:65535</DockerfileRunArguments>
+	<ApplicationIcon>DNS.ico</ApplicationIcon>
+	<ServerGarbageCollection>true</ServerGarbageCollection>
+	<DockerfileContext>..\..</DockerfileContext>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="DNS.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\BackendServices\DNSLibrary\DNSLibrary.csproj" />
+    <ProjectReference Include="..\..\BackendServices\MultiServerLibrary\MultiServerLibrary.csproj" />
+    <ProjectReference Include="..\..\BackendServices\TechnitiumLibrary.Net.Firewall\TechnitiumLibrary.Net.Firewall.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Content Include="static\**\*.*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>  
+  </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Costura.Fody" Version="6.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <!--<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>-->
+    </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+  
+  <Target Name="ModifyDepsFile" AfterTargets="AfterBuild">
+    <Exec Command="cmd /c (where pwsh &gt;nul 2&gt;&amp;1 &amp;&amp; pwsh -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath &quot;$(OutDir)$(ProjectName).deps.json&quot; -targetFramework &quot;$(TargetFramework)&quot;) || (powershell -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath &quot;$(OutDir)$(ProjectName).deps.json&quot; -targetFramework &quot;$(TargetFramework)&quot;)" />
+  </Target>
+
+</Project>

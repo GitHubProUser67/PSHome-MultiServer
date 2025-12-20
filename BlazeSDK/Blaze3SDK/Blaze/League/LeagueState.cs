@@ -1,0 +1,12 @@
+namespace Blaze3SDK.Blaze.League
+{
+	public enum LeagueState : int
+	{
+		LEAGUE_STATE_NONE = 0,
+		LEAGUE_STATE_REGISTRATION = 1,
+		LEAGUE_STATE_DRAFT = 2,
+		LEAGUE_STATE_REGULAR_SEASON = 3,
+		LEAGUE_STATE_PLAYOFFS = 4,
+		LEAGUE_STATE_COMPLETED = 5,
+	}
+}

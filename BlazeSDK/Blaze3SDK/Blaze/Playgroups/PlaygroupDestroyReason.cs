@@ -1,0 +1,9 @@
+namespace Blaze3SDK.Blaze.Playgroups
+{
+	public enum PlaygroupDestroyReason : int
+	{
+		PLAYGROUP_DESTROY_REASON_DEFAULT = 0,
+		PLAYGROUP_DESTROY_REASON_DISCONNECTED = 1,
+		PLAYGROUP_DESTROY_REASON_LEADER_CHANGE_DISABLED = 2,
+	}
+}

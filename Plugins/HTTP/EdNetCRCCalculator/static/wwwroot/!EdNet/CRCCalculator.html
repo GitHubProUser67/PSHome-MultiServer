@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EdNet CRC Calculator</title>
+    <style>
+        body {
+            background: url('tdu.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        .container {
+            background-color: #333;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: none;
+        }
+        textarea {
+            width: 80%;
+            height: 50px;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: none;
+            resize: none;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #v2Button {
+            background-color: #555;
+        }
+        #calculateButton {
+            background-color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <input type="text" id="textBox" placeholder="Input string value here">
+        <br>
+        <button id="v2Button">V2</button>
+        <button id="calculateButton" style="display: none;">Calculate!</button>
+        <br>
+        <textarea id="resultBox" readonly placeholder="CRC Value will be displayed here"></textarea>
+    </div>
+    
+    <!-- Chrome will not play it in the background due to restrictions on the browser code -->
+
+    <iframe width="0" height="0" src="https://www.youtube.com/embed/fYbrb2YYqdo?autoplay=1&loop=1"
+    frameborder="0" allowfullscreen></iframe>
+
+    <script>
+        const textBox = document.getElementById('textBox');
+        const v2Button = document.getElementById('v2Button');
+        const calculateButton = document.getElementById('calculateButton');
+        const resultBox = document.getElementById('resultBox');
+        let v2 = false;
+
+        // Function to update the visibility of the Calculate button
+        const updateCalculateButton = () => {
+            if (textBox.value.trim() !== '') {
+                calculateButton.style.display = 'inline-block';
+            } else {
+                calculateButton.style.display = 'none';
+            }
+        };
+
+        // Event listener for V2 button toggle
+        v2Button.addEventListener('click', () => {
+            v2 = !v2;
+            v2Button.style.backgroundColor = v2 ? '#007bff' : '#555';
+            updateCalculateButton(); // Update button visibility on V2 toggle
+        });
+
+        // Event listener for text input changes
+        textBox.addEventListener('input', updateCalculateButton);
+
+        // Check initial state of the textbox on page load
+        window.addEventListener('load', updateCalculateButton);
+
+        // Event listener for Calculate button click
+        calculateButton.addEventListener('click', () => {
+            const text = textBox.value.trim();
+            const v2Query = v2 ? '&v2=true' : '';
+            const url = `/!EdNet/GetCRC/?str=${encodeURIComponent(text)}${v2Query}`;
+
+            // Fetching the result
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.text();
+                })
+                .then(data => {
+                    resultBox.value = data; // Display result in textarea
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    resultBox.value = 'Error fetching data. Please try again.';
+                });
+        });
+    </script>
+</body>
+</html>

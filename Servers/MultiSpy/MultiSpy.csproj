@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+	<DockerfileRunArguments>-p 29900:29900 -p 29901:29901 -p 29910:29910 -p 27900:27900 -p 28910:28910 -p 27901:27901 -p 6667:6667 -p 65535:65535</DockerfileRunArguments>
+	<ApplicationIcon>MultiSpy.ico</ApplicationIcon>
+	<ServerGarbageCollection>true</ServerGarbageCollection>
+	<DockerfileContext>..\..</DockerfileContext>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Costura.Fody" Version="6.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <!--<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>-->
+    </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
+    <PackageReference Include="System.Data.SQLite" Version="1.0.119" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\AuxiliaryServices\MultiSpyService\MultiSpyService.csproj" />
+    <ProjectReference Include="..\..\BackendServices\TechnitiumLibrary.Net.Firewall\TechnitiumLibrary.Net.Firewall.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Content Include="static\**\*.*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>  
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Content Include="Python_Scripts\**\*.*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>  
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Content Include="MultiSpy.ico" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Include="costura-win-x86\SQLite.Interop.dll" />
+    <EmbeddedResource Include="costura-win-x64\SQLite.Interop.dll" />
+  </ItemGroup>
+  
+  <Target Name="ModifyDepsFile" AfterTargets="AfterBuild">
+    <Exec Command="cmd /c (where pwsh &gt;nul 2&gt;&amp;1 &amp;&amp; pwsh -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath &quot;$(OutDir)$(ProjectName).deps.json&quot; -targetFramework &quot;$(TargetFramework)&quot;) || (powershell -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath &quot;$(OutDir)$(ProjectName).deps.json&quot; -targetFramework &quot;$(TargetFramework)&quot;)" />
+  </Target>
+
+</Project>

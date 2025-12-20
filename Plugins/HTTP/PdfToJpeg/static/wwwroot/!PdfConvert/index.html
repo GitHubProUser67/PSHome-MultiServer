@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>PDF to JPEG Converter</title>
+
+    <style>
+
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+        .upload-box {
+            border: 2px solid #000;
+            padding: 20px;
+            text-align: center;
+            width: 300px;
+            background-color: #f9f9f9;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .upload-box input[type="file"] {
+            display: block;
+            margin: 20px auto;
+        }
+        .upload-box button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .upload-box button:hover {
+            background-color: #218838;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="upload-box">
+
+        <h2>Upload PDF Files</h2>
+
+        <form id="pdfForm" action="/!PdfConvert/Process/" method="post" enctype="multipart/form-data">
+
+            <input type="file" name="pdfFiles" accept=".pdf" multiple required>
+
+            <button type="submit">Convert to JPEG</button>
+
+        </form>
+
+    </div>
+
+
+    <script>
+
+        document.getElementById('pdfForm').addEventListener('submit', function(event) {
+            const files = document.querySelector('input[type="file"]').files;
+            for (let i = 0; i < files.length; i++) {
+                if (files[i].type !== "application/pdf") {
+                    alert("Only PDF files are allowed.");
+                    event.preventDefault();
+                    return;
+                }
+            }
+        });
+    </script>
+
+</body>
+
+</html>

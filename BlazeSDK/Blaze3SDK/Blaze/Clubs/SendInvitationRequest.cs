@@ -1,0 +1,16 @@
+using Tdf;
+
+namespace Blaze3SDK.Blaze.Clubs
+{
+	[TdfStruct]
+	public struct SendInvitationRequest
+	{
+
+		[TdfMember("CLID")]
+		public uint mClubId;
+
+		[TdfMember("BLID")]
+		public long mUserId;
+
+	}
+}
