@@ -3,9 +3,9 @@ using Newtonsoft.Json;
 
 namespace SSFWServer.SaveDataHelper
 {
-    public static class SSFWGetFileList
+    public static class GetFileList
     {
-        public static string? SSFWSaveDataDebugGetFileList(string directoryPath, string? segment)
+        public static string? SaveDataDebugGetFileList(string directoryPath, string? segment)
         {
             try
             {

@@ -5,11 +5,11 @@ using System.Text.RegularExpressions;
 
 namespace SSFWServer.Services
 {
-    public class SSFWAvatarLayoutService
+    public class AvatarLayoutService
     {
         private string? key;
 
-        public SSFWAvatarLayoutService(string sessionid, string? key)
+        public AvatarLayoutService(string sessionid, string? key)
         {
             this.key = key;
         }
@@ -22,13 +22,10 @@ namespace SSFWServer.Services
             // Check if the string ends with a number
             if (regex.IsMatch(absolutepath))
             {
-                // Get the matched number as a string
-                string numberString = regex.Match(absolutepath).Value;
-
                 // Check if the number is valid
-                if (int.TryParse(numberString, out int number))
+                if (int.TryParse(regex.Match(absolutepath).Value, out int number))
                 {
-                    SSFWUpdateAvatar(directorypath + "/list.json", number, delete);
+                    SSFWUpdateAvatarLayout(directorypath + "/list.json", number, delete);
 
                     if (delete && File.Exists(filepath + ".json"))
                     {
@@ -47,12 +44,12 @@ namespace SSFWServer.Services
             return false;
         }
 
-        public void SSFWUpdateAvatar(string filePath, int contentToUpdate, bool delete)
+        public void SSFWUpdateAvatarLayout(string filePath, int contentToUpdate, bool delete)
         {
+            string? json = null;
+
             try
             {
-                string? json = null;
-
                 if (File.Exists(filePath))
                     json = FileHelper.ReadAllText(filePath, key);
 
@@ -88,7 +85,7 @@ namespace SSFWServer.Services
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[SSFW] - SSFWUpdateAvatar errored out with this exception - {ex}");
+                LoggerAccessor.LogError($"[SSFW] - SSFWUpdateAvatarLayout errored out with this exception - {ex}");
             }
         }
     }

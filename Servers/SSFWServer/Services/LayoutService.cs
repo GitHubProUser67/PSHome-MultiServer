@@ -1,5 +1,6 @@
 using CustomLogger;
 using Newtonsoft.Json.Linq;
+using SSFWServer.Helpers;
 using SSFWServer.Helpers.FileHelper;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -7,11 +8,11 @@ using System.Text.RegularExpressions;
 
 namespace SSFWServer.Services
 {
-    public partial class SSFWLayoutService
+    public class LayoutService
     {
         private string? key;
 
-        public SSFWLayoutService(string? key)
+        public LayoutService(string? key)
         {
             this.key = key;
         }
@@ -46,7 +47,7 @@ namespace SSFWServer.Services
                             }
                             else
                             {
-                                string scenename = scenemap.FirstOrDefault(x => x.Value == SSFWMisc.ExtractPortion(kvp.Key, 13, 18)).Key;
+                                string scenename = scenemap.FirstOrDefault(x => x.Value == Misc.ExtractPortion(kvp.Key, 13, 18)).Key;
                                 if (!string.IsNullOrEmpty(scenename))
                                 {
                                     if (File.Exists(directorypath + $"/{kvp.Key}.json")) // SceneID now mapped, so SceneID based file has become obsolete.
@@ -74,7 +75,7 @@ namespace SSFWServer.Services
                         }
                         else
                         {
-                            string scenename = scenemap.FirstOrDefault(x => x.Value == SSFWMisc.ExtractPortion(sceneid, 13, 18)).Key;
+                            string scenename = scenemap.FirstOrDefault(x => x.Value == Misc.ExtractPortion(sceneid, 13, 18)).Key;
                             if (!string.IsNullOrEmpty(scenename))
                             {
                                 if (File.Exists(directorypath + $"/{sceneid}.json")) // SceneID now mapped, so SceneID based file has become obsolete.
@@ -123,7 +124,7 @@ namespace SSFWServer.Services
                     }
                     else
                     {
-                        string scenename = ScenelistParser.sceneDictionary.FirstOrDefault(x => x.Value == SSFWMisc.ExtractPortion(sceneid, 13, 18)).Key;
+                        string scenename = ScenelistParser.sceneDictionary.FirstOrDefault(x => x.Value == Misc.ExtractPortion(sceneid, 13, 18)).Key;
                         if (!string.IsNullOrEmpty(scenename))
                         {
                             string filepath = directorypath + $"/{scenename}.json";

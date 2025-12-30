@@ -1,8 +1,8 @@
 using MultiServerLibrary.Extension;
 
-namespace SSFWServer
+namespace SSFWServer.Helpers.DataMigrator
 {
-    public class SSFWDataMigrator
+    public class DataMigrator
     {
         public static void MigrateSSFWData(string ssfwrootDirectory, string oldStr, string? newStr)
         {
@@ -11,25 +11,23 @@ namespace SSFWServer
 
             foreach (string directory in new string[] { "/AvatarLayoutService", "/LayoutService", "/RewardsService", "/SaveDataService" })
             {
-                foreach (FileSystemInfo item in FileSystemUtils.AllFilesAndFoldersLinq(new DirectoryInfo(ssfwrootDirectory + directory)).Where(item => item.FullName.Contains(oldStr)))
+                foreach (FileSystemInfo item in new DirectoryInfo(ssfwrootDirectory + directory).AllFilesAndFoldersLinq().Where(item => item.FullName.Contains(oldStr)))
                 {
                     // Construct the full path for the new file/folder in the target directory
-                    string newFilePath = item.FullName.Replace(oldStr, newStr);
+                    string newPath = item.FullName.Replace(oldStr, newStr);
 
                     // Check if it's a file or directory and copy accordingly
-                    if ((item is FileInfo fileInfo) && !File.Exists(newFilePath))
+                    if (item is FileInfo fileInfo && !File.Exists(newPath))
                     {
-                        string? directoryPath = Path.GetDirectoryName(newFilePath);
+                        string? directoryPath = Path.GetDirectoryName(newPath);
 
                         if (!string.IsNullOrEmpty(directoryPath))
                             Directory.CreateDirectory(directoryPath);
 
-                        File.Copy(item.FullName, newFilePath);
-
-                        FileSystemUtils.SetFileReadWrite(newFilePath);
+                        File.Copy(item.FullName, newPath);
                     }
-                    else if ((item is DirectoryInfo directoryInfo) && !Directory.Exists(newFilePath))
-                        CopyDirectory(directoryInfo.FullName, newFilePath);
+                    else if (item is DirectoryInfo directoryInfo && !Directory.Exists(newPath))
+                        CopyDirectory(directoryInfo.FullName, newPath);
                 }
             }
         }
@@ -41,17 +39,15 @@ namespace SSFWServer
 
             foreach (string file in Directory.GetFiles(source))
             {
-                string newFilePath = Path.Combine(target, Path.GetFileName(file));
-                if (!File.Exists(newFilePath))
+                string destinationFile = Path.Combine(target, Path.GetFileName(file));
+                if (!File.Exists(destinationFile))
                 {
-                    string? directoryPath = Path.GetDirectoryName(newFilePath);
+                    string? directoryPath = Path.GetDirectoryName(destinationFile);
 
                     if (!string.IsNullOrEmpty(directoryPath))
                         Directory.CreateDirectory(directoryPath);
 
-                    File.Copy(file, newFilePath);
-
-                    FileSystemUtils.SetFileReadWrite(newFilePath);
+                    File.Copy(file, destinationFile);
                 }
             }
 
@@ -59,7 +55,9 @@ namespace SSFWServer
             {
                 string destinationDirectory = Path.Combine(target, Path.GetFileName(directory));
                 if (!Directory.Exists(destinationDirectory))
+                {
                     CopyDirectory(directory, destinationDirectory);
+                }
             }
         }
     }

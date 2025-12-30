@@ -802,6 +802,13 @@ namespace MultiServerLibrary.HTTP
             return newUrl;
         }
 
+        public static Uri ParseUriFromAbsolutePath(string input)
+        {
+            const string fakeDomain = "http://test.com";
+
+            return new Uri(fakeDomain + input);
+        }
+
         // HTTP requires that responses contain the proper MIME type. This quick mapping list below
         // contains many more mimetypes than System.Web.MimeMapping
 

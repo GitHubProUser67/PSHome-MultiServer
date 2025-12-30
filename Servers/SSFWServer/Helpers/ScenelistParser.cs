@@ -2,7 +2,7 @@ using SSFWServer.ChannelID;
 using System.Collections.Concurrent;
 using System.Xml;
 
-namespace SSFWServer
+namespace SSFWServer.Helpers
 {
     public class ScenelistParser
     {
@@ -34,7 +34,8 @@ namespace SSFWServer
                         if (sceneNodes != null)
                         {
                             // Extract ChannelID and SCENE ID from each SCENE element
-                            Parallel.ForEach(sceneNodes.Cast<XmlNode>(), sceneNode => {
+                            Parallel.ForEach(sceneNodes.Cast<XmlNode>(), sceneNode =>
+                            {
                                 if (sceneNode.Attributes != null)
                                 {
                                     string? ID = sceneNode.Attributes["ID"]?.Value;
@@ -77,7 +78,7 @@ namespace SSFWServer
                                                     }
                                                 }
                                             }
-                                            catch
+                                            catch (Exception)
                                             {
                                                 // Not Important
                                             }

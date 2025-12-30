@@ -1,159 +1,24 @@
+﻿using CastleLibrary.Sony.XI5;
 using CustomLogger;
-using System.Text;
-using System.Collections.Concurrent;
 using NetHasher;
+using MultiServerLibrary.Extension;
+using SSFWServer.Helpers;
+using SSFWServer.Helpers.DataMigrator;
+using System.Text;
 using CastleLibrary.Sony.SSFW;
-using CastleLibrary.Sony.XI5;
 
-namespace SSFWServer
+namespace SSFWServer.Services
 {
-    public class SSFWUserSessionManager
-    {
-        private static ConcurrentDictionary<string, (int, UserSession, DateTime)> userSessions = new();
-
-        public static void RegisterUser(string userName, string sessionid, string id, int realuserNameSize)
-        {
-            if (userSessions.TryGetValue(sessionid, out (int, UserSession, DateTime) sessionEntry))
-                UpdateKeepAliveTime(sessionid, sessionEntry);
-            else if (userSessions.TryAdd(sessionid, (realuserNameSize, new UserSession { Username = userName, Id = id }, DateTime.Now.AddMinutes(SSFWServerConfiguration.SSFWTTL))))
-                LoggerAccessor.LogInfo($"[UserSessionManager] - User '{userName}' successfully registered with SessionId '{sessionid}'.");
-            else
-                LoggerAccessor.LogError($"[UserSessionManager] - Failed to register User '{userName}' with SessionId '{sessionid}'.");
-        }
-
-        public static string? GetSessionIdByUsername(string? userName, bool rpcn)
-        {
-            if (string.IsNullOrEmpty(userName))
-                return null;
-
-            foreach (var kvp in userSessions)
-            {
-                string sessionId = kvp.Key;
-                var (realSize, session, _) = kvp.Value;
-
-                string? realUsername = session.Username?.Substring(0, realSize);
-
-                if (string.Equals(realUsername + (rpcn ? "@RPCN" : string.Empty), userName, StringComparison.Ordinal))
-                    return sessionId;
-            }
-
-            return null;
-        }
-
-        public static string? GetUsernameBySessionId(string? sessionId)
-        {
-            if (string.IsNullOrEmpty(sessionId))
-                return null;
-
-            if (userSessions.TryGetValue(sessionId, out (int, UserSession, DateTime) sessionEntry))
-                return sessionEntry.Item2.Username;
-
-            return null;
-        }
-
-        public static string? GetFormatedUsernameBySessionId(string? sessionId)
-        {
-            if (string.IsNullOrEmpty(sessionId))
-                return null;
-
-            if (userSessions.TryGetValue(sessionId, out (int, UserSession, DateTime) sessionEntry))
-            {
-                string? userName = sessionEntry.Item2.Username;
-
-                if (!string.IsNullOrEmpty(userName) && userName.Length > sessionEntry.Item1)
-                    userName = userName.Substring(0, sessionEntry.Item1);
-
-                return userName;
-            }
-
-            return null;
-        }
-
-        public static string? GetIdBySessionId(string? sessionId)
-        {
-            if (string.IsNullOrEmpty(sessionId))
-                return null;
-
-            (bool, string?) sessionTuple = IsSessionValid(sessionId, false);
-
-            if (sessionTuple.Item1)
-                return sessionTuple.Item2;
-
-            return null;
-        }
-
-        public static bool UpdateKeepAliveTime(string sessionid, (int, UserSession, DateTime) sessionEntry = default)
-        {
-            if (sessionEntry == default)
-            {
-                if (!userSessions.TryGetValue(sessionid, out sessionEntry))
-                    return false;
-            }
-
-            DateTime KeepAliveTime = DateTime.Now.AddMinutes(SSFWServerConfiguration.SSFWTTL);
-
-            sessionEntry.Item3 = KeepAliveTime;
-
-            if (userSessions.ContainsKey(sessionid))
-            {
-                LoggerAccessor.LogInfo($"[SSFWUserSessionManager] - Updating: {sessionEntry.Item2?.Username} session with id: {sessionEntry.Item2?.Id} keep-alive time to:{KeepAliveTime}.");
-                userSessions[sessionid] = sessionEntry;
-                return true;
-            }
-
-            LoggerAccessor.LogError($"[SSFWUserSessionManager] - Failed to update: {sessionEntry.Item2?.Username} session with id: {sessionEntry.Item2?.Id} keep-alive time.");
-            return false;
-        }
-
-        public static (bool, string?) IsSessionValid(string? sessionId, bool cleanupDeadSessions)
-        {
-            if (string.IsNullOrEmpty(sessionId))
-                return (false, null);
-
-            if (userSessions.TryGetValue(sessionId, out (int, UserSession, DateTime) sessionEntry))
-            {
-                if (sessionEntry.Item3 > DateTime.Now)
-                    return (true, sessionEntry.Item2.Id);
-                else if (cleanupDeadSessions)
-                {
-                    // Clean up expired entry.
-                    if (userSessions.TryRemove(sessionId, out sessionEntry))
-                        LoggerAccessor.LogWarn($"[SSFWUserSessionManager] - Cleaned: {sessionEntry.Item2.Username} session with id: {sessionEntry.Item2.Id}...");
-                    else
-                        LoggerAccessor.LogError($"[SSFWUserSessionManager] - Failed to clean: {sessionEntry.Item2.Username} session with id: {sessionEntry.Item2.Id}...");
-                }
-            }
-
-            return (false, null);
-        }
-
-        public static void SessionCleanupLoop(object? state)
-        {
-            lock (userSessions)
-            {
-                foreach (var sessionId in userSessions.Keys)
-                {
-                    IsSessionValid(sessionId, true);
-                }
-            }
-        }
-    }
-
-    public class UserSession
-    {
-        public string? Username { get; set; }
-        public string? Id { get; set; }
-    }
-
-    public class SSFWLogin
+    public class IdentityService : IDisposable
     {
         private string? XHomeClientVersion;
         private string? generalsecret;
         private string? homeClientVersion;
         private string? xsignature;
         private string? key;
+        private bool disposedValue;
 
-        public SSFWLogin(string XHomeClientVersion, string generalsecret, string homeClientVersion, string? xsignature, string? key)
+        public IdentityService(string XHomeClientVersion, string generalsecret, string homeClientVersion, string? xsignature, string? key)
         {
             this.XHomeClientVersion = XHomeClientVersion;
             this.generalsecret = generalsecret;
@@ -293,7 +158,7 @@ namespace SSFWServer
                 }
 
                 if (IsRPCN && Directory.Exists($"{SSFWServerConfiguration.SSFWStaticFolder}/AvatarLayoutService/{env}/{ResultStrings.Item2}") && !Directory.Exists($"{SSFWServerConfiguration.SSFWStaticFolder}/AvatarLayoutService/{env}/{ResultStrings.Item1}"))
-                    SSFWDataMigrator.MigrateSSFWData(SSFWServerConfiguration.SSFWStaticFolder, ResultStrings.Item2, ResultStrings.Item1);
+                    DataMigrator.MigrateSSFWData(SSFWServerConfiguration.SSFWStaticFolder, ResultStrings.Item2, ResultStrings.Item1);
 
                 string? resultString = IsRPCN ? ResultStrings.Item1 : ResultStrings.Item2;
 
@@ -317,7 +182,7 @@ namespace SSFWServer
                     if (File.Exists($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/mylayout.json")) // Migrate data.
                     {
                         // Parsing each value in the dictionary
-                        foreach (var kvp in new Services.SSFWLayoutService(key).SSFWGetLegacyFurnitureLayouts($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/mylayout.json"))
+                        foreach (var kvp in new Services.LayoutService(key).SSFWGetLegacyFurnitureLayouts($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/mylayout.json"))
                         {
                             if (kvp.Key == "00000000-00000000-00000000-00000004")
                             {
@@ -326,7 +191,7 @@ namespace SSFWServer
                             }
                             else
                             {
-                                string scenename = scenemap.FirstOrDefault(x => x.Value == SSFWMisc.ExtractPortion(kvp.Key, 13, 18)).Key;
+                                string scenename = scenemap.FirstOrDefault(x => x.Value == Misc.ExtractPortion(kvp.Key, 13, 18)).Key;
                                 if (!string.IsNullOrEmpty(scenename))
                                 {
                                     if (File.Exists($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/{kvp.Key}.json")) // SceneID now mapped, so SceneID based file has become obsolete.
@@ -346,12 +211,12 @@ namespace SSFWServer
                         File.Delete($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/mylayout.json");
                     }
                     else if (!File.Exists($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/HarborStudio.json"))
-                        File.WriteAllText($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/HarborStudio.json", SSFWMisc.HarbourStudioLayout);
+                        File.WriteAllText($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/HarborStudio.json", Misc.HarbourStudioLayout);
                 }
                 else
                 {
                     if (!File.Exists($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/mylayout.json"))
-                        File.WriteAllText($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/mylayout.json", SSFWMisc.LegacyLayoutTemplate);
+                        File.WriteAllText($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/mylayout.json", Misc.LegacyLayoutTemplate);
                 }
 
                 if (!File.Exists($"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{resultString}/mini.json"))
@@ -505,10 +370,43 @@ namespace SSFWServer
                     return null;
                 }
 
-                return $"{{\"session\": {{\"expires: 3097114741746 ,\"id\":\"{(IsRPCN ? SessionIDs.Item1 : SessionIDs.Item2)}\",\"person\":{{\"id\":\"{(IsRPCN ? SessionIDs.Item1 : SessionIDs.Item2)}\",\"display_name\":\"{resultString}\"}},\"service\":{{\"id\":\"{(IsRPCN ? SessionIDs.Item1 : SessionIDs.Item2)}\",\"display_name\":\"{resultString}\"}} }} }}";
+                return $"{{\"session\": {{\"expires\": \"3097114741746\" ,\"id\":\"{(IsRPCN ? SessionIDs.Item1 : SessionIDs.Item2)}\",\"person\":{{\"id\":\"{(IsRPCN ? SessionIDs.Item1 : SessionIDs.Item2)}\",\"display_name\":\"{resultString}\"}},\"service\":{{\"id\":\"{(IsRPCN ? SessionIDs.Item1 : SessionIDs.Item2)}\",\"display_name\":\"{resultString}\"}} }} }} }}";
             }
 
             return null;
         }
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    XHomeClientVersion = null;
+                    generalsecret = null;
+                    homeClientVersion = null;
+                    xsignature = null;
+                    key = null;
+                }
+
+                // TODO: libérer les ressources non managées (objets non managés) et substituer le finaliseur
+                // TODO: affecter aux grands champs une valeur null
+                disposedValue = true;
+            }
+        }
+
+        // // TODO: substituer le finaliseur uniquement si 'Dispose(bool disposing)' a du code pour libérer les ressources non managées
+        // ~SSFWLogin()
+        // {
+        //     // Ne changez pas ce code. Placez le code de nettoyage dans la méthode 'Dispose(bool disposing)'
+        //     Dispose(disposing: false);
+        // }
+
+        public void Dispose()
+        {
+            // Ne changez pas ce code. Placez le code de nettoyage dans la méthode 'Dispose(bool disposing)'
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
+
     }
 }

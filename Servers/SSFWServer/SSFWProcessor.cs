@@ -4,6 +4,8 @@ using MultiServerLibrary.HTTP;
 using MultiServerLibrary.SSL;
 using NetCoreServer;
 using NetCoreServer.CustomServers;
+using Org.BouncyCastle.Ocsp;
+using SSFWServer.Helpers;
 using SSFWServer.Helpers.FileHelper;
 using SSFWServer.SaveDataHelper;
 using SSFWServer.Services;
@@ -15,7 +17,6 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Tpm2Lib;
 
 namespace SSFWServer
 {
@@ -37,7 +38,7 @@ namespace SSFWServer
         private readonly string _certpath;
         private readonly string _certpass;
 
-        private static string? _legacykey;
+        public static string? _legacykey;
 
         public SSFWProcessor(string certpath, string certpass, string? locallegacykey)
         {
@@ -176,15 +177,20 @@ namespace SSFWServer
                             string? env = ExtractBeforeFirstDot(host);
                             sessionid = GetHeaderValue(Headers, "X-Home-Session-Id");
 
-                            if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
+                            if (string.IsNullOrEmpty(env) || !Misc.homeEnvs.Contains(env))
                                 env = "cprod";
 
                             // Instantiate services
-                            SSFWAuditService auditService = new(sessionid, env, _legacykey);
-                            SSFWRewardsService rewardSvc = new(_legacykey);
-                            SSFWLayoutService layout = new(_legacykey);
-                            SSFWAvatarLayoutService avatarLayout = new(sessionid, _legacykey);
-                            SSFWClanService clanService = new(sessionid);
+                            AuditService auditService = new(sessionid, env, _legacykey);
+                            AvatarService avatarService = new();
+                            FriendsService friendsService = new(sessionid, env, _legacykey);
+                            KeepAliveService keepAliveService = new();
+                            RewardsService rewardSvc = new(_legacykey);
+                            LayoutService layout = new(_legacykey);
+                            AvatarLayoutService avatarLayout = new(sessionid, _legacykey);
+                            ClanService clanService = new(sessionid);
+                            PlayerLookupService playerLookupService = new();
+                            TradingService tradingService = new(sessionid, env, _legacykey);
 
                             switch (request.Method)
                             {
@@ -216,6 +222,7 @@ namespace SSFWServer
                                             }
                                             else
                                                 Response.MakeGetResponse(res, "application/json");
+                                            break;
                                         }
                                         #endregion
 
@@ -223,27 +230,59 @@ namespace SSFWServer
                                         else if (absolutepath.Contains("/AdminObjectService/start"))
                                         {
                                             Response.Clear();
-                                            if (new SSFWAdminObjectService(sessionid, _legacykey).HandleAdminObjectService(UserAgent))
+                                            if (new AdminObjectService(sessionid, _legacykey).HandleAdminObjectService(UserAgent))
                                                 Response.SetBegin((int)HttpStatusCode.OK);
                                             else
                                                 Response.SetBegin((int)HttpStatusCode.Forbidden);
                                             Response.SetBody();
+                                            break;
                                         }
                                         #endregion
 
                                         #region SaveDataService
                                         else if (absolutepath.Contains($"/SaveDataService/{env}/{segments.LastOrDefault()}"))
                                         {
-                                            string? res = SSFWGetFileList.SSFWSaveDataDebugGetFileList(directoryPath, segments.LastOrDefault());
+                                            string? res = GetFileList.SaveDataDebugGetFileList(directoryPath, segments.LastOrDefault());
                                             if (res != null)
                                                 Response.MakeGetResponse(res, "application/json");
                                             else
                                                 Response.MakeErrorResponse();
+                                            break;
                                         }
                                         #endregion
 
-                                        else
+                                        #region PlayerLookup Service
+
+                                        //Doesn't pass in SessionId!!
+                                        else if (absolutepath.Contains($"/{LoginGUID}/person/byDisplayName"))
                                         {
+                                            var res = playerLookupService.HandlePlayerLookupService(absolutepath);
+                                            if (!string.IsNullOrEmpty(res))
+                                                Response.MakeGetResponse(res, "application/json");
+                                            else
+                                                Response.MakeErrorResponse(404, "Not Found");
+                                            break;
+                                        }
+                                        #endregion
+
+                                        #region DEBUG AuditService
+                                        if (absolutepath.Contains($"/AuditService/log/{env}/{SSFWUserSessionManager.GetIdBySessionId(sessionid)}/counts")
+                                            || absolutepath.Contains($"/AuditService/log/{env}/{SSFWUserSessionManager.GetIdBySessionId(sessionid)}/object")
+                                            && IsSSFWRegistered(sessionid))
+                                        {
+                                            var res = auditService.HandleAuditService(absolutepath, new byte[] { }, request);
+
+                                            if (!string.IsNullOrEmpty(res))
+                                                Response.MakeGetResponse(res, "application/json");
+                                            else
+                                                Response.MakeErrorResponse(404, "Not Found");
+                                            break;
+                                        }
+                                        #endregion
+
+                                        else if (IsSSFWRegistered(sessionid))
+                                        {
+                                            #region RewardService Inventory System
                                             //First check if this is a Inventory request
                                             if (absolutepath.Contains($"/RewardsService/") && absolutepath.Contains("counts"))
                                             {
@@ -264,6 +303,7 @@ namespace SSFWServer
                                                 }
                                                 else //fallback default 
                                                     Response.MakeGetResponse(@"{ ""00000000-00000000-00000000-00000001"": 1 } ", "application/json");
+                                                break;
                                             }
                                             //Check for specifically the Tracking GUID
                                             else if (absolutepath.Contains($"/RewardsService/") && absolutepath.Contains("object/00000000-00000000-00000000-00000001"))
@@ -318,11 +358,17 @@ namespace SSFWServer
                                                     }", "application/json");
                                                         #endregion
                                                     }
-
+                                                    break;
                                                 }
                                             }
+                                            #endregion
+
+                                            #region ClanService
                                             else if (absolutepath.Contains($"/ClanService/{env}/clan/"))
                                                 clanService.HandleClanDetailsService(request, Response, absolutepath);
+                                            #endregion
+
+                                            #region File return JSON, bin, jpeg
                                             else if (File.Exists(filePath + ".json"))
                                             {
                                                 string? res = FileHelper.ReadAllText(filePath + ".json", _legacykey);
@@ -362,8 +408,11 @@ namespace SSFWServer
                                                 Response.SetBegin((int)HttpStatusCode.NotFound);
                                                 Response.SetBody();
                                             }
+                                            #endregion
                                         }
                                     }
+
+                                    #region SaveData AvatarService
                                     else if (absolutepath.Contains($"/SaveDataService/avatar/{env}/") && absolutepath.EndsWith(".jpg"))
                                     {
                                         if (File.Exists(filePath))
@@ -389,11 +438,13 @@ namespace SSFWServer
                                         Response.SetBody();
                                     }
                                     break;
+                                #endregion
+
                                 case "POST":
 
                                     if (request.BodyLength <= Array.MaxLength)
                                     {
-                                        #region SSFW Login
+                                        #region IdentityService Login
                                         byte[] postbuffer = request.BodyBytes;
                                         if (absolutepath == $"/{LoginGUID}/login/token/psn")
                                         {
@@ -402,7 +453,7 @@ namespace SSFWServer
 
                                             if (!string.IsNullOrEmpty(XHomeClientVersion) && !string.IsNullOrEmpty(generalsecret))
                                             {
-                                                SSFWLogin login = new(XHomeClientVersion, generalsecret, XHomeClientVersion.Replace(".", string.Empty).PadRight(6, '0'), GetHeaderValue(Headers, "x-signature"), _legacykey);
+                                                IdentityService login = new(XHomeClientVersion, generalsecret, XHomeClientVersion.Replace(".", string.Empty).PadRight(6, '0'), GetHeaderValue(Headers, "x-signature"), _legacykey);
                                                 string? result = login.HandleLogin(postbuffer, env);
                                                 if (!string.IsNullOrEmpty(result))
                                                 {
@@ -413,6 +464,7 @@ namespace SSFWServer
                                                 }
                                                 else
                                                     Response.MakeErrorResponse();
+                                                login.Dispose();
                                             }
                                             else
                                             {
@@ -423,32 +475,13 @@ namespace SSFWServer
                                         }
                                         #endregion
 
-                                        #region PING
+                                        #region PING KeepAlive Service
                                         else if (absolutepath.Contains("/morelife") && !string.IsNullOrEmpty(GetHeaderValue(Headers, "x-signature")))
                                         {
-                                            const byte GuidLength = 36;
-                                            int index = absolutepath.IndexOf("/morelife");
-
-                                            if (index != -1 && index > GuidLength) // Makes sure we have at least 36 chars available beforehand.
-                                            {
-                                                // Extract the substring between the last '/' and the morelife separator.
-                                                string resultSessionId = absolutepath.Substring(index - GuidLength, GuidLength);
-
-                                                if (Regex.IsMatch(resultSessionId, @"^[{(]?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})[)}]?$") && IsSSFWRegistered(resultSessionId))
-                                                {
-                                                    SSFWUserSessionManager.UpdateKeepAliveTime(resultSessionId);
-                                                    Response.MakeGetResponse("{}", "application/json");
-                                                    break;
-                                                }
-                                                else
-                                                {
-                                                    Response.Clear();
-                                                    Response.SetBegin((int)HttpStatusCode.Forbidden);
-                                                    Response.SetBody();
-                                                }
-                                            }
+                                            if (keepAliveService.UpdateKeepAliveForClient(absolutepath, Response))
+                                                Response.MakeGetResponse("{}", "application/json"); // This doesn't even need a empty array, simply 200 Status is enough.
                                             else
-                                                Response.MakeErrorResponse();
+                                                Response.MakeErrorResponse(403);
                                         }
                                         #endregion
 
@@ -497,8 +530,25 @@ namespace SSFWServer
                                                 || absolutepath.Contains($"/RewardsService/p4t-{env}/"))
                                                 Response.MakeGetResponse(rewardSvc.HandleRewardServiceInvPOST(postbuffer, directoryPath, filePath, absolutepath), "application/json");
                                             #endregion
+
+                                            #region ClanService
                                             else if (absolutepath.Contains($"/ClanService/{env}/clan/"))
                                                 clanService.HandleClanDetailsService(request, Response, absolutepath);
+                                            #endregion
+
+                                            #region TradingService
+                                            else if (absolutepath.Contains($"/TradingService/pmcards/trade") && IsSSFWRegistered(sessionid))
+                                            {
+                                                string? res = tradingService.HandleTradingService(request, sessionid, absolutepath);
+
+                                                if (res != null)
+                                                    Response.MakeGetResponse(res, "application/json");
+                                                else
+                                                    Response.MakeErrorResponse();
+                                                break;
+                                            }
+                                            #endregion
+
                                             else
                                             {
                                                 LoggerAccessor.LogWarn($"[SSFWProcessor] : Host requested a POST method I don't know about! - Report it to GITHUB with the request : {absolutepath}");
@@ -564,12 +614,16 @@ namespace SSFWServer
                                                             Response.MakeErrorResponse();
                                                         break;
                                                     case "application/json":
+
+                                                        #region Event Log AuditService
                                                         if (absolutepath.Equals("/AuditService/log"))
                                                         {
-                                                            auditService.HandleAuditService(absolutepath, putbuffer);
-                                                            //Audit doesn't care we send ok!
+                                                            auditService.HandleAuditService(absolutepath, putbuffer, request);
+                                                            //Audit doesn't care so we send ok!
                                                             Response.MakeOkResponse();
                                                         }
+                                                        #endregion
+
                                                         else
                                                         {
                                                             File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.json", putbuffer);
@@ -627,8 +681,37 @@ namespace SSFWServer
                                             }
                                         }
                                         #endregion
+                                        
+                                        #region ClanService
                                         else if (absolutepath.Contains($"/ClanService/{env}/clan/"))
+                                        {
                                             clanService.HandleClanDetailsService(request, Response, absolutepath);
+                                        }
+                                        #endregion
+
+                                        #region RewardsService Inventory DEBUG
+                                        // RewardsService Inventory DEBUG - WipeInventory
+                                        else if (absolutepath.Contains($"/RewardsService/pmcards/rewards/{SSFWUserSessionManager.GetIdBySessionId(sessionid)}")
+                                            && IsSSFWRegistered(sessionid))
+                                        {
+                                            var res = rewardSvc.HandleRewardServiceInvDELETE(directoryPath, filePath, absolutepath, UserAgent, sessionid);
+                                            if (res != null)
+                                                Response.MakeOkResponse();
+                                            else
+                                                Response.MakeErrorResponse(500, "Failed to Delete Rewards Inventory!");
+                                        }
+                                        // RewardsService Inventory DEBUG - DebugClearCardTrackingData
+                                        else if (absolutepath.Contains($"/RewardsService/pmcards/rewards/{SSFWUserSessionManager.GetIdBySessionId(sessionid)}/00000000-00000000-00000000-00000001")
+                                            && IsSSFWRegistered(sessionid))
+                                        {
+                                            var res = rewardSvc.HandleRewardServiceInvCardTrackingDataDELETE(directoryPath, filePath, absolutepath, UserAgent, sessionid);
+                                            if (res != null)
+                                                Response.MakeOkResponse();
+                                            else
+                                                Response.MakeErrorResponse(500, "Failed to Delete Rewards Card Tracking Data!");
+                                        }
+                                        #endregion
+
                                         else
                                         {
                                             if (File.Exists(filePath + ".json"))
@@ -669,7 +752,7 @@ namespace SSFWServer
                                     break;
                             }
                         }
-                        //SoundShapes
+                        #region SoundShapes
                         else if (UserAgent.Contains("PS3Application"))
                         {
                             isApiRequest = true;
@@ -684,34 +767,44 @@ namespace SSFWServer
                                     {
                                         if (request.BodyLength <= Array.MaxLength)
                                         {
-                                            #region SSFW Login
+                                            #region IdentityService Login
                                             byte[] postbuffer = request.BodyBytes;
 
                                             //SoundShapes Login
                                             if (absolutepath == "/identity/login/token/psn")
                                             {
-                                                SSFWLogin login = new("1.00", "SoundShapes", "1.14", "$ound$h@pesi$C00l", _legacykey);
+                                                IdentityService login = new("1.00", "SoundShapes", "1.14", "$ound$h@pesi$C00l", _legacykey);
                                                 string? result = login.HandleLoginSS(postbuffer, "cprod");
                                                 if (!string.IsNullOrEmpty(result))
                                                 {
                                                     Response.Clear();
                                                     Response.SetBegin(201); // Replace with URL or proper Server IP
                                                     Response.SetHeader("location", $"http://{IPAddress.Any}/_dentity/api/service/{LoginGUID}/proxy/login/token/psn/api/client/sessions/f59306bd-3e25-4a34-a41c-ae6c0744c57e");
-                                                    Response.SetHeader("X-OTG-Identity-SessionId", "f59306bd-3e25-4a34-a41c-ae6c0744c57e");
+                                                    Response.SetHeader("X-OTG-Identity-SessionId", sessionid);
                                                     Response.SetContentType("application/json");
                                                     Response.SetBody(result, encoding);
                                                 }
                                                 else
                                                     Response.MakeErrorResponse();
+                                                login.Dispose();
                                             }
-                                            else if (absolutepath.Contains("/identity/person"))
+                                            #endregion
+
+                                            #region FriendService
+                                            else if (absolutepath.Contains($"/identity/person/{sessionid}/data/psn/friends-list"))
+                                            {
+                                                FriendsService friendsService = new FriendsService(sessionid, "prod", _legacykey);
+                                                var res = friendsService.HandleFriendsService(absolutepath, postbuffer);
                                                 Response.MakeOkResponse();
+                                            }
                                             #endregion
                                         }
                                         break;
                                     }
                             }
                         }
+                        #endregion
+
                     }
 
                     if (!isApiRequest)
@@ -801,7 +894,7 @@ namespace SSFWServer
                                         string sceneId = GetHeaderValue(Headers, "sceneId", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
-                                        if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
+                                        if (string.IsNullOrEmpty(env) || !Misc.homeEnvs.Contains(env))
                                             env = "cprod";
 
                                         Response.Clear();
@@ -850,7 +943,7 @@ namespace SSFWServer
                                                 }
 
                                                 if (!string.IsNullOrEmpty(matchingDirectory))
-                                                    res = new SSFWLayoutService(_legacykey).HandleLayoutServiceGET(matchingDirectory, sceneId);
+                                                    res = new LayoutService(_legacykey).HandleLayoutServiceGET(matchingDirectory, sceneId);
 
                                             } // if the dir not exists, we return 403.
 
@@ -920,7 +1013,7 @@ namespace SSFWServer
                                         sessionId = GetHeaderValue(Headers, "sessionid", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
-                                        if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
+                                        if (string.IsNullOrEmpty(env) || !Misc.homeEnvs.Contains(env))
                                             env = "cprod";
 
                                         userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
@@ -964,7 +1057,7 @@ namespace SSFWServer
                                         sessionId = GetHeaderValue(Headers, "sessionid", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
-                                        if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
+                                        if (string.IsNullOrEmpty(env) || !Misc.homeEnvs.Contains(env))
                                             env = "cprod";
 
                                         userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
@@ -977,7 +1070,7 @@ namespace SSFWServer
                                             {
                                                 try
                                                 {
-                                                    new SSFWRewardsService(_legacykey).AddMiniEntry(uuid, InventoryEntryType, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
+                                                    new RewardsService(_legacykey).AddMiniEntry(uuid, InventoryEntryType, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
                                                     Response.Clear();
                                                     Response.SetBegin((int)HttpStatusCode.OK);
                                                     Response.SetBody($"UUID: {uuid} successfully added to the Mini rewards list.", encoding, GetHeaderValue(Headers, "Origin"));
@@ -1010,7 +1103,7 @@ namespace SSFWServer
                                         sessionId = GetHeaderValue(Headers, "sessionid", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
-                                        if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
+                                        if (string.IsNullOrEmpty(env) || !Misc.homeEnvs.Contains(env))
                                             env = "cprod";
 
                                         userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
@@ -1030,7 +1123,7 @@ namespace SSFWServer
 
                                                 try
                                                 {
-                                                    new SSFWRewardsService(_legacykey).AddMiniEntries(entriesToAdd, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
+                                                    new RewardsService(_legacykey).AddMiniEntries(entriesToAdd, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
                                                     Response.Clear();
                                                     Response.SetBegin((int)HttpStatusCode.OK);
                                                     Response.SetBody($"UUIDs: {string.Join(",", uuids)} successfully added to the Mini rewards list.", encoding, GetHeaderValue(Headers, "Origin"));
@@ -1063,7 +1156,7 @@ namespace SSFWServer
                                         sessionId = GetHeaderValue(Headers, "sessionid", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
-                                        if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
+                                        if (string.IsNullOrEmpty(env) || !Misc.homeEnvs.Contains(env))
                                             env = "cprod";
 
                                         userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
@@ -1076,7 +1169,7 @@ namespace SSFWServer
                                             {
                                                 try
                                                 {
-                                                    new SSFWRewardsService(_legacykey).RemoveMiniEntry(uuid, InventoryEntryType, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
+                                                    new RewardsService(_legacykey).RemoveMiniEntry(uuid, InventoryEntryType, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
                                                     Response.Clear();
                                                     Response.SetBegin((int)HttpStatusCode.OK);
                                                     Response.SetBody($"UUID: {uuid} successfully removed in the Mini rewards list.", encoding, GetHeaderValue(Headers, "Origin"));
@@ -1109,7 +1202,7 @@ namespace SSFWServer
                                         sessionId = GetHeaderValue(Headers, "sessionid", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
-                                        if (string.IsNullOrEmpty(env) || !SSFWMisc.homeEnvs.Contains(env))
+                                        if (string.IsNullOrEmpty(env) || !Misc.homeEnvs.Contains(env))
                                             env = "cprod";
 
                                         userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
@@ -1129,7 +1222,7 @@ namespace SSFWServer
 
                                                 try
                                                 {
-                                                    new SSFWRewardsService(_legacykey).RemoveMiniEntries(entriesToRemove, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
+                                                    new RewardsService(_legacykey).RemoveMiniEntries(entriesToRemove, $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{userId}.json", env, userId);
                                                     Response.Clear();
                                                     Response.SetBegin((int)HttpStatusCode.OK);
                                                     Response.SetBody($"UUIDs: {string.Join(",", uuids)} removed in the Mini rewards list.", encoding, GetHeaderValue(Headers, "Origin"));
