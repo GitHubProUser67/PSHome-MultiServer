@@ -11,23 +11,25 @@ namespace SSFWServer.Helpers.DataMigrator
 
             foreach (string directory in new string[] { "/AvatarLayoutService", "/LayoutService", "/RewardsService", "/SaveDataService" })
             {
-                foreach (FileSystemInfo item in new DirectoryInfo(ssfwrootDirectory + directory).AllFilesAndFoldersLinq().Where(item => item.FullName.Contains(oldStr)))
+                foreach (FileSystemInfo item in FileSystemUtils.AllFilesAndFoldersLinq(new DirectoryInfo(ssfwrootDirectory + directory)).Where(item => item.FullName.Contains(oldStr)))
                 {
                     // Construct the full path for the new file/folder in the target directory
-                    string newPath = item.FullName.Replace(oldStr, newStr);
+                    string newFilePath = item.FullName.Replace(oldStr, newStr);
 
                     // Check if it's a file or directory and copy accordingly
-                    if (item is FileInfo fileInfo && !File.Exists(newPath))
+                    if ((item is FileInfo fileInfo) && !File.Exists(newFilePath))
                     {
-                        string? directoryPath = Path.GetDirectoryName(newPath);
+                        string? directoryPath = Path.GetDirectoryName(newFilePath);
 
                         if (!string.IsNullOrEmpty(directoryPath))
                             Directory.CreateDirectory(directoryPath);
 
-                        File.Copy(item.FullName, newPath);
+                        File.Copy(item.FullName, newFilePath);
+
+                        FileSystemUtils.SetFileReadWrite(newFilePath);
                     }
-                    else if (item is DirectoryInfo directoryInfo && !Directory.Exists(newPath))
-                        CopyDirectory(directoryInfo.FullName, newPath);
+                    else if ((item is DirectoryInfo directoryInfo) && !Directory.Exists(newFilePath))
+                        CopyDirectory(directoryInfo.FullName, newFilePath);
                 }
             }
         }
@@ -39,15 +41,17 @@ namespace SSFWServer.Helpers.DataMigrator
 
             foreach (string file in Directory.GetFiles(source))
             {
-                string destinationFile = Path.Combine(target, Path.GetFileName(file));
-                if (!File.Exists(destinationFile))
+                string newFilePath = Path.Combine(target, Path.GetFileName(file));
+                if (!File.Exists(newFilePath))
                 {
-                    string? directoryPath = Path.GetDirectoryName(destinationFile);
+                    string? directoryPath = Path.GetDirectoryName(newFilePath);
 
                     if (!string.IsNullOrEmpty(directoryPath))
                         Directory.CreateDirectory(directoryPath);
 
-                    File.Copy(file, destinationFile);
+                    File.Copy(file, newFilePath);
+
+                    FileSystemUtils.SetFileReadWrite(newFilePath);
                 }
             }
 
@@ -55,9 +59,7 @@ namespace SSFWServer.Helpers.DataMigrator
             {
                 string destinationDirectory = Path.Combine(target, Path.GetFileName(directory));
                 if (!Directory.Exists(destinationDirectory))
-                {
                     CopyDirectory(directory, destinationDirectory);
-                }
             }
         }
     }
