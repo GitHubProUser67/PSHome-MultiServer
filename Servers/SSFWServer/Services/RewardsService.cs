@@ -277,17 +277,20 @@ namespace SSFWServer.Services
             {
                 using JsonDocument document = JsonDocument.Parse(fixedJsonPayload);
                 JsonElement root = document.RootElement;
+
+                //Only return trackingGuid on error
+                var errorPayload = Encoding.UTF8.GetBytes($"{{\"idList\": [\"{trackingGuid}\"] }}");
                 if (!root.TryGetProperty("rewards", out JsonElement rewardsElement) || rewardsElement.ValueKind != JsonValueKind.Array)
                 {
                     LoggerAccessor.LogError("[SSFW] - RewardServiceInventoryPOST: Invalid payload - 'rewards' must be an array.");
-                    return Encoding.UTF8.GetBytes("{\"idList\": [\"00000000-00000000-00000000-00000001\"] }");
+                    return errorPayload;
                 }
 
                 var rewards = rewardsElement.EnumerateArray();
                 if (!rewards.MoveNext())
                 {
                     LoggerAccessor.LogError("[SSFW] - RewardServiceInventoryPOST: Invalid payload - 'rewards' array is empty.");
-                    return Encoding.UTF8.GetBytes("{\"idList\": [\"00000000-00000000-00000000-00000001\"] }");
+                    return errorPayload;
                 }
 
                 Dictionary<string, int> counts = new();

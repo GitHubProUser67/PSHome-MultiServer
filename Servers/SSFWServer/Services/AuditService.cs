@@ -1,10 +1,9 @@
-﻿using CustomLogger;
+﻿using CastleLibrary.Sony.SSFW;
+using CustomLogger;
 using NetCoreServer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using SSFWServer.Helpers;
 using System.Text;
-using System.Text.Json.Nodes;
 
 namespace SSFWServer.Services
 {
@@ -23,7 +22,7 @@ namespace SSFWServer.Services
 
         public string HandleAuditService(string absolutepath, byte[] buffer, HttpRequest request)
         {
-            string fileNameGUID = GuidGen.SSFWGenerateGuid(sessionid, env);
+            string fileNameGUID = GuidGenerator.SSFWGenerateGuid(sessionid, env);
             string? personIdToCompare = SSFWUserSessionManager.GetIdBySessionId(sessionid);
             string auditLogPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}";
 

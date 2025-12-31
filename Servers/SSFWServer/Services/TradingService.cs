@@ -18,7 +18,14 @@ namespace SSFWServer.Services
             this.key = key;
         }
 
-        private static List<TradeTransaction> tradeTransactions = new();
+
+        public class TradeResponse
+        {
+            public int result = -1;
+            public int id = -1;
+            public string message = string.Empty;
+            
+        }
 
         //<itemGuid, numOfCards>
         public class RootObject
@@ -26,12 +33,13 @@ namespace SSFWServer.Services
             public List<string>? members { get; set; }
         }
 
-        public class TradeTransaction
+        private static List<TradeTransaction> tradeTransactions = new();
+        public class TradeTransaction : TradeResponse
         {
-            public string tradeRequester = string.Empty;
-            public string tradePartner = string.Empty;
+            public string ownerId = string.Empty;
+            public string joinerId = string.Empty;
             public int transId = 0;
-            public int seqNumb = 0;
+            public int sequence = 0;
 
             public int tradeAmount = 0;
             //itemList is a dictionary list of <itemGuid, numOfCards> pairs.
@@ -39,7 +47,6 @@ namespace SSFWServer.Services
             public Dictionary<string, int> tradePartnerItemList = new Dictionary<string, int>();
 
             public Status status {  get; set; }
-            //cards to trade etc
         }
 
         public enum Status : int
@@ -54,6 +61,7 @@ namespace SSFWServer.Services
         public string HandleTradingService(HttpRequest req, string sessionid, string absolutepath)
         {
             TradeTransaction newTradeRequest = new TradeTransaction();
+            TradeResponse tradeResponse = new();
 
             int existingCardTradingTransactionId = 0;
             int sequenceNum = 0;
@@ -61,10 +69,10 @@ namespace SSFWServer.Services
 
             string? currentUserId = SSFWUserSessionManager.GetIdBySessionId(sessionid);
             if (string.IsNullOrEmpty(currentUserId))
-                return $" {{ \"result\": -1, \"id\": -1 }} ";
-
+                return JsonConvert.SerializeObject(tradeResponse);
+#if DEBUG
             LoggerAccessor.LogInfo(absoPathArray.Count());
-
+#endif
             //if this is a existing Trade Transaction, assign!
             if (absoPathArray.Length > 3)
             {
@@ -89,7 +97,7 @@ namespace SSFWServer.Services
                         if (transaction.transId == existingCardTradingTransactionId)
                         {
                             transaction.transId = existingCardTradingTransactionId;
-                            transaction.seqNumb = sequenceNum; //Set to 0 initially till set later
+                            transaction.sequence = sequenceNum; //Set to 0 initially till set later
 
                             try
                             {
@@ -99,10 +107,10 @@ namespace SSFWServer.Services
                                 if (reqitemList == null || reqitemList.Count == 0)
                                 {
                                     LoggerAccessor.LogInfo($"[SSFW] TradingService - Existing transaction {transaction.transId} failed to update, request contained no Items to add!");
-                                    return $" {{ \"result\": -1, \"id\": -1 }} ";
+                                    return JsonConvert.SerializeObject(tradeResponse);
                                 }
 
-                                if(transaction.tradePartner == currentUserId)
+                                if(transaction.joinerId == currentUserId)
                                 {
                                     transaction.tradePartnerItemList = reqitemList;
                                 } else //transaction.tradeRequester == curentUserId
@@ -112,10 +120,13 @@ namespace SSFWServer.Services
 
                                 LoggerAccessor.LogInfo($"[SSFW] TradingService - Existing transaction {transaction.transId} has been updated");
                                 tradeTransactions.Add(transaction);
-                                return $" {{ \"result\": 0, \"id\": -1 }} ";
+
+                                tradeResponse.result = 0;
+                                return JsonConvert.SerializeObject(tradeResponse);
                             } catch (Exception ex)
                             {
                                 LoggerAccessor.LogError($"[SSFW] TradingService - Exception caught attempting to remove existing trade transaction id {existingCardTradingTransactionId} with error {ex}");
+                                return JsonConvert.SerializeObject(tradeResponse);
 
                             }
 
@@ -133,8 +144,8 @@ namespace SSFWServer.Services
                     int index = 1;
                     foreach (var transaction in tradeTransactions)
                     {
-                        newTradeRequest.tradeRequester = currentUserId;
-                        newTradeRequest.tradePartner = memberValue;
+                        newTradeRequest.ownerId = currentUserId;
+                        newTradeRequest.joinerId = memberValue;
 
                         //If a existing transaction was created, update it here!
                         if (transaction.transId == existingCardTradingTransactionId)
@@ -153,7 +164,10 @@ namespace SSFWServer.Services
 
                         }
                     }
-                    return $"{{ \"result\": 0, \"id\": {index} }}";
+
+                    tradeResponse.result = 0;
+                    tradeResponse.id = index;
+                    return JsonConvert.SerializeObject(tradeResponse);
 
                 }
             }
@@ -165,30 +179,34 @@ namespace SSFWServer.Services
                 {
                     var existingTrade = tradeTransactions.FirstOrDefault(x => x.transId == existingCardTradingTransactionId);
 
-
                     if (existingTrade != null)
                     {
-                        LoggerAccessor.LogInfo($"[SSFW] TradingService - Checking current status of transactionId {existingTrade.transId} between Requester {existingTrade.tradeRequester} & Partner {existingTrade.tradePartner}: {existingTrade.status}");
+                        LoggerAccessor.LogInfo($"[SSFW] TradingService - Checking current status of transactionId {existingTrade.transId} between Requester {existingTrade.ownerId} & Partner {existingTrade.joinerId}: {existingTrade.status}");
 
+                        //RootObject? result = JsonConvert.DeserializeObject<RootObject>(CreateTransactionBody);
+
+                        newTradeRequest.result = 0;
+                        newTradeRequest.message = "Success";
+                        newTradeRequest.status = existingTrade.status;
+                        newTradeRequest.sequence = existingTrade.sequence;
+                        newTradeRequest.joinerId = existingTrade.joinerId;
+
+                        return JsonConvert.SerializeObject(newTradeRequest);
+
+                        /*
                         return $@" 	{{
      	""result"" : 0,
         ""message"" : ""Success"",
-        ""sequence"" : sequenceNumber,
+        ""sequence"" : {existingTrade.seqNumb},
         ""ownerId"" :""{existingTrade.tradeRequester}"",
-        ""joinerId"" :""{existingTrade.tradePartner}""""
+        ""joinerId"" :""{existingTrade.tradePartner}""
         ""status"" : {existingTrade.status}""
-     }}";
+     }}";*/
+
                     } else
                     {
-                        LoggerAccessor.LogInfo($"[SSFW] TradingService - Checking current status of transactionId {existingTrade.transId} between Requester {existingTrade.tradeRequester} & Partner {existingTrade.tradePartner}: {existingTrade.status}");
-                        return $@" 	{{
-     	""result"" : 0,
-        ""message"" : ""Success"",
-        ""sequence"" : sequenceNumber,
-        ""ownerId"" :""{existingTrade.tradeRequester}"",
-        ""joinerId"" :""{existingTrade.tradePartner}""""
-        ""status"" : {existingTrade.status}""
-     }}";
+                        LoggerAccessor.LogInfo($"[SSFW] TradingService - Checking current status of transactionId {existingTrade.transId} between Requester {existingTrade.ownerId} & Partner {existingTrade.joinerId}: {existingTrade.status}");
+                        return JsonConvert.SerializeObject(tradeResponse);
                     }
                 } else
                 {
@@ -203,11 +221,11 @@ namespace SSFWServer.Services
                             {
                                 return $@"{{
   ""result"": 0,
-  ""sequence"": {transaction.seqNumb},
-  ""{transaction.tradeRequester}"": {{
+  ""sequence"": {transaction.sequence},
+  ""{transaction.ownerId}"": {{
 {string.Join("", transaction.tradeRequesterItemList)}
   }},
-  ""{transaction.tradePartner}"": {{
+  ""{transaction.joinerId}"": {{
 {string.Join("", transaction.tradePartnerItemList)}
   }}
 }}";
@@ -215,7 +233,6 @@ namespace SSFWServer.Services
                         }
 
                     }
-
 
                 }
                 #endregion
@@ -230,17 +247,24 @@ namespace SSFWServer.Services
                         TradeTransaction? tradeRemovalRequest = tradeTransactions.FirstOrDefault(x => x.transId == existingCardTradingTransactionId) ?? null;
                         tradeTransactions.Remove(tradeRemovalRequest);
                         LoggerAccessor.LogError($"[SSFW] TradingService - Successfully cancelled existing trade transaction id {existingCardTradingTransactionId}");
+
+                        tradeResponse.result = 0;
+                        return JsonConvert.SerializeObject(tradeResponse);
                     }
                     catch (Exception e) { 
                         LoggerAccessor.LogError($"[SSFW] TradingService - Exception caught attempting to remove existing trade transaction id {existingCardTradingTransactionId} with error {e}");
-                        return $" {{ \"result\": 0, \"id\": -1 }} ";
+                        return JsonConvert.SerializeObject(tradeResponse);
                     }
 
                 }
 
             }
             #endregion
-            return $" {{ \"result\": 0, \"id\": -1 }} ";
+
+
+            tradeResponse.result = 0;
+            return JsonConvert.SerializeObject(tradeResponse);
+             
 
         }
     }

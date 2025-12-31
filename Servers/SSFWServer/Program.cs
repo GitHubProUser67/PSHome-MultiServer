@@ -20,6 +20,7 @@ public static class SSFWServerConfiguration
     public static string SSFWMinibase { get; set; } = "[]";
     public static string SSFWLegacyKey { get; set; } = "**NoNoNoYouCantHaxThis****69";
     public static string SSFWSessionIdKey { get; set; } = StringUtils.GenerateRandomBase64KeyAsync().Result;
+    public static string SSFWLayoutsFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/layouts";
     public static string SSFWStaticFolder { get; set; } = $"{Directory.GetCurrentDirectory()}/static/wwwssfwroot";
     public static string HTTPSCertificateFile { get; set; } = $"{Directory.GetCurrentDirectory()}/static/SSL/SSFW.pfx";
     public static string HTTPSCertificatePassword { get; set; } = "qwerty";

@@ -7,6 +7,8 @@ namespace SSFWServer.Services
     {
         public bool UpdateKeepAliveForClient(string absolutePath, HttpResponse res)
         {
+            Regex regex = new Regex(@"^[{(]?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})[)}]?$");
+
             const byte GuidLength = 36;
             int index = absolutePath.IndexOf("/morelife");
 
@@ -15,7 +17,7 @@ namespace SSFWServer.Services
                 // Extract the substring between the last '/' and the morelife separator.
                 string resultSessionId = absolutePath.Substring(index - GuidLength, GuidLength);
 
-                if (Regex.IsMatch(resultSessionId, @"^[{(]?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})[)}]?$"))
+                if (regex.IsMatch(resultSessionId))
                 {
                     SSFWUserSessionManager.UpdateKeepAliveTime(resultSessionId);
                     return true;
