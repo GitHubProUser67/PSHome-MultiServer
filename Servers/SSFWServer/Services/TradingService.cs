@@ -1,7 +1,10 @@
 ﻿using CustomLogger;
+using MaxMind.GeoIP2.Responses;
 using NetCoreServer;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
+using System.Transactions;
 
 namespace SSFWServer.Services
 {
@@ -19,12 +22,14 @@ namespace SSFWServer.Services
         }
 
 
-        public class TradeResponse
+        public class BaseResponse
         {
-            public int result = -1;
-            public int id = -1;
-            public string message = string.Empty;
-            
+            [JsonProperty("result")]
+            public int result { get; set; }
+            [JsonProperty("id")]
+            public int id { get; set; } = -1;
+            [JsonProperty("message")]
+            public string message { get; set; } = string.Empty;
         }
 
         //<itemGuid, numOfCards>
@@ -33,13 +38,17 @@ namespace SSFWServer.Services
             public List<string>? members { get; set; }
         }
 
-        private static List<TradeTransaction> tradeTransactions = new();
-        public class TradeTransaction : TradeResponse
+        private static List<TradeTransactionResponse> tradeTransactions = new();
+        public class TradeTransactionResponse : BaseResponse
         {
+            [JsonProperty("ownerId")]
             public string ownerId = string.Empty;
+            [JsonProperty("joinerId")]
             public string joinerId = string.Empty;
+            [JsonProperty("transactionId")]
             public int transId = 0;
-            public int sequence = 0;
+            [JsonProperty("sequence")]
+            public long sequence { get; set; } = 0;
 
             public int tradeAmount = 0;
             //itemList is a dictionary list of <itemGuid, numOfCards> pairs.
@@ -60,8 +69,8 @@ namespace SSFWServer.Services
 
         public string HandleTradingService(HttpRequest req, string sessionid, string absolutepath)
         {
-            TradeTransaction newTradeRequest = new TradeTransaction();
-            TradeResponse tradeResponse = new();
+            BaseResponse tradeResponse = new();
+            TradeTransactionResponse newTradeTransactionResponse = new TradeTransactionResponse();
 
             int existingCardTradingTransactionId = 0;
             int sequenceNum = 0;
@@ -127,16 +136,13 @@ namespace SSFWServer.Services
                             {
                                 LoggerAccessor.LogError($"[SSFW] TradingService - Exception caught attempting to remove existing trade transaction id {existingCardTradingTransactionId} with error {ex}");
                                 return JsonConvert.SerializeObject(tradeResponse);
-
                             }
-
 
                         }
                     }
 
                 } else // otherwise create new transaction!
-                {
-
+                {   
                     string CreateTransactionBody = req.Body;
                     RootObject? result = JsonConvert.DeserializeObject<RootObject>(CreateTransactionBody);
                     string memberValue = result.members[0];
@@ -144,8 +150,8 @@ namespace SSFWServer.Services
                     int index = 1;
                     foreach (var transaction in tradeTransactions)
                     {
-                        newTradeRequest.ownerId = currentUserId;
-                        newTradeRequest.joinerId = memberValue;
+                        newTradeTransactionResponse.ownerId = currentUserId;
+                        newTradeTransactionResponse.joinerId = memberValue;
 
                         //If a existing transaction was created, update it here!
                         if (transaction.transId == existingCardTradingTransactionId)
@@ -158,9 +164,9 @@ namespace SSFWServer.Services
                         //Initial first Transaction starts at index 1
                         else if (tradeTransactions.Count() == 0)
                         {
-                            newTradeRequest.transId = index;
-                            newTradeRequest.status = Status.Active;
-                            tradeTransactions.Add(newTradeRequest);
+                            newTradeTransactionResponse.transId = index;
+                            newTradeTransactionResponse.status = Status.Active;
+                            tradeTransactions.Add(newTradeTransactionResponse);
 
                         }
                     }
@@ -185,13 +191,15 @@ namespace SSFWServer.Services
 
                         //RootObject? result = JsonConvert.DeserializeObject<RootObject>(CreateTransactionBody);
 
-                        newTradeRequest.result = 0;
-                        newTradeRequest.message = "Success";
-                        newTradeRequest.status = existingTrade.status;
-                        newTradeRequest.sequence = existingTrade.sequence;
-                        newTradeRequest.joinerId = existingTrade.joinerId;
+                        JObject jsonResponse = JObject.FromObject(existingTrade);
 
-                        return JsonConvert.SerializeObject(newTradeRequest);
+                        jsonResponse[newTradeTransactionResponse.result] = 0;
+                        jsonResponse[newTradeTransactionResponse.message] = "Sucess";
+                        jsonResponse[newTradeTransactionResponse.status] = Convert.ToInt32(existingTrade.status);
+                        jsonResponse[newTradeTransactionResponse.sequence] = existingTrade.sequence;
+                        jsonResponse[newTradeTransactionResponse.joinerId] = existingTrade.joinerId;
+
+                        return jsonResponse.ToString(Formatting.Indented);
 
                         /*
                         return $@" 	{{
@@ -244,8 +252,8 @@ namespace SSFWServer.Services
                 {
                     try
                     {
-                        TradeTransaction? tradeRemovalRequest = tradeTransactions.FirstOrDefault(x => x.transId == existingCardTradingTransactionId) ?? null;
-                        tradeTransactions.Remove(tradeRemovalRequest);
+                        TradeTransactionResponse? tradeRemovalResp = tradeTransactions.FirstOrDefault(x => x.transId == existingCardTradingTransactionId) ?? null;
+                        tradeTransactions.Remove(tradeRemovalResp);
                         LoggerAccessor.LogError($"[SSFW] TradingService - Successfully cancelled existing trade transaction id {existingCardTradingTransactionId}");
 
                         tradeResponse.result = 0;
