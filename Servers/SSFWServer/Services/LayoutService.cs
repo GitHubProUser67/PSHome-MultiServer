@@ -1,9 +1,8 @@
 using CustomLogger;
 using Newtonsoft.Json.Linq;
 using SSFWServer.Helpers.FileHelper;
+using SSFWServer.Helpers.RegexHelper;
 using System.Text;
-using System.Text.RegularExpressions;
-
 
 namespace SSFWServer.Services
 {
@@ -71,9 +70,7 @@ namespace SSFWServer.Services
                         {
                             File.WriteAllText(directorypath + "/HarborStudio.json", Encoding.UTF8.GetString(buffer));
                             handled = true;
-                        }
-                        else
-                        {
+                        } else {
                             string scenename = scenemap.FirstOrDefault(x => x.Value == Program.ExtractPortion(sceneid, 13, 18)).Key;
                             if (!string.IsNullOrEmpty(scenename))
                             {
@@ -106,13 +103,7 @@ namespace SSFWServer.Services
             if (words.Length > 0)
                 sceneid = words[^1];
 
-#if NET7_0_OR_GREATER
-            Match match = UUIDRegex().Match(sceneid);
-#else
-            Match match = new Regex(@"[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}").Match(sceneid);
-#endif
-
-            if (match.Success) // If is UUID Ok.
+            if (GUIDValidator.RegexSceneIdValidMatch(sceneid).Success) // If is UUID Ok.
             {
                 if (File.Exists(SSFWServerConfiguration.ScenelistFile))
                 {
@@ -250,9 +241,5 @@ namespace SSFWServer.Services
             return outputDictionary;
         }
 
-#if NET7_0_OR_GREATER
-        [GeneratedRegex("[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}")]
-        private static partial Regex UUIDRegex();
-#endif
     }
 }

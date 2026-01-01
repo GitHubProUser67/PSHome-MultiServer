@@ -8,6 +8,21 @@ namespace SSFWServer.Helpers.RegexHelper
     {
         public static Regex RegexSessionValidator = new Regex(@"^[{(]?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})[)}]?$");
 
+#if NET7_0_OR_GREATER
+        [GeneratedRegex("[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}")]
+        private static partial Regex UUIDRegex();
+#endif
+
+        public static Match RegexSceneIdValidMatch(string sceneId)
+        {
+#if NET7_0_OR_GREATER
+            Match match = UUIDRegex().Match(sceneid);
+#else
+            Match match = new Regex(@"[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}").Match(sceneId);
+#endif
+           return match;
+        }
+
         public static string FixJsonValues(string json)
         {
             // Match GUID portion with 8-8-8-8 format (fix unquoted GUIDs)

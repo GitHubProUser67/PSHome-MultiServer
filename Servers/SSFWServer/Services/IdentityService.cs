@@ -191,7 +191,7 @@ namespace SSFWServer.Services
                             }
                             else
                             {
-                                string scenename = scenemap.FirstOrDefault(x => x.Value == Misc.ExtractPortion(kvp.Key, 13, 18)).Key;
+                                string scenename = scenemap.FirstOrDefault(x => x.Value == Program.ExtractPortion(kvp.Key, 13, 18)).Key;
                                 if (!string.IsNullOrEmpty(scenename))
                                 {
                                     if (File.Exists($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/{kvp.Key}.json")) // SceneID now mapped, so SceneID based file has become obsolete.

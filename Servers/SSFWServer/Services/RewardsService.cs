@@ -10,7 +10,7 @@ namespace SSFWServer.Services
 {
     public class RewardsService
     {
-        private string? key;
+        private readonly string? key;
 
         public RewardsService(string? key)
         {
@@ -28,7 +28,7 @@ namespace SSFWServer.Services
             return buffer;
         }
 
-        public byte[] HandleRewardServiceInvPOST(byte[] buffer, string directorypath, string filepath, string absolutepath)
+        public static byte[] HandleRewardServiceInvPOST(byte[] buffer, string directorypath, string filepath, string absolutepath)
         {
             Directory.CreateDirectory(directorypath);
 
@@ -37,10 +37,10 @@ namespace SSFWServer.Services
 
         public byte[]? HandleRewardServiceInvCardTrackingDataDELETE(string directorypath, string filepath, string absolutepath, string userAgent, string sessionId)
         {
-            AdminObjectService adminObjectService = new AdminObjectService(sessionId, key);
+            AdminObjectService adminObjectService = new(sessionId, key);
             if (adminObjectService.IsAdminVerified(userAgent))
             {
-                return RewardServiceInventory(null, directorypath, filepath, absolutepath, false, true);
+                return RewardServiceInventory(Array.Empty<byte>(), directorypath, filepath, absolutepath, false, true);
             } else {
                 LoggerAccessor.LogError($"[SSFW] - HandleRewardServiceInvCardTrackingDataDELETE : {SSFWUserSessionManager.GetIdBySessionId(sessionId)} Unauthorized to delete Card Tracking data!");
                 return null;
@@ -49,10 +49,10 @@ namespace SSFWServer.Services
 
         public byte[]? HandleRewardServiceWipeInvDELETE(string directorypath, string filepath, string absolutepath, string userAgent, string sessionId)
         {
-            AdminObjectService adminObjectService = new AdminObjectService(sessionId, key);
+            AdminObjectService adminObjectService = new(sessionId, key);
             if(adminObjectService.IsAdminVerified(userAgent))
             {
-                return RewardServiceInventory(null, directorypath, filepath, absolutepath, true, false);
+                return RewardServiceInventory(Array.Empty<byte>(), directorypath, filepath, absolutepath, true, false);
             } else {
                 LoggerAccessor.LogError($"[SSFW] - HandleRewardServiceWipeInvDELETE : {SSFWUserSessionManager.GetIdBySessionId(sessionId)} Unauthorized to wipe inventory data!");
                 return null;
@@ -68,7 +68,7 @@ namespace SSFWServer.Services
             TrunkServiceProcess(filepath.Replace("/setpartial", string.Empty) + ".json", Encoding.UTF8.GetString(buffer), env, userId);
         }
 
-        public void HandleRewardServiceTrunksEmergencyPOST(byte[] buffer, string directorypath, string absolutepath)
+        public static void HandleRewardServiceTrunksEmergencyPOST(byte[] buffer, string directorypath, string absolutepath)
         {
             Directory.CreateDirectory(directorypath);
 
@@ -166,7 +166,7 @@ namespace SSFWServer.Services
                                 JArray? mainArray = (JArray?)mainFile["objects"];
                                 if (mainArray != null)
                                 {
-                                    Dictionary<string, string> entriesToAddInMini = new Dictionary<string, string>();
+                                    Dictionary<string, string> entriesToAddInMini = new();
 
                                     foreach (JObject addObject in addArray)
                                     {
@@ -216,7 +216,7 @@ namespace SSFWServer.Services
                                 JArray? mainArray = (JArray?)mainFile["objects"];
                                 if (mainArray != null)
                                 {
-                                    List<string> entriesToRemoveInMini = new List<string>();
+                                    List<string> entriesToRemoveInMini = new();
 
                                     foreach (JObject deleteObj in deleteArray)
                                     {
@@ -257,7 +257,7 @@ namespace SSFWServer.Services
             }
         }
 
-        public byte[] RewardServiceInventory(byte[] buffer, string directorypath, string filepath, string absolutePath, bool deleteInv, bool deleteOnlyTracking)
+        public static byte[] RewardServiceInventory(byte[] buffer, string directorypath, string filepath, string absolutePath, bool deleteInv, bool deleteOnlyTracking)
         {
             //Tracking Inventory GUID
             const string trackingGuid = "00000000-00000000-00000000-00000001"; // fallback/hardcoded tracking GUID
@@ -269,8 +269,8 @@ namespace SSFWServer.Services
             string trackingFileDir = $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutePath}/object";
             string trackingFile = $"{trackingFileDir}/{trackingGuid}.json";
 
-            Directory.CreateDirectory(Path.GetDirectoryName(countsStoreDir));
-            Directory.CreateDirectory(Path.GetDirectoryName(trackingFileDir));
+            Directory.CreateDirectory(Path.GetDirectoryName(countsStoreDir) ?? countsStoreDir);
+            Directory.CreateDirectory(Path.GetDirectoryName(trackingFileDir) ?? trackingFileDir);
 
             //Parse Buffer
             string fixedJsonPayload = GUIDValidator.FixJsonValues(Encoding.UTF8.GetString(buffer));
@@ -349,15 +349,17 @@ namespace SSFWServer.Services
                             }
 
                             string? objectId = objectIdElement.GetString();
-
-                            // Update counts
-                            if (counts.ContainsKey(objectId))
+                            if (!string.IsNullOrEmpty(objectId))
                             {
-                                counts[objectId]++;
-                            }
-                            else
-                            {
-                                counts[objectId] = 1;
+                                // Update counts
+                                if (counts.ContainsKey(objectId))
+                                {
+                                    counts[objectId]++;
+                                }
+                                else
+                                {
+                                    counts[objectId] = 1;
+                                }
                             }
 
                             // Check if this is a tracking object (has metadata or matches tracking GUID)
@@ -394,14 +396,17 @@ namespace SSFWServer.Services
                                     }
                                 }
 
-                                trackingRewards[objectId] = metadata;
+                                if (!string.IsNullOrEmpty(objectId))
+                                {
+                                    trackingRewards[objectId] = metadata;
+                                }
 
-                                // Write tracking data
+                                 // Write tracking data
                                 var trackingData = new Dictionary<string, object>
-                        {
-                            { "result", 0 },
-                            { "rewards", trackingRewards }
-                        };
+                                {
+                                    { "result", 0 },
+                                    { "rewards", trackingRewards }
+                                };
                                 string trackingJson = System.Text.Json.JsonSerializer.Serialize(trackingData, new JsonSerializerOptions { WriteIndented = true });
                                 File.WriteAllText(trackingFile, trackingJson);
 #if DEBUG
@@ -511,7 +516,7 @@ namespace SSFWServer.Services
             }
         }
 
-        private string BuildAddSetPartialJson(Dictionary<string, byte> entries, int startIndex)
+        private static string BuildAddSetPartialJson(Dictionary<string, byte> entries, int startIndex)
         {
             // Create the object to build the JSON structure
             var jsonObject = new
@@ -540,7 +545,7 @@ namespace SSFWServer.Services
             return JsonConvert.SerializeObject(jsonObject);
         }
 
-        private string BuildDeleteSetPartialJson(Dictionary<string, byte> entries, Dictionary<int, (string, byte)> indexToItem)
+        private static string BuildDeleteSetPartialJson(Dictionary<string, byte> entries, Dictionary<int, (string, byte)> indexToItem)
         {
             // Create the object to build the JSON structure
             var jsonObject = new
