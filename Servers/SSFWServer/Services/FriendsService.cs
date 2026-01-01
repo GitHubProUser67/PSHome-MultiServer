@@ -18,14 +18,14 @@ namespace SSFWServer.Services
 
         public string HandleFriendsService(string absolutepath, byte[] buffer)
         {
-            string? userName = SSFWUserSessionManager.GetUsernameBySessionId(sessionid);
-            string auditLogPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}/{env}";
+            string? userName = SSFWUserSessionManager.GetIdBySessionId(sessionid);
+            string friendsStorePath = $"{SSFWServerConfiguration.SSFWStaticFolder}/FriendsService/{env}";
             try
             {
-                Directory.CreateDirectory(auditLogPath);
+                Directory.CreateDirectory(friendsStorePath);
 
-                File.WriteAllText($"{auditLogPath}/{userName}.txt", Encoding.UTF8.GetString(buffer));
-                LoggerAccessor.LogInfo($"[SSFW] FriendsService - HandleFriendsService Friends list posted: {userName}");
+                File.WriteAllText($"{friendsStorePath}/{userName}.txt", Encoding.UTF8.GetString(buffer));
+                LoggerAccessor.LogInfo($"[SSFW] FriendsService - HandleFriendsService Friends list posted: {userName} at {$"{friendsStorePath}/{userName}.txt"}");
                 return "Success";
             }
             catch (Exception ex)

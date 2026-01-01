@@ -13,6 +13,7 @@ using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 namespace SSFWServer
@@ -551,6 +552,14 @@ namespace SSFWServer
                                             }
                                             #endregion
 
+                                            #region FriendsService
+                                            else if (absolutepath.Contains($"/identity/person/{sessionid}/data/psn/friends-list") && IsSSFWRegistered(sessionid))
+                                            {
+                                                var res = friendsService.HandleFriendsService(absolutepath, postbuffer);
+                                                Response.MakeOkResponse();
+                                            }
+                                            #endregion
+
                                             else
                                             {
                                                 LoggerAccessor.LogWarn($"[SSFWProcessor] : Host requested a POST method I don't know about! - Report it to GITHUB with the request : {absolutepath}");
@@ -754,6 +763,7 @@ namespace SSFWServer
                                     break;
                             }
                         }
+
                         #region SoundShapes
                         else if (UserAgent.Contains("PS3Application"))
                         {
@@ -891,7 +901,7 @@ namespace SSFWServer
                                         }
                                         break;
                                     case "/WebService/ApplyLayoutOverride/":
-                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
                                         string targetUserName = GetHeaderValue(Headers, "targetUserName", false);
                                         string sceneId = GetHeaderValue(Headers, "sceneId", false);
                                         env = GetHeaderValue(Headers, "env", false);
@@ -988,7 +998,7 @@ namespace SSFWServer
                                         }
                                         break;
                                     case "/WebService/R3moveLayoutOverride/":
-                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
 
                                         Response.Clear();
 
@@ -1012,7 +1022,7 @@ namespace SSFWServer
                                         }
                                         break;
                                     case "/WebService/GetMini/":
-                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
                                         if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))
@@ -1056,7 +1066,7 @@ namespace SSFWServer
                                         break;
                                     case "/WebService/AddMiniItem/":
                                         uuid = GetHeaderValue(Headers, "uuid", false);
-                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
                                         if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))
@@ -1102,7 +1112,7 @@ namespace SSFWServer
                                         break;
                                     case "/WebService/AddMiniItems/":
                                         uuids = GetHeaderValue(Headers, "uuids", false).Split(',');
-                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
                                         if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))
@@ -1155,7 +1165,7 @@ namespace SSFWServer
                                         break;
                                     case "/WebService/RemoveMiniItem/":
                                         uuid = GetHeaderValue(Headers, "uuid", false);
-                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
                                         if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))
@@ -1201,7 +1211,7 @@ namespace SSFWServer
                                         break;
                                     case "/WebService/RemoveMiniItems/":
                                         uuids = GetHeaderValue(Headers, "uuids", false).Split(',');
-                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
                                         if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))

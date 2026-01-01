@@ -72,7 +72,7 @@ public static class SSFWServerConfiguration
 
             // Write the JObject to a file
             File.WriteAllText(configPath, new JObject(
-                new JProperty("config_version", (ushort)2),
+                new JProperty("config_version", (ushort)3),
                 new JProperty("minibase", SSFWMinibase),
                 new JProperty("legacyKey", SSFWLegacyKey),
                 new JProperty("sessionidKey", SSFWSessionIdKey),
@@ -84,7 +84,8 @@ public static class SSFWServerConfiguration
                 new JProperty("certificate_file", HTTPSCertificateFile),
                 new JProperty("certificate_password", HTTPSCertificatePassword),
                 new JProperty("certificate_hashing_algorithm", HTTPSCertificateHashingAlgorithm.Name),
-                new JProperty("scenelist_file", ScenelistFile)
+                new JProperty("scenelist_file", ScenelistFile),
+                new JProperty("layouts_folder", SSFWLayoutsFolder)
             ).ToString());
 
             return;
@@ -109,6 +110,7 @@ public static class SSFWServerConfiguration
             HTTPSCertificateHashingAlgorithm = new HashAlgorithmName(GetValueOrDefault(config, "certificate_hashing_algorithm", HTTPSCertificateHashingAlgorithm.Name));
             HTTPSDNSList = GetValueOrDefault(config, "https_dns_list", HTTPSDNSList);
             ScenelistFile = GetValueOrDefault(config, "scenelist_file", ScenelistFile);
+            SSFWLayoutsFolder = GetValueOrDefault(config, "layouts_folder", SSFWLayoutsFolder);
         }
         catch (Exception ex)
         {
