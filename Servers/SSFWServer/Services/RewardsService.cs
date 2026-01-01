@@ -28,7 +28,7 @@ namespace SSFWServer.Services
             return buffer;
         }
 
-        public static byte[] HandleRewardServiceInvPOST(byte[] buffer, string directorypath, string filepath, string absolutepath)
+        public byte[] HandleRewardServiceInvPOST(byte[] buffer, string directorypath, string filepath, string absolutepath)
         {
             Directory.CreateDirectory(directorypath);
 
@@ -68,7 +68,7 @@ namespace SSFWServer.Services
             TrunkServiceProcess(filepath.Replace("/setpartial", string.Empty) + ".json", Encoding.UTF8.GetString(buffer), env, userId);
         }
 
-        public static void HandleRewardServiceTrunksEmergencyPOST(byte[] buffer, string directorypath, string absolutepath)
+        public void HandleRewardServiceTrunksEmergencyPOST(byte[] buffer, string directorypath, string absolutepath)
         {
             Directory.CreateDirectory(directorypath);
 

@@ -178,6 +178,7 @@ namespace SSFWServer
                                 env = "cprod";
 
                             // Instantiate services
+                            AchievementService achievementService = new(sessionid, env, _legacykey);
                             AuditService auditService = new(sessionid, env, _legacykey);
                             AvatarService avatarService = new();
                             FriendsService friendsService = new(sessionid, env, _legacykey);
@@ -255,6 +256,18 @@ namespace SSFWServer
                                         else if (absolutepath.Contains($"/{LoginGUID}/person/byDisplayName"))
                                         {
                                             var res = playerLookupService.HandlePlayerLookupService(absolutepath);
+                                            if (!string.IsNullOrEmpty(res))
+                                                Response.MakeGetResponse(res, "application/json");
+                                            else
+                                                Response.MakeErrorResponse(404, "Not Found");
+                                            break;
+                                        }
+                                        #endregion
+
+                                        #region DEBUG AchievementService 
+                                        else if (absolutepath.Contains($"/AchievementService/{SSFWUserSessionManager.GetIdBySessionId(sessionid)}"))
+                                        {
+                                            var res = achievementService.HandleAchievementService(absolutepath);
                                             if (!string.IsNullOrEmpty(res))
                                                 Response.MakeGetResponse(res, "application/json");
                                             else

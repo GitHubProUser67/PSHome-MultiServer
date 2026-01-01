@@ -63,7 +63,7 @@ namespace SSFWServer.Services
         }
 
 
-        public static string HandleTradingService(HttpRequest req, string sessionid, string absolutepath)
+        public string HandleTradingService(HttpRequest req, string sessionid, string absolutepath)
         {
             BaseResponse tradeResponse = new();
             TradeTransactionResponse newTradeTransactionResponse = new();
