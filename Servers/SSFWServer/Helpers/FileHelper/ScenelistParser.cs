@@ -2,7 +2,7 @@ using SSFWServer.ChannelID;
 using System.Collections.Concurrent;
 using System.Xml;
 
-namespace SSFWServer.Helpers
+namespace SSFWServer.Helpers.FileHelper
 {
     public class ScenelistParser
     {

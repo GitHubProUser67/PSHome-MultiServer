@@ -4,9 +4,15 @@ namespace SSFWServer.Services
 {
     public class AvatarService
     {
-        public byte[]? HandleAvatarService(string absolutepath, string? key)
+        public byte[]? HandleAvatarService(string absolutepath, string filePath, string? key)
         {
-            return FileHelper.ReadAllBytes(absolutepath, key);
+            if (File.Exists(filePath))
+            {
+                return FileHelper.ReadAllBytes(absolutepath, key);
+            } else
+            {
+                return null;
+            }
         }
     }
 }

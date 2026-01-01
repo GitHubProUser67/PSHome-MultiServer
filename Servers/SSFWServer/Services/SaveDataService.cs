@@ -1,11 +1,11 @@
-using CustomLogger;
+﻿using CustomLogger;
 using Newtonsoft.Json;
 
-namespace SSFWServer.SaveDataHelper
+namespace SSFWServer.Services
 {
-    public static class GetFileList
+    public class SaveDataService
     {
-        public static string? SaveDataDebugGetFileList(string directoryPath, string? segment)
+        public string? DebugGetFileList(string directoryPath, string? segment)
         {
             try
             {
@@ -19,7 +19,7 @@ namespace SSFWServer.SaveDataHelper
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError($"[SSFW] - SaveDataDebug GetFileList ERROR: \n{e}");
+                LoggerAccessor.LogError($"[SSFW] -  DebugGetFileList ERROR: \n{e}");
             }
 
             return null;

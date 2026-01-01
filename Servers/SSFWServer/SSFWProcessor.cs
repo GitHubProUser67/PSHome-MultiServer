@@ -4,10 +4,7 @@ using MultiServerLibrary.HTTP;
 using MultiServerLibrary.SSL;
 using NetCoreServer;
 using NetCoreServer.CustomServers;
-using Org.BouncyCastle.Ocsp;
-using SSFWServer.Helpers;
 using SSFWServer.Helpers.FileHelper;
-using SSFWServer.SaveDataHelper;
 using SSFWServer.Services;
 using System.Collections.Concurrent;
 using System.Net;
@@ -177,7 +174,7 @@ namespace SSFWServer
                             string? env = ExtractBeforeFirstDot(host);
                             sessionid = GetHeaderValue(Headers, "X-Home-Session-Id");
 
-                            if (string.IsNullOrEmpty(env) || !Misc.homeEnvs.Contains(env))
+                            if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))
                                 env = "cprod";
 
                             // Instantiate services
@@ -190,6 +187,7 @@ namespace SSFWServer
                             AvatarLayoutService avatarLayout = new(sessionid, _legacykey);
                             ClanService clanService = new(sessionid);
                             PlayerLookupService playerLookupService = new();
+                            SaveDataService saveDataService = new();
                             TradingService tradingService = new(sessionid, env, _legacykey);
 
                             switch (request.Method)
@@ -242,7 +240,7 @@ namespace SSFWServer
                                         #region SaveDataService
                                         else if (absolutepath.Contains($"/SaveDataService/{env}/{segments.LastOrDefault()}"))
                                         {
-                                            string? res = GetFileList.SaveDataDebugGetFileList(directoryPath, segments.LastOrDefault());
+                                            string? res = saveDataService.DebugGetFileList(directoryPath, segments.LastOrDefault()); ;
                                             if (res != null)
                                                 Response.MakeGetResponse(res, "application/json");
                                             else
@@ -415,21 +413,12 @@ namespace SSFWServer
                                     #region SaveData AvatarService
                                     else if (absolutepath.Contains($"/SaveDataService/avatar/{env}/") && absolutepath.EndsWith(".jpg"))
                                     {
-                                        if (File.Exists(filePath))
-                                        {
-                                            byte[]? res = FileHelper.ReadAllBytes(filePath, _legacykey);
+                                        byte[]? res = avatarService.HandleAvatarService(absolutepath, filePath, _legacykey);
 
-                                            if (res != null)
-                                                Response.MakeGetResponse(res, "image/jpg");
-                                            else
-                                                Response.MakeErrorResponse();
-                                        }
+                                        if (res != null)
+                                            Response.MakeGetResponse(res, "image/jpg");
                                         else
-                                        {
-                                            Response.Clear();
-                                            Response.SetBegin((int)HttpStatusCode.NotFound);
-                                            Response.SetBody();
-                                        }
+                                            Response.MakeErrorResponse(404, "Not Found");
                                     }
                                     else
                                     {
@@ -525,7 +514,7 @@ namespace SSFWServer
                                                 Response.MakeOkResponse();
                                             }
                                             else if (
-                                                absolutepath.Contains($"/RewardsService/pm_{env}_inv/")
+                                                absolutepath.Contains($"/RewardsService/pm_{env}_cards/")
                                                 || absolutepath.Contains($"/RewardsService/pmcards/")
                                                 || absolutepath.Contains($"/RewardsService/p4t-{env}/"))
                                                 Response.MakeGetResponse(rewardSvc.HandleRewardServiceInvPOST(postbuffer, directoryPath, filePath, absolutepath), "application/json");
@@ -694,7 +683,7 @@ namespace SSFWServer
                                         else if (absolutepath.Contains($"/RewardsService/pmcards/rewards/{SSFWUserSessionManager.GetIdBySessionId(sessionid)}")
                                             && IsSSFWRegistered(sessionid))
                                         {
-                                            var res = rewardSvc.HandleRewardServiceInvDELETE(directoryPath, filePath, absolutepath, UserAgent, sessionid);
+                                            var res = rewardSvc.HandleRewardServiceWipeInvDELETE(directoryPath, filePath, absolutepath, UserAgent, sessionid);
                                             if (res != null)
                                                 Response.MakeOkResponse();
                                             else
@@ -894,7 +883,7 @@ namespace SSFWServer
                                         string sceneId = GetHeaderValue(Headers, "sceneId", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
-                                        if (string.IsNullOrEmpty(env) || !Misc.homeEnvs.Contains(env))
+                                        if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))
                                             env = "cprod";
 
                                         Response.Clear();
@@ -1013,7 +1002,7 @@ namespace SSFWServer
                                         sessionId = GetHeaderValue(Headers, "sessionid", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
-                                        if (string.IsNullOrEmpty(env) || !Misc.homeEnvs.Contains(env))
+                                        if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))
                                             env = "cprod";
 
                                         userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
@@ -1057,7 +1046,7 @@ namespace SSFWServer
                                         sessionId = GetHeaderValue(Headers, "sessionid", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
-                                        if (string.IsNullOrEmpty(env) || !Misc.homeEnvs.Contains(env))
+                                        if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))
                                             env = "cprod";
 
                                         userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
@@ -1103,7 +1092,7 @@ namespace SSFWServer
                                         sessionId = GetHeaderValue(Headers, "sessionid", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
-                                        if (string.IsNullOrEmpty(env) || !Misc.homeEnvs.Contains(env))
+                                        if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))
                                             env = "cprod";
 
                                         userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
@@ -1156,7 +1145,7 @@ namespace SSFWServer
                                         sessionId = GetHeaderValue(Headers, "sessionid", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
-                                        if (string.IsNullOrEmpty(env) || !Misc.homeEnvs.Contains(env))
+                                        if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))
                                             env = "cprod";
 
                                         userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);
@@ -1202,7 +1191,7 @@ namespace SSFWServer
                                         sessionId = GetHeaderValue(Headers, "sessionid", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
-                                        if (string.IsNullOrEmpty(env) || !Misc.homeEnvs.Contains(env))
+                                        if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))
                                             env = "cprod";
 
                                         userId = SSFWUserSessionManager.GetIdBySessionId(sessionId);

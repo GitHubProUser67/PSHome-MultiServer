@@ -1,10 +1,7 @@
 ﻿using CustomLogger;
-using MaxMind.GeoIP2.Responses;
 using NetCoreServer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System;
-using System.Transactions;
 
 namespace SSFWServer.Services
 {
@@ -21,7 +18,6 @@ namespace SSFWServer.Services
             this.key = key;
         }
 
-
         public class BaseResponse
         {
             [JsonProperty("result")]
@@ -32,9 +28,9 @@ namespace SSFWServer.Services
             public string message { get; set; } = string.Empty;
         }
 
-        //<itemGuid, numOfCards>
         public class RootObject
         {
+            [JsonProperty("members")]
             public List<string>? members { get; set; }
         }
 
@@ -42,18 +38,18 @@ namespace SSFWServer.Services
         public class TradeTransactionResponse : BaseResponse
         {
             [JsonProperty("ownerId")]
-            public string ownerId = string.Empty;
+            public string ownerId { get; set; } = string.Empty;
             [JsonProperty("joinerId")]
-            public string joinerId = string.Empty;
+            public string joinerId { get; set; } = string.Empty;
             [JsonProperty("transactionId")]
-            public int transId = 0;
+            public int transId { get; set; } = 0;
             [JsonProperty("sequence")]
             public long sequence { get; set; } = 0;
 
-            public int tradeAmount = 0;
+            public int tradeAmount { get; set; } = 0;
             //itemList is a dictionary list of <itemGuid, numOfCards> pairs.
-            public Dictionary<string, int> tradeRequesterItemList = new Dictionary<string, int>();
-            public Dictionary<string, int> tradePartnerItemList = new Dictionary<string, int>();
+            public Dictionary<string, int> tradeRequesterItemList { get; set; } = new Dictionary<string, int>();
+            public Dictionary<string, int> tradePartnerItemList { get; set; } = new Dictionary<string, int>();
 
             public Status status {  get; set; }
         }
@@ -135,6 +131,8 @@ namespace SSFWServer.Services
                             } catch (Exception ex)
                             {
                                 LoggerAccessor.LogError($"[SSFW] TradingService - Exception caught attempting to remove existing trade transaction id {existingCardTradingTransactionId} with error {ex}");
+
+                                tradeResponse.result = -1;
                                 return JsonConvert.SerializeObject(tradeResponse);
                             }
 
@@ -143,8 +141,7 @@ namespace SSFWServer.Services
 
                 } else // otherwise create new transaction!
                 {   
-                    string CreateTransactionBody = req.Body;
-                    RootObject? result = JsonConvert.DeserializeObject<RootObject>(CreateTransactionBody);
+                    RootObject? result = JsonConvert.DeserializeObject<RootObject>(req.Body);
                     string memberValue = result.members[0];
 
                     int index = 1;
@@ -174,7 +171,6 @@ namespace SSFWServer.Services
                     tradeResponse.result = 0;
                     tradeResponse.id = index;
                     return JsonConvert.SerializeObject(tradeResponse);
-
                 }
             }
             else if (req.Method == "GET")
@@ -194,26 +190,28 @@ namespace SSFWServer.Services
                         JObject jsonResponse = JObject.FromObject(existingTrade);
 
                         jsonResponse[newTradeTransactionResponse.result] = 0;
-                        jsonResponse[newTradeTransactionResponse.message] = "Sucess";
-                        jsonResponse[newTradeTransactionResponse.status] = Convert.ToInt32(existingTrade.status);
+                        jsonResponse[newTradeTransactionResponse.message] = "Success";
                         jsonResponse[newTradeTransactionResponse.sequence] = existingTrade.sequence;
+                        jsonResponse[newTradeTransactionResponse.ownerId] = existingTrade.ownerId;
                         jsonResponse[newTradeTransactionResponse.joinerId] = existingTrade.joinerId;
+                        jsonResponse[newTradeTransactionResponse.status] = Convert.ToInt32(existingTrade.status);
 
                         return jsonResponse.ToString(Formatting.Indented);
 
-                        /*
+                        /* Original
                         return $@" 	{{
      	""result"" : 0,
         ""message"" : ""Success"",
-        ""sequence"" : {existingTrade.seqNumb},
+        ""sequence"" : {existingTrade.sequence},
         ""ownerId"" :""{existingTrade.tradeRequester}"",
-        ""joinerId"" :""{existingTrade.tradePartner}""
+        ""joinerId"" :""{existingTrade.joinerId}""
         ""status"" : {existingTrade.status}""
      }}";*/
 
-                    } else
+                    }
+                    else
                     {
-                        LoggerAccessor.LogInfo($"[SSFW] TradingService - Checking current status of transactionId {existingTrade.transId} between Requester {existingTrade.ownerId} & Partner {existingTrade.joinerId}: {existingTrade.status}");
+                        LoggerAccessor.LogInfo($"[SSFW] TradingService - GET method failed to find existing trade transaction!");
                         return JsonConvert.SerializeObject(tradeResponse);
                     }
                 } else
@@ -269,11 +267,8 @@ namespace SSFWServer.Services
             }
             #endregion
 
-
             tradeResponse.result = 0;
             return JsonConvert.SerializeObject(tradeResponse);
-             
-
         }
     }
 }

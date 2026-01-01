@@ -36,13 +36,13 @@ namespace SSFWServer.Services
 
                         // TODO, extract the proper region.
                         string jsonToWrite = $@"{{
-""region"":""en-US"",
-""message"":""OK"",
-""result"":0,
-""psnClanId"":{psnClanId},
-""sceneObjectId"":""{idElement.GetString()!}"",
-""personId"":""{_sessionid}"",
-""clanId"":""{DotNetHasher.ComputeMD5String(Encoding.UTF8.GetBytes(psnClanId))}""
+""region"": ""en-US"",
+""message"": ""OK"",
+""result"": 0,
+""psnClanId"": {psnClanId},
+""sceneObjectId"": ""{idElement.GetString()!}"",
+""personId"": ""{_sessionid}"",
+""clanId"": ""{DotNetHasher.ComputeMD5String(Encoding.UTF8.GetBytes(psnClanId))}""
 }}";
                         File.WriteAllText(filePath, jsonToWrite);
 
@@ -66,14 +66,14 @@ namespace SSFWServer.Services
                 return res.MakeErrorResponse(404, "Not Found");
             }
 
-            // Delete clan details
+            // Delete clan details if clan requested DELETE method
             try
             {
                 if (File.Exists(filePath))
                 {
                     string? sceneObjectId = JsonDocument.Parse(File.ReadAllText(filePath)).RootElement.GetProperty("sceneObjectId").GetString() ?? string.Empty;
                     File.Delete(filePath);
-                    return res.MakeGetResponse($"{{\"sceneObjectIds\":[\"{sceneObjectId}\"]}}", "application/json");
+                    return res.MakeGetResponse($"{{\"sceneObjectIds\": [\"{sceneObjectId}\"] }}", "application/json");
                 }
             }
             catch

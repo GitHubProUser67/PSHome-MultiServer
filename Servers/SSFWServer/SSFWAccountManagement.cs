@@ -1,11 +1,17 @@
 using CustomLogger;
 using Newtonsoft.Json;
-using SSFWServer.Helpers;
 using SSFWServer.Helpers.FileHelper;
 using System.Text;
 
 namespace SSFWServer
 {
+    public class SSFWUserData
+    {
+        public string? Username { get; set; }
+        public int LogonCount { get; set; }
+        public int IGA { get; set; }
+    }
+
     public class SSFWAccountManagement
     {
         public static int ReadOrMigrateAccount(byte[] extractedData, string? username, string? sessionid, string? key)

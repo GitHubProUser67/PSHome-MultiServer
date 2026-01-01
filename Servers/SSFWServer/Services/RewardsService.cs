@@ -42,19 +42,19 @@ namespace SSFWServer.Services
             {
                 return RewardServiceInventory(null, directorypath, filepath, absolutepath, false, true);
             } else {
-                LoggerAccessor.LogError($"[SSFW] - HandleRewardServiceInvCardTrackingDataDELETE : {SSFWUserSessionManager.GetIdBySessionId(sessionId)} Unauthorized to delete Tracking data!");
+                LoggerAccessor.LogError($"[SSFW] - HandleRewardServiceInvCardTrackingDataDELETE : {SSFWUserSessionManager.GetIdBySessionId(sessionId)} Unauthorized to delete Card Tracking data!");
                 return null;
             }
         }
 
-        public byte[]? HandleRewardServiceInvDELETE(string directorypath, string filepath, string absolutepath, string userAgent, string sessionId)
+        public byte[]? HandleRewardServiceWipeInvDELETE(string directorypath, string filepath, string absolutepath, string userAgent, string sessionId)
         {
             AdminObjectService adminObjectService = new AdminObjectService(sessionId, key);
             if(adminObjectService.IsAdminVerified(userAgent))
             {
                 return RewardServiceInventory(null, directorypath, filepath, absolutepath, true, false);
             } else {
-                LoggerAccessor.LogError($"[SSFW] - HandleRewardServiceInvDELETE : {SSFWUserSessionManager.GetIdBySessionId(sessionId)} Unauthorized to delete Tracking data!");
+                LoggerAccessor.LogError($"[SSFW] - HandleRewardServiceWipeInvDELETE : {SSFWUserSessionManager.GetIdBySessionId(sessionId)} Unauthorized to wipe inventory data!");
                 return null;
             }
         }
@@ -105,7 +105,7 @@ namespace SSFWServer.Services
                                 continue;
                             if (rewardValue.Type != JTokenType.Integer)
                             {
-                                LoggerAccessor.LogInfo($"[RewardsService] - Reward:{rewardValue} earned, adding to mini file:{filePath}.");
+                                LoggerAccessor.LogInfo($"[SSFW] SSFWUpdateMini - Reward: {rewardValue} earned, adding to mini file: {filePath}.");
                                 rewardValue = 1;
                             }
 
@@ -257,19 +257,20 @@ namespace SSFWServer.Services
             }
         }
 
-        public byte[] RewardServiceInventory(byte[]? buffer, string directorypath, string filepath, string absolutePath, bool deleteInv, bool deleteOnlyTracking)
+        public byte[] RewardServiceInventory(byte[] buffer, string directorypath, string filepath, string absolutePath, bool deleteInv, bool deleteOnlyTracking)
         {
             //Tracking Inventory GUID
             const string trackingGuid = "00000000-00000000-00000000-00000001"; // fallback/hardcoded tracking GUID
 
             // File paths based on the provided format
-            string countsStoreDir = $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutePath}/";
-            Directory.CreateDirectory(Path.GetDirectoryName(countsStoreDir));
+            string countsStoreDir = $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutePath}";
             string countsStore = $"{countsStoreDir}/counts.json";
 
             string trackingFileDir = $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutePath}/object";
-            Directory.CreateDirectory(Path.GetDirectoryName(trackingFileDir));
             string trackingFile = $"{trackingFileDir}/{trackingGuid}.json";
+
+            Directory.CreateDirectory(Path.GetDirectoryName(countsStoreDir));
+            Directory.CreateDirectory(Path.GetDirectoryName(trackingFileDir));
 
             //Parse Buffer
             string fixedJsonPayload = GUIDValidator.FixJsonValues(Encoding.UTF8.GetString(buffer));
