@@ -1,4 +1,5 @@
 using CustomLogger;
+using SSFWServer.Helpers.RegexHelper;
 using System.Collections.Concurrent;
 
 namespace SSFWServer
@@ -82,7 +83,7 @@ namespace SSFWServer
                     // Check if session is still valid and username matches
                     if (entry.Item3 > DateTime.Now
                         && entry.Item2.Username.StartsWith(userName)
-                        && entry.Item2.Username.Contains("018609"))
+                        && HasMinimumClientVersion(userName))
                     {
                         return entry.Item2.Id;
                     }
@@ -107,7 +108,7 @@ namespace SSFWServer
 
                     if (entry.Item3 > DateTime.Now
                         && entry.Item2.Username.StartsWith(userName)
-                        && entry.Item2.Username.Contains("018609"))
+                        && HasMinimumClientVersion(userName))
                     {
                         return entry.Item2;
                     }
@@ -212,6 +213,16 @@ namespace SSFWServer
                     IsSessionValid(sessionId, true);
                 }
             }
+        }
+
+        private static bool HasMinimumClientVersion(string username, int minimumVersion = 016531)
+        {
+            var match = GUIDValidator.VersionFilter.Match(username);
+            if (match.Success && int.TryParse(match.Value, out int version))
+            {
+                return version >= minimumVersion;
+            }
+            return false;
         }
     }
 

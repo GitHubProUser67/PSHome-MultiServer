@@ -78,7 +78,7 @@ namespace SSFWServer.Helpers.FileHelper
                                                     }
                                                 }
                                             }
-                                            catch (Exception)
+                                            catch
                                             {
                                                 // Not Important
                                             }

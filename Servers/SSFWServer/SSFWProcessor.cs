@@ -13,7 +13,6 @@ using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 namespace SSFWServer
@@ -23,7 +22,7 @@ namespace SSFWServer
         private const string LoginGUID = "bb88aea9-6bf8-4201-a6ff-5d1f8da0dd37";
 
         // Defines a list of web-related file extensions
-        private static readonly HashSet<string> allowedWebExtensions = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
+        private static readonly HashSet<string> allowedWebExtensions = new(StringComparer.InvariantCultureIgnoreCase)
         {
             ".html", ".htm", ".cgi", ".css", ".js", ".svg", ".gif", ".ico", ".woff", ".woff2", ".ttf", ".eot"
         };
@@ -36,7 +35,7 @@ namespace SSFWServer
         private readonly string _certpath;
         private readonly string _certpass;
 
-        public static string? _legacykey;
+        private static string? _legacykey;
 
         public SSFWProcessor(string certpath, string certpass, string? locallegacykey)
         {
@@ -252,7 +251,6 @@ namespace SSFWServer
                                         #endregion
 
                                         #region PlayerLookup Service
-
                                         //Doesn't pass in SessionId!!
                                         else if (absolutepath.Contains($"/{LoginGUID}/person/byDisplayName"))
                                         {
@@ -279,10 +277,9 @@ namespace SSFWServer
 
                                         #region DEBUG AuditService
                                         if (absolutepath.Contains($"/AuditService/log/{env}/{SSFWUserSessionManager.GetIdBySessionId(sessionid)}/counts")
-                                            || absolutepath.Contains($"/AuditService/log/{env}/{SSFWUserSessionManager.GetIdBySessionId(sessionid)}/object")
-                                            && IsSSFWRegistered(sessionid))
+                                            || absolutepath.Contains($"/AuditService/log/{env}/{SSFWUserSessionManager.GetIdBySessionId(sessionid)}/object"))
                                         {
-                                            var res = auditService.HandleAuditService(absolutepath, new byte[] { }, request);
+                                            var res = auditService.HandleAuditService(absolutepath, Array.Empty<byte>(), request);
 
                                             if (!string.IsNullOrEmpty(res))
                                                 Response.MakeGetResponse(res, "application/json");
@@ -292,96 +289,12 @@ namespace SSFWServer
                                         }
                                         #endregion
 
-                                        else if (IsSSFWRegistered(sessionid))
+                                        #region RewardService Inventory System
+                                        //First check if this is a Inventory request
+                                        if (absolutepath.Contains($"/RewardsService/") && absolutepath.Contains("counts"))
                                         {
-                                            #region RewardService Inventory System
-                                            //First check if this is a Inventory request
-                                            if (absolutepath.Contains($"/RewardsService/") && absolutepath.Contains("counts"))
-                                            {
-                                                //Detect if existing inv exists
-                                                if (File.Exists(filePath + ".json"))
-                                                {
-                                                    string? res = FileHelper.ReadAllText(filePath + ".json", _legacykey);
-
-                                                    if (!string.IsNullOrEmpty(res))
-                                                    {
-                                                        if (GetHeaderValue(Headers, "Accept") == "application/json")
-                                                            Response.MakeGetResponse(res, "application/json");
-                                                        else
-                                                            Response.MakeGetResponse(res);
-                                                    }
-                                                    else
-                                                        Response.MakeErrorResponse();
-                                                }
-                                                else //fallback default 
-                                                    Response.MakeGetResponse(@"{ ""00000000-00000000-00000000-00000001"": 1 } ", "application/json");
-                                                break;
-                                            }
-                                            //Check for specifically the Tracking GUID
-                                            else if (absolutepath.Contains($"/RewardsService/") && absolutepath.Contains("object/00000000-00000000-00000000-00000001"))
-                                            {
-                                                //Detect if existing inv exists
-                                                if (File.Exists(filePath + ".json"))
-                                                {
-                                                    string? res = FileHelper.ReadAllText(filePath + ".json", _legacykey);
-
-                                                    if (!string.IsNullOrEmpty(res))
-                                                    {
-                                                        if (GetHeaderValue(Headers, "Accept") == "application/json")
-                                                            Response.MakeGetResponse(res, "application/json");
-                                                        else
-                                                            Response.MakeGetResponse(res);
-                                                    }
-                                                    else
-                                                        Response.MakeErrorResponse();
-                                                }
-                                                else //fallback default 
-                                                {
-#if DEBUG
-                                                    LoggerAccessor.LogWarn($"[SSFWProcessor] : {UserAgent} Non-existent inventories detected, using defaults!");
-#endif
-                                                    if (absolutepath.Contains("p4t-cprod"))
-                                                    {
-                                                        #region Quest for Greatness
-                                                        Response.MakeGetResponse(@"{
-                                                      ""result"": 0,
-                                                      ""rewards"": {
-                                                        ""00000000-00000000-00000000-00000001"": {
-                                                          ""migrated"": 1,
-                                                          ""_id"": ""1""
-                                                        }
-                                                      }
-                                                    }", "application/json");
-                                                        #endregion
-                                                    }
-                                                    else
-                                                    {
-                                                        #region Pottermore
-                                                        Response.MakeGetResponse(@"{
-                                                      ""result"": 0,
-                                                      ""rewards"": [
-                                                        {
-                                                          ""00000000-00000000-00000000-00000001"": {
-                                                          ""boost"": ""AQ=="",
-                                                          ""_id"": ""tracking""
-                                                          }
-                                                        }
-                                                      ]
-                                                    }", "application/json");
-                                                        #endregion
-                                                    }
-                                                    break;
-                                                }
-                                            }
-                                            #endregion
-
-                                            #region ClanService
-                                            else if (absolutepath.Contains($"/ClanService/{env}/clan/"))
-                                                clanService.HandleClanDetailsService(request, Response, absolutepath);
-                                            #endregion
-
-                                            #region File return JSON, bin, jpeg
-                                            else if (File.Exists(filePath + ".json"))
+                                            //Detect if existing inv exists
+                                            if (File.Exists(filePath + ".json"))
                                             {
                                                 string? res = FileHelper.ReadAllText(filePath + ".json", _legacykey);
 
@@ -395,40 +308,120 @@ namespace SSFWServer
                                                 else
                                                     Response.MakeErrorResponse();
                                             }
-                                            else if (File.Exists(filePath + ".bin"))
+                                            else //fallback default 
+                                                Response.MakeGetResponse(@"{ ""00000000-00000000-00000000-00000001"": 1 } ", "application/json");
+                                            break;
+                                        }
+                                        //Check for specifically the Tracking GUID
+                                        else if (absolutepath.Contains($"/RewardsService/") && absolutepath.Contains("object/00000000-00000000-00000000-00000001"))
+                                        {
+                                            //Detect if existing inv exists
+                                            if (File.Exists(filePath + ".json"))
                                             {
-                                                byte[]? res = FileHelper.ReadAllBytes(filePath + ".bin", _legacykey);
+                                                string? res = FileHelper.ReadAllText(filePath + ".json", _legacykey);
 
-                                                if (res != null)
-                                                    Response.MakeGetResponse(res, "application/octet-stream");
+                                                if (!string.IsNullOrEmpty(res))
+                                                {
+                                                    if (GetHeaderValue(Headers, "Accept") == "application/json")
+                                                        Response.MakeGetResponse(res, "application/json");
+                                                    else
+                                                        Response.MakeGetResponse(res);
+                                                }
                                                 else
                                                     Response.MakeErrorResponse();
                                             }
-                                            else if (File.Exists(filePath + ".jpeg"))
+                                            else //fallback default 
                                             {
-                                                byte[]? res = FileHelper.ReadAllBytes(filePath + ".jpeg", _legacykey);
-
-                                                if (res != null)
-                                                    Response.MakeGetResponse(res, "image/jpeg");
+#if DEBUG
+                                                LoggerAccessor.LogWarn($"[SSFWProcessor] : {UserAgent} Non-existent inventories detected, using defaults!");
+#endif
+                                                if (absolutepath.Contains("p4t-cprod"))
+                                                {
+                                                    #region Quest for Greatness
+                                                    Response.MakeGetResponse(@"{
+                                                      ""result"": 0,
+                                                      ""rewards"": {
+                                                        ""00000000-00000000-00000000-00000001"": {
+                                                          ""migrated"": 1,
+                                                          ""_id"": ""1""
+                                                        }
+                                                      }
+                                                    }", "application/json");
+                                                    #endregion
+                                                }
                                                 else
-                                                    Response.MakeErrorResponse();
+                                                {
+                                                    #region Pottermore
+                                                    Response.MakeGetResponse(@"{
+                                                      ""result"": 0,
+                                                      ""rewards"": [
+                                                        {
+                                                          ""00000000-00000000-00000000-00000001"": {
+                                                          ""boost"": ""AQ=="",
+                                                          ""_id"": ""tracking""
+                                                          }
+                                                        }
+                                                      ]
+                                                    }", "application/json");
+                                                    #endregion
+                                                }
+                                                break;
+                                            }
+                                        }
+                                        #endregion
+
+                                        #region ClanService
+                                        else if (absolutepath.Contains($"/ClanService/{env}/clan/"))
+                                            clanService.HandleClanDetailsService(request, Response, absolutepath);
+                                        #endregion
+
+                                        #region File return JSON, bin, jpeg
+                                        else if (File.Exists(filePath + ".json"))
+                                        {
+                                            string? res = FileHelper.ReadAllText(filePath + ".json", _legacykey);
+
+                                            if (!string.IsNullOrEmpty(res))
+                                            {
+                                                if (GetHeaderValue(Headers, "Accept") == "application/json")
+                                                    Response.MakeGetResponse(res, "application/json");
+                                                else
+                                                    Response.MakeGetResponse(res);
                                             }
                                             else
-                                            {
-                                                LoggerAccessor.LogWarn($"[SSFWProcessor] : {UserAgent} Requested a non-existent file - {filePath}");
-                                                Response.Clear();
-                                                Response.SetBegin((int)HttpStatusCode.NotFound);
-                                                Response.SetBody();
-                                            }
-                                            #endregion
+                                                Response.MakeErrorResponse();
                                         }
+                                        else if (File.Exists(filePath + ".bin"))
+                                        {
+                                            byte[]? res = FileHelper.ReadAllBytes(filePath + ".bin", _legacykey);
+
+                                            if (res != null)
+                                                Response.MakeGetResponse(res, "application/octet-stream");
+                                            else
+                                                Response.MakeErrorResponse();
+                                        }
+                                        else if (File.Exists(filePath + ".jpeg"))
+                                        {
+                                            byte[]? res = FileHelper.ReadAllBytes(filePath + ".jpeg", _legacykey);
+
+                                            if (res != null)
+                                                Response.MakeGetResponse(res, "image/jpeg");
+                                            else
+                                                Response.MakeErrorResponse();
+                                        }
+                                        else
+                                        {
+                                            LoggerAccessor.LogWarn($"[SSFWProcessor] : {UserAgent} Requested a non-existent file - {filePath}");
+                                            Response.Clear();
+                                            Response.SetBegin((int)HttpStatusCode.NotFound);
+                                            Response.SetBody();
+                                        }
+                                        #endregion
                                     }
 
                                     #region SaveData AvatarService
                                     else if (absolutepath.Contains($"/SaveDataService/avatar/{env}/") && absolutepath.EndsWith(".jpg"))
                                     {
                                         byte[]? res = avatarService.HandleAvatarService(absolutepath, filePath, _legacykey);
-
                                         if (res != null)
                                             Response.MakeGetResponse(res, "image/jpg");
                                         else
@@ -467,7 +460,6 @@ namespace SSFWServer
                                                 }
                                                 else
                                                     Response.MakeErrorResponse();
-                                                login.Dispose();
                                             }
                                             else
                                             {
@@ -481,8 +473,9 @@ namespace SSFWServer
                                         #region PING KeepAlive Service
                                         else if (absolutepath.Contains("/morelife") && !string.IsNullOrEmpty(GetHeaderValue(Headers, "x-signature")))
                                         {
-                                            if (keepAliveService.UpdateKeepAliveForClient(absolutepath, Response))
-                                                Response.MakeGetResponse("{}", "application/json"); // This doesn't even need a empty array, simply 200 Status is enough.
+                                            if (KeepAliveService.UpdateKeepAliveForClient(absolutepath))
+                                                Response.MakeOkResponse(); // This doesn't even need a empty array, simply 200 Status is enough.
+                                            //Response.MakeGetResponse("{}", "application/json"); 
                                             else
                                                 Response.MakeErrorResponse(403);
                                         }
@@ -540,7 +533,7 @@ namespace SSFWServer
                                             #endregion
 
                                             #region TradingService
-                                            else if (absolutepath.Contains($"/TradingService/pmcards/trade") && IsSSFWRegistered(sessionid))
+                                            else if (absolutepath.Contains($"/TradingService/pmcards/trade"))
                                             {
                                                 string? res = tradingService.HandleTradingService(request, sessionid, absolutepath);
 
@@ -553,7 +546,7 @@ namespace SSFWServer
                                             #endregion
 
                                             #region FriendsService
-                                            else if (absolutepath.Contains($"/identity/person/{sessionid}/data/psn/friends-list") && IsSSFWRegistered(sessionid))
+                                            else if (absolutepath.Contains($"/identity/person/{sessionid}/data/psn/friends-list"))
                                             {
                                                 var res = friendsService.HandleFriendsService(absolutepath, postbuffer);
                                                 Response.MakeOkResponse();
@@ -702,8 +695,7 @@ namespace SSFWServer
 
                                         #region RewardsService Inventory DEBUG
                                         // RewardsService Inventory DEBUG - WipeInventory
-                                        else if (absolutepath.Contains($"/RewardsService/pmcards/rewards/{SSFWUserSessionManager.GetIdBySessionId(sessionid)}")
-                                            && IsSSFWRegistered(sessionid))
+                                        else if (absolutepath.Contains($"/RewardsService/pmcards/rewards/{SSFWUserSessionManager.GetIdBySessionId(sessionid)}"))
                                         {
                                             var res = rewardSvc.HandleRewardServiceWipeInvDELETE(directoryPath, filePath, absolutepath, UserAgent, sessionid);
                                             if (res != null)
@@ -712,8 +704,7 @@ namespace SSFWServer
                                                 Response.MakeErrorResponse(500, "Failed to Delete Rewards Inventory!");
                                         }
                                         // RewardsService Inventory DEBUG - DebugClearCardTrackingData
-                                        else if (absolutepath.Contains($"/RewardsService/pmcards/rewards/{SSFWUserSessionManager.GetIdBySessionId(sessionid)}/00000000-00000000-00000000-00000001")
-                                            && IsSSFWRegistered(sessionid))
+                                        else if (absolutepath.Contains($"/RewardsService/pmcards/rewards/{SSFWUserSessionManager.GetIdBySessionId(sessionid)}/00000000-00000000-00000000-00000001"))
                                         {
                                             var res = rewardSvc.HandleRewardServiceInvCardTrackingDataDELETE(directoryPath, filePath, absolutepath, UserAgent, sessionid);
                                             if (res != null)
@@ -798,14 +789,13 @@ namespace SSFWServer
                                                 }
                                                 else
                                                     Response.MakeErrorResponse();
-                                                login.Dispose();
                                             }
                                             #endregion
 
                                             #region FriendService
                                             else if (absolutepath.Contains($"/identity/person/{sessionid}/data/psn/friends-list"))
                                             {
-                                                FriendsService friendsService = new FriendsService(sessionid, "prod", _legacykey);
+                                                FriendsService friendsService = new(sessionid, "prod", _legacykey);
                                                 var res = friendsService.HandleFriendsService(absolutepath, postbuffer);
                                                 Response.MakeOkResponse();
                                             }
@@ -901,7 +891,8 @@ namespace SSFWServer
                                         }
                                         break;
                                     case "/WebService/ApplyLayoutOverride/":
-                                        sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
+                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        if (sessionId == string.Empty) sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
                                         string targetUserName = GetHeaderValue(Headers, "targetUserName", false);
                                         string sceneId = GetHeaderValue(Headers, "sceneId", false);
                                         env = GetHeaderValue(Headers, "env", false);
@@ -998,7 +989,8 @@ namespace SSFWServer
                                         }
                                         break;
                                     case "/WebService/R3moveLayoutOverride/":
-                                        sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
+                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        if (sessionId == string.Empty) sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
 
                                         Response.Clear();
 
@@ -1022,7 +1014,8 @@ namespace SSFWServer
                                         }
                                         break;
                                     case "/WebService/GetMini/":
-                                        sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
+                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        if (sessionId == string.Empty) sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
                                         if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))
@@ -1066,7 +1059,8 @@ namespace SSFWServer
                                         break;
                                     case "/WebService/AddMiniItem/":
                                         uuid = GetHeaderValue(Headers, "uuid", false);
-                                        sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
+                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        if (sessionId == string.Empty) sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
                                         if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))
@@ -1112,7 +1106,8 @@ namespace SSFWServer
                                         break;
                                     case "/WebService/AddMiniItems/":
                                         uuids = GetHeaderValue(Headers, "uuids", false).Split(',');
-                                        sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
+                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        if (sessionId == string.Empty) sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
                                         if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))
@@ -1165,7 +1160,8 @@ namespace SSFWServer
                                         break;
                                     case "/WebService/RemoveMiniItem/":
                                         uuid = GetHeaderValue(Headers, "uuid", false);
-                                        sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
+                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        if (sessionId == string.Empty) sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
                                         if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))
@@ -1211,7 +1207,8 @@ namespace SSFWServer
                                         break;
                                     case "/WebService/RemoveMiniItems/":
                                         uuids = GetHeaderValue(Headers, "uuids", false).Split(',');
-                                        sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
+                                        sessionId = GetHeaderValue(Headers, "sessionid", false);
+                                        if (sessionId == string.Empty) sessionId = GetHeaderValue(Headers, "X-Home-Session-Id", false);
                                         env = GetHeaderValue(Headers, "env", false);
 
                                         if (string.IsNullOrEmpty(env) || !SSFWServerConfiguration.homeEnvs.Contains(env))

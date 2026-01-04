@@ -6,7 +6,8 @@ namespace SSFWServer.Helpers.RegexHelper
 {
     public class GUIDValidator
     {
-        public static Regex RegexSessionValidator = new Regex(@"^[{(]?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})[)}]?$");
+        public static Regex RegexSessionValidator = new(@"^[{(]?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})[)}]?$");
+        public static Regex VersionFilter = new(@"\d{6}");
 
 #if NET7_0_OR_GREATER
         [GeneratedRegex("[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}")]

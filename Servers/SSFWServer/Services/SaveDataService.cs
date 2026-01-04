@@ -1,5 +1,6 @@
 ﻿using CustomLogger;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace SSFWServer.Services
 {
@@ -14,12 +15,12 @@ namespace SSFWServer.Services
                     List<FileItem>? files = GetFilesInfo(directoryPath + "/" + segment);
 
                     if (files != null)
-                        return JsonConvert.SerializeObject(new FilesContainer() { files = files }, Formatting.Indented);
+                        return JsonSerializer.Serialize(new FilesContainer() { files = files });
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError($"[SSFW] -  DebugGetFileList ERROR: \n{e}");
+                LoggerAccessor.LogError($"[SSFW] - DebugGetFileList ERROR: \n{e}");
             }
 
             return null;

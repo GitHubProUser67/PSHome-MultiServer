@@ -1,4 +1,5 @@
 using CustomLogger;
+using MultiServerLibrary.Extension;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SSFWServer.Helpers.FileHelper;
@@ -42,7 +43,7 @@ namespace SSFWServer.Services
             {
                 return RewardServiceInventory(Array.Empty<byte>(), directorypath, filepath, absolutepath, false, true);
             } else {
-                LoggerAccessor.LogError($"[SSFW] - HandleRewardServiceInvCardTrackingDataDELETE : {SSFWUserSessionManager.GetIdBySessionId(sessionId)} Unauthorized to delete Card Tracking data!");
+                LoggerAccessor.LogWarn($"[SSFW] - HandleRewardServiceInvCardTrackingDataDELETE : {SSFWUserSessionManager.GetIdBySessionId(sessionId)} Unauthorized to delete Card Tracking data!");
                 return null;
             }
         }
@@ -54,7 +55,7 @@ namespace SSFWServer.Services
             {
                 return RewardServiceInventory(Array.Empty<byte>(), directorypath, filepath, absolutepath, true, false);
             } else {
-                LoggerAccessor.LogError($"[SSFW] - HandleRewardServiceWipeInvDELETE : {SSFWUserSessionManager.GetIdBySessionId(sessionId)} Unauthorized to wipe inventory data!");
+                LoggerAccessor.LogWarn($"[SSFW] - HandleRewardServiceWipeInvDELETE : {SSFWUserSessionManager.GetIdBySessionId(sessionId)} Unauthorized to wipe inventory data!");
                 return null;
             }
         }
@@ -103,11 +104,6 @@ namespace SSFWServer.Services
                             JToken? rewardValue = reward.Value;
                             if (string.IsNullOrEmpty(rewardKey) || rewardValue == null)
                                 continue;
-                            if (rewardValue.Type != JTokenType.Integer)
-                            {
-                                LoggerAccessor.LogInfo($"[SSFW] SSFWUpdateMini - Reward: {rewardValue} earned, adding to mini file: {filePath}.");
-                                rewardValue = 1;
-                            }
 
                             // Check if the reward exists in the JSON array
                             JToken? existingReward = jsonArray.FirstOrDefault(r => r[rewardKey] != null);
@@ -121,13 +117,13 @@ namespace SSFWServer.Services
                             {
                                 if (existingReward != null)
                                     // Update the value of the reward
-                                    existingReward[rewardKey] = rewardValue;
+                                    existingReward[rewardKey] = DateTime.UtcNow.ToUnixTime();
                                 else
                                 {
                                     // Add the new reward to the JSON array
                                     jsonArray.Add(new JObject
                                     {
-                                        { rewardKey, rewardValue }
+                                        { rewardKey, DateTime.UtcNow.ToUnixTime() }
                                     });
                                 }
                             }
@@ -186,7 +182,7 @@ namespace SSFWServer.Services
 
                                         foreach (var entry in entriesToAddInMini)
                                         {
-                                            SSFWUpdateMini(miniPath, $"{{\"rewards\":{{\"{entry.Key}\": {entry.Value}}}}}", false);
+                                            SSFWUpdateMini(miniPath, $"{{ \"rewards\": {{ \"{entry.Key}\": {entry.Value} }} }}", false);
                                         }
                                     }
                                 }
@@ -239,7 +235,7 @@ namespace SSFWServer.Services
                                         {
                                             foreach (string entry in entriesToRemoveInMini)
                                             {
-                                                SSFWUpdateMini(miniPath, $"{{\"rewards\":{{\"{entry}\": -1}}}}", true);
+                                                SSFWUpdateMini(miniPath, $"{{ \"rewards\": {{ \"{entry}\": -1 }} }}", true);
                                             }
                                         }
                                     }
@@ -300,7 +296,9 @@ namespace SSFWServer.Services
                     if(deleteInv)
                     {
                         File.Delete(countsStore);
-                        LoggerAccessor.LogInfo($"[SSFW] - RewardServiceInventory: Deleting Inventory counts at {countsStore}");
+#if DEBUG
+                        LoggerAccessor.LogInfo($"[SSFW] - RewardServiceInventory: Successfully deleted Inventory counts at {countsStore}");
+#endif
                     } else
                     {
                         string countsJson = File.ReadAllText(countsStore);
@@ -318,7 +316,9 @@ namespace SSFWServer.Services
                     if (deleteInv || deleteOnlyTracking)
                     {
                         File.Delete(trackingFile);
+#if DEBUG
                         LoggerAccessor.LogInfo($"[SSFW] - RewardServiceInventory: Deleting Tracking file at {trackingFile}");
+#endif
                         return Encoding.UTF8.GetBytes("");
                     }
                     else

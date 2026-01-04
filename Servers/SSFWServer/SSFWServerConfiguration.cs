@@ -2,6 +2,7 @@ using CustomLogger;
 using Newtonsoft.Json.Linq;
 using System.Security.Cryptography;
 using MultiServerLibrary.Extension;
+using System.Collections.Concurrent;
 
 public static class SSFWServerConfiguration
 {
@@ -42,18 +43,18 @@ public static class SSFWServerConfiguration
         };
 
     // Sandbox Environments
-    public static List<string> homeEnvs = new()
-        {
-            "cprod", "cprodts", "cpreprod", "cpreprodb",
-            "rc-qa", "rcdev", "rc-dev", "cqa-e",
-            "cqa-a", "cqa-j", "cqa-h", "cqab-e",
-            "cqab-a", "cqab-j", "cqab-h", "qcqa-e",
-            "qcqa-a", "qcqa-j", "qcqa-h", "qcpreprod",
-            "qcqab-e", "qcqab-a", "qcqab-j", "qcqab-h",
-            "qcpreprodb", "coredev", "core-dev", "core-qa",
-            "cdev", "cdev2", "cdev3", "cdeva", "cdevb", "cdevc",
-            "nonprod1", "nonprod2", "nonprod3", "prodsp"
-        };
+    public static readonly ConcurrentBag<string> homeEnvs = new()
+    {
+        "cprod", "cprodts", "cpreprod", "cpreprodb",
+        "rc-qa", "rcdev", "rc-dev", "cqa-e",
+        "cqa-a", "cqa-j", "cqa-h", "cqab-e",
+        "cqab-a", "cqab-j", "cqab-h", "qcqa-e",
+        "qcqa-a", "qcqa-j", "qcqa-h", "qcpreprod",
+        "qcqab-e", "qcqab-a", "qcqab-j", "qcqab-h",
+        "qcpreprodb", "coredev", "core-dev", "core-qa",
+        "cdev", "cdev2", "cdev3", "cdeva", "cdevb", "cdevc",
+        "nonprod1", "nonprod2", "nonprod3", "prodsp"
+    };
 
     /// <summary>
     /// Tries to load the specified configuration file.

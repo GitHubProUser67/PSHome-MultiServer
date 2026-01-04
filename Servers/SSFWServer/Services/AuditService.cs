@@ -26,10 +26,6 @@ namespace SSFWServer.Services
             string? personIdToCompare = SSFWUserSessionManager.GetIdBySessionId(sessionid);
             string auditLogPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}";
 
-#if DEBUG
-            LoggerAccessor.LogInfo(auditLogPath);
-#endif
-
             switch (request.Method)
             {
                 case "PUT":
@@ -38,7 +34,9 @@ namespace SSFWServer.Services
                         Directory.CreateDirectory(auditLogPath);
 
                         File.WriteAllText($"{auditLogPath}/{fileNameGUID}.json", Encoding.UTF8.GetString(buffer));
+#if DEBUG
                         LoggerAccessor.LogInfo($"[SSFW] AuditService - HandleAuditService Audit event log posted: {fileNameGUID}");
+#endif
                         return $"{{ \"result\": 0 }}";
                     }
                     catch (Exception ex)
@@ -54,7 +52,7 @@ namespace SSFWServer.Services
 
                         string newFileMatchingEntry = string.Empty;
 
-                        List<string> listOfEventsByUser = new List<string>();
+                        List<string> listOfEventsByUser = new();
                         int userEventTotal = 1;
                         int idxTotal = 0;
                         foreach (string fileToRead in files)
@@ -80,17 +78,20 @@ namespace SSFWServer.Services
                                 idxTotal++;
                             }
                         }
-
-                        LoggerAccessor.LogError($"[SSFW] AuditService - HandleAuditService returning count list of logs for player {personIdToCompare}");
+#if DEBUG
+                        LoggerAccessor.LogInfo($"[SSFW] AuditService - HandleAuditService returning count list of logs for player {personIdToCompare}");
+#endif
                         return $"{{ \"count\": {idxTotal}, \"events\": {{ {string.Join("", listOfEventsByUser)} }} }}";
                     } else if(absolutepath.Contains("object"))
                     {
+#if DEBUG
                         LoggerAccessor.LogInfo("[SSFW] AuditService - HandleAuditService Event log get " + auditLogPath.Replace("/object", "") + ".json");
+#endif
                         return File.ReadAllText(auditLogPath.Replace("/object", "") + ".json");
                     }
                     break;
                 default:
-                    LoggerAccessor.LogError($"[SSFW] AuditService - HandleAuditService Method {request.Method} unhandled");
+                    LoggerAccessor.LogError($"[SSFW] AuditService - HandleAuditService Method {request.Method} unhandled!");
                     return $"{{ \"result\": -1 }}";
             }
 

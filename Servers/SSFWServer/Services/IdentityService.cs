@@ -1,7 +1,6 @@
 ﻿using CastleLibrary.Sony.XI5;
 using CustomLogger;
 using NetHasher;
-using MultiServerLibrary.Extension;
 using SSFWServer.Helpers.DataMigrator;
 using System.Text;
 using CastleLibrary.Sony.SSFW;
@@ -9,14 +8,13 @@ using SSFWServer.Helpers.FileHelper;
 
 namespace SSFWServer.Services
 {
-    public class IdentityService : IDisposable
+    public class IdentityService
     {
         private string? XHomeClientVersion;
         private string? generalsecret;
         private string? homeClientVersion;
         private string? xsignature;
         private string? key;
-        private bool disposedValue;
 
         public IdentityService(string XHomeClientVersion, string generalsecret, string homeClientVersion, string? xsignature, string? key)
         {
@@ -376,38 +374,6 @@ namespace SSFWServer.Services
             }
 
             return null;
-        }
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    XHomeClientVersion = null;
-                    generalsecret = null;
-                    homeClientVersion = null;
-                    xsignature = null;
-                    key = null;
-                }
-
-                // TODO: libérer les ressources non managées (objets non managés) et substituer le finaliseur
-                // TODO: affecter aux grands champs une valeur null
-                disposedValue = true;
-            }
-        }
-
-        // // TODO: substituer le finaliseur uniquement si 'Dispose(bool disposing)' a du code pour libérer les ressources non managées
-        // ~SSFWLogin()
-        // {
-        //     // Ne changez pas ce code. Placez le code de nettoyage dans la méthode 'Dispose(bool disposing)'
-        //     Dispose(disposing: false);
-        // }
-
-        public void Dispose()
-        {
-            // Ne changez pas ce code. Placez le code de nettoyage dans la méthode 'Dispose(bool disposing)'
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
         }
 
     }
