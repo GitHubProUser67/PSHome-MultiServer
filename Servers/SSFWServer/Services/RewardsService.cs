@@ -271,7 +271,7 @@ namespace SSFWServer.Services
             }
             else
             {
-                LoggerAccessor.LogError("Fatal error in RewardService Inventory System! CountsStorDir or TrackingFileDir should NOT be null!");
+                LoggerAccessor.LogError("[SSFW] - RewardServiceInventoryPOST: Fatal error in RewardService Inventory System! CountsStorDir or TrackingFileDir should NOT be null!");
             }
 
             //Parse Buffer
