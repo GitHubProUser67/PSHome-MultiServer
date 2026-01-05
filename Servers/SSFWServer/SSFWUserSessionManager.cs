@@ -155,33 +155,6 @@ namespace SSFWServer
         }
 
 
-
-        public static (bool, string?) IsSessionValidByDisplayName(string? userName, bool cleanupDeadSessions)
-        {
-            if (string.IsNullOrEmpty(userName))
-                return (false, null);
-
-            var userSession = userSessions.FirstOrDefault(x => x.Value.Item2.Username == userName);
-
-            if (!string.IsNullOrEmpty(userSession.Value.Item2.Id))
-
-                if (userSessions.TryGetValue(userSession.Value.Item2.Id, out (int, UserSession, DateTime) sessionEntry))
-                {
-                    if (sessionEntry.Item3 > DateTime.Now)
-                        return (true, sessionEntry.Item2.Id);
-                    else if (cleanupDeadSessions)
-                    {
-                        // Clean up expired entry.
-                        if (userSessions.TryRemove(userSession.Value.Item2.Id, out sessionEntry))
-                            LoggerAccessor.LogWarn($"[SSFWUserSessionManager] - Cleaned: {sessionEntry.Item2.Username} session with id: {sessionEntry.Item2.Id}...");
-                        else
-                            LoggerAccessor.LogError($"[SSFWUserSessionManager] - Failed to clean: {sessionEntry.Item2.Username} session with id: {sessionEntry.Item2.Id}...");
-                    }
-                }
-
-            return (false, null);
-        }
-
         public static (bool, string?) IsSessionValid(string? sessionId, bool cleanupDeadSessions)
         {
             if (string.IsNullOrEmpty(sessionId))

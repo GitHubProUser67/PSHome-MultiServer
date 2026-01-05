@@ -25,7 +25,9 @@ namespace SSFWServer.Services
                 Directory.CreateDirectory(friendsStorePath);
 
                 File.WriteAllText($"{friendsStorePath}/{userName}.txt", Encoding.UTF8.GetString(buffer));
+#if DEBUG
                 LoggerAccessor.LogInfo($"[SSFW] FriendsService - HandleFriendsService Friends list posted: {userName} at {$"{friendsStorePath}/{userName}.txt"}");
+#endif
                 return "Success";
             }
             catch (Exception ex)

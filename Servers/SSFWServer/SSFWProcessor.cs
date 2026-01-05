@@ -419,9 +419,10 @@ namespace SSFWServer
                                     }
 
                                     #region SaveData AvatarService
-                                    else if (absolutepath.Contains($"/SaveDataService/avatar/{env}/") && absolutepath.EndsWith(".jpg"))
+                                    else if (absolutepath.Contains($"/SaveDataService/avatar/{env}/") 
+                                        && absolutepath.EndsWith(".jpg"))
                                     {
-                                        byte[]? res = avatarService.HandleAvatarService(absolutepath, filePath, _legacykey);
+                                        byte[]? res = avatarService.HandleAvatarService(filePath, _legacykey);
                                         if (res != null)
                                             Response.MakeGetResponse(res, "image/jpg");
                                         else

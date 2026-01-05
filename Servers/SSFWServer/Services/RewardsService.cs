@@ -265,8 +265,14 @@ namespace SSFWServer.Services
             string trackingFileDir = $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutePath}/object";
             string trackingFile = $"{trackingFileDir}/{trackingGuid}.json";
 
-            Directory.CreateDirectory(Path.GetDirectoryName(countsStoreDir) ?? countsStoreDir);
-            Directory.CreateDirectory(Path.GetDirectoryName(trackingFileDir) ?? trackingFileDir);
+            if (!string.IsNullOrEmpty(countsStoreDir) && !string.IsNullOrEmpty(trackingFileDir)) {
+                Directory.CreateDirectory(Path.GetDirectoryName(countsStoreDir));
+                Directory.CreateDirectory(Path.GetDirectoryName(trackingFileDir));
+            }
+            else
+            {
+                LoggerAccessor.LogError("Fatal error in RewardService Inventory System! CountsStorDir or TrackingFileDir should NOT be null!");
+            }
 
             //Parse Buffer
             string fixedJsonPayload = GUIDValidator.FixJsonValues(Encoding.UTF8.GetString(buffer));
