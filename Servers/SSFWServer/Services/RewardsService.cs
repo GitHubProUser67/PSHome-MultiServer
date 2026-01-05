@@ -265,13 +265,13 @@ namespace SSFWServer.Services
             string trackingFileDir = $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutePath}/object";
             string trackingFile = $"{trackingFileDir}/{trackingGuid}.json";
 
-            if (!string.IsNullOrEmpty(countsStoreDir) && !string.IsNullOrEmpty(trackingFileDir)) {
+            if (!string.IsNullOrEmpty(countsStoreDir) || !string.IsNullOrEmpty(trackingFileDir)) {
                 Directory.CreateDirectory(Path.GetDirectoryName(countsStoreDir));
                 Directory.CreateDirectory(Path.GetDirectoryName(trackingFileDir));
             }
             else
             {
-                LoggerAccessor.LogError("[SSFW] - RewardServiceInventoryPOST: Fatal error in RewardService Inventory System! CountsStorDir or TrackingFileDir should NOT be null!");
+                LoggerAccessor.LogError("[SSFW] - RewardServiceInventoryPOST: Fatal error in RewardService Inventory System! CountsStoreDir or TrackingFileDir should NOT be null!");
             }
 
             //Parse Buffer
