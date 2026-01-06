@@ -258,6 +258,9 @@ namespace SSFWServer.Services
             //Tracking Inventory GUID
             const string trackingGuid = "00000000-00000000-00000000-00000001"; // fallback/hardcoded tracking GUID
 
+            //Only return trackingGuid on error
+            var errorPayload = Encoding.UTF8.GetBytes($"{{\"idList\": [\"{trackingGuid}\"] }}");
+
             // File paths based on the provided format
             string countsStoreDir = $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutePath}";
             string countsStore = $"{countsStoreDir}/counts.json";
@@ -265,13 +268,14 @@ namespace SSFWServer.Services
             string trackingFileDir = $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutePath}/object";
             string trackingFile = $"{trackingFileDir}/{trackingGuid}.json";
 
-            if (!string.IsNullOrEmpty(countsStoreDir) || !string.IsNullOrEmpty(trackingFileDir)) {
+            if (!string.IsNullOrEmpty(countsStoreDir) && !string.IsNullOrEmpty(trackingFileDir)) {
                 Directory.CreateDirectory(Path.GetDirectoryName(countsStoreDir));
                 Directory.CreateDirectory(Path.GetDirectoryName(trackingFileDir));
             }
             else
             {
                 LoggerAccessor.LogError("[SSFW] - RewardServiceInventoryPOST: Fatal error in RewardService Inventory System! CountsStoreDir or TrackingFileDir should NOT be null!");
+                return errorPayload;
             }
 
             //Parse Buffer
@@ -281,8 +285,6 @@ namespace SSFWServer.Services
                 using JsonDocument document = JsonDocument.Parse(fixedJsonPayload);
                 JsonElement root = document.RootElement;
 
-                //Only return trackingGuid on error
-                var errorPayload = Encoding.UTF8.GetBytes($"{{\"idList\": [\"{trackingGuid}\"] }}");
                 if (!root.TryGetProperty("rewards", out JsonElement rewardsElement) || rewardsElement.ValueKind != JsonValueKind.Array)
                 {
                     LoggerAccessor.LogError("[SSFW] - RewardServiceInventoryPOST: Invalid payload - 'rewards' must be an array.");
