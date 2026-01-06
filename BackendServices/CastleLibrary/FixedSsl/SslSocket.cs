@@ -1,3 +1,4 @@
+using EndianTools;
 using FixedSsl.Crypto;
 using System;
 using System.Collections.Generic;
@@ -53,13 +54,13 @@ namespace FixedSsl
 
             // total 5 bytes
 
-            byte[] header = new byte[5];
+            byte[] header = new byte[TlsParser.TLS_HEADER_LEN];
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
             int received = await socket.ReceiveAsync(header, SocketFlags.Peek).ConfigureAwait(false);
 #else
             int received = socket.Receive(header, SocketFlags.Peek);
 #endif
-            if (received != 5)
+            if (received != TlsParser.TLS_HEADER_LEN)
             {
 #if DEBUG
                 CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid header peek.");
@@ -87,20 +88,11 @@ namespace FixedSsl
 
             if (ssl)
             {
-                // TLS: header[3..4] = record length
-                if (received < 5)
-                {
-#if DEBUG
-                    CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid header data.");
-#endif
-                    return null;
-                }
-
                 received = 0;
 
                 int r;
-                int recordLength = (header[3] << 8) | header[4];
-                totalLength = 5 + recordLength;
+
+                totalLength = TlsParser.TLS_HEADER_LEN + EndianAwareConverter.ToUInt16(header, Endianness.BigEndian, 3);
 
                 clientHello = new byte[totalLength];
 
@@ -135,8 +127,7 @@ namespace FixedSsl
                 int r;
 
                 // SSLv2 header: first 2 bytes = 15-bit length
-                int v2Length = ((header[0] & 0x7F) << 8) | header[1];
-                totalLength = v2Length + 2; // SSLv2 header length
+                totalLength = (((header[0] & 0x7F) << 8) | header[1]) + 2; // SSLv2 header length
 
                 clientHello = new byte[totalLength];
 
@@ -227,7 +218,8 @@ namespace FixedSsl
                     }
                 }
 
-                return new Org.Mentalis.Security.Ssl.SecureNetworkStream(new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server)), ownSocket);
+                if (maxSslVersion != TLSv11 || versions.Contains(SSLv3) || versions.Contains(TLSv1)) // Downgrading is fine on these old protocols.
+                    return new Org.Mentalis.Security.Ssl.SecureNetworkStream(new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server)), ownSocket);
             }
 #pragma warning restore
 
@@ -259,9 +251,9 @@ namespace FixedSsl
 
             // total 5 bytes
 
-            byte[] header = new byte[5];
+            byte[] header = new byte[TlsParser.TLS_HEADER_LEN];
             int received = socket.Receive(header, SocketFlags.Peek);
-            if (received != 5)
+            if (received != TlsParser.TLS_HEADER_LEN)
             {
 #if DEBUG
                 CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid header peek.");
@@ -289,20 +281,11 @@ namespace FixedSsl
 
             if (ssl)
             {
-                // TLS: header[3..4] = record length
-                if (received < 5)
-                {
-#if DEBUG
-                    CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid header data.");
-#endif
-                    return null;
-                }
-
                 received = 0;
 
                 int r;
-                int recordLength = (header[3] << 8) | header[4];
-                totalLength = 5 + recordLength;
+
+                totalLength = TlsParser.TLS_HEADER_LEN + EndianAwareConverter.ToUInt16(header, Endianness.BigEndian, 3); ;
 
                 clientHello = new byte[totalLength];
 
@@ -337,8 +320,7 @@ namespace FixedSsl
                 int r;
 
                 // SSLv2 header: first 2 bytes = 15-bit length
-                int v2Length = ((header[0] & 0x7F) << 8) | header[1];
-                totalLength = v2Length + 2; // SSLv2 header length
+                totalLength = (((header[0] & 0x7F) << 8) | header[1]) + 2; // SSLv2 header length
 
                 clientHello = new byte[totalLength];
 
@@ -443,7 +425,8 @@ namespace FixedSsl
                     }
                 }
 
-                return new Org.Mentalis.Security.Ssl.SecureNetworkStream(new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server)), ownSocket);
+                if (maxSslVersion != TLSv11 || versions.Contains(SSLv3) || versions.Contains(TLSv1)) // Downgrading is fine on these old protocols.
+                    return new Org.Mentalis.Security.Ssl.SecureNetworkStream(new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server)), ownSocket);
             }
 #pragma warning restore
 
@@ -587,7 +570,7 @@ namespace FixedSsl
                                     object state)
         {
             if (task == null)
-                throw new ArgumentNullException("task");
+                throw new ArgumentNullException(nameof(task));
 
             var tcs = new TaskCompletionSource<T>(state);
             task.ContinueWith(t =>

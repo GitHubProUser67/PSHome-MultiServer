@@ -9,7 +9,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 {
     internal static class Venue
     {
-        private static UniqueIDGenerator UniqueIDCounter = new UniqueIDGenerator(0);
+        private static UniqueIDGenerator UniqueIDCounter = new UniqueIDGenerator();
 
         public static void BuildVenuePlugin(WebserverBase server)
         {
@@ -1105,7 +1105,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                 {
                     case "Stagertron":
                         await ctx.Response.Send($@"<lua>
-	                                <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                     <applet>
 		                                    <StageEnter_def></StageEnter_def>
                                             <StageExit_def></StageExit_def>
@@ -1312,7 +1312,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                         return;
                     case "BackstagePass":
                         await ctx.Response.Send($@"<lua>
-	                                <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                     <entityGroup>
 		                                <EntityGroup_def></EntityGroup_def>
 	                                </entityGroup>
@@ -1354,7 +1354,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                         return;
                     case "Customisation":
                         await ctx.Response.Send($@"<lua>
-	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <Customisation_def></Customisation_def>
 	                                    </applet>
@@ -1412,7 +1412,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                         if (profile_def == "default")
                         {
                             await ctx.Response.Send($@"<lua>
-	                                <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                     <applet>
 		                                <Strutertron_def></Strutertron_def>
 		                                <Votertron_def></Votertron_def>
@@ -1624,7 +1624,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                         else if (profile_def == "stage")
                         {
                             await ctx.Response.Send($@"<lua>
-	                                <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                     <applet>
 		                                <Votertron_def></Votertron_def>
 		                                <Votertron_0_def></Votertron_0_def>
@@ -1799,7 +1799,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                         else if (profile_def == "dancefloor")
                         {
                             await ctx.Response.Send($@"<lua>
-	                                <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                     <applet>
 		                               <Spotlight_def></Spotlight_def>
 	                                </applet>
@@ -1887,7 +1887,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                         break;
                     case "Logos":
                         await ctx.Response.Send($@"<lua>
-	                                <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                     <entityGroup>
 		                                <EntityGroup_def></EntityGroup_def>
 	                                </entityGroup>
@@ -1950,7 +1950,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                         if (profile_def != "default")
                         {
                             await ctx.Response.Send($@"<lua>
-	                                <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                     <soundStream>
 		                                <{profile_def}></{profile_def}>
 		                                <{profile_def}_MUFFLED1></{profile_def}_MUFFLED1>
@@ -1999,7 +1999,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                         break;
                     case "Posertrons":
                         await ctx.Response.Send($@"<lua>
-	                                <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                     <applet>
 		                                <Posertrons_V2></Posertrons_V2>
 	                                </applet>
@@ -2066,7 +2066,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                         return;
                     case "commercePoints":
                         await ctx.Response.Send($@"<lua>
-	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <CommercePoint_def></CommercePoint_def>
 	                                    </applet>

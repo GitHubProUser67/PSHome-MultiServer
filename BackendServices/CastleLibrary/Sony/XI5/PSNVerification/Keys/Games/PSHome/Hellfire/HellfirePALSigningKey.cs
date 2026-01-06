@@ -1,8 +1,0 @@
-﻿namespace CastleLibrary.Sony.XI5.PSNVerification.Keys.Games.PSHome.Hellfire
-{
-    public class HellfirePALSigningKey : PsnLegacyPublicSigningKey
-    {
-        public override string Xhex => "a20162751c9693f90fafa9d5cb5ee50eb750e6985b4fd999";
-        public override string Yhex => "362c5b38b3784acde8b1e4a7a01155bc779cad2b32791686";
-    }
-}

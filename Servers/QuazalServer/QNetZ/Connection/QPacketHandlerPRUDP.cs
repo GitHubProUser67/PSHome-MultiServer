@@ -1,11 +1,11 @@
+using CastleLibrary.Utils;
 using CustomLogger;
-using System.Net;
-using System.Text;
-using System.Net.Sockets;
-using QuazalServer.RDVServices.RMC;
-using QuazalServer.RDVServices;
 using QuazalServer.QNetZ.Factory;
-using MultiServerLibrary.Extension;
+using QuazalServer.RDVServices;
+using QuazalServer.RDVServices.RMC;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 
 namespace QuazalServer.QNetZ
 {
@@ -155,8 +155,9 @@ namespace QuazalServer.QNetZ
                 if (UDP != null)
                     _ = UDP.SendAsync(data, data.Length, ep);
             }
-
-            LoggerAccessor.LogInfo($"[PRUDP Handler] - Packet Data: {data.ToHexString()}");
+#if DEBUG
+			LoggerAccessor.LogInfo($"[PRUDP Handler] - Packet Data: {data.BytesToHexStr()}");
+#endif
 		}
 
         public QPacket MakeACK(QPacket p, QClient client)
@@ -246,7 +247,7 @@ namespace QuazalServer.QNetZ
                     foreach (byte b in data)
                         sb.Append(b.ToString("X2") + " ");
 
-                    LoggerAccessor.LogInfo($"[PRUDP Handler] - Packet Data:{buff.ToHexString()}");
+                    LoggerAccessor.LogInfo($"[PRUDP Handler] - Packet Data:{buff.BytesToHexStr()}");
 
                     LoggerAccessor.LogInfo($"[PRUDP Handler] - [{SourceName}] received:{packetIn.ToStringShort()}");
                     LoggerAccessor.LogInfo($"[PRUDP Handler] - [{SourceName}] received:{sb}");
@@ -310,7 +311,7 @@ namespace QuazalServer.QNetZ
 								{
 									case "ex5LYTJ0":
 										if (packetIn.payload != null)
-											LoggerAccessor.LogInfo($"[QPakcetHandler] - Client requested a HERMES packet: {packetIn.payload.ToHexString()} - UTF8:{Encoding.UTF8.GetString(packetIn.payload)}");
+											LoggerAccessor.LogInfo($"[QPakcetHandler] - Client requested a HERMES packet: {packetIn.payload.BytesToHexStr()} - UTF8:{Encoding.UTF8.GetString(packetIn.payload)}");
 										else
                                             LoggerAccessor.LogWarn($"[QPakcetHandler] - Client requested a HERMES packet with no data!");
                                         break;

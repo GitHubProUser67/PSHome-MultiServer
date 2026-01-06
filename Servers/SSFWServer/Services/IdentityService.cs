@@ -1,9 +1,9 @@
-﻿using CastleLibrary.Sony.XI5;
+﻿using CastleLibrary.S0ny.XI5;
+using CastleLibrary.S0ny.SSFW;
 using CustomLogger;
 using NetHasher;
 using SSFWServer.Helpers.DataMigrator;
 using System.Text;
-using CastleLibrary.Sony.SSFW;
 using SSFWServer.Helpers.FileHelper;
 
 namespace SSFWServer.Services
@@ -166,6 +166,8 @@ namespace SSFWServer.Services
                     return null;
                 }
 
+                string myLayoutPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/mylayout.json";
+
                 Directory.CreateDirectory($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}");
                 Directory.CreateDirectory($"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{resultString}");
                 Directory.CreateDirectory($"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks");
@@ -177,12 +179,14 @@ namespace SSFWServer.Services
 
                     IDictionary<string, string> scenemap = ScenelistParser.sceneDictionary;
 
-                    if (File.Exists($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/mylayout.json")) // Migrate data.
+                    if (File.Exists(myLayoutPath)) // Migrate data.
                     {
+                        const string harborUuid = "00000000-00000000-00000000-00000004";
+
                         // Parsing each value in the dictionary
-                        foreach (var kvp in new Services.LayoutService(key).SSFWGetLegacyFurnitureLayouts($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/mylayout.json"))
+                        foreach (var kvp in new LayoutService(key).SSFWGetLegacyFurnitureLayouts(myLayoutPath))
                         {
-                            if (kvp.Key == "00000000-00000000-00000000-00000004")
+                            if (kvp.Key == harborUuid)
                             {
                                 File.WriteAllText($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/HarborStudio.json", kvp.Value);
                                 handled = true;
@@ -206,25 +210,45 @@ namespace SSFWServer.Services
                             handled = false;
                         }
 
-                        File.Delete($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/mylayout.json");
+                        File.Delete(myLayoutPath);
                     }
                     else if (!File.Exists($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/HarborStudio.json"))
-                        File.WriteAllText($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/HarborStudio.json",
-                            File.ReadAllText($"{SSFWServerConfiguration.SSFWLayoutsFolder}/HarborStudio.json"));
+                    {
+                        string defaultLayoutPath = $"{SSFWServerConfiguration.SSFWLayoutsFolder}/HarborStudio.json";
+
+                        if (File.Exists(defaultLayoutPath))
+                            File.WriteAllText($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/HarborStudio.json",
+                               File.ReadAllText(defaultLayoutPath));
+                        else
+                            File.WriteAllText($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/HarborStudio.json", @"{
+                              ""version"": 3,
+                              ""wallpaper"": 2,
+                              ""furniture"": [
+                              ]
+                            }");
+                    }
                 }
-                else
+                else if (!File.Exists(myLayoutPath))
                 {
-                    if (!File.Exists($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/mylayout.json"))
-                        File.WriteAllText($"{SSFWServerConfiguration.SSFWStaticFolder}/LayoutService/{env}/person/{resultString}/mylayout.json",
-                            File.ReadAllText($"{SSFWServerConfiguration.SSFWLayoutsFolder}/LegacyLayout.json"));
+                    string defaultLegacyLayoutPath = $"{SSFWServerConfiguration.SSFWLayoutsFolder}/LegacyLayout.json";
+
+                    if (File.Exists(defaultLegacyLayoutPath))
+                        File.WriteAllText(myLayoutPath,
+                           File.ReadAllText(defaultLegacyLayoutPath));
+                    else
+                        File.WriteAllText(myLayoutPath, "[]");
                 }
 
-                if (!File.Exists($"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{resultString}/mini.json"))
-                    File.WriteAllText($"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{resultString}/mini.json", SSFWServerConfiguration.SSFWMinibase);
-                if (!File.Exists($"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{resultString}.json"))
-                    File.WriteAllText($"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{resultString}.json", "{\"objects\":[]}");
-                if (!File.Exists($"{SSFWServerConfiguration.SSFWStaticFolder}/AvatarLayoutService/{env}/{resultString}/list.json"))
-                    File.WriteAllText($"{SSFWServerConfiguration.SSFWStaticFolder}/AvatarLayoutService/{env}/{resultString}/list.json", "[]");
+                string miniPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{resultString}/mini.json";
+                string trunksPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/trunks-{env}/trunks/{resultString}.json";
+                string avtrListPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/AvatarLayoutService/{env}/{resultString}/list.json";
+
+                if (!File.Exists(miniPath))
+                    File.WriteAllText(miniPath, SSFWServerConfiguration.SSFWMinibase);
+                if (!File.Exists(trunksPath))
+                    File.WriteAllText(trunksPath, "{\"objects\":[]}");
+                if (!File.Exists(avtrListPath))
+                    File.WriteAllText(avtrListPath, "[]");
 
                 return $"{{\"session\":[{{\"@id\":\"{(IsRPCN ? SessionIDs.Item1 : SessionIDs.Item2)}\",\"person\":{{\"@id\":\"{resultString}\",\"logonCount\":\"{logoncount}\"}}}}]}}";
             }

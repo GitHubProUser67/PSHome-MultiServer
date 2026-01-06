@@ -392,7 +392,9 @@ namespace MultiSpy.Servers
 			if (state == null || String.IsNullOrWhiteSpace(query) || keyValues == null) {
 				return;
 			}
-
+#if DEBUG
+			LoggerAccessor.LogInfo($"[LoginServer] - HandleClientManager - Client issued query:{query}.");
+#endif
 			if (state.State == 1) {
 				if (query.Equals("login", StringComparison.InvariantCultureIgnoreCase))
 				{
@@ -400,14 +402,22 @@ namespace MultiSpy.Servers
 					state.StartKeepAlive(this);
 				}
 				else if (query.Equals("newuser", StringComparison.InvariantCultureIgnoreCase))
-                    SendToClient(ref state, LoginServerMessages.NewUser(ref state, keyValues));
+					SendToClient(ref state, LoginServerMessages.NewUser(ref state, keyValues));
+				else
+					LoggerAccessor.LogError($"[LoginServer] - HandleClientManager - Unknown State 1 query:{query}, expect breakage!");
             }
             else if (state.State == 2)
 			{
-				if (query.Equals("getprofile", StringComparison.InvariantCultureIgnoreCase))
+                if (query.Equals("logout", StringComparison.InvariantCultureIgnoreCase))
+                    LoginServerMessages.Logout(ref state, keyValues);
+                else if (query.Equals("getprofile", StringComparison.InvariantCultureIgnoreCase))
                     SendToClient(ref state, LoginServerMessages.SendProfile(ref state, keyValues, false));
                 else if (query.Equals("updatepro", StringComparison.InvariantCultureIgnoreCase))
                     LoginServerMessages.UpdateProfile(ref state, keyValues);
+                else if (query.Equals("status", StringComparison.InvariantCultureIgnoreCase))
+                    LoginServerMessages.HandleStatus(ref state, keyValues);
+                else
+                    LoggerAccessor.LogError($"[LoginServer] - HandleClientManager - Unknown State 2 query:{query}, expect breakage!");
             }
             else if (state.State == 3)
 			{
@@ -417,6 +427,8 @@ namespace MultiSpy.Servers
                     SendToClient(ref state, LoginServerMessages.SendProfile(ref state, keyValues, true));
                 else if (query.Equals("status", StringComparison.InvariantCultureIgnoreCase))
                     LoginServerMessages.HandleStatus(ref state, keyValues);
+                else
+                    LoggerAccessor.LogError($"[LoginServer] - HandleClientManager - Unknown State 3 query:{query}, expect breakage!");
             }
             else if (state.State >= 4)
 				state.Dispose();
@@ -424,20 +436,24 @@ namespace MultiSpy.Servers
 
         private void HandleSearchManager(ref LoginSocketState? state, string query, Dictionary<string, string> keyValues)
 		{
-			if (state.State == 0) {
-				if (query.Equals("nicks", StringComparison.InvariantCultureIgnoreCase)) {
-					SendToClient(ref state, LoginServerMessages.SendNicks(ref state, keyValues));
-				} else if (query.Equals("check", StringComparison.InvariantCultureIgnoreCase)) {
-					SendToClient(ref state, LoginServerMessages.SendCheck(ref state, keyValues));
-				} 
-			} else if (state.State == 1) {
-				state.State++;
-			} else if (state.State >= 2) {
-				state.Dispose();
-			}
-		}
+#if DEBUG
+            LoggerAccessor.LogInfo($"[LoginServer] - HandleSearchManager - Search issued query:{query}.");
+#endif
+            if (state.State == 0) {
+				if (query.Equals("nicks", StringComparison.InvariantCultureIgnoreCase))
+                    SendToClient(ref state, LoginServerMessages.SendNicks(ref state, keyValues));
+                else if (query.Equals("check", StringComparison.InvariantCultureIgnoreCase))
+                    SendToClient(ref state, LoginServerMessages.SendCheck(ref state, keyValues));
+                else
+                    LoggerAccessor.LogError($"[LoginServer] - HandleSearchManager - Unknown State 0 query:{query}, expect breakage!");
+            }
+			else if (state.State == 1)
+                state.State++;
+            else if (state.State >= 2)
+                state.Dispose();
+        }
 
-		private static Dictionary<string, string>? GetKeyValue(string message, out string query)
+        private static Dictionary<string, string>? GetKeyValue(string message, out string query)
 		{
 			Dictionary<string, string> parsedData = new Dictionary<string, string>();
 

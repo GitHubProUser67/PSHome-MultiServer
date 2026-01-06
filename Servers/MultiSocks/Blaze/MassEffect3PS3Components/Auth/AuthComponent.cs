@@ -3,9 +3,7 @@ using Blaze3SDK.Components;
 using BlazeCommon;
 using CustomLogger;
 using MultiSocks.Blaze.MassEffect3PS3Components.Model;
-using MultiServerLibrary.Extension;
-using System.Text;
-using CastleLibrary.Sony.XI5;
+using CastleLibrary.S0ny.XI5;
 
 namespace MultiSocks.Blaze.MassEffect3PS3Components.Auth
 {
@@ -67,7 +65,7 @@ namespace MultiSocks.Blaze.MassEffect3PS3Components.Auth
             ME3Player.AllPlayers.Add(player);
             context.AccountId = player.ID;
             player.Name = username;
-            player.PlayerID = playerIDCounter.CreateUniqueID();
+            player.PlayerID = playerIDCounter.CreateSequentialID();
             player.UserID = player.PlayerID;
             player.pathtoprofile = playerProfileDir + "/player_ps3.conf";
             player.Settings = new List<ME3Player.ME3PlayerInfo.SettingEntry>();

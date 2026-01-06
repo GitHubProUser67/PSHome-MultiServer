@@ -183,6 +183,8 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
                             player.CurrentSparkGameId = 0;
                     }
 
+                    _gameIds.ReleaseID(gid);
+
                     CustomLogger.LoggerAccessor.LogWarn($"[SparkService] - EndGame - Game {gid} ended, all player states reset.");
                     return Result(new { retVal = true });
                 }
@@ -213,6 +215,8 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
                         if (player != null)
                             player.CurrentSparkGameId = 0;
                     }
+
+                    _gameIds.ReleaseID(gid);
 
                     CustomLogger.LoggerAccessor.LogWarn($"[SparkService] - CancelGame - Game {gid} canceled, all player states reset.");
                     return Result(new { retVal = true });
@@ -298,6 +302,8 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
                             .Where(s => s.Participants.Count < (s.Game.data?.gathering?.m_uiMinParticipants))
                             .ToList())
                         {
+                            uint gid = session.URLs.gid;
+
                             sessions.Remove(session);
 
                             foreach (var pid in session.Participants)
@@ -308,8 +314,10 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
                                     player.CurrentSparkGameId = 0;
                             }
 
+                            _gameIds.ReleaseID(gid);
+
                             CustomLogger.LoggerAccessor.LogWarn(
-                                $"[SparkService] - AutoRemoved game {session.URLs.gid} (below min participants), all player states reset.");
+                                $"[SparkService] - AutoRemoved game {gid} (below min participants), all player states reset.");
                         }
                     }
                 }
@@ -323,6 +331,8 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
                             .Where(s => s.Participants.Count < (s.Game.data?.gathering?.m_uiMinParticipants))
                             .ToList())
                         {
+                            uint gid = session.URLs.gid;
+
                             sessions.Remove(session);
 
                             foreach (var pid in session.Participants)
@@ -333,8 +343,10 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
                                     player.CurrentSparkGameId = 0;
                             }
 
+                            _gameIds.ReleaseID(gid);
+
                             CustomLogger.LoggerAccessor.LogWarn(
-                                $"[SparkService] - AutoRemoved game {session.URLs.gid} (below min participants), all player states reset.");
+                                $"[SparkService] - AutoRemoved game {gid} (below min participants), all player states reset.");
                         }
                     }
                 }
@@ -353,6 +365,8 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
 
                     if (session.Participants.Count < session.Game.data?.gathering.m_uiMinParticipants && _gameSessions.TryGetValue(playerToShutdown.AccessKey, out var sessions))
                     {
+                        uint gid = session.URLs.gid;
+
                         sessions.RemoveAll(s => s.URLs.gid == session.URLs.gid);
 
                         foreach (var pid in session.Participants)
@@ -363,8 +377,10 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
                                 player.CurrentSparkGameId = 0;
                         }
 
+                        _gameIds.ReleaseID(gid);
+
                         CustomLogger.LoggerAccessor.LogWarn(
-                            $"[SparkService] - AutoRemoved game {session.URLs.gid} (below min participants), all player states reset.");
+                            $"[SparkService] - AutoRemoved game {gid} (below min participants), all player states reset.");
                     }
 
                     return true;

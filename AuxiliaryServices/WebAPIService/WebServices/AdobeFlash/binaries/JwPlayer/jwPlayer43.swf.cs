@@ -1,4 +1,4 @@
-using CastleLibrary.Sony.Edge;
+using CastleLibrary.S0ny.Edge;
 
 namespace WebAPIService.WebServices.AdobeFlash.binaries.JwPlayer
 {

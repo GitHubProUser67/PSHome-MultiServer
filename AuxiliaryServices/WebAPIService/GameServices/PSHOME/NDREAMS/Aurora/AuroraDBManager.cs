@@ -1,3 +1,4 @@
+using CastleLibrary.Utils;
 using HttpMultipartParser;
 using Microsoft.EntityFrameworkCore;
 using MultiServerLibrary.Extension;
@@ -48,7 +49,7 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                     Directory.CreateDirectory(apipath + $"/NDREAMS/Aurora/PlayersInventory/{name}");
 
                     string PlayerVisitProfilePath = apipath + $"/NDREAMS/Aurora/PlayersInventory/{name}/visit_counter.json";
-                    string Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).ToHexString(); // Seems to not make a difference.
+                    string Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).BytesToHexStr(); // Seems to not make a difference.
 
                     if (File.Exists(PlayerVisitProfilePath))
                     {
@@ -273,7 +274,7 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                         if (key == ExpectedHash)
                         {
                             int best = 0;
-                            string Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).ToHexString();
+                            string Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).BytesToHexStr();
 
                             if (int.TryParse(score, out int resscore))
                             {
@@ -380,7 +381,7 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
 
                         if (key == ExpectedHash)
                         {
-                            string Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).ToHexString();
+                            string Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).BytesToHexStr();
                             if (!string.IsNullOrEmpty(everything))
                             {
                                 string[] parts = everything.Split(',');
@@ -404,7 +405,7 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
 
                         if (key == ExpectedHash)
                         {
-                            string Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).ToHexString();
+                            string Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).BytesToHexStr();
 
                             if (!string.IsNullOrEmpty(consumable))
                                 File.WriteAllText(directoryPath + $"/{consumable}", count);
@@ -422,7 +423,7 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
 
                         if (key == ExpectedHash)
                         {
-                            string Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).ToHexString();
+                            string Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).BytesToHexStr();
                             int rescount = 0;
 
                             if (!string.IsNullOrEmpty(consumable) && File.Exists(directoryPath + $"/{consumable}"))

@@ -14,7 +14,7 @@ using Horizon.MUIS.Config;
 using Horizon.SERVER;
 using static Horizon.SERVER.Medius.BaseMediusComponent;
 using Horizon.MUM.Models;
-using MultiServerLibrary.Extension;
+using CastleLibrary.Utils;
 
 namespace Horizon.MUIS
 {
@@ -330,7 +330,7 @@ namespace Horizon.MUIS
 
                             if (QueryData != null)
                             {
-                                LoggerAccessor.LogDebug($"[MUIS] - QUERY CHECK - Client:{data.ClientObject?.IP} Has Data:{QueryData.ToHexString()} in offset: {clientCheatQuery.StartAddress}");
+                                LoggerAccessor.LogDebug($"[MUIS] - QUERY CHECK - Client:{data.ClientObject?.IP} Has Data:{QueryData.BytesToHexStr()} in offset: {clientCheatQuery.StartAddress}");
 
                                 if (data.ApplicationId == 20371 || data.ApplicationId == 20374)
                                 {
@@ -344,7 +344,7 @@ namespace Horizon.MUIS
                                                     {
 														if (data.ClientObject.ClientHomeData == null)
 															data.ClientObject.ClientHomeData = MediusClass.HomeOffsetsList.Where(x => !string.IsNullOrEmpty(x.Sha1Hash) && x.Sha1Hash[..^8]
-															.Equals(clientCheatQuery.Data.ToHexString(), StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
+															.Equals(clientCheatQuery.Data.BytesToHexStr(), StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
 
                                                         if (!MediusClass.Settings.PlaystationHomeAllowAnyEboot && data.ClientObject.ClientHomeData == null)
                                                         {

@@ -641,7 +641,7 @@ namespace MultiServerLibrary.HTTP
             "audio/x-ms-wma"          // WMA Standard V2
         };
 
-        public static string[] _DefaultFiles =
+        public static string[] DefaultFiles =
         {
             "index.html",
             "index.htm",
@@ -795,10 +795,14 @@ namespace MultiServerLibrary.HTTP
 
         public static string DecodeUrl(string url)
         {
-            if (string.IsNullOrEmpty(url)) return string.Empty;
+            if (string.IsNullOrEmpty(url))
+                return string.Empty;
+
             string newUrl;
+
             while ((newUrl = Uri.UnescapeDataString(url)) != url)
                 url = newUrl;
+
             return newUrl;
         }
 
@@ -967,7 +971,7 @@ namespace MultiServerLibrary.HTTP
             if (input.StartsWith("http", StringComparison.InvariantCultureIgnoreCase) && input.Contains("://"))
                 return HttpUtility.ParseQueryString(input);
 
-            return HttpUtility.ParseQueryString(new Uri("http://test.com" + input).Query);
+            return HttpUtility.ParseQueryString(ParseUriFromAbsolutePath(input).Query);
         }
 
         public static string ProcessQueryString(string input, bool extractQuery = false)

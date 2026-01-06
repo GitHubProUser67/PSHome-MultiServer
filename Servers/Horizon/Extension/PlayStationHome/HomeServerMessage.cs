@@ -1,3 +1,4 @@
+using CastleLibrary.Utils;
 using Horizon.MUM.Models;
 using MultiServerLibrary.Extension;
 using System.Text;
@@ -51,7 +52,7 @@ namespace Horizon.SERVER.Extension.PlayStationHome
 
             return HomeRTMTools.SendRemoteCommand(targetClientIp, accessToken, (lc ? LcRexecMsgPrefix : RexecMsgPrefix) + Convert.ToBase64String(ByteUtils.CombineByteArrays(Encoding.ASCII.GetBytes(regionCode),
                 ByteUtils.CombineByteArray(ModeratorMessageCmd, BitConverter.IsLittleEndian ? EndianTools.EndianUtils.EndianSwap(BitConverter.GetBytes(worldId)) : BitConverter.GetBytes(worldId)),
-                ByteUtils.CombineByteArray("00 44 45 56 00 4D 55 4C 54 49 53 45 52 56 45 52 00".HexStringToByteArray(), ByteUtils.CombineByteArray(Encoding.UTF8.GetBytes(payload), Encoding.ASCII.GetBytes("\0"))))) + (lc ? "' )" : string.Empty), retail);
+                ByteUtils.CombineByteArray("00 44 45 56 00 4D 55 4C 54 49 53 45 52 56 45 52 00".HexStrToBytes(), ByteUtils.CombineByteArray(Encoding.UTF8.GetBytes(payload), Encoding.ASCII.GetBytes("\0"))))) + (lc ? "' )" : string.Empty), retail);
         }
 
         private static Task<bool> SendAdminMessageCommand(ClientObject client, string? regionCode, int worldId, string payload, bool lc)
@@ -61,7 +62,7 @@ namespace Horizon.SERVER.Extension.PlayStationHome
 
             return HomeRTMTools.SendRemoteCommand(client, (lc ? LcRexecMsgPrefix : RexecMsgPrefix) + Convert.ToBase64String(ByteUtils.CombineByteArrays(Encoding.ASCII.GetBytes(regionCode),
                 ByteUtils.CombineByteArray(ModeratorMessageCmd, BitConverter.IsLittleEndian ? EndianTools.EndianUtils.EndianSwap(BitConverter.GetBytes(worldId)) : BitConverter.GetBytes(worldId)),
-                ByteUtils.CombineByteArray("00 44 45 56 00 4D 55 4C 54 49 53 45 52 56 45 52 00".HexStringToByteArray(), ByteUtils.CombineByteArray(Encoding.UTF8.GetBytes(payload), Encoding.ASCII.GetBytes("\0"))))) + (lc ? "' )" : string.Empty));
+                ByteUtils.CombineByteArray("00 44 45 56 00 4D 55 4C 54 49 53 45 52 56 45 52 00".HexStrToBytes(), ByteUtils.CombineByteArray(Encoding.UTF8.GetBytes(payload), Encoding.ASCII.GetBytes("\0"))))) + (lc ? "' )" : string.Empty));
         }
 
         private static Task<bool> BroadcastAdminMessageCommand(string? regionCode, string payload, bool lc, bool retail)
@@ -70,7 +71,7 @@ namespace Horizon.SERVER.Extension.PlayStationHome
                 return Task.FromResult(false);
 
             return HomeRTMTools.BroadcastRemoteCommand((lc ? LcRexecMsgPrefix : RexecMsgPrefix) + Convert.ToBase64String(ByteUtils.CombineByteArrays(Encoding.ASCII.GetBytes(regionCode),
-                ByteUtils.CombineByteArray(ModeratorBroadcastMessageCmd, "44455600".HexStringToByteArray()), ByteUtils.CombineByteArray("4D 55 4C 54 49 53 45 52 56 45 52 00".HexStringToByteArray(),
+                ByteUtils.CombineByteArray(ModeratorBroadcastMessageCmd, "44455600".HexStrToBytes()), ByteUtils.CombineByteArray("4D 55 4C 54 49 53 45 52 56 45 52 00".HexStrToBytes(),
                 ByteUtils.CombineByteArray(Encoding.UTF8.GetBytes(payload), Encoding.ASCII.GetBytes("\0"))))) + (lc ? "' )" : string.Empty), retail);
         }
 

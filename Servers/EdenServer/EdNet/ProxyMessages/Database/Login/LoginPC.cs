@@ -22,7 +22,7 @@ namespace EdenServer.EdNet.ProxyMessages.Database.Login
             string gameKey = request.ExtractString();
             string megapackKey = request.ExtractString();
 
-            EdStore response = new EdStore(null, 1200);
+            EdStore response = new EdStore(null, 8);
 
             response.InsertStart(edStoreBank.COREREQUESTS_A_LOGIN);
 
@@ -38,12 +38,8 @@ namespace EdenServer.EdNet.ProxyMessages.Database.Login
             else
             {
                 response.InsertUInt8(1); // Success
-                response.InsertUInt32(userId);
+                response.InsertUInt32(DateTimeUtils.GetUnixTimeU32());
                 response.InsertUInt8(LoginDatabase.Instance.LogLogin(userName, clientIp) ? (byte)1 : (byte)0);
-                response.InsertUInt32(Convert.ToUInt32(userData["teamid"]));
-                response.InsertString(userName);
-                response.InsertUInt32(userId); // Must match the second parameter.
-                response.InsertUInt64(0); // Unk
             }
 
             response.InsertEnd();

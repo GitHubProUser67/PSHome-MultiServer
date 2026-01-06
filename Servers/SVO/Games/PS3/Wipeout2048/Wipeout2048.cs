@@ -1,4 +1,4 @@
-using CastleLibrary.Sony.XI5;
+using CastleLibrary.S0ny.XI5;
 using CustomLogger;
 using MultiServerLibrary.Extension;
 using SpaceWizards.HttpListener;
@@ -1253,11 +1253,11 @@ namespace SVO.Games.PS3
                                             fileName += ".bin";
 
                                         if (File.Exists($"{SVOServerConfiguration.SVOStaticFolder}/wox_ws/rest/fileservices/{name}/{fileName}"))
-                                            fileData = Encoding.UTF8.GetBytes($"<BinaryDownload checksum=\"{CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateOTGSecuredHash("m4nT15")}\">\n" +
+                                            fileData = Encoding.UTF8.GetBytes($"<BinaryDownload checksum=\"{CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateOTGSecuredHash("m4nT15")}\">\n" +
                                                     $"        <Data>{File.ReadAllText($"{SVOServerConfiguration.SVOStaticFolder}/wox_ws/rest/fileservices/{name}/{fileName}")}</Data>\n" +
                                                     $"    </BinaryDownload>");
                                         else
-                                            fileData = Encoding.UTF8.GetBytes($"<BinaryDownload checksum=\"{CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateOTGSecuredHash("m4nT15")}\">\n" +
+                                            fileData = Encoding.UTF8.GetBytes($"<BinaryDownload checksum=\"{CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateOTGSecuredHash("m4nT15")}\">\n" +
                                                     "        <Data></Data>\n" +
                                                     $"    </BinaryDownload>");
 

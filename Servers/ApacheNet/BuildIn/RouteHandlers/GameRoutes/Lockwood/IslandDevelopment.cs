@@ -9,7 +9,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 {
     internal static class IslandDevelopment
     {
-        private static UniqueIDGenerator UniqueIDCounter = new UniqueIDGenerator(0);
+        private static UniqueIDGenerator UniqueIDCounter = new UniqueIDGenerator();
 
         public static void BuildIslandPlugin(WebserverBase server)
         {
@@ -503,7 +503,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                 {
                     case "Gate":
                         await ctx.Response.Send($@"<lua>
-	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <UUIDGate_def></UUIDGate_def>
 	                                    </applet>
@@ -646,7 +646,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                         return;
                     case "commercePoints":
                         await ctx.Response.Send($@"<lua>
-	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <CommercePoint0_def></CommercePoint0_def>
 		                                    <CommercePoint1_def></CommercePoint1_def>
@@ -794,7 +794,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                         return;
                     case "Twitter":
                         await ctx.Response.Send($@"<lua>
-	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <Twitter_def></Twitter_def>
 	                                    </applet>
@@ -883,7 +883,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                 if (sceneIdent == "Beach")
                                 {
                                     await ctx.Response.Send($@"<lua>
-	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <Telescope_def></Telescope_def>
 	                                    </applet>
@@ -944,7 +944,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                 if (sceneIdent == "Beach")
                                 {
                                     await ctx.Response.Send($@"<lua>
-	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <CommercePointLux_def></CommercePointLux_def>
 		                                    <CommercePoint_def></CommercePoint_def>
@@ -1013,7 +1013,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                 if (sceneIdent == "Beach")
                                 {
                                     await ctx.Response.Send($@"<lua>
-	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <Posertrons_V2></Posertrons_V2>
 	                                    </applet>
@@ -1065,7 +1065,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                 else if (sceneIdent == "Lounge")
                                 {
                                     await ctx.Response.Send($@"<lua>
-	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <Posertrons_V2></Posertrons_V2>
 	                                    </applet>
@@ -1098,7 +1098,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                 if (sceneIdent == "Lounge")
                                 {
                                     await ctx.Response.Send($@"<lua>
-	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <UUIDGate_def></UUIDGate_def>
 	                                    </applet>
@@ -1147,7 +1147,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                 if (sceneIdent == "Hideaway")
                                 {
                                     await ctx.Response.Send($@"<lua>
-	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <Splashertron_def></Splashertron_def>
 	                                    </applet>
@@ -1194,7 +1194,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                 else if (sceneIdent == "Forest")
                                 {
                                     await ctx.Response.Send($@"<lua>
-                                         <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+                                         <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                          <applet>
                                              <Splashertron_def></Splashertron_def>
                                          </applet>
@@ -1241,7 +1241,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                 else if (sceneIdent == "Lounge")
                                 {
                                     await ctx.Response.Send($@"<lua>
-	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <Splashertron_def></Splashertron_def>
 	                                    </applet>
@@ -1269,7 +1269,7 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                 else if (sceneIdent == "Beach")
                                 {
                                     await ctx.Response.Send($@"<lua>
-	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateUniqueID()}</feature_com_context>
+	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <Splashertron_def></Splashertron_def>
 	                                    </applet>

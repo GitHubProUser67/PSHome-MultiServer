@@ -17,7 +17,7 @@ namespace Horizon.Extension.Extension.PlayStationHome
             DMEObject? homeDmeServer = retail ? DmeClass.TcpServer.GetServerPerAppId(20374) : DmeClass.TcpServer.GetServerPerAppId(20371);
             if (homeDmeServer != null && homeDmeServer.DmeWorld != null)
             {
-                World? worldToSearchIn = homeDmeServer.DmeWorld.GetWorldById(WorldId, DmeWorldId);
+                World? worldToSearchIn = World.GetWorldById(WorldId, DmeWorldId);
                 var client = worldToSearchIn?.Clients.FirstOrDefault(c => c.DmeId == DmeId);
                 if (client != null)
                 {
@@ -42,7 +42,7 @@ namespace Horizon.Extension.Extension.PlayStationHome
             DMEObject? homeDmeServer = retail ? DmeClass.TcpServer.GetServerPerAppId(20374) : DmeClass.TcpServer.GetServerPerAppId(20371);
             if (homeDmeServer != null && homeDmeServer.DmeWorld != null)
             {
-                World? worldToSearchIn = homeDmeServer.DmeWorld.GetWorldById(WorldId, DmeWorldId);
+                World? worldToSearchIn = World.GetWorldById(WorldId, DmeWorldId);
                 var client = worldToSearchIn?.Clients.FirstOrDefault(c => c.DmeId == DmeId);
                 if (client != null)
                 {
@@ -67,7 +67,7 @@ namespace Horizon.Extension.Extension.PlayStationHome
             DMEObject? homeDmeServer = retail ? DmeClass.TcpServer.GetServerPerAppId(20374) : DmeClass.TcpServer.GetServerPerAppId(20371);
             if (homeDmeServer != null && homeDmeServer.DmeWorld != null)
             {
-                World? worldToSearchIn = homeDmeServer.DmeWorld.GetWorldById(WorldId, DmeWorldId);
+                World? worldToSearchIn = World.GetWorldById(WorldId, DmeWorldId);
                 var client = worldToSearchIn?.Clients.FirstOrDefault(c => c.DmeId == DmeId);
                 if (client != null)
                 {
@@ -92,7 +92,7 @@ namespace Horizon.Extension.Extension.PlayStationHome
             DMEObject? homeDmeServer = retail ? DmeClass.TcpServer.GetServerPerAppId(20374) : DmeClass.TcpServer.GetServerPerAppId(20371);
             if (homeDmeServer != null && homeDmeServer.DmeWorld != null)
             {
-                World? worldToSearchIn = homeDmeServer.DmeWorld.GetWorldById(WorldId, DmeWorldId);
+                World? worldToSearchIn = World.GetWorldById(WorldId, DmeWorldId);
                 var client = worldToSearchIn?.Clients.FirstOrDefault(c => c.DmeId == DmeId);
                 if (client != null)
                 {
@@ -117,7 +117,7 @@ namespace Horizon.Extension.Extension.PlayStationHome
             DMEObject? homeDmeServer = retail ? DmeClass.TcpServer.GetServerPerAppId(20374) : DmeClass.TcpServer.GetServerPerAppId(20371);
             if (homeDmeServer != null && homeDmeServer.DmeWorld != null)
             {
-                World? worldToSearchIn = homeDmeServer.DmeWorld.GetWorldById(WorldId, DmeWorldId);
+                World? worldToSearchIn = World.GetWorldById(WorldId, DmeWorldId);
                 var client = worldToSearchIn?.Clients.FirstOrDefault(c => c.DmeId == DmeId);
                 if (client != null)
                 {

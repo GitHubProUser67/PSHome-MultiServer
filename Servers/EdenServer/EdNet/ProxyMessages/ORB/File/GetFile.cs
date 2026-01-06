@@ -20,8 +20,10 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
 
             response.InsertStart(edStoreBank.CRC_A_ORB_GETFILE);
 
-            if (OpenFile.fileSystemCache.TryRemove(fileid, out var fileSystemEntry))
+            if (OpenFile.FileSystemCache.TryRemove(fileid, out var fileSystemEntry))
             {
+                OpenFile.FileSystemIdCounter.ReleaseID(fileid);
+
                 byte[] responseBytes = new byte[(int)Math.Min(chunkSize, fileSystemEntry.Item2.Length - offset)];
 
                 Array.Copy(fileSystemEntry.Item2, offset, responseBytes, 0, responseBytes.Length);

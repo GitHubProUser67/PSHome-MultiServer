@@ -1,11 +1,12 @@
 using CustomLogger;
 using MultiSocks.Aries.Messages;
 using MultiSocks.ProtoSSL;
-using MultiServerLibrary.Extension;
 using System.Net.Sockets;
 using System.Text;
 using MultiServerLibrary.CustomServers;
-
+#if DEBUG
+using CastleLibrary.Utils;
+#endif
 namespace MultiSocks.Aries
 {
     public abstract class AbstractAriesServer : IDisposable
@@ -96,7 +97,7 @@ namespace MultiSocks.Aries
             {
                 string body = Encoding.ASCII.GetString(data);
 #if DEBUG
-                LoggerAccessor.LogInfo($"[AbstractDirtySockServer] - {client.ADDR} Requested Type {name} : {{{data.ToHexString().Replace("\n", string.Empty)}}}");
+                LoggerAccessor.LogInfo($"[AbstractDirtySockServer] - {client.ADDR} Requested Type {name} : {{{data.BytesToHexStr().Replace("\n", string.Empty)}}}");
 #else
                 LoggerAccessor.LogInfo($"[AbstractDirtySockServer] - {client.ADDR} Requested Type {name}");
 #endif

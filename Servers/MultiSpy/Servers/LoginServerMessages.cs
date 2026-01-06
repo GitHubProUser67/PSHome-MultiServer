@@ -20,8 +20,13 @@ namespace MultiSpy.Servers
 
         public static void HandleStatus(ref LoginSocketState state, Dictionary<string, string> keyValues)
 		{
-			if (keyValues.ContainsKey("logout"))
-                state.Dispose();
+            var clientData = LoginDatabase.Instance.GetData(state.Name);
+
+            if (clientData != null && keyValues.ContainsKey("sesskey") && long.TryParse(keyValues["sesskey"], out long sessionKey) && sessionKey == (long)clientData["session"])
+			{
+                if (keyValues.ContainsKey("logout"))
+                    state.Dispose();
+            }
 		}
 
         public static byte[] SendProof(ref LoginSocketState state, Dictionary<string, string> keyValues)
@@ -29,10 +34,11 @@ namespace MultiSpy.Servers
 			string response = String.Empty;
 
 			int requiredValues = 0;
+            int operationId = 1;
 
-			state.Name = String.Empty;
+            state.Name = String.Empty;
 
-			if (keyValues.ContainsKey("uniquenick")) {
+            if (keyValues.ContainsKey("uniquenick")) {
 				state.Name = keyValues["uniquenick"];
 				requiredValues++;
 			}
@@ -47,8 +53,13 @@ namespace MultiSpy.Servers
 				requiredValues++;
 			}
 
-			if (requiredValues != 3)
-				return DataFunctions.StringToBytes(@"\error\\err\0\fatal\\errmsg\Invalid Query!\id\1\final\");
+            if (keyValues.ContainsKey("id") && int.TryParse(keyValues["id"], out operationId))
+            {
+                // Do nothing.
+            }
+
+            if (requiredValues != 3)
+				return DataFunctions.StringToBytes($@"\error\\err\0\fatal\\errmsg\Invalid Query!\id\{operationId}\final\");
 
 			var clientData = LoginDatabase.Instance.GetData(state.Name);
 
@@ -59,19 +70,20 @@ namespace MultiSpy.Servers
                 if (response.Equals(responseValue)) {
 					ushort session = GenerateSession(state.Name);
 
-					string proof = String.Format(@"\lc\2\sesskey\{0}\proof\{1}\userid\{2}\profileid\{3}\uniquenick\{4}\lt\{5}\id\1\final\",
+					string proof = String.Format(@"\lc\2\sesskey\{0}\proof\{1}\userid\{2}\profileid\{3}\uniquenick\{4}\lt\{5}\id\{6}\final\",
 						session,
 						GenerateProofValue(state),
 						clientData["userid"],
 						clientData["profileid"],
 						state.Name,
-						_random.GetString(22, FileSystemUtils.ASCIIChars + "][") + "__");
+						_random.GetString(22, FileSystemUtils.ASCIIChars + "][") + "__",
+                        operationId);
 
-					/*state.Session = session.ToString();
+					state.Session = session.ToString();
 					Dictionary<string, object> updateClientData = new Dictionary<string, object>() {
 						{ "session", session }
 					};
-					LoginDatabase.Instance.SetData(state.Name, updateClientData);*/
+					LoginDatabase.Instance.SetData(state.Name, updateClientData);
 
 					LoginDatabase.Instance.LogLogin(state.Name, ((IPEndPoint)state.Socket.RemoteEndPoint).Address);
 
@@ -81,11 +93,11 @@ namespace MultiSpy.Servers
 				else
 				{
 					CustomLogger.LoggerAccessor.LogError($"[LoginServerMessages] - SendProof - MD5 mismatch! response:{response} response_value:{responseValue}");
-					return DataFunctions.StringToBytes(@"\error\\err\260\fatal\\errmsg\The password provided is incorrect.\id\1\final\");
+					return DataFunctions.StringToBytes($@"\error\\err\260\fatal\\errmsg\The password provided is incorrect.\id\{operationId}\final\");
 				}
 			}
 			else
-                return DataFunctions.StringToBytes(String.Format(@"\error\\err\265\fatal\\errmsg\Username [{0}] doesn't exist!\id\1\final\", state.Name));
+                return DataFunctions.StringToBytes(String.Format($@"\error\\err\265\fatal\\errmsg\Username [{0}] doesn't exist!\id\{operationId}\final\", state.Name));
         }
 
         public static byte[] SendProfile(ref LoginSocketState state, Dictionary<string, string> keyValues, bool retrieve)
@@ -136,12 +148,10 @@ namespace MultiSpy.Servers
 
 		public static void Logout(ref LoginSocketState state, Dictionary<string, string> keyValues)
 		{
-			// we're not doing anything about session, so no need to reset it back to 0...
-			// maybe one day though...
-			/*Dictionary<string, object> clientData = new Dictionary<string, object>() {
+			Dictionary<string, object> clientData = new Dictionary<string, object>() {
 				{ "session", (Int64)0 }
 			};
-			LoginDatabase.Instance.SetData(state.Name, clientData);*/
+			LoginDatabase.Instance.SetData(state.Name, clientData);
 			state.Dispose();
 		}
 
@@ -149,35 +159,42 @@ namespace MultiSpy.Servers
 		{
 			string message = String.Empty;
 
-			if (keyValues.ContainsKey("nick")) {
+            int operationId = 1;
+
+            if (keyValues.ContainsKey("id") && int.TryParse(keyValues["id"], out operationId))
+            {
+                // Do nothing.
+            }
+
+            if (keyValues.ContainsKey("nick")) {
 				state.Name = keyValues["nick"];
 			} else {
-				return DataFunctions.StringToBytes(@"\error\\err\0\fatal\\errmsg\Invalid Query!\id\1\final\");
+				return DataFunctions.StringToBytes($@"\error\\err\0\fatal\\errmsg\Invalid Query!\id\{operationId}\final\");
 			}
 			
 			if (keyValues.ContainsKey("email")) {
 				state.Email = keyValues["email"];
 			} else {
-				return DataFunctions.StringToBytes(@"\error\\err\0\fatal\\errmsg\Invalid Query!\id\1\final\");
+				return DataFunctions.StringToBytes($@"\error\\err\0\fatal\\errmsg\Invalid Query!\id\{operationId}\final\");
 			}
 
 			if (keyValues.ContainsKey("passwordenc")) {
 				state.PasswordEncrypted = keyValues["passwordenc"];
 			} else {
-				return DataFunctions.StringToBytes(@"\error\\err\0\fatal\\errmsg\Invalid Query!\id\1\final\");
+				return DataFunctions.StringToBytes($@"\error\\err\0\fatal\\errmsg\Invalid Query!\id\{operationId}\final\");
 			}
 
 			if (LoginDatabase.Instance.UserExists(state.Name)) {
-				return DataFunctions.StringToBytes(@"\error\\err\516\fatal\\errmsg\This account name is already in use!\id\1\final\");
+				return DataFunctions.StringToBytes($@"\error\\err\516\fatal\\errmsg\This account name is already in use!\id\{operationId}\final\");
 			} else {
 				string password = DecryptPassword(state.PasswordEncrypted);
 
 				// Verify password
 				if (password.Length < 3) {
-					return DataFunctions.StringToBytes(@"\error\\err\0\fatal\\errmsg\The password is too short, must be 3 characters at least!\id\1\final\"); 
+					return DataFunctions.StringToBytes($@"\error\\err\0\fatal\\errmsg\The password is too short, must be 3 characters at least!\id\{operationId}\final\"); 
 				}
 				if (password.Length > 30) {
-					return DataFunctions.StringToBytes(@"\error\\err\0\fatal\\errmsg\The password is too long, must be 30 characters at most!\id\1\final\"); 
+					return DataFunctions.StringToBytes($@"\error\\err\0\fatal\\errmsg\The password is too long, must be 30 characters at most!\id\{operationId}\final\"); 
 				}
 
 				LoginDatabase.Instance.CreateUser(state.Name, NetHasher.DotNetHasher.ComputeMD5String(Encoding.ASCII.GetBytes(password)).ToLower(), state.Email, "??", ((IPEndPoint)state.Socket.RemoteEndPoint).Address);
@@ -185,10 +202,10 @@ namespace MultiSpy.Servers
 				var clientData = LoginDatabase.Instance.GetData(state.Name);
 
 				if (clientData == null) {
-					return DataFunctions.StringToBytes(@"\error\\err\0\fatal\\errmsg\Error creating account!\id\1\final\");
+					return DataFunctions.StringToBytes($@"\error\\err\0\fatal\\errmsg\Error creating account!\id\{operationId}\final\");
 				}
 
-				message = String.Format(@"\nur\\userid\{0}\profileid\{1}\id\1\final\", clientData["userid"], clientData["profileid"]);
+				message = String.Format(@"\nur\\userid\{0}\profileid\{1}\id\{2}\final\", clientData["userid"], clientData["profileid"], operationId);
 			}
 
 			return DataFunctions.StringToBytes(message);
@@ -206,8 +223,15 @@ namespace MultiSpy.Servers
 
 		internal static byte[] SendNicks(ref LoginSocketState state, Dictionary<string, string> keyValues)
 		{
-			if (!keyValues.ContainsKey("email") || (!keyValues.ContainsKey("passenc") && !keyValues.ContainsKey("pass"))) {
-				return DataFunctions.StringToBytes(@"\error\\err\0\fatal\\errmsg\Invalid Query!\id\1\final\");
+            int operationId = 1;
+
+            if (keyValues.ContainsKey("id") && int.TryParse(keyValues["id"], out operationId))
+            {
+                // Do nothing.
+            }
+
+            if (!keyValues.ContainsKey("email") || (!keyValues.ContainsKey("passenc") && !keyValues.ContainsKey("pass"))) {
+				return DataFunctions.StringToBytes($@"\error\\err\0\fatal\\errmsg\Invalid Query!\id\{operationId}\final\");
 			}
 
 			string password = String.Empty;
@@ -222,7 +246,7 @@ namespace MultiSpy.Servers
 			var clientData = LoginDatabase.Instance.GetData(keyValues["email"], password);
 
 			if (clientData == null) {
-				return DataFunctions.StringToBytes(@"\error\\err\551\fatal\\errmsg\Unable to get any associated profiles.\id\1\final\");
+				return DataFunctions.StringToBytes($@"\error\\err\551\fatal\\errmsg\Unable to get any associated profiles.\id\{operationId}\final\");
 			}
 
 			List<string> nicks = new List<string>();
@@ -343,7 +367,7 @@ namespace MultiSpy.Servers
 
 			ushort session = 0;
 			while (len-- != 0) {
-				session = (ushort)(SessionCRCTable[((name[nameIndex] ^ session) & 0xff) % 256] ^ (session >> 8));
+				session = (ushort)(SessionCRCTable[((name[nameIndex] ^ session) & byte.MaxValue) % 256] ^ (session >> 8));
 				nameIndex++;
 			}
 
@@ -352,10 +376,10 @@ namespace MultiSpy.Servers
 
 		private static string DecryptPassword(string password)
 		{
-			return gsEncode(gsBase64Decode(password));
+			return GsEncode(GsBase64Decode(password));
 		}
 
-		public static string gsEncode(string password)
+		public static string GsEncode(string password)
 		{
 			int i;
 			int a;
@@ -375,7 +399,7 @@ namespace MultiSpy.Servers
 				c = 0;
 				d -= c;
 				if (d != 0) {
-					num = gsLame(num);
+					num = GsLame(num);
 					a = num % d;
 					a += c;
 				} else
@@ -387,7 +411,7 @@ namespace MultiSpy.Servers
 			return DataFunctions.BytesToString(pass);
 		}
 
-		private static int gsLame(int num)
+		private static int GsLame(int num)
 		{
 			int a;
 			int c = (num >> 16) & 0xffff;
@@ -423,7 +447,7 @@ namespace MultiSpy.Servers
 			'\x29', '\x2a', '\x2b', '\x2c', '\x2d', '\x2e', '\x2f', '\x30', '\x31', '\x32', '\x33', '\x00', '\x00', '\x00', '\x00', '\x00'
 		};
 
-		private static string gsBase64Decode(string s)
+		private static string GsBase64Decode(string s)
 		{
 			byte[] data = DataFunctions.StringToBytes(s);
 
@@ -448,6 +472,7 @@ namespace MultiSpy.Servers
 					else
 					{
 						c = data[dataoffs++];
+
 						if ((c == '=') || (c == '_'))  // support also the Gamespy base64
 						{
 							c = 0;
@@ -455,7 +480,9 @@ namespace MultiSpy.Servers
 						}
 					}
 				} while (c != 0 && ((c <= ' ') || (c > 0x7f)));
-				if (c == 0) break;
+
+				if (c == 0)
+					break;
 
 				switch (step & 3)
 				{

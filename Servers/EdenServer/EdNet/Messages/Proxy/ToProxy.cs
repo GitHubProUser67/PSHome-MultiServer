@@ -1,6 +1,6 @@
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
+#if DEBUG
+using CastleLibrary.Utils;
+#endif
 using CustomLogger;
 using EdenServer.ClientChallengeService;
 using EdenServer.EdNet.ProxyMessages;
@@ -8,16 +8,20 @@ using EdenServer.EdNet.ProxyMessages.Database.Login;
 using EdenServer.EdNet.ProxyMessages.EdBuffer;
 using EdenServer.EdNet.ProxyMessages.ORB;
 using EdenServer.EdNet.ProxyMessages.ORB.File;
+using EdenServer.EdNet.ProxyMessages.ORB.User;
 using EdNetService.CRC;
 using EdNetService.Models;
 using EndianTools;
 using MultiServerLibrary.Extension;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 
 namespace EdenServer.EdNet.Messages
 {
     public class ToProxy : AbstractMessage
     {
-        const string Url = "http://github.com/GitHubProUser67/MultiServer3";
+        const string Url = "http://github.com/GitHubProUser67/PSHome-MultiServer/";
 
         // true value means we force LittleEndian cryptography.
         private static readonly Dictionary<string, bool> allowedVersions = new Dictionary<string, bool>() { { "MC 1.45 A", true }, { "MC 1.66 A", true }, { "[VED]TDU2", false } };
@@ -36,7 +40,8 @@ namespace EdenServer.EdNet.Messages
             { edStoreBank.CRC_R_ORB_GETFILE, typeof(GetFile) },
 
             // Events
-            { edStoreBank.CRC_E_STATS_USER_STATISTICS_UPDATE_V2, null },
+            { edStoreBank.COREREQUESTS_E_UPDATE_USER0, typeof(UpdateTDUUser) },
+            { edStoreBank.CRC_E_STATS_USER_STATISTICS_UPDATE_V2, typeof(UpdateTDUUserStats) },
         };
 
         private byte[]? UrlBytes;
@@ -272,7 +277,7 @@ namespace EdenServer.EdNet.Messages
                             if (client.BCipher)
                                 client.DecipherData(Payload);
 #if DEBUG
-                            LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Client To ORB Payload : {{{Payload.ToHexString().Replace("\n", string.Empty)}}}");
+                            LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Client To ORB Payload : {{{Payload.BytesToHexStr().Replace("\n", string.Empty)}}}");
 #endif
                             EdStore orbRequest = new EdStore(Payload, Payload.Length);
                             ushort orbcrc = orbRequest.ExtractStart();
@@ -295,7 +300,7 @@ namespace EdenServer.EdNet.Messages
                                     orbPayload = orbRequest.ExtractRawBytes(orbReqPayloadSize);
                                     orbMagicCrc = EndianAwareConverter.ToUInt16(orbPayload, Endianness.BigEndian, 0);
 #if DEBUG
-                                    LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested ORB Magic {orbMagicCrc:X4} : {{{orbPayload.ToHexString().Replace("\n", string.Empty)}}}");
+                                    LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested ORB Magic {orbMagicCrc:X4} : {{{orbPayload.BytesToHexStr().Replace("\n", string.Empty)}}}");
 #else
                                     LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested ORB Magic {orbMagicCrc:X4}");
 #endif
@@ -331,7 +336,7 @@ namespace EdenServer.EdNet.Messages
                                     orbPayload = orbRequest.ExtractRawBytes(orbReqPayloadSize);
                                     orbMagicCrc = EndianAwareConverter.ToUInt16(orbPayload, Endianness.BigEndian, 0);
 #if DEBUG
-                                    LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested ORB Magic {orbMagicCrc:X4} : {{{orbPayload.ToHexString().Replace("\n", string.Empty)}}}");
+                                    LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested ORB Magic {orbMagicCrc:X4} : {{{orbPayload.BytesToHexStr().Replace("\n", string.Empty)}}}");
 #else
                                     LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested ORB Magic {orbMagicCrc:X4}");
 #endif

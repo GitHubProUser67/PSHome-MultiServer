@@ -61,9 +61,7 @@ namespace MultiSocks.Aries
                 return;
             }
 
-            PasswordUtils passutils = new();
-
-            string? DecryptedPass = passutils.ssc2Decode(PASS, client.SKEY);
+            string? DecryptedPass = PasswordUtils.Ssc2Decode(PASS, client.SKEY);
 
             if (DecryptedPass == string.Empty) // EA assumed that Consoles protect the login so they crypt an empty password, extremly bad, but can't do anything.
             {

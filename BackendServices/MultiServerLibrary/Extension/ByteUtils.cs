@@ -18,45 +18,6 @@ namespace MultiServerLibrary.Extension
         [DllImport("msvcrt.dll", CallingConvention = CallingConvention.Cdecl)]
         static extern int memcmp(byte[] b1, byte[] b2, long count);
 
-        private static readonly uint[] _lookup32Unsafe = CreateLookup32Unsafe();
-        private unsafe static readonly uint* _lookup32UnsafeP = (uint*)GCHandle.Alloc(_lookup32Unsafe, GCHandleType.Pinned).AddrOfPinnedObject();
-
-        private static uint[] CreateLookup32Unsafe()
-        {
-            uint[] result = new uint[256];
-            for (int i = 0; i < 256; i++)
-            {
-                string s = i.ToString("X2");
-                if (BitConverter.IsLittleEndian)
-                    result[i] = ((uint)s[0]) + ((uint)s[1] << 16);
-                else
-                    result[i] = ((uint)s[1]) + ((uint)s[0] << 16);
-            }
-            return result;
-        }
-
-        /// <summary>
-        /// Transform a byte array to it's hexadecimal representation.
-        /// <para>Obtenir un tableau de bytes dans sa représentation hexadecimale.</para>
-        /// <param name="bytes">The byte array to transform.</param>
-        /// </summary>
-        /// <returns>A string.</returns>
-        public unsafe static string ToHexString(this byte[] bytes)
-        {
-            uint* lookupP = _lookup32UnsafeP;
-            char[] result = new char[bytes.Length * 2];
-            fixed (byte* bytesP = bytes)
-            fixed (char* resultP = result)
-            {
-                uint* resultP2 = (uint*)resultP;
-                for (int i = 0; i < bytes.Length; i++)
-                {
-                    resultP2[i] = lookupP[bytesP[i]];
-                }
-            }
-            return new string(result);
-        }
-
         // https://stackoverflow.com/questions/43289/comparing-two-byte-arrays-in-net
         /// <summary>
         /// Check if 2 byte arrays are strictly identical.
@@ -103,6 +64,37 @@ namespace MultiServerLibrary.Extension
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Finds a matching byte array within an other byte array.
+        /// <para>Trouve un tableau de bytes correspondant dans un autre tableau de bytes.</para>
+        /// </summary>
+        /// <param name="data1">The data to search for.</param>
+        /// <param name="data2">The data to search into for the data1.</param>
+        /// <returns>A int (-1 if not found).</returns>
+        private static int FindDataPositionInBinary(byte[] data1, byte[] data2)
+        {
+            if (data1 == null || data2 == null)
+                return -1;
+
+            for (int i = 0; i < data1.Length - data2.Length + 1; i++)
+            {
+                bool found = true;
+                for (int j = 0; j < data2.Length; j++)
+                {
+                    if (data1[i + j] != data2[j])
+                    {
+                        found = false;
+                        break;
+                    }
+                }
+
+                if (found)
+                    return i;
+            }
+
+            return -1; // data2 not found in data1
         }
 
         public static byte[] SubArray(this byte[] arr, int sizeToSubstract, bool atStart = false)

@@ -4,8 +4,8 @@ using System.Text;
 using System.IO;
 using System;
 using NetHasher;
-using CastleLibrary.Sony.SSFW;
-using CastleLibrary.Sony.XI5;
+using CastleLibrary.S0ny.SSFW;
+using CastleLibrary.S0ny.XI5;
 
 namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
 {

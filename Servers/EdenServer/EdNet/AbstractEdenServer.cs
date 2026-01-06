@@ -1,8 +1,10 @@
+#if DEBUG
+using CastleLibrary.Utils;
+#endif
 using CustomLogger;
 using EdenServer.EdNet.Messages;
 using EdNetService.Models;
 using MultiServerLibrary.CustomServers;
-using MultiServerLibrary.Extension;
 using System.Net;
 using System.Net.Sockets;
 
@@ -52,7 +54,7 @@ namespace EdenServer.EdNet
             receivedStore.LoadData(data, data.Length);
             ushort initialCrc = receivedStore.ExtractStart();
 #if DEBUG
-            LoggerAccessor.LogInfo($"[EDEN_UDP] - {remoteEP.Address} Requested EdStore {initialCrc:X4} : {{{receivedStore.Data.ToHexString().Replace("\n", string.Empty)}}}");
+            LoggerAccessor.LogInfo($"[EDEN_UDP] - {remoteEP.Address} Requested EdStore {initialCrc:X4} : {{{receivedStore.Data.BytesToHexStr().Replace("\n", string.Empty)}}}");
 #else
             LoggerAccessor.LogInfo($"[EDEN_UDP] - {remoteEP.Address} Requested EdStore {initialCrc:X4}");
 #endif

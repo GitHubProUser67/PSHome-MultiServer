@@ -15,7 +15,8 @@
     {
         public const ushort CRC_EDL_SESSION_MESSAGE = 0xA986;
         public const ushort COREREQUESTS_E_UPDATE_USER_OLD = 0x2ACB;
-        public const ushort COREREQUESTS_E_UPDATE_USER = 0xC5C2;
+        public const ushort COREREQUESTS_E_UPDATE_USER0 = 0xF5FB;
+        public const ushort COREREQUESTS_E_UPDATE_USER1 = 0xC5C2;
         public const ushort COREREQUESTS_R_CONTACT_USER = 0x0594;
         public const ushort COREREQUESTS_A_CONTACT_USER = 0x0511;
         public const ushort COREREQUESTS_R_CONTACT_USER_EX = 0xFB4C;
@@ -576,6 +577,9 @@
 
         public static readonly ushort UserHostedNetBufferGarage = Utils.GetCRCFromString("uhedNetServiceNetBufferGarage");
         public static readonly ushort NetBufferGarage = Utils.GetCRCFromString("edNetServiceNetBufferGarage");
+
+        public static readonly ushort crc_current_session_infos_v7 = Utils.GetCRCFromString("CP2GameAction::crc_current_session_infos(int your_index,byte islobbying,int nettime,[byte object_index,object player]=NULL,...)v7"); // To use with EdNetBuffer
+        public static readonly ushort NewsBuffer = Utils.GetCRCFromString("News::newsbuffer({byte,uint,uint,buffer_with_full_infos_with_localized_txt_title_param}...)"); // To use with EdNetBuffer
 
         public static readonly ushort STeamMemberDetails0 = Utils.GetCRCFromString("STeamMemberDetails 03/05/2006");
         public static readonly ushort STeamMemberDetails1 = Utils.GetCRCFromString("STeamMemberDetails 06/07/2006");

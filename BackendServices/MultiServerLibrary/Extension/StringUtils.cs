@@ -67,50 +67,6 @@ namespace MultiServerLibrary.Extension
 
         public static string RemoveSuffix(this string self, char toRemove) => string.IsNullOrEmpty(self) ? self : (self.EndsWith(toRemove) ? self.Substring(0, self.Length - 1) : self);
 
-        /// <summary>
-        /// Transform a string to it's hexadecimal representation.
-        /// <para>Obtenir un string dans sa représentation hexadecimale.</para>
-        /// <param name="str">The string to transform.</param>
-        /// </summary>
-        /// <returns>A string.</returns>
-        public static string ToHexString(this string str)
-        {
-            StringBuilder sb = new StringBuilder();
-
-            foreach (byte t in Encoding.UTF8.GetBytes(str))
-            {
-                sb.Append(t.ToString("X2"));
-            }
-
-            return sb.ToString();
-        }
-
-        public static string HexStringToString(this string hex)
-        {
-            return Encoding.UTF8.GetString(hex.HexStringToByteArray());
-        }
-
-        /// <summary>
-        /// Convert a hex-formatted string to byte array.
-        /// <para>Convertir une représentation hexadécimal en tableau de bytes.</para>
-        /// </summary>
-        /// <param name="hex">A string looking like "300D06092A864886F70D0101050500".</param>
-        /// <returns>A byte array.</returns>
-        public static byte[] HexStringToByteArray(this string hex)
-        {
-            string cleanedRequest = hex.Replace(" ", string.Empty)
-                    .Replace("\t", string.Empty).Replace("\r", string.Empty)
-                    .Replace("\n", string.Empty);
-
-            if (cleanedRequest.Length % 2 == 1)
-                throw new ArgumentException("[StringUtils] - HexStringToByteArray - The binary key cannot have an odd number of digits");
-
-            return Enumerable.Range(0, cleanedRequest.Length)
-                     .Where(x => x % 2 == 0)
-                     .Select(x => Convert.ToByte(cleanedRequest.Substring(x, 2), 16))
-                     .ToArray();
-        }
-
         public static double Eval(this string expression, string filter = null)
         {
             return Convert.ToDouble(new DataTable().Compute(expression, filter));

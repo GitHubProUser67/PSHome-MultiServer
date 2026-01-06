@@ -1,26 +1,27 @@
+using CastleLibrary.S0ny.XI5;
+using CastleLibrary.Utils;
 using CustomLogger;
 using DotNetty.Transport.Channels;
+using EndianTools;
+using Horizon.HTTPSERVICE;
+using Horizon.LIBRARY.Database.Models;
+using Horizon.MUM.Models;
+using Horizon.PluginManager;
 using Horizon.RT.Common;
 using Horizon.RT.Cryptography;
 using Horizon.RT.Cryptography.RSA;
 using Horizon.RT.Models;
-using Horizon.HTTPSERVICE;
 using Horizon.SERVER.Config;
-using Horizon.SERVER.PluginArgs;
 using Horizon.SERVER.Extension.PlayStationHome;
-using Horizon.PluginManager;
-using Horizon.LIBRARY.Database.Models;
-using Newtonsoft.Json.Linq;
-using MultiServerLibrary.Extension;
-using EndianTools;
-using Horizon.MUM.Models;
-using System.Text.RegularExpressions;
-using System.Net;
-using System.Globalization;
-using System.Text;
-using System.Buffers;
+using Horizon.SERVER.PluginArgs;
 using MultiServerLibrary;
-using CastleLibrary.Sony.XI5;
+using MultiServerLibrary.Extension;
+using Newtonsoft.Json.Linq;
+using System.Buffers;
+using System.Globalization;
+using System.Net;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Horizon.SERVER.Medius
 {
@@ -257,7 +258,7 @@ LoggerAccessor.LogError($"[MAS] - Client {clientChannel.RemoteAddress} attemptin
 
                         if (QueryData != null)
                         {
-                            LoggerAccessor.LogDebug($"[MAS] - QUERY CHECK - Client:{data.ClientObject?.IP} Has Data:{QueryData.ToHexString()} in offset: {clientCheatQuery.StartAddress}");
+                            LoggerAccessor.LogDebug($"[MAS] - QUERY CHECK - Client:{data.ClientObject?.IP} Has Data:{QueryData.BytesToHexStr()} in offset: {clientCheatQuery.StartAddress}");
 
                             if (MediusClass.Settings.HttpsSVOCheckPatcher && clientCheatQuery.QueryType == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY && QueryData.Length == 6
                                 && QueryData.EqualsTo(new byte[] { 0x68, 0x74, 0x74, 0x70, 0x73, 0x3A }))
@@ -458,7 +459,7 @@ LoggerAccessor.LogError($"[MAS] - Client {clientChannel.RemoteAddress} attemptin
                                                 {
                                                     if (data.ClientObject.ClientHomeData == null)
                                                         data.ClientObject.ClientHomeData = MediusClass.HomeOffsetsList.Where(x => !string.IsNullOrEmpty(x.Sha1Hash) && x.Sha1Hash[..^8]
-                                                        .Equals(clientCheatQuery.Data.ToHexString(), StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
+                                                        .Equals(clientCheatQuery.Data.BytesToHexStr(), StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
 
                                                     if (data.ClientObject.ClientHomeData != null)
                                                     {

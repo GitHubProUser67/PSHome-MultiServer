@@ -55,7 +55,7 @@ namespace MultiSocks.Blaze.MassEffect3PS3Components.Model
 
             public ME3PlayerInfo(ProtoFireConnection client, Stream clientstream)
             {
-                ID = (int)counter.CreateUniqueID();
+                ID = (int)counter.CreateSequentialID();
                 Client = client;
                 ClientStream = clientstream;
                 GameState = "boot";

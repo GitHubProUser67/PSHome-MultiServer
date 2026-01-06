@@ -5,7 +5,7 @@ using QuazalServer.QNetZ.DDL;
 using QuazalServer.QNetZ.Interfaces;
 using QuazalServer.QNetZ.Connection;
 using MultiServerLibrary.Extension;
-using CastleLibrary.Sony.XI5;
+using CastleLibrary.S0ny.XI5;
 
 namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
 {

@@ -169,7 +169,7 @@ namespace MultiSocks.Aries
                 return;
             }
 
-            string? DecryptedPass = new PasswordUtils().ssc2Decode(PASS, client.SKEY);
+            string? DecryptedPass = PasswordUtils.Ssc2Decode(PASS, client.SKEY);
 
             if (DecryptedPass == string.Empty) // EA assumed that Consoles protect the login so they crypt an empty password, extremly bad, but can't do anything.
             {
@@ -252,7 +252,7 @@ namespace MultiSocks.Aries
         public void TryGuestLogin(AriesClient client, string? PASS, string LOC, string? MAC, string TOKEN)
         {
             // From: https://github.com/teknogods/eaEmu/blob/master/eaEmu/ea/games/pcburnout08.py#L184
-            string guestUsername = $"guest{_guestIdGen.CreateUniqueID()}";
+            string guestUsername = $"guest{_guestIdGen.CreateSequentialID()}";
 
             //is someone else already logged in as this user?
             AriesUser? oldUser = Users.GetUserByName(guestUsername);
@@ -271,7 +271,7 @@ namespace MultiSocks.Aries
             {
                 MAC = MAC ?? string.Empty,
                 Connection = client,
-                ID = (int)CRC32.CreateCastagnoli(Encoding.UTF8.GetBytes(guestUsername + (new PasswordUtils().ssc2Decode(PASS, client.SKEY) ?? string.Empty) + "EA")),
+                ID = (int)CRC32.CreateCastagnoli(Encoding.UTF8.GetBytes(guestUsername + (PasswordUtils.Ssc2Decode(PASS, client.SKEY) ?? string.Empty) + "EA")),
                 Personas = personas,
                 Username = guestUsername,
                 ADDR = client.ADDR,

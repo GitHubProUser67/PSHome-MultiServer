@@ -392,15 +392,29 @@ namespace EdNetService.Models
         public DateTime lastRequestTime = DateTimeUtils.GetHighPrecisionUtcTime();
         public DateTime LastPacketSent;
 
+        protected EdStore _user_rights = null;
+
         public Blowfish fish = new Blowfish();
 
         protected UdpClient _client;
 
         public ClientObject(UdpClient client, bool cipher)
         {
-            Id = _IdCounter.CreateUniqueID();
+            Id = _IdCounter.CreateSequentialID();
             _client = client;
             BCipher = cipher;
+        }
+
+        public EdStore UserRights
+        {
+            get
+            {
+                return _user_rights;
+            }
+            set
+            {
+                _user_rights = value;
+            }
         }
 
         public ClientTask AddTask(uint TargetIp, ushort TargetPort)

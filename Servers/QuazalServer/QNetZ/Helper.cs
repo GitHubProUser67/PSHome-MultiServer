@@ -3,8 +3,8 @@ using System.Security.Cryptography;
 using lzo.net;
 using System.Text.RegularExpressions;
 using EndianTools;
-using MultiServerLibrary.Extension;
 using Org.BouncyCastle.Utilities.Zlib;
+using CastleLibrary.Utils;
 
 namespace QuazalServer.QNetZ
 {
@@ -324,7 +324,7 @@ namespace QuazalServer.QNetZ
             if (input.Length == 32 && Regex.IsMatch(input, @"\b[a-fA-F0-9]{32}\b")) // Might maybe conflict if user type in a md5 like pass, which is a very bad idea ^^.
 			{
                 count = pid % 1024;
-                buff = input.HexStringToByteArray();
+                buff = input.HexStrToBytes();
             }
             else
             {

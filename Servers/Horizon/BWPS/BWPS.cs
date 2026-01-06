@@ -6,7 +6,7 @@ using DotNetty.Handlers.Logging;
 using Horizon.LIBRARY.Pipeline.Udp;
 using System.Net;
 using DotNetty.Buffers;
-using MultiServerLibrary.Extension;
+using CastleLibrary.Utils;
 
 namespace Horizon.BWPS
 {
@@ -50,7 +50,7 @@ namespace Horizon.BWPS
                             buffer.WriteByte(MsgArray[2]);
                             buffer.WriteByte(MsgArray[3]);
                             buffer.WriteIntLE(50982); // SequenceId
-                            buffer.WriteBytes("03 03 02 00 00 00 00 00 02 03".HexStringToByteArray());
+                            buffer.WriteBytes("03 03 02 00 00 00 00 00 02 03".HexStrToBytes());
 
                             // send response message 3 times
                             for (int i = 0; i < 3; i++)

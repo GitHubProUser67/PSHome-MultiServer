@@ -64,29 +64,6 @@ namespace EndianTools
             return reversedArray;
         }
 
-        [Obsolete("EndianSwap2 is a hack, never use it.")]
-        public static byte[] EndianSwap2(byte[] dataIn)
-        {
-            if (dataIn == null)
-                return null;
-            else if (dataIn.Length % 4 != 0)
-                throw new ArgumentException("[EndianUtils] - EndianSwap2: Array length must be a multiple of 4.");
-
-            int inputLength = dataIn.Length;
-
-            byte[] reversedArray = new byte[inputLength];
-            Array.Copy(dataIn, reversedArray, inputLength);
-
-            for (int i = 0; i < inputLength; i += 4)
-            {
-                // Swap bytes in positions [i] <-> [i+2], and [i+1] <-> [i+3]
-                (reversedArray[i], reversedArray[i + 2]) = (reversedArray[i + 2], reversedArray[i]);
-                (reversedArray[i + 1], reversedArray[i + 3]) = (reversedArray[i + 3], reversedArray[i + 1]);
-            }
-
-            return reversedArray;
-        }
-
         /// <summary>
         /// Reverse the endianess of a given byte array.
         /// <para>change l'endianess d'un tableau de bytes.</para>

@@ -10,11 +10,11 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
     public class OpenFile : AbstractProxyMessage
     {
         private const uint maxFsRetry = 10;
-        private const uint timeout = 2000;
+        private const uint timeout = 6000;
 
-        UniqueIDGenerator _fileSystemIdCounter = new UniqueIDGenerator();
+        public static readonly UniqueIDGenerator FileSystemIdCounter = new UniqueIDGenerator();
 
-        public static readonly ConcurrentDictionary<uint, (string, byte[], bool)> fileSystemCache = new ConcurrentDictionary<uint, (string, byte[], bool)>();
+        public static readonly ConcurrentDictionary<uint, (string, byte[], bool)> FileSystemCache = new ConcurrentDictionary<uint, (string, byte[], bool)>();
 
         public override byte[]? Process(IPEndPoint endpoint, IPEndPoint target, ClientTask task, ushort PacketMagic)
         {
@@ -59,7 +59,7 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
                         return null;
                 }
 
-                uint fileId = _fileSystemIdCounter.CreateUniqueID();
+                uint fileId = FileSystemIdCounter.CreateUniqueID();
                 string directoryPath = staticUserHostedDir + suffix;
                 string filePath = directoryPath + filename;
 
@@ -68,7 +68,7 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
                 if (bupdload_wanted)
                 {
                     DriveInfo drive = new DriveInfo(Path.GetPathRoot(Assembly.GetExecutingAssembly().Location));
-                    if (drive.IsReady && uploadtotalsize <= drive.AvailableFreeSpace && fileSystemCache.TryAdd(fileId, (filePath, new byte[uploadtotalsize], true)))
+                    if (drive.IsReady && uploadtotalsize <= drive.AvailableFreeSpace && FileSystemCache.TryAdd(fileId, (filePath, new byte[uploadtotalsize], true)))
                     {
                         response.InsertUInt8(0); // Success.
                         response.InsertUInt32(fileId);
@@ -77,13 +77,16 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
                         response.InsertUInt32(timeout);
                     }
                     else
+                    {
+                        FileSystemIdCounter.ReleaseID(fileId);
                         SetFailure(response);
+                    }
                 }
                 else if (System.IO.File.Exists(filePath))
                 {
                     uint fileSize = (uint)new FileInfo(filePath).Length;
 
-                    if (fileSystemCache.TryAdd(fileId, (filePath, System.IO.File.ReadAllBytes(filePath), false)))
+                    if (FileSystemCache.TryAdd(fileId, (filePath, System.IO.File.ReadAllBytes(filePath), false)))
                     {
                         response.InsertUInt8(0); // Success.
                         response.InsertUInt32(fileId);
@@ -92,10 +95,14 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
                         response.InsertUInt32(timeout);
                     }
                     else
+                    {
+                        FileSystemIdCounter.ReleaseID(fileId);
                         SetFailure(response);
+                    }
                 }
                 else
                 {
+                    FileSystemIdCounter.ReleaseID(fileId);
                     LoggerAccessor.LogWarn($"[OpenFile] - File:{filename} was not found for userId:{userId}, sending error response...");
                     SetFailure(response);
                 }

@@ -1,3 +1,4 @@
+using CastleLibrary.Utils;
 using CustomLogger;
 using Horizon.MUM.Models;
 using Horizon.RT.Common;
@@ -37,7 +38,7 @@ namespace Horizon.SERVER.Extension.PlayStationHome
             if (clients != null)
             {
                 byte[] HubRexecMessage = ByteUtils.CombineByteArrays(new byte[2], new byte[][] { BitConverter.GetBytes(BitConverter.IsLittleEndian ? EndianTools.EndianUtils.ReverseUshort((ushort)(command.Length + 9)) : (ushort)(command.Length + 9))
-                    , "FFFFFFE5FFFFFFFF".HexStringToByteArray(), EnsureMultipleOfEight( ByteUtils.CombineByteArray(Encoding.UTF8.GetBytes(command), Encoding.ASCII.GetBytes("\0"))) });
+                    , "FFFFFFE5FFFFFFFF".HexStrToBytes(), EnsureMultipleOfEight( ByteUtils.CombineByteArray(Encoding.UTF8.GetBytes(command), Encoding.ASCII.GetBytes("\0"))) });
 
                 clients.ForEach(x =>
                 {
@@ -68,7 +69,7 @@ namespace Horizon.SERVER.Extension.PlayStationHome
                 return Task.FromResult(false);
 
             byte[] HubRexecMessage = ByteUtils.CombineByteArrays(new byte[2] { client.ProtocolVersion, 0x00 }, new byte[][] { BitConverter.GetBytes(BitConverter.IsLittleEndian ? EndianTools.EndianUtils.ReverseUshort((ushort)(command.Length + 9)) : (ushort)(command.Length + 9))
-                    , "FFFFFFE5FFFFFFFF".HexStringToByteArray(), EnsureMultipleOfEight( ByteUtils.CombineByteArray(Encoding.UTF8.GetBytes(command), Encoding.ASCII.GetBytes("\0"))) });
+                    , "FFFFFFE5FFFFFFFF".HexStrToBytes(), EnsureMultipleOfEight( ByteUtils.CombineByteArray(Encoding.UTF8.GetBytes(command), Encoding.ASCII.GetBytes("\0"))) });
 
             client.Queue(new MediusBinaryFwdMessage1()
             {
@@ -93,7 +94,7 @@ namespace Horizon.SERVER.Extension.PlayStationHome
             };
 
             byte[] HubRexecMessage = ByteUtils.CombineByteArrays(new byte[2], new byte[][] { BitConverter.GetBytes(BitConverter.IsLittleEndian ? EndianTools.EndianUtils.ReverseUshort((ushort)(command.Length + 9)) : (ushort)(command.Length + 9))
-                    , "FFFFFFE5FFFFFFFF".HexStringToByteArray(), EnsureMultipleOfEight( ByteUtils.CombineByteArray(Encoding.UTF8.GetBytes(command), Encoding.ASCII.GetBytes("\0"))) });
+                    , "FFFFFFE5FFFFFFFF".HexStrToBytes(), EnsureMultipleOfEight( ByteUtils.CombineByteArray(Encoding.UTF8.GetBytes(command), Encoding.ASCII.GetBytes("\0"))) });
 
             foreach (Channel channel in MediusClass.Manager.GetAllChannels(Retail ? 20374 : 20371))
             {

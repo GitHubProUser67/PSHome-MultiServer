@@ -2,8 +2,8 @@ using Blaze3SDK.Blaze;
 using Blaze3SDK.Blaze.Util;
 using Blaze3SDK.Components;
 using BlazeCommon;
+using CastleLibrary.Utils;
 using CustomLogger;
-using MultiServerLibrary.Extension;
 
 namespace MultiSocks.Blaze.MassEffect3PS3Components.Util
 {
@@ -118,7 +118,7 @@ namespace MultiSocks.Blaze.MassEffect3PS3Components.Util
                 mAddress = "playersyncservices.ea.com",
                 mInitialReportTypes = (PssReportTypes)0xF,
                 // To find the signature, search for pathern: B9DDE13B in the eboot.
-                mNpCommSignature = "B9 DD E1 3B 01 00 00 00 00 00 00 00 26 AE D5 B6 4A 5A 46 E6 D1 3D 66 27 DE 91 04 13 89 BA 9A FB B1 34 CC B5 47 BF D6 09 A0 B8 F0 81 AE 20 46 39 08 39 09 B0 47 85 BF 78 DF D3 93 9D B2 7D B5 56 D9 4C 4D 7A DC 69 CC 94 36 95 29 FF 54 4F E7 CC C3 98 93 53 87 D6 79 B4 16 B1 DA 4B 9C 76 AB 19 E9 D9 C7 48 2C 21 3C 7A E0 8C 9B 6E 7E 45 E5 6B 9A 62 04 AA 7A EE 2C 9E B5 E9 A9 67 CB 27 2B E1 CB F2 11 8A 49 4E 77 00 E9 1A 65 F5 70 07 6C CA 3E 15 20 B0 DF D6 13 96 71 13 96 CB 2F C7 87 5D".HexStringToByteArray(),
+                mNpCommSignature = "B9 DD E1 3B 01 00 00 00 00 00 00 00 26 AE D5 B6 4A 5A 46 E6 D1 3D 66 27 DE 91 04 13 89 BA 9A FB B1 34 CC B5 47 BF D6 09 A0 B8 F0 81 AE 20 46 39 08 39 09 B0 47 85 BF 78 DF D3 93 9D B2 7D B5 56 D9 4C 4D 7A DC 69 CC 94 36 95 29 FF 54 4F E7 CC C3 98 93 53 87 D6 79 B4 16 B1 DA 4B 9C 76 AB 19 E9 D9 C7 48 2C 21 3C 7A E0 8C 9B 6E 7E 45 E5 6B 9A 62 04 AA 7A EE 2C 9E B5 E9 A9 67 CB 27 2B E1 CB F2 11 8A 49 4E 77 00 E9 1A 65 F5 70 07 6C CA 3E 15 20 B0 DF D6 13 96 71 13 96 CB 2F C7 87 5D".HexStrToBytes(),
                 mOfferIds = null,
                 mPort = 443,
                 mProjectId = "303107",

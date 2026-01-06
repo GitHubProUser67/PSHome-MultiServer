@@ -1,10 +1,11 @@
-using System;
 using System.Linq;
 
 namespace EdNetService.CRC
 {
     public class Utils
     {
+        private static readonly object _lock = new object();
+
         private static bool IsCRCTableInitiated = false;
 
         private static readonly uint[] CRCTable = new uint[256];
@@ -39,9 +40,7 @@ namespace EdNetService.CRC
                 InitializeCRCTable();
 
             foreach (byte byteValue in b.Select(v => (byte)v))
-            {
                 CRCValue = CRCValue >> 8 ^ CRCTable[(CRCValue ^ byteValue) & byte.MaxValue];
-            }
 
             return ~CRCValue;
         }
@@ -54,9 +53,7 @@ namespace EdNetService.CRC
                 InitializeCRCTable();
 
             foreach (byte byteValue in b)
-            {
                 CRCValue = CRCValue >> 8 ^ CRCTable[(CRCValue ^ byteValue) & byte.MaxValue];
-            }
 
             return ~CRCValue;
         }
@@ -65,29 +62,32 @@ namespace EdNetService.CRC
         {
             uint uVar2 = 0;
 
-            do
+            lock (_lock)
             {
-                int iVar1 = 8;
-                uint uVar3 = uVar2;
-
                 do
                 {
-                    if ((uVar3 & 1) == 0)
-                        uVar3 >>= 1;
-                    else
-                        uVar3 = uVar3 >> 1 ^ 0xEDB88320;
+                    int iVar1 = 8;
+                    uint uVar3 = uVar2;
 
-                    iVar1--;
+                    do
+                    {
+                        if ((uVar3 & 1) == 0)
+                            uVar3 >>= 1;
+                        else
+                            uVar3 = uVar3 >> 1 ^ 0xEDB88320;
 
-                } while (iVar1 > 0);
+                        iVar1--;
 
-                CRCTable[uVar2] = uVar3;
+                    } while (iVar1 > 0);
 
-                uVar2++;
+                    CRCTable[uVar2] = uVar3;
 
-            } while (uVar2 < 256);
+                    uVar2++;
 
-            IsCRCTableInitiated = true;
+                } while (uVar2 < 256);
+
+                IsCRCTableInitiated = true;
+            }
         }
     }
 }

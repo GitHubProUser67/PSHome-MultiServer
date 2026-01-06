@@ -1,10 +1,11 @@
+using CastleLibrary.Utils;
 using CustomLogger;
-using MultiServerLibrary.Extension;
 using DotNetty.Transport.Channels;
 using EndianTools;
 using Horizon.MUM.Models;
 using Horizon.RT.Common;
 using Horizon.RT.Models;
+using MultiServerLibrary.Extension;
 using static Horizon.SERVER.Medius.BaseMediusComponent;
 
 namespace Horizon.SERVER.Extension.PlayStationHome
@@ -26,10 +27,10 @@ namespace Horizon.SERVER.Extension.PlayStationHome
         private static byte[] Ref6 = "AAAAAAAAAAE=".IsBase64().Item2;
 
         private static List<byte[]> ForceInviteRefs = new List<byte[]> { 
-            "B4A08C784F3097477A95BAE6ED2360B8".HexStringToByteArray(),
-            "5FB36D34F9C08B51C653602A9A1E0EE2".HexStringToByteArray(),
-            "3190194C117C510E0414DF77B4BEE615".HexStringToByteArray(),
-            "090276717FA70EAEBCA71218898D226F".HexStringToByteArray(),
+            "B4A08C784F3097477A95BAE6ED2360B8".HexStrToBytes(),
+            "5FB36D34F9C08B51C653602A9A1E0EE2".HexStrToBytes(),
+            "3190194C117C510E0414DF77B4BEE615".HexStrToBytes(),
+            "090276717FA70EAEBCA71218898D226F".HexStrToBytes(),
         };
 
         #endregion

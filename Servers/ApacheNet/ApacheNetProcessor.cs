@@ -110,7 +110,7 @@ namespace ApacheNet
             const string svoMacHeader = "X-SVOMac";
             if (ctx.Request.HeaderExists(svoMacHeader))
             {
-                string? serverMac = CastleLibrary.Sony.SVO.WebSecurityUtils.CalcuateSVOMac(ctx.Request.RetrieveHeaderValue(svoMacHeader));
+                string? serverMac = CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(ctx.Request.RetrieveHeaderValue(svoMacHeader));
 
                 if (string.IsNullOrEmpty(serverMac))
                 {
@@ -308,7 +308,7 @@ namespace ApacheNet
                                     case "/":
                                         bool root_handled = false;
 
-                                        foreach (string indexFile in HTTPProcessor._DefaultFiles)
+                                        foreach (string indexFile in HTTPProcessor.DefaultFiles)
                                         {
                                             if (File.Exists(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}"))
                                             {
@@ -434,7 +434,7 @@ namespace ApacheNet
                                             {
                                                 bool handled = false;
 
-                                                foreach (string indexFile in HTTPProcessor._DefaultFiles)
+                                                foreach (string indexFile in HTTPProcessor.DefaultFiles)
                                                 {
                                                     if (File.Exists(apacheContext.FilePath + indexFile))
                                                     {
@@ -647,7 +647,7 @@ namespace ApacheNet
                                     case "/":
                                         bool root_handled = false;
 
-                                        foreach (string indexFile in HTTPProcessor._DefaultFiles)
+                                        foreach (string indexFile in HTTPProcessor.DefaultFiles)
                                         {
                                             if (File.Exists(ApacheNetServerConfiguration.HTTPStaticFolder + $"/{indexFile}"))
                                             {
@@ -767,7 +767,7 @@ namespace ApacheNet
                                             {
                                                 bool handled = false;
 
-                                                foreach (string indexFile in HTTPProcessor._DefaultFiles)
+                                                foreach (string indexFile in HTTPProcessor.DefaultFiles)
                                                 {
                                                     if (File.Exists(apacheContext.FilePath + indexFile))
                                                     {

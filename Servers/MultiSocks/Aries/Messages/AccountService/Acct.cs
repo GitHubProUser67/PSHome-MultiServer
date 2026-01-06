@@ -29,7 +29,7 @@ namespace MultiSocks.Aries.Messages.AccountService
                     NAME = maddrparams.FirstOrDefault();
             }
 
-            string? DecryptedPass = new PasswordUtils().ssc2Decode(PASS, client.SKEY);
+            string? DecryptedPass = PasswordUtils.Ssc2Decode(PASS, client.SKEY);
 
             if (!string.IsNullOrEmpty(NAME))
             {

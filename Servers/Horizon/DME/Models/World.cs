@@ -6,7 +6,6 @@ using Horizon.RT.Common;
 using Horizon.RT.Models;
 using Horizon.SERVER;
 using MultiServerLibrary.Extension;
-using Org.BouncyCastle.Asn1.X509;
 using Prometheus;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -15,12 +14,13 @@ namespace Horizon.DME.Models
 {
     public class World : IAsyncDisposable
     {
-        private static Counter worldsCreated = Metrics.CreateCounter("dme_worlds_created_total", "Total number of created worlds in DME.");
+        private const short MAX_WORLD = 25000;
 
-        private static UniqueIDGenerator _idCounter = new UniqueIDGenerator();
+        private static readonly Counter worldsCreated = Metrics.CreateCounter("dme_worlds_created_total", "Total number of created worlds in DME.");
+
+        private static readonly UniqueIDGenerator _idCounter = new UniqueIDGenerator();
 
         public int MAX_CLIENTS_PER_WORLD = DmeClass.Settings.MaxClientsPerWorld;
-        public int MAX_WORLDS = DmeClass.Settings.DmeServerMaxWorld;
 
         #region Id Management
 
@@ -33,14 +33,15 @@ namespace Horizon.DME.Models
         {
             this.MediusWorldId = MediusWorldId;
 
-            int totalIdsCounted = 0;
-            while (totalIdsCounted < MAX_WORLDS && _idToWorld.ContainsKey((int)_idCounter.GetCurrentID()))
-            {
-                _idCounter.SetCurrentID((uint)(((int)_idCounter.GetCurrentID() + 1) % MAX_WORLDS));
-                ++totalIdsCounted;
-            }
+            short currentMaxWorldSetting = DmeClass.Settings.DmeServerMaxWorld;
 
-            if (totalIdsCounted == MAX_WORLDS)
+            if (currentMaxWorldSetting > MAX_WORLD || currentMaxWorldSetting < 1)
+            {
+                WorldId = -1;
+                LoggerAccessor.LogError($"[DMEWorld] - Invalid parameter for MAX_WORLD (max:{MAX_WORLD}, min:1)!");
+                return;
+            }
+            else if (_idCounter.ActiveCount >= currentMaxWorldSetting)
             {
                 WorldId = -1;
                 LoggerAccessor.LogError("[DMEWorld] - Max worlds reached!");
@@ -49,27 +50,24 @@ namespace Horizon.DME.Models
 
             WorldId = (int)_idCounter.CreateUniqueID();
 
-            if (_idToWorld.TryAdd(WorldId, this))
-            {
-                LoggerAccessor.LogInfo($"[DMEWorld] - Registered world with id {WorldId}");
-                worldsCreated.Inc();
-            }
-            else
-            {
-                WorldId = -1;
-                LoggerAccessor.LogError($"[DMEWorld] - Failed to register world with id {WorldId}");
-            }
+            _idToWorld.TryAdd(WorldId, this);
+
+            LoggerAccessor.LogInfo($"[DMEWorld] - Registered world with id {WorldId}");
+            worldsCreated.Inc();
         }
 
         private void FreeWorld()
         {
             if (_idToWorld.TryRemove(WorldId, out _))
+            {
+                _idCounter.ReleaseID((uint)WorldId);
                 LoggerAccessor.LogInfo($"[DMEWorld] - Unregistered world with id {WorldId}");
+            }
             else
                 LoggerAccessor.LogError($"[DMEWorld] - Failed to unregister world with id {WorldId}");
         }
 
-        public World? GetWorldById(int MediusWorldId, int DmeWorldId)
+        public static World? GetWorldById(int MediusWorldId, int DmeWorldId)
         {
             return _idToWorld.Values.FirstOrDefault(world => world.MediusWorldId == MediusWorldId && world.WorldId == DmeWorldId);
         }
@@ -199,6 +197,8 @@ namespace Horizon.DME.Models
             await _clientsFlushedTcs.Task.ConfigureAwait(false);
 
             LoggerAccessor.LogInfo($"[DMEWorld] - world:{WorldId} destroyed.");
+
+            GC.SuppressFinalize(this);
         }
 
         public async Task Stop()

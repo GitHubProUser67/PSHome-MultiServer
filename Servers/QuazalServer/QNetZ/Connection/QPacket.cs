@@ -1,6 +1,6 @@
-using MultiServerLibrary.Extension;
 using EndianTools;
 using System.Text;
+using CastleLibrary.Utils;
 
 namespace QuazalServer.QNetZ
 {
@@ -451,7 +451,7 @@ namespace QuazalServer.QNetZ
 					sb.Append(b.ToString("X2") + " ");
 			}
 			sb.AppendLine();
-			sb.AppendLine(" Checksum:0x" + (checkSum ?? Array.Empty<byte>()).ToHexString());
+			sb.AppendLine(" Checksum:0x" + (checkSum ?? Array.Empty<byte>()).BytesToHexStr());
 			sb.AppendLine("}");
 			return sb.ToString();
 		}

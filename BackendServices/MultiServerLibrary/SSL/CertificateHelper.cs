@@ -9,6 +9,7 @@ using System.Collections.Concurrent;
 using MultiServerLibrary.Extension;
 using NetHasher;
 using System.Threading;
+using CastleLibrary.Utils;
 #if !NETCOREAPP3_0_OR_GREATER
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Crypto;
@@ -949,11 +950,11 @@ namespace MultiServerLibrary.SSL
 
             byte[] oid = hashAlgorithm.Name switch
             {
-                DotNetHasher.MD5Const => MD5id.HexStringToByteArray(),
-                DotNetHasher.Sha1Const => SHA1id.HexStringToByteArray(),
-                DotNetHasher.Sha256Const => SHA256id.HexStringToByteArray(),
-                DotNetHasher.Sha384Const => SHA384id.HexStringToByteArray(),
-                DotNetHasher.Sha512Const => SHA512id.HexStringToByteArray(),
+                DotNetHasher.MD5Const => MD5id.HexStrToBytes(),
+                DotNetHasher.Sha1Const => SHA1id.HexStrToBytes(),
+                DotNetHasher.Sha256Const => SHA256id.HexStrToBytes(),
+                DotNetHasher.Sha384Const => SHA384id.HexStrToBytes(),
+                DotNetHasher.Sha512Const => SHA512id.HexStrToBytes(),
                 _ => null
             };
 
@@ -1006,8 +1007,8 @@ namespace MultiServerLibrary.SSL
 
             byte[] oid = hashAlgorithm.Name switch
             {
-                DotNetHasher.Sha256Const => SHA256id.HexStringToByteArray(),
-                DotNetHasher.Sha384Const => SHA384id.HexStringToByteArray(),
+                DotNetHasher.Sha256Const => SHA256id.HexStrToBytes(),
+                DotNetHasher.Sha384Const => SHA384id.HexStrToBytes(),
                 _ => null
             };
 

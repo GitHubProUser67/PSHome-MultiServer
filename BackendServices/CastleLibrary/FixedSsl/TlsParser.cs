@@ -41,7 +41,8 @@ namespace FixedSsl
 
     public static class TlsParser
     {
-        private const int TLS_HEADER_LEN = 5;
+        public const int TLS_HEADER_LEN = 5;
+
         private const byte TLS_HANDSHAKE_CONTENT_TYPE = 0x16;
         private const byte TLS_HANDSHAKE_TYPE_CLIENT_HELLO = 0x01;
 

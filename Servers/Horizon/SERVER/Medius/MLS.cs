@@ -1,3 +1,4 @@
+using CastleLibrary.Utils;
 using CustomLogger;
 using DotNetty.Transport.Channels;
 using EndianTools;
@@ -263,7 +264,7 @@ LoggerAccessor.LogWarn($"[MLS] - GuestLogin: User {data.ClientObject.AccountName
 
                         if (QueryData != null)
                         {
-                            LoggerAccessor.LogDebug($"[MLS] - QUERY CHECK - Client:{data.ClientObject?.IP} Has Data:{QueryData.ToHexString()} in offset: {clientCheatQuery.StartAddress}");
+                            LoggerAccessor.LogDebug($"[MLS] - QUERY CHECK - Client:{data.ClientObject?.IP} Has Data:{QueryData.BytesToHexStr()} in offset: {clientCheatQuery.StartAddress}");
 
                             if (data.ApplicationId == 20371 || data.ApplicationId == 20374)
                             {
@@ -476,7 +477,7 @@ LoggerAccessor.LogWarn($"[MLS] - GuestLogin: User {data.ClientObject.AccountName
                                                 {
                                                     if (data.ClientObject.ClientHomeData == null)
                                                         data.ClientObject.ClientHomeData = MediusClass.HomeOffsetsList.Where(x => !string.IsNullOrEmpty(x.Sha1Hash) && x.Sha1Hash[..^8]
-                                                        .Equals(clientCheatQuery.Data.ToHexString(), StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
+                                                        .Equals(clientCheatQuery.Data.BytesToHexStr(), StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
 
                                                     if (data.ClientObject.ClientHomeData != null)
                                                     {

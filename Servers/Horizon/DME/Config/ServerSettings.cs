@@ -93,7 +93,7 @@ namespace Horizon.DME.Config
         public bool EnableMedius = true; // (DEFAULT: 1)
         public bool EnforceAuthentication = true; // (DEFAULT: 1)
 
-        public short DmeServerMaxWorld = 4000; //		# (DEFAULT: 10, MAXIMUM 4000)
+        public short DmeServerMaxWorld = 25000; //		# (DEFAULT: 10, MAXIMUM 25000)
 
         /// <summary>
         /// There is no limit to clients per world as far as the service is concerned
