@@ -47,6 +47,7 @@ namespace MultiSocks.Aries
                 { "sviw", typeof(Sviw) }, // Request names for each fields in a user's stats record.
                 { "user", typeof(User) }, //get my user info
                 { "usld", typeof(Usld) }, // User Settings Load -- load a user's (persona's) common game specific settings.
+                { "ussv", typeof(Ussv) }, // User Settings Save -- Save a user's (persona's) common game specific settings.
                 { "onln", typeof(Onln) }, //search for a user's info
                 { "opup", typeof(Opup) }, //?
                 { "ottr", typeof(Ottr) }, //?

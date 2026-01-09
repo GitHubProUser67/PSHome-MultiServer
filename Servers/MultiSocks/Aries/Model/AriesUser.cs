@@ -20,6 +20,19 @@ namespace MultiSocks.Aries.Model
         public List<string> Friends = new List<string>();
         public List<string> Rivals = new List<string>();
         public string Auxiliary = string.Empty;
+        public Dictionary<string, string?> Settings = new Dictionary<string, string?>()
+        {
+            { "IMGATE", "0" },
+            { "QMSG0", "Wanna play?" },
+            { "QMSG1", "I rule!" },
+            { "QMSG2", "Doh!" },
+            { "QMSG3", "Mmmm... doughnuts." },
+            { "QMSG04", "What time is it?" },
+            { "QMSG05", "The truth is out of style." },
+            { "SPM_EA", "0" },
+            { "SPM_PART", "0" },
+            { "UID", "$00000000000003fe" },
+        };
         private string[] Parameters = new string[] { "PUSMC01?????", string.Empty, string.Empty, "-1", "-1", string.Empty, "d" };
 
         public int SelectedPersona = -1;

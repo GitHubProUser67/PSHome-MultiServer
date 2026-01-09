@@ -6,18 +6,10 @@ namespace MultiSocks.Aries.Messages
 
         public override void Process(AbstractAriesServer context, AriesClient client)
         {
-            if (context is not MatchmakerServer) return;
+            if (context is not MatchmakerServer || client.User == null) return;
 
-            OutputCache.Add("IMGATE", "0");
-            OutputCache.Add("QMSG0", "Wanna play?");
-            OutputCache.Add("QMSG1", "I rule!");
-            OutputCache.Add("QMSG2", "Doh!");
-            OutputCache.Add("QMSG3", "Mmmm... doughnuts.");
-            OutputCache.Add("QMSG04", "What time is it?");
-            OutputCache.Add("QMSG05", "The truth is out of style.");
-            OutputCache.Add("SPM_EA", "0");
-            OutputCache.Add("SPM_PART", "0");
-            OutputCache.Add("UID", "$00000000000003fe");
+            foreach (var entry in client.User.Settings)
+                OutputCache.Add(entry.Key, entry.Value ?? string.Empty);
 
             client.SendMessage(this);
         }
