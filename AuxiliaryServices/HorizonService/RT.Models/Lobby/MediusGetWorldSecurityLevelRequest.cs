@@ -31,9 +31,9 @@ namespace Horizon.RT.Models
             base.Deserialize(reader);
 
             MessageID = reader.Read<MessageId>();
-            reader.ReadBytes(2);
-
             SessionKey = reader.ReadString();
+            
+            reader.ReadBytes(2);
             MediusWorldID = reader.ReadInt32();
             AppType = reader.Read<MediusApplicationType>();
         }
@@ -43,9 +43,9 @@ namespace Horizon.RT.Models
             base.Serialize(writer);
 
             writer.Write(MessageID ?? MessageId.Empty);
-            writer.Write(new byte[2]);
-
             writer.Write(SessionKey);
+            
+            writer.Write(new byte[2]);
             writer.Write(MediusWorldID);
             writer.Write(AppType);
         }
