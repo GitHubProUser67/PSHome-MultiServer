@@ -126,7 +126,8 @@ public static class ApacheNetServerConfiguration
             "secure.cpreprod.homeps3.online.scee.com",
             "secure.heavyh2o.net",
             "game.hellfiregames.com",
-            "www.ndreamsgateway.com"
+            "www.ndreamsgateway.com",
+            "oc.homect-scej.jp"
         };
     public static List<ushort>? Ports { get; set; } = new() { NetworkPorts.Http.Tcp, NetworkPorts.Http.Ssl, 3074, 3658, 9090, 10010, 26004, 33000 };
     public static List<string>? RedirectRules { get; set; }
