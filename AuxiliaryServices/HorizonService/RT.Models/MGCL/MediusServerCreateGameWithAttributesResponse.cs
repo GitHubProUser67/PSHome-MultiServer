@@ -1,13 +1,16 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyReport, MediusMGCLMessageIds.ServerCreateGameWithAttributesResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyReport,
+        MediusMGCLMessageIds.ServerCreateGameWithAttributesResponse
+    )]
     public class MediusServerCreateGameWithAttributesResponse : BaseMGCLMessage, IMediusResponse
     {
-        public override byte PacketType => (byte)MediusMGCLMessageIds.ServerCreateGameWithAttributesResponse;
+        public override byte PacketType =>
+            (byte)MediusMGCLMessageIds.ServerCreateGameWithAttributesResponse;
 
         public MessageId MessageID { get; set; }
         public MGCL_ERROR_CODE Confirmation;
@@ -37,10 +40,11 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"Confirmation: {Confirmation} " +
-                $"WorldID: {MediusWorldId}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"Confirmation: {Confirmation} "
+                + $"WorldID: {MediusWorldId}";
         }
     }
 }

@@ -38,72 +38,152 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 =============================================================================*/
 #endregion
 
+using System;
+using System.Runtime.CompilerServices;
 
-namespace Tommunism.SoftFloat
+namespace Tommunism.SoftFloat;
+
+internal static partial class Internals
 {
-    internal static partial class Internals
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool IsHexFormat(ReadOnlySpan<char> format, out bool isLowerCase)
     {
-        #region Rounding
-
-        // softfloat_roundToUI32
-        public static uint RoundToUI32(SoftFloatContext context, bool sign, ulong sig, RoundingMode roundingMode, bool exact)
+        if (!format.IsEmpty && (format[0] == 'X' || format[0] == 'x'))
         {
-            uint roundIncrement, roundBits;
-            uint z;
+            if (format.Length > 1)
+                throw new ArgumentException(
+                    "Floating-point binary hexadecimal format does not currently allow a user-defined precision.",
+                    nameof(format)
+                );
 
-            roundIncrement = 0x800U;
-            if (roundingMode is not RoundingMode.NearMaxMag and not RoundingMode.NearEven)
-            {
-                roundIncrement = 0;
-                if (sign)
-                {
-                    if (sig == 0)
-                        return 0;
-
-                    if (roundingMode is RoundingMode.Min or RoundingMode.Odd)
-                        goto invalid;
-                }
-                else
-                {
-                    if (roundingMode == RoundingMode.Max)
-                        roundIncrement = 0xFFF;
-                }
-            }
-
-            roundBits = (uint)sig & 0xFFF;
-            sig += roundIncrement;
-            if ((sig & 0xFFFFF00000000000) != 0)
-                goto invalid;
-
-            z = (uint)(sig >> 12);
-            if (roundBits == 0x800 && roundingMode == RoundingMode.NearEven)
-                z &= ~(uint)1;
-
-            if (sign && z != 0)
-                goto invalid;
-
-            if (roundBits != 0)
-            {
-                if (roundingMode == RoundingMode.Odd)
-                    z |= 1U;
-
-                if (exact)
-                    context.ExceptionFlags |= ExceptionFlags.Inexact;
-            }
-
-            return z;
-
-        invalid:
-            context.RaiseFlags(ExceptionFlags.Invalid);
-            return context.UInt32FromOverflow(sign);
+            isLowerCase = format[0] == 'x';
+            return true;
         }
 
-        // softfloat_roundToUI64
-        public static ulong RoundToUI64(SoftFloatContext context, bool sign, ulong sig, ulong sigExtra, RoundingMode roundingMode, bool exact)
+        isLowerCase = default;
+        return false;
+    }
+
+    internal static bool IsExpFormatOrDefault(
+        ReadOnlySpan<char> format,
+        out string? replacedFormat,
+        string defaultFormat = "E"
+    )
+    {
+        if (format.IsEmpty)
         {
-            if (roundingMode is RoundingMode.NearMaxMag or RoundingMode.NearEven)
+            replacedFormat = defaultFormat;
+            return true;
+        }
+
+        // Round-trip should only use either exponent form or simplified decimal form.
+        if (format[0] is 'E' or 'e' or 'R' or 'r')
+        {
+            replacedFormat = null;
+            return true;
+        }
+
+        replacedFormat = null;
+        return false;
+    }
+
+    #region Rounding
+
+    // softfloat_roundToUI32
+    public static uint RoundToUI32(
+        SoftFloatContext context,
+        bool sign,
+        ulong sig,
+        RoundingMode roundingMode,
+        bool exact
+    )
+    {
+        uint roundIncrement,
+            roundBits;
+        uint z;
+
+        roundIncrement = 0x800U;
+        if (roundingMode is not RoundingMode.NearMaxMag and not RoundingMode.NearEven)
+        {
+            roundIncrement = 0;
+            if (sign)
             {
-                if (0x8000000000000000 <= sigExtra)
+                if (sig == 0)
+                    return 0;
+
+                if (roundingMode is RoundingMode.Min or RoundingMode.Odd)
+                    goto invalid;
+            }
+            else
+            {
+                if (roundingMode == RoundingMode.Max)
+                    roundIncrement = 0xFFF;
+            }
+        }
+
+        roundBits = (uint)sig & 0xFFF;
+        sig += roundIncrement;
+        if ((sig & 0xFFFFF00000000000) != 0)
+            goto invalid;
+
+        z = (uint)(sig >> 12);
+        if (roundBits == 0x800 && roundingMode == RoundingMode.NearEven)
+            z &= ~(uint)1;
+
+        if (sign && z != 0)
+            goto invalid;
+
+        if (roundBits != 0)
+        {
+            if (roundingMode == RoundingMode.Odd)
+                z |= 1U;
+
+            if (exact)
+                context.ExceptionFlags |= ExceptionFlags.Inexact;
+        }
+
+        return z;
+
+        invalid:
+        context.RaiseFlags(ExceptionFlags.Invalid);
+        return context.UInt32FromOverflow(sign);
+    }
+
+    // softfloat_roundToUI64
+    public static ulong RoundToUI64(
+        SoftFloatContext context,
+        bool sign,
+        ulong sig,
+        ulong sigExtra,
+        RoundingMode roundingMode,
+        bool exact
+    )
+    {
+        if (roundingMode is RoundingMode.NearMaxMag or RoundingMode.NearEven)
+        {
+            if (0x8000000000000000 <= sigExtra)
+            {
+                ++sig;
+                if (sig == 0)
+                    goto invalid;
+
+                if (roundingMode == RoundingMode.NearEven && sigExtra == 0x8000000000000000)
+                    sig &= ~(ulong)1;
+            }
+        }
+        else
+        {
+            if (sign)
+            {
+                if ((sig | sigExtra) == 0)
+                    return 0;
+
+                if (roundingMode is RoundingMode.Min or RoundingMode.Odd)
+                    goto invalid;
+            }
+            else
+            {
+                if (roundingMode == RoundingMode.Max && sigExtra != 0)
                 {
                     ++sig;
                     if (sig == 0)
@@ -113,143 +193,145 @@ namespace Tommunism.SoftFloat
                         sig &= ~(ulong)1;
                 }
             }
-            else
-            {
-                if (sign)
-                {
-                    if ((sig | sigExtra) == 0)
-                        return 0;
-
-                    if (roundingMode is RoundingMode.Min or RoundingMode.Odd)
-                        goto invalid;
-                }
-                else
-                {
-                    if (roundingMode == RoundingMode.Max && sigExtra != 0)
-                    {
-                        ++sig;
-                        if (sig == 0)
-                            goto invalid;
-
-                        if (roundingMode == RoundingMode.NearEven && sigExtra == 0x8000000000000000)
-                            sig &= ~(ulong)1;
-                    }
-                }
-            }
-
-            if (sign && sig != 0)
-                goto invalid;
-
-            if (sigExtra != 0)
-            {
-                if (roundingMode == RoundingMode.Odd)
-                    sig |= 1;
-
-                if (exact)
-                    context.ExceptionFlags |= ExceptionFlags.Inexact;
-            }
-
-            return sig;
-
-        invalid:
-            context.RaiseFlags(ExceptionFlags.Invalid);
-            return context.UInt64FromOverflow(sign);
         }
 
-        // softfloat_roundToI32
-        public static int RoundToI32(SoftFloatContext context, bool sign, ulong sig, RoundingMode roundingMode, bool exact)
+        if (sign && sig != 0)
+            goto invalid;
+
+        if (sigExtra != 0)
         {
-            uint roundIncrement, roundBits;
-            uint sig32;
-            int z;
+            if (roundingMode == RoundingMode.Odd)
+                sig |= 1;
 
-            roundIncrement = 0x800;
-            if (roundingMode is not RoundingMode.NearMaxMag and not RoundingMode.NearEven)
-            {
-                roundIncrement = 0;
-                if (sign ? roundingMode is RoundingMode.Min or RoundingMode.Odd : roundingMode == RoundingMode.Max)
-                    roundIncrement = 0xFFF;
-            }
-
-            roundBits = (uint)sig & 0xFFF;
-            sig += roundIncrement;
-            if ((sig & 0xFFFFF00000000000) != 0)
-                goto invalid;
-
-            sig32 = (uint)(sig >> 12);
-            if (roundBits == 0x800 && roundingMode == RoundingMode.NearEven)
-                sig32 &= ~1U;
-
-            z = sign ? -(int)sig32 : (int)sig32;
-            if (z != 0 && ((z < 0) ^ sign))
-                goto invalid;
-
-            if (roundBits != 0)
-            {
-                if (roundingMode == RoundingMode.Odd)
-                    z |= 1;
-
-                if (exact)
-                    context.ExceptionFlags |= ExceptionFlags.Inexact;
-            }
-
-            return z;
-
-        invalid:
-            context.RaiseFlags(ExceptionFlags.Invalid);
-            return context.Int32FromOverflow(sign);
+            if (exact)
+                context.ExceptionFlags |= ExceptionFlags.Inexact;
         }
 
-        // softfloat_roundToI64
-        public static long RoundToI64(SoftFloatContext context, bool sign, ulong sig, ulong sigExtra, RoundingMode roundingMode, bool exact)
-        {
-            long z;
-
-            if (roundingMode is RoundingMode.NearMaxMag or RoundingMode.NearEven)
-            {
-                if (0x8000000000000000 <= sigExtra)
-                {
-                    ++sig;
-                    if (sig == 0)
-                        goto invalid;
-
-                    if (roundingMode == RoundingMode.NearEven && sigExtra == 0x8000000000000000)
-                        sig &= ~1UL;
-                }
-            }
-            else
-            {
-                if (sigExtra != 0 && (sign ? roundingMode is RoundingMode.Min or RoundingMode.Odd : roundingMode == RoundingMode.Max))
-                {
-                    ++sig;
-                    if (sig == 0)
-                        goto invalid;
-
-                    if (roundingMode == RoundingMode.NearEven && sigExtra == 0x8000000000000000)
-                        sig &= ~1UL;
-                }
-            }
-
-            z = sign ? -(long)sig : (long)sig;
-            if (z != 0 && ((z < 0) ^ sign))
-                goto invalid;
-
-            if (sigExtra != 0)
-            {
-                if (roundingMode == RoundingMode.Odd)
-                    z |= 1L;
-
-                if (exact)
-                    context.ExceptionFlags |= ExceptionFlags.Inexact;
-            }
-
-            return z;
+        return sig;
 
         invalid:
-            context.RaiseFlags(ExceptionFlags.Invalid);
-            return context.Int64FromOverflow(sign);
-        }
-
-        #endregion
+        context.RaiseFlags(ExceptionFlags.Invalid);
+        return context.UInt64FromOverflow(sign);
     }
+
+    // softfloat_roundToI32
+    public static int RoundToI32(
+        SoftFloatContext context,
+        bool sign,
+        ulong sig,
+        RoundingMode roundingMode,
+        bool exact
+    )
+    {
+        uint roundIncrement,
+            roundBits;
+        uint sig32;
+        int z;
+
+        roundIncrement = 0x800;
+        if (roundingMode is not RoundingMode.NearMaxMag and not RoundingMode.NearEven)
+        {
+            roundIncrement = 0;
+            if (
+                sign
+                    ? roundingMode is RoundingMode.Min or RoundingMode.Odd
+                    : roundingMode == RoundingMode.Max
+            )
+                roundIncrement = 0xFFF;
+        }
+
+        roundBits = (uint)sig & 0xFFF;
+        sig += roundIncrement;
+        if ((sig & 0xFFFFF00000000000) != 0)
+            goto invalid;
+
+        sig32 = (uint)(sig >> 12);
+        if (roundBits == 0x800 && roundingMode == RoundingMode.NearEven)
+            sig32 &= ~1U;
+
+        z = sign ? -(int)sig32 : (int)sig32;
+        if (z != 0 && ((z < 0) ^ sign))
+            goto invalid;
+
+        if (roundBits != 0)
+        {
+            if (roundingMode == RoundingMode.Odd)
+                z |= 1;
+
+            if (exact)
+                context.ExceptionFlags |= ExceptionFlags.Inexact;
+        }
+
+        return z;
+
+        invalid:
+        context.RaiseFlags(ExceptionFlags.Invalid);
+        return context.Int32FromOverflow(sign);
+    }
+
+    // softfloat_roundToI64
+    public static long RoundToI64(
+        SoftFloatContext context,
+        bool sign,
+        ulong sig,
+        ulong sigExtra,
+        RoundingMode roundingMode,
+        bool exact
+    )
+    {
+        long z;
+
+        if (roundingMode is RoundingMode.NearMaxMag or RoundingMode.NearEven)
+        {
+            if (0x8000000000000000 <= sigExtra)
+            {
+                ++sig;
+                if (sig == 0)
+                    goto invalid;
+
+                if (roundingMode == RoundingMode.NearEven && sigExtra == 0x8000000000000000)
+                    sig &= ~1UL;
+            }
+        }
+        else
+        {
+            if (
+                sigExtra != 0
+                && (
+                    sign
+                        ? roundingMode is RoundingMode.Min or RoundingMode.Odd
+                        : roundingMode == RoundingMode.Max
+                )
+            )
+            {
+                ++sig;
+                if (sig == 0)
+                    goto invalid;
+
+                if (roundingMode == RoundingMode.NearEven && sigExtra == 0x8000000000000000)
+                    sig &= ~1UL;
+            }
+        }
+
+        z = sign ? -(long)sig : (long)sig;
+        if (z != 0 && ((z < 0) ^ sign))
+            goto invalid;
+
+        if (sigExtra != 0)
+        {
+            if (roundingMode == RoundingMode.Odd)
+                z |= 1L;
+
+            if (exact)
+                context.ExceptionFlags |= ExceptionFlags.Inexact;
+        }
+
+        return z;
+
+        invalid:
+        context.RaiseFlags(ExceptionFlags.Invalid);
+        return context.Int64FromOverflow(sign);
+    }
+
+    #endregion
 }

@@ -1,14 +1,16 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.CheckMyClanInvitationsResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.CheckMyClanInvitationsResponse
+    )]
     public class MediusCheckMyClanInvitationsResponse : BaseLobbyMessage, IMediusResponse
     {
-
-        public override byte PacketType => (byte)MediusLobbyMessageIds.CheckMyClanInvitationsResponse;
+        public override byte PacketType =>
+            (byte)MediusLobbyMessageIds.CheckMyClanInvitationsResponse;
 
         public bool IsSuccess => StatusCode >= 0;
 
@@ -34,10 +36,10 @@ namespace Horizon.RT.Models
             ClanInvitationID = reader.ReadInt32();
             ClanID = reader.ReadInt32();
             ResponseStatus = reader.Read<MediusClanInvitationsResponseStatus>();
-            if(reader.MediusVersion == 113)
-                Message = reader.ReadString(Constants.CLANMSG_MAXLEN_113);
-            else
-                Message = reader.ReadString(Constants.CLANMSG_MAXLEN);
+            Message =
+                reader.MediusVersion == 113
+                    ? reader.ReadString(Constants.CLANMSG_MAXLEN_113)
+                    : reader.ReadString(Constants.CLANMSG_MAXLEN);
             LeaderAccountID = reader.ReadInt32();
             LeaderAccountName = reader.ReadString(Constants.ACCOUNTNAME_MAXLEN);
             EndOfList = reader.ReadBoolean();
@@ -55,7 +57,7 @@ namespace Horizon.RT.Models
             writer.Write(ClanInvitationID);
             writer.Write(ClanID);
             writer.Write(ResponseStatus);
-            if(writer.MediusVersion == 113)
+            if (writer.MediusVersion == 113)
                 writer.Write(Message, Constants.CLANMSG_MAXLEN_113);
             else
                 writer.Write(Message, Constants.CLANMSG_MAXLEN);
@@ -67,16 +69,17 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"ClanInvitationID: {ClanInvitationID} " +
-                $"ClanID: {ClanID} " +
-                $"ResponseStatus: {ResponseStatus} " +
-                $"Message: {Message} " +
-                $"LeaderAccountID: {LeaderAccountID} " +
-                $"LeaderAccountName: {LeaderAccountName} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"ClanInvitationID: {ClanInvitationID} "
+                + $"ClanID: {ClanID} "
+                + $"ResponseStatus: {ResponseStatus} "
+                + $"Message: {Message} "
+                + $"LeaderAccountID: {LeaderAccountID} "
+                + $"LeaderAccountName: {LeaderAccountName} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

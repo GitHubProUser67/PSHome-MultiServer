@@ -2,30 +2,28 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct GameBrowserPlayerData
-	{
+    [TdfStruct]
+    public struct GameBrowserPlayerData
+    {
+        [TdfMember("LOC")]
+        public uint mAccountLocale;
 
-		[TdfMember("LOC")]
-		public uint mAccountLocale;
+        [TdfMember("EXID")]
+        public ulong mExternalId;
 
-		[TdfMember("EXID")]
-		public ulong mExternalId;
+        [TdfMember("PATT")]
+        public SortedDictionary<string, string> mPlayerAttribs;
 
-		[TdfMember("PATT")]
-		public SortedDictionary<string, string> mPlayerAttribs;
+        [TdfMember("PID")]
+        public long mPlayerId;
 
-		[TdfMember("PID")]
-		public long mPlayerId;
+        [TdfMember("NAME")]
+        public string mPlayerName;
 
-		[TdfMember("NAME")]
-		public string mPlayerName;
+        [TdfMember("STAT")]
+        public PlayerState mPlayerState;
 
-		[TdfMember("STAT")]
-		public PlayerState mPlayerState;
-
-		[TdfMember("TIDX")]
-		public ushort mTeamIndex;
-
-	}
+        [TdfMember("TIDX")]
+        public ushort mTeamIndex;
+    }
 }

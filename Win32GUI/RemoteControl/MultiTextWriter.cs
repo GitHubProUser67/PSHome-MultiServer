@@ -1,18 +1,14 @@
-﻿using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
+﻿using System.Text;
 
 namespace RemoteControl
 {
     public class MultiTextWriter : TextWriter
     {
-        private IEnumerable<TextWriter> writers;
+        private readonly IEnumerable<TextWriter> writers;
 
         public MultiTextWriter(IEnumerable<TextWriter> writers)
         {
-            this.writers = writers.ToList();
+            this.writers = [.. writers];
         }
 
         public MultiTextWriter(params TextWriter[] writers)

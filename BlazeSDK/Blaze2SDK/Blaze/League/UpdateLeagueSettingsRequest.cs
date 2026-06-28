@@ -6,7 +6,6 @@ namespace Blaze2SDK.Blaze.League
     [TdfStruct]
     public struct UpdateLeagueSettingsRequest
     {
-
         /// <summary>
         /// Max String Length: 6
         /// </summary>
@@ -42,6 +41,5 @@ namespace Blaze2SDK.Blaze.League
 
         [TdfMember("TRPH")]
         public uint mTrophy;
-
     }
 }

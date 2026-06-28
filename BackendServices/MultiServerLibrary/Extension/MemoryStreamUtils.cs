@@ -1,16 +1,16 @@
-﻿using System;
-using System.IO;
-
-namespace MultiServerLibrary.Extension
+﻿namespace MultiServerLibrary.Extension
 {
     public static class MemoryStreamUtils
     {
-        public static void Clear(this MemoryStream source)
+        extension(MemoryStream source)
         {
-            byte[] buffer = source.GetBuffer();
-            Array.Clear(buffer, 0, buffer.Length);
-            source.Position = 0;
-            source.SetLength(0);
+            public void Clear()
+            {
+                var buffer = source.GetBuffer();
+                Array.Clear(buffer, 0, buffer.Length);
+                source.Position = 0;
+                source.SetLength(0);
+            }
         }
     }
 }

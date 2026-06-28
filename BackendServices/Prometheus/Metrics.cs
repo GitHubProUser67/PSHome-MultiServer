@@ -1,8 +1,8 @@
-﻿namespace Prometheus;
+namespace Prometheus;
 
 /// <summary>
 /// Static class for easy creation of metrics. Acts as the entry point to the prometheus-net metrics recording API.
-/// 
+///
 /// Some built-in metrics are registered by default in the default collector registry. If these default metrics are
 /// not desired, call <see cref="SuppressDefaultMetrics()"/> to remove them before registering your own.
 /// </summary>
@@ -12,7 +12,7 @@ public static class Metrics
     /// The default registry where all metrics are registered by default.
     /// </summary>
     public static CollectorRegistry DefaultRegistry { get; private set; }
-    
+
     /// <summary>
     /// The default metric factory used to create collectors in the default registry.
     /// </summary>
@@ -48,50 +48,78 @@ public static class Metrics
     /// <summary>
     /// Counters only increase in value and reset to zero when the process restarts.
     /// </summary>
-    public static Counter CreateCounter(string name, string help, CounterConfiguration? configuration = null) =>
-        DefaultFactory.CreateCounter(name, help, configuration);
+    public static Counter CreateCounter(
+        string name,
+        string help,
+        CounterConfiguration? configuration = null
+    ) => DefaultFactory.CreateCounter(name, help, configuration);
 
     /// <summary>
     /// Gauges can have any numeric value and change arbitrarily.
     /// </summary>
-    public static Gauge CreateGauge(string name, string help, GaugeConfiguration? configuration = null) =>
-        DefaultFactory.CreateGauge(name, help, configuration);
+    public static Gauge CreateGauge(
+        string name,
+        string help,
+        GaugeConfiguration? configuration = null
+    ) => DefaultFactory.CreateGauge(name, help, configuration);
 
     /// <summary>
     /// Summaries track the trends in events over time (10 minutes by default).
     /// </summary>
-    public static Summary CreateSummary(string name, string help, SummaryConfiguration? configuration = null) =>
-        DefaultFactory.CreateSummary(name, help, configuration);
+    public static Summary CreateSummary(
+        string name,
+        string help,
+        SummaryConfiguration? configuration = null
+    ) => DefaultFactory.CreateSummary(name, help, configuration);
 
     /// <summary>
     /// Histograms track the size and number of events in buckets.
     /// </summary>
-    public static Histogram CreateHistogram(string name, string help, HistogramConfiguration? configuration = null) =>
-        DefaultFactory.CreateHistogram(name, help, configuration);
+    public static Histogram CreateHistogram(
+        string name,
+        string help,
+        HistogramConfiguration? configuration = null
+    ) => DefaultFactory.CreateHistogram(name, help, configuration);
 
     /// <summary>
     /// Counters only increase in value and reset to zero when the process restarts.
     /// </summary>
-    public static Counter CreateCounter(string name, string help, string[] labelNames, CounterConfiguration? configuration = null) =>
-        DefaultFactory.CreateCounter(name, help, labelNames, configuration);
+    public static Counter CreateCounter(
+        string name,
+        string help,
+        string[] labelNames,
+        CounterConfiguration? configuration = null
+    ) => DefaultFactory.CreateCounter(name, help, labelNames, configuration);
 
     /// <summary>
     /// Gauges can have any numeric value and change arbitrarily.
     /// </summary>
-    public static Gauge CreateGauge(string name, string help, string[] labelNames, GaugeConfiguration? configuration = null) =>
-        DefaultFactory.CreateGauge(name, help, labelNames, configuration);
+    public static Gauge CreateGauge(
+        string name,
+        string help,
+        string[] labelNames,
+        GaugeConfiguration? configuration = null
+    ) => DefaultFactory.CreateGauge(name, help, labelNames, configuration);
 
     /// <summary>
     /// Summaries track the trends in events over time (10 minutes by default).
     /// </summary>
-    public static Summary CreateSummary(string name, string help, string[] labelNames, SummaryConfiguration? configuration = null) =>
-        DefaultFactory.CreateSummary(name, help, labelNames, configuration);
+    public static Summary CreateSummary(
+        string name,
+        string help,
+        string[] labelNames,
+        SummaryConfiguration? configuration = null
+    ) => DefaultFactory.CreateSummary(name, help, labelNames, configuration);
 
     /// <summary>
     /// Histograms track the size and number of events in buckets.
     /// </summary>
-    public static Histogram CreateHistogram(string name, string help, string[] labelNames, HistogramConfiguration? configuration = null) =>
-        DefaultFactory.CreateHistogram(name, help, labelNames, configuration);
+    public static Histogram CreateHistogram(
+        string name,
+        string help,
+        string[] labelNames,
+        HistogramConfiguration? configuration = null
+    ) => DefaultFactory.CreateHistogram(name, help, labelNames, configuration);
 
     /// <summary>
     /// Counters only increase in value and reset to zero when the process restarts.
@@ -131,7 +159,8 @@ public static class Metrics
     /// Suppresses the registration of the default sample metrics from the default registry.
     /// Has no effect if not called on startup (it will not remove metrics from a registry already in use).
     /// </summary>
-    public static void SuppressDefaultMetrics() => SuppressDefaultMetrics(SuppressDefaultMetricOptions.SuppressAll);
+    public static void SuppressDefaultMetrics() =>
+        SuppressDefaultMetrics(SuppressDefaultMetricOptions.SuppressAll);
 
     /// <summary>
     /// Suppresses the registration of the default sample metrics from the default registry.
@@ -142,37 +171,34 @@ public static class Metrics
         options ??= SuppressDefaultMetricOptions.SuppressAll;
 
         // Only has effect if called before the registry is collected from. Otherwise a no-op.
-        DefaultRegistry.SetBeforeFirstCollectCallback(delegate
-        {
-            var configureCallbacks = new SuppressDefaultMetricOptions.ConfigurationCallbacks()
+        DefaultRegistry.SetBeforeFirstCollectCallback(
+            delegate
             {
-#if NET
-                ConfigureEventCounterAdapter = _configureEventCounterAdapterCallback,
-#endif
-#if NET6_0_OR_GREATER
-                ConfigureMeterAdapter = _configureMeterAdapterOptions
-#endif
-            };
+                var configureCallbacks = new SuppressDefaultMetricOptions.ConfigurationCallbacks()
+                {
+                    ConfigureEventCounterAdapter = _configureEventCounterAdapterCallback,
+                    ConfigureMeterAdapter = _configureMeterAdapterOptions,
+                };
 
-            options.ApplyToDefaultRegistry(configureCallbacks);
-        });
+                options.ApplyToDefaultRegistry(configureCallbacks);
+            }
+        );
     }
 
-#if NET
-    private static Action<EventCounterAdapterOptions> _configureEventCounterAdapterCallback = delegate { };
+    private static Action<EventCounterAdapterOptions> _configureEventCounterAdapterCallback =
+        delegate { };
 
     /// <summary>
     /// Configures the event counter adapter that is enabled by default on startup.
     /// </summary>
-    public static void ConfigureEventCounterAdapter(Action<EventCounterAdapterOptions> callback) => _configureEventCounterAdapterCallback = callback;
-#endif
+    public static void ConfigureEventCounterAdapter(Action<EventCounterAdapterOptions> callback) =>
+        _configureEventCounterAdapterCallback = callback;
 
-#if NET6_0_OR_GREATER
     private static Action<MeterAdapterOptions> _configureMeterAdapterOptions = delegate { };
 
     /// <summary>
     /// Configures the meter adapter that is enabled by default on startup.
     /// </summary>
-    public static void ConfigureMeterAdapter(Action<MeterAdapterOptions> callback) => _configureMeterAdapterOptions = callback;
-#endif
+    public static void ConfigureMeterAdapter(Action<MeterAdapterOptions> callback) =>
+        _configureMeterAdapterOptions = callback;
 }

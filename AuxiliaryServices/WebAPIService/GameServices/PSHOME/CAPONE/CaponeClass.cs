@@ -1,32 +1,17 @@
-
-using CustomLogger;
-using Newtonsoft.Json.Linq;
-using System;
-using System.IO;
-using System.Text;
-
 namespace WebAPIService.GameServices.PSHOME.CAPONE
 {
-    public class CAPONEClass
+    public class CAPONEClass(string method, string absolutePath, string workPath)
     {
-        private string workPath;
-        private string absolutePath;
-        private string method;
-
-        public CAPONEClass(string method, string absolutePath, string workPath)
-        {
-            this.workPath = workPath;
-            this.absolutePath = absolutePath;
-            this.method = method;
-        }
-
+        private readonly string workPath = workPath;
+        private readonly string absolutePath = absolutePath;
+        private readonly string method = method;
 
         public string ProcessRequest(byte[] PostData, string ContentType, bool https)
         {
             if (string.IsNullOrEmpty(absolutePath))
                 return null;
 
-            string res = string.Empty;
+            var res = string.Empty;
 
             switch (method)
             {
@@ -34,19 +19,25 @@ namespace WebAPIService.GameServices.PSHOME.CAPONE
                     switch (absolutePath)
                     {
                         case "/capone/reportCollector/submit/":
-                            {
+                        {
+                            res = GriefReporter.caponeReportCollectorSubmit(
+                                PostData,
+                                ContentType,
+                                workPath
+                            );
+                            return res;
+                        }
 
-                                res = GriefReporter.caponeReportCollectorSubmit(PostData, ContentType, workPath);
-                                return res;
-                            }
-
-                            //Case statement won't handle dynamic changing strings
+                        //Case statement won't handle dynamic changing strings
                         default:
 
-                            res = GriefReporter.caponeContentStoreUpload(PostData, ContentType, workPath, absolutePath);
+                            res = GriefReporter.caponeContentStoreUpload(
+                                PostData,
+                                ContentType,
+                                workPath,
+                                absolutePath
+                            );
                             return res;
-
-                            
                     }
                 default:
                     break;

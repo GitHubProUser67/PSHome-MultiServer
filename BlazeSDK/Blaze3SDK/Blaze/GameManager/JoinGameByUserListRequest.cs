@@ -2,36 +2,34 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct JoinGameByUserListRequest
-	{
+    [TdfStruct]
+    public struct JoinGameByUserListRequest
+    {
+        [TdfMember("GENT")]
+        public GameEntryType mGameEntryType;
 
-		[TdfMember("GENT")]
-		public GameEntryType mGameEntryType;
+        [TdfMember("GID")]
+        public uint mGameId;
 
-		[TdfMember("GID")]
-		public uint mGameId;
+        [TdfMember("GVER")]
+        public string mGameProtocolVersionString;
 
-		[TdfMember("GVER")]
-		public string mGameProtocolVersionString;
+        [TdfMember("JMET")]
+        public JoinMethod mJoinMethod;
 
-		[TdfMember("JMET")]
-		public JoinMethod mJoinMethod;
+        [TdfMember("TIDX")]
+        public ushort mJoiningTeamIndex;
 
-		[TdfMember("TIDX")]
-		public ushort mJoiningTeamIndex;
+        [TdfMember("ATTR")]
+        public SortedDictionary<string, string> mPlayerAttribs;
 
-		[TdfMember("ATTR")]
-		public SortedDictionary<string, string> mPlayerAttribs;
+        [TdfMember("PLST")]
+        public List<long> mPlayerIdList;
 
-		[TdfMember("PLST")]
-		public List<long> mPlayerIdList;
+        [TdfMember("PNET")]
+        public NetworkAddress mPlayerNetworkAddress;
 
-		[TdfMember("PNET")]
-		public NetworkAddress mPlayerNetworkAddress;
-
-		[TdfMember("SLOT")]
-		public SlotType mRequestedSlotType;
-
-	}
+        [TdfMember("SLOT")]
+        public SlotType mRequestedSlotType;
+    }
 }

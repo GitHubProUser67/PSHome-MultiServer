@@ -1,34 +1,43 @@
-﻿using CustomLogger;
-using System;
-using System.IO;
 using System.Net;
+using CustomLogger;
+using MultiServerLibrary.Extension.NET;
 using WatsonWebserver.Core;
 using WebAPIService.GameServices.PSHOME.OHS;
+using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 {
     internal static class Venue
     {
-        private static UniqueIDGenerator UniqueIDCounter = new UniqueIDGenerator();
+        private static readonly UniqueIDGenerator UniqueIDCounter = new();
 
         public static void BuildVenuePlugin(WebserverBase server)
         {
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/static/Lockwood/Features/Venue/{scenetype}/{build}/{country}/setDressing.xml", async (ctx) =>
-            {
-                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                ctx.Response.ContentType = "text/xml";
-                string xmlPath = $"/static/Lockwood/Features/Venue/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/setDressing.xml";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
-
-                if (File.Exists(filePath))
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/static/Lockwood/Features/Venue/{scenetype}/{build}/{country}/setDressing.xml",
+                async (ctx) =>
                 {
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
-                }
+                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                    ctx.Response.ContentType = "text/xml";
+                    var xmlPath =
+                        $"/static/Lockwood/Features/Venue/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/setDressing.xml";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - setDressing data was not found for the Venue, falling back to server file.");
+                    if (File.Exists(filePath))
+                    {
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
 
-                await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - setDressing data was not found for the Venue, falling back to server file."
+                    );
+
+                    await ctx
+                        .Response.Send(
+                            LUA2XmlProcessor.TransformLuaTableToXml(
+                                @"
                     local maps = {
 	                    'colourMap', 'normalMap', 'specularMap', 'envMap', 'emissiveMap', 'colour2Map', 'normal2Map', 'specular2Map'
                     }
@@ -920,25 +929,38 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 				    }
 
                     return XmlConvert.LuaToXml(TableFromInput, 'lua', 1)
-                    "));
-            });
-
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/static/Lockwood/Features/Venue/{scenetype}/{build}/{country}/features.xml", async (ctx) =>
-            {
-                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                ctx.Response.ContentType = "text/xml";
-                string xmlPath = $"/static/Lockwood/Features/Venue/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/features.xml";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
-
-                if (File.Exists(filePath))
-                {
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
+                    "
+                            )
+                        )
+                        .ConfigureAwait(false);
                 }
+            );
 
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - features data was not found for the Venue, falling back to server file.");
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/static/Lockwood/Features/Venue/{scenetype}/{build}/{country}/features.xml",
+                async (ctx) =>
+                {
+                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                    ctx.Response.ContentType = "text/xml";
+                    var xmlPath =
+                        $"/static/Lockwood/Features/Venue/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/features.xml";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
-                await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
+                    if (File.Exists(filePath))
+                    {
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - features data was not found for the Venue, falling back to server file."
+                    );
+
+                    await ctx
+                        .Response.Send(
+                            LUA2XmlProcessor.TransformLuaTableToXml(
+                                @"
                             local TableFromInput = {
                                 ['commercePoints'] = {
                                     default = true
@@ -993,25 +1015,38 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 				            }
 
                             return XmlConvert.LuaToXml(TableFromInput, 'lua', 1)
-                            "));
-            });
-
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/static/Lockwood/Features/Venue/{scenetype}/{build}/{country}/camPath.xml", async (ctx) =>
-            {
-                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                ctx.Response.ContentType = "text/xml";
-                string xmlPath = $"/static/Lockwood/Features/Venue/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/camPath.xml";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
-
-                if (File.Exists(filePath))
-                {
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
+                            "
+                            )
+                        )
+                        .ConfigureAwait(false);
                 }
+            );
 
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - camPath data was not found for the Venue, falling back to server file.");
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/static/Lockwood/Features/Venue/{scenetype}/{build}/{country}/camPath.xml",
+                async (ctx) =>
+                {
+                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                    ctx.Response.ContentType = "text/xml";
+                    var xmlPath =
+                        $"/static/Lockwood/Features/Venue/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/camPath.xml";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
-                await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
+                    if (File.Exists(filePath))
+                    {
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - camPath data was not found for the Venue, falling back to server file."
+                    );
+
+                    await ctx
+                        .Response.Send(
+                            LUA2XmlProcessor.TransformLuaTableToXml(
+                                @"
                             local TableFromInput = {
                                 origin = {
                                     name = 'origin',
@@ -1056,55 +1091,71 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                             }
 
                             return XmlConvert.LuaToXml(TableFromInput, 'lua', 1)
-                            "));
-            });
-
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/static/Lockwood/Features/Venue/{scenetype}/{build}/{country}/{group_def}/{profile_def}", async (ctx) =>
-            {
-                string? group_def = ctx.Request.Url.Parameters["group_def"];
-                string? profile_def = ctx.Request.Url.Parameters["profile_def"];
-                if (string.IsNullOrEmpty(group_def) || string.IsNullOrEmpty(profile_def))
-                {
-                    ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    ctx.Response.ContentType = "text/plain";
-                    await ctx.Response.Send();
-                    return;
+                            "
+                            )
+                        )
+                        .ConfigureAwait(false);
                 }
-                const string param_str = ".param_group";
-                if (!profile_def.EndsWith(param_str))
-                {
-                    LoggerAccessor.LogWarn($"[PostAuthParameters] - profile_def definition path was invalid!");
-                    ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    ctx.Response.ContentType = "text/plain";
-                    await ctx.Response.Send();
-                    return;
-                }
-                string xmlPath = $"/static/Lockwood/Features/Venue/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/{group_def}/{profile_def}";
-                profile_def = profile_def.Substring(0, profile_def.Length - param_str.Length);
-                if (string.IsNullOrEmpty(profile_def))
-                {
-                    LoggerAccessor.LogWarn($"[PostAuthParameters] - profile_def definition project was invalid!");
-                    ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    ctx.Response.ContentType = "text/plain";
-                    await ctx.Response.Send();
-                    return;
-                }
-                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                ctx.Response.ContentType = "text/xml";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
+            );
 
-                if (File.Exists(filePath))
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/static/Lockwood/Features/Venue/{scenetype}/{build}/{country}/{group_def}/{profile_def}",
+                async (ctx) =>
                 {
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
-                }
+                    var group_def = ctx.Request.Url.Parameters["group_def"];
+                    var profile_def = ctx.Request.Url.Parameters["profile_def"];
+                    if (string.IsNullOrEmpty(group_def) || string.IsNullOrEmpty(profile_def))
+                    {
+                        ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        ctx.Response.ContentType = "text/plain";
+                        await ctx.Response.Send().ConfigureAwait(false);
+                        return;
+                    }
+                    const string param_str = ".param_group";
+                    if (!profile_def.EndsWith(param_str))
+                    {
+                        LoggerAccessor.LogWarn(
+                            $"[PostAuthParameters] - profile_def definition path was invalid!"
+                        );
+                        ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        ctx.Response.ContentType = "text/plain";
+                        await ctx.Response.Send().ConfigureAwait(false);
+                        return;
+                    }
+                    var xmlPath =
+                        $"/static/Lockwood/Features/Venue/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/{group_def}/{profile_def}";
+                    profile_def = profile_def[..^param_str.Length];
+                    if (string.IsNullOrEmpty(profile_def))
+                    {
+                        LoggerAccessor.LogWarn(
+                            $"[PostAuthParameters] - profile_def definition project was invalid!"
+                        );
+                        ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        ctx.Response.ContentType = "text/plain";
+                        await ctx.Response.Send().ConfigureAwait(false);
+                        return;
+                    }
+                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                    ctx.Response.ContentType = "text/xml";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - {profile_def} data was not found for the Venue, falling back to server file.");
+                    if (File.Exists(filePath))
+                    {
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
 
-                switch (group_def)
-                {
-                    case "Stagertron":
-                        await ctx.Response.Send($@"<lua>
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - {profile_def} data was not found for the Venue, falling back to server file."
+                    );
+
+                    switch (group_def)
+                    {
+                        case "Stagertron":
+                            await ctx
+                                .Response.Send(
+                                    $@"<lua>
 	                                <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                     <applet>
 		                                    <StageEnter_def></StageEnter_def>
@@ -1308,10 +1359,14 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                                 <pos type='vec'>10.369,1.922,-20.612,0</pos>
                                         </stage_exit_dest>
 	                                </feature_root>
-                                </lua>");
-                        return;
-                    case "BackstagePass":
-                        await ctx.Response.Send($@"<lua>
+                                </lua>"
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "BackstagePass":
+                            await ctx
+                                .Response.Send(
+                                    $@"<lua>
 	                                <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                     <entityGroup>
 		                                <EntityGroup_def></EntityGroup_def>
@@ -1350,10 +1405,14 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                    </entityGroup>
 		                                </root_block_0>
 	                                </feature_root>
-                                </lua>");
-                        return;
-                    case "Customisation":
-                        await ctx.Response.Send($@"<lua>
+                                </lua>"
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "Customisation":
+                            await ctx
+                                .Response.Send(
+                                    $@"<lua>
 	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <Customisation_def></Customisation_def>
@@ -1406,12 +1465,16 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                    </entityGroup>
 		                                </root_logo>
 	                                    </feature_root>
-                                    </lua>");
-                        return;
-                    case "Runwaytron":
-                        if (profile_def == "default")
-                        {
-                            await ctx.Response.Send($@"<lua>
+                                    </lua>"
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "Runwaytron":
+                            if (profile_def == "default")
+                            {
+                                await ctx
+                                    .Response.Send(
+                                        $@"<lua>
 	                                <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                     <applet>
 		                                <Strutertron_def></Strutertron_def>
@@ -1618,12 +1681,16 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                                 <pos type='vec'>-4.589,1.849,-20.478,0</pos>
 		                                </catwalk_exit_dest>
 	                                </feature_root>
-                                </lua>");
-                            return;
-                        }
-                        else if (profile_def == "stage")
-                        {
-                            await ctx.Response.Send($@"<lua>
+                                </lua>"
+                                    )
+                                    .ConfigureAwait(false);
+                                return;
+                            }
+                            else if (profile_def == "stage")
+                            {
+                                await ctx
+                                    .Response.Send(
+                                        $@"<lua>
 	                                <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                     <applet>
 		                                <Votertron_def></Votertron_def>
@@ -1793,12 +1860,16 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                    </detectors>
 		                                </root_vote_1>
 	                                </feature_root>
-                                </lua>");
-                            return;
-                        }
-                        else if (profile_def == "dancefloor")
-                        {
-                            await ctx.Response.Send($@"<lua>
+                                </lua>"
+                                    )
+                                    .ConfigureAwait(false);
+                                return;
+                            }
+                            else if (profile_def == "dancefloor")
+                            {
+                                await ctx
+                                    .Response.Send(
+                                        $@"<lua>
 	                                <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                     <applet>
 		                               <Spotlight_def></Spotlight_def>
@@ -1881,12 +1952,16 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                    </applet>
 		                                </root_spot_2>
 	                                </feature_root>
-                                </lua>");
-                            return;
-                        }
-                        break;
-                    case "Logos":
-                        await ctx.Response.Send($@"<lua>
+                                </lua>"
+                                    )
+                                    .ConfigureAwait(false);
+                                return;
+                            }
+                            break;
+                        case "Logos":
+                            await ctx
+                                .Response.Send(
+                                    $@"<lua>
 	                                <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                     <entityGroup>
 		                                <EntityGroup_def></EntityGroup_def>
@@ -1944,12 +2019,16 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                    </entityGroup>
 		                                </root_logo_1>
 	                                </feature_root>
-                                </lua>");
-                        return;
-                    case "Music":
-                        if (profile_def != "default")
-                        {
-                            await ctx.Response.Send($@"<lua>
+                                </lua>"
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "Music":
+                            if (profile_def != "default")
+                            {
+                                await ctx
+                                    .Response.Send(
+                                        $@"<lua>
 	                                <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                     <soundStream>
 		                                <{profile_def}></{profile_def}>
@@ -1993,12 +2072,16 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                    </soundStream>
 		                                </root_muffled>
 	                                </feature_root>
-                                </lua>");
-                            return;
-                        }
-                        break;
-                    case "Posertrons":
-                        await ctx.Response.Send($@"<lua>
+                                </lua>"
+                                    )
+                                    .ConfigureAwait(false);
+                                return;
+                            }
+                            break;
+                        case "Posertrons":
+                            await ctx
+                                .Response.Send(
+                                    $@"<lua>
 	                                <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                     <applet>
 		                                <Posertrons_V2></Posertrons_V2>
@@ -2062,10 +2145,14 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                    </applet>
 		                                </root_commerce>
 	                                </feature_root>
-                                </lua>");
-                        return;
-                    case "commercePoints":
-                        await ctx.Response.Send($@"<lua>
+                                </lua>"
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "commercePoints":
+                            await ctx
+                                .Response.Send(
+                                    $@"<lua>
 	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <CommercePoint_def></CommercePoint_def>
@@ -2100,14 +2187,19 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                        </detectors>
 		                                    </root>
 	                                    </feature_root>
-                                    </lua>");
-                        return;
-                    default:
-                        LoggerAccessor.LogWarn($"[PostAuthParameters] - group_def definition data was not found for group_def:{group_def}!");
-                        break;
+                                    </lua>"
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        default:
+                            LoggerAccessor.LogWarn(
+                                $"[PostAuthParameters] - group_def definition data was not found for group_def:{group_def}!"
+                            );
+                            break;
+                    }
+                    await ctx.Response.Send("<lua></lua>").ConfigureAwait(false);
                 }
-                await ctx.Response.Send("<lua></lua>");
-            });
+            );
         }
     }
 }

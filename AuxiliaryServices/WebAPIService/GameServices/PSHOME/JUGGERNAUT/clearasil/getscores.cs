@@ -1,15 +1,17 @@
-using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
 using WebAPIService.LeaderboardService;
+
 namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil
 {
     public class getscores
     {
-        public static string ProcessGetScores(IDictionary<string, string> QueryParameters, string apiPath)
+        public static string ProcessGetScores(
+            IDictionary<string, string> QueryParameters,
+            string apiPath
+        )
         {
-            if (QueryParameters != null && QueryParameters.ContainsKey("phase"))
+            if (QueryParameters != null && QueryParameters.TryGetValue("phase", out var value))
             {
-                bool phase2 = QueryParameters["phase"] == "2";
+                var phase2 = value == "2";
                 ClearasilScoreBoardData scoreboard;
 
                 lock (pushscore.Leaderboards)
@@ -18,7 +20,13 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil
 
                     if (scoreboard == null)
                     {
-                        scoreboard = new ClearasilScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, phase2 ? "phase2" : "phase1");
+                        scoreboard = new ClearasilScoreBoardData(
+                            LeaderboardDbContext.BuildOptions(
+                                0,
+                                $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}"
+                            ),
+                            phase2 ? "phase2" : "phase1"
+                        );
                         pushscore.Leaderboards[phase2 ? 1 : 0] = scoreboard;
                     }
                 }

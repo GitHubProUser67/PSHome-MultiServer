@@ -1,8 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
-using System.Collections.Generic;
-using System.Linq;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -48,8 +45,9 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"Messages: {string.Join("\r\n", Messages?.Select(x => x.ToString()))}";
+            return base.ToString()
+                + " "
+                + $"Messages: {string.Join("\r\n", Messages?.Select(x => x.ToString()))}";
         }
     }
 }

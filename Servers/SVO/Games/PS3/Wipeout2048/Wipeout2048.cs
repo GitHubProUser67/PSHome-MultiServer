@@ -1,13 +1,13 @@
+using System.Text;
+using System.Text.RegularExpressions;
 using CastleLibrary.S0ny.XI5;
 using CustomLogger;
 using MultiServerLibrary.Extension;
 using SpaceWizards.HttpListener;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace SVO.Games.PS3
 {
-    public class Wipeout2048
+    public partial class Wipeout2048
     {
         public static async Task Wipeout2048_OTG(HttpListenerRequest request, HttpListenerResponse response)
         {
@@ -19,7 +19,7 @@ namespace SVO.Games.PS3
                     return;
                 }
 
-                string method = request.HttpMethod;
+                var method = request.HttpMethod;
 
                 using (response)
                 {
@@ -36,12 +36,12 @@ namespace SVO.Games.PS3
                                     response.Headers.Set("Content-Type", "application/xml;charset=UTF-8");
                                     response.Headers.Set("Content-Language", string.Empty);
 
-                                    string domain = "wipeout2048.online.scee.com";
+                                    var domain = "wipeout2048.online.scee.com";
 
                                     if (!SVOServerConfiguration.PreferDNSUrls)
                                         await InternetProtocolUtils.TryGetServerIP(out domain).ConfigureAwait(false);
 
-                                    byte[] start = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                    var start = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                             "<Start>" +
                                             $"<DATA dataType=\"URI\" name=\"startURL\" value=\"https://{domain}:10062/wox_ws/rest/main/Start\"/>" +
                                             $"<DATA dataType=\"URI\" name=\"ticketLoginURL\" value=\"https://{domain}:10062/wox_ws/rest/account/TicketLogin\"/>" +
@@ -100,7 +100,7 @@ namespace SVO.Games.PS3
                                     response.Headers.Set("Content-Type", "application/xml;charset=UTF-8");
                                     response.Headers.Set("Content-Language", string.Empty);
 
-                                    byte[] RankedConfig = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                    var RankedConfig = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                             "<GetRankedConfig>\r\n\t" +
                                             "<stage1>\r\n\t\t" +
                                             "<modes size=\"8\">\r\n\t\t\t" +
@@ -405,7 +405,7 @@ namespace SVO.Games.PS3
                                     response.Headers.Set("Content-Type", "application/xml;charset=UTF-8");
                                     response.Headers.Set("Content-Language", string.Empty);
 
-                                    byte[] Eula = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                    var Eula = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                         "<Eula>" +
                                         "Online Interactions Not Rated by the ESRB\r\n\r\n" +
                                         "ONLINE USER AGREEMENT\r\n\r\n" +
@@ -469,7 +469,7 @@ namespace SVO.Games.PS3
                                     response.Headers.Set("Content-Type", "application/xml;charset=UTF-8");
                                     response.Headers.Set("Content-Language", string.Empty);
 
-                                    byte[] Announcements = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                    var Announcements = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                             "<Announcements><Announcement>WipEout.. HD Patch 2.51 information\r\n\r\n" +
                                             "- Spectate - Zone Battle - Fix crash when cycling through the ships.\r\n" +
                                             "- Restores Online Rank Progress\r\n\r\n" +
@@ -504,7 +504,7 @@ namespace SVO.Games.PS3
                                     response.Headers.Set("Content-Type", "application/xml;charset=UTF-8");
                                     response.Headers.Set("Content-Language", string.Empty);
 
-                                    byte[] GetList = Encoding.UTF8.GetBytes(Leaderboard2048Lookup.SerializeLeaderboard(Leaderboard2048Lookup.leaderboard2048_Data));
+                                    var GetList = Encoding.UTF8.GetBytes(Leaderboard2048Lookup.SerializeLeaderboard(Leaderboard2048Lookup.leaderboard2048_Data));
 
                                     response.StatusCode = (int)System.Net.HttpStatusCode.OK;
 
@@ -531,29 +531,29 @@ namespace SVO.Games.PS3
                             {
                                 case "GET":
 
-                                    string name = string.Empty;
+                                    var name = string.Empty;
 
-                                    string authKey = string.Empty;
+                                    var authKey = string.Empty;
 
-                                    string timeZone = string.Empty;
+                                    var timeZone = string.Empty;
 
-                                    string signature = string.Empty;
-                                    string id = string.Empty;
+                                    var signature = string.Empty;
+                                    var id = string.Empty;
 
-                                    string? cookieHeader = request.Headers.Get("Cookie");
+                                    var cookieHeader = request.Headers.Get("Cookie");
 
                                     if (cookieHeader != null)
                                     {
                                         response.SendChunked = true;
 
-                                        string[] cookies = cookieHeader.Split(';');
+                                        var cookies = cookieHeader.Split(';');
 
-                                        foreach (string cookie in cookies)
+                                        foreach (var cookie in cookies)
                                         {
-                                            string[] parts = cookie.Trim().Split('=');
+                                            var parts = cookie.Trim().Split('=');
 
-                                            string key = parts[0];
-                                            string value = parts[1];
+                                            var key = parts[0];
+                                            var value = parts[1];
 
                                             if (key == "name")
                                                 name = value;
@@ -570,7 +570,7 @@ namespace SVO.Games.PS3
                                         response.Headers.Set("Content-Type", "application/xml;charset=UTF-8");
                                         response.Headers.Set("Content-Language", string.Empty);
 
-                                        byte[] MediusStats = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                        var MediusStats = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                             $"<MediusStats accountId=\"{id}\" accountName=\"{name}\"/>");
 
                                         response.StatusCode = (int)System.Net.HttpStatusCode.OK;
@@ -600,29 +600,29 @@ namespace SVO.Games.PS3
                             {
                                 case "POST":
 
-                                    string name = string.Empty;
+                                    var name = string.Empty;
 
-                                    string authKey = string.Empty;
+                                    var authKey = string.Empty;
 
-                                    string timeZone = string.Empty;
+                                    var timeZone = string.Empty;
 
-                                    string signature = string.Empty;
-                                    string id = string.Empty;
+                                    var signature = string.Empty;
+                                    var id = string.Empty;
 
-                                    string? cookieHeader = request.Headers.Get("Cookie");
+                                    var cookieHeader = request.Headers.Get("Cookie");
 
                                     if (cookieHeader != null)
                                     {
                                         response.SendChunked = true;
 
-                                        string[] cookies = cookieHeader.Split(';');
+                                        var cookies = cookieHeader.Split(';');
 
-                                        foreach (string cookie in cookies)
+                                        foreach (var cookie in cookies)
                                         {
-                                            string[] parts = cookie.Trim().Split('=');
+                                            var parts = cookie.Trim().Split('=');
 
-                                            string key = parts[0];
-                                            string value = parts[1];
+                                            var key = parts[0];
+                                            var value = parts[1];
 
                                             if (key == "name")
                                                 name = value;
@@ -636,7 +636,7 @@ namespace SVO.Games.PS3
                                                 id = value;
                                         }
 
-                                        string contentType = request.ContentType;
+                                        var contentType = request.ContentType;
 
                                         if (!string.IsNullOrEmpty(contentType))
                                             response.Headers.Set("Content-Type", contentType);
@@ -653,10 +653,10 @@ namespace SVO.Games.PS3
                                             ms.Position = 0;
 
                                             // Find the number of bytes in the stream
-                                            int contentLength = (int)ms.Length;
+                                            var contentLength = (int)ms.Length;
 
                                             // Create a byte array
-                                            byte[] buffer = new byte[contentLength];
+                                            var buffer = new byte[contentLength];
 
                                             // Read the contents of the memory stream into the byte array
                                             ms.Read(buffer, 0, contentLength);
@@ -669,7 +669,7 @@ namespace SVO.Games.PS3
                                                 fs.Flush();
                                             }
 
-                                            byte[] Friends = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                            var Friends = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                                "<Friends><status value=\"0\"/></Friends>");
 
                                             response.StatusCode = (int)System.Net.HttpStatusCode.OK;
@@ -701,33 +701,33 @@ namespace SVO.Games.PS3
                                 case "POST":
                                     response.SendChunked = true;
 
-                                    string signature = string.Empty;
+                                    var signature = string.Empty;
 
-                                    string signatureClass = string.Empty;
+                                    var signatureClass = string.Empty;
 
-                                    string userContext = string.Empty;
+                                    var userContext = string.Empty;
 
-                                    string languageId = string.Empty;
+                                    var languageId = string.Empty;
 
-                                    string timeZone = string.Empty;
+                                    var timeZone = string.Empty;
 
-                                    string psnname = string.Empty;
-                                    int accountId = -1;
+                                    var psnname = string.Empty;
+                                    var accountId = -1;
 
-                                    string url = request.Url.ToString();
+                                    var url = request.Url.ToString();
 
-                                    string[] urlParts = url.Split('?');
-                                    string basePath = urlParts[0];
-                                    string queryString = urlParts.Length > 1 ? urlParts[1] : string.Empty;
+                                    var urlParts = url.Split('?');
+                                    var basePath = urlParts[0];
+                                    var queryString = urlParts.Length > 1 ? urlParts[1] : string.Empty;
 
-                                    string[] parameters = queryString.Split('&');
+                                    var parameters = queryString.Split('&');
 
-                                    foreach (string parameter in parameters)
+                                    foreach (var parameter in parameters)
                                     {
-                                        string[] parts = parameter.Split('=');
+                                        var parts = parameter.Split('=');
 
-                                        string key = Uri.UnescapeDataString(parts[0]);
-                                        string value = Uri.UnescapeDataString(parts[1]);
+                                        var key = Uri.UnescapeDataString(parts[0]);
+                                        var value = Uri.UnescapeDataString(parts[1]);
 
                                         if (key == "signature")
                                             signature = value;
@@ -749,16 +749,16 @@ namespace SVO.Games.PS3
                                         ms.Position = 0;
 
                                         // Find the number of bytes in the stream
-                                        int contentLength = (int)ms.Length;
+                                        var contentLength = (int)ms.Length;
 
                                         // Create a byte array
-                                        byte[] buffer = new byte[contentLength];
+                                        var buffer = new byte[contentLength];
 
                                         // Read the contents of the memory stream into the byte array
                                         ms.Read(buffer, 0, contentLength);
 
                                         // get ticket
-                                        XI5Ticket ticket = XI5Ticket.ReadFromBytes(buffer);
+                                        var ticket = XI5Ticket.ReadFromBytes(buffer);
 
                                         // setup username
                                         psnname = ticket.Username;
@@ -793,7 +793,7 @@ namespace SVO.Games.PS3
                                         ms.Flush();
                                     }
 
-                                    string langId = "0";
+                                    var langId = "0";
 
                                     try
                                     {
@@ -803,7 +803,7 @@ namespace SVO.Games.PS3
                                             langId = request.Url.Query.Substring(94, request.Url.Query.Length - 94);
                                             if (r.Result != null)
                                                 accountId = r.Result.AccountId;
-                                        });
+                                        }).ConfigureAwait(false);
                                     }
                                     catch (Exception)
                                     {
@@ -820,7 +820,7 @@ namespace SVO.Games.PS3
                                     response.Headers.Set("Content-Type", "application/xml;charset=UTF-8");
                                     response.Headers.Set("Content-Language", string.Empty);
 
-                                    byte[] TicketLoginActionData = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                    var TicketLoginActionData = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                         "<SP_Login>\r\n" +
                                         "   <status> \r\n" +
                                         "        <id>1</id> \r\n" +
@@ -860,7 +860,7 @@ namespace SVO.Games.PS3
                                     response.Headers.Set("Content-Type", "application/xml;charset=UTF-8");
                                     response.Headers.Set("Content-Language", string.Empty);
 
-                                    byte[] GetPlayerTimes = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                    var GetPlayerTimes = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                             "<GetPlayerTimes><status value=\"0\"/></GetPlayerTimes>");
 
                                     response.StatusCode = (int)System.Net.HttpStatusCode.OK;
@@ -889,32 +889,32 @@ namespace SVO.Games.PS3
                                 case "GET":
                                     response.SendChunked = true;
 
-                                    string leaderboardId = string.Empty;
+                                    var leaderboardId = string.Empty;
 
-                                    string row = string.Empty;
+                                    var row = string.Empty;
 
-                                    string pageSize = string.Empty;
+                                    var pageSize = string.Empty;
 
-                                    string accountName = string.Empty;
+                                    var accountName = string.Empty;
 
-                                    string accountId = string.Empty;
+                                    var accountId = string.Empty;
 
-                                    string filterMode = string.Empty;
+                                    var filterMode = string.Empty;
 
-                                    string url = request.Url.ToString();
+                                    var url = request.Url.ToString();
 
-                                    string[] urlParts = url.Split('?');
-                                    string basePath = urlParts[0];
-                                    string queryString = urlParts.Length > 1 ? urlParts[1] : string.Empty;
+                                    var urlParts = url.Split('?');
+                                    var basePath = urlParts[0];
+                                    var queryString = urlParts.Length > 1 ? urlParts[1] : string.Empty;
 
-                                    string[] parameters = queryString.Split('&');
+                                    var parameters = queryString.Split('&');
 
-                                    foreach (string parameter in parameters)
+                                    foreach (var parameter in parameters)
                                     {
-                                        string[] parts = parameter.Split('=');
+                                        var parts = parameter.Split('=');
 
-                                        string key = Uri.UnescapeDataString(parts[0]);
-                                        string value = Uri.UnescapeDataString(parts[1]);
+                                        var key = Uri.UnescapeDataString(parts[0]);
+                                        var value = Uri.UnescapeDataString(parts[1]);
 
                                         if (key == "leaderboardId")
                                             leaderboardId = value;
@@ -934,7 +934,7 @@ namespace SVO.Games.PS3
                                     response.Headers.Set("Content-Language", string.Empty);
 
                                     // TODO, implements real leaderboard function.
-                                    byte[] GetPageData = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                    var GetPageData = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                             "<Leaderboard>" +
                                             "<GetPage>" +
                                             $"{Leaderboard2048Lookup.SerializeLeaderboardEntryById(Leaderboard2048Lookup.leaderboard2048_Data, leaderboardId)}" +
@@ -968,29 +968,29 @@ namespace SVO.Games.PS3
                             {
                                 case "GET":
 
-                                    string name = string.Empty;
+                                    var name = string.Empty;
 
-                                    string authKey = string.Empty;
+                                    var authKey = string.Empty;
 
-                                    string timeZone = string.Empty;
+                                    var timeZone = string.Empty;
 
-                                    string signature = string.Empty;
-                                    string id = string.Empty;
+                                    var signature = string.Empty;
+                                    var id = string.Empty;
 
-                                    string? cookieHeader = request.Headers.Get("Cookie");
+                                    var cookieHeader = request.Headers.Get("Cookie");
 
                                     if (cookieHeader != null)
                                     {
                                         response.SendChunked = true;
 
-                                        string[] cookies = cookieHeader.Split(';');
+                                        var cookies = cookieHeader.Split(';');
 
-                                        foreach (string cookie in cookies)
+                                        foreach (var cookie in cookies)
                                         {
-                                            string[] parts = cookie.Trim().Split('=');
+                                            var parts = cookie.Trim().Split('=');
 
-                                            string key = parts[0];
-                                            string value = parts[1];
+                                            var key = parts[0];
+                                            var value = parts[1];
 
                                             if (key == "name")
                                                 name = value;
@@ -1007,7 +1007,7 @@ namespace SVO.Games.PS3
                                         response.Headers.Set("Content-Type", "application/xml;charset=UTF-8");
                                         response.Headers.Set("Content-Language", string.Empty);
 
-                                        byte[] XPLeaderboard = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                        var XPLeaderboard = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                             $"<XPLeaderboard/>");
 
                                         response.StatusCode = (int)System.Net.HttpStatusCode.OK;
@@ -1039,29 +1039,29 @@ namespace SVO.Games.PS3
                             {
                                 case "GET":
 
-                                    string name = string.Empty;
+                                    var name = string.Empty;
 
-                                    string authKey = string.Empty;
+                                    var authKey = string.Empty;
 
-                                    string timeZone = string.Empty;
+                                    var timeZone = string.Empty;
 
-                                    string signature = string.Empty;
-                                    string id = string.Empty;
+                                    var signature = string.Empty;
+                                    var id = string.Empty;
 
-                                    string? cookieHeader = request.Headers.Get("Cookie");
+                                    var cookieHeader = request.Headers.Get("Cookie");
 
                                     if (cookieHeader != null)
                                     {
                                         response.SendChunked = true;
 
-                                        string[] cookies = cookieHeader.Split(';');
+                                        var cookies = cookieHeader.Split(';');
 
-                                        foreach (string cookie in cookies)
+                                        foreach (var cookie in cookies)
                                         {
-                                            string[] parts = cookie.Trim().Split('=');
+                                            var parts = cookie.Trim().Split('=');
 
-                                            string key = parts[0];
-                                            string value = parts[1];
+                                            var key = parts[0];
+                                            var value = parts[1];
 
                                             if (key == "name")
                                                 name = value;
@@ -1077,11 +1077,11 @@ namespace SVO.Games.PS3
 
                                         Dictionary<string, string> parameterDictionary = new(); // Query sent are dynamic for this request.
 
-                                        int questionMarkIndex = request.RawUrl.IndexOf("?");
+                                        var questionMarkIndex = request.RawUrl.IndexOf("?");
                                         if (questionMarkIndex != -1) // If '?' is found
                                         {
-                                            string trimmedurl = request.RawUrl[(questionMarkIndex + 1)..];
-                                            foreach (string? UrlArg in System.Web.HttpUtility.ParseQueryString(trimmedurl).AllKeys) // Thank you WebOne.
+                                            var trimmedurl = request.RawUrl[(questionMarkIndex + 1)..];
+                                            foreach (var UrlArg in System.Web.HttpUtility.ParseQueryString(trimmedurl).AllKeys) // Thank you WebOne.
                                             {
                                                 if (!string.IsNullOrEmpty(UrlArg))
                                                     parameterDictionary[UrlArg] = System.Web.HttpUtility.ParseQueryString(trimmedurl)[UrlArg] ?? string.Empty;
@@ -1091,7 +1091,7 @@ namespace SVO.Games.PS3
                                         response.Headers.Set("Content-Type", "application/xml;charset=UTF-8");
                                         response.Headers.Set("Content-Language", string.Empty);
 
-                                        byte[] PostScore = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                        var PostScore = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                             "<PostScore>" +
                                             "</PostScore>");
 
@@ -1124,29 +1124,29 @@ namespace SVO.Games.PS3
                             {
                                 case "GET":
 
-                                    string name = string.Empty;
+                                    var name = string.Empty;
 
-                                    string authKey = string.Empty;
+                                    var authKey = string.Empty;
 
-                                    string timeZone = string.Empty;
+                                    var timeZone = string.Empty;
 
-                                    string signature = string.Empty;
-                                    string id = string.Empty;
+                                    var signature = string.Empty;
+                                    var id = string.Empty;
 
-                                    string? cookieHeader = request.Headers.Get("Cookie");
+                                    var cookieHeader = request.Headers.Get("Cookie");
 
                                     if (cookieHeader != null)
                                     {
                                         response.SendChunked = true;
 
-                                        string[] cookies = cookieHeader.Split(';');
+                                        var cookies = cookieHeader.Split(';');
 
-                                        foreach (string cookie in cookies)
+                                        foreach (var cookie in cookies)
                                         {
-                                            string[] parts = cookie.Trim().Split('=');
+                                            var parts = cookie.Trim().Split('=');
 
-                                            string key = parts[0];
-                                            string value = parts[1];
+                                            var key = parts[0];
+                                            var value = parts[1];
 
                                             if (key == "name")
                                                 name = value;
@@ -1160,13 +1160,13 @@ namespace SVO.Games.PS3
                                                 id = value;
                                         }
 
-                                        string leaderboardId = request.QueryString["leaderboardId"] ?? "-1";
+                                        var leaderboardId = request.QueryString["leaderboardId"] ?? "-1";
 
                                         response.Headers.Set("Content-Type", "application/xml;charset=UTF-8");
                                         response.Headers.Set("Content-Language", string.Empty);
 
                                         // TODO, implements real leaderboard function.
-                                        byte[] GuessRankingData = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                        var GuessRankingData = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                             "<Leaderboard>" +
                                             "<GuessRanking>" +
                                             $"{Leaderboard2048Lookup.SerializeLeaderboardEntryById(Leaderboard2048Lookup.leaderboard2048_Data, leaderboardId)}" +
@@ -1199,29 +1199,29 @@ namespace SVO.Games.PS3
                             switch (method)
                             {
                                 case "GET":
-                                    string name = string.Empty;
+                                    var name = string.Empty;
 
-                                    string authKey = string.Empty;
+                                    var authKey = string.Empty;
 
-                                    string timeZone = string.Empty;
+                                    var timeZone = string.Empty;
 
-                                    string signature = string.Empty;
-                                    string id = string.Empty;
+                                    var signature = string.Empty;
+                                    var id = string.Empty;
 
-                                    string? cookieHeader = request.Headers.Get("Cookie");
+                                    var cookieHeader = request.Headers.Get("Cookie");
 
                                     if (cookieHeader != null)
                                     {
                                         response.SendChunked = true;
 
-                                        string[] cookies = cookieHeader.Split(';');
+                                        var cookies = cookieHeader.Split(';');
 
-                                        foreach (string cookie in cookies)
+                                        foreach (var cookie in cookies)
                                         {
-                                            string[] parts = cookie.Trim().Split('=');
+                                            var parts = cookie.Trim().Split('=');
 
-                                            string key = parts[0];
-                                            string value = parts[1];
+                                            var key = parts[0];
+                                            var value = parts[1];
 
                                             if (key == "name")
                                                 name = value;
@@ -1239,7 +1239,7 @@ namespace SVO.Games.PS3
                                         response.ContentType = "text/xml";
                                         response.Headers.Set("Content-Language", string.Empty);
 
-                                        string? fileName = request.QueryString["filename"];
+                                        var fileName = request.QueryString["filename"];
 
                                         if (string.IsNullOrEmpty(fileName))
                                         {
@@ -1249,15 +1249,14 @@ namespace SVO.Games.PS3
 
                                         byte[] fileData;
 
-                                        if (!new Regex(@"\.[^.]+$").Match(fileName).Success) // We give a default extension if none found.
+                                        if (!MyRegex().Match(fileName).Success) // We give a default extension if none found.
                                             fileName += ".bin";
 
-                                        if (File.Exists($"{SVOServerConfiguration.SVOStaticFolder}/wox_ws/rest/fileservices/{name}/{fileName}"))
-                                            fileData = Encoding.UTF8.GetBytes($"<BinaryDownload checksum=\"{CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateOTGSecuredHash("m4nT15")}\">\n" +
+                                        fileData = File.Exists($"{SVOServerConfiguration.SVOStaticFolder}/wox_ws/rest/fileservices/{name}/{fileName}")
+                                            ? Encoding.UTF8.GetBytes($"<BinaryDownload checksum=\"{CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateOTGSecuredHash("m4nT15")}\">\n" +
                                                     $"        <Data>{File.ReadAllText($"{SVOServerConfiguration.SVOStaticFolder}/wox_ws/rest/fileservices/{name}/{fileName}")}</Data>\n" +
-                                                    $"    </BinaryDownload>");
-                                        else
-                                            fileData = Encoding.UTF8.GetBytes($"<BinaryDownload checksum=\"{CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateOTGSecuredHash("m4nT15")}\">\n" +
+                                                    $"    </BinaryDownload>")
+                                            : Encoding.UTF8.GetBytes($"<BinaryDownload checksum=\"{CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateOTGSecuredHash("m4nT15")}\">\n" +
                                                     "        <Data></Data>\n" +
                                                     $"    </BinaryDownload>");
 
@@ -1285,29 +1284,29 @@ namespace SVO.Games.PS3
                             switch (method)
                             {
                                 case "GET":
-                                    string name = string.Empty;
+                                    var name = string.Empty;
 
-                                    string authKey = string.Empty;
+                                    var authKey = string.Empty;
 
-                                    string timeZone = string.Empty;
+                                    var timeZone = string.Empty;
 
-                                    string signature = string.Empty;
-                                    string id = string.Empty;
+                                    var signature = string.Empty;
+                                    var id = string.Empty;
 
-                                    string? cookieHeader = request.Headers.Get("Cookie");
+                                    var cookieHeader = request.Headers.Get("Cookie");
 
                                     if (cookieHeader != null)
                                     {
                                         response.SendChunked = true;
 
-                                        string[] cookies = cookieHeader.Split(';');
+                                        var cookies = cookieHeader.Split(';');
 
-                                        foreach (string cookie in cookies)
+                                        foreach (var cookie in cookies)
                                         {
-                                            string[] parts = cookie.Trim().Split('=');
+                                            var parts = cookie.Trim().Split('=');
 
-                                            string key = parts[0];
-                                            string value = parts[1];
+                                            var key = parts[0];
+                                            var value = parts[1];
 
                                             if (key == "name")
                                                 name = value;
@@ -1325,9 +1324,9 @@ namespace SVO.Games.PS3
                                         response.ContentType = "text/xml";
                                         response.Headers.Set("Content-Language", string.Empty);
 
-                                        string? filter = request.QueryString["filter"];
+                                        var filter = request.QueryString["filter"];
 
-                                        byte[] FriendActivities = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                        var FriendActivities = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                            "<FriendActivities>" +
                                            "</FriendActivities>");
 
@@ -1362,5 +1361,8 @@ namespace SVO.Games.PS3
                 response.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
             }
         }
+
+        [GeneratedRegex(@"\.[^.]+$")]
+        private static partial Regex MyRegex();
     }
 }

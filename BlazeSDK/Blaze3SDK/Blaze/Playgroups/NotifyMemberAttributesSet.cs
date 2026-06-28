@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Playgroups
 {
-	[TdfStruct]
-	public struct NotifyMemberAttributesSet
-	{
+    [TdfStruct]
+    public struct NotifyMemberAttributesSet
+    {
+        [TdfMember("EID")]
+        public long mBlazeId;
 
-		[TdfMember("EID")]
-		public long mBlazeId;
+        [TdfMember("ATTR")]
+        public SortedDictionary<string, string> mMemberAttributes;
 
-		[TdfMember("ATTR")]
-		public SortedDictionary<string, string> mMemberAttributes;
-
-		[TdfMember("PGID")]
-		public uint mPlaygroupId;
-
-	}
+        [TdfMember("PGID")]
+        public uint mPlaygroupId;
+    }
 }

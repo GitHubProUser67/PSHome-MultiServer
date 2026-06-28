@@ -1,6 +1,4 @@
-using Microsoft.EntityFrameworkCore;
 using MultiServerLibrary.HTTP;
-using System.Linq;
 using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.PSHOME.VEEMEE.olm
@@ -11,11 +9,20 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.olm
 
         public static void InitializeLeaderboard()
         {
-            if (Leaderboard == null)
-                Leaderboard = new OLMScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+            Leaderboard ??= new OLMScoreBoardData(
+                LeaderboardDbContext.BuildOptions(
+                    0,
+                    $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}"
+                )
+            );
         }
 
-        public static string GetLeaderboardPOST(byte[] PostData, string ContentType, int mode, string apiPath)
+        public static string GetLeaderboardPOST(
+            byte[] PostData,
+            string ContentType,
+            int mode,
+            string apiPath
+        )
         {
             string key;
             string psnid;
@@ -26,7 +33,9 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.olm
                 key = data["key"].First();
                 if (key != "KEqZKh3At4Ev")
                 {
-                    CustomLogger.LoggerAccessor.LogError("[VEEMEE] - olm - Client tried to push invalid key! Invalidating request.");
+                    CustomLogger.LoggerAccessor.LogError(
+                        "[VEEMEE] - olm - Client tried to push invalid key! Invalidating request."
+                    );
                     return null;
                 }
                 psnid = data["psnid"].First();
@@ -40,7 +49,9 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.olm
                     case 1:
                         return Leaderboard.SerializeToWeeklyString("leaderboard").Result;
                     default:
-                        CustomLogger.LoggerAccessor.LogWarn($"[OLMLeaderboard] - Unknown mode:{mode} requested, sending empty data...");
+                        CustomLogger.LoggerAccessor.LogWarn(
+                            $"[OLMLeaderboard] - Unknown mode:{mode} requested, sending empty data..."
+                        );
                         break;
                 }
             }

@@ -1,5 +1,3 @@
-using System;
-
 namespace EndianTools.BitConverterExtension
 {
     /// <summary>
@@ -13,7 +11,7 @@ namespace EndianTools.BitConverterExtension
         /// </summary>
         /// <remarks>
         /// Different computer architectures store data using different byte orders. "Big-endian"
-        /// means the most significant byte is on the left end of a word. "Little-endian" means the 
+        /// means the most significant byte is on the left end of a word. "Little-endian" means the
         /// most significant byte is on the right end of a word.
         /// </remarks>
         /// <returns>true if this converter is little-endian, false otherwise.</returns>
@@ -31,7 +29,7 @@ namespace EndianTools.BitConverterExtension
         }
 
         /// <summary>
-        /// Returns a decimal value converted from sixteen bytes 
+        /// Returns a decimal value converted from sixteen bytes
         /// at a specified position in a byte array.
         /// </summary>
         /// <param name="value">An array of bytes.</param>
@@ -42,10 +40,14 @@ namespace EndianTools.BitConverterExtension
             // HACK: This always assumes four parts, each in their own endianness,
             // starting with the first part at the start of the byte array.
             // On the other hand, there's no real format specified...
-            int[] parts = new int[4];
-            for (int i = 0; i < 4; i++)
+            var parts = new int[4];
+            for (var i = 0; i < 4; i++)
             {
-                parts[i] = EndianAwareConverter.ToInt32(value, Endianness.LittleEndian, (uint)(startIndex + i * 4));
+                parts[i] = EndianAwareConverter.ToInt32(
+                    value,
+                    Endianness.LittleEndian,
+                    (uint)(startIndex + (i * 4))
+                );
             }
             return new decimal(parts);
         }
@@ -59,7 +61,7 @@ namespace EndianTools.BitConverterExtension
         /// <param name="index">The index to start at</param>
         protected override void CopyBytesImpl(long value, int bytes, byte[] buffer, int index)
         {
-            for (int i = 0; i < bytes; i++)
+            for (var i = 0; i < bytes; i++)
             {
                 buffer[i + index] = unchecked((byte)(value & 0xff));
                 value >>= 8;
@@ -77,7 +79,7 @@ namespace EndianTools.BitConverterExtension
         protected override long FromBytes(byte[] buffer, int startIndex, int bytesToConvert)
         {
             long ret = 0;
-            for (int i = 0; i < bytesToConvert; i++)
+            for (var i = 0; i < bytesToConvert; i++)
             {
                 ret = unchecked((ret << 8) | buffer[startIndex + bytesToConvert - 1 - i]);
             }

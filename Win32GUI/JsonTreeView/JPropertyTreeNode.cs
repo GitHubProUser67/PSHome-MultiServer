@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Windows.Forms;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using ZTn.Json.JsonTreeView.Generic;
 using ZTn.Json.JsonTreeView.Json;
 using ZTn.Json.JsonTreeView.Linq;
@@ -65,15 +62,17 @@ namespace ZTn.Json.JsonTreeView
             // Extract the contained JProperties as the JObject was only a container
             // As Json.NET internally clones JToken instances having Parent!=null when inserting in a JContainer,
             // explicitly clones the new JProperties to nullify Parent and to know of the instances
-            var jParsedProperties = ((JObject)jTokenRoot.JTokenValue).Properties()
+            var jParsedProperties = ((JObject)jTokenRoot.JTokenValue)
+                .Properties()
                 .Select(p => new JProperty(p))
                 .ToList();
 
             // Update the properties of parent JObject by inserting jParsedProperties and removing edited JProperty
             var jObjectParent = (JObject)JPropertyTag.Parent;
 
-            var jProperties = jObjectParent.Properties()
-                .SelectMany(p => ReferenceEquals(p, JPropertyTag) ? jParsedProperties : new List<JProperty> { p })
+            var jProperties = jObjectParent
+                .Properties()
+                .SelectMany(p => ReferenceEquals(p, JPropertyTag) ? jParsedProperties : [p])
                 .Distinct(new JPropertyEqualityComparer())
                 .ToList();
             jObjectParent.ReplaceAll(jProperties);

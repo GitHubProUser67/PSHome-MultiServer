@@ -1,9 +1,8 @@
-using QuazalServer.RDVServices.DDL.Models;
-using QuazalServer.QNetZ;
 using QuazalServer.QNetZ.Attributes;
+using QuazalServer.QNetZ.Connection;
 using QuazalServer.QNetZ.DDL;
 using QuazalServer.QNetZ.Interfaces;
-using QuazalServer.QNetZ.Connection;
+using QuazalServer.RDVServices.DDL.Models;
 
 namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
 {
@@ -15,19 +14,19 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
     class MatchMakingService : RMCServiceBase
     {
         static uint GatheringIdCounter = 39000;
-        static List<SentInvitation> InvitationList = new();
+        static readonly List<SentInvitation> InvitationList = new();
 
         [RMCMethod(1)]
         public RMCResult RegisterGathering(AnyData<HermesPartySession> anyGathering)
         {
             if (Context != null && Context.Client.PlayerInfo != null)
             {
-                PlayerInfo? plInfo = Context.Client.PlayerInfo;
-                uint playerPid = plInfo.PID;
+                var plInfo = Context.Client.PlayerInfo;
+                var playerPid = plInfo.PID;
 
                 if (anyGathering.data != null)
                 {
-                    HermesPartySession gathering = anyGathering.data;
+                    var gathering = anyGathering.data;
                     gathering.m_idMyself = ++GatheringIdCounter;
                     gathering.m_pidOwner = playerPid;
 
@@ -43,8 +42,10 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
         [RMCMethod(2)]
         public RMCResult UnregisterGathering(uint idGathering)
         {
-            bool result = false;
-            var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == idGathering);
+            var result = false;
+            var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                x.Session.m_idMyself == idGathering
+            );
 
             if (gathering != null)
             {
@@ -52,7 +53,9 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
                 result = true;
             }
             else
-                CustomLogger.LoggerAccessor.LogError($"MatchMakingService.UnregisterGathering - no gathering with gid={idGathering}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"MatchMakingService.UnregisterGathering - no gathering with gid={idGathering}"
+                );
 
             return Result(new { retVal = result });
         }
@@ -66,17 +69,20 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
         [RMCMethod(4)]
         public RMCResult UpdateGathering(AnyData<HermesPartySession> anyGathering)
         {
-            bool result = false;
+            var result = false;
             if (anyGathering.data != null)
             {
                 var srcGathering = anyGathering.data;
-                var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == srcGathering.m_idMyself);
+                var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                    x.Session.m_idMyself == srcGathering.m_idMyself
+                );
 
                 if (gathering != null)
                 {
                     gathering.Session.m_uiMinParticipants = srcGathering.m_uiMinParticipants;
                     gathering.Session.m_uiMaxParticipants = srcGathering.m_uiMaxParticipants;
-                    gathering.Session.m_uiParticipationPolicy = srcGathering.m_uiParticipationPolicy;
+                    gathering.Session.m_uiParticipationPolicy =
+                        srcGathering.m_uiParticipationPolicy;
                     gathering.Session.m_uiPolicyArgument = srcGathering.m_uiPolicyArgument;
                     gathering.Session.m_uiFlags = srcGathering.m_uiFlags;
                     gathering.Session.m_uiState = srcGathering.m_uiState;
@@ -94,30 +100,40 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
                     result = true;
                 }
                 else
-                    CustomLogger.LoggerAccessor.LogError($"MatchMakingService.UpdateGathering - no gathering with gid={srcGathering.m_idMyself}");
+                    CustomLogger.LoggerAccessor.LogError(
+                        $"MatchMakingService.UpdateGathering - no gathering with gid={srcGathering.m_idMyself}"
+                    );
             }
 
             return Result(new { retVal = result });
         }
 
         [RMCMethod(5)]
-        public RMCResult Invite(uint idGathering, ICollection<uint> lstPrincipals, string strMessage)
+        public RMCResult Invite(
+            uint idGathering,
+            ICollection<uint> lstPrincipals,
+            string strMessage
+        )
         {
-            bool result = false;
+            var result = false;
             if (Context != null && Context.Client.PlayerInfo != null)
             {
-                PlayerInfo? plInfo = Context.Client.PlayerInfo;
-                PartySessionGathering? gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == idGathering);
+                var plInfo = Context.Client.PlayerInfo;
+                var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                    x.Session.m_idMyself == idGathering
+                );
 
                 if (gathering != null)
                 {
-                    var invitations = lstPrincipals.Select(x => new SentInvitation
-                    {
-                        SentById = plInfo.PID,
-                        GatheringId = idGathering,
-                        GuestId = x,
-                        Message = strMessage
-                    }).ToList();
+                    var invitations = lstPrincipals
+                        .Select(x => new SentInvitation
+                        {
+                            SentById = plInfo.PID,
+                            GatheringId = idGathering,
+                            GuestId = x,
+                            Message = strMessage,
+                        })
+                        .ToList();
 
                     // send notifications to invited user
                     foreach (var inv in invitations)
@@ -126,21 +142,32 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
 
                         if (qclient != null)
                         {
-                            var senderNotification = new NotificationEvent(NotificationEventsType.ParticipationEvent, 3)
+                            var senderNotification = new NotificationEvent(
+                                NotificationEventsType.ParticipationEvent,
+                                3
+                            )
                             {
                                 m_pidSource = plInfo.PID,
                                 m_uiParam1 = idGathering,
                                 m_uiParam2 = plInfo.PID,
                                 m_strParam = strMessage,
-                                m_uiParam3 = 0
+                                m_uiParam3 = 0,
                             };
 
-                            NotificationQueue.SendNotification(Context.Handler, qclient, senderNotification);
+                            NotificationQueue.SendNotification(
+                                Context.Handler,
+                                qclient,
+                                senderNotification
+                            );
                         }
                     }
 
                     // remove old
-                    InvitationList.RemoveAll(x => invitations.Any(y => x.GatheringId == y.GatheringId && x.GuestId == y.GuestId));
+                    InvitationList.RemoveAll(x =>
+                        invitations.Any(y =>
+                            x.GatheringId == y.GatheringId && x.GuestId == y.GuestId
+                        )
+                    );
 
                     // add new
                     InvitationList.AddRange(invitations);
@@ -148,7 +175,9 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
                     result = true;
                 }
                 else
-                    CustomLogger.LoggerAccessor.LogError($"MatchMakingService.Invite - no gathering with gid={idGathering}");
+                    CustomLogger.LoggerAccessor.LogError(
+                        $"MatchMakingService.Invite - no gathering with gid={idGathering}"
+                    );
             }
 
             return Result(new { retVal = result });
@@ -157,16 +186,22 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
         [RMCMethod(6)]
         public RMCResult AcceptInvitation(uint idGathering, string strMessage)
         {
-            bool result = false;
+            var result = false;
             if (Context != null && Context.Client.PlayerInfo != null)
             {
                 var plInfo = Context.Client.PlayerInfo;
-                var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == idGathering);
-                var invitation = InvitationList.FirstOrDefault(x => x.GatheringId == idGathering && x.GuestId == plInfo.PID);
+                var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                    x.Session.m_idMyself == idGathering
+                );
+                var invitation = InvitationList.FirstOrDefault(x =>
+                    x.GatheringId == idGathering && x.GuestId == plInfo.PID
+                );
 
                 if (invitation == null)
                 {
-                    CustomLogger.LoggerAccessor.LogError($"MatchMakingService.AcceptInvitation - no invitation found to gathering gid={idGathering} for PID={plInfo.PID}");
+                    CustomLogger.LoggerAccessor.LogError(
+                        $"MatchMakingService.AcceptInvitation - no invitation found to gathering gid={idGathering} for PID={plInfo.PID}"
+                    );
                     return Result(new { retVal = result });
                 }
 
@@ -178,16 +213,23 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
                     if (qsender != null)
                     {
                         // accepted invitation event
-                        NotificationEvent senderNotification = new(NotificationEventsType.ParticipationEvent, 4)
+                        NotificationEvent senderNotification = new(
+                            NotificationEventsType.ParticipationEvent,
+                            4
+                        )
                         {
                             m_pidSource = plInfo.PID,
                             m_uiParam1 = idGathering,
                             m_uiParam2 = plInfo.PID,
                             m_strParam = strMessage,
-                            m_uiParam3 = 0
+                            m_uiParam3 = 0,
                         };
 
-                        NotificationQueue.SendNotification(Context.Handler, qsender, senderNotification);
+                        NotificationQueue.SendNotification(
+                            Context.Handler,
+                            qsender,
+                            senderNotification
+                        );
                     }
 
                     // should he be added?
@@ -196,20 +238,27 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
                     // send to all party members
                     foreach (var pid in gathering.Participants)
                     {
-                        QClient? qclient = Context.Handler.GetQClientByClientPID(pid);
+                        var qclient = Context.Handler.GetQClientByClientPID(pid);
 
                         if (qclient != null)
                         {
-                            NotificationEvent notification = new(NotificationEventsType.ParticipationEvent, 1)
+                            NotificationEvent notification = new(
+                                NotificationEventsType.ParticipationEvent,
+                                1
+                            )
                             {
                                 m_pidSource = plInfo.PID,
                                 m_uiParam1 = idGathering,
                                 m_uiParam2 = plInfo.PID,
                                 m_strParam = strMessage,
-                                m_uiParam3 = 0
+                                m_uiParam3 = 0,
                             };
 
-                            NotificationQueue.SendNotification(Context.Handler, qclient, notification);
+                            NotificationQueue.SendNotification(
+                                Context.Handler,
+                                qclient,
+                                notification
+                            );
                         }
                     }
 
@@ -219,7 +268,9 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
                     result = true;
                 }
                 else
-                    CustomLogger.LoggerAccessor.LogError($"MatchMakingService.AcceptInvitation - no gathering with gid={idGathering}");
+                    CustomLogger.LoggerAccessor.LogError(
+                        $"MatchMakingService.AcceptInvitation - no gathering with gid={idGathering}"
+                    );
             }
 
             return Result(new { retVal = result });
@@ -228,39 +279,54 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
         [RMCMethod(7)]
         public RMCResult DeclineInvitation(uint idGathering, string strMessage)
         {
-            bool result = false;
+            var result = false;
             if (Context != null && Context.Client.PlayerInfo != null)
             {
                 var plInfo = Context.Client.PlayerInfo;
-                var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == idGathering);
-                var invitation = InvitationList.FirstOrDefault(x => x.GatheringId == idGathering && x.GuestId == plInfo.PID);
+                var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                    x.Session.m_idMyself == idGathering
+                );
+                var invitation = InvitationList.FirstOrDefault(x =>
+                    x.GatheringId == idGathering && x.GuestId == plInfo.PID
+                );
 
                 if (invitation == null)
                 {
-                    CustomLogger.LoggerAccessor.LogError($"MatchMakingService.DeclineInvitation - no invitation found to gathering gid={idGathering} for PID={plInfo.PID}");
+                    CustomLogger.LoggerAccessor.LogError(
+                        $"MatchMakingService.DeclineInvitation - no invitation found to gathering gid={idGathering} for PID={plInfo.PID}"
+                    );
                     return Result(new { retVal = result });
                 }
 
                 if (gathering == null)
-                    CustomLogger.LoggerAccessor.LogWarn($"MatchMakingService.DeclineInvitation - no gathering with gid={idGathering}, removing invitation anyway");
+                    CustomLogger.LoggerAccessor.LogWarn(
+                        $"MatchMakingService.DeclineInvitation - no gathering with gid={idGathering}, removing invitation anyway"
+                    );
 
                 // send notification to invitation sender
-                QClient? qsender = Context.Handler.GetQClientByClientPID(invitation.SentById);
+                var qsender = Context.Handler.GetQClientByClientPID(invitation.SentById);
 
                 if (qsender != null)
                 {
                     // decline invitation event
                     // is that correct?
-                    NotificationEvent senderNotification = new(NotificationEventsType.ParticipationEvent, 2)
+                    NotificationEvent senderNotification = new(
+                        NotificationEventsType.ParticipationEvent,
+                        2
+                    )
                     {
                         m_pidSource = plInfo.PID,
                         m_uiParam1 = idGathering,
                         m_uiParam2 = plInfo.PID,
                         m_strParam = strMessage,
-                        m_uiParam3 = 0
+                        m_uiParam3 = 0,
                     };
 
-                    NotificationQueue.SendNotification(Context.Handler, qsender, senderNotification);
+                    NotificationQueue.SendNotification(
+                        Context.Handler,
+                        qsender,
+                        senderNotification
+                    );
                 }
 
                 // done with it
@@ -289,7 +355,7 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
                     {
                         m_idGathering = x.GatheringId,
                         m_idGuest = x.GuestId,
-                        m_strMessage = x.Message
+                        m_strMessage = x.Message,
                     });
 
                 return Result(list);
@@ -303,15 +369,15 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
         {
             if (Context != null && Context.Client.PlayerInfo != null)
             {
-                PlayerInfo? plInfo = Context.Client.PlayerInfo;
-                uint myUserPid = plInfo.PID;
+                var plInfo = Context.Client.PlayerInfo;
+                var myUserPid = plInfo.PID;
                 var list = InvitationList
                     .Where(x => x.GuestId == myUserPid)
                     .Select(x => new Invitation()
                     {
                         m_idGathering = x.GatheringId,
                         m_idGuest = x.GuestId,
-                        m_strMessage = x.Message
+                        m_strMessage = x.Message,
                     });
 
                 return Result(list);
@@ -323,11 +389,13 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
         [RMCMethod(11)]
         public RMCResult Participate(uint idGathering, string strMessage)
         {
-            bool result = false;
+            var result = false;
             if (Context != null && Context.Client.PlayerInfo != null)
             {
                 var plInfo = Context.Client.PlayerInfo;
-                var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == idGathering);
+                var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                    x.Session.m_idMyself == idGathering
+                );
 
                 if (gathering != null)
                 {
@@ -335,7 +403,9 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
                     result = true;
                 }
                 else
-                    CustomLogger.LoggerAccessor.LogError($"MatchMakingService.Participate - no gathering with gid={idGathering}");
+                    CustomLogger.LoggerAccessor.LogError(
+                        $"MatchMakingService.Participate - no gathering with gid={idGathering}"
+                    );
             }
 
             return Result(new { retVal = result });
@@ -344,11 +414,13 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
         [RMCMethod(12)]
         public RMCResult CancelParticipation(uint idGathering, string strMessage)
         {
-            bool result = false;
+            var result = false;
             if (Context != null && Context.Client.PlayerInfo != null)
             {
                 var plInfo = Context.Client.PlayerInfo;
-                var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == idGathering);
+                var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                    x.Session.m_idMyself == idGathering
+                );
 
                 if (gathering != null && gathering.Participants != null)
                 {
@@ -365,16 +437,23 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
 
                         if (qclient != null)
                         {
-                            NotificationEvent leaveNotification = new(NotificationEventsType.ParticipationEvent, 2)
+                            NotificationEvent leaveNotification = new(
+                                NotificationEventsType.ParticipationEvent,
+                                2
+                            )
                             {
                                 m_pidSource = plInfo.PID,
                                 m_uiParam1 = idGathering,
                                 m_uiParam2 = plInfo.PID,
                                 m_strParam = strMessage,
-                                m_uiParam3 = 0
+                                m_uiParam3 = 0,
                             };
 
-                            NotificationQueue.SendNotification(Context.Handler, qclient, leaveNotification);
+                            NotificationQueue.SendNotification(
+                                Context.Handler,
+                                qclient,
+                                leaveNotification
+                            );
                         }
                     }
 
@@ -382,7 +461,9 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
                 }
                 else
                 {
-                    CustomLogger.LoggerAccessor.LogError($"MatchMakingService.CancelParticipation - no gathering with gid={idGathering}");
+                    CustomLogger.LoggerAccessor.LogError(
+                        $"MatchMakingService.CancelParticipation - no gathering with gid={idGathering}"
+                    );
                 }
             }
 
@@ -440,15 +521,23 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
         [RMCMethod(21)]
         public RMCResult FindBySingleID(uint id)
         {
-            bool result = false;
-            var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == id);
+            var result = false;
+            var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                x.Session.m_idMyself == id
+            );
 
             if (gathering != null)
                 result = true;
             else
                 gathering = new PartySessionGathering();
 
-            return Result(new { bResult = result, pGathering = new AnyData<HermesPartySession>(gathering.Session) });
+            return Result(
+                new
+                {
+                    bResult = result,
+                    pGathering = new AnyData<HermesPartySession>(gathering.Session),
+                }
+            );
         }
 
         [RMCMethod(22)]
@@ -536,9 +625,12 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
         }
 
         [RMCMethod(36)]
-        public RMCResult MigrateGatheringOwnership(uint gid, IEnumerable<uint> lstPotentialNewOwnersID)
+        public RMCResult MigrateGatheringOwnership(
+            uint gid,
+            IEnumerable<uint> lstPotentialNewOwnersID
+        )
         {
-            bool result = false;
+            var result = false;
             UNIMPLEMENTED();
             return Result(new { retVal = result });
         }
@@ -559,17 +651,23 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
         [RMCMethod(39)]
         public RMCResult RegisterLocalURLs(uint gid, IEnumerable<StationURL> lstUrls)
         {
-            var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == gid);
+            var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                x.Session.m_idMyself == gid
+            );
 
             if (gathering != null && gathering.Urls != null)
             {
-                var newUrls = lstUrls.Where(x => !gathering.Urls.Any(u => u.urlString == x.urlString));
+                var newUrls = lstUrls.Where(x =>
+                    !gathering.Urls.Any(u => u.urlString == x.urlString)
+                );
 
                 gathering.Urls.Clear();
                 gathering.Urls.AddRange(newUrls);
             }
             else
-                CustomLogger.LoggerAccessor.LogError($"MatchMakingService.RegisterLocalURLs - no gathering with gid={gid}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"MatchMakingService.RegisterLocalURLs - no gathering with gid={gid}"
+                );
 
             return Error(0);
         }
@@ -579,13 +677,17 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
         {
             if (Context != null && Context.Client.PlayerInfo != null)
             {
-                PlayerInfo? plInfo = Context.Client.PlayerInfo;
-                var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == gid);
+                var plInfo = Context.Client.PlayerInfo;
+                var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                    x.Session.m_idMyself == gid
+                );
 
                 if (gathering != null)
                     gathering.Session.m_pidHost = plInfo.PID;
                 else
-                    CustomLogger.LoggerAccessor.LogError($"MatchMakingService.UpdateSessionHost - no gathering with gid={gid}");
+                    CustomLogger.LoggerAccessor.LogError(
+                        $"MatchMakingService.UpdateSessionHost - no gathering with gid={gid}"
+                    );
             }
 
             return Error(0);
@@ -594,12 +696,16 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
         [RMCMethod(41)]
         public RMCResult GetSessionURLs(uint gid)
         {
-            var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == gid);
+            var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                x.Session.m_idMyself == gid
+            );
 
             if (gathering != null)
                 return Result(gathering.Urls);
             else
-                CustomLogger.LoggerAccessor.LogError($"MatchMakingService.GetSessionURLs - no gathering with gid={gid}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"MatchMakingService.GetSessionURLs - no gathering with gid={gid}"
+                );
 
             return Error(0);
         }

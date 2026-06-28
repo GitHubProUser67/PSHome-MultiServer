@@ -10,5 +10,12 @@ namespace Horizon.DME.PluginArgs
         public ScertDatagramPacket? Packet { get; set; }
 
         public bool Ignore { get; set; }
+
+        public bool IsIncoming { get; }
+
+        public OnUdpMsg(bool isIncoming)
+        {
+            IsIncoming = isIncoming;
+        }
     }
 }

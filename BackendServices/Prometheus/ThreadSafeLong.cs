@@ -2,25 +2,14 @@
 
 namespace Prometheus;
 
-internal struct ThreadSafeLong
+internal struct ThreadSafeLong(long value)
 {
-    private long _value;
-
-    public ThreadSafeLong(long value)
-    {
-        _value = value;
-    }
+    private long _value = value;
 
     public long Value
     {
-        get
-        {
-            return Interlocked.Read(ref _value);
-        }
-        set
-        {
-            Interlocked.Exchange(ref _value, value);
-        }
+        get { return Interlocked.Read(ref _value); }
+        set { Interlocked.Exchange(ref _value, value); }
     }
 
     public void Add(long increment)
@@ -35,10 +24,7 @@ internal struct ThreadSafeLong
 
     public override bool Equals(object? obj)
     {
-        if (obj is ThreadSafeLong other)
-            return Value.Equals(other.Value);
-
-        return Value.Equals(obj);
+        return obj is ThreadSafeLong other ? Value.Equals(other.Value) : Value.Equals(obj);
     }
 
     public override int GetHashCode()

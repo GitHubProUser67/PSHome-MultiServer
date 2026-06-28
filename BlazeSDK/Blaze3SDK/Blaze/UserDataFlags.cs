@@ -5,6 +5,6 @@ namespace Blaze3SDK.Blaze
     {
         None = 0,
         Subscribed = 1,
-        Online = 2
+        Online = 2,
     }
 }

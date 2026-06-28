@@ -1,44 +1,42 @@
-using CustomLogger;
-using FixedSsl;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using CastleLibrary.FixedSsl;
+using CustomLogger;
 
 namespace BlazeCommon
 {
-    public abstract class ProtoFireServer
+    public abstract class ProtoFireServer(
+        string name,
+        IPEndPoint localEP,
+        X509Certificate2? cert,
+        bool forceSsl
+    )
     {
-        public string Name { get; private set; }
-        public IPEndPoint LocalEP { get; private set; }
-        public bool IsRunning { get; private set; }
-        public X509Certificate2? Certificate { get; private set; }
-        public bool ForceSsl { get; private set; }
+        public string Name { get; private set; } = name;
+        public IPEndPoint LocalEP { get; private set; } = localEP;
+        public bool IsRunning { get; private set; } = false;
+        public X509Certificate2? Certificate { get; private set; } = cert;
+        public bool ForceSsl { get; private set; } = forceSsl;
 
         [MemberNotNullWhen(true, nameof(Certificate))]
-        public bool Secure { get => Certificate != null; }
+        public bool Secure
+        {
+            get => Certificate != null;
+        }
 
         private Socket? _listenSocket;
-        private long _nextConnectionId;
-        private ConcurrentDictionary<long, ProtoFireConnection> _connections;
-        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private long _nextConnectionId = 0;
+        private readonly ConcurrentDictionary<long, ProtoFireConnection> _connections = new();
+        private CancellationTokenSource _cancellationTokenSource = new();
 #pragma warning disable
-        private static readonly SslProtocols _sslProtocols = SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
-#pragma warning restore
-        public ProtoFireServer(string name, IPEndPoint localEP, X509Certificate2? cert, bool forceSsl)
-        {
-            Name = name;
-            LocalEP = localEP;
-            IsRunning = false;
-            Certificate = cert;
-            ForceSsl = forceSsl;
+        private static readonly SslProtocols _sslProtocols =
+            SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
 
-            _connections = new ConcurrentDictionary<long, ProtoFireConnection>();
-            _cancellationTokenSource = new CancellationTokenSource();
-            _nextConnectionId = 0;
-        }
+#pragma warning restore
 
         public void KillConnection(ProtoFireConnection connection)
         {
@@ -66,8 +64,14 @@ namespace BlazeCommon
             //server not running, start it
             try
             {
-                LoggerAccessor.LogInfo($"[ProtoFireServer] - Starting {(Secure ? "secure" : "insecure")} ProtoFireServer({Name}) on port {LocalEP.Port}...");
-                _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                LoggerAccessor.LogInfo(
+                    $"[ProtoFireServer] - Starting {(Secure ? "secure" : "insecure")} ProtoFireServer({Name}) on port {LocalEP.Port}..."
+                );
+                _listenSocket = new Socket(
+                    AddressFamily.InterNetwork,
+                    SocketType.Stream,
+                    ProtocolType.Tcp
+                );
                 _listenSocket.Bind(LocalEP);
                 _listenSocket.Listen(backlog);
                 IsRunning = true;
@@ -75,7 +79,9 @@ namespace BlazeCommon
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[ProtoFireServer] - Failed to start {(Secure ? "secure" : "insecure")} ProtoFireServer({Name}) on port {LocalEP.Port} (Exception: {ex}).");
+                LoggerAccessor.LogError(
+                    $"[ProtoFireServer] - Failed to start {(Secure ? "secure" : "insecure")} ProtoFireServer({Name}) on port {LocalEP.Port} (Exception: {ex})."
+                );
                 IsRunning = false;
                 return;
             }
@@ -85,10 +91,12 @@ namespace BlazeCommon
                 //start accepting connections
                 while (!_cancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    Socket socket = await _listenSocket.AcceptAsync(_cancellationTokenSource.Token).ConfigureAwait(false);
-                    long clientId = Interlocked.Increment(ref _nextConnectionId);
+                    var socket = await _listenSocket
+                        .AcceptAsync(_cancellationTokenSource.Token)
+                        .ConfigureAwait(false);
+                    var clientId = Interlocked.Increment(ref _nextConnectionId);
 
-                    ProtoFireConnection connection = new ProtoFireConnection(clientId, this, socket);
+                    var connection = new ProtoFireConnection(clientId, this, socket);
                     await OnProtoFireConnectInternalAsync(connection).ConfigureAwait(false);
                 }
             }
@@ -102,19 +110,20 @@ namespace BlazeCommon
             foreach (var connection in _connections.Values)
                 connection.Disconnect();
             _connections.Clear();
-
         }
 
         public async void AuthenticateAsServerCallback(IAsyncResult result)
         {
-            ProtoFireConnection connection = (ProtoFireConnection)result.AsyncState!;
+            var connection = (ProtoFireConnection)result.AsyncState!;
 
             try
             {
-                Stream? stream = SslSocket.EndAuthenticateAsServer(result);
+                var stream = SslSocket.EndAuthenticateAsServer(result);
                 if (stream == null)
                 {
-                    LoggerAccessor.LogError($"[ProtoFireServer] - Failed to authenticate as server for connection({connection.ID}).");
+                    LoggerAccessor.LogError(
+                        $"[ProtoFireServer] - Failed to authenticate as server for connection({connection.ID})."
+                    );
                     connection.Disconnect();
                     return;
                 }
@@ -122,25 +131,35 @@ namespace BlazeCommon
                 connection.SetStream(stream);
 
                 if (Secure)
-                    LoggerAccessor.LogInfo($"[ProtoFireServer] - Authenticated as server for connection({connection.ID}). Stream type: {stream.GetType().Name}");
+                    LoggerAccessor.LogInfo(
+                        $"[ProtoFireServer] - Authenticated as server for connection({connection.ID}). Stream type: {stream.GetType().Name}"
+                    );
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[ProtoFireServer] - Failed to authenticate as server for connection({connection.ID}) (Exception: {ex}).");
+                LoggerAccessor.LogError(
+                    $"[ProtoFireServer] - Failed to authenticate as server for connection({connection.ID}) (Exception: {ex})."
+                );
                 connection.Disconnect();
                 return;
             }
 
             while (IsRunning)
             {
-                ProtoFirePacket? packet = await connection.ReadPacketAsync().ConfigureAwait(false);
+                var packet = await connection.ReadPacketAsync().ConfigureAwait(false);
 
                 //disconnected
                 if (packet == null)
                     break;
 
-                try { await OnProtoFirePacketReceivedAsync(connection, packet).ConfigureAwait(false); }
-                catch (Exception ex) { await OnProtoFireErrorInternalAsync(connection, ex).ConfigureAwait(false); }
+                try
+                {
+                    await OnProtoFirePacketReceivedAsync(connection, packet).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    await OnProtoFireErrorInternalAsync(connection, ex).ConfigureAwait(false);
+                }
             }
 
             connection.Disconnect();
@@ -165,7 +184,9 @@ namespace BlazeCommon
                 return;
             }
 
-            LoggerAccessor.LogInfo($"[ProtoFireServer] - Connection({connection.ID}) accepted from {connection.Socket.RemoteEndPoint}.");
+            LoggerAccessor.LogInfo(
+                $"[ProtoFireServer] - Connection({connection.ID}) accepted from {connection.Socket.RemoteEndPoint}."
+            );
 
             try
             {
@@ -179,9 +200,19 @@ namespace BlazeCommon
             if (connection.Connected)
             {
                 if (Secure)
-                    LoggerAccessor.LogInfo($"[ProtoFireServer] - Authenticating as server for connection({connection.ID}).");
+                    LoggerAccessor.LogInfo(
+                        $"[ProtoFireServer] - Authenticating as server for connection({connection.ID})."
+                    );
 
-                SslSocket.BeginAuthenticateAsServer(_sslProtocols, connection.Socket, Certificate, ForceSsl, true, AuthenticateAsServerCallback, connection);
+                SslSocket.BeginAuthenticateAsServer(
+                    _sslProtocols,
+                    connection.Socket,
+                    Certificate,
+                    ForceSsl,
+                    true,
+                    AuthenticateAsServerCallback,
+                    connection
+                );
             }
         }
 
@@ -190,7 +221,9 @@ namespace BlazeCommon
             if (!_connections.TryRemove(connection.ID, out _))
                 return;
 
-            LoggerAccessor.LogInfo($"[ProtoFireServer] - Connection({connection.ID}) disconnected.");
+            LoggerAccessor.LogInfo(
+                $"[ProtoFireServer] - Connection({connection.ID}) disconnected."
+            );
 
             try
             {
@@ -202,8 +235,10 @@ namespace BlazeCommon
             }
         }
 
-
-        private async Task OnProtoFireErrorInternalAsync(ProtoFireConnection connection, Exception exception)
+        private async Task OnProtoFireErrorInternalAsync(
+            ProtoFireConnection connection,
+            Exception exception
+        )
         {
             try
             {
@@ -217,8 +252,14 @@ namespace BlazeCommon
         }
 
         public abstract Task OnProtoFireConnectAsync(ProtoFireConnection connection);
-        public abstract Task OnProtoFirePacketReceivedAsync(ProtoFireConnection connection, ProtoFirePacket packet);
+        public abstract Task OnProtoFirePacketReceivedAsync(
+            ProtoFireConnection connection,
+            ProtoFirePacket packet
+        );
         public abstract Task OnProtoFireDisconnectAsync(ProtoFireConnection connection);
-        public abstract Task OnProtoFireErrorAsync(ProtoFireConnection connection, Exception exception);
+        public abstract Task OnProtoFireErrorAsync(
+            ProtoFireConnection connection,
+            Exception exception
+        );
     }
 }

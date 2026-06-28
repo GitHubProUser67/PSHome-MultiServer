@@ -1,7 +1,6 @@
-using QuazalServer.RDVServices.DDL.Models;
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
-using QuazalServer.RDVServices.RMC;
+using QuazalServer.RDVServices.DDL.Models;
 
 namespace QuazalServer.RDVServices.GameServices.PS3UbisoftServices
 {
@@ -12,9 +11,7 @@ namespace QuazalServer.RDVServices.GameServices.PS3UbisoftServices
     class GameInfoService : RMCServiceBase
     {
         // files which server can renturn
-        private static readonly string[] FileList = {
-            "OnlineConfig.ini"
-        };
+        private static readonly string[] FileList = { "OnlineConfig.ini" };
 
         [RMCMethod(5)]
         public RMCResult GetFileInfoList(int indexStart, int numElements, string stringSearch)
@@ -23,33 +20,38 @@ namespace QuazalServer.RDVServices.GameServices.PS3UbisoftServices
 
             if (!string.IsNullOrEmpty(stringSearch))
             {
-                string directoryPath = QuazalServerConfiguration.QuazalStaticFolder + "/StaticFiles";
+                var directoryPath = QuazalServerConfiguration.QuazalStaticFolder + "/StaticFiles";
 
                 if (stringSearch == "*")
                 {
-                    foreach (string name in FileList.Skip(indexStart).Take(numElements))
+                    foreach (var name in FileList.Skip(indexStart).Take(numElements))
                     {
-                        string path = Path.Combine(directoryPath, name);
+                        var path = Path.Combine(directoryPath, name);
 
                         if (!File.Exists(path))
                             continue;
 
-                        fileList.Add(new PersistentInfo
-                        {
-                            m_name = name,
-                            m_size = (uint)new FileInfo(path).Length
-                        });
+                        fileList.Add(
+                            new PersistentInfo
+                            {
+                                m_name = name,
+                                m_size = (uint)new FileInfo(path).Length,
+                            }
+                        );
                     }
                 }
                 else
                 {
                     if (File.Exists(Path.Combine(directoryPath, stringSearch)))
                     {
-                        fileList.Add(new PersistentInfo
-                        {
-                            m_name = stringSearch,
-                            m_size = (uint)new FileInfo(Path.Combine(directoryPath, stringSearch)).Length
-                        });
+                        fileList.Add(
+                            new PersistentInfo
+                            {
+                                m_name = stringSearch,
+                                m_size = (uint)
+                                    new FileInfo(Path.Combine(directoryPath, stringSearch)).Length,
+                            }
+                        );
                     }
                 }
             }

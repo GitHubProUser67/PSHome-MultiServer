@@ -1,16 +1,18 @@
-using CustomLogger;
-using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 using System.Globalization;
-using System.Collections.Generic;
-using System;
+using CustomLogger;
+using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.UniverseVariableInformationResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.UniverseVariableInformationResponse
+    )]
     public class MediusUniverseVariableInformationResponse : BaseLobbyExtMessage, IMediusResponse
     {
-        public override byte PacketType => (byte)MediusLobbyExtMessageIds.UniverseVariableInformationResponse;
+        public override byte PacketType =>
+            (byte)MediusLobbyExtMessageIds.UniverseVariableInformationResponse;
 
         public bool IsSuccess => StatusCode >= 0;
 
@@ -32,7 +34,30 @@ namespace Horizon.RT.Models
         public string SvoURL; // UNIVERSE_SVO_URL_MAXLEN
         public bool EndOfList;
 
-        public List<int> approvedList = new List<int>() { 10421, 20043, 20244, 20043, 20464, 21093, 21094, 21614, 21624, 21834, 20371, 20374, 21324, 21514, 21784, 22073, 20464, 22500, 22920, 22924, 22930 };
+        public List<int> approvedList = new()
+        {
+            10421,
+            20043,
+            20244,
+            20043,
+            20464,
+            21093,
+            21094,
+            21614,
+            21624,
+            21834,
+            20371,
+            20374,
+            21324,
+            21514,
+            21784,
+            22073,
+            20464,
+            22500,
+            22920,
+            22924,
+            22930,
+        };
 
         public override void Deserialize(MessageReader reader)
         {
@@ -82,7 +107,6 @@ namespace Horizon.RT.Models
             }*/
 
             EndOfList = reader.ReadBoolean();
-
         }
 
         public override void Serialize(MessageWriter writer)
@@ -93,7 +117,7 @@ namespace Horizon.RT.Models
 
             writer.Write(StatusCode);
             writer.Write(InfoFilter);
-            
+
             if (InfoFilter.IsSet(MediusUniverseVariableInformationInfoFilter.INFO_ID))
                 writer.Write(UniverseID);
 
@@ -136,36 +160,53 @@ namespace Horizon.RT.Models
                         {
                             if (ExtendedInfo.StartsWith("*"))
                             {
-                                LoggerAccessor.LogInfo("[MediusUniverseVariableInformationResponse] - Setting SVOURL");
-                                if (InfoFilter.IsSet(MediusUniverseVariableInformationInfoFilter.INFO_SVO_URL))
+                                LoggerAccessor.LogInfo(
+                                    "[MediusUniverseVariableInformationResponse] - Setting SVOURL"
+                                );
+                                if (
+                                    InfoFilter.IsSet(
+                                        MediusUniverseVariableInformationInfoFilter.INFO_SVO_URL
+                                    )
+                                )
                                     writer.Write(SvoURL, Constants.UNIVERSE_SVO_URL_MAXLEN);
 
                                 break;
                             }
                             else
-                                betafirstFiveElements = ExtendedInfo.Substring(0, Math.Min(5, ExtendedInfo.Length));
+                                betafirstFiveElements = ExtendedInfo.Substring(
+                                    0,
+                                    Math.Min(5, ExtendedInfo.Length)
+                                );
                         }
 
                         if (!string.IsNullOrEmpty(betafirstFiveElements))
                         {
                             try
                             {
-                                homebetaver = double.Parse(betafirstFiveElements, CultureInfo.InvariantCulture);
+                                homebetaver = double.Parse(
+                                    betafirstFiveElements,
+                                    CultureInfo.InvariantCulture
+                                );
                             }
-                            catch
-                            {
-                                
-                            }
+                            catch { }
                         }
 
                         if (homebetaver >= 01.21)
                         {
-                            LoggerAccessor.LogInfo("[MediusUniverseVariableInformationResponse] - Setting SVOURL");
-                            if (InfoFilter.IsSet(MediusUniverseVariableInformationInfoFilter.INFO_SVO_URL))
+                            LoggerAccessor.LogInfo(
+                                "[MediusUniverseVariableInformationResponse] - Setting SVOURL"
+                            );
+                            if (
+                                InfoFilter.IsSet(
+                                    MediusUniverseVariableInformationInfoFilter.INFO_SVO_URL
+                                )
+                            )
                                 writer.Write(SvoURL, Constants.UNIVERSE_SVO_URL_MAXLEN);
                         }
                         else
-                            LoggerAccessor.LogInfo("[MediusUniverseVariableInformationResponse] - Not writing SVOURL");
+                            LoggerAccessor.LogInfo(
+                                "[MediusUniverseVariableInformationResponse] - Not writing SVOURL"
+                            );
                         break;
                     case 20374:
                         double homeretailver = 0;
@@ -174,69 +215,95 @@ namespace Horizon.RT.Models
                         {
                             if (ExtendedInfo.StartsWith("*"))
                             {
-                                LoggerAccessor.LogInfo("[MediusUniverseVariableInformationResponse] - Setting SVOURL");
-                                if (InfoFilter.IsSet(MediusUniverseVariableInformationInfoFilter.INFO_SVO_URL))
+                                LoggerAccessor.LogInfo(
+                                    "[MediusUniverseVariableInformationResponse] - Setting SVOURL"
+                                );
+                                if (
+                                    InfoFilter.IsSet(
+                                        MediusUniverseVariableInformationInfoFilter.INFO_SVO_URL
+                                    )
+                                )
                                     writer.Write(SvoURL, Constants.UNIVERSE_SVO_URL_MAXLEN);
 
                                 break;
                             }
                             else
-                                firstFiveElements = ExtendedInfo.Substring(0, Math.Min(5, ExtendedInfo.Length));
+                                firstFiveElements = ExtendedInfo.Substring(
+                                    0,
+                                    Math.Min(5, ExtendedInfo.Length)
+                                );
                         }
 
                         if (!string.IsNullOrEmpty(firstFiveElements))
                         {
                             try
                             {
-                                homeretailver = double.Parse(firstFiveElements, CultureInfo.InvariantCulture);
+                                homeretailver = double.Parse(
+                                    firstFiveElements,
+                                    CultureInfo.InvariantCulture
+                                );
                             }
-                            catch
-                            {
-                                
-                            }
+                            catch { }
                         }
 
                         if (homeretailver >= 01.21)
                         {
-                            LoggerAccessor.LogInfo("[MediusUniverseVariableInformationResponse] - Setting SVOURL");
-                            if (InfoFilter.IsSet(MediusUniverseVariableInformationInfoFilter.INFO_SVO_URL))
+                            LoggerAccessor.LogInfo(
+                                "[MediusUniverseVariableInformationResponse] - Setting SVOURL"
+                            );
+                            if (
+                                InfoFilter.IsSet(
+                                    MediusUniverseVariableInformationInfoFilter.INFO_SVO_URL
+                                )
+                            )
                                 writer.Write(SvoURL, Constants.UNIVERSE_SVO_URL_MAXLEN);
                         }
                         else
-                            LoggerAccessor.LogInfo("[MediusUniverseVariableInformationResponse] - Not writing SVOURL");
+                            LoggerAccessor.LogInfo(
+                                "[MediusUniverseVariableInformationResponse] - Not writing SVOURL"
+                            );
                         break;
                     default:
-                        LoggerAccessor.LogInfo("[MediusUniverseVariableInformationResponse] - Setting SVOURL");
-                        if (InfoFilter.IsSet(MediusUniverseVariableInformationInfoFilter.INFO_SVO_URL))
+                        LoggerAccessor.LogInfo(
+                            "[MediusUniverseVariableInformationResponse] - Setting SVOURL"
+                        );
+                        if (
+                            InfoFilter.IsSet(
+                                MediusUniverseVariableInformationInfoFilter.INFO_SVO_URL
+                            )
+                        )
                             writer.Write(SvoURL, Constants.UNIVERSE_SVO_URL_MAXLEN);
                         break;
                 }
             }
             else
-                LoggerAccessor.LogInfo("[MediusUniverseVariableInformationResponse] - Not writing SVOURL");
+                LoggerAccessor.LogInfo(
+                    "[MediusUniverseVariableInformationResponse] - Not writing SVOURL"
+                );
 
             writer.Write(EndOfList);
         }
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"InfoFilter: {InfoFilter} " +
-                $"UniverseID: {UniverseID} " +
-                $"UniverseName: {UniverseName} " +
-                $"DNS: {DNS} " +
-                $"Port: {Port} " +
-                $"UniverseDescription: {UniverseDescription} " +
-                $"Status: {Status} " +
-                $"UserCount: {UserCount} " +
-                $"MaxUsers: {MaxUsers} " +
-                $"UniverseBilling: {UniverseBilling} " +
-                $"BillingSystemName: {BillingSystemName} " +
-                $"ExtendedInfo: {ExtendedInfo} " +
-                $"SvoURL: {SvoURL} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"InfoFilter: {InfoFilter} "
+                + $"UniverseID: {UniverseID} "
+                + $"UniverseName: {UniverseName} "
+                + $"DNS: {DNS} "
+                + $"Port: {Port} "
+                + $"UniverseDescription: {UniverseDescription} "
+                + $"Status: {Status} "
+                + $"UserCount: {UserCount} "
+                + $"MaxUsers: {MaxUsers} "
+                + $"UniverseBilling: {UniverseBilling} "
+                + $"BillingSystemName: {BillingSystemName} "
+                + $"ExtendedInfo: {ExtendedInfo} "
+                + $"SvoURL: {SvoURL} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

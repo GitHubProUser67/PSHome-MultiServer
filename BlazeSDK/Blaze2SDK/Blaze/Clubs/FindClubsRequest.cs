@@ -6,7 +6,6 @@ namespace Blaze2SDK.Blaze.Clubs
     [TdfStruct]
     public struct FindClubsRequest
     {
-
         /// <summary>
         /// Max String Length: 30
         /// </summary>
@@ -69,6 +68,5 @@ namespace Blaze2SDK.Blaze.Clubs
 
         [TdfMember("UFLI")]
         public List<uint> mMemberFilterList;
-
     }
 }

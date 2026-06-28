@@ -1,20 +1,13 @@
-﻿using CustomLogger;
-using System.Text;
+﻿using System.Text;
+using CustomLogger;
 using WebAPIService.GameServices.UBISOFT.BuildAPI.BuildDBPullService;
 
 namespace WebAPIService.GameServices.UBISOFT.BuildAPI
 {
-
-    public class SoapBuildAPIClass
+    public class SoapBuildAPIClass(string method, string absolutepath)
     {
-        string absolutepath;
-        string method;
-
-        public SoapBuildAPIClass(string method, string absolutepath)
-        {
-            this.absolutepath = absolutepath;
-            this.method = method;
-        }
+        readonly string absolutepath = absolutepath;
+        readonly string method = method;
 
         public string ProcessRequest(byte[] PostData, string ContentType)
         {
@@ -26,15 +19,21 @@ namespace WebAPIService.GameServices.UBISOFT.BuildAPI
                 case "POST":
                     switch (absolutepath)
                     {
-
                         case "/BuildDBPullService.asmx":
-                            return BuildDBPullServiceHandler.buildDBRequestParser(PostData, ContentType);
+                            return BuildDBPullServiceHandler.buildDBRequestParser(
+                                PostData,
+                                ContentType
+                            );
                         default:
                             {
 #if DEBUG
-                                LoggerAccessor.LogWarn($"[BuildDBPullService] - Unhandled server request discovered: {absolutepath} | DETAILS: \n{Encoding.UTF8.GetString(PostData)}");
+                                LoggerAccessor.LogWarn(
+                                    $"[BuildDBPullService] - Unhandled server request discovered: {absolutepath} | DETAILS: \n{Encoding.UTF8.GetString(PostData)}"
+                                );
 #else
-                                LoggerAccessor.LogWarn($"[BuildDBPullService] - Unhandled server request discovered: {absolutepath}");
+                                LoggerAccessor.LogWarn(
+                                    $"[BuildDBPullService] - Unhandled server request discovered: {absolutepath}"
+                                );
 #endif
                             }
                             break;

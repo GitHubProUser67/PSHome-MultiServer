@@ -1,19 +1,25 @@
 namespace Prometheus.HttpClientMetrics;
 
-internal sealed class HttpClientRequestCountHandler : HttpClientDelegatingHandlerBase<ICollector<ICounter>, ICounter>
+internal sealed class HttpClientRequestCountHandler(
+    HttpClientRequestCountOptions? options,
+    HttpClientIdentity identity
+)
+    : HttpClientDelegatingHandlerBase<ICollector<ICounter>, ICounter>(
+        options,
+        options?.Counter,
+        identity
+    )
 {
-    public HttpClientRequestCountHandler(HttpClientRequestCountOptions? options, HttpClientIdentity identity)
-        : base(options, options?.Counter, identity)
-    {
-    }
-
-    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken
+    )
     {
         HttpResponseMessage? response = null;
 
         try
         {
-            response = await base.SendAsync(request, cancellationToken);
+            response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
             return response;
         }
         finally
@@ -24,8 +30,10 @@ internal sealed class HttpClientRequestCountHandler : HttpClientDelegatingHandle
 
     protected override string[] DefaultLabels => HttpClientRequestLabelNames.All;
 
-    protected override ICollector<ICounter> CreateMetricInstance(string[] labelNames) => MetricFactory.CreateCounter(
-        "httpclient_requests_sent_total",
-        "Count of HTTP requests that have been completed by an HttpClient.",
-        labelNames);
+    protected override ICollector<ICounter> CreateMetricInstance(string[] labelNames) =>
+        MetricFactory.CreateCounter(
+            "httpclient_requests_sent_total",
+            "Count of HTTP requests that have been completed by an HttpClient.",
+            labelNames
+        );
 }

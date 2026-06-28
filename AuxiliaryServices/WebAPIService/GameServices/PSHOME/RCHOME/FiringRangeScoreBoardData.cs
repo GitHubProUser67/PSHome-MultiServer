@@ -1,54 +1,51 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Xml.Linq;
+using Microsoft.EntityFrameworkCore;
 using WebAPIService.GameServices.PSHOME.RCHOME.Entities;
 using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.PSHOME.RCHOME
 {
-    internal class FiringRangeScoreBoardData
-    : ScoreboardService<FiringRangeScoreBoardEntry>
+    internal class FiringRangeScoreBoardData(
+        DbContextOptions<LeaderboardDbContext> options,
+        object obj = null
+    ) : ScoreboardService<FiringRangeScoreBoardEntry>(options)
     {
-        private string _gameproject;
-
-        public FiringRangeScoreBoardData(DbContextOptions options, object obj = null)
-            : base(options)
-        {
-            _gameproject = (string)obj;
-        }
+        private readonly string _gameproject = (string)obj;
 
         public override async Task<List<FiringRangeScoreBoardEntry>> GetTopScoresAsync(int max = 10)
         {
-            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            using (var db = new LeaderboardDbContext(_dboptions))
             {
                 db.Database.Migrate();
                 return await db.Set<FiringRangeScoreBoardEntry>()
-                .Where(x => x.ExtraData1 == _gameproject)
-                .OrderByDescending(e => e.Score)
-                .Take(max)
-                .ToListAsync().ConfigureAwait(false);
+                    .Where(x => x.ExtraData1 == _gameproject)
+                    .OrderByDescending(e => e.Score)
+                    .Take(max)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
             }
         }
 
-        public override async Task UpdateScoreAsync(string playerId, float newScore, List<object> extraData = null)
+        public override async Task UpdateScoreAsync(
+            string playerId,
+            float newScore,
+            List<object> extraData = null
+        )
         {
             if (string.IsNullOrEmpty(playerId))
                 return;
 
-            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            using (var db = new LeaderboardDbContext(_dboptions))
             {
                 db.Database.Migrate();
                 var set = db.Set<FiringRangeScoreBoardEntry>();
-                DateTime now = DateTime.UtcNow; // use UTC for consistency
+                var now = DateTime.UtcNow; // use UTC for consistency
 
-                var existing = await set
-                    .Where(x => x.ExtraData1 == _gameproject)
+                var existing = await set.Where(x => x.ExtraData1 == _gameproject)
                     .FirstOrDefaultAsync(e =>
-                    e.PlayerId != null &&
-                    e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
+                        e.PlayerId != null && e.PlayerId.ToLower() == playerId.ToLower()
+                    )
+                    .ConfigureAwait(false);
 
                 if (existing != null)
                 {
@@ -62,13 +59,16 @@ namespace WebAPIService.GameServices.PSHOME.RCHOME
                 }
                 else
                 {
-                    await set.AddAsync(new FiringRangeScoreBoardEntry
-                    {
-                        ExtraData1 = _gameproject,
-                        PlayerId = playerId,
-                        Score = newScore,
-                        UpdatedAt = now // set timestamp for new entry
-                    }).ConfigureAwait(false);
+                    await set.AddAsync(
+                            new FiringRangeScoreBoardEntry
+                            {
+                                ExtraData1 = _gameproject,
+                                PlayerId = playerId,
+                                Score = newScore,
+                                UpdatedAt = now, // set timestamp for new entry
+                            }
+                        )
+                        .ConfigureAwait(false);
                     await db.SaveChangesAsync().ConfigureAwait(false);
                 }
             }
@@ -76,13 +76,15 @@ namespace WebAPIService.GameServices.PSHOME.RCHOME
 
         public override async Task<string> SerializeToString(string gameName, int max = 10)
         {
-            XElement xmlScoreboard = new XElement(gameName);
+            var xmlScoreboard = new XElement(gameName);
 
             foreach (var entry in await GetTopScoresAsync(max).ConfigureAwait(false))
             {
-                XElement xmlEntry = new XElement("row",
+                var xmlEntry = new XElement(
+                    "row",
                     new XElement("c", entry.PsnId),
-                    new XElement("c", entry.Score.ToString().Replace(",", ".")));
+                    new XElement("c", entry.Score.ToString().Replace(",", "."))
+                );
 
                 xmlScoreboard.Add(xmlEntry);
             }

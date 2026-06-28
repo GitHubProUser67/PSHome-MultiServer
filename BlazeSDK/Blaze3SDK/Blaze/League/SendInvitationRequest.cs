@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.League
 {
-	[TdfStruct]
-	public struct SendInvitationRequest
-	{
+    [TdfStruct]
+    public struct SendInvitationRequest
+    {
+        [TdfMember("INVT")]
+        public long mInviteeId;
 
-		[TdfMember("INVT")]
-		public long mInviteeId;
+        [TdfMember("LGID")]
+        public uint mLeagueId;
 
-		[TdfMember("LGID")]
-		public uint mLeagueId;
-
-		[TdfMember("META")]
-		public byte[] mMetadata;
-
-	}
+        [TdfMember("META")]
+        public byte[] mMetadata;
+    }
 }

@@ -1,7 +1,6 @@
-using QuazalServer.RDVServices.DDL.Models;
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
-using QuazalServer.RDVServices.RMC;
+using QuazalServer.RDVServices.DDL.Models;
 
 namespace QuazalServer.RDVServices.GameServices.PS3UbisoftServices
 {

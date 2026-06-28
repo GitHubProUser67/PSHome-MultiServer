@@ -1,13 +1,11 @@
-﻿using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Security;
-using Org.BouncyCastle.Tls;
-using Org.BouncyCastle.Tls.Crypto;
-using Org.BouncyCastle.Tls.Crypto.Impl.BC;
-using System;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Security;
+using Org.BouncyCastle.Tls;
+using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
-namespace FixedSsl
+namespace CastleLibrary.FixedSsl
 {
     // From: https://github.com/Aim4kill/BlazeSDK/blob/master/ProtoFire/Tls/ProtoSSLCertificate.cs
     public class BCSSLCertificate
@@ -23,20 +21,27 @@ namespace FixedSsl
 
         public BCSSLCertificate(X509Certificate2 certificate)
         {
-            AsymmetricAlgorithm privateKey = GetPrivateKey(certificate);
-            if (privateKey == null)
-                throw new ArgumentException("[BCSSLCertificate] - Certificate does not contain a private key");
-
+            var privateKey = GetPrivateKey(certificate) ?? throw new ArgumentException(
+                    "[BCSSLCertificate] - Certificate does not contain a private key"
+                );
             try
             {
                 PrivateKey = DotNetUtilities.GetKeyPair(privateKey).Private;
             }
             catch (CryptographicException exception)
             {
-                throw new ArgumentException("[BCSSLCertificate] - Invalid certificate private key or private key is not exportable (missing X509KeyStorageFlags.Exportable flag).", exception);
+                throw new ArgumentException(
+                    "[BCSSLCertificate] - Invalid certificate private key or private key is not exportable (missing X509KeyStorageFlags.Exportable flag).",
+                    exception
+                );
             }
 
-            Certificate = new Certificate(new TlsCertificate[] { new BcTlsCertificate(new BcTlsCrypto(new SecureRandom()), DotNetUtilities.FromX509Certificate(certificate).CertificateStructure) });
+            Certificate = new Certificate([
+                new BcTlsCertificate(
+                    new BcTlsCrypto(new SecureRandom()),
+                    DotNetUtilities.FromX509Certificate(certificate).CertificateStructure
+                ),
+            ]);
         }
 
         public static AsymmetricAlgorithm GetPrivateKey(X509Certificate2 certificate)
@@ -47,27 +52,30 @@ namespace FixedSsl
             if (!certificate.HasPrivateKey)
                 return null;
 
-            RSA rsa = certificate.GetRSAPrivateKey();
+            var rsa = certificate.GetRSAPrivateKey();
             if (rsa != null)
                 return rsa;
 
-            DSA dsa = certificate.GetDSAPrivateKey();
+            var dsa = certificate.GetDSAPrivateKey();
             if (dsa != null)
                 return dsa;
 
-            ECDsa ecdsa = certificate.GetECDsaPrivateKey();
+            var ecdsa = certificate.GetECDsaPrivateKey();
             if (ecdsa != null)
                 return ecdsa;
 
-            ECDiffieHellman ecdh = certificate.GetECDiffieHellmanPrivateKey();
-            if (ecdh != null)
-                return ecdh;
-
-            throw new NotSupportedException("[BCSSLCertificate] - GetPrivateKey: Key algorithm not supported");
+            var ecdh = certificate.GetECDiffieHellmanPrivateKey();
+            return ecdh != null
+                ? (AsymmetricAlgorithm)ecdh
+                : throw new NotSupportedException(
+                    "[BCSSLCertificate] - GetPrivateKey: Key algorithm not supported"
+                );
         }
 
-        public static BCSSLCertificate FromX509Certificate2(X509Certificate2 certificate) => new BCSSLCertificate(certificate);
+        public static BCSSLCertificate FromX509Certificate2(X509Certificate2 certificate) =>
+            new(certificate);
 
-        public static implicit operator BCSSLCertificate(X509Certificate2 certificate) => FromX509Certificate2(certificate);
+        public static implicit operator BCSSLCertificate(X509Certificate2 certificate) =>
+            FromX509Certificate2(certificate);
     }
 }

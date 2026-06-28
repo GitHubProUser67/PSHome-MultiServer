@@ -1,6 +1,5 @@
-using CustomLogger;
-using System;
 using System.Text;
+using CustomLogger;
 
 namespace WebAPIService.GameServices.PSHOME.OHS
 {
@@ -8,10 +7,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
     {
         private static int Wrapped(int index, int max)
         {
-            if (index > max)
-                return 1 + index % (max + 1);
-            else
-                return index;
+            return index > max ? 1 + (index % (max + 1)) : index;
         }
 
         public static string Encrypt(string str, int offset, int game)
@@ -25,14 +21,14 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 return null;
             }
 
-            StringBuilder chars = new StringBuilder();
+            var chars = new StringBuilder();
 
             chars.Append((char)((int)Math.Floor((double)((offset - 1) / 95)) + 32));
-            chars.Append((char)((offset - 1) % 95 + 32));
+            chars.Append((char)(((offset - 1) % 95) + 32));
 
-            for (int i = 0; i < str.Length; i++)
+            for (var i = 0; i < str.Length; i++)
             {
-                int srcbyte = str[i] - 32;
+                var srcbyte = str[i] - 32;
                 if (srcbyte < 0 || srcbyte > 95)
                 {
                     LoggerAccessor.LogError("[OHS - Encrypt] - Invalid character in input string");
@@ -42,13 +38,17 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 int cipherbyte;
 
                 if (game == 1)
-                    cipherbyte = StaticKeys.version1cipher[Wrapped(i + 1 + offset, StaticKeys.version1cipher.Length) - 1];
+                    cipherbyte = StaticKeys.version1cipher[
+                        Wrapped(i + 1 + offset, StaticKeys.version1cipher.Length) - 1
+                    ];
                 else if (game == 2)
-                    cipherbyte = StaticKeys.version2cipher[Wrapped(i + 1 + offset, StaticKeys.version2cipher.Length) - 1];
+                    cipherbyte = StaticKeys.version2cipher[
+                        Wrapped(i + 1 + offset, StaticKeys.version2cipher.Length) - 1
+                    ];
                 else
                     return null;
 
-                chars.Append((char)((srcbyte + cipherbyte) % 95 + 32));
+                chars.Append((char)(((srcbyte + cipherbyte) % 95) + 32));
             }
 
             return chars.ToString();
@@ -59,13 +59,13 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             if (string.IsNullOrEmpty(str))
                 return null;
 
-            StringBuilder chars = new StringBuilder();
+            var chars = new StringBuilder();
 
-            int offset = (str[0] - 32) * 95 + (str[1] - 32) + 1;
+            var offset = ((str[0] - 32) * 95) + (str[1] - 32) + 1;
 
-            for (int i = 3; i <= str.Length; i++)
+            for (var i = 3; i <= str.Length; i++)
             {
-                int srcbyte = str[i - 1] - 32;
+                var srcbyte = str[i - 1] - 32;
                 if (srcbyte < 0 || srcbyte > 95)
                 {
                     LoggerAccessor.LogError("[OHS - Decrypt] - Invalid character in input string");
@@ -75,13 +75,17 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 int cipherbyte;
 
                 if (game == 1)
-                    cipherbyte = StaticKeys.version1cipher[Wrapped(i - 2 + offset, StaticKeys.version1cipher.Length) - 1];
+                    cipherbyte = StaticKeys.version1cipher[
+                        Wrapped(i - 2 + offset, StaticKeys.version1cipher.Length) - 1
+                    ];
                 else if (game == 2)
-                    cipherbyte = StaticKeys.version2cipher[Wrapped(i - 2 + offset, StaticKeys.version2cipher.Length) - 1];
+                    cipherbyte = StaticKeys.version2cipher[
+                        Wrapped(i - 2 + offset, StaticKeys.version2cipher.Length) - 1
+                    ];
                 else
                     return null;
 
-                chars.Append((char)(((srcbyte - cipherbyte) % 95 + 95) % 95 + 32));
+                chars.Append((char)(((((srcbyte - cipherbyte) % 95) + 95) % 95) + 32));
             }
 
             return chars.ToString();
@@ -89,27 +93,26 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
         private static ushort Hash16(string str, ushort histart, ushort lostart)
         {
-            ushort hi = histart, lo = lostart;
-            for (int i = 0; i < str.Length; i++)
+            ushort hi = histart,
+                lo = lostart;
+            for (var i = 0; i < str.Length; i++)
             {
-                byte b = (byte)str[i];
+                var b = (byte)str[i];
                 lo = (ushort)((b + lo) % 255);
                 hi = (ushort)((255 - b + hi) % 255);
 
-                ushort lolo = (ushort)(lo % 16);
-                ushort lohi = (ushort)(lo / 16);
-                ushort hilo = (ushort)(hi % 16);
-                ushort hihi = (ushort)(hi / 16);
+                var lolo = (ushort)(lo % 16);
+                var lohi = (ushort)(lo / 16);
+                var hilo = (ushort)(hi % 16);
+                var hihi = (ushort)(hi / 16);
 
-                lo = (ushort)(hilo * 16 + lolo);
-                hi = (ushort)(hihi * 16 + lohi);
+                lo = (ushort)((hilo * 16) + lolo);
+                hi = (ushort)((hihi * 16) + lohi);
 
-                ushort temp = lo;
-                lo = hi;
-                hi = temp;
+                (hi, lo) = (lo, hi);
             }
 
-            return (ushort)(hi * 255 + lo);
+            return (ushort)((hi * 255) + lo);
         }
 
         private static (ushort, ushort) Hash32(string str)
@@ -119,7 +122,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
         public static string Hash32Str(string str)
         {
-            (ushort hi, ushort lo) = Hash32(str);
+            (var hi, var lo) = Hash32(str);
             return string.Format("{0:X4}{1:X4}", hi, lo);
         }
 

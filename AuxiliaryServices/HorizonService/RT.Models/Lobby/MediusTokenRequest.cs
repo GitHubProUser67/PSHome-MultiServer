@@ -1,6 +1,5 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
@@ -16,22 +15,27 @@ namespace Horizon.RT.Models
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Token action to take: Add, update, clear.
         /// </summary>
         public MediusTokenActionType TokenAction;
+
         /// <summary>
         /// Token category.
         /// </summary>
         public MediusTokenCategoryType TokenCategory;
+
         /// <summary>
         /// Entity ID of the token.
         /// </summary>
         public uint EntityID;
+
         /// <summary>
         /// Token to replace.
         /// </summary>
         public string TokenToReplace;
+
         /// <summary>
         /// New token to replace with, or create.
         /// </summary>
@@ -39,10 +43,8 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            // 
             MessageID = reader.Read<MessageId>();
             reader.ReadBytes(3); // padding
             TokenAction = reader.Read<MediusTokenActionType>();
@@ -55,10 +57,8 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            // 
             writer.Write(MessageID ?? MessageId.Empty);
             writer.Write(new byte[3]);
             writer.Write(TokenAction);
@@ -71,13 +71,14 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"TokenAction: {TokenAction} " + 
-                $"TokenCategory: {TokenCategory}" +
-                $"EntityID: {EntityID} " +
-                $"TokenToReplace: {string.Join("", TokenToReplace)} " +
-                $"Token: {string.Join("", Token)}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"TokenAction: {TokenAction} "
+                + $"TokenCategory: {TokenCategory}"
+                + $"EntityID: {EntityID} "
+                + $"TokenToReplace: {string.Join("", TokenToReplace)} "
+                + $"Token: {string.Join("", Token)}";
         }
     }
 }

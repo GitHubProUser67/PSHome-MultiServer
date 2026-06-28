@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Runtime.CompilerServices;
 using Prometheus.SummaryImpl;
 
@@ -13,7 +13,7 @@ public sealed class Summary : Collector<Summary.Child>, ISummary
     /// Client library guidelines say that the summary should default to not measuring quantiles.
     /// https://prometheus.io/docs/instrumenting/writing_clientlibs/#summary
     /// </summary>
-    internal static readonly QuantileEpsilonPair[] DefObjectivesArray = new QuantileEpsilonPair[0];
+    internal static readonly QuantileEpsilonPair[] DefObjectivesArray = [];
 
     // Default duration for which observations stay relevant
     public static readonly TimeSpan DefMaxAge = TimeSpan.FromMinutes(10);
@@ -47,7 +47,7 @@ public sealed class Summary : Collector<Summary.Child>, ISummary
     // value of DefBufCap should suffice for most uses. If there is a need
     // to increase the value, a multiple of 500 is recommended (because that
     // is the internal buffer size of the underlying package
-    // "github.com/bmizerany/perks/quantile").      
+    // "github.com/bmizerany/perks/quantile").
     private readonly int _bufCap;
 
     private readonly double[] _sortedObjectives;
@@ -67,7 +67,8 @@ public sealed class Summary : Collector<Summary.Child>, ISummary
         IReadOnlyList<QuantileEpsilonPair>? objectives = null,
         TimeSpan? maxAge = null,
         int? ageBuckets = null,
-        int? bufCap = null)
+        int? bufCap = null
+    )
         : base(name, help, instanceLabelNames, staticLabels, suppressInitialValue, exemplarBehavior)
     {
         _objectives = objectives ?? DefObjectivesArray;
@@ -103,14 +104,22 @@ public sealed class Summary : Collector<Summary.Child>, ISummary
             for (var i = 0; i < _objectives.Count; i++)
             {
                 _sortedObjectives[i] = _objectives[i].Quantile;
-                _quantileLabels[i] = TextSerializer.EncodeValueAsCanonicalLabel(QuantileLabelName, _objectives[i].Quantile);
+                _quantileLabels[i] = TextSerializer.EncodeValueAsCanonicalLabel(
+                    QuantileLabelName,
+                    _objectives[i].Quantile
+                );
             }
 
             Array.Sort(_sortedObjectives);
         }
     }
 
-    private protected override Child NewChild(LabelSequence instanceLabels, LabelSequence flattenedLabels, bool publish, ExemplarBehavior exemplarBehavior)
+    private protected override Child NewChild(
+        LabelSequence instanceLabels,
+        LabelSequence flattenedLabels,
+        bool publish,
+        ExemplarBehavior exemplarBehavior
+    )
     {
         return new Child(this, instanceLabels, flattenedLabels, publish, exemplarBehavior);
     }
@@ -119,7 +128,13 @@ public sealed class Summary : Collector<Summary.Child>, ISummary
 
     public sealed class Child : ChildBase, ISummary
     {
-        internal Child(Summary parent, LabelSequence instanceLabels, LabelSequence flattenedLabels, bool publish, ExemplarBehavior exemplarBehavior)
+        internal Child(
+            Summary parent,
+            LabelSequence instanceLabels,
+            LabelSequence flattenedLabels,
+            bool publish,
+            ExemplarBehavior exemplarBehavior
+        )
             : base(parent, instanceLabels, flattenedLabels, publish, exemplarBehavior)
         {
             _parent = parent;
@@ -127,7 +142,8 @@ public sealed class Summary : Collector<Summary.Child>, ISummary
             _hotBuf = new SampleBuffer(_parent._bufCap);
             _coldBuf = new SampleBuffer(_parent._bufCap);
             _streamDuration = new TimeSpan(_parent._maxAge.Ticks / _parent._ageBuckets);
-            _headStreamExpUnixtimeSeconds = LowGranularityTimeSource.GetSecondsFromUnixEpoch() + _streamDuration.TotalSeconds;
+            _headStreamExpUnixtimeSeconds =
+                LowGranularityTimeSource.GetSecondsFromUnixEpoch() + _streamDuration.TotalSeconds;
             _hotBufExpUnixtimeSeconds = _headStreamExpUnixtimeSeconds;
 
             _streams = new QuantileStream[_parent._ageBuckets];
@@ -144,11 +160,11 @@ public sealed class Summary : Collector<Summary.Child>, ISummary
         private static readonly byte[] SumSuffix = "sum"u8.ToArray();
         private static readonly byte[] CountSuffix = "count"u8.ToArray();
 
-#if NET
         [AsyncMethodBuilder(typeof(PoolingAsyncValueTaskMethodBuilder))]
-#endif
-        private protected override async ValueTask CollectAndSerializeImplAsync(IMetricsSerializer serializer,
-            CancellationToken cancel)
+        private protected override async ValueTask CollectAndSerializeImplAsync(
+            IMetricsSerializer serializer,
+            CancellationToken cancel
+        )
         {
             // We output sum.
             // We output count.
@@ -159,7 +175,9 @@ public sealed class Summary : Collector<Summary.Child>, ISummary
             long count;
             double sum;
 
-            var values = ArrayPool<(double quantile, double value)>.Shared.Rent(_parent._objectives.Count);
+            var values = ArrayPool<(double quantile, double value)>.Shared.Rent(
+                _parent._objectives.Count
+            );
             var valuesIndex = 0;
 
             try
@@ -178,40 +196,50 @@ public sealed class Summary : Collector<Summary.Child>, ISummary
                         for (var i = 0; i < _parent._sortedObjectives.Length; i++)
                         {
                             var quantile = _parent._sortedObjectives[i];
-                            var value = _headStream.Count == 0 ? double.NaN : _headStream.Query(quantile);
+                            var value =
+                                _headStream.Count == 0 ? double.NaN : _headStream.Query(quantile);
 
                             values[valuesIndex++] = (quantile, value);
                         }
                     }
                 }
 
-                await serializer.WriteMetricPointAsync(
-                    Parent.NameBytes,
-                    FlattenedLabelsBytes,
-                    CanonicalLabel.Empty,
-                    sum,
-                    ObservedExemplar.Empty,
-                    SumSuffix,
-                    cancel);
-                await serializer.WriteMetricPointAsync(
-                    Parent.NameBytes,
-                    FlattenedLabelsBytes,
-                    CanonicalLabel.Empty,
-                    count,
-                    ObservedExemplar.Empty,
-                    CountSuffix,
-                    cancel);
+                await serializer
+                    .WriteMetricPointAsync(
+                        Parent.NameBytes,
+                        FlattenedLabelsBytes,
+                        CanonicalLabel.Empty,
+                        sum,
+                        ObservedExemplar.Empty,
+                        SumSuffix,
+                        cancel
+                    )
+                    .ConfigureAwait(false);
+                await serializer
+                    .WriteMetricPointAsync(
+                        Parent.NameBytes,
+                        FlattenedLabelsBytes,
+                        CanonicalLabel.Empty,
+                        count,
+                        ObservedExemplar.Empty,
+                        CountSuffix,
+                        cancel
+                    )
+                    .ConfigureAwait(false);
 
                 for (var i = 0; i < _parent._objectives.Count; i++)
                 {
-                    await serializer.WriteMetricPointAsync(
-                        Parent.NameBytes,
-                        FlattenedLabelsBytes,
-                        _parent._quantileLabels[i],
-                        values[i].value,
-                        ObservedExemplar.Empty,
-                        null,
-                        cancel);
+                    await serializer
+                        .WriteMetricPointAsync(
+                            Parent.NameBytes,
+                            FlattenedLabelsBytes,
+                            _parent._quantileLabels[i],
+                            values[i].value,
+                            ObservedExemplar.Empty,
+                            null,
+                            cancel
+                        )
+                        .ConfigureAwait(false);
                 }
             }
             finally
@@ -293,7 +321,7 @@ public sealed class Summary : Collector<Summary.Child>, ISummary
             }
         }
 
-        // FlushColdBuf needs mtx locked. 
+        // FlushColdBuf needs mtx locked.
         private void FlushColdBuf()
         {
             for (var bufIdx = 0; bufIdx < _coldBuf.Position; bufIdx++)
@@ -336,6 +364,7 @@ public sealed class Summary : Collector<Summary.Child>, ISummary
     }
 
     public void Publish() => Unlabelled.Publish();
+
     public void Unpublish() => Unlabelled.Unpublish();
 
     // count + sum + objectives

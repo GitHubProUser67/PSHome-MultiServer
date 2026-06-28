@@ -4,7 +4,12 @@ namespace BlazeCommon
 {
     public class BlazeProxyNotificationMethodInfo
     {
-        public BlazeProxyNotificationMethodInfo(IBlazeProxyComponent component, ushort notificationId, Type notificationType, MethodInfo notificationMethod)
+        public BlazeProxyNotificationMethodInfo(
+            IBlazeProxyComponent component,
+            ushort notificationId,
+            Type notificationType,
+            MethodInfo notificationMethod
+        )
         {
             Component = component;
             Id = notificationId;
@@ -21,8 +26,8 @@ namespace BlazeCommon
 
         public async Task<object> InvokeAsync(object notification)
         {
-            var task = (Task)Method.Invoke(Component, new object?[] { notification })!;
-            await task;
+            var task = (Task)Method.Invoke(Component, [notification])!;
+            await task.ConfigureAwait(false);
             return ((dynamic)task).Result;
         }
     }

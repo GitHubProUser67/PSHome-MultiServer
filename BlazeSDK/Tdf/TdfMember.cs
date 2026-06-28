@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Tdf.Extensions;
 
 namespace Tdf
@@ -18,26 +18,30 @@ namespace Tdf
             Tag = tagString;
 
             if (!IsASCII(tagString))
-                throw new Exception($"Tag can only consist of ASCII characters from 32 to 95 ({tagString})");
+                throw new Exception(
+                    $"Tag can only consist of ASCII characters from 32 to 95 ({tagString})"
+                );
 
             Tag = tagString.ToUpper();
 
-            int len = Tag.Length;
+            var len = Tag.Length;
 
             if (len > 4 || len <= 0)
                 throw new Exception($"Tag length can be [1;4] ({tagString})");
 
-            for (int i = 0; i < Tag.Length; i++)
+            for (var i = 0; i < Tag.Length; i++)
                 if (Tag[i] < ' ' || Tag[i] > '_') //' ' - 32 (0x20) //'_' - 95 (0x5F)
-                    throw new Exception($"Tag can only consist of ASCII characters from 32 to 95 ({tagString})");
+                    throw new Exception(
+                        $"Tag can only consist of ASCII characters from 32 to 95 ({tagString})"
+                    );
 
             if ((Tag[0] - 'A') > 25)
                 throw new Exception("Tag must begin with letter [A-Z] (tag: " + tagString + ")");
 
             //the part where we convert string to tag bytes
 
-            byte[] asciiBytes = Encoding.ASCII.GetBytes(Tag);
-            int result = (asciiBytes[0] - 32) << 26;
+            var asciiBytes = Encoding.ASCII.GetBytes(Tag);
+            var result = (asciiBytes[0] - 32) << 26;
             if (len > 1)
             {
                 result |= ((asciiBytes[1] - 32) & 0x3F) << 20;
@@ -45,43 +49,42 @@ namespace Tdf
                 {
                     result |= ((asciiBytes[2] - 32) & 0x3F) << 14;
                     if (len > 3)
-                        result |= (((asciiBytes[3] - 32) & 0x3F) << 8);
+                        result |= ((asciiBytes[3] - 32) & 0x3F) << 8;
                 }
             }
 
             Bytes = BitConverter.GetBytes(result);
-            if (BitConverter.IsLittleEndian)
+            if (EndianTools.EndianAwareConverter.isLittleEndianSystem)
                 Array.Reverse(Bytes);
 
             //use only the first 3 bytes
-            Bytes = Bytes.Take(TAG_LENGTH).ToArray();
+            Bytes = [.. Bytes.Take(TAG_LENGTH)];
         }
 
-        private TdfMember(byte[] tagBytes)
+        public TdfMember(byte[] tagBytes)
         {
-            if (tagBytes == null)
-                throw new ArgumentNullException(nameof(tagBytes));
+            ArgumentNullException.ThrowIfNull(tagBytes);
 
             if (tagBytes.Length != TAG_LENGTH)
                 throw new ArgumentException("Tag must be 3 bytes long", nameof(tagBytes));
 
             Bytes = tagBytes;
-            byte[] temp = new byte[sizeof(uint)];
+            var temp = new byte[sizeof(uint)];
 
             Buffer.BlockCopy(Bytes, 0, temp, 0, TAG_LENGTH);
 
-            if (BitConverter.IsLittleEndian)
+            if (EndianTools.EndianAwareConverter.isLittleEndianSystem)
             {
                 Array.Reverse(Bytes);
                 Array.Reverse(temp);
             }
 
-            uint num = BitConverter.ToUInt32(temp, 0);
+            var num = BitConverter.ToUInt32(temp, 0);
 
-            byte[] buf = new byte[4];
-            int len = 4;
+            var buf = new byte[4];
+            var len = 4;
 
-            uint val = num & 0x3F00;
+            var val = num & 0x3F00;
             if (val != 0)
                 buf[3] = (byte)(((num >> 8) & 0x3F) + 32);
             else
@@ -127,18 +130,16 @@ namespace Tdf
 
         public static TdfMember? FromStream(Stream stream)
         {
-            byte[] tag = new byte[TAG_LENGTH];
-            if (!stream.ReadAll(tag, 0, TAG_LENGTH))
-                return null;
-            return new TdfMember(tag);
+            var tag = new byte[TAG_LENGTH];
+            return !stream.ReadAll(tag, 0, TAG_LENGTH) ? null : new TdfMember(tag);
         }
 
         public static async Task<TdfMember?> FromStreamAsync(Stream stream)
         {
-            byte[] tag = new byte[TAG_LENGTH];
-            if (!await stream.ReadAllAsync(tag, 0, TAG_LENGTH).ConfigureAwait(false))
-                return null;
-            return new TdfMember(tag);
+            var tag = new byte[TAG_LENGTH];
+            return !await stream.ReadAllAsync(tag, 0, TAG_LENGTH).ConfigureAwait(false)
+                ? null
+                : new TdfMember(tag);
         }
 
         private static bool IsASCII(string str)
@@ -170,6 +171,5 @@ namespace Tdf
         {
             return Tag.GetHashCode();
         }
-
     }
 }

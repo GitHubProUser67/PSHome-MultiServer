@@ -1,62 +1,88 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.IO;
-using System;
-using System.Threading.Tasks;
-using System.Globalization;
-using MultiServerLibrary.HTTP;
-using MultiServerLibrary.Extension;
-using MultiServerLibrary.Upscalers;
-using WebAPIService.WebServices.AdobeFlash.binaries.JwPlayer;
 using ApacheNet.Models;
+using MultiServerLibrary.Extension;
+using MultiServerLibrary.Extension.NET;
+using MultiServerLibrary.HTTP;
+using MultiServerLibrary.Upscalers;
 
 namespace ApacheNet
 {
-    public class LocalFileStreamHelper
+    public partial class LocalFileStreamHelper
     {
         public const int FileLockAwaitMs = 500;
 
         public const long compressionSizeLimit = 800L * 1024 * 1024; // 800MB in bytes
 
-        public static async Task<bool> HandleRequest(ApacheContext ctx, string encoding, string absolutepath, string filePath
-            , string ContentType, string UserAgent, bool isVideoOrAudio, bool isHtmlCompatible, bool noCompressCacheControl)
+        public static async Task<bool> HandleRequest(
+            ApacheContext ctx,
+            string encoding,
+            string absolutepath,
+            string filePath,
+            string ContentType,
+            string UserAgent,
+            bool isVideoOrAudio,
+            bool isHtmlCompatible,
+            bool noCompressCacheControl
+        )
         {
-            bool isNoneMatchValid = false;
-            string ifModifiedSince = ctx.Request.RetrieveHeaderValue("If-Modified-Since");
-            bool isModifiedSinceValid = HTTPProcessor.CheckLastWriteTime(filePath, ifModifiedSince);
-            string NoneMatch = ctx.Request.RetrieveHeaderValue("If-None-Match");
-            string EtagMD5 = HTTPProcessor.ETag(filePath);
+            var ifModifiedSince = ctx.Request.RetrieveHeaderValue("If-Modified-Since");
+            var NoneMatch = ctx.Request.RetrieveHeaderValue("If-None-Match");
+            var EtagMD5 = HTTPProcessor.ETag(filePath);
 
             if (!string.IsNullOrEmpty(EtagMD5))
-            {
-                isNoneMatchValid = NoneMatch == EtagMD5;
                 ctx.Response.Headers.Add("ETag", EtagMD5);
-                ctx.Response.Headers.Add("Expires", DateTime.Now.AddMinutes(30).ToString("r"));
-            }
 
-            if ((isNoneMatchValid && isModifiedSinceValid) ||
-                (isNoneMatchValid && string.IsNullOrEmpty(ifModifiedSince)) ||
-                (isModifiedSinceValid && string.IsNullOrEmpty(NoneMatch)))
+            if (
+                !string.IsNullOrEmpty(NoneMatch)
+                    ? NoneMatch == EtagMD5
+                    : !string.IsNullOrEmpty(ifModifiedSince)
+                        && HTTPProcessor.CheckLastWriteTime(filePath, ifModifiedSince)
+            )
             {
                 ctx.Response.ContentType = "text/plain";
                 ctx.StatusCode = HttpStatusCode.NotModified;
                 return await ctx.SendImmediate().ConfigureAwait(false);
             }
 
-            bool compressionSettingEnabled = ApacheNetServerConfiguration.EnableHTTPCompression;
-            string extension = Path.GetExtension(filePath);
             Stream? st;
+            var compressionSettingEnabled = ApacheNetServerConfiguration.EnableHTTPCompression;
+            var extension = Path.GetExtension(filePath);
 
-            if (ApacheNetServerConfiguration.EnableImageUpscale && ((!string.IsNullOrEmpty(ContentType) && ContentType.StartsWith("image/")) || (!string.IsNullOrEmpty(extension) && extension.Equals(".dds", StringComparison.InvariantCultureIgnoreCase))))
+            if (
+                ApacheNetServerConfiguration.EnableImageUpscale
+                && (
+                    (!string.IsNullOrEmpty(ContentType) && ContentType.StartsWith("image/"))
+                    || (
+                        !string.IsNullOrEmpty(extension)
+                        && extension.Equals(".dds", StringComparison.InvariantCultureIgnoreCase)
+                    )
+                )
+            )
             {
                 ctx.Response.ContentType = ContentType;
 
                 try
                 {
-                    st = ImageOptimizer.OptimizeImage(ApacheNetServerConfiguration.MediaConvertersFolder, Path.Combine(ApacheNetServerConfiguration.MediaConvertersFolder, "ImageMagick"), filePath, extension, ImageOptimizer.defaultOptimizerParams);
+                    st = ImageOptimizer.OptimizeImage(
+                        ApacheNetServerConfiguration.MediaConvertersFolder,
+                        Path.Combine(
+                            ApacheNetServerConfiguration.MediaConvertersFolder,
+                            "ImageMagick"
+                        ),
+                        filePath,
+                        extension,
+                        ImageOptimizer.defaultOptimizerParams
+                    );
 
-                    if (compressionSettingEnabled && !noCompressCacheControl && !string.IsNullOrEmpty(encoding) && st.Length <= compressionSizeLimit)
+                    if (
+                        compressionSettingEnabled
+                        && !noCompressCacheControl
+                        && !string.IsNullOrEmpty(encoding)
+                        && st.Length <= compressionSizeLimit
+                    )
                     {
                         if (encoding.Contains("zstd"))
                         {
@@ -98,41 +124,64 @@ namespace ApacheNet
 
                             ctx.Response.Headers.Add("Accept-Ranges", "bytes");
 
-                            if (compressionSettingEnabled && !noCompressCacheControl && !string.IsNullOrEmpty(encoding) && new FileInfo(filePath).Length <= compressionSizeLimit)
+                            if (
+                                compressionSettingEnabled
+                                && !noCompressCacheControl
+                                && !string.IsNullOrEmpty(encoding)
+                                && new FileInfo(filePath).Length <= compressionSizeLimit
+                            )
                             {
                                 if (encoding.Contains("gzip"))
                                 {
                                     ctx.Response.Headers.Add("Content-Encoding", "gzip");
-                                    st = HTTPProcessor.GzipCompressStream(await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
+                                    st = HTTPProcessor.GzipCompressStream(
+                                        await FileSystemUtils
+                                            .TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs)
+                                            .ConfigureAwait(false)
+                                    );
                                 }
                                 else if (encoding.Contains("deflate"))
                                 {
                                     ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                    st = HTTPProcessor.DeflateStream(await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
+                                    st = HTTPProcessor.DeflateStream(
+                                        await FileSystemUtils
+                                            .TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs)
+                                            .ConfigureAwait(false)
+                                    );
                                 }
                                 else
-                                    st = await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false);
+                                    st = await FileSystemUtils
+                                        .TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs)
+                                        .ConfigureAwait(false);
                             }
                             else
-                                st = await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false);
+                                st = await FileSystemUtils
+                                    .TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs)
+                                    .ConfigureAwait(false);
 
                             goto sendImmediate;
                         default:
 #if DEBUG
-                            bool debug = true;
+                            var debug = true;
 #else
                             bool debug = false;
 #endif
                             // The HDK documentation states that only Flash player 7 is supported on the "in-game" browser mode (silk_npflashplayer.sprx). Normal browser uses Flash Player 9 (silk_npflashplayer9.sprx).
-                            bool flashPlayer7 = true;
+                            var flashPlayer7 = true;
                             if (ctx.Request.HeaderExists("x-ps3-browser"))
                             {
-                                var match = Regex.Match(ctx.Request.RetrieveHeaderValue("x-ps3-browser"), @"system=(\d+\.\d+)");
+                                var match = MyRegex()
+                                    .Match(ctx.Request.RetrieveHeaderValue("x-ps3-browser"));
                                 if (match.Success)
-                                    flashPlayer7 = double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) < 2.50;
+                                    flashPlayer7 =
+                                        double.Parse(
+                                            match.Groups[1].Value,
+                                            CultureInfo.InvariantCulture
+                                        ) < 2.50;
                             }
-                            bool isSupported = HTTPProcessor.IsPS3SupportedContentType(ContentType);
-                            htmlContent = $@"
+                            var isSupported = HTTPProcessor.IsPS3SupportedContentType(ContentType);
+                            htmlContent =
+                                $@"
                                 <!DOCTYPE html>
                                 <html>
                                 <head>
@@ -174,32 +223,21 @@ namespace ApacheNet
                                     {(debug ? "alert(\"DEBUG: Media player loaded.\");" : string.Empty)}
                                   }}" : @$"function printTrace() {{
                                     {(debug ? "alert(\"DEBUG: Media player loaded.\");" : string.Empty)}
-                                  }}
-                                  {jwPlayer53Js.Content}")}
+                                  }}")}
                                 </script>
                                 <body>
                                   <h1>Media Player</h1>
                                   <a class='button' href='{absolutepath}?PS3=play' target='_blank'>{(isSupported ? "▶ Download Video" : "Backup Video to external storage")}</a>
                                   <p>Media {(isSupported ? string.Empty : "not ")}compatible with the PlayStation 3 System</p>
-                                  {(flashPlayer7 ? $@"{(IsJWPlayerCompatibleFormat(ContentType) ? $@"<br />
+                                  {$@"{(IsJWPlayerCompatibleFormat(ContentType) ? $@"<br />
                                     <object
                                         type=""application/x-shockwave-flash""
-                                        data=""/jwplayer/player43.swf""
+                                        data=""/jwplayer/player{(flashPlayer7 ? "43" : "53")}.swf""
                                         width=""860""
                                         height=""580"">
                                         <param name=""allowfullscreen"" value=""true"" />
                                         <param name=""flashvars"" value=""controlbar=bottom&file={absolutepath}?PS3=play"" />
-                                    </object>" : string.Empty)}" : $@"{(IsJWPlayerCompatibleFormat(ContentType) ? $@"<br />
-                                    <div id=""player"">Loading player...</div>
-                                    <script type=""text/javascript"">
-                                      jwplayer(""player"").setup({{
-                                        file: ""{absolutepath}?PS3=play"",
-                                        width: 860,
-                                        height: 580,
-                                        controlbar: ""bottom"",
-                                        allowfullscreen: ""true""
-                                      }});
-                                    </script>" : string.Empty)}")}
+                                    </object>" : string.Empty)}"}
                                 </body>
                                 </html>";
                             break;
@@ -207,7 +245,8 @@ namespace ApacheNet
                 }
                 else // TODO, support more older browsers?
                 {
-                    htmlContent = @"
+                    htmlContent =
+                        @"
                             <!DOCTYPE html>
                             <html>
                             <head>
@@ -235,7 +274,9 @@ namespace ApacheNet
                             <body>
                               <div id=""video-container"">
                                 <video controls>
-                                  <source src=""" + absolutepath + $@""" type=""{ContentType}"">
+                                  <source src="""
+                        + absolutepath
+                        + $@""" type=""{ContentType}"">
                                 </video>
                               </div>
                             </body>
@@ -244,9 +285,13 @@ namespace ApacheNet
 
                 ctx.Response.ContentType = "text/html; charset=UTF-8";
 
-                MemoryStream htmlMs = new MemoryStream(Encoding.UTF8.GetBytes(htmlContent));
+                var htmlMs = new MemoryStream(Encoding.UTF8.GetBytes(htmlContent));
 
-                if (compressionSettingEnabled && !noCompressCacheControl && !string.IsNullOrEmpty(encoding))
+                if (
+                    compressionSettingEnabled
+                    && !noCompressCacheControl
+                    && !string.IsNullOrEmpty(encoding)
+                )
                 {
                     if (encoding.Contains("zstd"))
                     {
@@ -278,35 +323,60 @@ namespace ApacheNet
             {
                 ctx.Response.ContentType = ContentType;
 
-                if (compressionSettingEnabled && !noCompressCacheControl && !string.IsNullOrEmpty(encoding) && new FileInfo(filePath).Length <= compressionSizeLimit)
+                if (
+                    compressionSettingEnabled
+                    && !noCompressCacheControl
+                    && !string.IsNullOrEmpty(encoding)
+                    && new FileInfo(filePath).Length <= compressionSizeLimit
+                )
                 {
                     if (encoding.Contains("zstd"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "zstd");
-                        st = HTTPProcessor.ZstdCompressStream(await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
+                        st = HTTPProcessor.ZstdCompressStream(
+                            await FileSystemUtils
+                                .TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs)
+                                .ConfigureAwait(false)
+                        );
                     }
                     else if (encoding.Contains("br"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "br");
-                        st = HTTPProcessor.BrotliCompressStream(await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
+                        st = HTTPProcessor.BrotliCompressStream(
+                            await FileSystemUtils
+                                .TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs)
+                                .ConfigureAwait(false)
+                        );
                     }
                     else if (encoding.Contains("gzip"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "gzip");
-                        st = HTTPProcessor.GzipCompressStream(await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
+                        st = HTTPProcessor.GzipCompressStream(
+                            await FileSystemUtils
+                                .TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs)
+                                .ConfigureAwait(false)
+                        );
                     }
                     else if (encoding.Contains("deflate"))
                     {
                         ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                        st = HTTPProcessor.DeflateStream(await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false));
+                        st = HTTPProcessor.DeflateStream(
+                            await FileSystemUtils
+                                .TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs)
+                                .ConfigureAwait(false)
+                        );
                     }
                     else
-                        st = await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false);
+                        st = await FileSystemUtils
+                            .TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs)
+                            .ConfigureAwait(false);
                 }
                 else
-                    st = await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false);
+                    st = await FileSystemUtils
+                        .TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs)
+                        .ConfigureAwait(false);
             }
-sendImmediate:
+            sendImmediate:
             if (st == null)
             {
                 ctx.Response.Headers.Clear();
@@ -315,28 +385,46 @@ sendImmediate:
                 return await ctx.SendImmediate().ConfigureAwait(false);
             }
 
-            bool chunked = ctx.AcceptChunked;
+            var chunked = ApacheContext.AcceptChunked;
+
+            // Hotfix PSHome videos not being displayed in HTTP using chunck encoding (game bug).
+            if (
+                !string.IsNullOrEmpty(ctx.Request.Useragent)
+                && ctx.Request.Useragent.Contains("PSHome")
+                && isVideoOrAudio
+            )
+                chunked = false;
+
+            ctx.StatusCode = HttpStatusCode.OK;
+            ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
+            ctx.Response.Headers.Add(
+                "Last-Modified",
+                File.GetLastWriteTime(filePath).ToString("r")
+            );
+            ctx.Response.Headers.Add("Expires", DateTime.Now.AddMinutes(30).ToString("r"));
 
             using (st)
-            {
-                // Hotfix PSHome videos not being displayed in HTTP using chunck encoding (game bug).
-                if (!string.IsNullOrEmpty(ctx.Request.Useragent) && ctx.Request.Useragent.Contains("CellOS") && isVideoOrAudio)
-                    chunked = false;
-
-                ctx.StatusCode = HttpStatusCode.OK;
-                ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                ctx.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(filePath).ToString("r"));
                 return await ctx.SendImmediate(st, chunked).ConfigureAwait(false);
-            }
         }
 
-        public static async Task<bool> HandlePartialRangeRequest(ApacheContext ctx, string filePath, string ContentType,
-            bool noCompressCacheControl, string boundary = "multiserver_separator")
+        public static async Task<bool> HandlePartialRangeRequest(
+            ApacheContext ctx,
+            string filePath,
+            string ContentType,
+            bool noCompressCacheControl,
+            string boundary = "multiserver_separator"
+        )
         {
             // This method directly communicate with the wire to handle, normally, imposible transfers.
             // If a part of the code sounds weird to you, it's normal... So does curl tests...
 
-            if (HTTPProcessor.CheckLastWriteTime(filePath, ctx.Request.RetrieveHeaderValue("If-Unmodified-Since"), true))
+            if (
+                HTTPProcessor.CheckLastWriteTime(
+                    filePath,
+                    ctx.Request.RetrieveHeaderValue("If-Unmodified-Since"),
+                    true
+                )
+            )
             {
                 ctx.StatusCode = HttpStatusCode.PreconditionFailed;
                 return await ctx.SendImmediate().ConfigureAwait(false);
@@ -345,30 +433,36 @@ sendImmediate:
             {
                 try
                 {
-                    FileStream fs = await FileSystemUtils.TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs).ConfigureAwait(false);
+                    var fs = await FileSystemUtils
+                        .TryOpen(filePath, FileShare.ReadWrite, FileLockAwaitMs)
+                        .ConfigureAwait(false);
 
                     if (fs != null)
                     {
                         const int rangebuffersize = 32768;
 
-                        string acceptencoding = ctx.Request.RetrieveHeaderValue("Accept-Encoding");
+                        var acceptencoding = ctx.Request.RetrieveHeaderValue("Accept-Encoding");
 
                         using (fs)
                         {
                             long startByte = -1;
                             long endByte = -1;
-                            long filesize = fs.Length;
-                            string HeaderString = ctx.Request.RetrieveHeaderValue("Range").Replace("bytes=", string.Empty);
+                            var filesize = fs.Length;
+                            var HeaderString = ctx
+                                .Request.RetrieveHeaderValue("Range")
+                                .Replace("bytes=", string.Empty);
                             if (HeaderString.Contains(','))
                             {
-                                byte[] multipartSeparator = Encoding.UTF8.GetBytes($"--{boundary}--");
-                                byte[] Separator = new byte[] { 0x0D, 0x0A };
+                                var multipartSeparator = Encoding.UTF8.GetBytes($"--{boundary}--");
+                                var Separator = "\r\n"u8.ToArray();
 
                                 using HugeMemoryStream ms = new();
                                 // Split the ranges based on the comma (',') separator
-                                foreach (string RangeSelect in HeaderString.Split(','))
+                                foreach (var RangeSelect in HeaderString.Split(','))
                                 {
-                                    byte[] contentTypeBytes = Encoding.UTF8.GetBytes($"Content-Type: {ContentType}");
+                                    var contentTypeBytes = Encoding.UTF8.GetBytes(
+                                        $"Content-Type: {ContentType}"
+                                    );
                                     ms.Write(Separator, 0, Separator.Length);
                                     ms.Write(multipartSeparator, 0, multipartSeparator.Length - 2);
                                     ms.Write(Separator, 0, Separator.Length);
@@ -377,11 +471,15 @@ sendImmediate:
                                     fs.Position = 0;
                                     startByte = -1;
                                     endByte = -1;
-                                    string[] range = RangeSelect.Split('-');
-                                    if (range[0].Trim().Length > 0) _ = long.TryParse(range[0], out startByte);
-                                    if (range[1].Trim().Length > 0) _ = long.TryParse(range[1], out endByte);
-                                    if (endByte == -1) endByte = filesize;
-                                    else if (endByte != filesize) endByte++;
+                                    var range = RangeSelect.Split('-');
+                                    if (range[0].Trim().Length > 0)
+                                        _ = long.TryParse(range[0], out startByte);
+                                    if (range[1].Trim().Length > 0)
+                                        _ = long.TryParse(range[1], out endByte);
+                                    if (endByte == -1)
+                                        endByte = filesize;
+                                    else if (endByte != filesize)
+                                        endByte++;
                                     if (startByte == -1)
                                     {
                                         startByte = filesize - endByte;
@@ -392,46 +490,72 @@ sendImmediate:
                                     if (startByte >= filesize && endByte == filesize) // Curl test showed this behaviour.
                                     {
                                         byte[] payloadBytes;
-                                        const string payload = "<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\r\n" +
-                                                "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\r\n" +
-                                                "         \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\r\n" +
-                                                "<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\r\n" +
-                                                "        <head>\r\n" +
-                                                "                <title>416 - Requested Range Not Satisfiable</title>\r\n" +
-                                                "        </head>\r\n" +
-                                                "        <body>\r\n" +
-                                                "                <h1>416 - Requested Range Not Satisfiable</h1>\r\n" +
-                                                "        </body>\r\n" +
-                                                "</html>";
+                                        const string payload =
+                                            "<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\r\n"
+                                            + "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\r\n"
+                                            + "         \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\r\n"
+                                            + "<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\r\n"
+                                            + "        <head>\r\n"
+                                            + "                <title>416 - Requested Range Not Satisfiable</title>\r\n"
+                                            + "        </head>\r\n"
+                                            + "        <body>\r\n"
+                                            + "                <h1>416 - Requested Range Not Satisfiable</h1>\r\n"
+                                            + "        </body>\r\n"
+                                            + "</html>";
 
                                         ms.Flush();
                                         ms.Close();
                                         fs.Flush();
                                         fs.Close();
-                                        ctx.Response.Headers.Add("Content-Range", string.Format("bytes */{0}", filesize));
-                                        ctx.StatusCode = HttpStatusCode.RequestedRangeNotSatisfiable;
+                                        ctx.Response.Headers.Add(
+                                            "Content-Range",
+                                            string.Format("bytes */{0}", filesize)
+                                        );
+                                        ctx.StatusCode =
+                                            HttpStatusCode.RequestedRangeNotSatisfiable;
                                         ctx.Response.ContentType = "text/html; charset=UTF-8";
-                                        if (ApacheNetServerConfiguration.EnableHTTPCompression && !noCompressCacheControl && !string.IsNullOrEmpty(acceptencoding))
+                                        if (
+                                            ApacheNetServerConfiguration.EnableHTTPCompression
+                                            && !noCompressCacheControl
+                                            && !string.IsNullOrEmpty(acceptencoding)
+                                        )
                                         {
                                             if (acceptencoding.Contains("zstd"))
                                             {
-                                                ctx.Response.Headers.Add("Content-Encoding", "zstd");
-                                                payloadBytes = HTTPProcessor.CompressZstd(Encoding.UTF8.GetBytes(payload));
+                                                ctx.Response.Headers.Add(
+                                                    "Content-Encoding",
+                                                    "zstd"
+                                                );
+                                                payloadBytes = HTTPProcessor.CompressZstd(
+                                                    Encoding.UTF8.GetBytes(payload)
+                                                );
                                             }
                                             else if (acceptencoding.Contains("br"))
                                             {
                                                 ctx.Response.Headers.Add("Content-Encoding", "br");
-                                                payloadBytes = HTTPProcessor.CompressBrotli(Encoding.UTF8.GetBytes(payload));
+                                                payloadBytes = HTTPProcessor.CompressBrotli(
+                                                    Encoding.UTF8.GetBytes(payload)
+                                                );
                                             }
                                             else if (acceptencoding.Contains("gzip"))
                                             {
-                                                ctx.Response.Headers.Add("Content-Encoding", "gzip");
-                                                payloadBytes = HTTPProcessor.CompressGzip(Encoding.UTF8.GetBytes(payload));
+                                                ctx.Response.Headers.Add(
+                                                    "Content-Encoding",
+                                                    "gzip"
+                                                );
+                                                payloadBytes = HTTPProcessor.CompressGzip(
+                                                    Encoding.UTF8.GetBytes(payload)
+                                                );
                                             }
                                             else if (acceptencoding.Contains("deflate"))
                                             {
-                                                ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                                payloadBytes = HTTPProcessor.Deflate(Encoding.UTF8.GetBytes(payload));
+                                                ctx.Response.Headers.Add(
+                                                    "Content-Encoding",
+                                                    "deflate"
+                                                );
+                                                payloadBytes = HTTPProcessor.Deflate(
+                                                    Encoding.UTF8.GetBytes(payload)
+                                                );
                                             }
                                             else
                                                 payloadBytes = Encoding.UTF8.GetBytes(payload);
@@ -439,35 +563,70 @@ sendImmediate:
                                         else
                                             payloadBytes = Encoding.UTF8.GetBytes(payload);
 
-                                        return await ctx.SendImmediate(payloadBytes, ctx.AcceptChunked).ConfigureAwait(false);
+                                        return await ctx.SendImmediate(
+                                                payloadBytes,
+                                                ApacheContext.AcceptChunked
+                                            )
+                                            .ConfigureAwait(false);
                                     }
-                                    else if ((startByte >= endByte) || startByte < 0 || endByte <= 0) // Curl test showed this behaviour.
+                                    else if (
+                                        (startByte >= endByte)
+                                        || startByte < 0
+                                        || endByte <= 0
+                                    ) // Curl test showed this behaviour.
                                     {
                                         ms.Flush();
                                         ms.Close();
                                         fs.Position = 0;
 
-                                        ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                        ctx.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(filePath).ToString("r"));
+                                        ctx.Response.Headers.Add(
+                                            "Date",
+                                            DateTime.Now.ToString("r")
+                                        );
+                                        ctx.Response.Headers.Add(
+                                            "Last-Modified",
+                                            File.GetLastWriteTime(filePath).ToString("r")
+                                        );
                                         ctx.Response.Headers.Add("Accept-Ranges", "bytes");
                                         ctx.StatusCode = HttpStatusCode.OK;
                                         ctx.Response.ContentType = ContentType;
-                                        return await ctx.SendImmediate(fs, ctx.AcceptChunked).ConfigureAwait(false);
+                                        return await ctx.SendImmediate(
+                                                fs,
+                                                ApacheContext.AcceptChunked
+                                            )
+                                            .ConfigureAwait(false);
                                     }
                                     else
                                     {
-                                        int bytesRead = 0;
-                                        long TotalBytes = endByte - startByte;
+                                        var bytesRead = 0;
+                                        var TotalBytes = endByte - startByte;
                                         long totalBytesCopied = 0;
-                                        byte[] buffer = new byte[rangebuffersize];
-                                        byte[] contentRangeBytes = Encoding.UTF8.GetBytes("Content-Range: " + string.Format("bytes {0}-{1}/{2}", startByte, endByte - 1, filesize));
+                                        var buffer = new byte[rangebuffersize];
+                                        var contentRangeBytes = Encoding.UTF8.GetBytes(
+                                            "Content-Range: "
+                                                + string.Format(
+                                                    "bytes {0}-{1}/{2}",
+                                                    startByte,
+                                                    endByte - 1,
+                                                    filesize
+                                                )
+                                        );
                                         fs.Position = startByte;
                                         ms.Write(contentRangeBytes, 0, contentRangeBytes.Length);
                                         ms.Write(Separator, 0, Separator.Length);
                                         ms.Write(Separator, 0, Separator.Length);
-                                        while (totalBytesCopied < TotalBytes && (bytesRead = await fs.ReadAsync(buffer.AsMemory(0, rangebuffersize)).ConfigureAwait(false)) > 0)
+                                        while (
+                                            totalBytesCopied < TotalBytes
+                                            && (
+                                                bytesRead = await fs.ReadAsync(
+                                                        buffer.AsMemory(0, rangebuffersize)
+                                                    )
+                                                    .ConfigureAwait(false)
+                                            ) > 0
+                                        )
                                         {
-                                            int bytesToWrite = (int)Math.Min(TotalBytes - totalBytesCopied, bytesRead);
+                                            var bytesToWrite = (int)
+                                                Math.Min(TotalBytes - totalBytesCopied, bytesRead);
                                             ms.Write(buffer, 0, bytesToWrite);
                                             totalBytesCopied += bytesToWrite;
                                         }
@@ -477,25 +636,34 @@ sendImmediate:
                                 ms.Write(multipartSeparator, 0, multipartSeparator.Length);
                                 ms.Write(Separator, 0, Separator.Length);
                                 ms.Position = 0;
-                                ctx.Response.ContentType = $"multipart/byteranges; boundary={boundary}";
+                                ctx.Response.ContentType =
+                                    $"multipart/byteranges; boundary={boundary}";
                                 ctx.Response.Headers.Add("Accept-Ranges", "bytes");
                                 ctx.Response.Headers.Add("Content-Length", ms.Length.ToString());
                                 ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                ctx.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(filePath).ToString("r"));
+                                ctx.Response.Headers.Add(
+                                    "Last-Modified",
+                                    File.GetLastWriteTime(filePath).ToString("r")
+                                );
                                 ctx.StatusCode = HttpStatusCode.PartialContent;
 
                                 fs.Flush();
                                 fs.Close();
 
-                                return await ctx.SendImmediate(ms, ctx.AcceptChunked).ConfigureAwait(false);
+                                return await ctx.SendImmediate(ms, ApacheContext.AcceptChunked)
+                                    .ConfigureAwait(false);
                             }
                             else
                             {
-                                string[] range = HeaderString.Split('-');
-                                if (range[0].Trim().Length > 0) _ = long.TryParse(range[0], out startByte);
-                                if (range[1].Trim().Length > 0) _ = long.TryParse(range[1], out endByte);
-                                if (endByte == -1) endByte = filesize;
-                                else if (endByte != filesize) endByte++;
+                                var range = HeaderString.Split('-');
+                                if (range[0].Trim().Length > 0)
+                                    _ = long.TryParse(range[0], out startByte);
+                                if (range[1].Trim().Length > 0)
+                                    _ = long.TryParse(range[1], out endByte);
+                                if (endByte == -1)
+                                    endByte = filesize;
+                                else if (endByte != filesize)
+                                    endByte++;
                                 if (startByte == -1)
                                 {
                                     startByte = filesize - endByte;
@@ -507,44 +675,60 @@ sendImmediate:
                             if (startByte >= filesize && endByte == filesize) // Curl test showed this behaviour.
                             {
                                 byte[] payloadBytes;
-                                const string payload = "<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\r\n" +
-                                                    "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\r\n" +
-                                                    "         \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\r\n" +
-                                                    "<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\r\n" +
-                                                    "        <head>\r\n" +
-                                                    "                <title>416 - Requested Range Not Satisfiable</title>\r\n" +
-                                                    "        </head>\r\n" +
-                                                    "        <body>\r\n" +
-                                                    "                <h1>416 - Requested Range Not Satisfiable</h1>\r\n" +
-                                                    "        </body>\r\n" +
-                                                    "</html>";
+                                const string payload =
+                                    "<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\r\n"
+                                    + "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\r\n"
+                                    + "         \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\r\n"
+                                    + "<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\r\n"
+                                    + "        <head>\r\n"
+                                    + "                <title>416 - Requested Range Not Satisfiable</title>\r\n"
+                                    + "        </head>\r\n"
+                                    + "        <body>\r\n"
+                                    + "                <h1>416 - Requested Range Not Satisfiable</h1>\r\n"
+                                    + "        </body>\r\n"
+                                    + "</html>";
 
                                 fs.Flush();
                                 fs.Close();
-                                ctx.Response.Headers.Add("Content-Range", string.Format("bytes */{0}", filesize));
+                                ctx.Response.Headers.Add(
+                                    "Content-Range",
+                                    string.Format("bytes */{0}", filesize)
+                                );
                                 ctx.StatusCode = HttpStatusCode.RequestedRangeNotSatisfiable;
                                 ctx.Response.ContentType = "text/html; charset=UTF-8";
-                                if (ApacheNetServerConfiguration.EnableHTTPCompression && !noCompressCacheControl && !string.IsNullOrEmpty(acceptencoding))
+                                if (
+                                    ApacheNetServerConfiguration.EnableHTTPCompression
+                                    && !noCompressCacheControl
+                                    && !string.IsNullOrEmpty(acceptencoding)
+                                )
                                 {
                                     if (acceptencoding.Contains("zstd"))
                                     {
                                         ctx.Response.Headers.Add("Content-Encoding", "zstd");
-                                        payloadBytes = HTTPProcessor.CompressZstd(Encoding.UTF8.GetBytes(payload));
+                                        payloadBytes = HTTPProcessor.CompressZstd(
+                                            Encoding.UTF8.GetBytes(payload)
+                                        );
                                     }
                                     else if (acceptencoding.Contains("br"))
                                     {
                                         ctx.Response.Headers.Add("Content-Encoding", "br");
-                                        payloadBytes = HTTPProcessor.CompressBrotli(Encoding.UTF8.GetBytes(payload));
+                                        payloadBytes = HTTPProcessor.CompressBrotli(
+                                            Encoding.UTF8.GetBytes(payload)
+                                        );
                                     }
                                     else if (acceptencoding.Contains("gzip"))
                                     {
                                         ctx.Response.Headers.Add("Content-Encoding", "gzip");
-                                        payloadBytes = HTTPProcessor.CompressGzip(Encoding.UTF8.GetBytes(payload));
+                                        payloadBytes = HTTPProcessor.CompressGzip(
+                                            Encoding.UTF8.GetBytes(payload)
+                                        );
                                     }
                                     else if (acceptencoding.Contains("deflate"))
                                     {
                                         ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                        payloadBytes = HTTPProcessor.Deflate(Encoding.UTF8.GetBytes(payload));
+                                        payloadBytes = HTTPProcessor.Deflate(
+                                            Encoding.UTF8.GetBytes(payload)
+                                        );
                                     }
                                     else
                                         payloadBytes = Encoding.UTF8.GetBytes(payload);
@@ -552,40 +736,61 @@ sendImmediate:
                                 else
                                     payloadBytes = Encoding.UTF8.GetBytes(payload);
 
-                                return await ctx.SendImmediate(payloadBytes, ctx.AcceptChunked).ConfigureAwait(false);
+                                return await ctx.SendImmediate(
+                                        payloadBytes,
+                                        ApacheContext.AcceptChunked
+                                    )
+                                    .ConfigureAwait(false);
                             }
                             else if ((startByte >= endByte) || startByte < 0 || endByte <= 0) // Curl test showed this behaviour.
                             {
                                 fs.Position = 0;
 
                                 ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                ctx.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(filePath).ToString("r"));
+                                ctx.Response.Headers.Add(
+                                    "Last-Modified",
+                                    File.GetLastWriteTime(filePath).ToString("r")
+                                );
                                 ctx.Response.Headers.Add("Accept-Ranges", "bytes");
                                 ctx.StatusCode = HttpStatusCode.OK;
                                 ctx.Response.ContentType = ContentType;
 
-                                return await ctx.SendImmediate(fs, ctx.AcceptChunked).ConfigureAwait(false);
+                                return await ctx.SendImmediate(fs, ApacheContext.AcceptChunked)
+                                    .ConfigureAwait(false);
                             }
                             else
                             {
-                                ctx.Response.ChunkedTransfer = ctx.AcceptChunked;
+                                ctx.Response.ChunkedTransfer = ApacheContext.AcceptChunked;
 
-                                long TotalBytes = endByte - startByte;
+                                var TotalBytes = endByte - startByte;
                                 fs.Position = startByte;
                                 ctx.Response.ContentType = ContentType;
                                 ctx.Response.Headers.Add("Accept-Ranges", "bytes");
-                                ctx.Response.Headers.Add("Content-Range", string.Format("bytes {0}-{1}/{2}", startByte, endByte - 1, filesize));
+                                ctx.Response.Headers.Add(
+                                    "Content-Range",
+                                    string.Format(
+                                        "bytes {0}-{1}/{2}",
+                                        startByte,
+                                        endByte - 1,
+                                        filesize
+                                    )
+                                );
                                 ctx.Response.Headers.Add("Content-Length", TotalBytes.ToString());
                                 ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                ctx.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(filePath).ToString("r"));
+                                ctx.Response.Headers.Add(
+                                    "Last-Modified",
+                                    File.GetLastWriteTime(filePath).ToString("r")
+                                );
                                 ctx.Response.StatusCode = (int)HttpStatusCode.PartialContent;
 
                                 if (ctx.Response.ChunkedTransfer)
                                 {
                                     if (TotalBytes == 0)
-                                        return await ctx.Response.SendChunk(Array.Empty<byte>(), true).ConfigureAwait(false);
+                                        return await ctx
+                                            .Response.SendChunk([], true)
+                                            .ConfigureAwait(false);
 
-                                    int bufferSize = ApacheNetServerConfiguration.BufferSize;
+                                    var bufferSize = ApacheNetServerConfiguration.BufferSize;
 
                                     bool isNotlastChunk;
                                     byte[] buffer;
@@ -594,24 +799,31 @@ sendImmediate:
                                     {
                                         isNotlastChunk = TotalBytes > bufferSize;
                                         buffer = new byte[isNotlastChunk ? bufferSize : TotalBytes];
-                                        int n = await fs.ReadAsync(buffer).ConfigureAwait(false);
+                                        var n = await fs.ReadAsync(buffer).ConfigureAwait(false);
 
                                         if (isNotlastChunk)
-                                            await ctx.Response.SendChunk(buffer, false).ConfigureAwait(false);
+                                            await ctx
+                                                .Response.SendChunk(buffer, false)
+                                                .ConfigureAwait(false);
                                         else
-                                            return await ctx.Response.SendChunk(buffer, true).ConfigureAwait(false);
+                                            return await ctx
+                                                .Response.SendChunk(buffer, true)
+                                                .ConfigureAwait(false);
 
                                         TotalBytes -= n;
                                     }
                                 }
                                 else
-                                    return await ctx.Response.Send(TotalBytes, fs).ConfigureAwait(false);
+                                    return await ctx
+                                        .Response.Send(TotalBytes, fs)
+                                        .ConfigureAwait(false);
                             }
                         }
                     }
                 }
                 catch
                 {
+                    // Not Important
                 }
 
                 ctx.StatusCode = HttpStatusCode.InternalServerError;
@@ -625,19 +837,21 @@ sendImmediate:
             contentType = contentType.ToLowerInvariant();
 
             // List of compatible MIME types for JW Player Flash mode
-            foreach (var type in new[]
-            {
-                "video/x-flv",           // FLV video
-                "video/mp4",             // MP4 video (H.264 + AAC)
-                "video/mpeg",            // Sometimes for .3gp or MPEG-4
-                "audio/mpeg",            // MP3 audio
-                "audio/mp3",             // MP3 audio (sometimes used)
-                "audio/aac",             // AAC audio
-                "audio/x-aac",           // AAC audio
-                "video/3gpp",            // 3GP video (if H.264 + AAC)
-                "video/quicktime",       // MOV (H.264 + AAC)
-                "video/x-m4v"            // Apple M4V (MP4 variant)
-            })
+            foreach (
+                var type in new[]
+                {
+                    "video/x-flv", // FLV video
+                    "video/mp4", // MP4 video (H.264 + AAC)
+                    "video/mpeg", // Sometimes for .3gp or MPEG-4
+                    "audio/mpeg", // MP3 audio
+                    "audio/mp3", // MP3 audio (sometimes used)
+                    "audio/aac", // AAC audio
+                    "audio/x-aac", // AAC audio
+                    "video/3gpp", // 3GP video (if H.264 + AAC)
+                    "video/quicktime", // MOV (H.264 + AAC)
+                    "video/x-m4v", // Apple M4V (MP4 variant)
+                }
+            )
             {
                 if (contentType == type)
                     return true;
@@ -645,5 +859,8 @@ sendImmediate:
 
             return false;
         }
+
+        [GeneratedRegex(@"system=(\d+\.\d+)")]
+        private static partial Regex MyRegex();
     }
 }

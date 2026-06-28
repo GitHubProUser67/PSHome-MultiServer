@@ -2,30 +2,28 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Redirector
 {
-	[TdfStruct]
-	public struct ServerEndpointInfo
-	{
+    [TdfStruct]
+    public struct ServerEndpointInfo
+    {
+        [TdfMember("ADRS")]
+        public List<ServerAddressInfo> mAddresses;
 
-		[TdfMember("ADRS")]
-		public List<ServerAddressInfo> mAddresses;
+        [TdfMember("CHAN")]
+        public string mChannel;
 
-		[TdfMember("CHAN")]
-		public string mChannel;
+        [TdfMember("CCON")]
+        public uint mCurrentConnections;
 
-		[TdfMember("CCON")]
-		public uint mCurrentConnections;
+        [TdfMember("DEC")]
+        public string mDecoder;
 
-		[TdfMember("DEC")]
-		public string mDecoder;
+        [TdfMember("ENC")]
+        public string mEncoder;
 
-		[TdfMember("ENC")]
-		public string mEncoder;
+        [TdfMember("MCON")]
+        public uint mMaxConnections;
 
-		[TdfMember("MCON")]
-		public uint mMaxConnections;
-
-		[TdfMember("PROT")]
-		public string mProtocol;
-
-	}
+        [TdfMember("PROT")]
+        public string mProtocol;
+    }
 }

@@ -1,20 +1,17 @@
-﻿using System;
-
-namespace MultiSpyService.GSEncoding
+﻿namespace MultiSpyService.GSEncoding
 {
     public class EncodingHelper
     {
         public static byte[] GenerateValidationKey()
         {
-            long timestamp = (DateTime.UtcNow - new DateTime(1970, 1, 1)).Ticks / 10000L;
-            byte[] key = new byte[8];
-            for (int i = 0; i < 8; i++)
+            var timestamp = (DateTime.UtcNow - new DateTime(1970, 1, 1)).Ticks / 10000L;
+            var key = new byte[8];
+            for (var i = 0; i < 8; i++)
             {
                 do
                 {
-                    timestamp = (timestamp * 214013L + 2531011L) & 0x7FL;
-                }
-                while (timestamp < 33L || timestamp >= 127L);
+                    timestamp = ((timestamp * 214013L) + 2531011L) & 0x7FL;
+                } while (timestamp < 33L || timestamp >= 127L);
                 key[i] = (byte)timestamp;
             }
             return key;
@@ -22,21 +19,32 @@ namespace MultiSpyService.GSEncoding
 
         public static byte[] Decode(byte[] key, byte[] validate, byte[] data, long size)
         {
-            if (key != null && validate != null && data != null && size >= 0L)
-            {
-                return DecodeInternal(key, validate, data, size, null);
-            }
-            return null;
+            return key != null && validate != null && data != null && size >= 0L
+                ? DecodeInternal(key, validate, data, size, null)
+                : null;
         }
 
-        private static byte[] DecodeInternal(byte[] state, byte[] key, byte[] data, long dataSize, EncodingData context)
+        private static byte[] DecodeInternal(
+            byte[] state,
+            byte[] key,
+            byte[] data,
+            long dataSize,
+            EncodingData context
+        )
         {
-            byte[] encodingKey = new byte[261];
-            byte[] currentKey = (context != null) ? context.EncodingKey : encodingKey;
+            var encodingKey = new byte[261];
+            var currentKey = (context != null) ? context.EncodingKey : encodingKey;
 
             if (context == null || context.Start == 0L)
             {
-                data = PrepareDataForDecoding(ref currentKey, ref state, key, ref data, ref dataSize, ref context);
+                data = PrepareDataForDecoding(
+                    ref currentKey,
+                    ref state,
+                    key,
+                    ref data,
+                    ref dataSize,
+                    ref context
+                );
                 if (data == null)
                     return null;
             }
@@ -49,14 +57,36 @@ namespace MultiSpyService.GSEncoding
 
             if (context.Start != 0L)
             {
-                byte[] remainingData = new byte[dataSize - context.Offset];
-                Array.ConstrainedCopy(data, (int)context.Offset, remainingData, 0, (int)(dataSize - context.Offset));
-                long processed = ProcessDecoding(ref currentKey, ref remainingData, dataSize - context.Offset);
-                Array.ConstrainedCopy(remainingData, 0, data, (int)context.Offset, (int)(dataSize - context.Offset));
+                var remainingData = new byte[dataSize - context.Offset];
+                Array.ConstrainedCopy(
+                    data,
+                    (int)context.Offset,
+                    remainingData,
+                    0,
+                    (int)(dataSize - context.Offset)
+                );
+                var processed = ProcessDecoding(
+                    ref currentKey,
+                    ref remainingData,
+                    dataSize - context.Offset
+                );
+                Array.ConstrainedCopy(
+                    remainingData,
+                    0,
+                    data,
+                    (int)context.Offset,
+                    (int)(dataSize - context.Offset)
+                );
                 context.Offset += processed;
 
-                byte[] finalData = new byte[dataSize - context.Start];
-                Array.ConstrainedCopy(data, (int)context.Start, finalData, 0, (int)(dataSize - context.Start));
+                var finalData = new byte[dataSize - context.Start];
+                Array.ConstrainedCopy(
+                    data,
+                    (int)context.Start,
+                    finalData,
+                    0,
+                    (int)(dataSize - context.Start)
+                );
                 return finalData;
             }
 
@@ -65,19 +95,21 @@ namespace MultiSpyService.GSEncoding
 
         public static byte[] Encode(byte[] key, byte[] validate, byte[] data, long size)
         {
-            byte[] combinedData = new byte[size + 23L];
-            byte[] header = new byte[23];
+            var combinedData = new byte[size + 23L];
+            var header = new byte[23];
 
             if (key != null && validate != null && data != null && size >= 0L)
             {
-                int keyLength = key.Length;
-                int validateLength = validate.Length;
-                int seed = new Random().Next();
+                var keyLength = key.Length;
+                var validateLength = validate.Length;
+                var seed = new Random().Next();
 
-                for (int i = 0; i < header.Length; i++)
+                for (var i = 0; i < header.Length; i++)
                 {
-                    seed = seed * 214013 + 2531011;
-                    header[i] = (byte)((seed ^ key[i % keyLength] ^ validate[i % validateLength]) % 256);
+                    seed = (seed * 214013) + 2531011;
+                    header[i] = (byte)(
+                        (seed ^ key[i % keyLength] ^ validate[i % validateLength]) % 256
+                    );
                 }
 
                 header[0] = 235;
@@ -85,18 +117,18 @@ namespace MultiSpyService.GSEncoding
                 header[2] = 0;
                 header[8] = 228;
 
-                for (long i = size - 1L; i >= 0L; i--)
+                for (var i = size - 1L; i >= 0L; i--)
                 {
                     combinedData[header.Length + i] = data[i];
                 }
 
                 Array.Copy(header, combinedData, header.Length);
                 size += header.Length;
-                long combinedSize = size;
+                var combinedSize = size;
 
-                byte[] encodedData = EncodeInternal(key, validate, combinedData, combinedSize, null);
+                var encodedData = EncodeInternal(key, validate, combinedData, combinedSize, null);
 
-                byte[] finalResult = new byte[encodedData.Length + header.Length];
+                var finalResult = new byte[encodedData.Length + header.Length];
                 Array.Copy(header, 0, finalResult, 0, header.Length);
                 Array.Copy(encodedData, 0, finalResult, header.Length, encodedData.Length);
 
@@ -106,14 +138,27 @@ namespace MultiSpyService.GSEncoding
             return null;
         }
 
-        private static byte[] EncodeInternal(byte[] state, byte[] key, byte[] data, long dataSize, EncodingData context)
+        private static byte[] EncodeInternal(
+            byte[] state,
+            byte[] key,
+            byte[] data,
+            long dataSize,
+            EncodingData context
+        )
         {
-            byte[] encodingKey = new byte[261];
-            byte[] currentKey = (context != null) ? context.EncodingKey : encodingKey;
+            var encodingKey = new byte[261];
+            var currentKey = (context != null) ? context.EncodingKey : encodingKey;
 
             if (context == null || context.Start == 0L)
             {
-                data = PrepareDataForDecoding(ref currentKey, ref state, key, ref data, ref dataSize, ref context);
+                data = PrepareDataForDecoding(
+                    ref currentKey,
+                    ref state,
+                    key,
+                    ref data,
+                    ref dataSize,
+                    ref context
+                );
                 if (data == null)
                     return null;
             }
@@ -126,24 +171,53 @@ namespace MultiSpyService.GSEncoding
 
             if (context.Start != 0L)
             {
-                byte[] remainingData = new byte[dataSize - context.Offset];
-                Array.ConstrainedCopy(data, (int)context.Offset, remainingData, 0, (int)(dataSize - context.Offset));
-                long processed = ProcessEncoding(ref currentKey, ref remainingData, dataSize - context.Offset);
-                Array.ConstrainedCopy(remainingData, 0, data, (int)context.Offset, (int)(dataSize - context.Offset));
+                var remainingData = new byte[dataSize - context.Offset];
+                Array.ConstrainedCopy(
+                    data,
+                    (int)context.Offset,
+                    remainingData,
+                    0,
+                    (int)(dataSize - context.Offset)
+                );
+                var processed = ProcessEncoding(
+                    ref currentKey,
+                    ref remainingData,
+                    dataSize - context.Offset
+                );
+                Array.ConstrainedCopy(
+                    remainingData,
+                    0,
+                    data,
+                    (int)context.Offset,
+                    (int)(dataSize - context.Offset)
+                );
                 context.Offset += processed;
 
-                byte[] finalData = new byte[dataSize - context.Start];
-                Array.ConstrainedCopy(data, (int)context.Start, finalData, 0, (int)(dataSize - context.Start));
+                var finalData = new byte[dataSize - context.Start];
+                Array.ConstrainedCopy(
+                    data,
+                    (int)context.Start,
+                    finalData,
+                    0,
+                    (int)(dataSize - context.Start)
+                );
                 return finalData;
             }
 
             return null;
         }
 
-        private static byte[] PrepareDataForDecoding(ref byte[] encodingKey, ref byte[] state, byte[] key, ref byte[] data, ref long dataSize, ref EncodingData context)
+        private static byte[] PrepareDataForDecoding(
+            ref byte[] encodingKey,
+            ref byte[] state,
+            byte[] key,
+            ref byte[] data,
+            ref long dataSize,
+            ref EncodingData context
+        )
         {
             long headerSize = (data[0] ^ 0xEC) + 2;
-            byte[] keyBytes = new byte[8];
+            var keyBytes = new byte[8];
 
             if (dataSize < headerSize)
                 return null;
@@ -153,7 +227,7 @@ namespace MultiSpyService.GSEncoding
                 return null;
 
             Array.Copy(data, keyBytes, 8);
-            byte[] payload = new byte[dataSize - headerSize];
+            var payload = new byte[dataSize - headerSize];
             Array.ConstrainedCopy(data, (int)headerSize, payload, 0, (int)(dataSize - headerSize));
 
             MixKeys(ref state, ref key, ref keyBytes, payload, keyDataSize);
@@ -163,7 +237,7 @@ namespace MultiSpyService.GSEncoding
 
             if (context == null)
             {
-                byte[] trimmedData = new byte[dataSize];
+                var trimmedData = new byte[dataSize];
                 Array.ConstrainedCopy(data, (int)headerSize, trimmedData, 0, (int)dataSize);
                 return trimmedData;
             }
@@ -176,7 +250,13 @@ namespace MultiSpyService.GSEncoding
             return data;
         }
 
-        private static void MixKeys(ref byte[] state, ref byte[] key, ref byte[] keyBytes, byte[] payload, long keyDataSize)
+        private static void MixKeys(
+            ref byte[] state,
+            ref byte[] key,
+            ref byte[] keyBytes,
+            byte[] payload,
+            long keyDataSize
+        )
         {
             long validateSize = key.Length;
             for (long i = 0; i < keyDataSize; i++)
@@ -184,14 +264,14 @@ namespace MultiSpyService.GSEncoding
                 keyBytes[(key[i % validateSize] * i) & 7L] ^= (byte)(keyBytes[i & 7L] ^ payload[i]);
             }
 
-            long keyBytesSize = 8L;
+            var keyBytesSize = 8L;
             InitializeState(ref state, ref keyBytes, ref keyBytesSize);
         }
 
         private static void InitializeState(ref byte[] state, ref byte[] keyBytes, ref long keySize)
         {
-            long pos = 0L;
-            long offset = 0L;
+            var pos = 0L;
+            var offset = 0L;
 
             if (keySize >= 1L)
             {
@@ -200,9 +280,16 @@ namespace MultiSpyService.GSEncoding
                     state[i] = (byte)i;
                 }
 
-                for (long i = 255L; i >= 0L; i--)
+                for (var i = 255L; i >= 0L; i--)
                 {
-                    byte swapIndex = (byte)NextKeyIndex(state, i, keyBytes, keySize, ref pos, ref offset);
+                    var swapIndex = (byte)NextKeyIndex(
+                        state,
+                        i,
+                        keyBytes,
+                        keySize,
+                        ref pos,
+                        ref offset
+                    );
                     (state[i], state[swapIndex]) = (state[swapIndex], state[i]);
                 }
 
@@ -214,11 +301,19 @@ namespace MultiSpyService.GSEncoding
             }
         }
 
-        private static long NextKeyIndex(byte[] state, long index, byte[] keyBytes, long keySize, ref long pos, ref long offset)
+        private static long NextKeyIndex(
+            byte[] state,
+            long index,
+            byte[] keyBytes,
+            long keySize,
+            ref long pos,
+            ref long offset
+        )
         {
-            long count = 0L;
-            long mask = 1L;
-            if (index == 0L) return 0L;
+            var count = 0L;
+            var mask = 1L;
+            if (index == 0L)
+                return 0L;
             if (index > 1L)
             {
                 while (mask < index)
@@ -237,8 +332,7 @@ namespace MultiSpyService.GSEncoding
                 }
                 count++;
                 result = (count <= 11L) ? (pos & mask) : (pos & (mask % index));
-            }
-            while (result > index);
+            } while (result > index);
 
             return result;
         }

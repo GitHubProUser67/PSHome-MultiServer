@@ -1,42 +1,48 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections;
-using System.Linq;
+﻿using System.Collections;
 using System.Reflection;
 using System.Text;
 
-namespace DNS.Protocol.Utils {
-    public class ObjectStringifier {
-        public static ObjectStringifier New(object obj) {
+namespace DNSLibrary.Utils
+{
+    public class ObjectStringifier
+    {
+        public static ObjectStringifier New(object obj)
+        {
             return new ObjectStringifier(obj);
         }
 
-        public static string Stringify(object obj) {
+        public static string Stringify(object obj)
+        {
             return StringifyObject(obj);
         }
 
-        private static string StringifyObject(object obj) {
-            if (obj is string v) {
-                return v;
-            } else if (obj is IDictionary dictionary) {
-                return StringifyDictionary(dictionary);
-            } else if (obj is IEnumerable enumerable) {
-                return StringifyList(enumerable);
-            } else {
-                return obj == null ? "null" : obj.ToString();
-            }
+        private static string StringifyObject(object obj)
+        {
+            return obj is string v ? v
+                : obj is IDictionary dictionary ? StringifyDictionary(dictionary)
+                : obj is IEnumerable enumerable ? StringifyList(enumerable)
+                : obj == null ? "null"
+                : obj.ToString();
         }
 
-        private static string StringifyList(IEnumerable enumerable) {
-            return "[" + string.Join(", ", enumerable.Cast<object>().Select(o => StringifyObject(o)).ToArray()) + "]";
+        private static string StringifyList(IEnumerable enumerable)
+        {
+            return "["
+                + string.Join(
+                    ", ",
+                    enumerable.Cast<object>().Select(o => StringifyObject(o)).ToArray()
+                )
+                + "]";
         }
 
-        private static string StringifyDictionary(IDictionary dict) {
-            StringBuilder result = new StringBuilder();
+        private static string StringifyDictionary(IDictionary dict)
+        {
+            var result = new StringBuilder();
 
             result.Append('{');
 
-            foreach (DictionaryEntry pair in dict) {
+            foreach (DictionaryEntry pair in dict)
+            {
                 result
                     .Append(pair.Key)
                     .Append('=')
@@ -44,35 +50,38 @@ namespace DNS.Protocol.Utils {
                     .Append(", ");
             }
 
-            if (result.Length > 1) {
+            if (result.Length > 1)
                 result.Remove(result.Length - 2, 2);
-            }
 
             return result.Append('}').ToString();
         }
 
-        private object obj;
-        private Dictionary<string, string> pairs;
+        private readonly object obj;
+        private readonly Dictionary<string, string> pairs;
+        private static readonly object[] index = Array.Empty<object>();
 
-        public ObjectStringifier(object obj) {
+        public ObjectStringifier(object obj)
+        {
             this.obj = obj;
-            this.pairs = new Dictionary<string, string>();
+            pairs = new Dictionary<string, string>();
         }
 
-        public ObjectStringifier Remove(params string[] names) {
-            foreach (string name in names) {
+        public ObjectStringifier Remove(params string[] names)
+        {
+            foreach (var name in names)
                 pairs.Remove(name);
-            }
 
             return this;
         }
 
-        public ObjectStringifier Add(params string[] names) {
-            Type type = obj.GetType();
+        public ObjectStringifier Add(params string[] names)
+        {
+            var type = obj.GetType();
 
-            foreach (string name in names) {
-                PropertyInfo property = type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
-                object value = property.GetValue(obj, new object[] { });
+            foreach (var name in names)
+            {
+                var property = type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+                var value = property.GetValue(obj, index);
 
                 pairs.Add(name, StringifyObject(value));
             }
@@ -80,24 +89,28 @@ namespace DNS.Protocol.Utils {
             return this;
         }
 
-        public ObjectStringifier Add(string name, object value) {
+        public ObjectStringifier Add(string name, object value)
+        {
             pairs.Add(name, StringifyObject(value));
             return this;
         }
 
-        public ObjectStringifier AddAll() {
-            PropertyInfo[] properties = obj.GetType().GetProperties(
-                BindingFlags.Public | BindingFlags.Instance);
+        public ObjectStringifier AddAll()
+        {
+            var properties = obj.GetType()
+                .GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
-            foreach (PropertyInfo property in properties) {
-                object value = property.GetValue(obj, new object[] { });
+            foreach (var property in properties)
+            {
+                var value = property.GetValue(obj, index);
                 pairs.Add(property.Name, StringifyObject(value));
             }
 
             return this;
         }
 
-        public override string ToString() {
+        public override string ToString()
+        {
             return StringifyDictionary(pairs);
         }
     }

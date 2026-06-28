@@ -1,13 +1,14 @@
-using CustomLogger;
-using FixedSsl;
-using MultiSocks.Aries.Messages;
-using MultiSocks.Aries.Model;
-using Org.BouncyCastle.Crypto;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using CastleLibrary.FixedSsl;
+using CustomLogger;
+using EndianTools;
+using MultiSocks.Aries.Components;
+using MultiSocks.Aries.Model;
+using Org.BouncyCastle.Crypto;
 
 namespace MultiSocks.Aries
 {
@@ -37,14 +38,24 @@ namespace MultiSocks.Aries
         private string CommandName = "null";
         private uint ErrorCode = 0;
 
-        private (AsymmetricKeyParameter, Org.BouncyCastle.Tls.Certificate, X509Certificate2) SecureKeyCert;
+        private (
+            AsymmetricKeyParameter,
+            Org.BouncyCastle.Tls.Certificate,
+            X509Certificate2
+        ) SecureKeyCert;
 
         public long PingSendTick;
         public int Ping;
 
         private const int MAX_SIZE = 1024 * 1024 * 2;
 
-        public AriesClient(AbstractAriesServer context, TcpClient client, bool secure, string CN, bool WeakChainSignedRSAKey)
+        public AriesClient(
+            AbstractAriesServer context,
+            TcpClient client,
+            bool secure,
+            string CN,
+            bool WeakChainSignedRSAKey
+        )
         {
             this.secure = secure;
             Context = context;
@@ -54,10 +65,13 @@ namespace MultiSocks.Aries
 
             if (secure && context.SSLCache != null)
             {
-                if (CN == "fesl.ea.com")
-                    SecureKeyCert = context.SSLCache.GetVulnerableFeslEaCert();
-                else
-                    SecureKeyCert = context.SSLCache.GetVulnerableLegacyCustomEaCert(CN, WeakChainSignedRSAKey);
+                SecureKeyCert =
+                    CN == "fesl.ea.com"
+                        ? context.SSLCache.GetVulnerableFeslEaCert()
+                        : context.SSLCache.GetVulnerableLegacyCustomEaCert(
+                            CN,
+                            WeakChainSignedRSAKey
+                        );
             }
 
             RecvThread = new Thread(RunLoop);
@@ -69,7 +83,15 @@ namespace MultiSocks.Aries
             try
             {
 #pragma warning disable
-                ClientStream = await SslSocket.AuthenticateAsServerAsync(SslProtocols.Ssl3, tcpClient.Client, SecureKeyCert.Item3, secure, true).ConfigureAwait(false);
+                ClientStream = await SslSocket
+                    .AuthenticateAsServerAsync(
+                        SslProtocols.Ssl3,
+                        tcpClient.Client,
+                        SecureKeyCert.Item3,
+                        secure,
+                        true
+                    )
+                    .ConfigureAwait(false);
 #pragma warning restore
             }
             catch (Exception e)
@@ -77,24 +99,28 @@ namespace MultiSocks.Aries
                 ClientStream?.Dispose();
                 tcpClient.Dispose();
                 Disconnected = true;
-                LoggerAccessor.LogError($"[AriesClient] - Failed to accept connection, User {ADDR} forced disconnected. (Exception:{e})");
+                LoggerAccessor.LogError(
+                    $"[AriesClient] - Failed to accept connection, User {ADDR} forced disconnected. (Exception:{e})"
+                );
                 Context.RemoveClient(this);
 
                 return;
             }
 
-            bool InHeader = false;
-            int len, TempDatOff = 0;
-            int ExpectedBytes = -1;
+            var InHeader = false;
+            int len,
+                off,
+                TempDatOff = 0;
+            var ExpectedBytes = -1;
             byte[]? TempData = null;
-            byte[] bytes = new byte[65536];
+            var bytes = new byte[65536];
 
             try
             {
                 // Do not use the async equivalent of ClientStream.Read or issues will happen.
                 while ((len = ClientStream.Read(bytes)) != 0)
                 {
-                    int off = 0;
+                    off = 0;
                     while (len > 0)
                     {
                         // got some data
@@ -109,7 +135,7 @@ namespace MultiSocks.Aries
 
                         if (TempData != null)
                         {
-                            int copyLen = Math.Min(len, TempData.Length - TempDatOff);
+                            var copyLen = Math.Min(len, TempData.Length - TempDatOff);
                             Array.Copy(bytes, off, TempData, TempDatOff, copyLen);
                             off += copyLen;
                             TempDatOff += copyLen;
@@ -121,14 +147,22 @@ namespace MultiSocks.Aries
                                 {
                                     // header complete.
                                     InHeader = false;
-                                    int size = TempData[11] | TempData[10] << 8 | TempData[9] << 16 | TempData[8] << 24;
+                                    var size = EndianAwareConverter.ToInt32(
+                                        TempData,
+                                        Endianness.BigEndian,
+                                        8
+                                    );
                                     if (size > MAX_SIZE)
                                     {
                                         tcpClient.Close(); // either something terrible happened or they're trying to mess with us
                                         break;
                                     }
                                     CommandName = Encoding.ASCII.GetString(TempData)[..4];
-                                    ErrorCode = (uint)(TempData[7] | TempData[6] << 8 | TempData[5] << 16 | TempData[4] << 24);
+                                    ErrorCode = EndianAwareConverter.ToUInt32(
+                                        TempData,
+                                        Endianness.BigEndian,
+                                        4
+                                    );
 
                                     TempData = new byte[size - 12];
                                     TempDatOff = 0;
@@ -162,9 +196,10 @@ namespace MultiSocks.Aries
         private void GotMessage(string name, uint errorCode, byte[] data)
         {
             Task.Run(() =>
-            {
-                Context.HandleMessage(name, errorCode, data, this);
-            }).Wait();
+                {
+                    Context.HandleMessage(name, errorCode, data, this);
+                })
+                .Wait();
         }
 
         private Task DequeueAsyncMessage()
@@ -174,7 +209,7 @@ namespace MultiSocks.Aries
 
             try
             {
-                while (AsyncMessageQueue.TryDequeue(out AbstractMessage? msg))
+                while (AsyncMessageQueue.TryDequeue(out var msg))
                 {
                     // Some games not like when async msgs are sent too close to each others (MOH).
                     Thread.Sleep(100);
@@ -231,7 +266,7 @@ namespace MultiSocks.Aries
 
             try
             {
-                byte[] data = msg.GetData();
+                var data = msg.GetData();
                 ClientStream?.Write(data, 0, data.Length);
             }
             catch

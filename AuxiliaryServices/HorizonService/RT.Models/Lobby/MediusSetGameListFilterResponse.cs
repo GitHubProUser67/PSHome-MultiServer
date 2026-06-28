@@ -1,10 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.SetGameListFilterResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.SetGameListFilterResponse
+    )]
     public class MediusSetGameListFilterResponse : BaseLobbyExtMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.SetGameListFilterResponse;
@@ -40,10 +42,11 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"FilterID: {FilterID}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"FilterID: {FilterID}";
         }
     }
 }

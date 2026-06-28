@@ -1,16 +1,16 @@
 using CustomLogger;
-using QuazalServer.RDVServices.DDL.Models;
 using QuazalServer.QNetZ.Attributes;
+using QuazalServer.QNetZ.Connection;
 using QuazalServer.QNetZ.DDL;
 using QuazalServer.QNetZ.Interfaces;
-using QuazalServer.QNetZ.Connection;
+using QuazalServer.RDVServices.DDL.Models;
 
 namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 {
     /// <summary>
-	/// Secure connection service protocol
-	/// </summary>
-	[RMCService((ushort)RMCProtocolId.SecureConnectionService)]
+    /// Secure connection service protocol
+    /// </summary>
+    [RMCService((ushort)RMCProtocolId.SecureConnectionService)]
     public class SecureConnectionService : RMCServiceBase
     {
         [RMCMethod(1)]
@@ -21,7 +21,7 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                 // change address
                 StationURL rdvConnectionUrl = new(vecMyURLs.Last().ToString())
                 {
-                    Address = Context.Client.Endpoint.Address.ToString()
+                    Address = Context.Client.Endpoint.Address.ToString(),
                 };
                 rdvConnectionUrl["type"] = 3;
 
@@ -29,7 +29,7 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                 {
                     pidConnectionID = Context.Client.PlayerInfo?.RVCID ?? 0,
                     retval = (int)ErrorCode.Core_NoError,
-                    urlPublic = rdvConnectionUrl
+                    urlPublic = rdvConnectionUrl,
                 };
 
                 return Result(result);
@@ -51,7 +51,10 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         }
 
         [RMCMethod(4)]
-        public RMCResult RegisterEx(ICollection<StationURL> vecMyURLs, AnyData<UbiAuthenticationLoginCustomData> hCustomData)
+        public RMCResult RegisterEx(
+            ICollection<StationURL> vecMyURLs,
+            AnyData<UbiAuthenticationLoginCustomData> hCustomData
+        )
         {
             if (hCustomData.data != null)
             {
@@ -64,13 +67,16 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                 {
                     pidConnectionID = Context.Client.PlayerInfo.RVCID,
                     retval = (int)ErrorCode.Core_NoError,
-                    urlPublic = rdvConnectionUrl
+                    urlPublic = rdvConnectionUrl,
                 };
 
                 return Result(result);
             }
             else
-                LoggerAccessor.LogError(1, $"[RMC Secure] Error: Unknown Custom Data class {hCustomData.className}");
+                LoggerAccessor.LogError(
+                    1,
+                    $"[RMC Secure] Error: Unknown Custom Data class {hCustomData.className}"
+                );
 
             return Error((int)ErrorCode.RendezVous_ClassNotFound);
         }

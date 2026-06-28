@@ -1,16 +1,14 @@
-using CustomLogger;
-using Horizon.RT.Common;
-using Horizon.RT.Models;
-using Horizon.LIBRARY.Database.Models;
 using System.Collections.Concurrent;
 using System.Net;
-using IChannel = DotNetty.Transport.Channels.IChannel;
+using CustomLogger;
 using Horizon.HTTPSERVICE;
-using Horizon.SERVER;
-using Horizon.SERVER.Medius;
+using Horizon.LIBRARY.Database.Models;
 using Horizon.MUM.Models;
+using Horizon.RT.Common;
+using Horizon.RT.Models;
 using MultiServerLibrary.Extension;
 using Prometheus;
+using IChannel = DotNetty.Transport.Channels.IChannel;
 
 namespace Horizon.MUM
 {
@@ -33,19 +31,36 @@ namespace Horizon.MUM
             public Dictionary<string, Clan> ClanNameToClan = new();
         }
 
-        public static Counter playersJoined = Metrics.CreateCounter("medius_players_joined_total", "Total number of players having joined Medius.");
-        public static Counter channelsCreated = Metrics.CreateCounter("medius_channels_created_total", "Total number of created channels in Medius.");
-        private static Counter gamesCreated = Metrics.CreateCounter("medius_games_created_total", "Total number of created games in Medius.");
+        public static Counter playersJoined = Metrics.CreateCounter(
+            "medius_players_joined_total",
+            "Total number of players having joined Medius."
+        );
+        public static Counter channelsCreated = Metrics.CreateCounter(
+            "medius_channels_created_total",
+            "Total number of created channels in Medius."
+        );
+        private static readonly Counter gamesCreated = Metrics.CreateCounter(
+            "medius_games_created_total",
+            "Total number of created games in Medius."
+        );
 
         private const int gameJoinDelay = 2500;
 
         private Dictionary<string, int[]> _appIdGroups = new();
 
-        private readonly ConcurrentDictionary<(int, int), SemaphoreSlim> _gameJoinSemaphores = new ConcurrentDictionary<(int, int), SemaphoreSlim>();
-        private readonly ConcurrentDictionary<(int, int), SemaphoreSlim> _gameJoin0Semaphores = new ConcurrentDictionary<(int, int), SemaphoreSlim>();
+        private readonly ConcurrentDictionary<(int, int), SemaphoreSlim> _gameJoinSemaphores =
+            new();
+        private readonly ConcurrentDictionary<(int, int), SemaphoreSlim> _gameJoin0Semaphores =
+            new();
 
-        private readonly ConcurrentDictionary<(int, int), ConcurrentQueue<Func<Task>>> _gameJoinRequestQueue = new ConcurrentDictionary<(int, int), ConcurrentQueue<Func<Task>>>();
-        private readonly ConcurrentDictionary<(int, int), ConcurrentQueue<Func<Task>>> _gameJoin0RequestQueue = new ConcurrentDictionary<(int, int), ConcurrentQueue<Func<Task>>>();
+        private readonly ConcurrentDictionary<
+            (int, int),
+            ConcurrentQueue<Func<Task>>
+        > _gameJoinRequestQueue = new();
+        private readonly ConcurrentDictionary<
+            (int, int),
+            ConcurrentQueue<Func<Task>>
+        > _gameJoin0RequestQueue = new();
 
         private readonly ConcurrentDictionary<int, QuickLookup> _lookupsByAppId = new();
 
@@ -58,7 +73,9 @@ namespace Horizon.MUM
         public List<ClientObject> GetClients(int appId)
         {
             return appId == 0
-                ? _lookupsByAppId.SelectMany(x => x.Value.SessionKeyToClient.Select(x => x.Value)).ToList()
+                ? _lookupsByAppId
+                    .SelectMany(x => x.Value.SessionKeyToClient.Select(x => x.Value))
+                    .ToList()
                 : _lookupsByAppId
                     .Where(x => GetAppIdsInGroup(appId).Contains(x.Key))
                     .SelectMany(x => x.Value.SessionKeyToClient.Select(x => x.Value))
@@ -67,11 +84,11 @@ namespace Horizon.MUM
 
         public ClientObject? GetClientByAccountId(int accountId, int appId)
         {
-            foreach (int appIdInGroup in GetAppIdsInGroup(appId))
+            foreach (var appIdInGroup in GetAppIdsInGroup(appId))
             {
-                if (_lookupsByAppId.TryGetValue(appIdInGroup, out QuickLookup? quickLookup))
+                if (_lookupsByAppId.TryGetValue(appIdInGroup, out var quickLookup))
                 {
-                    if (quickLookup.AccountIdToClient.TryGetValue(accountId, out ClientObject? result))
+                    if (quickLookup.AccountIdToClient.TryGetValue(accountId, out var result))
                         return result;
                 }
             }
@@ -83,11 +100,11 @@ namespace Horizon.MUM
         {
             accountName = accountName.ToLower();
 
-            foreach (int appIdInGroup in GetAppIdsInGroup(appId))
+            foreach (var appIdInGroup in GetAppIdsInGroup(appId))
             {
-                if (_lookupsByAppId.TryGetValue(appIdInGroup, out QuickLookup? quickLookup))
+                if (_lookupsByAppId.TryGetValue(appIdInGroup, out var quickLookup))
                 {
-                    if (quickLookup.AccountNameToClient.TryGetValue(accountName, out ClientObject? result))
+                    if (quickLookup.AccountNameToClient.TryGetValue(accountName, out var result))
                         return result;
                 }
             }
@@ -100,11 +117,11 @@ namespace Horizon.MUM
             if (string.IsNullOrEmpty(accessToken))
                 return null;
 
-            foreach (int appIdInGroup in GetAppIdsInGroup(appId))
+            foreach (var appIdInGroup in GetAppIdsInGroup(appId))
             {
-                if (_lookupsByAppId.TryGetValue(appIdInGroup, out QuickLookup? quickLookup))
+                if (_lookupsByAppId.TryGetValue(appIdInGroup, out var quickLookup))
                 {
-                    if (quickLookup.AccessTokenToClient.TryGetValue(accessToken, out ClientObject? result))
+                    if (quickLookup.AccessTokenToClient.TryGetValue(accessToken, out var result))
                         return result;
                 }
             }
@@ -117,11 +134,11 @@ namespace Horizon.MUM
             if (string.IsNullOrEmpty(sessionKey))
                 return null;
 
-            foreach (int appIdInGroup in GetAppIdsInGroup(appId))
+            foreach (var appIdInGroup in GetAppIdsInGroup(appId))
             {
-                if (_lookupsByAppId.TryGetValue(appIdInGroup, out QuickLookup? quickLookup))
+                if (_lookupsByAppId.TryGetValue(appIdInGroup, out var quickLookup))
                 {
-                    if (quickLookup.SessionKeyToClient.TryGetValue(sessionKey, out ClientObject? result))
+                    if (quickLookup.SessionKeyToClient.TryGetValue(sessionKey, out var result))
                         return result;
                 }
             }
@@ -132,10 +149,10 @@ namespace Horizon.MUM
         public List<ClientObject>? GetClientsByIp(string? Ip, int appId)
         {
             return _lookupsByAppId
-                   .Where(x => GetAppIdsInGroup(appId).Contains(x.Key))
-                   .SelectMany(x => x.Value.SessionKeyToClient.Select(x => x.Value))
-                   .Where(x => x.ApplicationId == appId && x.IP.ToString().Equals(Ip))
-                   .ToList();
+                .Where(x => GetAppIdsInGroup(appId).Contains(x.Key))
+                .SelectMany(x => x.Value.SessionKeyToClient.Select(x => x.Value))
+                .Where(x => x.ApplicationId == appId && x.IP.ToString().Equals(Ip))
+                .ToList();
         }
 
         public void AddClient(ClientObject client)
@@ -147,29 +164,33 @@ namespace Horizon.MUM
         {
             if (!newClient.IsLoggedIn)
             {
-                LoggerAccessor.LogError("[MumManager] - Trying to add a LoggedIn client but client is not logged in!");
+                LoggerAccessor.LogError(
+                    "[MumManager] - Trying to add a LoggedIn client but client is not logged in!"
+                );
                 return;
             }
 
-            foreach (int appIdInGroup in GetAppIdsInGroup(newClient.ApplicationId))
+            foreach (var appIdInGroup in GetAppIdsInGroup(newClient.ApplicationId))
             {
-                if (_lookupsByAppId.TryGetValue(appIdInGroup, out QuickLookup? quickLookup))
+                if (_lookupsByAppId.TryGetValue(appIdInGroup, out var quickLookup))
                 {
                     try
                     {
                         if (!string.IsNullOrEmpty(newClient.AccountName))
                         {
-                            string accountNameLower = newClient.AccountName.ToLower();
+                            var accountNameLower = newClient.AccountName.ToLower();
 
-                            if (quickLookup.AccountIdToClient.ContainsKey(newClient.AccountId))
+                            if (
+                                !quickLookup.AccountIdToClient.TryAdd(
+                                    newClient.AccountId,
+                                    newClient
+                                )
+                            )
                                 quickLookup.AccountIdToClient[newClient.AccountId] = newClient;
-                            else
-                                quickLookup.AccountIdToClient.Add(newClient.AccountId, newClient);
-
-                            if (quickLookup.AccountNameToClient.ContainsKey(accountNameLower))
+                            if (
+                                !quickLookup.AccountNameToClient.TryAdd(accountNameLower, newClient)
+                            )
                                 quickLookup.AccountNameToClient[accountNameLower] = newClient;
-                            else
-                                quickLookup.AccountNameToClient.Add(accountNameLower, newClient);
                         }
                     }
                     catch (Exception e)
@@ -181,7 +202,9 @@ namespace Horizon.MUM
                             quickLookup.AccountNameToClient.Remove(newClient.AccountName.ToLower());
                         }
 
-                        LoggerAccessor.LogError(e);
+                        LoggerAccessor.LogError(
+                            $"[MumManager] - Error in AddOrUpdateLoggedInClient {e}"
+                        );
                     }
                 }
             }
@@ -202,7 +225,7 @@ namespace Horizon.MUM
                 {
                     lock (quickLookup.GameIdToGame)
                     {
-                        count += (uint)quickLookup.GameIdToGame.Count();
+                        count += (uint)quickLookup.GameIdToGame.Count;
                     }
                 }
             }
@@ -219,7 +242,12 @@ namespace Horizon.MUM
             {
                 lock (lookupByAppId.Value.GameIdToGame)
                 {
-                    Game? game = lookupByAppId.Value.GameIdToGame.FirstOrDefault(x => x.Value?.DMEServer?.SessionKey == dmeSessionKey && x.Value?.MediusWorldId == MediusWorldId).Value;
+                    var game = lookupByAppId
+                        .Value.GameIdToGame.FirstOrDefault(x =>
+                            x.Value?.DMEServer?.SessionKey == dmeSessionKey
+                            && x.Value?.MediusWorldId == MediusWorldId
+                        )
+                        .Value;
                     if (game != null)
                         return game;
                 }
@@ -237,7 +265,12 @@ namespace Horizon.MUM
             {
                 lock (lookupByAppId.Value.PartyIdToGame)
                 {
-                    Party? party = lookupByAppId.Value.PartyIdToGame.FirstOrDefault(x => x.Value?.DMEServer?.SessionKey == dmeSessionKey && x.Value?.MediusWorldId == MediusWorldId).Value;
+                    var party = lookupByAppId
+                        .Value.PartyIdToGame.FirstOrDefault(x =>
+                            x.Value?.DMEServer?.SessionKey == dmeSessionKey
+                            && x.Value?.MediusWorldId == MediusWorldId
+                        )
+                        .Value;
                     if (party != null)
                         return party;
                 }
@@ -252,7 +285,11 @@ namespace Horizon.MUM
             {
                 lock (lookupByAppId.Value.PartyIdToGame)
                 {
-                    Party? party = lookupByAppId.Value.PartyIdToGame.FirstOrDefault(x => x.Value?.ApplicationId == appId && x.Value.PartyName == name).Value;
+                    var party = lookupByAppId
+                        .Value.PartyIdToGame.FirstOrDefault(x =>
+                            x.Value?.ApplicationId == appId && x.Value.PartyName == name
+                        )
+                        .Value;
                     if (party != null)
                         return party;
                 }
@@ -266,8 +303,9 @@ namespace Horizon.MUM
             {
                 lock (lookupByAppId.Value.AppIdToChannel)
                 {
-                    Channel? channel = lookupByAppId.Value.AppIdToChannel.SelectMany(kv => kv.Value) // Flatten all channels
-                                      .FirstOrDefault(c => c.Name == worldName); // Find the first channel with matching name
+                    var channel = lookupByAppId
+                        .Value.AppIdToChannel.SelectMany(kv => kv.Value) // Flatten all channels
+                        .FirstOrDefault(c => c.Name == worldName); // Find the first channel with matching name
 
                     if (channel != null)
                         return channel;
@@ -283,7 +321,7 @@ namespace Horizon.MUM
             {
                 lock (lookupByAppId.Value.GameIdToGame)
                 {
-                    if (lookupByAppId.Value.GameIdToGame.TryGetValue(gameId, out Game? game))
+                    if (lookupByAppId.Value.GameIdToGame.TryGetValue(gameId, out var game))
                         return game;
                 }
             }
@@ -293,48 +331,50 @@ namespace Horizon.MUM
 
         public IEnumerable<Game> GetAllGamesByAppId(int applicationId)
         {
-            if (_lookupsByAppId.TryGetValue(applicationId, out QuickLookup? quickLookup))
+            if (_lookupsByAppId.TryGetValue(applicationId, out var quickLookup))
             {
                 lock (quickLookup.GameIdToGame)
                 {
                     foreach (var pair in quickLookup.GameIdToGame)
                     {
-                        if (pair.Value.GameChannel != null && pair.Value.GameChannel.ApplicationId == applicationId)
+                        if (
+                            pair.Value.GameChannel != null
+                            && pair.Value.GameChannel.ApplicationId == applicationId
+                        )
                             yield return pair.Value;
                     }
                 }
             }
         }
-		
+
         public List<Game> GetGamesByGameIdViaChannelFilter(int gameId)
         {
             List<Channel> channels = new();
             List<Game> Games = new();
 
-            foreach (int[] appIds in _appIdGroups.Values)
+            foreach (var appIds in _appIdGroups.Values)
             {
-                foreach (int appId in appIds)
+                foreach (var appId in appIds)
                 {
-                    if (_lookupsByAppId.TryGetValue(appId, out QuickLookup? quickLookup))
+                    if (_lookupsByAppId.TryGetValue(appId, out var quickLookup))
                     {
                         lock (quickLookup.AppIdToChannel)
                         {
-                            channels.AddRange(quickLookup.AppIdToChannel
-                                .Where(pair => pair.Key == appId)
-                                .SelectMany(pair => pair.Value)
-                                .ToList());
+                            channels.AddRange(
+                                quickLookup
+                                    .AppIdToChannel.Where(pair => pair.Key == appId)
+                                    .SelectMany(pair => pair.Value)
+                                    .ToList()
+                            );
                         }
                     }
                 }
             }
 
-            foreach (Channel channel in channels)
+            foreach (var channel in channels)
             {
-                foreach (Game game in channel.Games)
-                {
-                    if (game.MediusWorldId == gameId)
-                        Games.Add(game);
-                }
+                if (channel.Game != null && channel.Game.MediusWorldId == gameId)
+                    Games.Add(channel.Game);
             }
 
             return Games;
@@ -345,30 +385,29 @@ namespace Horizon.MUM
             List<Channel> channels = new();
             List<Game> Games = new();
 
-            foreach (int[] appIds in _appIdGroups.Values)
+            foreach (var appIds in _appIdGroups.Values)
             {
-                foreach (int appId in appIds)
+                foreach (var appId in appIds)
                 {
-                    if (_lookupsByAppId.TryGetValue(appId, out QuickLookup? quickLookup))
+                    if (_lookupsByAppId.TryGetValue(appId, out var quickLookup))
                     {
                         lock (quickLookup.AppIdToChannel)
                         {
-                            channels.AddRange(quickLookup.AppIdToChannel
-                                .Where(pair => pair.Key == appId)
-                                .SelectMany(pair => pair.Value)
-                                .ToList());
+                            channels.AddRange(
+                                quickLookup
+                                    .AppIdToChannel.Where(pair => pair.Key == appId)
+                                    .SelectMany(pair => pair.Value)
+                                    .ToList()
+                            );
                         }
                     }
                 }
             }
 
-            foreach (Channel channel in channels)
+            foreach (var channel in channels)
             {
-                foreach (Game game in channel.Games)
-                {
-                    if (game.GameName == gameName)
-                        Games.Add(game);
-                }
+                if (channel.Game != null && channel.Game.GameName == gameName)
+                    Games.Add(channel.Game);
             }
 
             return Games;
@@ -380,7 +419,7 @@ namespace Horizon.MUM
             {
                 lock (lookupByAppId.Value.PartyIdToGame)
                 {
-                    if (lookupByAppId.Value.PartyIdToGame.TryGetValue(partyId, out Party? party))
+                    if (lookupByAppId.Value.PartyIdToGame.TryGetValue(partyId, out var party))
                         return party;
                 }
             }
@@ -394,7 +433,9 @@ namespace Horizon.MUM
                 _lookupsByAppId.TryAdd(game.ApplicationId, quickLookup = new QuickLookup());
 
             quickLookup.GameIdToGame.Add(game.MediusWorldId, game);
-            await HorizonServerConfiguration.Database.CreateGame(game.ToGameDTO());
+            await HorizonServerConfiguration
+                .Database.CreateGame(game.ToGameDTO())
+                .ConfigureAwait(false);
 
             gamesCreated.Inc();
         }
@@ -407,115 +448,160 @@ namespace Horizon.MUM
             return quickLookup.GameIdToGame.Count;
         }
 
-        public IEnumerable<Game> GetGameList(int appId, int pageIndex, int pageSize, IEnumerable<GameListFilter> filters)
+        public IEnumerable<Game> GetGameList(
+            int appId,
+            int pageIndex,
+            int pageSize,
+            IEnumerable<GameListFilter> filters
+        )
         {
 #if DEBUG
-            return _lookupsByAppId.Where(x =>
-            {
-                bool condition = GetAppIdsInGroup(appId).Contains(x.Key);
-                if (!condition)
-                    LoggerAccessor.LogWarn($"[MumManager] - DEBUG - GetGameList - Condition failed: AppId {x.Key} is not in the group.");
-                return condition;
-            })
-            .SelectMany(x => x.Value.GameIdToGame.Select(x => x.Value))
-            .Where(x =>
-            {
-                bool worldStatusCondition = x.WorldStatus == MediusWorldStatus.WorldActive || x.WorldStatus == MediusWorldStatus.WorldStaging;
-                if (!worldStatusCondition)
-                    LoggerAccessor.LogWarn($"[MumManager] - DEBUG - GetGameList - Condition failed: WorldStatus is {x.WorldStatus}.");
+            return _lookupsByAppId
+                .Where(x =>
+                {
+                    var condition = GetAppIdsInGroup(appId).Contains(x.Key);
+                    if (!condition)
+                        LoggerAccessor.LogWarn(
+                            $"[MumManager] - DEBUG - GetGameList - Condition failed: AppId {x.Key} is not in the group."
+                        );
+                    return condition;
+                })
+                .SelectMany(x => x.Value.GameIdToGame.Select(x => x.Value))
+                .Where(x =>
+                {
+                    var worldStatusCondition =
+                        x.WorldStatus == MediusWorldStatus.WorldActive
+                        || x.WorldStatus == MediusWorldStatus.WorldStaging
+                        || x.WorldStatus == MediusWorldStatus.WorldClosed;
+                    if (!worldStatusCondition)
+                        LoggerAccessor.LogWarn(
+                            $"[MumManager] - DEBUG - GetGameList - Condition failed: WorldStatus is {x.WorldStatus}."
+                        );
 
-                bool playerCountCondition = x.PlayerCount >= x.MinPlayers;
-                if (!playerCountCondition)
-                    LoggerAccessor.LogWarn($"[MumManager] - DEBUG - GetGameList - Condition failed: PlayerCount is {x.PlayerCount}, MinPlayers is {x.MinPlayers}.");
+                    var filtersCondition = !filters.Any() || filters.All(y => y.IsMatch(x));
+                    if (!filtersCondition)
+                        LoggerAccessor.LogWarn(
+                            $"[MumManager] - DEBUG - GetGameList - Condition failed: Filters do not match."
+                        );
 
-                bool filtersCondition = !filters.Any() || filters.All(y => y.IsMatch(x));
-                if (!filtersCondition)
-                    LoggerAccessor.LogWarn($"[MumManager] - DEBUG - GetGameList - Condition failed: Filters do not match.");
-
-                return worldStatusCondition && playerCountCondition && filtersCondition;
-            })
-            .Skip((pageIndex - 1) * pageSize)
-            .Take(pageSize);
+                    return worldStatusCondition && filtersCondition;
+                })
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize);
 #else
-            return _lookupsByAppId.Where(x => GetAppIdsInGroup(appId).Contains(x.Key))
-                            .SelectMany(x => x.Value.GameIdToGame.Select(x => x.Value))
-                            .Where(x => (x.WorldStatus == MediusWorldStatus.WorldActive || x.WorldStatus == MediusWorldStatus.WorldStaging) &&
-                                        x.PlayerCount >= x.MinPlayers && (!filters.Any() || filters.All(y => y.IsMatch(x))))
-                            .Skip((pageIndex - 1) * pageSize)
-                            .Take(pageSize);
+            return _lookupsByAppId
+                .Where(x => GetAppIdsInGroup(appId).Contains(x.Key))
+                .SelectMany(x => x.Value.GameIdToGame.Select(x => x.Value))
+                .Where(x =>
+                    (
+                        x.WorldStatus == MediusWorldStatus.WorldActive
+                        || x.WorldStatus == MediusWorldStatus.WorldStaging
+                        || x.WorldStatus == MediusWorldStatus.WorldClosed
+                    ) && (!filters.Any() || filters.All(y => y.IsMatch(x)))
+                )
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize);
 #endif
         }
 
-        public IEnumerable<Game> GetGameListOnAnyMatchingFilter(int appId, int pageIndex, int pageSize, IEnumerable<GameListFilter> filters)
+        public IEnumerable<Game> GetGameListOnAnyMatchingFilter(
+            int appId,
+            int pageIndex,
+            int pageSize,
+            IEnumerable<GameListFilter> filters
+        )
         {
 #if DEBUG
-            return _lookupsByAppId.Where(x =>
-            {
-                bool condition = GetAppIdsInGroup(appId).Contains(x.Key);
-                if (!condition)
-                    LoggerAccessor.LogWarn($"[MumManager] - DEBUG - GetGameListOnAnyMatchingFilter - Condition failed: AppId {x.Key} is not in the group.");
-                return condition;
-            })
-            .SelectMany(x => x.Value.GameIdToGame.Select(x => x.Value))
-            .Where(x =>
-            {
-                bool worldStatusCondition = x.WorldStatus == MediusWorldStatus.WorldActive || x.WorldStatus == MediusWorldStatus.WorldStaging;
-                if (!worldStatusCondition)
-                    LoggerAccessor.LogWarn($"[MumManager] - DEBUG - GetGameListOnAnyMatchingFilter - Condition failed: WorldStatus is {x.WorldStatus}.");
+            return _lookupsByAppId
+                .Where(x =>
+                {
+                    var condition = GetAppIdsInGroup(appId).Contains(x.Key);
+                    if (!condition)
+                        LoggerAccessor.LogWarn(
+                            $"[MumManager] - DEBUG - GetGameListOnAnyMatchingFilter - Condition failed: AppId {x.Key} is not in the group."
+                        );
+                    return condition;
+                })
+                .SelectMany(x => x.Value.GameIdToGame.Select(x => x.Value))
+                .Where(x =>
+                {
+                    var worldStatusCondition =
+                        x.WorldStatus == MediusWorldStatus.WorldActive
+                        || x.WorldStatus == MediusWorldStatus.WorldStaging
+                        || x.WorldStatus == MediusWorldStatus.WorldClosed;
+                    if (!worldStatusCondition)
+                        LoggerAccessor.LogWarn(
+                            $"[MumManager] - DEBUG - GetGameListOnAnyMatchingFilter - Condition failed: WorldStatus is {x.WorldStatus}."
+                        );
 
-                bool playerCountCondition = x.PlayerCount >= x.MinPlayers;
-                if (!playerCountCondition)
-                    LoggerAccessor.LogWarn($"[MumManager] - DEBUG - GetGameListOnAnyMatchingFilter - Condition failed: PlayerCount is {x.PlayerCount}, MinPlayers is {x.MinPlayers}.");
+                    var filtersCondition = !filters.Any() || filters.Any(y => y.IsMatch(x));
+                    if (!filtersCondition)
+                        LoggerAccessor.LogWarn(
+                            $"[MumManager] - DEBUG - GetGameListOnAnyMatchingFilter - Condition failed: No filters matched."
+                        );
 
-                bool filtersCondition = !filters.Any() || filters.Any(y => y.IsMatch(x));
-                if (!filtersCondition)
-                    LoggerAccessor.LogWarn($"[MumManager] - DEBUG - GetGameListOnAnyMatchingFilter - Condition failed: No filters matched.");
-
-                return worldStatusCondition && playerCountCondition && filtersCondition;
-            })
-            .Skip((pageIndex - 1) * pageSize)
-            .Take(pageSize);
+                    return worldStatusCondition && filtersCondition;
+                })
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize);
 #else
-            return _lookupsByAppId.Where(x => GetAppIdsInGroup(appId).Contains(x.Key))
-                            .SelectMany(x => x.Value.GameIdToGame.Select(x => x.Value))
-                            .Where(x => (x.WorldStatus == MediusWorldStatus.WorldActive || x.WorldStatus == MediusWorldStatus.WorldStaging) &&
-                                        x.PlayerCount >= x.MinPlayers && (!filters.Any() || filters.Any(y => y.IsMatch(x))))
-                            .Skip((pageIndex - 1) * pageSize)
-                            .Take(pageSize);
+            return _lookupsByAppId
+                .Where(x => GetAppIdsInGroup(appId).Contains(x.Key))
+                .SelectMany(x => x.Value.GameIdToGame.Select(x => x.Value))
+                .Where(x =>
+                    (
+                        x.WorldStatus == MediusWorldStatus.WorldActive
+                        || x.WorldStatus == MediusWorldStatus.WorldStaging
+                        || x.WorldStatus == MediusWorldStatus.WorldClosed
+                    ) && (!filters.Any() || filters.Any(y => y.IsMatch(x)))
+                )
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize);
 #endif
         }
 
         public IEnumerable<Game> GetGameListAppId(int appId, int pageIndex, int pageSize)
         {
 #if DEBUG
-            return _lookupsByAppId.Where(x =>
-            {
-                bool condition = GetAppIdsInGroup(appId).Contains(x.Key);
-                if (!condition)
-                    LoggerAccessor.LogWarn($"[MumManager] - DEBUG - GetGameListAppId - Condition failed: AppId {x.Key} is not in the group.");
-                return condition;
-            })
-            .SelectMany(x => x.Value.GameIdToGame.Select(x => x.Value))
-            .Where(x =>
-            {
-                bool worldStatusCondition = x.WorldStatus == MediusWorldStatus.WorldActive || x.WorldStatus == MediusWorldStatus.WorldStaging;
-                if (!worldStatusCondition)
-                    LoggerAccessor.LogWarn($"[MumManager] - DEBUG - GetGameListAppId - Condition failed: WorldStatus is {x.WorldStatus}.");
+            return _lookupsByAppId
+                .Where(x =>
+                {
+                    var condition = GetAppIdsInGroup(appId).Contains(x.Key);
+                    if (!condition)
+                        LoggerAccessor.LogWarn(
+                            $"[MumManager] - DEBUG - GetGameListAppId - Condition failed: AppId {x.Key} is not in the group."
+                        );
+                    return condition;
+                })
+                .SelectMany(x => x.Value.GameIdToGame.Select(x => x.Value))
+                .Where(x =>
+                {
+                    var worldStatusCondition =
+                        x.WorldStatus == MediusWorldStatus.WorldActive
+                        || x.WorldStatus == MediusWorldStatus.WorldStaging
+                        || x.WorldStatus == MediusWorldStatus.WorldClosed;
+                    if (!worldStatusCondition)
+                        LoggerAccessor.LogWarn(
+                            $"[MumManager] - DEBUG - GetGameListAppId - Condition failed: WorldStatus is {x.WorldStatus}."
+                        );
 
-                bool playerCountCondition = x.PlayerCount >= x.MinPlayers;
-                if (!playerCountCondition)
-                    LoggerAccessor.LogWarn($"[MumManager] - DEBUG - GetGameListAppId - Condition failed: PlayerCount is {x.PlayerCount}, MinPlayers is {x.MinPlayers}.");
-
-                return worldStatusCondition && playerCountCondition;
-            })
-            .Skip((pageIndex - 1) * pageSize)
-            .Take(pageSize);
+                    return worldStatusCondition;
+                })
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize);
 #else
-            return _lookupsByAppId.Where(x => GetAppIdsInGroup(appId).Contains(x.Key))
-                            .SelectMany(x => x.Value.GameIdToGame.Select(x => x.Value))
-                            .Where(x => (x.WorldStatus == MediusWorldStatus.WorldActive || x.WorldStatus == MediusWorldStatus.WorldStaging) && x.PlayerCount >= x.MinPlayers)
-                            .Skip((pageIndex - 1) * pageSize)
-                            .Take(pageSize);
+            return _lookupsByAppId
+                .Where(x => GetAppIdsInGroup(appId).Contains(x.Key))
+                .SelectMany(x => x.Value.GameIdToGame.Select(x => x.Value))
+                .Where(x =>
+                    (
+                        x.WorldStatus == MediusWorldStatus.WorldActive
+                        || x.WorldStatus == MediusWorldStatus.WorldStaging
+                        || x.WorldStatus == MediusWorldStatus.WorldClosed
+                    )
+                )
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize);
 #endif
         }
 
@@ -534,36 +620,53 @@ namespace Horizon.MUM
             else if (request is MediusCreateGameRequest0 r0)
                 gameName = r0.GameName;
 
-            IEnumerable<Game> existingGames = _lookupsByAppId.Where(x => GetAppIdsInGroup(client.ApplicationId).Contains(client.ApplicationId)).SelectMany(x => x.Value.GameIdToGame.Select(g => g.Value));
+            var existingGames = _lookupsByAppId
+                .Where(x => GetAppIdsInGroup(client.ApplicationId).Contains(client.ApplicationId))
+                .SelectMany(x => x.Value.GameIdToGame.Select(g => g.Value));
 
             // Ensure the name is unique
             // If the host leaves then we unreserve the name
-            if (existingGames.Any(x => x.WorldStatus != MediusWorldStatus.WorldClosed && x.WorldStatus != MediusWorldStatus.WorldInactive && x.GameName == gameName && x.Host != null && x.Host.IsConnected))
+            if (
+                existingGames.Any(x =>
+                    x.WorldStatus != MediusWorldStatus.WorldClosed
+                    && x.WorldStatus != MediusWorldStatus.WorldInactive
+                    && x.GameName == gameName
+                    && x.Host != null
+                    && x.Host.IsConnected
+                )
+            )
             {
-                client.Queue(new RT_MSG_SERVER_APP()
-                {
-                    Message = new MediusCreateGameResponse()
+                client.Queue(
+                    new RT_MSG_SERVER_APP()
                     {
-                        MessageID = request.MessageID,
-                        MediusWorldID = -1,
-                        StatusCode = MediusCallbackStatus.MediusGameNameExists
+                        Message = new MediusCreateGameResponse()
+                        {
+                            MessageID = request.MessageID,
+                            MediusWorldID = -1,
+                            StatusCode = MediusCallbackStatus.MediusGameNameExists,
+                        },
                     }
-                });
+                );
                 return;
             }
 
             // Try to get next free dme server
             // If none exist, return error to clist
-            ClientObject? dme = MediusClass.ProxyServer.GetFreeDme(client.ApplicationId, client.LocationId);
+            var dme = Program.MediusManager?.ProxyServer.GetFreeDme(
+                client.ApplicationId,
+                client.LocationId
+            );
 
             if (dme == null)
             {
-                client.Queue(new MediusCreateGameResponse()
-                {
-                    MessageID = request.MessageID,
-                    MediusWorldID = -1,
-                    StatusCode = MediusCallbackStatus.MediusTransactionTimedOut
-                });
+                client.Queue(
+                    new MediusCreateGameResponse()
+                    {
+                        MessageID = request.MessageID,
+                        MediusWorldID = -1,
+                        StatusCode = MediusCallbackStatus.MediusTransactionTimedOut,
+                    }
+                );
                 return;
             }
             else
@@ -573,33 +676,39 @@ namespace Horizon.MUM
                 {
                     game = new Game(client, request, dme);
 
-                    await AddGame(game);
+                    await AddGame(game).ConfigureAwait(false);
 
                     // Send create game request to dme server
-                    dme.Queue(new MediusServerCreateGameWithAttributesRequest()
-                    {
-                        MessageID = new MessageId($"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}-{0}"),
-                        WorldID = game.GameChannel!.Id,
-                        Attributes = game.Attributes,
-                        ApplicationID = client.ApplicationId,
-                        MaxClients = game.MaxPlayers
-                    });
+                    dme.Queue(
+                        new MediusServerCreateGameWithAttributesRequest()
+                        {
+                            MessageID = new MessageId(
+                                $"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}-{0}"
+                            ),
+                            WorldID = game.GameChannel!.Id,
+                            Attributes = game.Attributes,
+                            ApplicationID = client.ApplicationId,
+                            MaxClients = game.MaxPlayers,
+                        }
+                    );
 
                     return;
                 }
                 catch (Exception e)
                 {
-                    LoggerAccessor.LogError(e);
+                    LoggerAccessor.LogError($"[MumManager] - Error in CreateGame {e}");
                 }
             }
 
             // Failure adding game for some reason
-            client.Queue(new MediusCreateGameResponse()
-            {
-                MessageID = request.MessageID,
-                MediusWorldID = -1,
-                StatusCode = MediusCallbackStatus.MediusFail
-            });
+            client.Queue(
+                new MediusCreateGameResponse()
+                {
+                    MessageID = request.MessageID,
+                    MediusWorldID = -1,
+                    StatusCode = MediusCallbackStatus.MediusFail,
+                }
+            );
         }
         #endregion
 
@@ -617,36 +726,53 @@ namespace Horizon.MUM
                 gameName = r.GameName;
             }
 
-            IEnumerable<Game> existingGames = _lookupsByAppId.Where(x => GetAppIdsInGroup(client.ApplicationId).Contains(client.ApplicationId)).SelectMany(x => x.Value.GameIdToGame.Select(g => g.Value));
+            var existingGames = _lookupsByAppId
+                .Where(x => GetAppIdsInGroup(client.ApplicationId).Contains(client.ApplicationId))
+                .SelectMany(x => x.Value.GameIdToGame.Select(g => g.Value));
 
             // Ensure the name is unique
             // If the host leaves then we unreserve the name
-            if (existingGames.Any(x => x.WorldStatus != MediusWorldStatus.WorldClosed && x.WorldStatus != MediusWorldStatus.WorldInactive && x.GameName == gameName && x.Host != null && x.Host.IsConnected))
+            if (
+                existingGames.Any(x =>
+                    x.WorldStatus != MediusWorldStatus.WorldClosed
+                    && x.WorldStatus != MediusWorldStatus.WorldInactive
+                    && x.GameName == gameName
+                    && x.Host != null
+                    && x.Host.IsConnected
+                )
+            )
             {
-                client.Queue(new RT_MSG_SERVER_APP()
-                {
-                    Message = new MediusCreateGameResponse()
+                client.Queue(
+                    new RT_MSG_SERVER_APP()
                     {
-                        MessageID = request.MessageID,
-                        MediusWorldID = -1,
-                        StatusCode = MediusCallbackStatus.MediusGameNameExists
+                        Message = new MediusCreateGameResponse()
+                        {
+                            MessageID = request.MessageID,
+                            MediusWorldID = -1,
+                            StatusCode = MediusCallbackStatus.MediusGameNameExists,
+                        },
                     }
-                });
+                );
                 return;
             }
 
             // Try to get next free dme server
             // If none exist, return error to clist
-            ClientObject? dme = MediusClass.ProxyServer.GetFreeDme(client.ApplicationId, client.LocationId);
+            var dme = Program.MediusManager?.ProxyServer.GetFreeDme(
+                client.ApplicationId,
+                client.LocationId
+            );
 
             if (dme == null)
             {
-                client.Queue(new MediusCreateGameResponse()
-                {
-                    MessageID = request.MessageID,
-                    MediusWorldID = -1,
-                    StatusCode = MediusCallbackStatus.MediusTransactionTimedOut
-                });
+                client.Queue(
+                    new MediusCreateGameResponse()
+                    {
+                        MessageID = request.MessageID,
+                        MediusWorldID = -1,
+                        StatusCode = MediusCallbackStatus.MediusTransactionTimedOut,
+                    }
+                );
                 return;
             }
             else
@@ -656,38 +782,48 @@ namespace Horizon.MUM
                 {
                     Game game = new(client, request, dme);
 
-                    await AddGame(game);
+                    await AddGame(game).ConfigureAwait(false);
 
                     // Send create game request to dme server
-                    dme.Queue(new MediusServerCreateGameWithAttributesRequest()
-                    {
-                        MessageID = new MessageId($"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}-{0}"),
-                        WorldID = game.GameChannel!.Id,
-                        Attributes = game.Attributes,
-                        ApplicationID = client.ApplicationId,
-                        MaxClients = game.MaxPlayers
-                    });
+                    dme.Queue(
+                        new MediusServerCreateGameWithAttributesRequest()
+                        {
+                            MessageID = new MessageId(
+                                $"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}-{0}"
+                            ),
+                            WorldID = game.GameChannel!.Id,
+                            Attributes = game.Attributes,
+                            ApplicationID = client.ApplicationId,
+                            MaxClients = game.MaxPlayers,
+                        }
+                    );
 
                     return;
                 }
                 catch (Exception e)
                 {
-                    LoggerAccessor.LogError(e);
+                    LoggerAccessor.LogError($"[MumManager] - Error in CreateGame1 {e}");
                 }
             }
 
             // Failure adding game for some reason
-            client.Queue(new MediusCreateGameResponse()
-            {
-                MessageID = request.MessageID,
-                MediusWorldID = -1,
-                StatusCode = MediusCallbackStatus.MediusFail
-            });
+            client.Queue(
+                new MediusCreateGameResponse()
+                {
+                    MessageID = request.MessageID,
+                    MediusWorldID = -1,
+                    StatusCode = MediusCallbackStatus.MediusFail,
+                }
+            );
         }
         #endregion
 
         #region MatchCreateGame
-        public async Task MatchCreateGame(ClientObject client, MediusMatchCreateGameRequest matchCreateGameRequest, IChannel channel)
+        public async Task MatchCreateGame(
+            ClientObject client,
+            MediusMatchCreateGameRequest matchCreateGameRequest,
+            IChannel channel
+        )
         {
             if (!_lookupsByAppId.TryGetValue(client.ApplicationId, out var quickLookup))
                 _lookupsByAppId.TryAdd(client.ApplicationId, quickLookup = new QuickLookup());
@@ -696,21 +832,33 @@ namespace Horizon.MUM
             if (matchCreateGameRequest is MediusMatchCreateGameRequest r)
                 gameName = r.GameName;
 
-            IEnumerable<Game> existingGames = _lookupsByAppId.Where(x => GetAppIdsInGroup(client.ApplicationId).Contains(client.ApplicationId)).SelectMany(x => x.Value.GameIdToGame.Select(g => g.Value));
+            var existingGames = _lookupsByAppId
+                .Where(x => GetAppIdsInGroup(client.ApplicationId).Contains(client.ApplicationId))
+                .SelectMany(x => x.Value.GameIdToGame.Select(g => g.Value));
 
             // Ensure the name is unique
             // If the host leaves then we unreserve the name
-            if (existingGames.Any(x => x.WorldStatus != MediusWorldStatus.WorldClosed && x.WorldStatus != MediusWorldStatus.WorldInactive && x.GameName == gameName && x.Host != null && x.Host.IsConnected))
+            if (
+                existingGames.Any(x =>
+                    x.WorldStatus != MediusWorldStatus.WorldClosed
+                    && x.WorldStatus != MediusWorldStatus.WorldInactive
+                    && x.GameName == gameName
+                    && x.Host != null
+                    && x.Host.IsConnected
+                )
+            )
             {
-                client.Queue(new RT_MSG_SERVER_APP()
-                {
-                    Message = new MediusMatchCreateGameResponse()
+                client.Queue(
+                    new RT_MSG_SERVER_APP()
                     {
-                        MessageID = matchCreateGameRequest.MessageID,
-                        MediusWorldID = -1,
-                        StatusCode = MediusCallbackStatus.MediusGameNameExists
+                        Message = new MediusMatchCreateGameResponse()
+                        {
+                            MessageID = matchCreateGameRequest.MessageID,
+                            MediusWorldID = -1,
+                            StatusCode = MediusCallbackStatus.MediusGameNameExists,
+                        },
                     }
-                });
+                );
                 return;
             }
 
@@ -722,33 +870,41 @@ namespace Horizon.MUM
                 {
                     // Try to get next free MPS server
                     // If none exist, return error to clist
-                    //var dme = MediusStarter.ProxyServer.GetFreeDme(client.ApplicationId);
-                    MPS mps = MediusClass.GetMPS();
+                    var mps = Program.MediusManager?.ProxyServer;
                     if (mps == null)
                     {
-                        client.Queue(new MediusMatchCreateGameResponse()
-                        {
-                            MessageID = matchCreateGameRequest.MessageID,
-                            MediusWorldID = -1,
-                            StatusCode = MediusCallbackStatus.MediusTransactionTimedOut
-                        });
+                        client.Queue(
+                            new MediusMatchCreateGameResponse()
+                            {
+                                MessageID = matchCreateGameRequest.MessageID,
+                                MediusWorldID = -1,
+                                StatusCode = MediusCallbackStatus.MediusTransactionTimedOut,
+                            }
+                        );
                         return;
                     }
 
-                    ClientObject dme = client;
+                    var dme = client;
 
                     Game game = new(client, matchCreateGameRequest, dme);
 
-                    await client.JoinGameP2P(game);
-                    await AddGame(game);
+                    await client.JoinGameP2P(game).ConfigureAwait(false);
 
-                    mps.SendServerCreateGameWithAttributesRequestP2P(matchCreateGameRequest.MessageID.ToString(), client.AccountId, game.MediusWorldId, false, game, client);
+                    await AddGame(game).ConfigureAwait(false);
+
+                    mps.SendServerCreateGameOrPartyWithAttributesRequestP2P(
+                        matchCreateGameRequest.MessageID.ToString(),
+                        client.AccountId,
+                        game.MediusWorldId,
+                        game,
+                        client
+                    );
 
                     return;
                 }
                 catch (Exception e)
                 {
-                    LoggerAccessor.LogError(e);
+                    LoggerAccessor.LogError($"[MumManager] - Error in MatchCreateGame P2P {e}");
                 }
             }
             else
@@ -756,15 +912,20 @@ namespace Horizon.MUM
             {
                 // Try to get next free dme server
                 // If none exist, return error to clist
-                var dme = MediusClass.ProxyServer.GetFreeDme(client.ApplicationId, client.LocationId);
+                var dme = Program.MediusManager?.ProxyServer.GetFreeDme(
+                    client.ApplicationId,
+                    client.LocationId
+                );
                 if (dme == null)
                 {
-                    client.Queue(new MediusMatchCreateGameResponse()
-                    {
-                        MessageID = matchCreateGameRequest.MessageID,
-                        MediusWorldID = -1,
-                        StatusCode = MediusCallbackStatus.MediusTransactionTimedOut
-                    });
+                    client.Queue(
+                        new MediusMatchCreateGameResponse()
+                        {
+                            MessageID = matchCreateGameRequest.MessageID,
+                            MediusWorldID = -1,
+                            StatusCode = MediusCallbackStatus.MediusTransactionTimedOut,
+                        }
+                    );
                     return;
                 }
 
@@ -773,54 +934,66 @@ namespace Horizon.MUM
                 {
                     Game game = new(client, matchCreateGameRequest, dme);
 
-                    await AddGame(game);
+                    await AddGame(game).ConfigureAwait(false);
 
                     game.RequestData = matchCreateGameRequest.RequestData;
                     game.AppDataSize = matchCreateGameRequest.ApplicationDataSize;
                     game.AppData = matchCreateGameRequest.ApplicationData;
 
                     // Send create game request to dme server
-                    dme.Queue(new MediusServerCreateGameWithAttributesRequest()
-                    {
-                        MessageID = new MessageId($"{game.MediusWorldId}-{client.AccountId}-{matchCreateGameRequest.MessageID}-{0}"),
-                        WorldID = game.GameChannel!.Id,
-                        Attributes = game.Attributes,
-                        ApplicationID = client.ApplicationId,
-                        MaxClients = game.MaxPlayers
-                    });
+                    dme.Queue(
+                        new MediusServerCreateGameWithAttributesRequest()
+                        {
+                            MessageID = new MessageId(
+                                $"{game.MediusWorldId}-{client.AccountId}-{matchCreateGameRequest.MessageID}-{0}"
+                            ),
+                            WorldID = game.GameChannel!.Id,
+                            Attributes = game.Attributes,
+                            ApplicationID = client.ApplicationId,
+                            MaxClients = game.MaxPlayers,
+                        }
+                    );
 
                     return;
                 }
                 catch (Exception e)
                 {
-                    LoggerAccessor.LogError(e);
+                    LoggerAccessor.LogError($"[MumManager] - Error in MatchCreateGame DME {e}");
                 }
             }
 
-            // Failure adding game for some reason
-            client.Queue(new MediusMatchCreateGameResponse()
-            {
-                MessageID = matchCreateGameRequest.MessageID,
-                MediusWorldID = -1,
-                StatusCode = MediusCallbackStatus.MediusMatchGameCreationFailed
-            });
+            // Failure creating match game for some reason
+            client.Queue(
+                new MediusMatchCreateGameResponse()
+                {
+                    MessageID = matchCreateGameRequest.MessageID,
+                    MediusWorldID = -1,
+                    StatusCode = MediusCallbackStatus.MediusMatchGameCreationFailed,
+                }
+            );
         }
         #endregion
 
         #region Create Game P2P
 
         #region MediusServerCreateGameOnMeRequest / MediusServerCreateGameOnSelfRequest / MediusServerCreateGameOnSelfRequest0
-        public async Task<ClientObject?> CreateGameP2P(ClientObject client, IMediusRequest request, IChannel channel)
+        public async Task<ClientObject?> CreateGameP2P(
+            ClientObject client,
+            IMediusRequest request,
+            IChannel channel
+        )
         {
             if (!_lookupsByAppId.TryGetValue(client.ApplicationId, out var quickLookup))
                 _lookupsByAppId.TryAdd(client.ApplicationId, quickLookup = new QuickLookup());
 
-            int AccountId = -1;
-            int WorldId = -1;
+            var AccountId = -1;
+            var WorldId = -1;
             string? gameName = null;
             NetAddressList gameNetAddressList = new();
 
-            string p2pHostAddressRemoved = ((IPEndPoint)channel.RemoteAddress).Address.ToString().Remove(0, 7);
+            var p2pHostAddressRemoved = ((IPEndPoint)channel.RemoteAddress)
+                .Address.ToString()
+                .Remove(0, 7);
 
             if (request is MediusServerCreateGameOnMeRequest r)
             {
@@ -828,21 +1001,44 @@ namespace Horizon.MUM
                 WorldId = r.WorldID;
                 gameName = r.GameName;
 
-                if (r.AddressList.AddressList[0].AddressType == NetAddressType.NetAddressTypeBinaryExternalVport ||
-                        r.AddressList.AddressList[1].AddressType == NetAddressType.NetAddressTypeBinaryInternalVport)
+                if (
+                    r.AddressList.AddressList[0].AddressType
+                        == NetAddressType.NetAddressTypeBinaryExternalVport
+                    || r.AddressList.AddressList[1].AddressType
+                        == NetAddressType.NetAddressTypeBinaryInternalVport
+                )
                 {
-                    gameNetAddressList.AddressList[0].IPBinaryBitOne = r.AddressList.AddressList[0].IPBinaryBitOne;
-                    gameNetAddressList.AddressList[0].IPBinaryBitTwo = r.AddressList.AddressList[0].IPBinaryBitTwo;
-                    gameNetAddressList.AddressList[0].IPBinaryBitThree = r.AddressList.AddressList[0].IPBinaryBitThree;
-                    gameNetAddressList.AddressList[0].IPBinaryBitFour = r.AddressList.AddressList[0].IPBinaryBitFour;
-                    gameNetAddressList.AddressList[0].BinaryPort = r.AddressList.AddressList[0].BinaryPort;
+                    gameNetAddressList.AddressList[0].IPBinaryBitOne = r.AddressList
+                        .AddressList[0]
+                        .IPBinaryBitOne;
+                    gameNetAddressList.AddressList[0].IPBinaryBitTwo = r.AddressList
+                        .AddressList[0]
+                        .IPBinaryBitTwo;
+                    gameNetAddressList.AddressList[0].IPBinaryBitThree = r.AddressList
+                        .AddressList[0]
+                        .IPBinaryBitThree;
+                    gameNetAddressList.AddressList[0].IPBinaryBitFour = r.AddressList
+                        .AddressList[0]
+                        .IPBinaryBitFour;
+                    gameNetAddressList.AddressList[0].BinaryPort = r.AddressList
+                        .AddressList[0]
+                        .BinaryPort;
 
-
-                    gameNetAddressList.AddressList[1].IPBinaryBitOne = r.AddressList.AddressList[1].IPBinaryBitOne;
-                    gameNetAddressList.AddressList[1].IPBinaryBitTwo = r.AddressList.AddressList[1].IPBinaryBitTwo;
-                    gameNetAddressList.AddressList[1].IPBinaryBitThree = r.AddressList.AddressList[1].IPBinaryBitThree;
-                    gameNetAddressList.AddressList[1].IPBinaryBitFour = r.AddressList.AddressList[1].IPBinaryBitFour;
-                    gameNetAddressList.AddressList[1].BinaryPort = r.AddressList.AddressList[1].BinaryPort;
+                    gameNetAddressList.AddressList[1].IPBinaryBitOne = r.AddressList
+                        .AddressList[1]
+                        .IPBinaryBitOne;
+                    gameNetAddressList.AddressList[1].IPBinaryBitTwo = r.AddressList
+                        .AddressList[1]
+                        .IPBinaryBitTwo;
+                    gameNetAddressList.AddressList[1].IPBinaryBitThree = r.AddressList
+                        .AddressList[1]
+                        .IPBinaryBitThree;
+                    gameNetAddressList.AddressList[1].IPBinaryBitFour = r.AddressList
+                        .AddressList[1]
+                        .IPBinaryBitFour;
+                    gameNetAddressList.AddressList[1].BinaryPort = r.AddressList
+                        .AddressList[1]
+                        .BinaryPort;
                 }
                 else
                     gameNetAddressList = r.AddressList;
@@ -861,59 +1057,80 @@ namespace Horizon.MUM
                 gameNetAddressList = r2.AddressList;
             }
 
-            IEnumerable<Game> existingGames = _lookupsByAppId.Where(x => GetAppIdsInGroup(client.ApplicationId).Contains(client.ApplicationId)).SelectMany(x => x.Value.GameIdToGame.Select(g => g.Value));
+            var existingGames = _lookupsByAppId
+                .Where(x => GetAppIdsInGroup(client.ApplicationId).Contains(client.ApplicationId))
+                .SelectMany(x => x.Value.GameIdToGame.Select(g => g.Value));
 
             // Ensure the name is unique
             // If the host leaves then we unreserve the name
-            if (existingGames.Any(x => x.WorldStatus != MediusWorldStatus.WorldClosed && x.WorldStatus != MediusWorldStatus.WorldInactive && x.GameName == gameName && x.Host != null && x.Host.IsConnected))
+            if (
+                existingGames.Any(x =>
+                    x.WorldStatus != MediusWorldStatus.WorldClosed
+                    && x.WorldStatus != MediusWorldStatus.WorldInactive
+                    && x.GameName == gameName
+                    && x.Host != null
+                    && x.Host.IsConnected
+                )
+            )
             {
-                client?.Queue(new RT_MSG_SERVER_APP()
-                {
-                    Message = new MediusCreateGameResponse()
+                client?.Queue(
+                    new RT_MSG_SERVER_APP()
                     {
-                        MessageID = request.MessageID,
-                        MediusWorldID = -1,
-                        StatusCode = MediusCallbackStatus.MediusGameNameExists
+                        Message = new MediusCreateGameResponse()
+                        {
+                            MessageID = request.MessageID,
+                            MediusWorldID = -1,
+                            StatusCode = MediusCallbackStatus.MediusGameNameExists,
+                        },
                     }
-                });
+                );
                 return null;
             }
 
             // Create and add game.
             try
             {
-                ClientObject dme = client;
+                var dme = client;
 
                 if (request is not MediusServerCreateGameOnSelfRequest0)
-                    client = GetClientByAccountId(AccountId, client.ApplicationId) ?? throw new Exception("[MumManager] - CreateGameP2P - Specified an invalid AccountId or requested client not yet logged-in!");
+                    client =
+                        GetClientByAccountId(AccountId, client.ApplicationId)
+                        ?? throw new Exception(
+                            "[MumManager] - CreateGameP2P - Specified an invalid AccountId or requested client not yet logged-in!"
+                        );
 
                 Game game = new(client, request, dme);
 
-                await client.JoinGameP2P(game);
-                await AddGame(game);
+                await client.JoinGameP2P(game).ConfigureAwait(false);
+
+                await AddGame(game).ConfigureAwait(false);
 
                 //Send Success response
-                dme.Queue(new MediusServerCreateGameOnMeResponse()
-                {
-                    MessageID = request.MessageID,
-                    Confirmation = MGCL_ERROR_CODE.MGCL_SUCCESS,
-                    MediusWorldID = game.MediusWorldId,
-                });
+                dme.Queue(
+                    new MediusServerCreateGameOnMeResponse()
+                    {
+                        MessageID = request.MessageID,
+                        Confirmation = MGCL_ERROR_CODE.MGCL_SUCCESS,
+                        MediusWorldID = game.MediusWorldId,
+                    }
+                );
 
                 return client;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[MumManager] - Error in CreateGameP2P {e}");
             }
 
             // Failure adding game for some reason
-            client.Queue(new MediusCreateGameResponse()
-            {
-                MessageID = request.MessageID,
-                MediusWorldID = -1,
-                StatusCode = MediusCallbackStatus.MediusFail
-            });
+            client.Queue(
+                new MediusCreateGameResponse()
+                {
+                    MessageID = request.MessageID,
+                    MediusWorldID = -1,
+                    StatusCode = MediusCallbackStatus.MediusFail,
+                }
+            );
 
             return null;
         }
@@ -925,25 +1142,43 @@ namespace Horizon.MUM
         public Task JoinGame(ClientObject client, MediusJoinGameRequest request)
         {
             List<int> skipGameHostTypeCheckAppIds = new() { 10680, 10681, 10683, 10684, 10994 }; // Some 108 Medius games not send the same gameHostType in request, but still expect a result...
-            List<int> approvedMaxPlayersAppIds = new() { 20624, 22500, 22920, 22924, 22930, 23360, 24000, 24180 };
+            List<int> approvedMaxPlayersAppIds = new()
+            {
+                20624,
+                22500,
+                22920,
+                22924,
+                22930,
+                23360,
+                24000,
+                24180,
+            };
 
-            if ((client.ApplicationId == 20371 || client.ApplicationId == 20374) && client.ClientHomeData != null && client.ClientHomeData.VersionAsDouble >= 01.21)
+            if (
+                (client.ApplicationId == 20371 || client.ApplicationId == 20374)
+                && client.ClientHomeData != null
+                && client.ClientHomeData.VersionAsDouble >= 01.21
+            )
                 approvedMaxPlayersAppIds.Add(client.ApplicationId);
 
             Game? game = null;
             if (request.MediusWorldID == -1)
             {
-                IEnumerable<Game>? gameList = GetGameListAppId(client.ApplicationId, 1, 100); // -1 means any?
+                var gameList = GetGameListAppId(client.ApplicationId, 1, 100); // -1 means any?
 
                 if (gameList == null)
                 {
-                    LoggerAccessor.LogWarn($"[MediusManager] - Join Game Request Handler Error: Error in retrieving game world info from MUM cache [{request.MediusWorldID}]");
-                    client.Queue(new MediusJoinGameResponse()
-                    {
-                        SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
-                        MessageID = request.MessageID,
-                        StatusCode = MediusCallbackStatus.MediusGameNotFound
-                    });
+                    LoggerAccessor.LogWarn(
+                        $"[MumManager] - Join Game Request Handler Error: Error in retrieving game list info from MUM cache [{request.MediusWorldID}]"
+                    );
+                    client.Queue(
+                        new MediusJoinGameResponse()
+                        {
+                            SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
+                            MessageID = request.MessageID,
+                            StatusCode = MediusCallbackStatus.MediusGameNotFound,
+                        }
+                    );
                 }
                 else
                     game = gameList.FirstOrDefault();
@@ -953,187 +1188,361 @@ namespace Horizon.MUM
 
             if (game == null)
             {
-                LoggerAccessor.LogWarn($"Join Game Request Handler Error: Error in retrieving game world info from MUM cache [{request.MediusWorldID}]");
-                client.Queue(new MediusJoinGameResponse()
-                {
-                    SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
-                    MessageID = request.MessageID,
-                    StatusCode = MediusCallbackStatus.MediusGameNotFound
-                });
+                LoggerAccessor.LogWarn(
+                    $"[MumManager] - Join Game Request Handler Error: Error in retrieving game world info from MUM cache [{request.MediusWorldID}]"
+                );
+                client.Queue(
+                    new MediusJoinGameResponse()
+                    {
+                        SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
+                        MessageID = request.MessageID,
+                        StatusCode = MediusCallbackStatus.MediusGameNotFound,
+                    }
+                );
             }
-
             #region Password
-            else if (!string.IsNullOrEmpty(game.GamePassword) && game.GamePassword != request.GamePassword)
+            else if (
+                !string.IsNullOrEmpty(game.GamePassword)
+                && game.GamePassword != request.GamePassword
+            )
             {
-                LoggerAccessor.LogWarn($"Join Game Request Handler Error: This game's password {game.GamePassword} doesn't match the requested GamePassword {request.GamePassword}");
-                client.Queue(new MediusJoinGameResponse()
-                {
-                    SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
-                    MessageID = request.MessageID,
-                    StatusCode = MediusCallbackStatus.MediusInvalidPassword
-                });
+                LoggerAccessor.LogWarn(
+                    $"[MumManager] - Join Game Request Handler Error: This game's password {game.GamePassword} doesn't match the requested GamePassword {request.GamePassword}"
+                );
+                client.Queue(
+                    new MediusJoinGameResponse()
+                    {
+                        SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
+                        MessageID = request.MessageID,
+                        StatusCode = MediusCallbackStatus.MediusInvalidPassword,
+                    }
+                );
+            }
+            #endregion
+
+            #region WorldStatus
+            else if (game.WorldStatus == MediusWorldStatus.WorldClosed)
+            {
+                client.Queue(
+                    new MediusJoinGameResponse()
+                    {
+                        SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
+                        MessageID = request.MessageID,
+                        StatusCode = MediusCallbackStatus.MediusRequestDenied,
+                    }
+                );
             }
             #endregion
 
             #region MaxPlayers
             else if (game.PlayerCount >= game.MaxPlayers)
             {
-                LoggerAccessor.LogWarn($"Join Game Request Handler Error: This game does not allow more than {game.MaxPlayers}. Current player count: {game.PlayerCount}");
-                client.Queue(new MediusJoinGameResponse()
-                {
-                    SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
-                    MessageID = request.MessageID,
-                    StatusCode = MediusCallbackStatus.MediusWorldIsFull
-                });
+                client.Queue(
+                    new MediusJoinGameResponse()
+                    {
+                        SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
+                        MessageID = request.MessageID,
+                        StatusCode = MediusCallbackStatus.MediusWorldIsFull,
+                    }
+                );
             }
             #endregion
 
             #region GameHostType check
-            else if (!skipGameHostTypeCheckAppIds.Contains(client.ApplicationId) && request.GameHostType != game.GameHostType)
+            else if (
+                !skipGameHostTypeCheckAppIds.Contains(client.ApplicationId)
+                && request.GameHostType != game.GameHostType
+            )
             {
-                LoggerAccessor.LogWarn($"Join Game Request Handler Error: This games HostType {game.GameHostType} does not match the Requests HostType {request.GameHostType}");
-                client.Queue(new MediusJoinGameResponse()
-                {
-                    SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
-                    MessageID = request.MessageID,
-                    StatusCode = MediusCallbackStatus.MediusRequestDenied
-                });
+                client.Queue(
+                    new MediusJoinGameResponse()
+                    {
+                        SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
+                        MessageID = request.MessageID,
+                        StatusCode = MediusCallbackStatus.MediusRequestDenied,
+                    }
+                );
             }
             #endregion
 
             #region JoinType.MediusJoinAsMassSpectator
-            else if (request.JoinType == MediusJoinType.MediusJoinAsMassSpectator && (Convert.ToInt32(game.Attributes) & 2) == 0)
-                LoggerAccessor.LogWarn($"Join Game Request Handler Error: This game does not allow mass spectators. Attributes: {game.Attributes}");
-
+            else if (
+                request.JoinType == MediusJoinType.MediusJoinAsMassSpectator
+                && (Convert.ToInt32(game.Attributes) & 2) == 0
+            )
+                LoggerAccessor.LogWarn(
+                    $"[MumManager] - Join Game Request Handler Error: This game does not allow mass spectators. Attributes: {game.Attributes}"
+                );
             #endregion
 
             else
             {
-                _ = EnqueueJoinGameAsync(client.ApplicationId, game.MediusWorldId, () =>
-                {
-                    // if This is a Peer to Peer Player Host as DME we treat differently
-                    if (game.GameHostType == MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer
-                        && game.netAddressList?.AddressList?[0].AddressType == NetAddressType.NetAddressTypeSignalAddress)
+                _ = EnqueueJoinGameAsync(
+                    client.ApplicationId,
+                    game.MediusWorldId,
+                    () =>
                     {
-                        game.Host?.Queue(new MediusServerJoinGameRequest()
+                        // if This is a Peer to Peer Player Host as DME we treat differently
+                        if (
+                            game.GameHostType == MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer
+                            && game.netAddressList?.AddressList?[0].AddressType
+                                == NetAddressType.NetAddressTypeSignalAddress
+                        )
                         {
-                            MessageID = new MessageId($"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}-{0}"),
-                            ConnectInfo = new NetConnectionInfo()
-                            {
-                                Type = NetConnectionType.NetConnectionTypePeerToPeerUDP,
-                                AccessKey = client.AccessToken,
-                                SessionKey = client.SessionKey,
-                                TargetWorldID = game.MediusWorldId,
-                                ServerKey = MediusClass.GlobalAuthPublic,
-                                AddressList = new NetAddressList()
+                            game.Host?.Queue(
+                                new MediusServerJoinGameRequest()
                                 {
-                                    AddressList = new NetAddress[Constants.NET_ADDRESS_LIST_COUNT]
+                                    MessageID = new MessageId(
+                                        $"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}-{0}"
+                                    ),
+                                    ConnectInfo = new NetConnectionInfo()
                                     {
-                                        new NetAddress() { AddressBytes = request.AddressList.AddressList[0].AddressBytes, Port = request.AddressList.AddressList[0].Port, AddressType = NetAddressType.NetAddressTypeSignalAddress},
-                                        new NetAddress() { AddressType = NetAddressType.NetAddressNone},
-                                    }
-                                },
-                            }
-                        });
-                    }
-                    else if (game.GameHostType == MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer
-                            && game.netAddressList?.AddressList?[0].AddressType == NetAddressType.NetAddressTypeExternal
-                            && game.netAddressList?.AddressList?[1].AddressType == NetAddressType.NetAddressTypeInternal)
-                    {
-                        game.Host?.Queue(new MediusServerJoinGameRequest()
-                        {
-                            MessageID = new MessageId($"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}-{0}"),
-                            ConnectInfo = new NetConnectionInfo()
-                            {
-                                Type = NetConnectionType.NetConnectionTypePeerToPeerUDP,
-                                AccessKey = client.AccessToken,
-                                SessionKey = client.SessionKey,
-                                TargetWorldID = game.MediusWorldId,
-                                ServerKey = MediusClass.GlobalAuthPublic,
-                                AddressList = new NetAddressList()
-                                {
-                                    AddressList = new NetAddress[Constants.NET_ADDRESS_LIST_COUNT]
-                                    {
-                                    new NetAddress() { Address = request.AddressList?.AddressList?[0].Address, Port = request.AddressList.AddressList[0].Port, AddressType = NetAddressType.NetAddressTypeExternal},
-                                    new NetAddress() { Address = request.AddressList?.AddressList?[1].Address, Port = request.AddressList.AddressList[1].Port, AddressType = NetAddressType.NetAddressTypeInternal},
-                                    }
-                                },
-                            }
-                        });
-                    }
-
-                    else if (game.GameHostType == MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer
-                            && game.netAddressList?.AddressList?[0].AddressType == NetAddressType.NetAddressTypeBinaryExternalVport
-                            && game.netAddressList?.AddressList?[1].AddressType == NetAddressType.NetAddressTypeBinaryInternalVport)
-                    {
-                        game.Host?.Queue(new MediusServerJoinGameRequest()
-                        {
-                            MessageID = new MessageId($"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}"),
-                            ConnectInfo = new NetConnectionInfo()
-                            {
-                                Type = NetConnectionType.NetConnectionTypePeerToPeerUDP,
-                                AccessKey = client.AccessToken,
-                                SessionKey = client.SessionKey,
-                                TargetWorldID = game.MediusWorldId,
-                                ServerKey = MediusClass.GlobalAuthPublic,
-                                AddressList = new NetAddressList()
-                                {
-                                    AddressList = new NetAddress[Constants.NET_ADDRESS_LIST_COUNT]
-                                    {
-                                    new NetAddress() { IPBinaryBitOne = request.AddressList.AddressList[0].IPBinaryBitOne,
-                                        IPBinaryBitTwo = request.AddressList.AddressList[0].IPBinaryBitTwo,
-                                        IPBinaryBitThree = request.AddressList.AddressList[0].IPBinaryBitThree,
-                                        IPBinaryBitFour = request.AddressList.AddressList[0].IPBinaryBitFour,
-                                        BinaryPort = request.AddressList.AddressList[0].BinaryPort,
-                                        AddressType = NetAddressType.NetAddressTypeBinaryExternalVport},
-                                    new NetAddress() { IPBinaryBitOne = request.AddressList.AddressList[1].IPBinaryBitOne,
-                                        IPBinaryBitTwo = request.AddressList.AddressList[1].IPBinaryBitTwo,
-                                        IPBinaryBitThree = request.AddressList.AddressList[1].IPBinaryBitThree,
-                                        IPBinaryBitFour = request.AddressList.AddressList[1].IPBinaryBitFour,
-                                        BinaryPort = request.AddressList.AddressList[1].BinaryPort,
-                                        AddressType = NetAddressType.NetAddressTypeBinaryInternalVport},
-                                    }
-                                },
-                            }
-                        });
-
-                    }
-
-                    // Else send normal Connection type to DME
-                    else
-                    {
-                        ClientObject? dme = game.DMEServer;
-
-                        if (client.MediusVersion > 108 && client.ApplicationId != 10994 || client.ApplicationId == 10680 || client.ApplicationId == 10681 || client.ApplicationId == 10683 || client.ApplicationId == 10684)
-                            dme?.Queue(new MediusServerJoinGameRequest()
-                            {
-                                MessageID = new MessageId($"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}-{0}"),
-                                ConnectInfo = new NetConnectionInfo()
-                                {
-                                    Type = NetConnectionType.NetConnectionTypeClientServerTCPAuxUDP,
-                                    TargetWorldID = game.MediusWorldId,
-                                    AccessKey = client.AccessToken,
-                                    SessionKey = client.SessionKey,
-                                    ServerKey = MediusClass.GlobalAuthPublic
+                                        Type = NetConnectionType.NetConnectionTypePeerToPeerUDP,
+                                        AccessKey = client.AccessToken,
+                                        SessionKey = client.SessionKey,
+                                        TargetWorldID = game.MediusWorldId,
+                                        ServerKey = new RSA_KEY(
+                                            LIBRARY
+                                                .Pipeline.Attribute.ScertClientAttribute.DefaultRsaAuthKey.N.ToByteArrayUnsigned()
+                                                .Reverse()
+                                                .ToArray()
+                                        ),
+                                        AddressList = new NetAddressList()
+                                        {
+                                            AddressList = new NetAddress[
+                                                Constants.NET_ADDRESS_LIST_COUNT
+                                            ]
+                                            {
+                                                new()
+                                                {
+                                                    AddressBytes = request
+                                                        .AddressList
+                                                        .AddressList[0]
+                                                        .AddressBytes,
+                                                    Port = request.AddressList.AddressList[0].Port,
+                                                    AddressType =
+                                                        NetAddressType.NetAddressTypeSignalAddress,
+                                                },
+                                                new()
+                                                {
+                                                    AddressType = NetAddressType.NetAddressNone,
+                                                },
+                                            },
+                                        },
+                                    },
                                 }
-                            });
+                            );
+                        }
+                        else if (
+                            game.GameHostType == MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer
+                            && game.netAddressList?.AddressList?[0].AddressType
+                                == NetAddressType.NetAddressTypeExternal
+                            && game.netAddressList?.AddressList?[1].AddressType
+                                == NetAddressType.NetAddressTypeInternal
+                        )
+                        {
+                            game.Host?.Queue(
+                                new MediusServerJoinGameRequest()
+                                {
+                                    MessageID = new MessageId(
+                                        $"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}-{0}"
+                                    ),
+                                    ConnectInfo = new NetConnectionInfo()
+                                    {
+                                        Type = NetConnectionType.NetConnectionTypePeerToPeerUDP,
+                                        AccessKey = client.AccessToken,
+                                        SessionKey = client.SessionKey,
+                                        TargetWorldID = game.MediusWorldId,
+                                        ServerKey = new RSA_KEY(
+                                            LIBRARY
+                                                .Pipeline.Attribute.ScertClientAttribute.DefaultRsaAuthKey.N.ToByteArrayUnsigned()
+                                                .Reverse()
+                                                .ToArray()
+                                        ),
+                                        AddressList = new NetAddressList()
+                                        {
+                                            AddressList = new NetAddress[
+                                                Constants.NET_ADDRESS_LIST_COUNT
+                                            ]
+                                            {
+                                                new()
+                                                {
+                                                    Address = request
+                                                        .AddressList
+                                                        ?.AddressList
+                                                        ?[0]
+                                                        .Address,
+                                                    Port = request.AddressList.AddressList[0].Port,
+                                                    AddressType =
+                                                        NetAddressType.NetAddressTypeExternal,
+                                                },
+                                                new()
+                                                {
+                                                    Address = request
+                                                        .AddressList
+                                                        ?.AddressList
+                                                        ?[1]
+                                                        .Address,
+                                                    Port = request.AddressList.AddressList[1].Port,
+                                                    AddressType =
+                                                        NetAddressType.NetAddressTypeInternal,
+                                                },
+                                            },
+                                        },
+                                    },
+                                }
+                            );
+                        }
+                        else if (
+                            game.GameHostType == MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer
+                            && game.netAddressList?.AddressList?[0].AddressType
+                                == NetAddressType.NetAddressTypeBinaryExternalVport
+                            && game.netAddressList?.AddressList?[1].AddressType
+                                == NetAddressType.NetAddressTypeBinaryInternalVport
+                        )
+                        {
+                            game.Host?.Queue(
+                                new MediusServerJoinGameRequest()
+                                {
+                                    MessageID = new MessageId(
+                                        $"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}"
+                                    ),
+                                    ConnectInfo = new NetConnectionInfo()
+                                    {
+                                        Type = NetConnectionType.NetConnectionTypePeerToPeerUDP,
+                                        AccessKey = client.AccessToken,
+                                        SessionKey = client.SessionKey,
+                                        TargetWorldID = game.MediusWorldId,
+                                        ServerKey = new RSA_KEY(
+                                            LIBRARY
+                                                .Pipeline.Attribute.ScertClientAttribute.DefaultRsaAuthKey.N.ToByteArrayUnsigned()
+                                                .Reverse()
+                                                .ToArray()
+                                        ),
+                                        AddressList = new NetAddressList()
+                                        {
+                                            AddressList = new NetAddress[
+                                                Constants.NET_ADDRESS_LIST_COUNT
+                                            ]
+                                            {
+                                                new()
+                                                {
+                                                    IPBinaryBitOne = request
+                                                        .AddressList
+                                                        .AddressList[0]
+                                                        .IPBinaryBitOne,
+                                                    IPBinaryBitTwo = request
+                                                        .AddressList
+                                                        .AddressList[0]
+                                                        .IPBinaryBitTwo,
+                                                    IPBinaryBitThree = request
+                                                        .AddressList
+                                                        .AddressList[0]
+                                                        .IPBinaryBitThree,
+                                                    IPBinaryBitFour = request
+                                                        .AddressList
+                                                        .AddressList[0]
+                                                        .IPBinaryBitFour,
+                                                    BinaryPort = request
+                                                        .AddressList
+                                                        .AddressList[0]
+                                                        .BinaryPort,
+                                                    AddressType =
+                                                        NetAddressType.NetAddressTypeBinaryExternalVport,
+                                                },
+                                                new()
+                                                {
+                                                    IPBinaryBitOne = request
+                                                        .AddressList
+                                                        .AddressList[1]
+                                                        .IPBinaryBitOne,
+                                                    IPBinaryBitTwo = request
+                                                        .AddressList
+                                                        .AddressList[1]
+                                                        .IPBinaryBitTwo,
+                                                    IPBinaryBitThree = request
+                                                        .AddressList
+                                                        .AddressList[1]
+                                                        .IPBinaryBitThree,
+                                                    IPBinaryBitFour = request
+                                                        .AddressList
+                                                        .AddressList[1]
+                                                        .IPBinaryBitFour,
+                                                    BinaryPort = request
+                                                        .AddressList
+                                                        .AddressList[1]
+                                                        .BinaryPort,
+                                                    AddressType =
+                                                        NetAddressType.NetAddressTypeBinaryInternalVport,
+                                                },
+                                            },
+                                        },
+                                    },
+                                }
+                            );
+                        }
+                        // Else send normal Connection type to DME
                         else
-                            dme?.Queue(new MediusServerJoinGameRequest()
-                            {
-                                MessageID = new MessageId($"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}-{0}"),
-                                ConnectInfo = new NetConnectionInfo()
-                                {
-                                    Type = NetConnectionType.NetConnectionTypeClientServerTCP,
-                                    TargetWorldID = game.MediusWorldId,
-                                    AccessKey = client.AccessToken,
-                                    SessionKey = client.SessionKey,
-                                    ServerKey = MediusClass.GlobalAuthPublic
-                                }
-                            });
-                    }
+                        {
+                            var dme = game.DMEServer;
 
-                    return Task.CompletedTask;
-                });
+                            if (
+                                (client.MediusVersion > 108 && client.ApplicationId != 10994)
+                                || client.ApplicationId == 10680
+                                || client.ApplicationId == 10681
+                                || client.ApplicationId == 10683
+                                || client.ApplicationId == 10684
+                            )
+                                dme?.Queue(
+                                    new MediusServerJoinGameRequest()
+                                    {
+                                        MessageID = new MessageId(
+                                            $"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}-{0}"
+                                        ),
+                                        ConnectInfo = new NetConnectionInfo()
+                                        {
+                                            Type =
+                                                NetConnectionType.NetConnectionTypeClientServerTCPAuxUDP,
+                                            TargetWorldID = game.MediusWorldId,
+                                            AccessKey = client.AccessToken,
+                                            SessionKey = client.SessionKey,
+                                            ServerKey = new RSA_KEY(
+                                                LIBRARY
+                                                    .Pipeline.Attribute.ScertClientAttribute.DefaultRsaAuthKey.N.ToByteArrayUnsigned()
+                                                    .Reverse()
+                                                    .ToArray()
+                                            ),
+                                        },
+                                    }
+                                );
+                            else
+                                dme?.Queue(
+                                    new MediusServerJoinGameRequest()
+                                    {
+                                        MessageID = new MessageId(
+                                            $"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}-{0}"
+                                        ),
+                                        ConnectInfo = new NetConnectionInfo()
+                                        {
+                                            Type =
+                                                NetConnectionType.NetConnectionTypeClientServerTCP,
+                                            TargetWorldID = game.MediusWorldId,
+                                            AccessKey = client.AccessToken,
+                                            SessionKey = client.SessionKey,
+                                            ServerKey = new RSA_KEY(
+                                                LIBRARY
+                                                    .Pipeline.Attribute.ScertClientAttribute.DefaultRsaAuthKey.N.ToByteArrayUnsigned()
+                                                    .Reverse()
+                                                    .ToArray()
+                                            ),
+                                        },
+                                    }
+                                );
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                );
             }
 
             return Task.CompletedTask;
@@ -1143,88 +1552,153 @@ namespace Horizon.MUM
         #region JoinGameRequest0
         public void JoinGame0(ClientObject client, MediusJoinGameRequest0 request)
         {
-            List<int> approvedMaxPlayersAppIds = new() { 20624, 22500, 22920, 22924, 22930, 23360, 24000, 24180 };
+            List<int> approvedMaxPlayersAppIds = new()
+            {
+                20624,
+                22500,
+                22920,
+                22924,
+                22930,
+                23360,
+                24000,
+                24180,
+            };
 
-            if ((client.ApplicationId == 20371 || client.ApplicationId == 20374) && client.ClientHomeData != null && client.ClientHomeData.VersionAsDouble >= 01.21)
+            if (
+                (client.ApplicationId == 20371 || client.ApplicationId == 20374)
+                && client.ClientHomeData != null
+                && client.ClientHomeData.VersionAsDouble >= 01.21
+            )
                 approvedMaxPlayersAppIds.Add(client.ApplicationId);
 
-            Game? game = GetGameByGameId(request.MediusWorldID);
+            var game = GetGameByGameId(request.MediusWorldID);
             if (game == null)
             {
-                client.Queue(new MediusJoinGameResponse()
-                {
-                    SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
-                    MessageID = request.MessageID,
-                    StatusCode = MediusCallbackStatus.MediusGameNotFound
-                });
+                client.Queue(
+                    new MediusJoinGameResponse()
+                    {
+                        SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
+                        MessageID = request.MessageID,
+                        StatusCode = MediusCallbackStatus.MediusGameNotFound,
+                    }
+                );
             }
-            else if (!string.IsNullOrEmpty(game.GamePassword) && game.GamePassword != request.GamePassword)
+            else if (
+                !string.IsNullOrEmpty(game.GamePassword)
+                && game.GamePassword != request.GamePassword
+            )
             {
-                client.Queue(new MediusJoinGameResponse()
-                {
-                    SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
-                    MessageID = request.MessageID,
-                    StatusCode = MediusCallbackStatus.MediusInvalidPassword
-                });
+                client.Queue(
+                    new MediusJoinGameResponse()
+                    {
+                        SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
+                        MessageID = request.MessageID,
+                        StatusCode = MediusCallbackStatus.MediusInvalidPassword,
+                    }
+                );
+            }
+            else if (game.WorldStatus == MediusWorldStatus.WorldClosed)
+            {
+                client.Queue(
+                    new MediusJoinGameResponse()
+                    {
+                        SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
+                        MessageID = request.MessageID,
+                        StatusCode = MediusCallbackStatus.MediusRequestDenied,
+                    }
+                );
             }
             else if (game.PlayerCount >= game.MaxPlayers)
             {
-                client.Queue(new MediusJoinGameResponse()
-                {
-                    SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
-                    MessageID = request.MessageID,
-                    StatusCode = MediusCallbackStatus.MediusWorldIsFull
-                });
+                client.Queue(
+                    new MediusJoinGameResponse()
+                    {
+                        SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
+                        MessageID = request.MessageID,
+                        StatusCode = MediusCallbackStatus.MediusWorldIsFull,
+                    }
+                );
             }
             else
             {
-                _ = EnqueueJoinGame0Async(client.ApplicationId, game.MediusWorldId, () =>
-                {
-                    // if This is a Peer to Peer Player Host as DME we treat differently
-                    if (game.GameHostType == MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
+                _ = EnqueueJoinGame0Async(
+                    client.ApplicationId,
+                    game.MediusWorldId,
+                    () =>
                     {
-                        game.Host?.Queue(new MediusServerJoinGameRequest()
+                        // if This is a Peer to Peer Player Host as DME we treat differently
+                        if (game.GameHostType == MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
                         {
-                            MessageID = new MessageId($"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}-{0}"),
-                            ConnectInfo = new NetConnectionInfo()
-                            {
-                                Type = NetConnectionType.NetConnectionTypePeerToPeerUDP,
-                                TargetWorldID = game.MediusWorldId,
-                                AccessKey = client.AccessToken,
-                                SessionKey = client.SessionKey,
-                                ServerKey = MediusClass.GlobalAuthPublic
-                            }
-                        });
-                    }
-                    // Else send normal Connection type
-                    else
-                    {
-                        game.DMEServer?.Queue(new MediusServerJoinGameRequest()
+                            game.Host?.Queue(
+                                new MediusServerJoinGameRequest()
+                                {
+                                    MessageID = new MessageId(
+                                        $"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}-{0}"
+                                    ),
+                                    ConnectInfo = new NetConnectionInfo()
+                                    {
+                                        Type = NetConnectionType.NetConnectionTypePeerToPeerUDP,
+                                        TargetWorldID = game.MediusWorldId,
+                                        AccessKey = client.AccessToken,
+                                        SessionKey = client.SessionKey,
+                                        ServerKey = new RSA_KEY(
+                                            LIBRARY
+                                                .Pipeline.Attribute.ScertClientAttribute.DefaultRsaAuthKey.N.ToByteArrayUnsigned()
+                                                .Reverse()
+                                                .ToArray()
+                                        ),
+                                    },
+                                }
+                            );
+                        }
+                        // Else send normal Connection type
+                        else
                         {
-                            MessageID = new MessageId($"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}-{0}"),
-                            ConnectInfo = new NetConnectionInfo()
-                            {
-                                Type = NetConnectionType.NetConnectionTypeClientServerTCP,
-                                TargetWorldID = game.MediusWorldId,
-                                AccessKey = client.AccessToken,
-                                SessionKey = client.SessionKey,
-                                ServerKey = MediusClass.GlobalAuthPublic
-                            }
-                        });
-                    }
+                            game.DMEServer?.Queue(
+                                new MediusServerJoinGameRequest()
+                                {
+                                    MessageID = new MessageId(
+                                        $"{game.MediusWorldId}-{client.AccountId}-{request.MessageID}-{0}"
+                                    ),
+                                    ConnectInfo = new NetConnectionInfo()
+                                    {
+                                        Type = NetConnectionType.NetConnectionTypeClientServerTCP,
+                                        TargetWorldID = game.MediusWorldId,
+                                        AccessKey = client.AccessToken,
+                                        SessionKey = client.SessionKey,
+                                        ServerKey = new RSA_KEY(
+                                            LIBRARY
+                                                .Pipeline.Attribute.ScertClientAttribute.DefaultRsaAuthKey.N.ToByteArrayUnsigned()
+                                                .Reverse()
+                                                .ToArray()
+                                        ),
+                                    },
+                                }
+                            );
+                        }
 
-                    return Task.CompletedTask;
-                });
+                        return Task.CompletedTask;
+                    }
+                );
             }
         }
 
         private async Task EnqueueJoinGameAsync(int applicationId, int gameId, Func<Task> taskFunc)
         {
-            SemaphoreSlim semaphore = _gameJoinSemaphores.GetOrAdd((applicationId, gameId), _ => new SemaphoreSlim(1, 1));
+            var semaphore = _gameJoinSemaphores.GetOrAdd(
+                (applicationId, gameId),
+                _ => new SemaphoreSlim(1, 1)
+            );
 
-            ConcurrentQueue<Func<Task>> queue = _gameJoinRequestQueue.GetOrAdd((applicationId, gameId), _ => new ConcurrentQueue<Func<Task>>());
+            var queue = _gameJoinRequestQueue.GetOrAdd(
+                (applicationId, gameId),
+                _ => new ConcurrentQueue<Func<Task>>()
+            );
 
-            Task enqueueJob = Task.Run(() => { queue.Enqueue(taskFunc); });
+            var enqueueJob = Task.Run(() =>
+            {
+                queue.Enqueue(taskFunc);
+            });
 
             if (!semaphore.Wait(0))
                 return;
@@ -1239,10 +1713,8 @@ namespace Horizon.MUM
                     {
                         await taskToExecute().ConfigureAwait(false);
                     }
-                    catch
-                    {
-                    }
-                    
+                    catch { }
+
                     await Task.Delay(gameJoinDelay).ConfigureAwait(false);
                 }
             }
@@ -1254,11 +1726,20 @@ namespace Horizon.MUM
 
         private async Task EnqueueJoinGame0Async(int applicationId, int gameId, Func<Task> taskFunc)
         {
-            SemaphoreSlim semaphore = _gameJoin0Semaphores.GetOrAdd((applicationId, gameId), _ => new SemaphoreSlim(1, 1));
+            var semaphore = _gameJoin0Semaphores.GetOrAdd(
+                (applicationId, gameId),
+                _ => new SemaphoreSlim(1, 1)
+            );
 
-            ConcurrentQueue<Func<Task>> queue = _gameJoin0RequestQueue.GetOrAdd((applicationId, gameId), _ => new ConcurrentQueue<Func<Task>>());
+            var queue = _gameJoin0RequestQueue.GetOrAdd(
+                (applicationId, gameId),
+                _ => new ConcurrentQueue<Func<Task>>()
+            );
 
-            Task enqueueJob = Task.Run(() => { queue.Enqueue(taskFunc); });
+            var enqueueJob = Task.Run(() =>
+            {
+                queue.Enqueue(taskFunc);
+            });
 
             if (!semaphore.Wait(0))
                 return;
@@ -1273,9 +1754,7 @@ namespace Horizon.MUM
                     {
                         await taskToExecute().ConfigureAwait(false);
                     }
-                    catch
-                    {
-                    }
+                    catch { }
 
                     await Task.Delay(gameJoinDelay).ConfigureAwait(false);
                 }
@@ -1296,18 +1775,20 @@ namespace Horizon.MUM
         {
             List<Channel> channels = new();
 
-            foreach (int[] appIds in _appIdGroups.Values)
+            foreach (var appIds in _appIdGroups.Values)
             {
-                foreach (int appId in appIds)
+                foreach (var appId in appIds)
                 {
-                    if (_lookupsByAppId.TryGetValue(appId, out QuickLookup? quickLookup))
+                    if (_lookupsByAppId.TryGetValue(appId, out var quickLookup))
                     {
                         lock (quickLookup.AppIdToChannel)
                         {
-                            channels.AddRange(quickLookup.AppIdToChannel
-                                .Where(pair => pair.Key == appId)
-                                .SelectMany(pair => pair.Value)
-                                .ToList());
+                            channels.AddRange(
+                                quickLookup
+                                    .AppIdToChannel.Where(pair => pair.Key == appId)
+                                    .SelectMany(pair => pair.Value)
+                                    .ToList()
+                            );
                         }
                     }
                 }
@@ -1320,14 +1801,16 @@ namespace Horizon.MUM
         {
             List<Channel> channels = new();
 
-            if (_lookupsByAppId.TryGetValue(appId, out QuickLookup? quickLookup))
+            if (_lookupsByAppId.TryGetValue(appId, out var quickLookup))
             {
                 lock (quickLookup.AppIdToChannel)
                 {
-                    channels.AddRange(quickLookup.AppIdToChannel
-                        .Where(pair => pair.Key == appId)
-                        .SelectMany(pair => pair.Value)
-                        .ToList());
+                    channels.AddRange(
+                        quickLookup
+                            .AppIdToChannel.Where(pair => pair.Key == appId)
+                            .SelectMany(pair => pair.Value)
+                            .ToList()
+                    );
                 }
             }
 
@@ -1336,13 +1819,16 @@ namespace Horizon.MUM
 
         public Channel? GetChannelByChannelId(int channelId, int appId)
         {
-            foreach (int appIdInGroup in GetAppIdsInGroup(appId))
+            foreach (var appIdInGroup in GetAppIdsInGroup(appId))
             {
-                if (_lookupsByAppId.TryGetValue(appIdInGroup, out QuickLookup? quickLookup))
+                if (_lookupsByAppId.TryGetValue(appIdInGroup, out var quickLookup))
                 {
                     lock (quickLookup.AppIdToChannel)
                     {
-                        Channel? channel = quickLookup.AppIdToChannel.SelectMany(kv => kv.Value).Where(c => c.Id == channelId && c.ApplicationId == appId).FirstOrDefault();
+                        var channel = quickLookup
+                            .AppIdToChannel.SelectMany(kv => kv.Value)
+                            .Where(c => c.Id == channelId && c.ApplicationId == appId)
+                            .FirstOrDefault();
                         if (channel != null)
                             return channel;
                     }
@@ -1354,13 +1840,15 @@ namespace Horizon.MUM
 
         public Channel? GetChannelByChannelName(string channelName, int appId)
         {
-            foreach (int appIdInGroup in GetAppIdsInGroup(appId))
+            foreach (var appIdInGroup in GetAppIdsInGroup(appId))
             {
-                if (_lookupsByAppId.TryGetValue(appIdInGroup, out QuickLookup? quickLookup))
+                if (_lookupsByAppId.TryGetValue(appIdInGroup, out var quickLookup))
                 {
                     lock (quickLookup.AppIdToChannel)
                     {
-                        Channel? channel = quickLookup.AppIdToChannel.SelectMany(kv => kv.Value).FirstOrDefault(x => x.Name == channelName && x.ApplicationId == appId);
+                        var channel = quickLookup
+                            .AppIdToChannel.SelectMany(kv => kv.Value)
+                            .FirstOrDefault(x => x.Name == channelName && x.ApplicationId == appId);
                         if (channel != null)
                             return channel;
                     }
@@ -1370,18 +1858,28 @@ namespace Horizon.MUM
             return null;
         }
 
-        public Channel? GetChannelByRequestFilter(int appId, ChannelType type, ulong FieldMask1, ulong FieldMask2, ulong FieldMask3, ulong FieldMask4, MediusLobbyFilterMaskLevelType filterMaskLevelType)
+        public Channel? GetChannelByRequestFilter(
+            int appId,
+            ChannelType type,
+            ulong FieldMask1,
+            ulong FieldMask2,
+            ulong FieldMask3,
+            ulong FieldMask4,
+            MediusLobbyFilterMaskLevelType filterMaskLevelType
+        )
         {
             return _lookupsByAppId
                 .Where(x => GetAppIdsInGroup(appId).Contains(x.Key))
                 .SelectMany(x => x.Value.AppIdToChannel.SelectMany(x => x.Value))
-                .Where(x => x.Type == type &&
-                    x.ApplicationId == appId &&
-                    x.GenericField1 == FieldMask1 &&
-                    x.GenericField2 == FieldMask2 &&
-                    x.GenericField3 == FieldMask3 &&
-                    x.GenericField4 == FieldMask4 &&
-                    x.GenericFieldLevel == (MediusWorldGenericFieldLevelType)filterMaskLevelType)
+                .Where(x =>
+                    x.Type == type
+                    && x.ApplicationId == appId
+                    && x.GenericField1 == FieldMask1
+                    && x.GenericField2 == FieldMask2
+                    && x.GenericField3 == FieldMask3
+                    && x.GenericField4 == FieldMask4
+                    && x.GenericFieldLevel == (MediusWorldGenericFieldLevelType)filterMaskLevelType
+                )
                 .First();
         }
 
@@ -1389,13 +1887,16 @@ namespace Horizon.MUM
         {
             uint count = 0;
 
-            foreach (int appIdInGroup in GetAppIdsInGroup(appId))
+            foreach (var appIdInGroup in GetAppIdsInGroup(appId))
             {
-                if (_lookupsByAppId.TryGetValue(appIdInGroup, out QuickLookup? quickLookup))
+                if (_lookupsByAppId.TryGetValue(appIdInGroup, out var quickLookup))
                 {
                     lock (quickLookup.AppIdToChannel)
                     {
-                        count += (uint)quickLookup.AppIdToChannel.SelectMany(kv => kv.Value).Count(x => x.Type == type && x.ApplicationId == appId);
+                        count += (uint)
+                            quickLookup
+                                .AppIdToChannel.SelectMany(kv => kv.Value)
+                                .Count(x => x.Type == type && x.ApplicationId == appId);
                     }
                 }
             }
@@ -1407,13 +1908,15 @@ namespace Horizon.MUM
         {
             Channel? channel = null;
 
-            foreach (int appIdInGroup in GetAppIdsInGroup(appId))
+            foreach (var appIdInGroup in GetAppIdsInGroup(appId))
             {
-                if (_lookupsByAppId.TryGetValue(appIdInGroup, out QuickLookup? quickLookup))
+                if (_lookupsByAppId.TryGetValue(appIdInGroup, out var quickLookup))
                 {
                     lock (quickLookup.AppIdToChannel)
                     {
-                        channel = quickLookup.AppIdToChannel.SelectMany(kv => kv.Value).FirstOrDefault(x => x.ApplicationId == appId && x.Id == 1);
+                        channel = quickLookup
+                            .AppIdToChannel.SelectMany(kv => kv.Value)
+                            .FirstOrDefault(x => x.ApplicationId == appId && x.Id == 1);
                         if (channel != null)
                             return channel;
                     }
@@ -1430,15 +1933,18 @@ namespace Horizon.MUM
 
         public async Task AddChannel(Channel channel)
         {
-            if (!_lookupsByAppId.TryGetValue(channel.ApplicationId, out QuickLookup? quickLookup))
+            if (!_lookupsByAppId.TryGetValue(channel.ApplicationId, out var quickLookup))
                 _lookupsByAppId.TryAdd(channel.ApplicationId, quickLookup = new QuickLookup());
 
             lock (quickLookup.AppIdToChannel)
             {
-                if (!quickLookup.AppIdToChannel.ContainsKey(channel.ApplicationId))
-                    quickLookup.AppIdToChannel.Add(channel.ApplicationId, new List<Channel>() { channel });
+                if (!quickLookup.AppIdToChannel.TryGetValue(channel.ApplicationId, out var value))
+                    quickLookup.AppIdToChannel.Add(
+                        channel.ApplicationId,
+                        new List<Channel>() { channel }
+                    );
                 else
-                    quickLookup.AppIdToChannel[channel.ApplicationId].Add(channel);
+                    value.Add(channel);
             }
 
             await channel.OnChannelCreate(channel).ConfigureAwait(false);
@@ -1457,18 +1963,30 @@ namespace Horizon.MUM
         /// <param name="FieldMask4"></param>
         /// <param name="filterMaskLevelType"></param>
         /// <returns></returns>
-        public IEnumerable<Channel> GetChannelListFiltered(int appId, int pageIndex, int pageSize, ChannelType type, ulong FieldMask1, ulong FieldMask2, ulong FieldMask3, ulong FieldMask4, MediusLobbyFilterMaskLevelType filterMaskLevelType)
+        public IEnumerable<Channel> GetChannelListFiltered(
+            int appId,
+            int pageIndex,
+            int pageSize,
+            ChannelType type,
+            ulong FieldMask1,
+            ulong FieldMask2,
+            ulong FieldMask3,
+            ulong FieldMask4,
+            MediusLobbyFilterMaskLevelType filterMaskLevelType
+        )
         {
             return _lookupsByAppId
                 .Where(x => GetAppIdsInGroup(appId).Contains(x.Key))
                 .SelectMany(x => x.Value.AppIdToChannel.SelectMany(x => x.Value))
-                .Where(x => x.Type == type &&
-                    x.ApplicationId == appId &&
-                    x.GenericField1 == FieldMask1 &&
-                    x.GenericField2 == FieldMask2 &&
-                    x.GenericField3 == FieldMask3 &&
-                    x.GenericField4 == FieldMask4 &&
-                    x.GenericFieldLevel == (MediusWorldGenericFieldLevelType)filterMaskLevelType)
+                .Where(x =>
+                    x.Type == type
+                    && x.ApplicationId == appId
+                    && x.GenericField1 == FieldMask1
+                    && x.GenericField2 == FieldMask2
+                    && x.GenericField3 == FieldMask3
+                    && x.GenericField4 == FieldMask4
+                    && x.GenericFieldLevel == (MediusWorldGenericFieldLevelType)filterMaskLevelType
+                )
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize);
         }
@@ -1499,13 +2017,17 @@ namespace Horizon.MUM
         /// <param name="pageSize"></param>
         /// <param name="type"></param>
         /// <returns></returns>
-        public IEnumerable<Channel> GetChannelList(int appId, int pageIndex, int pageSize, ChannelType type)
+        public IEnumerable<Channel> GetChannelList(
+            int appId,
+            int pageIndex,
+            int pageSize,
+            ChannelType type
+        )
         {
             return _lookupsByAppId
                 .Where(x => GetAppIdsInGroup(appId).Contains(x.Key))
                 .SelectMany(x => x.Value.AppIdToChannel.SelectMany(x => x.Value))
-                .Where(x => x.Type == type &&
-                    x.ApplicationId == appId)
+                .Where(x => x.Type == type && x.ApplicationId == appId)
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize);
         }
@@ -1520,83 +2042,167 @@ namespace Horizon.MUM
             return _lookupsByAppId
                 .Where(x => GetAppIdsInGroup(appId).Contains(x.Key))
                 .SelectMany(x => x.Value.AppIdToChannel.SelectMany(x => x.Value))
-                .Where(x => x.ApplicationId == appId).OrderBy(kvp => kvp.PlayerCount).First();
+                .Where(x => x.ApplicationId == appId)
+                .OrderBy(kvp => kvp.PlayerCount)
+                .First();
         }
         #endregion
 
         #region Party
 
-        public Task joinParty(ClientObject client, MediusPartyJoinByIndexRequest request)
+        public void JoinParty(ClientObject client, MediusPartyJoinByIndexRequest request)
         {
-            List<int> approvedMaxPlayersAppIds = new() { 20624, 22500, 22920, 22924, 22930, 23360, 24000, 24180 };
+            List<int> skipGameHostTypeCheckAppIds = new() { }; // Some 108 Medius games not send the same gameHostType in request, but still expect a result...
 
-            Party? party = GetPartyByPartyId(request.MediusWorldID); // MUM original fetches GameWorldData
+            List<int> approvedMaxPlayersAppIds = new()
+            {
+                20624,
+                22500,
+                22920,
+                22924,
+                22930,
+                23360,
+                24000,
+                24180,
+            };
+
+            var party = GetPartyByPartyId(request.MediusWorldID); // MUM original fetches GameWorldData
             if (party == null)
             {
-                LoggerAccessor.LogWarn($"Join Game Request Handler Error: Error in retrieving party info from MUM cache [{request.MediusWorldID}]");
+                LoggerAccessor.LogWarn(
+                    $"[MumManager] - Join Game Request Handler Error: Error in retrieving party info from MUM cache [{request.MediusWorldID}]"
+                );
 
-                client.Queue(new MediusPartyJoinByIndexResponse()
-                {
-                    SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
-                    MessageID = request.MessageID,
-                    StatusCode = MediusCallbackStatus.MediusNoResult
-                });
+                client.Queue(
+                    new MediusPartyJoinByIndexResponse()
+                    {
+                        SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
+                        MessageID = request.MessageID,
+                        StatusCode = MediusCallbackStatus.MediusNoResult,
+                    }
+                );
             }
             #region Password
-            else if (party.PartyPassword != null && party.PartyPassword != string.Empty && party.PartyPassword != request.PartyPassword)
+            else if (
+                party.PartyPassword != null
+                && party.PartyPassword != string.Empty
+                && party.PartyPassword != request.PartyPassword
+            )
             {
-                LoggerAccessor.LogWarn($"Join Game Request Handler Error: This party's password {party.PartyPassword} doesn't match the requested party Password {request.PartyPassword}");
-                client.Queue(new MediusPartyJoinByIndexResponse()
-                {
-                    SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
-                    MessageID = request.MessageID,
-                    StatusCode = MediusCallbackStatus.MediusInvalidPassword
-                });
+                client.Queue(
+                    new MediusPartyJoinByIndexResponse()
+                    {
+                        SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
+                        MessageID = request.MessageID,
+                        StatusCode = MediusCallbackStatus.MediusInvalidPassword,
+                    }
+                );
+            }
+            #endregion
+            #region WorldStatus
+            else if (party.WorldStatus == MediusWorldStatus.WorldClosed)
+            {
+                client.Queue(
+                    new MediusJoinGameResponse()
+                    {
+                        SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
+                        MessageID = request.MessageID,
+                        StatusCode = MediusCallbackStatus.MediusRequestDenied,
+                    }
+                );
             }
             #endregion
             #region MaxPlayers
             else if (party.PlayerCount >= party.MaxPlayers)
             {
-                LoggerAccessor.LogWarn($"Join Game Request Handler Error: This game does not allow more than {party.MaxPlayers}. Current player count: {party.PlayerCount}");
-                client.Queue(new MediusPartyJoinByIndexResponse()
-                {
-                    SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
-                    MessageID = request.MessageID,
-                    StatusCode = MediusCallbackStatus.MediusWorldIsFull
-                });
+                client.Queue(
+                    new MediusPartyJoinByIndexResponse()
+                    {
+                        SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
+                        MessageID = request.MessageID,
+                        StatusCode = MediusCallbackStatus.MediusWorldIsFull,
+                    }
+                );
             }
             #endregion
             #region GameHostType check
-            else if (request.PartyHostType != party.PartyHostType)
+            else if (
+                !skipGameHostTypeCheckAppIds.Contains(client.ApplicationId)
+                && request.PartyHostType != party.PartyHostType
+            )
             {
-                LoggerAccessor.LogWarn($"PartyJoinByIndex Request Handler Error: This party's HostType {party.PartyHostType} does not match the Requests HostType {request.PartyHostType}");
-                client.Queue(new MediusPartyJoinByIndexResponse()
-                {
-                    SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
-                    MessageID = request.MessageID,
-                    StatusCode = MediusCallbackStatus.MediusRequestDenied
-                });
+                client.Queue(
+                    new MediusPartyJoinByIndexResponse()
+                    {
+                        SetMaxPlayers = approvedMaxPlayersAppIds.Contains(client.ApplicationId),
+                        MessageID = request.MessageID,
+                        StatusCode = MediusCallbackStatus.MediusRequestDenied,
+                    }
+                );
             }
             #endregion
             else
             {
-                var dme = party.DMEServer;
-
-                dme?.Queue(new MediusServerJoinGameRequest()
-                {
-                    MessageID = new MessageId($"{party.MediusWorldId}-{client.AccountId}-{request.MessageID}-{1}"),
-                    ConnectInfo = new NetConnectionInfo()
+                _ = EnqueueJoinGameAsync(
+                    client.ApplicationId,
+                    party.MediusWorldId,
+                    () =>
                     {
-                        Type = NetConnectionType.NetConnectionTypeClientServerTCPAuxUDP,
-                        TargetWorldID = party.MediusWorldId,
-                        AccessKey = client.AccessToken,
-                        SessionKey = client.SessionKey,
-                        ServerKey = request.pubKey
-                    }
-                });
-            }
+                        // if This is a Peer to Peer Player Host as DME we treat differently
+                        if (party.PartyHostType == MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
+                        {
+                            party.Host?.Queue(
+                                new MediusServerJoinGameRequest()
+                                {
+                                    MessageID = new MessageId(
+                                        $"{party.MediusWorldId}-{client.AccountId}-{request.MessageID}-{1}"
+                                    ),
+                                    ConnectInfo = new NetConnectionInfo()
+                                    {
+                                        Type = NetConnectionType.NetConnectionTypePeerToPeerUDP,
+                                        TargetWorldID = party.MediusWorldId,
+                                        AccessKey = client.AccessToken,
+                                        SessionKey = client.SessionKey,
+                                        ServerKey = new RSA_KEY(
+                                            LIBRARY
+                                                .Pipeline.Attribute.ScertClientAttribute.DefaultRsaAuthKey.N.ToByteArrayUnsigned()
+                                                .Reverse()
+                                                .ToArray()
+                                        ),
+                                    },
+                                }
+                            );
+                        }
+                        // Else send normal Connection type
+                        else
+                        {
+                            party.DMEServer?.Queue(
+                                new MediusServerJoinGameRequest()
+                                {
+                                    MessageID = new MessageId(
+                                        $"{party.MediusWorldId}-{client.AccountId}-{request.MessageID}-{1}"
+                                    ),
+                                    ConnectInfo = new NetConnectionInfo()
+                                    {
+                                        Type = NetConnectionType.NetConnectionTypeClientServerTCP,
+                                        TargetWorldID = party.MediusWorldId,
+                                        AccessKey = client.AccessToken,
+                                        SessionKey = client.SessionKey,
+                                        ServerKey = new RSA_KEY(
+                                            LIBRARY
+                                                .Pipeline.Attribute.ScertClientAttribute.DefaultRsaAuthKey.N.ToByteArrayUnsigned()
+                                                .Reverse()
+                                                .ToArray()
+                                        ),
+                                    },
+                                }
+                            );
+                        }
 
-            return Task.CompletedTask;
+                        return Task.CompletedTask;
+                    }
+                );
+            }
         }
 
         public async Task AddParty(Party party)
@@ -1605,294 +2211,276 @@ namespace Horizon.MUM
                 _lookupsByAppId.TryAdd(party.ApplicationId, quickLookup = new QuickLookup());
 
             quickLookup.PartyIdToGame.Add(party.MediusWorldId, party);
-            await HorizonServerConfiguration.Database.CreateParty(party.ToPartyDTO());
+            await HorizonServerConfiguration
+                .Database.CreateParty(party.ToPartyDTO())
+                .ConfigureAwait(false);
         }
 
-        public async Task CreateParty(ClientObject client, IMediusRequest request)
+        public async Task CreateParty(ClientObject client, MediusPartyCreateRequest request)
         {
             if (!_lookupsByAppId.TryGetValue(client.ApplicationId, out var quickLookup))
                 _lookupsByAppId.TryAdd(client.ApplicationId, quickLookup = new QuickLookup());
 
             var appIdsInGroup = GetAppIdsInGroup(client.ApplicationId);
-            string? partyName = null;
-            if (request is MediusPartyCreateRequest r)
-                partyName = r.PartyName;
+            string partyName = request.PartyName;
 
-            var existingParties = _lookupsByAppId.Where(x => appIdsInGroup.Contains(client.ApplicationId)).SelectMany(x => x.Value.PartyIdToGame.Select(g => g.Value));
+            var existingParties = _lookupsByAppId
+                .Where(x => appIdsInGroup.Contains(client.ApplicationId))
+                .SelectMany(x => x.Value.PartyIdToGame.Select(g => g.Value));
 
             // Ensure the name is unique
             // If the host leaves then we unreserve the name
-            if (existingParties.Any(x => x.WorldStatus != MediusWorldStatus.WorldClosed && x.WorldStatus != MediusWorldStatus.WorldInactive && x.PartyName == partyName && x.Host != null && x.Host.IsConnected))
+            if (
+                existingParties.Any(x =>
+                    x.WorldStatus != MediusWorldStatus.WorldClosed
+                    && x.WorldStatus != MediusWorldStatus.WorldInactive
+                    && x.PartyName == partyName
+                    && x.Host != null
+                    && x.Host.IsConnected
+                )
+            )
             {
-                client.Queue(new RT_MSG_SERVER_APP()
-                {
-                    Message = new MediusCreateGameResponse()
+                client.Queue(
+                    new RT_MSG_SERVER_APP()
                     {
-                        MessageID = request.MessageID,
-                        MediusWorldID = -1,
-                        StatusCode = MediusCallbackStatus.MediusGameNameExists
+                        Message = new MediusCreateGameResponse()
+                        {
+                            MessageID = request.MessageID,
+                            MediusWorldID = -1,
+                            StatusCode = MediusCallbackStatus.MediusGameNameExists,
+                        },
                     }
-                });
+                );
                 return;
             }
 
-            // Try to get next free dme server
-            // If none exist, return error to clist
-            var dme = MediusClass.ProxyServer.GetFreeDme(client.ApplicationId, client.LocationId);
-            MPS mps = MediusClass.GetMPS();
-            if (mps == null)
+            // P2P Matchmaking.
+            if (request.PartyHostType == MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
             {
-                
-            }
-            else if (dme == null)
-            {
-                client.Queue(new MediusPartyCreateResponse()
-                {
-                    MessageID = request.MessageID,
-                    MediusWorldID = -1,
-                    StatusCode = MediusCallbackStatus.MediusTransactionTimedOut
-                });
-                return;
-            }
-            else
-            {
-                // Create and add party.
+                // Create and add
                 try
                 {
-                    Party? party = new(client, request, dme);
-                    await AddParty(party);
+                    // Try to get next free MPS server
+                    // If none exist, return error to clist
+                    var mps = Program.MediusManager?.ProxyServer;
+                    if (mps == null)
+                    {
+                        client.Queue(
+                            new MediusMatchCreateGameResponse()
+                            {
+                                MessageID = request.MessageID,
+                                MediusWorldID = -1,
+                                StatusCode = MediusCallbackStatus.MediusTransactionTimedOut,
+                            }
+                        );
+                        return;
+                    }
 
-                    await client.JoinParty(party, party.MediusWorldId);
+                    var dme = client;
 
-                    mps.SendServerCreateGameWithAttributesRequest(request.MessageID.ToString(), client.AccountId, party.GameChannel!.Id, party.MediusWorldId, true, (int)party.Attributes, client.ApplicationId, party.MaxPlayers);
+                    Party party = new(client, request, dme);
+
+                    await client.JoinPartyP2P(party).ConfigureAwait(false);
+
+                    await AddParty(party).ConfigureAwait(false);
+
+                    mps.SendServerCreateGameOrPartyWithAttributesRequestP2P(
+                        request.MessageID.ToString(),
+                        client.AccountId,
+                        party.MediusWorldId,
+                        party,
+                        client
+                    );
 
                     return;
                 }
                 catch (Exception e)
                 {
-                    LoggerAccessor.LogError(e);
+                    LoggerAccessor.LogError($"[MumManager] - Error in CreateParty P2P {e}");
+                }
+            }
+            // DME
+            else
+            {
+                // Try to get next free dme server
+                // If none exist, return error to clist
+                var dme = Program.MediusManager?.ProxyServer.GetFreeDme(
+                    client.ApplicationId,
+                    client.LocationId
+                );
+
+                if (dme == null)
+                {
+                    client.Queue(
+                        new MediusPartyCreateResponse()
+                        {
+                            MessageID = request.MessageID,
+                            MediusWorldID = -1,
+                            StatusCode = MediusCallbackStatus.MediusTransactionTimedOut,
+                        }
+                    );
+                    return;
+                }
+
+                // Create and add party.
+                try
+                {
+                    Party? party = new(client, request, dme);
+
+                    await AddParty(party).ConfigureAwait(false);
+
+                    // Send create game request to dme server
+                    dme.Queue(
+                        new MediusServerCreateGameWithAttributesRequest()
+                        {
+                            MessageID = new MessageId(
+                                $"{party.MediusWorldId}-{client.AccountId}-{request.MessageID}-{1}"
+                            ),
+                            WorldID = party.GameChannel!.Id,
+                            Attributes = party.Attributes,
+                            ApplicationID = client.ApplicationId,
+                            MaxClients = party.MaxPlayers,
+                        }
+                    );
+                    return;
+                }
+                catch (Exception e)
+                {
+                    LoggerAccessor.LogError($"[MumManager] - Error in CreateParty {e}");
                 }
             }
 
             // Failure adding game for some reason
-            client.Queue(new MediusPartyCreateResponse()
-            {
-                MessageID = request.MessageID,
-                MediusWorldID = -1,
-                StatusCode = MediusCallbackStatus.MediusFail
-            });
+            client.Queue(
+                new MediusPartyCreateResponse()
+                {
+                    MessageID = request.MessageID,
+                    MediusWorldID = -1,
+                    StatusCode = MediusCallbackStatus.MediusFail,
+                }
+            );
         }
 
         #endregion
 
         #region MFS
-        public IEnumerable<MediusFile> GetFilesList(string path, string filenameBeginsWith, uint pageSize, uint startingEntryNumber, int appId)
+        public IEnumerable<MediusFile> GetFilesList(
+            string path,
+            string filenameBeginsWith,
+            uint pageSize,
+            uint startingEntryNumber,
+            int appId
+        )
         {
             lock (_mediusFiles)
             {
+                _mediusFiles.Clear();
 
-                string[]? files = null;
-                int counter = 0;
-                /*
-                if (appId == 11203 || appId == 10994 || appId == 11204)
-                {
+                if (startingEntryNumber == 0)
+                    return _mediusFiles;
 
-                    string JakXPath = path + filenameBeginsWith.Split("*");
-                } else
+                try
                 {
+                    // Normalize pattern
+                    string searchPattern =
+                        string.IsNullOrWhiteSpace(filenameBeginsWith) || filenameBeginsWith == "*"
+                            ? "*"
+                            : filenameBeginsWith;
 
-                }
-                */
-                if (filenameBeginsWith.ToString() == "*")
-                {
-                    files = Directory.GetFiles(path).Select(file => Path.GetFileName(file)).ToArray();
-                }
-                else
-                {
-                    files = Directory.GetFiles(path, Convert.ToString(filenameBeginsWith));
-                }
+                    var files = Directory.GetFiles(path, searchPattern).OrderBy(f => f).ToArray();
 
-                if (files.Length < pageSize)
-                {
-                    counter = files.Count();
-                }
-                else
-                {
-                    counter = (int)pageSize - 1;
-                }
+                    int startIndex = (int)startingEntryNumber - 1;
 
-                for (int i = (int)startingEntryNumber - 1; i < counter; i++)
-                {
-                    string fileName = files[i];
-                    FileInfo fi = new FileInfo(fileName);
+                    if (startIndex < 0 || startIndex >= files.Length)
+                        return _mediusFiles;
 
-                    try
+                    int endIndex = Math.Min(startIndex + (int)pageSize, files.Length);
+
+                    for (int i = startIndex; i < endIndex; i++)
                     {
-                        _mediusFiles.Add(new MediusFile()
-                        {
-                            FileName = files[i],
-                            FileID = i,
-                            FileSize = (int)fi.Length,
-                            CreationTimeStamp = (int)fi.CreationTime.ToUnixTimeU32(),
-                        });
-                    }
-                    catch (Exception e)
-                    {
-                        LoggerAccessor.LogWarn($"MFS FileList Exception:\n{e}");
+                        var filePath = files[i];
+                        var fi = new FileInfo(filePath);
+
+                        _mediusFiles.Add(
+                            new MediusFile
+                            {
+                                FileName = Path.GetFileName(filePath),
+                                FileID = i,
+                                FileSize = (int)fi.Length,
+                                CreationTimeStamp = (int)fi.CreationTime.ToUnixTimeU32(),
+                            }
+                        );
                     }
                 }
+                catch (Exception e)
+                {
+                    LoggerAccessor.LogError($"[MumManager] - MFS FileList Exception: {e}");
+                }
+
                 return _mediusFiles;
             }
         }
 
-        public IEnumerable<MediusFile> GetFilesListExt(string path, string filenameBeginsWith, uint pageSize, uint startingEntryNumber, int appId)
+        public IEnumerable<MediusFile> GetFilesListExt(
+            string path,
+            string filenameBeginsWith,
+            uint pageSize,
+            uint startingEntryNumber,
+            int appId
+        )
         {
             lock (_mediusFiles)
             {
+                _mediusFiles.Clear();
+
                 if (startingEntryNumber == 0)
                     return _mediusFiles;
 
-                int counter = 0;
-
-                //JakX FileNameBeginsWith requires extra handling for folders
-                if (appId == 11203 || appId == 10994 || appId == 11204)
+                try
                 {
+                    string searchPattern = string.IsNullOrWhiteSpace(filenameBeginsWith)
+                        ? "*"
+                        : filenameBeginsWith;
 
-                    string JakXPath = path + filenameBeginsWith.Split("*");
+                    var files = Directory.GetFiles(path, searchPattern).OrderBy(f => f).ToArray();
 
-                    string[] filesArray = Directory.GetFiles(JakXPath);
+                    int startIndex = (int)startingEntryNumber - 1;
 
-                    //files = Directory.GetFiles(path).Select(file => Path.GetFileName(filenameBeginsWith)).ToArray();
+                    if (startIndex < 0 || startIndex >= files.Length)
+                        return _mediusFiles;
 
-                    if (filesArray.Length < pageSize)
+                    int endIndex = Math.Min(startIndex + (int)pageSize, files.Length);
+
+                    for (int i = startIndex; i < endIndex; i++)
                     {
-                        counter = filesArray.Count() - 1;
-                    }
-                    else
-                    {
-                        counter = (int)pageSize - 1;
-                    }
+                        var filePath = files[i];
+                        var fi = new FileInfo(filePath);
 
-                    for (int i = (int)(startingEntryNumber - 1); i < counter; i++)
-                    {
-                        //string[] pathArray = path.TrimStart('[').TrimEnd(']').Split(',');
-
-                        //string[] fileName = filesArray[i].Split(path, path.Length, options: StringSplitOptions.None);
-                        //string FileNameAppended = UsingStringJoin(fileName);
-
-                        try
-                        {
-                            string fileName = filesArray[i];
-                            FileInfo fi = new FileInfo(fileName);
-
-                            LoggerAccessor.LogInfo($"Medius Files Count: {_mediusFiles.Count}");
-
-                            _mediusFiles.Add(new MediusFile()
+                        _mediusFiles.Add(
+                            new MediusFile
                             {
-                                FileName = fileName.ToString(),
+                                FileName = Path.GetFileName(filePath),
                                 FileID = i,
                                 FileSize = (int)fi.Length,
                                 CreationTimeStamp = (int)fi.CreationTime.ToUnixTimeU32(),
-                            });
-                        }
-                        catch (Exception e)
-                        {
-                            LoggerAccessor.LogWarn($"MFS FileListExt Exception:\n{e}");
-                        }
+                            }
+                        );
                     }
-                    return _mediusFiles;
-                }
-                else
-                {
-
-                    string filenameBeginsWithAppended = filenameBeginsWith.Remove(filenameBeginsWith.Length - 1);
-
-
-                    string[] filesArray = Directory.GetFiles(path);
-
-                    //files = Directory.GetFiles(path).Select(file => Path.GetFileName(filenameBeginsWith)).ToArray();
-
-                    if (filesArray.Length < pageSize)
-                    {
-                        counter = filesArray.Count() - 1;
-                    }
-                    else
-                    {
-                        counter = (int)pageSize - 1;
-                    }
-
-                    for (int i = (int)(startingEntryNumber - 1); i < counter; i++)
-                    {
-                        //string[] pathArray = path.TrimStart('[').TrimEnd(']').Split(',');
-
-                        //string[] fileName = filesArray[i].Split(path, path.Length, options: StringSplitOptions.None);
-                        //string FileNameAppended = UsingStringJoin(fileName);
-
-                        try
-                        {
-                            string fileName = filesArray[i];
-                            FileInfo fi = new FileInfo(fileName);
-
-                            _mediusFiles.Where(x => x.FileName == fileName.StartsWith(filenameBeginsWithAppended).ToString()).ToList();
-
-                            /*
-                            _mediusFiles.Add(new MediusFile()
-                            {
-                                FileName = filenameBeginsWithAppended.ToString(),
-                                FileID = (uint)i,
-                                FileSize = (uint)fi.Length,
-                                CreationTimeStamp = Utils.ToUnixTime(fi.CreationTime),
-                            });
-                            */
-                        }
-                        catch (Exception e)
-                        {
-                            LoggerAccessor.LogWarn($"MFS FileListExt Exception:\n{e}");
-                        }
-                    }
-                    return _mediusFiles;
-                }
-
-
-            }
-        }
-
-        public IEnumerable<MediusFileMetaData> UpdateFileMetaData(string path, int appId, MediusFile mediusFile, MediusFileMetaData mediusFileMetaData)
-
-        {
-            lock (_mediusFilesToUpdateMetaData)
-            {
-
-                /*
-                if (filename.ToString() != null)
-                {
-                    files = Directory.GetFiles(path).Select(file => Path.GetFileName(file)).ToArray();
-                }
-                else
-                {
-                    files = Directory.GetFiles(path, Convert.ToString(filename));
-                }
-                */
-                try
-                {
-                    _mediusFilesToUpdateMetaData.Add(new MediusFileMetaData()
-                    {
-                        Key = mediusFileMetaData.Key,
-                        Value = mediusFileMetaData.Value,
-                    });
                 }
                 catch (Exception e)
                 {
-                    LoggerAccessor.LogError($"[MFS] - UpdateMetaData Exception:\n{e}");
+                    LoggerAccessor.LogError($"[MumManager] - MFS FileListExt Exception: {e}");
                 }
 
-                return _mediusFilesToUpdateMetaData;
+                return _mediusFiles;
             }
         }
 
-        public Task UploadMediusFile(MediusFileUploadResponse fileUploadResponse, ClientObject clientObject)
+        public static Task UploadMediusFile(
+            MediusFileUploadResponse fileUploadResponse,
+            ClientObject clientObject
+        )
         {
-
             var uploadState = clientObject.Upload;
 
             if (fileUploadResponse.iXferStatus >= MediusFileXferStatus.End)
@@ -1900,7 +2488,11 @@ namespace Horizon.MUM
 
             try
             {
-                LoggerAccessor.LogInfo($"[MFS] - Bytes Received Total [{uploadState.BytesReceived}] < [{uploadState.TotalSize}]");
+#if DEBUG
+                LoggerAccessor.LogInfo(
+                    $"[MumManager] - MFS Bytes Received Total [{uploadState.BytesReceived}] < [{uploadState.TotalSize}]"
+                );
+#endif
                 uploadState.Stream.Seek(fileUploadResponse.iStartByteIndex, SeekOrigin.Begin);
                 uploadState.Stream.Write(fileUploadResponse.Data, 0, fileUploadResponse.iDataSize);
                 uploadState.BytesReceived += fileUploadResponse.iDataSize;
@@ -1908,37 +2500,43 @@ namespace Horizon.MUM
 
                 if (uploadState.BytesReceived < uploadState.TotalSize)
                 {
-                    clientObject.Queue(new MediusFileUploadServerRequest()
-                    {
-                        MessageID = fileUploadResponse.MessageID,
-                        StatusCode = MediusCallbackStatus.MediusSuccess,
-                        iPacketNumber = uploadState.PacketNumber,
-                        iReqStartByteIndex = uploadState.BytesReceived,
-                        iXferStatus = MediusFileXferStatus.Mid
-                    });
+                    clientObject.Queue(
+                        new MediusFileUploadServerRequest()
+                        {
+                            MessageID = fileUploadResponse.MessageID,
+                            StatusCode = MediusCallbackStatus.MediusSuccess,
+                            iPacketNumber = uploadState.PacketNumber,
+                            iReqStartByteIndex = uploadState.BytesReceived,
+                            iXferStatus = MediusFileXferStatus.Mid,
+                        }
+                    );
                 }
                 else
                 {
-                    clientObject.Queue(new MediusFileUploadServerRequest()
-                    {
-                        MessageID = fileUploadResponse.MessageID,
-                        StatusCode = MediusCallbackStatus.MediusSuccess,
-                        iPacketNumber = uploadState.PacketNumber,
-                        iReqStartByteIndex = uploadState.BytesReceived,
-                        iXferStatus = MediusFileXferStatus.End
-                    });
+                    clientObject.Queue(
+                        new MediusFileUploadServerRequest()
+                        {
+                            MessageID = fileUploadResponse.MessageID,
+                            StatusCode = MediusCallbackStatus.MediusSuccess,
+                            iPacketNumber = uploadState.PacketNumber,
+                            iReqStartByteIndex = uploadState.BytesReceived,
+                            iXferStatus = MediusFileXferStatus.End,
+                        }
+                    );
                 }
             }
             catch
             {
-                clientObject.Queue(new MediusFileUploadServerRequest()
-                {
-                    MessageID = fileUploadResponse.MessageID,
-                    StatusCode = MediusCallbackStatus.MediusFileInternalAccessError,
-                    iPacketNumber = uploadState.PacketNumber,
-                    iReqStartByteIndex = uploadState.BytesReceived,
-                    iXferStatus = MediusFileXferStatus.Error
-                });
+                clientObject.Queue(
+                    new MediusFileUploadServerRequest()
+                    {
+                        MessageID = fileUploadResponse.MessageID,
+                        StatusCode = MediusCallbackStatus.MediusFileInternalAccessError,
+                        iPacketNumber = uploadState.PacketNumber,
+                        iReqStartByteIndex = uploadState.BytesReceived,
+                        iXferStatus = MediusFileXferStatus.Error,
+                    }
+                );
             }
 
             return Task.CompletedTask;
@@ -1959,7 +2557,8 @@ namespace Horizon.MUM
                 quickLookup.BuddyInvitationsToClient.Add(accountToAdd.AccountId, accountToAdd);
             }
 
-            return _lookupsByAppId.Where(x => appIdsInGroup.Contains(x.Key))
+            return _lookupsByAppId
+                .Where(x => appIdsInGroup.Contains(x.Key))
                 .SelectMany(x => x.Value.BuddyInvitationsToClient.Select(x => x.Value))
                 .ToList();
         }
@@ -1968,7 +2567,8 @@ namespace Horizon.MUM
         {
             var appIdsInGroup = GetAppIdsInGroup(appId);
 
-            return _lookupsByAppId.Where(x => appIdsInGroup.Contains(x.Key))
+            return _lookupsByAppId
+                .Where(x => appIdsInGroup.Contains(x.Key))
                 .SelectMany(x => x.Value.BuddyInvitationsToClient.Select(x => x.Value))
                 .Where(x => x.AccountId == AccountId)
                 .ToList();
@@ -2010,11 +2610,11 @@ namespace Horizon.MUM
 
         public async Task Tick()
         {
-            await TickClients();
+            await TickClients().ConfigureAwait(false);
 
-            await TickChannels();
+            await TickChannels().ConfigureAwait(false);
 
-            await TickGames();
+            await TickGames().ConfigureAwait(false);
         }
 
         private async Task TickChannels()
@@ -2028,19 +2628,21 @@ namespace Horizon.MUM
                     {
                         List<Channel> channelsToRemove = new();
 
-                        foreach (Channel channel in channelKeyPair.Value)
+                        foreach (var channel in channelKeyPair.Value)
                         {
                             if (channel.ReadyToDestroy)
                                 channelsToRemove.Add(channel);
                             else
-                                await channel.Tick();
+                                await channel.Tick().ConfigureAwait(false);
                         }
 
                         lock (quickLookup.Value.AppIdToChannel)
                         {
-                            foreach (Channel channel in channelsToRemove)
+                            foreach (var channel in channelsToRemove)
                             {
-                                LoggerAccessor.LogWarn($"Destroying Channel {channel}");
+                                LoggerAccessor.LogWarn(
+                                    $"[MumManager] - Destroying Channel {channel}"
+                                );
 
                                 channelKeyPair.Value.Remove(channel);
 
@@ -2054,7 +2656,7 @@ namespace Horizon.MUM
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[MediusManager] - Error in TickChannels {ex}");
+                LoggerAccessor.LogError($"[MumManager] - Error in TickChannels {ex}");
             }
         }
 
@@ -2068,9 +2670,9 @@ namespace Horizon.MUM
                 // Tick games
                 foreach (var quickLookup in _lookupsByAppId)
                 {
-                    int appid = quickLookup.Key;
-                    List<int> gameKeysToUpdate = new List<int>();
-                    List<int> partyKeysToUpdate = new List<int>();
+                    var appid = quickLookup.Key;
+                    var gameKeysToUpdate = new List<int>();
+                    var partyKeysToUpdate = new List<int>();
 
                     foreach (var gameKeyPair in quickLookup.Value.GameIdToGame)
                     {
@@ -2078,22 +2680,26 @@ namespace Horizon.MUM
 
                         if (game.MediusWorldId != gameKeyPair.Key)
                         {
-                            LoggerAccessor.LogWarn($"Game Id mismatch: key {gameKeyPair.Key} != game.MediusWorldId {game.MediusWorldId}, updating.");
+                            LoggerAccessor.LogWarn(
+                                $"[MumManager] - Game Id mismatch: key {gameKeyPair.Key} != game.MediusWorldId {game.MediusWorldId}, updating."
+                            );
                             gameKeysToUpdate.Add(gameKeyPair.Key);
                         }
                         if (game.ReadyToDestroy)
                         {
-                            LoggerAccessor.LogWarn($"Destroying Game {game}");
-                            await game.EndGame(appid);
+                            LoggerAccessor.LogWarn($"[MumManager] - Destroying Game {game}");
+                            await game.EndGame(appid).ConfigureAwait(false);
                             gamesToRemove.Enqueue((quickLookup.Value, gameKeyPair.Key));
                         }
                         else if (game.Destroyed)
                         {
-                            LoggerAccessor.LogWarn($"Removing destroyed Game {game}");
+                            LoggerAccessor.LogWarn(
+                                $"[MumManager] - Removing destroyed Game {game}"
+                            );
                             gamesToRemove.Enqueue((quickLookup.Value, gameKeyPair.Key));
                         }
                         else
-                            await game.Tick();
+                            await game.Tick().ConfigureAwait(false);
                     }
 
                     lock (quickLookup.Value.GameIdToGame)
@@ -2112,22 +2718,26 @@ namespace Horizon.MUM
 
                         if (party.MediusWorldId != partyKeyPair.Key)
                         {
-                            LoggerAccessor.LogWarn($"Party Id mismatch: key {partyKeyPair.Key} != party.MediusWorldId {party.MediusWorldId}, updating.");
+                            LoggerAccessor.LogWarn(
+                                $"[MumManager] - Party Id mismatch: key {partyKeyPair.Key} != party.MediusWorldId {party.MediusWorldId}, updating."
+                            );
                             partyKeysToUpdate.Add(partyKeyPair.Key);
                         }
                         if (party.ReadyToDestroy)
                         {
-                            LoggerAccessor.LogWarn($"Destroying Party {party}");
-                            await party.EndParty(appid);
+                            LoggerAccessor.LogWarn($"[MumManager] - Destroying Party {party}");
+                            await party.EndParty(appid).ConfigureAwait(false);
                             partiesToRemove.Enqueue((quickLookup.Value, partyKeyPair.Key));
                         }
                         else if (party.Destroyed)
                         {
-                            LoggerAccessor.LogWarn($"Removing destroyed Party {party}");
+                            LoggerAccessor.LogWarn(
+                                $"[MumManager] - Removing destroyed Party {party}"
+                            );
                             partiesToRemove.Enqueue((quickLookup.Value, partyKeyPair.Key));
                         }
                         else
-                            await party.Tick();
+                            await party.Tick().ConfigureAwait(false);
                     }
 
                     lock (quickLookup.Value.PartyIdToGame)
@@ -2150,7 +2760,7 @@ namespace Horizon.MUM
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[MediusManager] - Error in TickGames {ex}");
+                LoggerAccessor.LogError($"[MumManager] - Error in TickGames {ex}");
             }
         }
 
@@ -2160,19 +2770,25 @@ namespace Horizon.MUM
             {
                 Queue<(int, string)> clientsToRemove = new();
 
-                while (_addQueue.TryDequeue(out ClientObject? newClient))
+                while (_addQueue.TryDequeue(out var newClient))
                 {
                     if (!_lookupsByAppId.TryGetValue(newClient.ApplicationId, out var quickLookup))
-                        _lookupsByAppId.TryAdd(newClient.ApplicationId, quickLookup = new QuickLookup());
+                        _lookupsByAppId.TryAdd(
+                            newClient.ApplicationId,
+                            quickLookup = new QuickLookup()
+                        );
 
                     try
                     {
                         if (newClient.IsLoggedIn)
                         {
                             quickLookup.AccountIdToClient.Add(newClient.AccountId, newClient);
-							
+
                             if (!string.IsNullOrEmpty(newClient.AccountName))
-                                quickLookup.AccountNameToClient.Add(newClient.AccountName.ToLower(), newClient);
+                                quickLookup.AccountNameToClient.Add(
+                                    newClient.AccountName.ToLower(),
+                                    newClient
+                                );
                         }
 
                         if (!string.IsNullOrEmpty(newClient.AccessToken))
@@ -2189,9 +2805,11 @@ namespace Horizon.MUM
                             if (newClient.IsLoggedIn)
                             {
                                 quickLookup.AccountIdToClient.Remove(newClient.AccountId);
-								
+
                                 if (!string.IsNullOrEmpty(newClient.AccountName))
-                                    quickLookup.AccountNameToClient.Remove(newClient.AccountName.ToLower());
+                                    quickLookup.AccountNameToClient.Remove(
+                                        newClient.AccountName.ToLower()
+                                    );
                             }
 
                             if (!string.IsNullOrEmpty(newClient.AccessToken))
@@ -2201,8 +2819,9 @@ namespace Horizon.MUM
                                 quickLookup.SessionKeyToClient.Remove(newClient.SessionKey);
                         }
 
-                        LoggerAccessor.LogError(e);
-                        //throw e;
+                        LoggerAccessor.LogError(
+                            $"[MumManager] - Error in TickClients addQueue cleanup {e}"
+                        );
                     }
                 }
 
@@ -2212,10 +2831,12 @@ namespace Horizon.MUM
                     {
                         if (!clientKeyPair.Value.IsConnected)
                         {
-                            LoggerAccessor.LogWarn($"Destroying Client {clientKeyPair.Value}");
+                            LoggerAccessor.LogWarn(
+                                $"[MumManager] - Destroying Client {clientKeyPair.Value}"
+                            );
 
                             // end server session and Logout
-                            await clientKeyPair.Value.Logout();
+                            await clientKeyPair.Value.Logout().ConfigureAwait(false);
                             clientKeyPair.Value.EndServerSession();
 
                             clientsToRemove.Enqueue((quickLookup.Key, clientKeyPair.Key));
@@ -2226,11 +2847,16 @@ namespace Horizon.MUM
                 }
 
                 // Remove
-                while (clientsToRemove.TryDequeue(out (int, string) appIdAndSessionKey))
+                while (clientsToRemove.TryDequeue(out var appIdAndSessionKey))
                 {
-                    if (_lookupsByAppId.TryGetValue(appIdAndSessionKey.Item1, out QuickLookup? quickLookup))
+                    if (_lookupsByAppId.TryGetValue(appIdAndSessionKey.Item1, out var quickLookup))
                     {
-                        if (quickLookup.SessionKeyToClient.Remove(appIdAndSessionKey.Item2, out ClientObject? clientObject))
+                        if (
+                            quickLookup.SessionKeyToClient.Remove(
+                                appIdAndSessionKey.Item2,
+                                out var clientObject
+                            )
+                        )
                         {
                             if (!string.IsNullOrEmpty(clientObject.AccessToken))
                                 quickLookup.AccessTokenToClient.Remove(clientObject.AccessToken);
@@ -2238,14 +2864,16 @@ namespace Horizon.MUM
                             quickLookup.AccountIdToClient.Remove(clientObject.AccountId);
 
                             if (!string.IsNullOrEmpty(clientObject.AccountName))
-                               quickLookup.AccountNameToClient.Remove(clientObject.AccountName.ToLower());
+                                quickLookup.AccountNameToClient.Remove(
+                                    clientObject.AccountName.ToLower()
+                                );
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[MediusManager] - Error in TickClients {ex}");
+                LoggerAccessor.LogError($"[MumManager] - Error in TickClients {ex}");
             }
         }
 
@@ -2256,11 +2884,16 @@ namespace Horizon.MUM
         public async Task OnDatabaseAuthenticated()
         {
             // get supported app ids
-            AppIdDTO[]? appids = await HorizonServerConfiguration.Database.GetAppIds();
+            var appids = await HorizonServerConfiguration
+                .Database.GetAppIds()
+                .ConfigureAwait(false);
 
             if (appids != null)
                 // build dictionary of app ids from response
-                _appIdGroups = appids.ToDictionary(x => x.Name, x => x.AppIds != null ? x.AppIds.ToArray() : Array.Empty<int>());
+                _appIdGroups = appids.ToDictionary(
+                    x => x.Name,
+                    x => x.AppIds != null ? x.AppIds.ToArray() : Array.Empty<int>()
+                );
         }
 
         public bool IsAppIdSupported(int appId)
@@ -2270,36 +2903,13 @@ namespace Horizon.MUM
 
         public int[] GetAppIdsInGroup(int appId)
         {
-            return _appIdGroups.FirstOrDefault(x => x.Value.Contains(appId)).Value ?? Array.Empty<int>();
+            return _appIdGroups.FirstOrDefault(x => x.Value.Contains(appId)).Value
+                ?? Array.Empty<int>();
         }
 
         #endregion
 
         #region Misc
-
-        public SECURITY_MODE GetServerSecurityMode(SECURITY_MODE securityMode, RSA_KEY rsaKey)
-        {
-            int result;
-
-            result = (int)securityMode;
-
-            if (securityMode == SECURITY_MODE.MODE_UNKNOWN)
-            {
-                //result = (KM_GetLocalPublicKey(RSA_KEY, 0x80000000, 0) != 0) + 1;
-
-                //securityMode = (SECURITY_MODE)result;
-            }
-
-
-            return (SECURITY_MODE)result;
-        }
-
-        public void rt_msg_server_check_protocol_compatibility(int clientVersion, byte p_compatible)
-        {
-
-
-
-        }
 
         #region AnonymouseAccountIdGenerator
         /// <summary>
@@ -2308,260 +2918,29 @@ namespace Horizon.MUM
         /// </summary>
         /// <param name="AnonymousIDRangeSeed">Config Value for changing the MAS</param>
         /// <returns></returns>
-        public int AnonymousAccountIDGenerator(int AnonymousIDRangeSeed)
+        public static int AnonymousAccountIDGenerator(int AnonymousIDRangeSeed)
         {
             // Anonymous login expect a negative id < 0.
             return new Random().Next(-80000000, AnonymousIDRangeSeed);
         }
         #endregion
 
-        public string UsingStringJoin(string[] array)
-        {
-            return string.Join(string.Empty, array);
-        }
-
-        #endregion
-
-        #region Vulgarity
-
-        public void load_classifier(string filename)
-        {
-            int classifier = 0;
-            var rootPath = Path.GetFullPath(MediusClass.Settings.MediusVulgarityRootPath);
-
-            try
-            {
-                var stream = File.Open(rootPath + filename, FileMode.OpenOrCreate, FileAccess.Read);
-
-                FileInfo fi = new FileInfo(filename);
-
-                if (fi.Extension == "cl")
-                    classifier = read_classifier(stream);
-                else
-                    LoggerAccessor.LogWarn($"Unknown file type in {rootPath}.\n");
-
-            }
-            catch (Exception)
-            {
-                LoggerAccessor.LogWarn($"Cannot open {rootPath + "/" + filename}.\n");
-            }
-
-        }
-
-        public int read_classifier(FileStream fileClassifier)
-        {
-            if (fileClassifier.Length == 20398493)
-            {
-
-            }
-
-            return 0;
-        }
-        #endregion
-
-        #region DmeServerClient
-
-        public Task DmeServerClientIpQuery(int WorldID, int TargetClient, IPAddress IP)
-        {
-
-            return Task.CompletedTask;
-        }
-
-        public DME_SERVER_RESULT DmeServerMapRtError(uint RtError)
-        {
-            DME_SERVER_RESULT result;
-            if (RtError == 52518)
-            {
-                result = DME_SERVER_RESULT.DME_SERVER_UNKNOWN_MSG_TYPE;
-                return result;
-            }
-
-            if (RtError > 0xCD26)
-            {
-                result = DME_SERVER_RESULT.DME_SERVER_MUTEX_ERROR;
-                if (RtError != 52528)
-                {
-                    if (RtError > 0xCD30)
-                    {
-                        result = DME_SERVER_RESULT.DME_SERVER_UNSECURED_ERROR;
-                        if (RtError != 52533)
-                        {
-                            if (RtError > 0xCD35)
-                            {
-                                result = DME_SERVER_RESULT.DME_SERVER_CONFIG_ERROR;
-                                if (RtError != 52535)
-                                {
-                                    result = DME_SERVER_RESULT.DME_SERVER_BUFF_OVERFLOW_ERROR;
-                                    if (RtError >= 0xCD37)
-                                    {
-                                        result = DME_SERVER_RESULT.DME_SERVER_PARTIAL_RW_ERROR;
-                                        if (RtError != 52536)
-                                        {
-                                            result = DME_SERVER_RESULT.DME_SERVER_CLIENT_ALREADY_DISCONNECTED;
-                                        }
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                //if (RtError == 52530)
-                                //return 30;
-                                result = DME_SERVER_RESULT.DME_SERVER_NO_MORE_WORLDS;
-                                if (RtError >= 0xCD32)
-                                {
-                                    result = DME_SERVER_RESULT.DME_SERVER_CLIENT_LIMIT;
-                                    if (RtError != 52531)
-                                    {
-                                        result = DME_SERVER_RESULT.DME_SERVER_ENCRYPTED_ERROR;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        result = DME_SERVER_RESULT.DME_SERVER_MSG_TOO_BIG;
-                        if (RtError != 52523)
-                        {
-                            if (RtError > 0xCD2B)
-                            {
-                                result = DME_SERVER_RESULT.DME_SERVER_PARTIAL_WRITE;
-                                if (RtError != 52525)
-                                {
-                                    result = DME_SERVER_RESULT.DME_SERVER_UNKNOWN_MSG_TYPE;
-                                    if (RtError >= 0xCD2D)
-                                    {
-                                        result = DME_SERVER_RESULT.DME_SERVER_SOCKET_RESET_ERROR;
-                                        if (RtError != 52526)
-                                        {
-                                            result = DME_SERVER_RESULT.DME_SERVER_CIRC_BUF_ERROR;
-                                        }
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                result = DME_SERVER_RESULT.DME_SERVER_TCP_GET_WORLD_INDEX;
-                                if (RtError != 52520)
-                                {
-                                    result = DME_SERVER_RESULT.DME_SERVER_WOULD_BLOCK;
-                                    if (RtError >= 0xCD28)
-                                    {
-                                        result = DME_SERVER_RESULT.DME_SERVER_READ_ERROR;
-                                        if (RtError != 52521)
-                                        {
-                                            result = DME_SERVER_RESULT.DME_SERVER_SOCKET_CLOSED;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                if (RtError == 52508)
-                {
-                    result = DME_SERVER_RESULT.DME_SERVER_CONN_MSG_ERROR;
-                    return result;
-                }
-                if (RtError > 0xCD1C)
-                {
-                    result = DME_SERVER_RESULT.DME_SERVER_SOCKET_BIND_ERROR;
-                    if (RtError != 52513)
-                    {
-                        if (RtError > 0xCD21)
-                        {
-                            result = DME_SERVER_RESULT.DME_SERVER_SOCKET_LISTEN_ERROR;
-                            if (RtError != 52515)
-                            {
-                                result = DME_SERVER_RESULT.DME_SERVER_SOCKET_POLL_ERROR;
-                                if (RtError >= 0xCD23)
-                                {
-                                    result = DME_SERVER_RESULT.DME_SERVER_SOCKET_READ_ERROR;
-                                    if (RtError != 52516)
-                                    {
-                                        result = DME_SERVER_RESULT.DME_SERVER_SOCKET_WRITE_ERROR;
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            result = DME_SERVER_RESULT.DME_SERVER_STACK_LOAD_ERROR;
-                            if (RtError != 52510)
-                            {
-                                result = DME_SERVER_RESULT.DME_SERVER_WORLD_FULL;
-                                if (RtError >= 0xCD1E)
-                                {
-                                    result = DME_SERVER_RESULT.DME_SERVER_SOCKET_CREATE_ERROR;
-                                    if (RtError != 52511)
-                                    {
-                                        result = DME_SERVER_RESULT.DME_SERVER_SOCKET_OPT_ERROR;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    if (RtError == 52503)
-                    {
-                        result = DME_SERVER_RESULT.DME_SERVER_NOT_INITIALIZED;
-                        return result;
-                    }
-
-                    if (RtError <= 0xCD17)
-                    {
-                        if (RtError == 52501)
-                        {
-                            result = DME_SERVER_RESULT.DME_SERVER_INVALID_PARAM;
-                            return result;
-                        }
-                        if (RtError > 0xCD15)
-                        {
-                            result = DME_SERVER_RESULT.DME_SERVER_NOT_IMPLEMENTED;
-                            return result;
-                        }
-                    }
-
-                    result = DME_SERVER_RESULT.DME_SERVER_MEM_ALLOC;
-                    if (RtError != 52505)
-                    {
-                        result = DME_SERVER_RESULT.DME_SERVER_UNKNOWN_RESULT;
-                        if (RtError >= 0xCD19)
-                        {
-                            result = DME_SERVER_RESULT.DME_SERVER_SOCKET_LIMIT;
-                            if (RtError != 52506)
-                            {
-                                result = DME_SERVER_RESULT.DME_SERVER_UNKNOWN_CONN_ERROR;
-                            }
-                        }
-                    }
-                }
-            }
-
-            return result;
-        }
-
         #endregion
 
         #region Matchmaking
-        public int CalculateSizeOfMatchRoster(MediusMatchRosterInfo roster)
+        public static int CalculateSizeOfMatchRoster(MediusMatchRosterInfo roster)
         {
             int rosterSize;
             uint v3;
             uint partySize;
 
-            MediusMatchPartyInfo mediusMatchPartyInfo = new MediusMatchPartyInfo();
+            var mediusMatchPartyInfo = new MediusMatchPartyInfo();
 
             if (roster == null)
                 return 0;
-            rosterSize = 4 * roster.NumParties + 8;
+            rosterSize = (4 * roster.NumParties) + 8;
             partySize = (uint)roster.Parties;
-            v3 = (uint)(4 * roster.NumParties + partySize - 4);
+            v3 = (uint)((4 * roster.NumParties) + partySize - 4);
             while (partySize <= v3)
             {
                 rosterSize += CalculateSizeOfMatchParty(mediusMatchPartyInfo);
@@ -2571,18 +2950,9 @@ namespace Horizon.MUM
             return rosterSize;
         }
 
-        public int CalculateSizeOfMatchParty(MediusMatchPartyInfo party)
+        public static int CalculateSizeOfMatchParty(MediusMatchPartyInfo party)
         {
-            int MatchPartySize;
-            if (party != null)
-            {
-                MatchPartySize = 8 * party.NumPlayers + 8;
-            }
-            else
-            {
-                MatchPartySize = 0;
-            }
-
+            var MatchPartySize = party != null ? (8 * party.NumPlayers) + 8 : 0;
             return MatchPartySize;
         }
         #endregion

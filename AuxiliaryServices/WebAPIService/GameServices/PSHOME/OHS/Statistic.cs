@@ -1,8 +1,6 @@
-using System;
-using MultiServerLibrary.HTTP;
 using CustomLogger;
 using HttpMultipartParser;
-using System.IO;
+using MultiServerLibrary.HTTP;
 
 namespace WebAPIService.GameServices.PSHOME.OHS
 {
@@ -12,16 +10,18 @@ namespace WebAPIService.GameServices.PSHOME.OHS
         {
             string dataforohs = null;
 
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary))
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
                     try
                     {
-                        LoggerAccessor.LogInfo($"[OHS] : Client Version - {data.GetParameterValue("version")}");
+                        LoggerAccessor.LogInfo(
+                            $"[OHS] : Client Version - {data.GetParameterValue("version")}"
+                        );
                     }
                     catch (Exception)
                     {
@@ -29,11 +29,17 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                     }
                     try
                     {
-                        dataforohs = JaminProcessor.JaminDeFormat(data.GetParameterValue("data"), true, 0);
+                        dataforohs = JaminProcessor.JaminDeFormat(
+                            data.GetParameterValue("data"),
+                            true,
+                            0
+                        );
                     }
                     catch (Exception ex)
                     {
-                        LoggerAccessor.LogWarn($"[OHS] : Client issued Statistics with an unknown body format, report this to GITHUB: {ex}");
+                        LoggerAccessor.LogWarn(
+                            $"[OHS] : Client issued Statistics with an unknown body format, report this to GITHUB: {ex}"
+                        );
                     }
                     ms.Flush();
                 }
@@ -48,21 +54,22 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 return JaminProcessor.JaminFormat("{ [\"status\"] = \"fail\" }", 0);
         }
 
-
         public static string HeatmapTracker(byte[] PostData, string ContentType)
         {
             string dataforohs = null;
 
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary))
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
                     try
                     {
-                        LoggerAccessor.LogInfo($"[OHS] : Client Version - {data.GetParameterValue("version")}");
+                        LoggerAccessor.LogInfo(
+                            $"[OHS] : Client Version - {data.GetParameterValue("version")}"
+                        );
                     }
                     catch (Exception)
                     {
@@ -72,13 +79,19 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                     try
                     {
 #if DEBUG
-                        dataforohs = JaminProcessor.JaminDeFormat(data.GetParameterValue("data"), true, 0);
+                        dataforohs = JaminProcessor.JaminDeFormat(
+                            data.GetParameterValue("data"),
+                            true,
+                            0
+                        );
                         LoggerAccessor.LogInfo($"[OHS] Heatmap Tracker Data : {dataforohs}");
 #endif
                     }
                     catch (Exception ex)
                     {
-                        LoggerAccessor.LogWarn($"[OHS] : Client issued Heatmap Tracker with an unknown body format, report this to GITHUB: {ex}");
+                        LoggerAccessor.LogWarn(
+                            $"[OHS] : Client issued Heatmap Tracker with an unknown body format, report this to GITHUB: {ex}"
+                        );
                     }
 
                     ms.Flush();
@@ -98,16 +111,18 @@ namespace WebAPIService.GameServices.PSHOME.OHS
         {
             string dataforohs = null;
 
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary))
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
                     try
                     {
-                        LoggerAccessor.LogInfo($"[OHS] : Client Version - {data.GetParameterValue("version")}");
+                        LoggerAccessor.LogInfo(
+                            $"[OHS] : Client Version - {data.GetParameterValue("version")}"
+                        );
                     }
                     catch (Exception)
                     {
@@ -117,13 +132,19 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                     try
                     {
 #if DEBUG
-                        dataforohs = JaminProcessor.JaminDeFormat(data.GetParameterValue("data"), true, 0);
+                        dataforohs = JaminProcessor.JaminDeFormat(
+                            data.GetParameterValue("data"),
+                            true,
+                            0
+                        );
                         LoggerAccessor.LogInfo($"[OHS] Points Tracker Data : {dataforohs}");
 #endif
                     }
                     catch (Exception ex)
                     {
-                        LoggerAccessor.LogWarn($"[OHS] : Client issued Points Tracker with an unknown body format, report this to GITHUB: {ex}");
+                        LoggerAccessor.LogWarn(
+                            $"[OHS] : Client issued Points Tracker with an unknown body format, report this to GITHUB: {ex}"
+                        );
                     }
 
                     ms.Flush();
@@ -138,6 +159,5 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             else
                 return JaminProcessor.JaminFormat("{ [\"status\"] = \"fail\" }", 0);
         }
-
     }
 }

@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Reflection;
 using Tdf.Extensions;
 
@@ -6,7 +6,7 @@ namespace Tdf
 {
     public class TdfLegacyEncoder : ITdfEncoder
     {
-        private TdfFactory _factory;
+        private readonly TdfFactory _factory;
 
         internal delegate void TdfWriter(Stream stream, TdfMember tag, object value);
 
@@ -15,54 +15,60 @@ namespace Tdf
             _factory = factory;
         }
 
-        public byte[] Encode<T>(T obj) where T : notnull
+        public byte[] Encode<T>(T obj)
+            where T : notnull
         {
-            using (MemoryStream payload = new MemoryStream())
+            using (var payload = new MemoryStream())
             {
                 WriteTo(payload, obj);
                 return payload.ToArray();
             }
         }
-
 
         public byte[] Encode(object obj)
         {
-            using (MemoryStream payload = new MemoryStream())
+            using (var payload = new MemoryStream())
             {
                 WriteTo(payload, obj);
                 return payload.ToArray();
             }
         }
 
-        public void WriteTo<T>(Stream stream, T obj) where T : notnull => WriteTo(stream, (object)obj);
+        public void WriteTo<T>(Stream stream, T obj)
+            where T : notnull => WriteTo(stream, (object)obj);
 
         public void WriteTo(Stream stream, object obj)
         {
-            Type objectType = obj.GetType();
+            var objectType = obj.GetType();
 
+            Dictionary<TdfMember, FieldInfo> keyValuePairs = [];
 
-            Dictionary<TdfMember, FieldInfo> keyValuePairs = new Dictionary<TdfMember, FieldInfo>();
-
-            foreach (FieldInfo field in objectType.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
+            foreach (
+                var field in objectType.GetFields(
+                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
+                )
+            )
             {
-                TdfMember? tag = field.GetCustomAttribute<TdfMember>();
+                var tag = field.GetCustomAttribute<TdfMember>();
                 if (tag == null) //no tag, skip it
                     continue;
 
                 keyValuePairs.Add(tag, field);
             }
 
-            foreach (KeyValuePair<TdfMember, FieldInfo> kvp in keyValuePairs/*.OrderBy(x => x.Key.Tag)*/)
+            foreach (
+                var kvp in keyValuePairs /*.OrderBy(x => x.Key.Tag)*/
+            )
             {
-                TdfMember? tag = kvp.Key;
-                FieldInfo field = kvp.Value;
+                var tag = kvp.Key;
+                var field = kvp.Value;
 
-                object? fieldValue = field.GetValue(obj);
+                var fieldValue = field.GetValue(obj);
                 if (fieldValue == null) //no value, we skip encoding it
                     continue;
 
-                TdfLegacyBaseType baseType = GetTdfBaseType(field.FieldType);
-                TdfWriter? writer = GetTdfWriter(field.FieldType, baseType, false);
+                var baseType = GetTdfBaseType(field.FieldType);
+                var writer = GetTdfWriter(field.FieldType, baseType, false);
 
                 if (writer != null)
                 {
@@ -71,7 +77,8 @@ namespace Tdf
                 }
             }
         }
-        private TdfLegacyBaseType GetTdfBaseType(Type fieldType)
+
+        private static TdfLegacyBaseType GetTdfBaseType(Type fieldType)
         {
             switch (Type.GetTypeCode(fieldType))
             {
@@ -98,137 +105,89 @@ namespace Tdf
 
             if (fieldType.IsGenericType)
             {
-                Type genericType = fieldType.GetGenericTypeDefinition();
+                var genericType = fieldType.GetGenericTypeDefinition();
 
                 if (genericType == typeof(List<>))
                     return TdfLegacyBaseType.TYPE_ARRAY;
 
-                if (genericType == typeof(Dictionary<,>) || genericType == typeof(SortedDictionary<,>))
+                if (
+                    genericType == typeof(Dictionary<,>)
+                    || genericType == typeof(SortedDictionary<,>)
+                )
                     return TdfLegacyBaseType.TYPE_MAP;
             }
 
-            if (fieldType.GetCustomAttribute<TdfStruct>() != null)
-                return TdfLegacyBaseType.TYPE_STRUCT;
-
-            if (fieldType == typeof(byte[]))
-                return TdfLegacyBaseType.TYPE_BLOB;
-
-            if (fieldType.BaseType == typeof(TdfUnion))
-                return TdfLegacyBaseType.TYPE_UNION;
-
-            throw new Exception("UNKNOWN BASE TYPE FOR TYPE: " + fieldType.FullName);
+            return fieldType.GetCustomAttribute<TdfStruct>() != null ? TdfLegacyBaseType.TYPE_STRUCT
+                : fieldType == typeof(byte[]) ? TdfLegacyBaseType.TYPE_BLOB
+                : fieldType.BaseType == typeof(TdfUnion) ? TdfLegacyBaseType.TYPE_UNION
+                : throw new Exception("UNKNOWN BASE TYPE FOR TYPE: " + fieldType.FullName);
         }
 
-        private TdfWriter? GetTdfWriter(Type fieldType, TdfLegacyBaseType baseType, bool withoutType)
+        private TdfWriter? GetTdfWriter(
+            Type fieldType,
+            TdfLegacyBaseType baseType,
+            bool withoutType
+        )
         {
-            if (withoutType)
-            {
-                switch (baseType)
+            return withoutType
+                ? baseType switch
                 {
-                    case TdfLegacyBaseType.TYPE_STRUCT:
-                        return WriteTdfStruct;
-                    case TdfLegacyBaseType.TYPE_STRING:
-                        return WriteTdfString;
-                    case TdfLegacyBaseType.TYPE_INT8:
-                        return WriteTdfInt8;
-                    case TdfLegacyBaseType.TYPE_UINT8:
-                        return WriteTdfUInt8;
-                    case TdfLegacyBaseType.TYPE_INT16:
-                        return WriteTdfInt16;
-                    case TdfLegacyBaseType.TYPE_UINT16:
-                        return WriteTdfUInt16;
-                    case TdfLegacyBaseType.TYPE_INT32:
-                        return WriteTdfInt32;
-                    case TdfLegacyBaseType.TYPE_UINT32:
-                        return WriteTdfUInt32;
-                    case TdfLegacyBaseType.TYPE_INT64:
-                        return WriteTdfInt64;
-                    case TdfLegacyBaseType.TYPE_UINT64:
-                        return WriteTdfUInt64;
-                    case TdfLegacyBaseType.TYPE_ARRAY:
-                        return WriteTdfArray;
-                    case TdfLegacyBaseType.TYPE_BLOB:
-                        return WriteTdfBlob;
-                    case TdfLegacyBaseType.TYPE_MAP:
-                        return WriteTdfMap;
-                    case TdfLegacyBaseType.TYPE_UNION:
-                        return WriteTdfUnion;
-                    default:
-                        return null;
+                    TdfLegacyBaseType.TYPE_STRUCT => WriteTdfStruct,
+                    TdfLegacyBaseType.TYPE_STRING => WriteTdfString,
+                    TdfLegacyBaseType.TYPE_INT8 => WriteTdfInt8,
+                    TdfLegacyBaseType.TYPE_UINT8 => WriteTdfUInt8,
+                    TdfLegacyBaseType.TYPE_INT16 => WriteTdfInt16,
+                    TdfLegacyBaseType.TYPE_UINT16 => WriteTdfUInt16,
+                    TdfLegacyBaseType.TYPE_INT32 => WriteTdfInt32,
+                    TdfLegacyBaseType.TYPE_UINT32 => WriteTdfUInt32,
+                    TdfLegacyBaseType.TYPE_INT64 => WriteTdfInt64,
+                    TdfLegacyBaseType.TYPE_UINT64 => WriteTdfUInt64,
+                    TdfLegacyBaseType.TYPE_ARRAY => WriteTdfArray,
+                    TdfLegacyBaseType.TYPE_BLOB => WriteTdfBlob,
+                    TdfLegacyBaseType.TYPE_MAP => WriteTdfMap,
+                    TdfLegacyBaseType.TYPE_UNION => WriteTdfUnion,
+                    _ => null,
                 }
-            }
-
-
-            switch (baseType)
-            {
-                case TdfLegacyBaseType.TYPE_STRUCT:
-                    return WriteTdfStructWithType;
-                case TdfLegacyBaseType.TYPE_STRING:
-                    return WriteTdfStringWithType;
-                case TdfLegacyBaseType.TYPE_INT8:
-                    return WriteTdfInt8WithType;
-                case TdfLegacyBaseType.TYPE_UINT8:
-                    return WriteTdfUInt8WithType;
-                case TdfLegacyBaseType.TYPE_INT16:
-                    return WriteTdfInt16WithType;
-                case TdfLegacyBaseType.TYPE_UINT16:
-                    return WriteTdfUInt16WithType;
-                case TdfLegacyBaseType.TYPE_INT32:
-                    return WriteTdfInt32WithType;
-                case TdfLegacyBaseType.TYPE_UINT32:
-                    return WriteTdfUInt32WithType;
-                case TdfLegacyBaseType.TYPE_INT64:
-                    return WriteTdfInt64WithType;
-                case TdfLegacyBaseType.TYPE_UINT64:
-                    return WriteTdfUInt64WithType;
-                case TdfLegacyBaseType.TYPE_ARRAY:
-                    return WriteTdfArrayWithType;
-                case TdfLegacyBaseType.TYPE_BLOB:
-                    return WriteTdfBlobWithType;
-                case TdfLegacyBaseType.TYPE_MAP:
-                    return WriteTdfMap;
-                case TdfLegacyBaseType.TYPE_UNION:
-                    return WriteTdfUnionWithType;
-                default:
-                    return null;
-            }
+                : baseType switch
+                {
+                    TdfLegacyBaseType.TYPE_STRUCT => WriteTdfStructWithType,
+                    TdfLegacyBaseType.TYPE_STRING => WriteTdfStringWithType,
+                    TdfLegacyBaseType.TYPE_INT8 => WriteTdfInt8WithType,
+                    TdfLegacyBaseType.TYPE_UINT8 => WriteTdfUInt8WithType,
+                    TdfLegacyBaseType.TYPE_INT16 => WriteTdfInt16WithType,
+                    TdfLegacyBaseType.TYPE_UINT16 => WriteTdfUInt16WithType,
+                    TdfLegacyBaseType.TYPE_INT32 => WriteTdfInt32WithType,
+                    TdfLegacyBaseType.TYPE_UINT32 => WriteTdfUInt32WithType,
+                    TdfLegacyBaseType.TYPE_INT64 => WriteTdfInt64WithType,
+                    TdfLegacyBaseType.TYPE_UINT64 => WriteTdfUInt64WithType,
+                    TdfLegacyBaseType.TYPE_ARRAY => WriteTdfArrayWithType,
+                    TdfLegacyBaseType.TYPE_BLOB => WriteTdfBlobWithType,
+                    TdfLegacyBaseType.TYPE_MAP => WriteTdfMap,
+                    TdfLegacyBaseType.TYPE_UNION => WriteTdfUnionWithType,
+                    _ => null,
+                };
         }
 
-        private byte GetDefaultTypeSize(TdfLegacyBaseType baseType)
+        private static byte GetDefaultTypeSize(TdfLegacyBaseType baseType)
         {
-            switch (baseType)
+            return baseType switch
             {
-                case TdfLegacyBaseType.TYPE_STRUCT:
-                    return 0;
-                case TdfLegacyBaseType.TYPE_STRING:
-                    return 15;
-                case TdfLegacyBaseType.TYPE_INT8:
-                    return sizeof(sbyte);
-                case TdfLegacyBaseType.TYPE_UINT8:
-                    return sizeof(byte);
-                case TdfLegacyBaseType.TYPE_INT16:
-                    return sizeof(short);
-                case TdfLegacyBaseType.TYPE_UINT16:
-                    return sizeof(ushort);
-                case TdfLegacyBaseType.TYPE_INT32:
-                    return sizeof(int);
-                case TdfLegacyBaseType.TYPE_UINT32:
-                    return sizeof(uint);
-                case TdfLegacyBaseType.TYPE_INT64:
-                    return sizeof(long);
-                case TdfLegacyBaseType.TYPE_UINT64:
-                    return sizeof(ulong);
-                case TdfLegacyBaseType.TYPE_ARRAY:
-                    return 1;
-                case TdfLegacyBaseType.TYPE_BLOB:
-                    return 15; //assumption
-                case TdfLegacyBaseType.TYPE_MAP:
-                    return 15; //assumption
-                case TdfLegacyBaseType.TYPE_UNION:
-                    return 0;
-                default:
-                    return 0;
-            }
+                TdfLegacyBaseType.TYPE_STRUCT => 0,
+                TdfLegacyBaseType.TYPE_STRING => 15,
+                TdfLegacyBaseType.TYPE_INT8 => sizeof(sbyte),
+                TdfLegacyBaseType.TYPE_UINT8 => sizeof(byte),
+                TdfLegacyBaseType.TYPE_INT16 => sizeof(short),
+                TdfLegacyBaseType.TYPE_UINT16 => sizeof(ushort),
+                TdfLegacyBaseType.TYPE_INT32 => sizeof(int),
+                TdfLegacyBaseType.TYPE_UINT32 => sizeof(uint),
+                TdfLegacyBaseType.TYPE_INT64 => sizeof(long),
+                TdfLegacyBaseType.TYPE_UINT64 => sizeof(ulong),
+                TdfLegacyBaseType.TYPE_ARRAY => 1,
+                TdfLegacyBaseType.TYPE_BLOB => 15, //assumption
+                TdfLegacyBaseType.TYPE_MAP => 15, //assumption
+                TdfLegacyBaseType.TYPE_UNION => 0,
+                _ => 0,
+            };
         }
 
         private void WriteTdfInt8WithType(Stream stream, TdfMember tag, object value)
@@ -239,7 +198,7 @@ namespace Tdf
 
         private void WriteTdfInt8(Stream stream, TdfMember tag, object value)
         {
-            sbyte actualVal = (sbyte)Convert.ChangeType(value, typeof(sbyte));
+            var actualVal = (sbyte)Convert.ChangeType(value, typeof(sbyte));
             stream.WriteByte(unchecked((byte)actualVal));
         }
 
@@ -251,7 +210,7 @@ namespace Tdf
 
         private void WriteTdfUInt8(Stream stream, TdfMember tag, object value)
         {
-            byte actualVal = (byte)Convert.ChangeType(value, typeof(byte));
+            var actualVal = (byte)Convert.ChangeType(value, typeof(byte));
             stream.WriteByte(actualVal);
         }
 
@@ -263,9 +222,9 @@ namespace Tdf
 
         private void WriteTdfInt16(Stream stream, TdfMember tag, object value)
         {
-            short actualVal = (short)Convert.ChangeType(value, typeof(short));
-            byte[] buf = BitConverter.GetBytes(actualVal);
-            if (BitConverter.IsLittleEndian)
+            var actualVal = (short)Convert.ChangeType(value, typeof(short));
+            var buf = BitConverter.GetBytes(actualVal);
+            if (EndianTools.EndianAwareConverter.isLittleEndianSystem)
                 Array.Reverse(buf);
             stream.Write(buf, 0, sizeof(short));
         }
@@ -278,9 +237,9 @@ namespace Tdf
 
         private void WriteTdfUInt16(Stream stream, TdfMember tag, object value)
         {
-            ushort actualVal = (ushort)Convert.ChangeType(value, typeof(ushort));
-            byte[] buf = BitConverter.GetBytes(actualVal);
-            if (BitConverter.IsLittleEndian)
+            var actualVal = (ushort)Convert.ChangeType(value, typeof(ushort));
+            var buf = BitConverter.GetBytes(actualVal);
+            if (EndianTools.EndianAwareConverter.isLittleEndianSystem)
                 Array.Reverse(buf);
             stream.Write(buf, 0, sizeof(ushort));
         }
@@ -293,9 +252,9 @@ namespace Tdf
 
         private void WriteTdfInt32(Stream stream, TdfMember tag, object value)
         {
-            int actualVal = (int)Convert.ChangeType(value, typeof(int));
-            byte[] buf = BitConverter.GetBytes(actualVal);
-            if (BitConverter.IsLittleEndian)
+            var actualVal = (int)Convert.ChangeType(value, typeof(int));
+            var buf = BitConverter.GetBytes(actualVal);
+            if (EndianTools.EndianAwareConverter.isLittleEndianSystem)
                 Array.Reverse(buf);
             stream.Write(buf, 0, sizeof(int));
         }
@@ -308,9 +267,9 @@ namespace Tdf
 
         private void WriteTdfUInt32(Stream stream, TdfMember tag, object value)
         {
-            uint actualVal = (uint)Convert.ChangeType(value, typeof(uint));
-            byte[] buf = BitConverter.GetBytes(actualVal);
-            if (BitConverter.IsLittleEndian)
+            var actualVal = (uint)Convert.ChangeType(value, typeof(uint));
+            var buf = BitConverter.GetBytes(actualVal);
+            if (EndianTools.EndianAwareConverter.isLittleEndianSystem)
                 Array.Reverse(buf);
             stream.Write(buf, 0, sizeof(uint));
         }
@@ -323,9 +282,9 @@ namespace Tdf
 
         private void WriteTdfInt64(Stream stream, TdfMember tag, object value)
         {
-            long actualVal = (long)Convert.ChangeType(value, typeof(long));
-            byte[] buf = BitConverter.GetBytes(actualVal);
-            if (BitConverter.IsLittleEndian)
+            var actualVal = (long)Convert.ChangeType(value, typeof(long));
+            var buf = BitConverter.GetBytes(actualVal);
+            if (EndianTools.EndianAwareConverter.isLittleEndianSystem)
                 Array.Reverse(buf);
             stream.Write(buf, 0, sizeof(long));
         }
@@ -338,9 +297,9 @@ namespace Tdf
 
         private void WriteTdfUInt64(Stream stream, TdfMember tag, object value)
         {
-            ulong actualVal = (ulong)Convert.ChangeType(value, typeof(ulong));
-            byte[] buf = BitConverter.GetBytes(actualVal);
-            if (BitConverter.IsLittleEndian)
+            var actualVal = (ulong)Convert.ChangeType(value, typeof(ulong));
+            var buf = BitConverter.GetBytes(actualVal);
+            if (EndianTools.EndianAwareConverter.isLittleEndianSystem)
                 Array.Reverse(buf);
             stream.Write(buf, 0, sizeof(ulong));
         }
@@ -369,7 +328,7 @@ namespace Tdf
 
         private void WriteTdfArrayWithType(Stream stream, TdfMember tag, object value)
         {
-            IList list = (IList)value;
+            var list = (IList)value;
             if (list.Count == 0)
             {
                 // Empty list, we skip encoding it entirely
@@ -383,18 +342,18 @@ namespace Tdf
 
         private void WriteTdfArray(Stream stream, TdfMember tag, object value)
         {
-            Type listType = value.GetType().GetGenericArguments()[0];
-            TdfLegacyBaseType baseType = GetTdfBaseType(listType);
-            TdfWriter? writer = GetTdfWriter(listType, baseType, true);
-
-            if (writer == null)
-                throw new NotSupportedException($"List type '{listType.FullName}' not supported!");
-
-            IList list = (IList)value;
+            var listType = value.GetType().GetGenericArguments()[0];
+            var baseType = GetTdfBaseType(listType);
+            var writer =
+                GetTdfWriter(listType, baseType, true)
+                ?? throw new NotSupportedException(
+                    $"List type '{listType.FullName}' not supported!"
+                );
+            var list = (IList)value;
             stream.WriteTdfLegacyInteger(list.Count);
             stream.WriteTdfLegacyBaseTypeAndSize(baseType, GetDefaultTypeSize(baseType));
 
-            foreach (object item in list)
+            foreach (var item in list)
                 writer(stream, tag, item);
         }
 
@@ -410,8 +369,8 @@ namespace Tdf
 
         private void WriteTdfMap(Stream stream, TdfMember tag, object value)
         {
-            ICollection collection = (ICollection)value;
-            IEnumerator enumerator = collection.GetEnumerator();
+            var collection = (ICollection)value;
+            var enumerator = collection.GetEnumerator();
 
             if (!enumerator.MoveNext())
             {
@@ -420,30 +379,33 @@ namespace Tdf
                 return;
             }
 
-            Type[] genericArguments = value.GetType().GetGenericArguments();
-            Type keyType = genericArguments[0];
-            Type valueType = genericArguments[1];
+            var genericArguments = value.GetType().GetGenericArguments();
+            var keyType = genericArguments[0];
+            var valueType = genericArguments[1];
 
-            TdfLegacyBaseType keyBaseType = GetTdfBaseType(keyType);
-            TdfLegacyBaseType valueBaseType = GetTdfBaseType(valueType);
+            var keyBaseType = GetTdfBaseType(keyType);
+            var valueBaseType = GetTdfBaseType(valueType);
 
-            TdfWriter? keyWriter = GetTdfWriter(keyType, keyBaseType, true);
-            TdfWriter? valueWriter = GetTdfWriter(valueType, valueBaseType, true);
+            var keyWriter = GetTdfWriter(keyType, keyBaseType, true);
+            var valueWriter = GetTdfWriter(valueType, valueBaseType, true);
 
             if (keyWriter == null)
-                throw new NotSupportedException($"Map key type '{keyType.FullName}' not supported!");
+                throw new NotSupportedException(
+                    $"Map key type '{keyType.FullName}' not supported!"
+                );
             if (valueWriter == null)
-                throw new NotSupportedException($"Map value type '{valueType.FullName}' not supported!");
+                throw new NotSupportedException(
+                    $"Map value type '{valueType.FullName}' not supported!"
+                );
 
             //item type KeyValuePair<KeyType, ValueType>
-            Type itemType = typeof(KeyValuePair<,>).MakeGenericType(keyType, valueType);
-            PropertyInfo keyProperty = itemType.GetProperty("Key")!;
-            PropertyInfo valueProperty = itemType.GetProperty("Value")!;
+            var itemType = typeof(KeyValuePair<,>).MakeGenericType(keyType, valueType);
+            var keyProperty = itemType.GetProperty("Key")!;
+            var valueProperty = itemType.GetProperty("Value")!;
 
-
-            object item = enumerator.Current;
-            object kvpKey = keyProperty.GetValue(item, null)!;
-            object kvpValue = valueProperty.GetValue(item, null)!;
+            var item = enumerator.Current;
+            var kvpKey = keyProperty.GetValue(item, null)!;
+            var kvpValue = valueProperty.GetValue(item, null)!;
 
             stream.WriteTdfLegacyBaseTypeAndSize(TdfLegacyBaseType.TYPE_MAP, collection.Count);
             stream.WriteTdfLegacyBaseTypeAndSize(keyBaseType, GetDefaultTypeSize(keyBaseType));
@@ -471,9 +433,9 @@ namespace Tdf
 
         private void WriteTdfUnion(Stream stream, TdfMember tag, object value)
         {
-            TdfUnion union = (TdfUnion)value;
-            object? obj = union.GetValue();
-            byte activeMember = obj != null ? union.ActiveMember : (byte)0x7f;
+            var union = (TdfUnion)value;
+            var obj = union.GetValue();
+            var activeMember = obj != null ? union.ActiveMember : (byte)0x7f;
             stream.WriteByte(activeMember);
 
             if (activeMember != 0x7F)
@@ -482,7 +444,5 @@ namespace Tdf
                 WriteTdfStructWithType(stream, tag, obj!);
             }
         }
-
-
     }
 }

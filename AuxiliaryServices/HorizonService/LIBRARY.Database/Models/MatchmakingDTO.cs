@@ -1,8 +1,5 @@
-using System;
-
 namespace Horizon.LIBRARY.Database.Models
 {
-    
     public class MatchmakingSupersetDTO
     {
         public int Id { get; set; }

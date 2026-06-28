@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-
 namespace WebAPIService.GameServices.UBISOFT.Models
 {
     public class OnlineConfigEntry

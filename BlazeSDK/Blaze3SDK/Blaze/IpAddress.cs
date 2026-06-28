@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze
 {
-	[TdfStruct]
-	public struct IpAddress
-	{
+    [TdfStruct]
+    public struct IpAddress
+    {
+        [TdfMember("IP")]
+        public uint mIp;
 
-		[TdfMember("IP")]
-		public uint mIp;
-
-		[TdfMember("PORT")]
-		public ushort mPort;
-
-	}
+        [TdfMember("PORT")]
+        public ushort mPort;
+    }
 }

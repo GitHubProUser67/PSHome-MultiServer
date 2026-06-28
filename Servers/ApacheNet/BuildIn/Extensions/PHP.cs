@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
+﻿using System.Diagnostics;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using MultiServerLibrary.Extension;
 using WatsonWebserver.Core;
 
@@ -13,6 +7,8 @@ namespace ApacheNet.BuildIn.Extensions
 {
     public class PHP : IDisposable
     {
+        private static readonly HashSet<string> ForbiddenHeaders = [];
+
         private bool ThreadsActive = true;
         private bool OutputStreamHooked = false;
 
@@ -43,24 +39,63 @@ namespace ApacheNet.BuildIn.Extensions
                 TheProcess.Dispose();
         }
 
-        public (int, byte[]?, Dictionary<string, string>) ProcessPHPPage(string FilePath, string PHPPath, string PHPVer, HttpContextBase ctx, bool secure, CancellationToken cancellationToken = default)
+        public (int, byte[]?, Dictionary<string, string>) ProcessPHPPage(
+            string FilePath,
+            string PHPPath,
+            string PHPVer,
+            HttpContextBase ctx,
+            bool secure,
+            CancellationToken cancellationToken = default
+        )
         {
             CancellationToken = cancellationToken;
 
-            int index = ctx.Request.Url.RawWithQuery.IndexOf("?");
-            string? queryString = index == -1 ? string.Empty : ctx.Request.Url.RawWithQuery[(index + 1)..];
+            var index = ctx.Request.Url.RawWithQuery.IndexOf("?");
+            var queryString =
+                index == -1 ? string.Empty : ctx.Request.Url.RawWithQuery[(index + 1)..];
 
             // Get paths for PHP
-            string? documentRootPath = Path.GetDirectoryName(FilePath);
-            string? scriptFilePath = Path.GetFullPath(FilePath);
-            string? scriptFileName = Path.GetFileName(FilePath);
-            string phpFullPath = $"{PHPPath}/{PHPVer}/";
+            var documentRootPath = Path.GetDirectoryName(FilePath);
+            var scriptFilePath = Path.GetFullPath(FilePath);
+            var scriptFileName = Path.GetFileName(FilePath);
+            var phpFullPath = $"{PHPPath}/{PHPVer}/";
 
             PostData = ctx.Request.DataAsBytes;
 
             TheProcess.StartInfo.FileName = $"{phpFullPath}php-cgi";
 
-            TheProcess.StartInfo.Arguments = $"-q -c \"{$"{phpFullPath}php.ini"}\" -d \"error_reporting=E_ALL\" -d \"display_errors={ApacheNetServerConfiguration.PHPDebugErrors}\" -d \"expose_php=Off\" -d \"include_path='{documentRootPath}'\" \"{FilePath}\"";
+            TheProcess.StartInfo.ArgumentList.Clear();
+
+            TheProcess.StartInfo.ArgumentList.Add("-q");
+            TheProcess.StartInfo.ArgumentList.Add("-c");
+            TheProcess.StartInfo.ArgumentList.Add(Path.Combine(phpFullPath, "php.ini"));
+
+            if (ApacheNetServerConfiguration.PHPTimeoutMilliseconds > 0)
+            {
+                TheProcess.StartInfo.ArgumentList.Add("-d");
+                TheProcess.StartInfo.ArgumentList.Add(
+                    $"max_execution_time={Math.Max(
+                    1,
+                    (int)Math.Ceiling(
+                        ApacheNetServerConfiguration.PHPTimeoutMilliseconds / 1000.0))}"
+                );
+            }
+
+            TheProcess.StartInfo.ArgumentList.Add("-d");
+            TheProcess.StartInfo.ArgumentList.Add("error_reporting=E_ALL");
+
+            TheProcess.StartInfo.ArgumentList.Add("-d");
+            TheProcess.StartInfo.ArgumentList.Add(
+                $"display_errors={ApacheNetServerConfiguration.PHPDebugErrors}"
+            );
+
+            TheProcess.StartInfo.ArgumentList.Add("-d");
+            TheProcess.StartInfo.ArgumentList.Add("expose_php=Off");
+
+            TheProcess.StartInfo.ArgumentList.Add("-d");
+            TheProcess.StartInfo.ArgumentList.Add($"include_path={documentRootPath}");
+
+            TheProcess.StartInfo.ArgumentList.Add(FilePath);
 
             TheProcess.StartInfo.CreateNoWindow = true;
             TheProcess.StartInfo.UseShellExecute = false;
@@ -72,35 +107,68 @@ namespace ApacheNet.BuildIn.Extensions
 
             // Set content length if needed
             if (PostData != null)
-                TheProcess.StartInfo.EnvironmentVariables.Add("CONTENT_LENGTH", PostData.Length.ToString());
+                TheProcess.StartInfo.EnvironmentVariables.Add(
+                    "CONTENT_LENGTH",
+                    PostData.Length.ToString()
+                );
 
             // Set environment variables for PHP
-            TheProcess.StartInfo.EnvironmentVariables["SYSTEMROOT"] = Environment.GetEnvironmentVariable("SYSTEMROOT");
-            TheProcess.StartInfo.EnvironmentVariables["WINDIR"] = Environment.GetEnvironmentVariable("WINDIR");
-            TheProcess.StartInfo.EnvironmentVariables["COMSPEC"] = Environment.GetEnvironmentVariable("COMSPEC");
-            TheProcess.StartInfo.EnvironmentVariables["TMPDIR"] = Environment.GetEnvironmentVariable("TMPDIR") ?? Path.GetTempPath();
-            TheProcess.StartInfo.EnvironmentVariables["TEMP"] = Environment.GetEnvironmentVariable("TEMP") ?? Path.GetTempPath();
-            TheProcess.StartInfo.EnvironmentVariables["PATH"] = Environment.GetEnvironmentVariable("PATH");
+            TheProcess.StartInfo.EnvironmentVariables["SYSTEMROOT"] =
+                Environment.GetEnvironmentVariable("SYSTEMROOT");
+            TheProcess.StartInfo.EnvironmentVariables["WINDIR"] =
+                Environment.GetEnvironmentVariable("WINDIR");
+            TheProcess.StartInfo.EnvironmentVariables["COMSPEC"] =
+                Environment.GetEnvironmentVariable("COMSPEC");
+            TheProcess.StartInfo.EnvironmentVariables["TMPDIR"] =
+                Environment.GetEnvironmentVariable("TMPDIR") ?? Path.GetTempPath();
+            TheProcess.StartInfo.EnvironmentVariables["TEMP"] =
+                Environment.GetEnvironmentVariable("TEMP") ?? Path.GetTempPath();
+            TheProcess.StartInfo.EnvironmentVariables["PATH"] = Environment.GetEnvironmentVariable(
+                "PATH"
+            );
             TheProcess.StartInfo.EnvironmentVariables.Add("GATEWAY_INTERFACE", "CGI/1.1");
-            TheProcess.StartInfo.EnvironmentVariables.Add("SERVER_PROTOCOL", $"HTTP/{ApacheNetServerConfiguration.HttpVersion}");
+            TheProcess.StartInfo.EnvironmentVariables.Add(
+                "SERVER_PROTOCOL",
+                $"HTTP/{ApacheNetServerConfiguration.HttpVersion}"
+            );
             TheProcess.StartInfo.EnvironmentVariables.Add("REDIRECT_STATUS", "200");
             TheProcess.StartInfo.EnvironmentVariables.Add("DOCUMENT_ROOT", documentRootPath);
             TheProcess.StartInfo.EnvironmentVariables.Add("SCRIPT_NAME", scriptFileName);
             TheProcess.StartInfo.EnvironmentVariables.Add("SCRIPT_FILENAME", scriptFilePath);
             TheProcess.StartInfo.EnvironmentVariables.Add("QUERY_STRING", queryString);
             TheProcess.StartInfo.EnvironmentVariables.Add("CONTENT_TYPE", ctx.Request.ContentType);
-            TheProcess.StartInfo.EnvironmentVariables.Add("REQUEST_METHOD", ctx.Request.Method.ToString());
+            TheProcess.StartInfo.EnvironmentVariables.Add(
+                "REQUEST_METHOD",
+                ctx.Request.Method.ToString()
+            );
             TheProcess.StartInfo.EnvironmentVariables.Add("USER_AGENT", ctx.Request.Useragent);
-            TheProcess.StartInfo.EnvironmentVariables.Add("SERVER_ADDR", ctx.Request.Destination.IpAddress);
-            TheProcess.StartInfo.EnvironmentVariables.Add("REMOTE_ADDR", ctx.Request.Source.IpAddress);
-            TheProcess.StartInfo.EnvironmentVariables.Add("REMOTE_PORT", ctx.Request.Source.Port.ToString());
-            TheProcess.StartInfo.EnvironmentVariables.Add("REQUEST_URI", $"{(secure ? "https" : "http")}://{ctx.Request.Destination.IpAddress}:{ctx.Request.Destination.Port}{ctx.Request.Url.RawWithQuery}");
+            TheProcess.StartInfo.EnvironmentVariables.Add(
+                "SERVER_ADDR",
+                ctx.Request.Destination.IpAddress
+            );
+            TheProcess.StartInfo.EnvironmentVariables.Add(
+                "REMOTE_ADDR",
+                ctx.Request.Source.IpAddress
+            );
+            TheProcess.StartInfo.EnvironmentVariables.Add(
+                "REMOTE_PORT",
+                ctx.Request.Source.Port.ToString()
+            );
+            TheProcess.StartInfo.EnvironmentVariables.Add(
+                "REQUEST_URI",
+                $"{(secure ? "https" : "http")}://{ctx.Request.Destination.IpAddress}:{ctx.Request.Destination.Port}{ctx.Request.Url.RawWithQuery}"
+            );
             foreach (var headerKeyPair in ctx.Request.Headers.ConvertHeadersToPhpFriendly())
             {
-                string? key = headerKeyPair.Key;
-                string? value = headerKeyPair.Value;
+                var key = headerKeyPair.Key;
+                var value = headerKeyPair.Value;
 
-                if (!string.IsNullOrEmpty(key) && value != null && IsValidEnvVarKey(key))
+                if (
+                    !string.IsNullOrEmpty(key)
+                    && value != null
+                    && IsValidEnvVarKey(key)
+                    && !ForbiddenHeaders.Contains(key)
+                )
                     TheProcess.StartInfo.EnvironmentVariables.Add(key, value);
             }
 
@@ -120,9 +188,9 @@ namespace ApacheNet.BuildIn.Extensions
             ReadOutputThread.Join();
             ReadErrorOutputThread?.Join();
 
-            if (ErrorOutput != null && ErrorOutput.Length > 0)
-                return (StandardOutput.Item1, ErrorOutput, StandardOutput.Item3);
-            return StandardOutput;
+            return ErrorOutput != null && ErrorOutput.Length > 0
+                ? (StandardOutput.Item1, ErrorOutput, StandardOutput.Item3)
+                : StandardOutput;
         }
 
         private void RunProcess()
@@ -130,7 +198,9 @@ namespace ApacheNet.BuildIn.Extensions
             try
             {
                 // Combine external cancellation with configured timeout
-                using CancellationTokenSource ctsTimeout = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
+                using var ctsTimeout = CancellationTokenSource.CreateLinkedTokenSource(
+                    CancellationToken
+                );
                 if (ApacheNetServerConfiguration.PHPTimeoutMilliseconds > 0)
                     // schedule cancellation after timeout
                     ctsTimeout.CancelAfter(ApacheNetServerConfiguration.PHPTimeoutMilliseconds);
@@ -138,57 +208,79 @@ namespace ApacheNet.BuildIn.Extensions
                 TheProcess.Start();
 
                 // Register cancellation → kill process when token is triggered
-                using CancellationTokenRegistration ctr = ctsTimeout.Token.Register(() =>
+                using var ctr = ctsTimeout.Token.Register(() =>
                 {
                     try
                     {
                         if (IsProcessAlive)
                         {
-                            CustomLogger.LoggerAccessor.LogWarn("[PHP] - Timeout/cancellation triggered, killing process.");
+                            CustomLogger.LoggerAccessor.LogWarn(
+                                "[PHP] - Timeout/cancellation triggered, killing process."
+                            );
                             TheProcess.Kill();
                         }
                     }
                     catch (Exception ex)
                     {
-                        CustomLogger.LoggerAccessor.LogError($"[PHP] - Failed to cancel process. (Exception:{ex})");
+                        CustomLogger.LoggerAccessor.LogError(
+                            $"[PHP] - Failed to cancel process. (Exception:{ex})"
+                        );
                     }
                 });
 
-                // Calculate approximately end time
-                DateTime EndTime = DateTime.Now.AddSeconds(5);
-
-                new Task(() =>
+                if (ApacheNetServerConfiguration.PHPIdleTimeoutMiliseconds > 0)
                 {
-                    while (DateTime.Now < EndTime) { Thread.Sleep(1000); }
-                    float PhpCpuLoad = 0;
-                    try
+                    // Calculate approximately end time
+                    var EndTime = DateTime.Now.AddMilliseconds(
+                        ApacheNetServerConfiguration.PHPIdleTimeoutMiliseconds
+                    );
+
+                    new Task(() =>
                     {
-                        while (IsProcessAlive)
+                        while (DateTime.Now < EndTime)
                         {
                             Thread.Sleep(1000);
-                            ProcessUtils.PreventProcessIdle(ref TheProcess, ref PhpCpuLoad);
                         }
-                    }
-                    catch
-                    {
-                        // No process remaining.
-                    }
-                }).Start();
+                        float PhpCpuLoad = 0;
+                        try
+                        {
+                            while (IsProcessAlive)
+                            {
+                                Thread.Sleep(1000);
+                                ProcessUtils.PreventProcessIdle(ref TheProcess, ref PhpCpuLoad);
+                            }
+                        }
+                        catch
+                        {
+                            // No process remaining.
+                        }
+                    }).Start();
+                }
 
                 // prepare tasks: write stdin, read stdout (binary), read stderr (string)
                 if (PostData != null && PostData.Length > 0)
-                    _ = WriteToStdinAsync(TheProcess.StandardInput.BaseStream, PostData, ctsTimeout.Token);
+                    _ = WriteToStdinAsync(
+                        TheProcess.StandardInput.BaseStream,
+                        PostData,
+                        ctsTimeout.Token
+                    );
                 else
                 {
                     // ensure we close stdin if no data - some CGI implementations expect EOF
-                    try { TheProcess.StandardInput.Close(); } catch { }
+                    try
+                    {
+                        TheProcess.StandardInput.Close();
+                    }
+                    catch { }
                 }
 
                 TheProcess.WaitForExit();
             }
             catch (Exception ex)
             {
-                CustomLogger.LoggerAccessor.LogWarn($"[PHP] - Killing bad process. (Exception:{ex})");
+                CustomLogger.LoggerAccessor.LogWarn(
+                    $"[PHP] - Killing bad process. (Exception:{ex})"
+                );
 
                 try
                 {
@@ -197,17 +289,19 @@ namespace ApacheNet.BuildIn.Extensions
                 }
                 catch (Exception innerEx)
                 {
-                    CustomLogger.LoggerAccessor.LogError($"[PHP] - Failed to kill process. (Exception:{innerEx})");
+                    CustomLogger.LoggerAccessor.LogError(
+                        $"[PHP] - Failed to kill process. (Exception:{innerEx})"
+                    );
                 }
             }
         }
 
         private void ReadOutput()
         {
-            bool HeadersEnd = false;
-            int statusCode = 200;
-            List<byte> lineBuffer = new List<byte>();
-            Dictionary<string, string> headers = new Dictionary<string, string>();
+            var HeadersEnd = false;
+            var statusCode = 200;
+            List<byte> lineBuffer = [];
+            Dictionary<string, string> headers = [];
 
             using (MemoryStream ms = new())
             using (MemoryStream headerBuffer = new(1))
@@ -234,32 +328,38 @@ namespace ApacheNet.BuildIn.Extensions
 
                                     StreamUtils.CopyStream(stream, headerBuffer, 1, 1);
 
-                                    byte b = headerBuffer.ToArray()[0];
+                                    var b = headerBuffer.ToArray()[0];
                                     lineBuffer.Add(b);
 
                                     if (b == '\n') // end of line
                                     {
-                                        string line = Encoding.ASCII.GetString(lineBuffer.ToArray()).TrimEnd('\r', '\n');
+                                        var line = Encoding
+                                            .ASCII.GetString([.. lineBuffer])
+                                            .TrimEnd('\r', '\n');
                                         lineBuffer.Clear();
 
                                         if (line != string.Empty)
                                         {
-                                            int index = line.IndexOf(':');
+                                            var index = line.IndexOf(':');
                                             if (index != -1)
                                             {
-                                                string headerKey = line.Substring(0, index);
-                                                string headerValue = line.Substring(index + 1).Trim();
+                                                var headerKey = line[..index];
+                                                var headerValue = line[(index + 1)..].Trim();
                                                 if (headerKey == "Status") // Extract the PHP result status code.
                                                 {
                                                     var parts = headerValue.Split(' ');
                                                     if (int.TryParse(parts[0], out statusCode))
                                                     {
 #if DEBUG
-                                                        CustomLogger.LoggerAccessor.LogInfo($"[PHP] - Custom status-code: {statusCode} assigned to result.");
+                                                        CustomLogger.LoggerAccessor.LogInfo(
+                                                            $"[PHP] - Custom status-code: {statusCode} assigned to result."
+                                                        );
 #endif
                                                     }
                                                     else
-                                                        CustomLogger.LoggerAccessor.LogWarn($"[PHP] - Unknown status-code format, falling back to OK response.");
+                                                        CustomLogger.LoggerAccessor.LogWarn(
+                                                            $"[PHP] - Unknown status-code format, falling back to OK response."
+                                                        );
                                                 }
                                                 else
                                                     headers[headerKey] = headerValue;
@@ -300,7 +400,7 @@ namespace ApacheNet.BuildIn.Extensions
                     {
                         try
                         {
-                            string? line = TheProcess.StandardError.ReadLine();
+                            var line = TheProcess.StandardError.ReadLine();
                             if (line != null)
                             {
                                 output.WriteLine(line);
@@ -321,7 +421,11 @@ namespace ApacheNet.BuildIn.Extensions
             }
         }
 
-        private static async Task WriteToStdinAsync(Stream stdinStream, byte[] data, CancellationToken ct)
+        private static async Task WriteToStdinAsync(
+            Stream stdinStream,
+            byte[] data,
+            CancellationToken ct
+        )
         {
             try
             {
@@ -329,10 +433,16 @@ namespace ApacheNet.BuildIn.Extensions
                 await stdinStream.FlushAsync(ct).ConfigureAwait(false);
                 stdinStream.Close(); // signal EOF
             }
-            catch (OperationCanceledException) { /* cancellation/timeout */ }
+            catch (OperationCanceledException)
+            { /* cancellation/timeout */
+            }
             catch
             {
-                try { stdinStream.Close(); } catch { }
+                try
+                {
+                    stdinStream.Close();
+                }
+                catch { }
             }
         }
 

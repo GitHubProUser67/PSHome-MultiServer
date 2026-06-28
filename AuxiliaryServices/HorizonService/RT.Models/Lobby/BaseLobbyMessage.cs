@@ -6,10 +6,6 @@ namespace Horizon.RT.Models
     {
         public override NetMessageClass PacketClass => NetMessageClass.MessageClassLobby;
 
-        public BaseLobbyMessage()
-        {
-
-        }
-
+        public BaseLobbyMessage() { }
     }
 }

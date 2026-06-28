@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Mail
 {
-	[TdfStruct]
-	public struct SetMailPrefRequest
-	{
+    [TdfStruct]
+    public struct SetMailPrefRequest
+    {
+        [TdfMember("EFPF")]
+        public EmailFormatPref mEmailFormatPref;
 
-		[TdfMember("EFPF")]
-		public EmailFormatPref mEmailFormatPref;
-
-		[TdfMember("UID")]
-		public long mUserId;
-
-	}
+        [TdfMember("UID")]
+        public long mUserId;
+    }
 }

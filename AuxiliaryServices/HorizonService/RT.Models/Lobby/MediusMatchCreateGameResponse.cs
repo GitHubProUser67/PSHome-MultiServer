@@ -1,10 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.MatchCreateGameResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.MatchCreateGameResponse
+    )]
     public class MediusMatchCreateGameResponse : BaseLobbyExtMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.MatchCreateGameResponse;
@@ -32,7 +34,6 @@ namespace Horizon.RT.Models
             RequestData = reader.ReadString(Constants.REQUESTDATA_MAXLEN);
             ApplicationDataSize = reader.ReadInt32();
             ApplicationData = reader.ReadString(ApplicationDataSize);
-
         }
 
         public override void Serialize(MessageWriter writer)
@@ -52,14 +53,15 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"MediusWorldID: {MediusWorldID} " +
-                $"SystemSpecificStatusCode: {SystemSpecificStatusCode} " +
-                $"RequestData: {RequestData} " +
-                $"ApplicationDataSize: {ApplicationDataSize} " +
-                $"ApplicationData: {ApplicationData}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"MediusWorldID: {MediusWorldID} "
+                + $"SystemSpecificStatusCode: {SystemSpecificStatusCode} "
+                + $"RequestData: {RequestData} "
+                + $"ApplicationDataSize: {ApplicationDataSize} "
+                + $"ApplicationData: {ApplicationData}";
         }
     }
 }

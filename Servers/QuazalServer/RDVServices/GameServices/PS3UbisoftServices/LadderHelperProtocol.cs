@@ -1,6 +1,5 @@
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
-using QuazalServer.RDVServices.RMC;
 
 namespace QuazalServer.RDVServices.GameServices.PS3UbisoftServices
 {
@@ -10,7 +9,16 @@ namespace QuazalServer.RDVServices.GameServices.PS3UbisoftServices
         [RMCMethod(1)]
         public RMCResult GetUnixUtc()
         {
-            return Result(new { time = Convert.ToUInt32(Math.Abs((DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, 0)).TotalSeconds)) });
+            return Result(
+                new
+                {
+                    time = Convert.ToUInt32(
+                        Math.Abs(
+                            (DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, 0)).TotalSeconds
+                        )
+                    ),
+                }
+            );
         }
 
         [RMCMethod(2)]

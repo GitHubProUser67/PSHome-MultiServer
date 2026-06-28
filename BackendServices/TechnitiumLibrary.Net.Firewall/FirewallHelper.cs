@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -10,7 +7,10 @@ namespace TechnitiumLibrary.Net.Firewall
     {
         private static bool _hasGlobalRule = false;
 
-        public static void CheckFirewallEntries(string appPath, Dictionary<int, Protocol>? ports = null)
+        public static void CheckFirewallEntries(
+            string appPath,
+            Dictionary<int, Protocol>? ports = null
+        )
         {
             if (string.IsNullOrWhiteSpace(appPath))
                 return;
@@ -59,14 +59,21 @@ namespace TechnitiumLibrary.Net.Firewall
             if (appPath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
                 appPath = appPath[..^4] + ".exe";
 
-            return RemoveFirewallRulePort(Path.GetFileNameWithoutExtension(appPath), appPath, port, prot);
+            return RemoveFirewallRulePort(
+                Path.GetFileNameWithoutExtension(appPath),
+                appPath,
+                port,
+                prot
+            );
         }
 
         private static bool RemoveFirewallRulesGlobal(string serverName, string appPath)
         {
             try
             {
-                while (WindowsFirewall.RuleExistsVista(serverName, appPath) != RuleStatus.DoesNotExists)
+                while (
+                    WindowsFirewall.RuleExistsVista(serverName, appPath) != RuleStatus.DoesNotExists
+                )
                     WindowsFirewall.RemoveRuleVista(serverName, appPath);
                 return true;
             }
@@ -78,12 +85,19 @@ namespace TechnitiumLibrary.Net.Firewall
             return false;
         }
 
-        private static bool RemoveFirewallRulePort(string serverName, string appPath, int port, Protocol protocol)
+        private static bool RemoveFirewallRulePort(
+            string serverName,
+            string appPath,
+            int port,
+            Protocol protocol
+        )
         {
             try
             {
                 string ruleName = GetRuleName(serverName, port, protocol);
-                while (WindowsFirewall.RuleExistsVista(ruleName, appPath) != RuleStatus.DoesNotExists)
+                while (
+                    WindowsFirewall.RuleExistsVista(ruleName, appPath) != RuleStatus.DoesNotExists
+                )
                     WindowsFirewall.RemoveRuleVista(ruleName, appPath);
                 return true;
             }
@@ -99,7 +113,8 @@ namespace TechnitiumLibrary.Net.Firewall
         {
             try
             {
-                bool ruleIsSet = WindowsFirewall.RuleExistsVista(serverName, appPath) == RuleStatus.Allowed;
+                bool ruleIsSet =
+                    WindowsFirewall.RuleExistsVista(serverName, appPath) == RuleStatus.Allowed;
                 if (ruleIsSet)
                     _hasGlobalRule = true;
                 return ruleIsSet;
@@ -112,11 +127,19 @@ namespace TechnitiumLibrary.Net.Firewall
             return false;
         }
 
-        private static bool WindowsFirewallPortEntryExists(string serverName, string appPath, int port, Protocol protocol)
+        private static bool WindowsFirewallPortEntryExists(
+            string serverName,
+            string appPath,
+            int port,
+            Protocol protocol
+        )
         {
             try
             {
-                return WindowsFirewall.RuleExistsVista(GetRuleName(serverName, port, protocol), appPath) == RuleStatus.Allowed;
+                return WindowsFirewall.RuleExistsVista(
+                        GetRuleName(serverName, port, protocol),
+                        appPath
+                    ) == RuleStatus.Allowed;
             }
             catch
             {
@@ -143,7 +166,8 @@ namespace TechnitiumLibrary.Net.Firewall
                     InterfaceTypeFlags.All,
                     true,
                     Direction.Inbound,
-                    true);
+                    true
+                );
 
                 _hasGlobalRule = true;
 
@@ -157,7 +181,12 @@ namespace TechnitiumLibrary.Net.Firewall
             return false;
         }
 
-        private static bool AddWindowsFirewallPortEntry(string serverName, string appPath, int port, Protocol protocol)
+        private static bool AddWindowsFirewallPortEntry(
+            string serverName,
+            string appPath,
+            int port,
+            Protocol protocol
+        )
         {
             try
             {
@@ -174,7 +203,8 @@ namespace TechnitiumLibrary.Net.Firewall
                     InterfaceTypeFlags.All,
                     true,
                     Direction.Inbound,
-                    true);
+                    true
+                );
 
                 return true;
             }
@@ -193,7 +223,13 @@ namespace TechnitiumLibrary.Net.Firewall
 
         private static string CreateRuleHash(string serverName, int port, Protocol protocol)
         {
-            return Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes($"{serverName}:{port}:{protocol}:TRYTOGUESSTHIS!!!!!!!*!")));
+            return Convert.ToHexString(
+                MD5.HashData(
+                    Encoding.UTF8.GetBytes(
+                        $"{serverName}:{port}:{protocol}:TRYTOGUESSTHIS!!!!!!!*!"
+                    )
+                )
+            );
         }
     }
 }

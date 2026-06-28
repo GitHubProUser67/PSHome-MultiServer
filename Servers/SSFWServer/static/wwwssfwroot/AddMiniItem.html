@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Mini Item</title>
+    <script>
+        async function sendMiniItemData() {
+            const sessionId = document.getElementById("sessionid").value;
+            const uuid = document.getElementById("uuid").value;
+            const env = document.getElementById("env").value;
+            const invtype = document.getElementById("invtype").value;
+
+            try {
+                const response = await fetch('http://127.0.0.1:8080/WebService/AddMiniItem/', {
+                    method: 'POST',
+                    headers: {
+                        'sessionid': sessionId,
+                        'uuid': uuid,
+                        'env': env,
+                        'invtype': invtype
+                    }
+                });
+
+                const responseBody = await response.text();
+
+                document.getElementById("result").innerText = response.ok
+                    ? `Success: ${responseBody}`
+                    : `Error: ${responseBody}`;
+            } catch (error) {
+                document.getElementById("result").innerText = `Request failed: ${error.message}`;
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <h1>Add Mini Item to Rewards List</h1>
+
+    <form id="miniItemForm" onsubmit="event.preventDefault(); sendMiniItemData();">
+        <label for="sessionid">Session ID:</label>
+        <input type="text" id="sessionid" name="sessionid" value="ce08691e-4ec8-2e68-36d7-7296d8fd856d" required><br><br>
+
+        <label for="uuid">UUID:</label>
+        <input type="text" id="uuid" name="uuid" value="8443D306-FC674DA2-AD424348-D73A2AF9" required><br><br>
+
+        <label for="env">Environment (env):</label>
+        <input type="text" id="env" name="env" value="cprod" required><br><br>
+
+        <label for="invtype">Inventory Entry Type (invtype):</label>
+        <input type="number" id="invtype" name="invtype" value="1" required><br><br>
+
+        <button type="submit">Submit</button>
+    </form>
+
+    <div id="result"></div>
+
+</body>
+</html>

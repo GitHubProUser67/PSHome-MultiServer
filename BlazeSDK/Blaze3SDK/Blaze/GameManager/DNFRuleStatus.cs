@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct DNFRuleStatus
-	{
+    [TdfStruct]
+    public struct DNFRuleStatus
+    {
+        [TdfMember("XDNF")]
+        public long mMaxDNFValue;
 
-		[TdfMember("XDNF")]
-		public long mMaxDNFValue;
-
-		[TdfMember("MDNF")]
-		public long mMyDNFValue;
-
-	}
+        [TdfMember("MDNF")]
+        public long mMyDNFValue;
+    }
 }

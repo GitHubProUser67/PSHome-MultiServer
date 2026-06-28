@@ -1,6 +1,6 @@
 {
   "solution": {
-    "path": "PSHMultiServer.sln",
+    "path": "PSHMultiServer.slnx",
     "projects": [
       "AuxiliaryServices\\AlcatrazService\\AlcatrazService.csproj",
       "AuxiliaryServices\\EdNetService\\EdNetService.csproj",
@@ -13,7 +13,6 @@
       "BackendServices\\EndianTools\\EndianTools.csproj",
       "BackendServices\\MultiServerLibrary\\MultiServerLibrary.csproj",
       "BackendServices\\NetCoreServer\\NetCoreServer.csproj",
-      "BackendServices\\PS2FloatLibrary\\PS2FloatLibrary.csproj",
       "BackendServices\\Prometheus\\Prometheus.csproj",
       "BackendServices\\SpaceWizards.HttpListener\\SpaceWizards.HttpListener.csproj",
       "BackendServices\\TechnitiumLibrary.Net.Firewall\\TechnitiumLibrary.Net.Firewall.csproj",
@@ -22,10 +21,11 @@
       "BlazeSDK\\Blaze3SDK\\Blaze3SDK.csproj",
       "BlazeSDK\\BlazeCommon\\BlazeCommon.csproj",
       "BlazeSDK\\Tdf\\Tdf.csproj",
-      "Plugins\\HTTP\\EdNetCRCCalculator\\EdNetCRCCalculator.csproj",
-      "Plugins\\HTTP\\PdfToJpeg\\PdfToJpeg.csproj",
-      "Plugins\\HTTP\\SceProfanityFilterService\\SceProfanityFilterService.csproj",
-      "Plugins\\HTTP\\SonyCdnReroute\\SonyCdnReroute.csproj",
+      "Plugins\\ApacheNet\\EdNetCRCCalculator\\EdNetCRCCalculator.csproj",
+      "Plugins\\ApacheNet\\PdfToJpeg\\PdfToJpeg.csproj",
+      "Plugins\\ApacheNet\\SceProfanityFilterService\\SceProfanityFilterService.csproj",
+      "Plugins\\ApacheNet\\SonyCdnReroute\\SonyCdnReroute.csproj",
+      "Plugins\\ApacheNet\\WebVideoService\\WebVideoService.csproj",
       "Servers\\ApacheNet\\ApacheNet.csproj",
       "Servers\\EdenServer\\EdenServer.csproj",
       "Servers\\Horizon\\Horizon.csproj",

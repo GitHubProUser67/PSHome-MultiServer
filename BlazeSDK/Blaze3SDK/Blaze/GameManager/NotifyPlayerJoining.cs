@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct NotifyPlayerJoining
-	{
+    [TdfStruct]
+    public struct NotifyPlayerJoining
+    {
+        [TdfMember("GID")]
+        public uint mGameId;
 
-		[TdfMember("GID")]
-		public uint mGameId;
-
-		[TdfMember("PDAT")]
-		public ReplicatedGamePlayer mJoiningPlayer;
-
-	}
+        [TdfMember("PDAT")]
+        public ReplicatedGamePlayer mJoiningPlayer;
+    }
 }

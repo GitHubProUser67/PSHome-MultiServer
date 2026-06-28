@@ -1,6 +1,5 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
@@ -21,17 +20,13 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             SessionKey = reader.ReadString(Constants.SESSIONKEY_MAXLEN);
             reader.ReadBytes(2);
 
-            //
             StartByte = reader.ReadInt32();
             EndByte = reader.ReadInt32();
             SortOrder = reader.Read<MediusSortOrder>();
@@ -40,17 +35,13 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(SessionKey);
             writer.Write(new byte[2]);
 
-            //
             writer.Write(StartByte);
             writer.Write(EndByte);
             writer.Write(SortOrder);
@@ -59,12 +50,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StartByte: {StartByte} " +
-                $"EndByte: {EndByte} " +
-                $"SortOrder: {SortOrder} " +
-                $"AccountID: {AccountID} ";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StartByte: {StartByte} "
+                + $"EndByte: {EndByte} "
+                + $"SortOrder: {SortOrder} "
+                + $"AccountID: {AccountID} ";
         }
     }
 }

@@ -1,9 +1,8 @@
-using QuazalServer.RDVServices.DDL.Models;
+using CustomLogger;
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
-using QuazalServer.RDVServices.RMC;
+using QuazalServer.RDVServices.DDL.Models;
 using RDVServices;
-using CustomLogger;
 
 namespace QuazalServer.RDVServices.GameServices.PS3RaymanLegendsServices
 {
@@ -21,25 +20,24 @@ namespace QuazalServer.RDVServices.GameServices.PS3RaymanLegendsServices
             var privileges = new Dictionary<uint, Privilege>();
 
             uint id = 1;
-            privileges.Add(id++, new Privilege()
-            {
-                m_ID = 1,
-                m_description = "Allow to play online"
-            });
+            privileges.Add(
+                id++,
+                new Privilege() { m_ID = 1, m_description = "Allow to play online" }
+            );
 
-            int unlockFlags = 0;
+            var unlockFlags = 0;
             using (var db = DBHelper.GetDbContext(Context.Handler.Factory.Item1))
             {
                 var curPlayerId = Context.Client.PlayerInfo.PID;
                 try
                 {
-
                     var curPlayer = db.Users.FirstOrDefault(x => x.Id == curPlayerId);
                     if (curPlayer != null)
                     {
                         unlockFlags = curPlayer.RewardFlags;
                     }
-                } catch (Exception ex)
+                }
+                catch (Exception ex)
                 {
                     LoggerAccessor.LogError($"Exception caught: {ex}");
                 }
@@ -68,7 +66,11 @@ namespace QuazalServer.RDVServices.GameServices.PS3RaymanLegendsServices
         }
 
         [RMCMethod(3)]
-        public RMCResult ActivateKeyWithExpectedPrivileges(string uniqueKey, string languageCode, IEnumerable<uint> expectedPrivilegeIDs)
+        public RMCResult ActivateKeyWithExpectedPrivileges(
+            string uniqueKey,
+            string languageCode,
+            IEnumerable<uint> expectedPrivilegeIDs
+        )
         {
             var privilegeList = new List<Privilege>();
 
@@ -78,7 +80,7 @@ namespace QuazalServer.RDVServices.GameServices.PS3RaymanLegendsServices
                 var curPlayer = db.Users.FirstOrDefault(x => x.Id == curPlayerId);
                 if (curPlayer != null)
                 {
-                    int unlockFlags = 0;
+                    var unlockFlags = 0;
                     if (uniqueKey == "IWantDeluxeCars")
                     {
                         privilegeList.AddRange(DeluxePrivileges.VehicleIds);

@@ -1,12 +1,12 @@
 # Consultez https://aka.ms/customizecontainer pour savoir comment personnaliser votre conteneur de débogage et comment Visual Studio utilise ce Dockerfile pour générer vos images afin d’accélérer le débogage.
 
 # Cet index est utilisé lors de l’exécution à partir de VS en mode rapide (par défaut pour la configuration de débogage)
-FROM mcr.microsoft.com/dotnet/runtime:6.0 AS base
+FROM mcr.microsoft.com/dotnet/runtime:10.0 AS base
 WORKDIR /app
 
 
 # Cette phase est utilisée pour générer le projet de service
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["Servers/MitmDNS/MitmDNS.csproj", "Servers/MitmDNS/"]

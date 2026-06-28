@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Text;
@@ -16,7 +14,7 @@ namespace NetCoreServer
     {
         public const string allowedMethods = "OPTIONS, HEAD, GET, PUT, POST, DELETE, PATCH";
 
-        public static List<string> allowedOrigins = new List<string>() { };
+        public static List<string> allowedOrigins = [];
 
         static HttpResponse()
         {
@@ -30,6 +28,7 @@ namespace NetCoreServer
         {
             Clear();
         }
+
         /// <summary>
         /// Initialize a new HTTP response with a given status and protocol
         /// </summary>
@@ -39,6 +38,7 @@ namespace NetCoreServer
         {
             SetBegin(status, protocol);
         }
+
         /// <summary>
         /// Initialize a new HTTP response with a given status, status phrase and protocol
         /// </summary>
@@ -53,7 +53,11 @@ namespace NetCoreServer
         /// <summary>
         /// Is the HTTP response empty?
         /// </summary>
-        public bool IsEmpty { get { return (_cache.Size > 0); } }
+        public bool IsEmpty
+        {
+            get { return _cache.Size > 0; }
+        }
+
         /// <summary>
         /// Is the HTTP response error flag set?
         /// </summary>
@@ -67,15 +71,27 @@ namespace NetCoreServer
         /// <summary>
         /// Get the HTTP response status phrase
         /// </summary>
-        public string StatusPhrase { get { return _statusPhrase; } }
+        public string StatusPhrase
+        {
+            get { return _statusPhrase; }
+        }
+
         /// <summary>
         /// Get the HTTP response protocol version
         /// </summary>
-        public string Protocol { get { return _protocol; } }
+        public string Protocol
+        {
+            get { return _protocol; }
+        }
+
         /// <summary>
         /// Get the HTTP response headers count
         /// </summary>
-        public long Headers { get { return _headers.Count; } }
+        public long Headers
+        {
+            get { return _headers.Count; }
+        }
+
         /// <summary>
         /// Get the HTTP response header by index
         /// </summary>
@@ -84,10 +100,7 @@ namespace NetCoreServer
 #if DEBUG
             Debug.Assert(i < _headers.Count, "Index out of bounds!");
 #endif
-            if (i >= _headers.Count)
-                return (string.Empty, string.Empty);
-
-            return _headers[i];
+            return i >= _headers.Count ? (string.Empty, string.Empty) : _headers[i];
         }
 
         #region Global CORS Handling
@@ -119,39 +132,57 @@ namespace NetCoreServer
 #if true // Serve as a HTTP json debugging.
         [JsonIgnore]
 #endif
-        public string Body { get { return _cache.ExtractString(_bodyIndex, _bodySize); } }
+        public string Body
+        {
+            get { return _cache.ExtractString(_bodyIndex, _bodySize); }
+        }
+
         /// <summary>
         /// Get the HTTP request body as byte array
         /// </summary>
         [JsonIgnore]
-        public byte[] BodyBytes { get { return _cache.Data[_bodyIndex..(_bodyIndex + _bodySize)]; } }
+        public byte[] BodyBytes
+        {
+            get { return _cache.Data[_bodyIndex..(_bodyIndex + _bodySize)]; }
+        }
+
         /// <summary>
         /// Get the HTTP request body as read-only byte span
         /// </summary>
         [JsonIgnore]
-        public ReadOnlySpan<byte> BodySpan { get { return new ReadOnlySpan<byte>(_cache.Data, _bodyIndex, _bodySize); } }
+        public ReadOnlySpan<byte> BodySpan
+        {
+            get { return new ReadOnlySpan<byte>(_cache.Data, _bodyIndex, _bodySize); }
+        }
+
         /// <summary>
         /// Get the HTTP response body length
         /// </summary>
-        public long BodyLength { get { return _bodyLength; } }
+        public long BodyLength
+        {
+            get { return _bodyLength; }
+        }
 
         /// <summary>
         /// Get the HTTP response cache content
         /// </summary>
         [JsonIgnore]
-        public Buffer Cache { get { return _cache; } }
+        public Buffer Cache
+        {
+            get { return _cache; }
+        }
 
         /// <summary>
         /// Get string from the current HTTP response
         /// </summary>
         public override string ToString()
         {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             sb.AppendLine($"Status: {Status}");
             sb.AppendLine($"Status phrase: {StatusPhrase}");
             sb.AppendLine($"Protocol: {Protocol}");
             sb.AppendLine($"Headers: {Headers}");
-            for (int i = 0; i < Headers; i++)
+            for (var i = 0; i < Headers; i++)
             {
                 var header = Header(i);
                 sb.AppendLine($"{header.Item1} : {header.Item2}");
@@ -188,85 +219,73 @@ namespace NetCoreServer
         /// <param name="protocol">Protocol version (default is "HTTP/1.1")</param>
         public HttpResponse SetBegin(int status, string protocol = "HTTP/1.1")
         {
-            string statusPhrase;
-
-            switch (status)
+            var statusPhrase = status switch
             {
-                case 100: statusPhrase = "Continue"; break;
-                case 101: statusPhrase = "Switching Protocols"; break;
-                case 102: statusPhrase = "Processing"; break;
-                case 103: statusPhrase = "Early Hints"; break;
-
-                case 200: statusPhrase = "OK"; break;
-                case 201: statusPhrase = "Created"; break;
-                case 202: statusPhrase = "Accepted"; break;
-                case 203: statusPhrase = "Non-Authoritative Information"; break;
-                case 204: statusPhrase = "No Content"; break;
-                case 205: statusPhrase = "Reset Content"; break;
-                case 206: statusPhrase = "Partial Content"; break;
-                case 207: statusPhrase = "Multi-Status"; break;
-                case 208: statusPhrase = "Already Reported"; break;
-
-                case 226: statusPhrase = "IM Used"; break;
-
-                case 300: statusPhrase = "Multiple Choices"; break;
-                case 301: statusPhrase = "Moved Permanently"; break;
-                case 302: statusPhrase = "Found"; break;
-                case 303: statusPhrase = "See Other"; break;
-                case 304: statusPhrase = "Not Modified"; break;
-                case 305: statusPhrase = "Use Proxy"; break;
-                case 306: statusPhrase = "Switch Proxy"; break;
-                case 307: statusPhrase = "Temporary Redirect"; break;
-                case 308: statusPhrase = "Permanent Redirect"; break;
-
-                case 400: statusPhrase = "Bad Request"; break;
-                case 401: statusPhrase = "Unauthorized"; break;
-                case 402: statusPhrase = "Payment Required"; break;
-                case 403: statusPhrase = "Forbidden"; break;
-                case 404: statusPhrase = "Not Found"; break;
-                case 405: statusPhrase = "Method Not Allowed"; break;
-                case 406: statusPhrase = "Not Acceptable"; break;
-                case 407: statusPhrase = "Proxy Authentication Required"; break;
-                case 408: statusPhrase = "Request Timeout"; break;
-                case 409: statusPhrase = "Conflict"; break;
-                case 410: statusPhrase = "Gone"; break;
-                case 411: statusPhrase = "Length Required"; break;
-                case 412: statusPhrase = "Precondition Failed"; break;
-                case 413: statusPhrase = "Payload Too Large"; break;
-                case 414: statusPhrase = "URI Too Long"; break;
-                case 415: statusPhrase = "Unsupported Media Type"; break;
-                case 416: statusPhrase = "Range Not Satisfiable"; break;
-                case 417: statusPhrase = "Expectation Failed"; break;
-
-                case 421: statusPhrase = "Misdirected Request"; break;
-                case 422: statusPhrase = "Unprocessable Entity"; break;
-                case 423: statusPhrase = "Locked"; break;
-                case 424: statusPhrase = "Failed Dependency"; break;
-                case 425: statusPhrase = "Too Early"; break;
-                case 426: statusPhrase = "Upgrade Required"; break;
-                case 427: statusPhrase = "Unassigned"; break;
-                case 428: statusPhrase = "Precondition Required"; break;
-                case 429: statusPhrase = "Too Many Requests"; break;
-                case 431: statusPhrase = "Request Header Fields Too Large"; break;
-
-                case 451: statusPhrase = "Unavailable For Legal Reasons"; break;
-
-                case 500: statusPhrase = "Internal Server Error"; break;
-                case 501: statusPhrase = "Not Implemented"; break;
-                case 502: statusPhrase = "Bad Gateway"; break;
-                case 503: statusPhrase = "Service Unavailable"; break;
-                case 504: statusPhrase = "Gateway Timeout"; break;
-                case 505: statusPhrase = "HTTP Version Not Supported"; break;
-                case 506: statusPhrase = "Variant Also Negotiates"; break;
-                case 507: statusPhrase = "Insufficient Storage"; break;
-                case 508: statusPhrase = "Loop Detected"; break;
-
-                case 510: statusPhrase = "Not Extended"; break;
-                case 511: statusPhrase = "Network Authentication Required"; break;
-
-                default: statusPhrase = "Unknown"; break;
-            }
-
+                100 => "Continue",
+                101 => "Switching Protocols",
+                102 => "Processing",
+                103 => "Early Hints",
+                200 => "OK",
+                201 => "Created",
+                202 => "Accepted",
+                203 => "Non-Authoritative Information",
+                204 => "No Content",
+                205 => "Reset Content",
+                206 => "Partial Content",
+                207 => "Multi-Status",
+                208 => "Already Reported",
+                226 => "IM Used",
+                300 => "Multiple Choices",
+                301 => "Moved Permanently",
+                302 => "Found",
+                303 => "See Other",
+                304 => "Not Modified",
+                305 => "Use Proxy",
+                306 => "Switch Proxy",
+                307 => "Temporary Redirect",
+                308 => "Permanent Redirect",
+                400 => "Bad Request",
+                401 => "Unauthorized",
+                402 => "Payment Required",
+                403 => "Forbidden",
+                404 => "Not Found",
+                405 => "Method Not Allowed",
+                406 => "Not Acceptable",
+                407 => "Proxy Authentication Required",
+                408 => "Request Timeout",
+                409 => "Conflict",
+                410 => "Gone",
+                411 => "Length Required",
+                412 => "Precondition Failed",
+                413 => "Payload Too Large",
+                414 => "URI Too Long",
+                415 => "Unsupported Media Type",
+                416 => "Range Not Satisfiable",
+                417 => "Expectation Failed",
+                421 => "Misdirected Request",
+                422 => "Unprocessable Entity",
+                423 => "Locked",
+                424 => "Failed Dependency",
+                425 => "Too Early",
+                426 => "Upgrade Required",
+                427 => "Unassigned",
+                428 => "Precondition Required",
+                429 => "Too Many Requests",
+                431 => "Request Header Fields Too Large",
+                451 => "Unavailable For Legal Reasons",
+                500 => "Internal Server Error",
+                501 => "Not Implemented",
+                502 => "Bad Gateway",
+                503 => "Service Unavailable",
+                504 => "Gateway Timeout",
+                505 => "HTTP Version Not Supported",
+                506 => "Variant Also Negotiates",
+                507 => "Insufficient Storage",
+                508 => "Loop Detected",
+                510 => "Not Extended",
+                511 => "Network Authentication Required",
+                _ => "Unknown",
+            };
             SetBegin(status, statusPhrase, protocol);
             return this;
         }
@@ -309,10 +328,9 @@ namespace NetCoreServer
         public HttpResponse SetContentType(string extension)
         {
             // Try to lookup the content type in mime table
-            if (_mimeTable.TryGetValue(extension, out string mime))
-                return SetHeader("Content-Type", mime);
-
-            return this;
+            return _mimeTable.TryGetValue(extension, out var mime)
+                ? SetHeader("Content-Type", mime)
+                : this;
         }
 
         /// <summary>
@@ -348,9 +366,18 @@ namespace NetCoreServer
         /// <param name="secure">Cookie secure flag (default is true)</param>
         /// <param name="strict">Cookie strict flag (default is true)</param>
         /// <param name="httpOnly">Cookie HTTP-only flag (default is true)</param>
-        public HttpResponse SetCookie(string name, string value, int maxAge = 86400, string path = "", string domain = "", bool secure = true, bool strict = true, bool httpOnly = true)
+        public HttpResponse SetCookie(
+            string name,
+            string value,
+            int maxAge = 86400,
+            string path = "",
+            string domain = "",
+            bool secure = true,
+            bool strict = true,
+            bool httpOnly = true
+        )
         {
-            string key = "Set-Cookie";
+            var key = "Set-Cookie";
 
             // Append the HTTP response header's key
             _cache.Append(key);
@@ -358,7 +385,7 @@ namespace NetCoreServer
             _cache.Append(": ");
 
             // Append the HTTP response header's value
-            int valueIndex = (int)_cache.Size;
+            var valueIndex = (int)_cache.Size;
 
             // Append cookie
             _cache.Append(name);
@@ -383,9 +410,9 @@ namespace NetCoreServer
             if (httpOnly)
                 _cache.Append("; HttpOnly");
 
-            int valueSize = (int)_cache.Size - valueIndex;
+            var valueSize = (int)_cache.Size - valueIndex;
 
-            string cookie = _cache.ExtractString(valueIndex, valueSize);
+            var cookie = _cache.ExtractString(valueIndex, valueSize);
 
             _cache.Append("\r\n");
 
@@ -398,22 +425,30 @@ namespace NetCoreServer
         /// Set the HTTP response body
         /// </summary>
         /// <param name="body">Body string content (default is "")</param>
-        public HttpResponse SetBody(string body = "", string encoding = null, string origin = null) => SetBody(body.AsSpan(), encoding, origin);
+        public HttpResponse SetBody(
+            string body = "",
+            string encoding = null,
+            string origin = null
+        ) => SetBody(body.AsSpan(), encoding, origin);
 
         /// <summary>
         /// Set the HTTP response body
         /// </summary>
         /// <param name="body">Body string content as a span of characters</param>
-        public HttpResponse SetBody(ReadOnlySpan<char> body, string encoding = null, string origin = null)
+        public HttpResponse SetBody(
+            ReadOnlySpan<char> body,
+            string encoding = null,
+            string origin = null
+        )
         {
-            int length = body.IsEmpty ? 0 : Encoding.UTF8.GetByteCount(body);
+            var length = body.IsEmpty ? 0 : Encoding.UTF8.GetByteCount(body);
 
             // Append CORS header
             SetCorsHeaders(origin);
 
             if (!string.IsNullOrEmpty(encoding) && length > 0)
             {
-                byte[] payload = Encoding.UTF8.GetBytes(body.ToString());
+                var payload = Encoding.UTF8.GetBytes(body.ToString());
                 if (!string.IsNullOrEmpty(encoding))
                 {
                     if (encoding.Contains("zstd"))
@@ -421,13 +456,11 @@ namespace NetCoreServer
                         SetHeader("Content-Encoding", "zstd");
                         payload = HTTPProcessor.CompressZstd(payload);
                     }
-#if NET5_0_OR_GREATER
                     else if (encoding.Contains("br"))
                     {
                         SetHeader("Content-Encoding", "br");
                         payload = HTTPProcessor.CompressBrotli(payload);
                     }
-#endif
                     else if (encoding.Contains("gzip"))
                     {
                         SetHeader("Content-Encoding", "gzip");
@@ -447,7 +480,7 @@ namespace NetCoreServer
 
                 _cache.Append("\r\n");
 
-                int index = (int)_cache.Size;
+                var index = (int)_cache.Size;
 
                 // Append the HTTP response body
                 _cache.Append(payload);
@@ -462,7 +495,7 @@ namespace NetCoreServer
 
                 _cache.Append("\r\n");
 
-                int index = (int)_cache.Size;
+                var index = (int)_cache.Size;
 
                 // Append the HTTP response body
                 _cache.Append(body);
@@ -479,22 +512,27 @@ namespace NetCoreServer
         /// Set the HTTP response body
         /// </summary>
         /// <param name="body">Body binary content</param>
-        public HttpResponse SetBody(byte[] body, string encoding = null, string origin = null) => SetBody(body.AsSpan(), encoding, origin);
+        public HttpResponse SetBody(byte[] body, string encoding = null, string origin = null) =>
+            SetBody(body.AsSpan(), encoding, origin);
 
         /// <summary>
         /// Set the HTTP response body
         /// </summary>
         /// <param name="body">Body binary content as a span of bytes</param>
-        public HttpResponse SetBody(ReadOnlySpan<byte> body, string encoding = null, string origin = null)
+        public HttpResponse SetBody(
+            ReadOnlySpan<byte> body,
+            string encoding = null,
+            string origin = null
+        )
         {
-            int length = body.Length;
+            var length = body.Length;
 
             // Append CORS header
             SetCorsHeaders(origin);
 
             if (!string.IsNullOrEmpty(encoding) && length > 0)
             {
-                byte[] payload = body.ToArray();
+                var payload = body.ToArray();
                 if (!string.IsNullOrEmpty(encoding))
                 {
                     if (encoding.Contains("zstd"))
@@ -502,13 +540,11 @@ namespace NetCoreServer
                         SetHeader("Content-Encoding", "zstd");
                         payload = HTTPProcessor.CompressZstd(payload);
                     }
-#if NET5_0_OR_GREATER
                     else if (encoding.Contains("br"))
                     {
                         SetHeader("Content-Encoding", "br");
                         payload = HTTPProcessor.CompressBrotli(payload);
                     }
-#endif
                     else if (encoding.Contains("gzip"))
                     {
                         SetHeader("Content-Encoding", "gzip");
@@ -528,7 +564,7 @@ namespace NetCoreServer
 
                 _cache.Append("\r\n");
 
-                int index = (int)_cache.Size;
+                var index = (int)_cache.Size;
 
                 // Append the HTTP response body
                 _cache.Append(payload);
@@ -543,7 +579,7 @@ namespace NetCoreServer
 
                 _cache.Append("\r\n");
 
-                int index = (int)_cache.Size;
+                var index = (int)_cache.Size;
 
                 // Append the HTTP response body
                 _cache.Append(body);
@@ -551,7 +587,7 @@ namespace NetCoreServer
                 _bodySize = length;
                 _bodyLength = length;
             }
-                
+
             _bodyLengthProvided = true;
             return this;
         }
@@ -567,7 +603,7 @@ namespace NetCoreServer
 
             _cache.Append("\r\n");
 
-            int index = (int)_cache.Size;
+            var index = (int)_cache.Size;
 
             // Clear the HTTP response body
             _bodyIndex = index;
@@ -594,7 +630,10 @@ namespace NetCoreServer
         /// </summary>
         /// <param name="content">Error content (default is "")</param>
         /// <param name="contentType">Error content type (default is "text/plain; charset=UTF-8")</param>
-        public HttpResponse MakeErrorResponse(string content = "", string contentType = "text/plain; charset=UTF-8")
+        public HttpResponse MakeErrorResponse(
+            string content = "",
+            string contentType = "text/plain; charset=UTF-8"
+        )
         {
             return MakeErrorResponse((int)HttpStatusCode.InternalServerError, content, contentType);
         }
@@ -605,7 +644,11 @@ namespace NetCoreServer
         /// <param name="status">Error status</param>
         /// <param name="content">Error content (default is "")</param>
         /// <param name="contentType">Error content type (default is "text/plain; charset=UTF-8")</param>
-        public HttpResponse MakeErrorResponse(int status, string content = "", string contentType = "text/plain; charset=UTF-8")
+        public HttpResponse MakeErrorResponse(
+            int status,
+            string content = "",
+            string contentType = "text/plain; charset=UTF-8"
+        )
         {
             Clear();
             SetBegin(status);
@@ -631,14 +674,20 @@ namespace NetCoreServer
         /// </summary>
         /// <param name="content">String content (default is "")</param>
         /// <param name="contentType">Content type (default is "text/plain; charset=UTF-8")</param>
-        public HttpResponse MakeGetResponse(string content = "", string contentType = "text/plain; charset=UTF-8") => MakeGetResponse(content.AsSpan(), contentType);
+        public HttpResponse MakeGetResponse(
+            string content = "",
+            string contentType = "text/plain; charset=UTF-8"
+        ) => MakeGetResponse(content.AsSpan(), contentType);
 
         /// <summary>
         /// Make GET response
         /// </summary>
         /// <param name="content">String content as a span of characters</param>
         /// <param name="contentType">Content type (default is "text/plain; charset=UTF-8")</param>
-        public HttpResponse MakeGetResponse(ReadOnlySpan<char> content, string contentType = "text/plain; charset=UTF-8")
+        public HttpResponse MakeGetResponse(
+            ReadOnlySpan<char> content,
+            string contentType = "text/plain; charset=UTF-8"
+        )
         {
             Clear();
             SetBegin((int)HttpStatusCode.OK);
@@ -653,7 +702,8 @@ namespace NetCoreServer
         /// </summary>
         /// <param name="content">Binary content</param>
         /// <param name="contentType">Content type (default is "")</param>
-        public HttpResponse MakeGetResponse(byte[] content, string contentType = "") => MakeGetResponse(content.AsSpan(), contentType);
+        public HttpResponse MakeGetResponse(byte[] content, string contentType = "") =>
+            MakeGetResponse(content.AsSpan(), contentType);
 
         /// <summary>
         /// Make GET response
@@ -674,7 +724,9 @@ namespace NetCoreServer
         /// Make OPTIONS response
         /// </summary>
         /// <param name="allow">Allow methods (default is "HEAD,GET,POST,PUT,DELETE,OPTIONS,TRACE")</param>
-        public HttpResponse MakeOptionsResponse(string allow = "HEAD,GET,POST,PUT,DELETE,OPTIONS,TRACE")
+        public HttpResponse MakeOptionsResponse(
+            string allow = "HEAD,GET,POST,PUT,DELETE,OPTIONS,TRACE"
+        )
         {
             Clear();
             SetBegin((int)HttpStatusCode.OK);
@@ -687,7 +739,8 @@ namespace NetCoreServer
         /// Make TRACE response
         /// </summary>
         /// <param name="content">String content</param>
-        public HttpResponse MakeTraceResponse(string content) => MakeTraceResponse(content.AsSpan());
+        public HttpResponse MakeTraceResponse(string content) =>
+            MakeTraceResponse(content.AsSpan());
 
         /// <summary>
         /// Make TRACE response
@@ -706,7 +759,8 @@ namespace NetCoreServer
         /// Make TRACE response
         /// </summary>
         /// <param name="content">Binary content</param>
-        public HttpResponse MakeTraceResponse(byte[] content) => MakeTraceResponse(content.AsSpan());
+        public HttpResponse MakeTraceResponse(byte[] content) =>
+            MakeTraceResponse(content.AsSpan());
 
         /// <summary>
         /// Make TRACE response
@@ -725,14 +779,18 @@ namespace NetCoreServer
         /// Make TRACE response
         /// </summary>
         /// <param name="request">HTTP request</param>
-        public HttpResponse MakeTraceResponse(HttpRequest request) => MakeTraceResponse(request.Cache.AsSpan());
+        public HttpResponse MakeTraceResponse(HttpRequest request) =>
+            MakeTraceResponse(request.Cache.AsSpan());
 
         // HTTP response status phrase
         private string _statusPhrase;
+
         // HTTP response protocol
         private string _protocol;
+
         // HTTP response headers
-        private readonly List<(string, string)> _headers = new List<(string, string)>();
+        private readonly List<(string, string)> _headers = [];
+
         // HTTP response body
         private int _bodyIndex;
         private int _bodySize;
@@ -740,7 +798,7 @@ namespace NetCoreServer
         private bool _bodyLengthProvided;
 
         // HTTP response cache
-        private readonly Buffer _cache = new Buffer();
+        private readonly Buffer _cache = new();
         private int _cacheSize;
 
         // HTTP response mime table
@@ -751,6 +809,7 @@ namespace NetCoreServer
         {
             return !IsErrorSet && (_bodyIndex == 0);
         }
+
         internal bool IsPendingBody()
         {
             return !IsErrorSet && (_bodyIndex > 0) && (_bodySize > 0);
@@ -763,23 +822,28 @@ namespace NetCoreServer
             _cache.Append(buffer, offset, size);
 
             // Try to seek for HTTP header separator
-            for (int i = _cacheSize; i < (int)_cache.Size; i++)
+            for (var i = _cacheSize; i < (int)_cache.Size; i++)
             {
                 // Check for the request cache out of bounds
                 if ((i + 3) >= (int)_cache.Size)
                     break;
 
                 // Check for the header separator
-                if ((_cache[i + 0] == '\r') && (_cache[i + 1] == '\n') && (_cache[i + 2] == '\r') && (_cache[i + 3] == '\n'))
+                if (
+                    (_cache[i + 0] == '\r')
+                    && (_cache[i + 1] == '\n')
+                    && (_cache[i + 2] == '\r')
+                    && (_cache[i + 3] == '\n')
+                )
                 {
-                    int index = 0;
+                    var index = 0;
 
                     // Set the error flag for a while...
                     IsErrorSet = true;
 
                     // Parse protocol version
-                    int protocolIndex = index;
-                    int protocolSize = 0;
+                    var protocolIndex = index;
+                    var protocolSize = 0;
                     while (_cache[index] != ' ')
                     {
                         protocolSize++;
@@ -788,13 +852,13 @@ namespace NetCoreServer
                             return false;
                     }
                     index++;
-                    if ((index >= (int)_cache.Size))
+                    if (index >= (int)_cache.Size)
                         return false;
                     _protocol = _cache.ExtractString(protocolIndex, protocolSize);
 
                     // Parse status code
-                    int statusIndex = index;
-                    int statusSize = 0;
+                    var statusIndex = index;
+                    var statusSize = 0;
                     while (_cache[index] != ' ')
                     {
                         if ((_cache[index] < '0') || (_cache[index] > '9'))
@@ -805,7 +869,7 @@ namespace NetCoreServer
                             return false;
                     }
                     Status = 0;
-                    for (int j = statusIndex; j < (statusIndex + statusSize); j++)
+                    for (var j = statusIndex; j < (statusIndex + statusSize); j++)
                     {
                         Status *= 10;
                         Status += _cache[j] - '0';
@@ -815,8 +879,8 @@ namespace NetCoreServer
                         return false;
 
                     // Parse status phrase
-                    int statusPhraseIndex = index;
-                    int statusPhraseSize = 0;
+                    var statusPhraseIndex = index;
+                    var statusPhraseSize = 0;
                     while (_cache[index] != '\r')
                     {
                         statusPhraseSize++;
@@ -836,8 +900,8 @@ namespace NetCoreServer
                     while ((index < (int)_cache.Size) && (index < i))
                     {
                         // Parse header name
-                        int headerNameIndex = index;
-                        int headerNameSize = 0;
+                        var headerNameIndex = index;
+                        var headerNameSize = 0;
                         while (_cache[index] != ':')
                         {
                             headerNameSize++;
@@ -864,8 +928,8 @@ namespace NetCoreServer
                         }
 
                         // Parse header value
-                        int headerValueIndex = index;
-                        int headerValueSize = 0;
+                        var headerValueIndex = index;
+                        var headerValueSize = 0;
                         while (_cache[index] != '\r')
                         {
                             headerValueSize++;
@@ -887,14 +951,26 @@ namespace NetCoreServer
                             return false;
 
                         // Add a new header
-                        string headerName = _cache.ExtractString(headerNameIndex, headerNameSize);
-                        _headers.Add((headerName, _cache.ExtractString(headerValueIndex, headerValueSize)));
+                        var headerName = _cache.ExtractString(headerNameIndex, headerNameSize);
+                        _headers.Add(
+                            (headerName, _cache.ExtractString(headerValueIndex, headerValueSize))
+                        );
 
                         // Try to find the body content length
-                        if (string.Compare(headerName, "Content-Length", StringComparison.OrdinalIgnoreCase) == 0)
+                        if (
+                            string.Compare(
+                                headerName,
+                                "Content-Length",
+                                StringComparison.OrdinalIgnoreCase
+                            ) == 0
+                        )
                         {
                             _bodyLength = 0;
-                            for (int j = headerValueIndex; j < (headerValueIndex + headerValueSize); j++)
+                            for (
+                                var j = headerValueIndex;
+                                j < (headerValueIndex + headerValueSize);
+                                j++
+                            )
                             {
                                 if ((_cache[j] < '0') || (_cache[j] > '9'))
                                     return false;
@@ -951,11 +1027,15 @@ namespace NetCoreServer
                 // Check the body content to find the response body end
                 if (_bodySize >= 4)
                 {
-                    int index = _bodyIndex + _bodySize - 4;
+                    var index = _bodyIndex + _bodySize - 4;
 
                     // Was the body fully received?
-                    if ((_cache[index + 0] == '\r') && (_cache[index + 1] == '\n') && (_cache[index + 2] == '\r') &&
-                        (_cache[index + 3] == '\n'))
+                    if (
+                        (_cache[index + 0] == '\r')
+                        && (_cache[index + 1] == '\n')
+                        && (_cache[index + 2] == '\r')
+                        && (_cache[index + 3] == '\n')
+                    )
                     {
                         _bodyLength = _bodySize;
                         return true;

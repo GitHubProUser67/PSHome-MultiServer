@@ -1,27 +1,61 @@
-using System.Collections.Generic;
+using System.Text;
+using CastleLibrary.NetHasher;
 using CustomLogger;
 using NLua;
-using System.Text;
-using System;
-using NetHasher;
+using Org.BouncyCastle.Utilities.Encoders;
 
 namespace WebAPIService.GameServices.PSHOME.NDREAMS
 {
     public static class NDREAMSServerUtils
     {
-        public static string Server_GetSignatureCustom(string signature, string username, string data, DateTime timeObj)
+        public static string Server_GetSignatureCustom(
+            string signature,
+            string username,
+            string data,
+            DateTime timeObj
+        )
         {
-            return DotNetHasher.ComputeSHA1String(Encoding.UTF8.GetBytes(signature + username + timeObj.Year + timeObj.Month + timeObj.Day + data + "Signature")).ToLower();
+            return DotNetHasher
+                .ComputeSHA1String(
+                    Encoding.UTF8.GetBytes(
+                        signature
+                            + username
+                            + timeObj.Year
+                            + timeObj.Month
+                            + timeObj.Day
+                            + data
+                            + "Signature"
+                    )
+                )
+                .ToLower();
         }
 
-        public static string Server_GetSignature(string parameter, string username, string data, DateTime timeObj)
+        public static string Server_GetSignature(
+            string parameter,
+            string username,
+            string data,
+            DateTime timeObj
+        )
         {
-            return DotNetHasher.ComputeSHA1String(Encoding.UTF8.GetBytes("nDreams" + parameter + username + timeObj.Year + timeObj.Month + timeObj.Day + data + "Signature")).ToLower();
+            return DotNetHasher
+                .ComputeSHA1String(
+                    Encoding.UTF8.GetBytes(
+                        "nDreams"
+                            + parameter
+                            + username
+                            + timeObj.Year
+                            + timeObj.Month
+                            + timeObj.Day
+                            + data
+                            + "Signature"
+                    )
+                )
+                .ToLower();
         }
 
         public static string Server_KeyToHash(string key, DateTime dObj, string level)
         {
-            Dictionary<char, char> map = new Dictionary<char, char>()
+            var map = new Dictionary<char, char>()
             {
                 { '0', '#' },
                 { '1', 'a' },
@@ -42,23 +76,32 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS
                 { 'G', 'g' },
                 { 'H', 'U' },
                 { 'I', '8' },
-                { 'J', '2' }
+                { 'J', '2' },
             };
 
-            StringBuilder str = new StringBuilder();
-            for (int i = 7; i >= 0; i--)
+            var str = new StringBuilder();
+            for (var i = 7; i >= 0; i--)
             {
-                char currentChar = key[i];
-                char mappedChar;
-                if (map.TryGetValue(currentChar, out char value))
-                    mappedChar = value;
-                else
-                    mappedChar = map[Convert.ToChar(Convert.ToInt32(currentChar))];
-
+                var currentChar = key[i];
+                var mappedChar = map.TryGetValue(currentChar, out var value)
+                    ? value
+                    : map[Convert.ToChar(Convert.ToInt32(currentChar))];
                 str.Append(mappedChar);
             }
 
-            return DotNetHasher.ComputeSHA1String(Encoding.UTF8.GetBytes("keyString" + level + dObj.Year + dObj.Month + dObj.Day + str.ToString() + level)).ToLower();
+            return DotNetHasher
+                .ComputeSHA1String(
+                    Encoding.UTF8.GetBytes(
+                        "keyString"
+                            + level
+                            + dObj.Year
+                            + dObj.Month
+                            + dObj.Day
+                            + str.ToString()
+                            + level
+                    )
+                )
+                .ToLower();
         }
 
         public static string CreateBase64StringFromGuids(List<string> GUIDS)
@@ -66,9 +109,9 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS
             if (GUIDS.Count == 0)
                 return null;
 
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
-            foreach (string guid in GUIDS)
+            foreach (var guid in GUIDS)
             {
                 if (sb.Length == 0)
                     sb.Append($"\"{guid}\"");
@@ -77,22 +120,20 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS
             }
 
             // Execute the Lua script and get the result
-            byte[] LuaTableOutput = ExecuteLuaScript(sb.ToString());
+            var LuaTableOutput = ExecuteLuaScript(sb.ToString());
 
-            if (LuaTableOutput != null)
-                return Convert.ToBase64String(LuaTableOutput);
-
-            return null;
+            return LuaTableOutput != null ? Base64.ToBase64String(LuaTableOutput) : null;
         }
 
         public static byte[] ExecuteLuaScript(string GUIDList)
         {
-            using (Lua lua = new Lua())
+            using (var lua = new Lua())
             {
                 try
                 {
                     // Execute the Lua script
-                    object[] returnValues = lua.DoString(@"local list = {PUT_GUID_LIST_HERE};
+                    var returnValues = lua.DoString(
+                        @"local list = {PUT_GUID_LIST_HERE};
 		                local normal = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 		                local key1   = {'i','o','p','1','2','8','x','c','5','t','3','v','h','k','q','0'};
 		                local key2   = {'a','d','1','g','h','4','y','u','8','o','p','2','5','9','e','i'};
@@ -146,7 +187,8 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS
 			                table.insert(bytes, text)
 		                end
 				
-		                return bytes;".Replace("PUT_GUID_LIST_HERE", GUIDList));
+		                return bytes;".Replace("PUT_GUID_LIST_HERE", GUIDList)
+                    );
 
                     // Accessing the returned values
                     if (returnValues != null && returnValues.Length > 0)
@@ -154,7 +196,7 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS
                         // Assuming the Lua script returns a table of byte arrays
                         if (returnValues[0] is LuaTable bytesTable)
                         {
-                            List<byte> ReturnBytes = new List<byte>();
+                            List<byte> ReturnBytes = [];
 
                             foreach (LuaTable val in bytesTable.Values)
                             {
@@ -164,14 +206,16 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS
                                 }
                             }
 
-                            return ReturnBytes.ToArray();
+                            return [.. ReturnBytes];
                         }
                     }
                 }
                 catch (Exception ex)
                 {
                     // Handle any exceptions that might occur during script execution
-                    LoggerAccessor.LogError("[ExecuteLuaScript] - Error executing Lua script: " + ex);
+                    LoggerAccessor.LogError(
+                        "[ExecuteLuaScript] - Error executing Lua script: " + ex
+                    );
                 }
 
                 lua.Close();

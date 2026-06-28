@@ -1,5 +1,5 @@
-using Blaze2SDK.Blaze.Util;
 using System.ComponentModel.DataAnnotations;
+using Blaze2SDK.Blaze.Util;
 using Tdf;
 
 namespace Blaze2SDK.Blaze.GameManager
@@ -7,7 +7,6 @@ namespace Blaze2SDK.Blaze.GameManager
     [TdfStruct]
     public struct ReplicatedGameData
     {
-
         [TdfMember("ADMN")]
         public List<uint> mAdminPlayerList;
 
@@ -54,7 +53,7 @@ namespace Blaze2SDK.Blaze.GameManager
         public int mGameProtocolVersion;
 
         [TdfMember("HNET")]
-        public List<NetworkAddress> mHostNetworkAddressList;
+        public NetworkAddress mHostNetworkAddress;
 
         [TdfMember("HSES")]
         public uint mTopologyHostSessionId;
@@ -132,6 +131,5 @@ namespace Blaze2SDK.Blaze.GameManager
 
         [TdfMember("XSES")]
         public byte[] mXnetSession;
-
     }
 }

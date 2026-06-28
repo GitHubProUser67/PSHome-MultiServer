@@ -4,7 +4,6 @@ namespace CastleLibrary.S0ny.PS3_Creator
 {
     internal abstract class Decryptor
     {
-
         public virtual void DoInit(byte[] key, byte[] iv) { }
 
         public virtual void DoUpdate(byte[] i, int inOffset, byte[] o, int outOffset, int len) { }
@@ -12,7 +11,6 @@ namespace CastleLibrary.S0ny.PS3_Creator
 
     internal class NoCrypt : Decryptor
     {
-
         public override void DoInit(byte[] key, byte[] iv)
         {
             // Do nothing
@@ -28,6 +26,7 @@ namespace CastleLibrary.S0ny.PS3_Creator
     {
         Aes c;
         ICryptoTransform ct;
+
         public override void DoInit(byte[] key, byte[] iv)
         {
             try
@@ -39,9 +38,7 @@ namespace CastleLibrary.S0ny.PS3_Creator
                 c.IV = iv;
                 ct = c.CreateDecryptor();
             }
-            catch
-            {
-            }
+            catch { }
         }
 
         public override void DoUpdate(byte[] i, int inOffset, byte[] o, int outOffset, int len)
@@ -50,9 +47,7 @@ namespace CastleLibrary.S0ny.PS3_Creator
             {
                 ct.TransformBlock(i, inOffset, len, o, outOffset);
             }
-            catch
-            {
-            }
+            catch { }
         }
     }
 
@@ -60,6 +55,7 @@ namespace CastleLibrary.S0ny.PS3_Creator
     {
         Aes c;
         ICryptoTransform ct;
+
         public override void DoInit(byte[] key, byte[] iv)
         {
             try
@@ -71,9 +67,7 @@ namespace CastleLibrary.S0ny.PS3_Creator
                 c.IV = iv;
                 ct = c.CreateEncryptor();
             }
-            catch
-            {
-            }
+            catch { }
         }
 
         public override void DoUpdate(byte[] i, int inOffset, byte[] o, int outOffset, int len)

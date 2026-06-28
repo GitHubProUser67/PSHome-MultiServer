@@ -2,21 +2,19 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Rsp
 {
-	[TdfStruct]
-	public struct StartPurchaseRequest
-	{
+    [TdfStruct]
+    public struct StartPurchaseRequest
+    {
+        [TdfMember("CID")]
+        public uint mConsumableId;
 
-		[TdfMember("CID")]
-		public uint mConsumableId;
+        [TdfMember("PSAL")]
+        public string mPingSiteAlias;
 
-		[TdfMember("PSAL")]
-		public string mPingSiteAlias;
+        [TdfMember("SID")]
+        public uint mServerId;
 
-		[TdfMember("SID")]
-		public uint mServerId;
-
-		[TdfMember("UID")]
-		public long mUserId;
-
-	}
+        [TdfMember("UID")]
+        public long mUserId;
+    }
 }

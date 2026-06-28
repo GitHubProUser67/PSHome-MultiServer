@@ -8,9 +8,9 @@
 namespace Prometheus;
 
 // Forwards all calls to an inner stream except where overridden in a derived class.
-internal abstract class DelegatingStreamInternal : Stream
+internal abstract class DelegatingStreamInternal(Stream innerStream) : Stream
 {
-    private readonly Stream _innerStream;
+    private readonly Stream _innerStream = innerStream;
 
     #region Properties
 
@@ -59,11 +59,6 @@ internal abstract class DelegatingStreamInternal : Stream
 
     #endregion Properties
 
-    protected DelegatingStreamInternal(Stream innerStream)
-    {
-        _innerStream = innerStream;
-    }
-
     protected override void Dispose(bool disposing)
     {
         if (disposing)
@@ -72,7 +67,6 @@ internal abstract class DelegatingStreamInternal : Stream
         }
         base.Dispose(disposing);
     }
-
 
     public override long Seek(long offset, SeekOrigin origin)
     {
@@ -89,11 +83,23 @@ internal abstract class DelegatingStreamInternal : Stream
         return _innerStream.ReadByte();
     }
 
-    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override Task<int> ReadAsync(
+        byte[] buffer,
+        int offset,
+        int count,
+        CancellationToken cancellationToken
+    )
     {
         return _innerStream.ReadAsync(buffer, offset, count, cancellationToken);
     }
-    public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
+
+    public override IAsyncResult BeginRead(
+        byte[] buffer,
+        int offset,
+        int count,
+        AsyncCallback? callback,
+        object? state
+    )
     {
         return _innerStream.BeginRead(buffer, offset, count, callback, state);
     }
@@ -128,13 +134,23 @@ internal abstract class DelegatingStreamInternal : Stream
         _innerStream.WriteByte(value);
     }
 
-    public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override Task WriteAsync(
+        byte[] buffer,
+        int offset,
+        int count,
+        CancellationToken cancellationToken
+    )
     {
         return _innerStream.WriteAsync(buffer, offset, count, cancellationToken);
     }
 
-
-    public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
+    public override IAsyncResult BeginWrite(
+        byte[] buffer,
+        int offset,
+        int count,
+        AsyncCallback? callback,
+        object? state
+    )
     {
         return _innerStream.BeginWrite(buffer, offset, count, callback, state);
     }
@@ -144,7 +160,11 @@ internal abstract class DelegatingStreamInternal : Stream
         _innerStream.EndWrite(asyncResult);
     }
 
-    public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
+    public override Task CopyToAsync(
+        Stream destination,
+        int bufferSize,
+        CancellationToken cancellationToken
+    )
     {
         return _innerStream.CopyToAsync(destination, bufferSize, cancellationToken);
     }

@@ -1,14 +1,13 @@
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
 using QuazalServer.RDVServices.DDL.Models.EventStatsProtocol;
-using QuazalServer.RDVServices.RMC;
 
 namespace QuazalServer.RDVServices.GameServices.v2Services
 {
     /// <summary>
-	/// Events stats service
-	/// </summary>
-	[RMCService((ushort)RMCProtocolId.EventStatsProtocol)]
+    /// Events stats service
+    /// </summary>
+    [RMCService((ushort)RMCProtocolId.EventStatsProtocol)]
     public class EventStatsProtocol : RMCServiceBase
     {
         [RMCMethod(1)]
@@ -40,7 +39,14 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
         {
             UNIMPLEMENTED();
 
-            return Result(new { gameStats = new List<GameStats> { }, unk = (uint)0, unk2 = new List<uint> { } });
+            return Result(
+                new
+                {
+                    gameStats = new List<GameStats> { },
+                    unk = (uint)0,
+                    unk2 = new List<uint> { },
+                }
+            );
         }
 
         [RMCMethod(5)]

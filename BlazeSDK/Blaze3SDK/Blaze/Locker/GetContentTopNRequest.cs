@@ -2,30 +2,28 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Locker
 {
-	[TdfStruct]
-	public struct GetContentTopNRequest
-	{
+    [TdfStruct]
+    public struct GetContentTopNRequest
+    {
+        [TdfMember("CCAT")]
+        public string mContentCategory;
 
-		[TdfMember("CCAT")]
-		public string mContentCategory;
+        [TdfMember("COUN")]
+        public int mCount;
 
-		[TdfMember("COUN")]
-		public int mCount;
+        [TdfMember("FLTR")]
+        public List<LeaderboardFilter> mFilters;
 
-		[TdfMember("FLTR")]
-		public List<LeaderboardFilter> mFilters;
+        [TdfMember("LB")]
+        public LeaderboardType mLeaderboardType;
 
-		[TdfMember("LB")]
-		public LeaderboardType mLeaderboardType;
+        [TdfMember("VIEW")]
+        public string mLeaderboardView;
 
-		[TdfMember("VIEW")]
-		public string mLeaderboardView;
+        [TdfMember("STRT")]
+        public int mStart;
 
-		[TdfMember("STRT")]
-		public int mStart;
-
-		[TdfMember("TAG")]
-		public string mTag;
-
-	}
+        [TdfMember("TAG")]
+        public string mTag;
+    }
 }

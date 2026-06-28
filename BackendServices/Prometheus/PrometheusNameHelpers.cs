@@ -6,11 +6,13 @@ namespace Prometheus;
 /// <summary>
 /// Transforms external names in different character sets into Prometheus (metric or label) names.
 /// </summary>
-internal static class PrometheusNameHelpers
+internal static partial class PrometheusNameHelpers
 {
-    private static readonly Regex NameRegex = new("^[a-zA-Z_][a-zA-Z0-9_]*$", RegexOptions.Compiled);
-    private const string FirstCharacterCharset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
-    private const string NonFirstCharacterCharset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789";
+    private static readonly Regex NameRegex = MyRegex();
+    private const string FirstCharacterCharset =
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+    private const string NonFirstCharacterCharset =
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789";
 
     public static string TranslateNameToPrometheusName(string inputName)
     {
@@ -22,7 +24,7 @@ internal static class PrometheusNameHelpers
 
         var sb = new StringBuilder();
 
-        foreach (char inputCharacter in inputName)
+        foreach (var inputCharacter in inputName)
         {
             // All lowercase.
             var c = Char.ToLowerInvariant(inputCharacter);
@@ -49,9 +51,13 @@ internal static class PrometheusNameHelpers
         var name = sb.ToString();
 
         // Sanity check.
-        if (!NameRegex.IsMatch(name))
-            throw new Exception("Self-check failed: generated name did not match our own naming rules.");
-
-        return name;
+        return !NameRegex.IsMatch(name)
+            ? throw new Exception(
+                "Self-check failed: generated name did not match our own naming rules."
+            )
+            : name;
     }
+
+    [GeneratedRegex("^[a-zA-Z_][a-zA-Z0-9_]*$", RegexOptions.Compiled)]
+    private static partial Regex MyRegex();
 }

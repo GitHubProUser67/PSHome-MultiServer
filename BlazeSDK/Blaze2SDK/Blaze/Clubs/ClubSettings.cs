@@ -6,7 +6,6 @@ namespace Blaze2SDK.Blaze.Clubs
     [TdfStruct]
     public struct ClubSettings
     {
-
         /// <summary>
         /// Max String Length: 30
         /// </summary>
@@ -70,6 +69,5 @@ namespace Blaze2SDK.Blaze.Clubs
 
         [TdfMember("TMID")]
         public uint mTeamId;
-
     }
 }

@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameReportingLegacy
 {
-	[TdfStruct]
-	public struct GameReportViewInfo
-	{
+    [TdfStruct]
+    public struct GameReportViewInfo
+    {
+        [TdfMember("DESC")]
+        public string mDesc;
 
-		[TdfMember("DESC")]
-		public string mDesc;
+        [TdfMember("META")]
+        public string mMetadata;
 
-		[TdfMember("META")]
-		public string mMetadata;
-
-		[TdfMember("VNAM")]
-		public string mName;
-
-	}
+        [TdfMember("VNAM")]
+        public string mName;
+    }
 }

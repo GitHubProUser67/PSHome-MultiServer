@@ -1,5 +1,5 @@
-using MultiSocks.Aries.Messages;
-using MultiSocks.Aries.Messages.PersonaService;
+using MultiSocks.Aries.Components;
+using MultiSocks.Aries.Components.PersonaService;
 
 namespace MultiSocks.Aries.Model
 {
@@ -17,15 +17,17 @@ namespace MultiSocks.Aries.Model
             if (user == null)
                 return false;
 
-            if (Users.Count >= Room.Max) return false;
-            if (!base.AddUser(user)) return false;
+            if (Users.Count >= Room.Max)
+                return false;
+            if (!base.AddUser(user))
+                return false;
 
             //send move to this user
-            Move move = new Move()
+            var move = new Move()
             {
                 IDENT = Room.ID.ToString(),
                 NAME = Room.Name,
-                COUNT = Users.Count.ToString()
+                COUNT = Users.Count.ToString(),
             };
             user.Connection?.SendMessage(move);
 
@@ -45,15 +47,17 @@ namespace MultiSocks.Aries.Model
             if (user == null)
                 return false;
 
-            if (Users.Count >= Room.Max) return false;
-            if (!base.AddUser(user)) return false;
+            if (Users.Count >= Room.Max)
+                return false;
+            if (!base.AddUser(user))
+                return false;
 
             //send move to this user
-            Room move = new Room()
+            var move = new Room()
             {
                 IDENT = Room.ID.ToString(),
                 NAME = Room.Name,
-                COUNT = Users.Count.ToString()
+                COUNT = Users.Count.ToString(),
             };
             user.Connection?.SendMessage(move);
 
@@ -71,30 +75,32 @@ namespace MultiSocks.Aries.Model
         public void AuditRoom(AriesUser user, string VERS = "")
         {
             //send move to this user
-            Peek peek = new Peek()
+            var peek = new Peek()
             {
                 IDENT = Room.ID.ToString(),
                 NAME = Room.Name,
-                COUNT = Users.Count.ToString()
+                COUNT = Users.Count.ToString(),
             };
             user.Connection?.SendMessage(peek);
 
             //send who to this user to tell them who they are
 
-            PlusUser info = user.GetInfo();
+            var info = user.GetInfo();
 
-            user.Connection?.SendMessage(new PlusWho()
-            {
-                I = info.I ?? string.Empty,
-                N = info.N,
-                M = info.M,
-                A = info.A ?? string.Empty,
-                X = info.X,
-                R = Room.Name,
-                RI = Room.ID.ToString(),
-                S = string.Empty,
-                F = string.Empty
-            });
+            user.Connection?.SendMessage(
+                new PlusWho()
+                {
+                    I = info.I ?? string.Empty,
+                    N = info.N,
+                    M = info.M,
+                    A = info.A ?? string.Empty,
+                    X = info.X,
+                    R = Room.Name,
+                    RI = Room.ID.ToString(),
+                    S = string.Empty,
+                    F = string.Empty,
+                }
+            );
             RefreshUser(user);
             ListToUser(user);
             Room.BroadcastPopulation();
@@ -112,27 +118,32 @@ namespace MultiSocks.Aries.Model
             {
                 infos.Add(user.GetInfo());
             }
-            foreach (var info in infos) target.Connection?.SendMessage(info);
+            foreach (var info in infos)
+                target.Connection?.SendMessage(info);
         }
 
         public override bool RemoveUser(AriesUser? user)
         {
             base.RemoveUser(user);
-            Broadcast(new PlusUser()
-            {
-                I = user.ID.ToString(),
-                T = Room.Users.Count().ToString(),
-                F = null,
-                P = null,
-                S = null
-            });
+            Broadcast(
+                new PlusUser()
+                {
+                    I = user.ID.ToString(),
+                    T = Room.Users.Count().ToString(),
+                    F = null,
+                    P = null,
+                    S = null,
+                }
+            );
 
-            Broadcast(new PlusMesg()
-            {
-                F = "C",
-                T = "\"has left the room\"",
-                N = user.PersonaName
-            });
+            Broadcast(
+                new PlusMesg()
+                {
+                    F = "C",
+                    T = "\"has left the room\"",
+                    N = user.PersonaName,
+                }
+            );
 
             Room.BroadcastPopulation();
             Room.RemoveChallenges(user);
@@ -149,30 +160,31 @@ namespace MultiSocks.Aries.Model
             }
 
             base.RemoveUser(user);
-            Broadcast(new PlusUser()
-            {
-                I = user.ID.ToString(),
-                T = Room.Users.Count().ToString(),
-                F = null,
-                P = null,
-                S = null
-            });
+            Broadcast(
+                new PlusUser()
+                {
+                    I = user.ID.ToString(),
+                    T = Room.Users.Count().ToString(),
+                    F = null,
+                    P = null,
+                    S = null,
+                }
+            );
 
-            Broadcast(new PlusMesg()
-            {
-                F = "C",
-                T = "\"has left the room\"",
-                N = user.PersonaName
-            });
+            Broadcast(
+                new PlusMesg()
+                {
+                    F = "C",
+                    T = "\"has left the room\"",
+                    N = user.PersonaName,
+                }
+            );
 
             Room.BroadcastPopulation();
             Room.RemoveChallenges(user);
             user.CurrentRoom = null;
 
-            if (Room.Users.Count() == 0)
-                return true;
-
-            return false;
+            return Room.Users.Count() == 0;
         }
     }
 }

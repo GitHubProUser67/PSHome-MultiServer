@@ -2,21 +2,19 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.League
 {
-	[TdfStruct]
-	public struct SetOptionRequest
-	{
+    [TdfStruct]
+    public struct SetOptionRequest
+    {
+        [TdfMember("LGID")]
+        public uint mLeagueId;
 
-		[TdfMember("LGID")]
-		public uint mLeagueId;
+        [TdfMember("GMID")]
+        public long mMemberId;
 
-		[TdfMember("GMID")]
-		public long mMemberId;
+        [TdfMember("OPID")]
+        public uint mOptionId;
 
-		[TdfMember("OPID")]
-		public uint mOptionId;
-
-		[TdfMember("VALU")]
-		public uint mValue;
-
-	}
+        [TdfMember("VALU")]
+        public uint mValue;
+    }
 }

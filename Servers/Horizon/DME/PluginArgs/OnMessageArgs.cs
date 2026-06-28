@@ -1,6 +1,6 @@
 using DotNetty.Transport.Channels;
-using Horizon.RT.Models;
 using Horizon.DME.Models;
+using Horizon.RT.Models;
 
 namespace Horizon.DME.PluginArgs
 {
@@ -15,7 +15,6 @@ namespace Horizon.DME.PluginArgs
         public bool IsIncoming { get; }
 
         public bool Ignore { get; set; } = false;
-
 
         public OnMessageArgs(bool isIncoming)
         {

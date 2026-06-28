@@ -1,13 +1,16 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.SetLocalizationParamsStatusResponse1)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.SetLocalizationParamsStatusResponse1
+    )]
     public class MediusSetLocalizationParamsStatusResponse1 : BaseLobbyExtMessage, IMediusResponse
     {
-        public override byte PacketType => (byte)MediusLobbyExtMessageIds.SetLocalizationParamsStatusResponse1;
+        public override byte PacketType =>
+            (byte)MediusLobbyExtMessageIds.SetLocalizationParamsStatusResponse1;
 
         public bool IsSuccess => StatusCode >= 0;
 
@@ -17,26 +20,20 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            //
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             reader.ReadBytes(3);
             StatusCode = reader.Read<MediusCallbackStatus>();
         }
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(new byte[3]);
             writer.Write(StatusCode);
         }

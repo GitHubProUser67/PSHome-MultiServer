@@ -1,49 +1,53 @@
-using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 using EndianTools.ZipperEndian;
-using Horizon.RT.Models;
+using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
-namespace HorizonService.RT.Models.ServerPlugins.MAPS
+namespace Horizon.RT.Models.ServerPlugins.MAPS
 {
-    [MediusMessage(NetMessageClass.MessageClassApplication, NetMessageTypeIds.NetMessageTypeProtocolInfo)]
-    public class NetMessageProtocolInfo : BaseApplicationMessage
+    [MediusMessage(
+        NetMessageClass.MessageClassApplication,
+        NetMessageTypeIds.NetMessageTypeProtocolInfo
+    )]
+    public class NetMessageProtocolInfo : BaseMediusPluginMessage
     {
-        public override NetMessageTypeIds PacketType => NetMessageTypeIds.NetMessageTypeProtocolInfo;
+        public override NetMessageTypeIds PacketType =>
+            NetMessageTypeIds.NetMessageTypeProtocolInfo;
 
-        public override byte IncomingMessage => 0;
-        public override int Size => 5;
+        public override int Size => 8;
+        public override ushort ClientBufferSize => 16;
+        public override byte PluginId => (byte)NetPluginType.kNetPluginMAPS;
 
-        public override byte PluginId => 31;
-
-        public uint protocolInfo;
+        public uint protocolVersion;
         public uint buildNumber;
 #if DEBUG
-        private static bool debug = true;
+        private static readonly bool debug = true;
 #else
         private static bool debug = false;
 #endif
+
         public override void DeserializePlugin(MessageReader reader)
         {
-            int BitIndex = 0;
-            byte[] buffer = reader.ReadBytes(8);
-            BufferImpl.ReadPrimitive(buffer, ref protocolInfo, ref BitIndex, debug);
+            var BitIndex = 0;
+            var buffer = reader.ReadBytes(Size);
+            BufferImpl.ReadPrimitive(buffer, ref protocolVersion, ref BitIndex, debug);
             BufferImpl.ReadPrimitive(buffer, ref buildNumber, ref BitIndex, debug);
         }
 
         public override void SerializePlugin(MessageWriter writer)
         {
-            int BitIndex = 0;
-            byte[] buffer = new byte[8];
-            BufferImpl.WritePrimitive(buffer, protocolInfo, ref BitIndex, debug);
+            var BitIndex = 0;
+            var buffer = new byte[Size];
+            BufferImpl.WritePrimitive(buffer, protocolVersion, ref BitIndex, debug);
             BufferImpl.WritePrimitive(buffer, buildNumber, ref BitIndex, debug);
             writer.Write(buffer, buffer.Length);
         }
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"protocolInfo: {protocolInfo} " +
-                $"buildNumber: {buildNumber}";
+            return base.ToString()
+                + " "
+                + $"protocolInfo: {protocolVersion} "
+                + $"buildNumber: {buildNumber}";
         }
     }
 }

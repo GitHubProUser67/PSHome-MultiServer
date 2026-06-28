@@ -1,4 +1,4 @@
-using MultiSocks.Aries.Messages;
+using MultiSocks.Aries.Components;
 
 namespace MultiSocks.Aries.Model
 {
@@ -36,26 +36,52 @@ namespace MultiSocks.Aries.Model
                 I = ID.ToString(),
                 N = Name,
                 T = Users?.Count().ToString(),
-                L = Max.ToString()
+                L = Max.ToString(),
             };
         }
 
-        public AriesGame? CreateGame(int maxSize, int minSize, string custFlags, string @params,
-                string name, bool priv, string seed, string sysFlags, string pass, int roomId)
+        public AriesGame? CreateGame(
+            int maxSize,
+            int minSize,
+            string ident,
+            string? sku,
+            string custFlags,
+            string @params,
+            string name,
+            bool priv,
+            string seed,
+            string sysFlags,
+            string pass,
+            int roomId
+        )
         {
             lock (Games)
             {
-                if (!Games.Any(game =>
-                    game.Name == name))
+                if (!Games.Any(game => game.Name == name))
                 {
-                    AriesGame game = new(maxSize, minSize, GameIDsCounter, custFlags, @params,
-                                    name, priv, seed, sysFlags, pass, roomId);
+                    AriesGame game = new(
+                        maxSize,
+                        minSize,
+                        GameIDsCounter,
+                        ident,
+                        sku,
+                        custFlags,
+                        @params,
+                        name,
+                        priv,
+                        seed,
+                        sysFlags,
+                        pass,
+                        roomId
+                    );
                     GameIDsCounter++;
                     Games.Add(game);
                     return game;
                 }
                 else
-                    CustomLogger.LoggerAccessor.LogWarn("[Room] - Trying to add a game while an other with same properties exists!");
+                    CustomLogger.LoggerAccessor.LogWarn(
+                        "[Room] - Trying to add a game while an other with same properties exists!"
+                    );
             }
 
             return null;
@@ -70,7 +96,9 @@ namespace MultiSocks.Aries.Model
         {
             lock (ChallengeMap)
             {
-                foreach (var chal in ChallengeMap.Where(x => x.Value._From == user.PersonaName).ToList())
+                foreach (
+                    var chal in ChallengeMap.Where(x => x.Value._From == user.PersonaName).ToList()
+                )
                 {
                     ChallengeMap.Remove(chal.Key);
                 }

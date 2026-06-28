@@ -394,6 +394,8 @@ ps2nascar04.ea.com,Redirect,IP
 ps2ssx04.ea.com,Redirect,IP
 ps2sims04.ea.com,Redirect,IP
 ps2ssx04.ea.com,Redirect,IP
+ps3nba08.ea.com,Redirect,IP
+ps3nascar08.ea.com,Redirect,IP
 ps3nascar09.ea.com,Redirect,IP
 ps3burnout08.ea.com,Redirect,IP
 ps3dpr09.ea.com,Redirect,IP

@@ -1,5 +1,7 @@
-﻿namespace DNS.Protocol {
-    public enum ResponseCode {
+﻿namespace DNSLibrary
+{
+    public enum ResponseCode
+    {
         NoError = 0,
         FormatError,
         ServerFailure,

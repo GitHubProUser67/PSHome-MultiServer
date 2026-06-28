@@ -1,18 +1,13 @@
-using Alcatraz.Context;
+using AlcatrazService;
 using Microsoft.EntityFrameworkCore;
 using MultiServerLibrary.Extension.LinqSQL;
 using WebAPIService.LeaderboardService;
 
 namespace MultiServerWebServices
 {
-    public class Startup
+    public class Startup(IConfiguration configuration)
     {
-        public Startup(IConfiguration configuration)
-        {
-            Configuration = configuration;
-        }
-
-        public IConfiguration Configuration { get; }
+        public IConfiguration Configuration { get; } = configuration;
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -21,16 +16,28 @@ namespace MultiServerWebServices
 
             services.AddDbContext<MainDbContext>(opt =>
             {
-                MainDbContext.OnContextBuilding(opt, (DBType)secOpts!.DbType, secOpts.QuazalDbConnectionString);
+                MainDbContext.OnContextBuilding(
+                    opt,
+                    (DBType)secOpts!.DbType,
+                    secOpts.QuazalDbConnectionString
+                );
             });
             services.AddDbContext<LeaderboardDbContext>(opt =>
             {
-                LeaderboardDbContext.OnContextBuilding(opt, (DBType)secOpts!.DbType, secOpts.WebAPILeaderboardDbConnectionString);
+                LeaderboardDbContext.OnContextBuilding(
+                    opt,
+                    (DBType)secOpts!.DbType,
+                    secOpts.WebAPILeaderboardDbConnectionString
+                );
             });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, MainDbContext dbContext)
+        public void Configure(
+            IApplicationBuilder app,
+            IWebHostEnvironment env,
+            MainDbContext dbContext
+        )
         {
             // update database if haven't
             dbContext.Database.Migrate();

@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -8,8 +7,6 @@ namespace Horizon.RT.Models
     public class MediusSendClanMessageRequest : BaseLobbyMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusLobbyMessageIds.SendClanMessage;
-
-
 
         public MessageId MessageID { get; set; }
         public string SessionKey; // SESSIONKEY_MAXLEN
@@ -21,10 +18,10 @@ namespace Horizon.RT.Models
 
             MessageID = reader.Read<MessageId>();
             SessionKey = reader.ReadString(Constants.SESSIONKEY_MAXLEN);
-            if (reader.MediusVersion == 113)
-                Message = reader.ReadString(Constants.CLANMSG_MAXLEN_113_2);
-            else
-                Message = reader.ReadString(Constants.CLANMSG_MAXLEN);
+            Message =
+                reader.MediusVersion == 113
+                    ? reader.ReadString(Constants.CLANMSG_MAXLEN_113_2)
+                    : reader.ReadString(Constants.CLANMSG_MAXLEN);
         }
 
         public override void Serialize(MessageWriter writer)
@@ -41,10 +38,11 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"Message: {Message}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"Message: {Message}";
         }
     }
 }

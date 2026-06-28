@@ -1,7 +1,6 @@
-using QuazalServer.RDVServices.DDL.Models;
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
-using QuazalServer.RDVServices.RMC;
+using QuazalServer.RDVServices.DDL.Models;
 using RDVServices;
 
 namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
@@ -20,13 +19,12 @@ namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
             var privileges = new Dictionary<uint, Privilege>();
 
             uint id = 1;
-            privileges.Add(id++, new Privilege()
-            {
-                m_ID = 1,
-                m_description = "Allow to play online"
-            });
+            privileges.Add(
+                id++,
+                new Privilege() { m_ID = 1, m_description = "Allow to play online" }
+            );
 
-            int unlockFlags = 0;
+            var unlockFlags = 0;
             using (var db = DBHelper.GetDbContext(Context.Handler.Factory.Item1))
             {
                 var curPlayerId = Context.Client.PlayerInfo.PID;
@@ -60,7 +58,11 @@ namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
         }
 
         [RMCMethod(3)]
-        public RMCResult ActivateKeyWithExpectedPrivileges(string uniqueKey, string languageCode, IEnumerable<uint> expectedPrivilegeIDs)
+        public RMCResult ActivateKeyWithExpectedPrivileges(
+            string uniqueKey,
+            string languageCode,
+            IEnumerable<uint> expectedPrivilegeIDs
+        )
         {
             var privilegeList = new List<Privilege>();
 
@@ -70,7 +72,7 @@ namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
                 var curPlayer = db.Users.FirstOrDefault(x => x.Id == curPlayerId);
                 if (curPlayer != null)
                 {
-                    int unlockFlags = 0;
+                    var unlockFlags = 0;
                     if (uniqueKey == "IWantDeluxeCars")
                     {
                         privilegeList.AddRange(DeluxePrivileges.VehicleIds);
@@ -108,8 +110,16 @@ namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
         [RMCMethod(4)]
         public RMCResult GetPrivilegeRemainDuration(uint privilege_id)
         {
-            UNIMPLEMENTED();
-            return Error(0);
+            int durationTime = 0;
+
+            switch (privilege_id)
+            {
+                case 18: // Uplay Passeport Trial
+                    durationTime = 4995000; // 999 hours.
+                    break;
+            }
+
+            return Result(new { retVal = durationTime });
         }
 
         [RMCMethod(5)]

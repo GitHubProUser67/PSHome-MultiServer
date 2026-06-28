@@ -1,13 +1,8 @@
 ﻿namespace Prometheus.HttpClientMetrics;
 
-public sealed class HttpClientIdentity
+public sealed class HttpClientIdentity(string name)
 {
-    public static readonly HttpClientIdentity Default = new HttpClientIdentity("default");
+    public static readonly HttpClientIdentity Default = new("default");
 
-    public string Name { get; }
-
-    public HttpClientIdentity(string name)
-    {
-        Name = name;
-    }
+    public string Name { get; } = name;
 }

@@ -1,6 +1,6 @@
 /*
  *   Mentalis.org Security Library
- * 
+ *
  *     Copyright � 2002-2005, The Mentalis.org Team
  *     All rights reserved.
  *     http://www.mentalis.org/
@@ -11,11 +11,11 @@
  *   are met:
  *
  *     - Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer. 
+ *        notice, this list of conditions and the following disclaimer.
  *
  *     - Neither the name of the Mentalis.org Team, nor the names of its contributors
  *        may be used to endorse or promote products derived from this
- *        software without specific prior written permission. 
+ *        software without specific prior written permission.
  *
  *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -33,37 +33,56 @@
 
 using System.Security.Cryptography;
 
-namespace Org.Mentalis.Security.Cryptography
+namespace CastleLibrary.FixedSsl.Security.Cryptography
 {
     /// <summary>
     /// Represents the abstract class from which all implementations of the <see cref="RIPEMD160"/> hash algorithm inherit.
     /// </summary>
-    public abstract class RIPEMD160 : HashAlgorithm {
-		/// <summary>
-		/// Initializes a new instance of <see cref="RIPEMD160"/>.
-		/// </summary>
-		/// <remarks>You cannot create an instance of an abstract class. Application code will create a new instance of a derived class.</remarks>
-		protected RIPEMD160() {
-			this.HashSizeValue = 160;
-		}
-		/// <summary>
-		/// Creates an instance of the default implementation of the <see cref="RIPEMD160"/> hash algorithm.
-		/// </summary>
-		/// <returns>A new instance of the RIPEMD160 hash algorithm.</returns>
-		public static new RIPEMD160 Create () {
-			return Create("RIPEMD160");
-		}
-		/// <summary>
-		/// Creates an instance of the specified implementation of the <see cref="RIPEMD160"/> hash algorithm.
-		/// </summary>
-		/// <param name="hashName">The name of the specific implementation of RIPEMD160 to use.</param>
-		/// <returns>A new instance of the specified implementation of RIPEMD160.</returns>
-		public static new RIPEMD160 Create (string hashName) {
-			try {
-				if (hashName.ToUpper() == "RIPEMD160" || hashName.ToUpper() == "RIPEMD" || hashName.ToLower() == "org.mentalis.security.cryptography.ripemd160")
-					return new RIPEMD160Managed();
-			} catch {}
-			return null;
-		}
-	}
+    public abstract class RIPEMD160 : HashAlgorithm
+    {
+        /// <summary>
+        /// Initializes a new instance of <see cref="RIPEMD160"/>.
+        /// </summary>
+        /// <remarks>You cannot create an instance of an abstract class. Application code will create a new instance of a derived class.</remarks>
+        protected RIPEMD160()
+        {
+            HashSizeValue = 160;
+        }
+
+        /// <summary>
+        /// Creates an instance of the default implementation of the <see cref="RIPEMD160"/> hash algorithm.
+        /// </summary>
+        /// <returns>A new instance of the RIPEMD160 hash algorithm.</returns>
+        public static new RIPEMD160 Create()
+        {
+            return Create("RIPEMD160");
+        }
+
+        /// <summary>
+        /// Creates an instance of the specified implementation of the <see cref="RIPEMD160"/> hash algorithm.
+        /// </summary>
+        /// <param name="hashName">The name of the specific implementation of RIPEMD160 to use.</param>
+        /// <returns>A new instance of the specified implementation of RIPEMD160.</returns>
+        public static new RIPEMD160 Create(string hashName)
+        {
+            try
+            {
+                if (
+                    hashName.Equals("RIPEMD160", StringComparison.CurrentCultureIgnoreCase)
+                    || hashName.Equals("RIPEMD", StringComparison.CurrentCultureIgnoreCase)
+                    || hashName.Equals(
+                        "CastleLibrary.FixedSsl.Security.Cryptography.ripemd160",
+                        StringComparison.CurrentCultureIgnoreCase
+                    )
+                    || hashName.Equals(
+                        "org.mentalis.security.cryptography.ripemd160",
+                        StringComparison.CurrentCultureIgnoreCase
+                    )
+                )
+                    return new RIPEMD160Managed();
+            }
+            catch { }
+            return null;
+        }
+    }
 }

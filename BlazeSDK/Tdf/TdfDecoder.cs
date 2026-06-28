@@ -1,5 +1,5 @@
 using System.Buffers.Binary;
-using System.Numerics;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Tdf.Extensions;
 
@@ -7,8 +7,8 @@ namespace Tdf
 {
     public class TdfDecoder : ITdfDecoder
     {
-        private TdfFactory _factory;
-        private bool _heat1Bug;
+        private readonly TdfFactory _factory;
+        private readonly bool _heat1Bug;
 
         //return value: success reading the data(if not stop continue reading the packet)
         internal delegate bool TdfReader(Stream stream, ref object? instance, FieldInfo? field);
@@ -19,91 +19,106 @@ namespace Tdf
             _heat1Bug = heat1Bug;
         }
 
-        public T Decode<T>(byte[] data) where T : notnull => Decode<T>(new MemoryStream(data));
+        public T Decode<
+            [DynamicallyAccessedMembers(
+                DynamicallyAccessedMemberTypes.PublicParameterlessConstructor
+            )]
+                T
+        >(byte[] data)
+            where T : notnull => Decode<T>(new MemoryStream(data));
 
-        public T Decode<T>(Stream stream) where T : notnull
+        public T Decode<
+            [DynamicallyAccessedMembers(
+                DynamicallyAccessedMemberTypes.PublicParameterlessConstructor
+            )]
+                T
+        >(Stream stream)
+            where T : notnull
         {
-            object? ret = Activator.CreateInstance<T>();
-            if (ret == null)
-                throw new NotSupportedException($"'{typeof(T).FullName}' must have a parameterless constructor!");
+            object? ret =
+                Activator.CreateInstance<T>()
+                ?? throw new NotSupportedException(
+                    $"'{typeof(T).FullName}' must have a parameterless constructor!"
+                );
+            var type = typeof(T);
+            var mainContext = _factory.GetContext(type);
 
-            Type type = typeof(T);
-            Dictionary<string, FieldInfo> mainContext = _factory.GetContext(type);
-
-            while (stream.Position < stream.Length && ReadTdf(stream, ref ret, mainContext)) ;
+            while (stream.Position < stream.Length && ReadTdf(stream, ref ret, mainContext))
+                ;
             return (T)ret!;
         }
 
-        public object Decode(Type type, byte[] data) => Decode(type, new MemoryStream(data));
+        public object Decode(
+            [DynamicallyAccessedMembers(
+                DynamicallyAccessedMemberTypes.PublicParameterlessConstructor
+            )]
+                Type type,
+            byte[] data
+        ) => Decode(type, new MemoryStream(data));
 
-        public object Decode(Type type, Stream stream)
+        public object Decode(
+            [DynamicallyAccessedMembers(
+                DynamicallyAccessedMemberTypes.PublicParameterlessConstructor
+            )]
+                Type type,
+            Stream stream
+        )
         {
-            object? ret = Activator.CreateInstance(type);
-            if (ret == null)
-                throw new NotSupportedException($"'{type.FullName}' must have a parameterless constructor!");
+            var ret =
+                Activator.CreateInstance(type)
+                ?? throw new NotSupportedException(
+                    $"'{type.FullName}' must have a parameterless constructor!"
+                );
+            var mainContext = _factory.GetContext(type);
 
-            Dictionary<string, FieldInfo> mainContext = _factory.GetContext(type);
-
-            while (stream.Position < stream.Length && ReadTdf(stream, ref ret, mainContext)) ;
+            while (stream.Position < stream.Length && ReadTdf(stream, ref ret, mainContext))
+                ;
             return ret!;
         }
 
-        private bool ReadTdf(Stream stream, ref object? instance, Dictionary<string, FieldInfo> context)
+        private bool ReadTdf(
+            Stream stream,
+            ref object? instance,
+            Dictionary<string, FieldInfo> context
+        )
         {
-            TdfMember? tdfMember = stream.ReadTdfTag();
+            var tdfMember = stream.ReadTdfTag();
             if (tdfMember == null)
                 return false;
 
-            TdfBaseType baseType = stream.ReadTdfBaseType();
-            context.TryGetValue(tdfMember, out FieldInfo? field);
-            TdfReader? reader = GetTdfReader(baseType);
+            var baseType = stream.ReadTdfBaseType();
+            context.TryGetValue(tdfMember, out var field);
+            var reader = GetTdfReader(baseType);
             if (reader == null)
                 return false;
-            bool res = reader(stream, ref instance, field);
+            var res = reader(stream, ref instance, field);
             //Console.WriteLine($"ReadTdf: {tdfMember} {baseType} {field?.Name} {res}");
             return res;
         }
 
-
-
         private TdfReader? GetTdfReader(TdfBaseType baseType)
         {
-            switch (baseType)
+            return baseType switch
             {
-                case TdfBaseType.TDF_TYPE_INTEGER:
-                    return ReadTdfInteger;
-                case TdfBaseType.TDF_TYPE_STRING:
-                    return ReadTdfString;
-                case TdfBaseType.TDF_TYPE_BINARY:
-                    return ReadTdfBlob;
-                case TdfBaseType.TDF_TYPE_STRUCT:
-                    return ReadTdfStruct;
-                case TdfBaseType.TDF_TYPE_LIST:
-                    return ReadTdfList;
-                case TdfBaseType.TDF_TYPE_MAP:
-                    return ReadTdfMap;
-                case TdfBaseType.TDF_TYPE_UNION:
-                    return ReadTdfUnion;
-                case TdfBaseType.TDF_TYPE_VARIABLE:
-                    return ReadTdfVariable;
-                case TdfBaseType.TDF_TYPE_BLAZE_OBJECT_TYPE:
-                    return ReadTdfBlazeObjectType;
-                case TdfBaseType.TDF_TYPE_BLAZE_OBJECT_ID:
-                    return ReadTdfBlazeObjectId;
-                case TdfBaseType.TDF_TYPE_FLOAT:
-                    return ReadTdfFloat;
-                case TdfBaseType.TDF_TYPE_TIMEVALUE:
-                    return ReadTdfTimeValue;
-                default:
-                    return null;
-            }
+                TdfBaseType.TDF_TYPE_INTEGER => ReadTdfInteger,
+                TdfBaseType.TDF_TYPE_STRING => ReadTdfString,
+                TdfBaseType.TDF_TYPE_BINARY => ReadTdfBlob,
+                TdfBaseType.TDF_TYPE_STRUCT => ReadTdfStruct,
+                TdfBaseType.TDF_TYPE_LIST => ReadTdfList,
+                TdfBaseType.TDF_TYPE_MAP => ReadTdfMap,
+                TdfBaseType.TDF_TYPE_UNION => ReadTdfUnion,
+                TdfBaseType.TDF_TYPE_VARIABLE => ReadTdfVariable,
+                TdfBaseType.TDF_TYPE_BLAZE_OBJECT_TYPE => ReadTdfBlazeObjectType,
+                TdfBaseType.TDF_TYPE_BLAZE_OBJECT_ID => ReadTdfBlazeObjectId,
+                TdfBaseType.TDF_TYPE_FLOAT => ReadTdfFloat,
+                TdfBaseType.TDF_TYPE_TIMEVALUE => ReadTdfTimeValue,
+                _ => null,
+            };
         }
-
-
 
         private bool ReadTdfInteger(Stream stream, ref object? instance, FieldInfo? field)
         {
-            BigInteger? value = stream.ReadTdfInteger();
+            var value = stream.ReadTdfInteger();
             if (value == null)
                 return false;
 
@@ -115,9 +130,9 @@ namespace Tdf
             //it looks like they messed up with encoding uint64 where the MSB (which is the sign bit for int64) was set to 1 and therefore was interpreted as negative number (this makes sense because they internally are using int64 for encoding integers).
             //this is the reason why we are forced to do unchecked conversions, but the result still will be valid.
 
-            byte[] binary = value.Value.ToByteArray(false, false);
+            var binary = value.Value.ToByteArray(false, false);
 
-            Type type = field.FieldType;
+            var type = field.FieldType;
             object resObject;
             switch (Type.GetTypeCode(type))
             {
@@ -168,14 +183,13 @@ namespace Tdf
             if (type.IsEnum)
                 resObject = Enum.ToObject(type, resObject);
 
-
             field.SetValue(instance, resObject);
             return true;
         }
 
         private bool ReadTdfString(Stream stream, ref object? instance, FieldInfo? field)
         {
-            string? str = stream.ReadTdfString();
+            var str = stream.ReadTdfString();
             if (str == null)
                 return false;
 
@@ -185,7 +199,7 @@ namespace Tdf
 
         private bool ReadTdfBlob(Stream stream, ref object? instance, FieldInfo? field)
         {
-            byte[]? blob = stream.ReadTdfBlob();
+            var blob = stream.ReadTdfBlob();
             if (blob == null)
                 return false;
 
@@ -193,13 +207,20 @@ namespace Tdf
             return true;
         }
 
-        private object? ReadTdfStruct(Stream stream, Type type)
+        private object? ReadTdfStruct(
+            Stream stream,
+            [DynamicallyAccessedMembers(
+                DynamicallyAccessedMemberTypes.PublicParameterlessConstructor
+            )]
+                Type type
+        )
         {
-            object? structValue = Activator.CreateInstance(type);
-            if (structValue == null)
-                throw new NotSupportedException($"'{type.FullName}' must have a parameterless constructor!");
-
-            Dictionary<string, FieldInfo> structContext = _factory.GetContext(type);
+            var structValue =
+                Activator.CreateInstance(type)
+                ?? throw new NotSupportedException(
+                    $"'{type.FullName}' must have a parameterless constructor!"
+                );
+            var structContext = _factory.GetContext(type);
 
             int b;
             while ((b = stream.ReadByte()) != 0x00)
@@ -215,19 +236,16 @@ namespace Tdf
             return structValue;
         }
 
-
         private bool ReadTdfStruct(Stream stream, ref object? instance, FieldInfo? field)
         {
-            Type? type = field?.FieldType;
+            var type = field?.FieldType;
             if (type == null)
             {
                 //object passed as a dummy type
-                if (ReadTdfStruct(stream, typeof(object)) == null)
-                    return false;
-                return true;
+                return ReadTdfStruct(stream, typeof(object)) != null;
             }
 
-            object? tdfStruct = ReadTdfStruct(stream, type);
+            var tdfStruct = ReadTdfStruct(stream, type);
             if (tdfStruct == null)
                 return false;
 
@@ -237,21 +255,20 @@ namespace Tdf
 
         private bool ReadTdfList(Stream stream, ref object? instance, FieldInfo? field)
         {
-            Type? listFullType = field?.FieldType;
+            var listFullType = field?.FieldType;
             Type? listMemberType = null;
             if (listFullType != null)
             {
-                Type[] genericArgTypes = listFullType.GetGenericArguments();
+                var genericArgTypes = listFullType.GetGenericArguments();
                 if (genericArgTypes.Length > 0)
                     listMemberType = genericArgTypes[0];
             }
 
-
-            TdfBaseType baseType = stream.ReadTdfBaseType();
-            ulong? countNullable = (ulong?)stream.ReadTdfInteger();
+            var baseType = stream.ReadTdfBaseType();
+            var countNullable = (ulong?)stream.ReadTdfInteger();
             if (countNullable == null)
                 return false;
-            ulong count = countNullable.Value;
+            var count = countNullable.Value;
 
             #region bug implementation fix
 
@@ -266,21 +283,23 @@ namespace Tdf
 
                     if (listMemberType == typeof(List<>))
                         baseType = TdfBaseType.TDF_TYPE_LIST;
-                    else if (listMemberType == typeof(Dictionary<,>) || listMemberType == typeof(SortedDictionary<,>))
+                    else if (
+                        listMemberType == typeof(Dictionary<,>)
+                        || listMemberType == typeof(SortedDictionary<,>)
+                    )
                         baseType = TdfBaseType.TDF_TYPE_MAP;
                 }
-
             }
             #endregion
 
-            TdfReader? reader = GetTdfReader(baseType);
+            var reader = GetTdfReader(baseType);
             if (reader == null)
                 return false;
 
             //unknown type, skip it
             if (listFullType == null || listMemberType == null)
             {
-                object? obj = new object();
+                var obj = new object();
                 for (ulong i = 0; i < count; i++)
                 {
                     if (!reader(stream, ref obj, null))
@@ -290,47 +309,47 @@ namespace Tdf
             }
 
             var list = Activator.CreateInstance(listFullType);
-            MethodInfo addMethod = listFullType.GetMethod("Add")!;
+            var addMethod = listFullType.GetMethod("Add")!;
 
-            object? typeContainerObj = Activator.CreateInstance(typeof(TdfValueContainer<>).MakeGenericType(listMemberType))!;
-            ITdfValueContainer typeContainer = (ITdfValueContainer?)typeContainerObj!;
-
+            var typeContainerObj = Activator.CreateInstance(
+                typeof(TdfValueContainer<>).MakeGenericType(listMemberType)
+            )!;
+            var typeContainer = (ITdfValueContainer?)typeContainerObj!;
 
             for (ulong i = 0; i < count; i++)
             {
                 if (!reader(stream, ref typeContainerObj, typeContainer.ValueFieldInfo))
                     return false;
 
-                addMethod.Invoke(list, new[] { typeContainer.Value });
+                addMethod.Invoke(list, [typeContainer.Value]);
             }
 
             field?.SetValue(instance, list);
             return true;
         }
 
-
         private bool ReadTdfMap(Stream stream, ref object? instance, FieldInfo? field)
         {
-            TdfBaseType keyDataType = stream.ReadTdfBaseType();
-            TdfBaseType valueDataType = stream.ReadTdfBaseType();
-            ulong? countNullable = (ulong?)stream.ReadTdfInteger();
+            var keyDataType = stream.ReadTdfBaseType();
+            var valueDataType = stream.ReadTdfBaseType();
+            var countNullable = (ulong?)stream.ReadTdfInteger();
             if (countNullable == null)
                 return false;
-            ulong count = countNullable.Value;
+            var count = countNullable.Value;
 
-            TdfReader? keyReader = GetTdfReader(keyDataType);
-            TdfReader? valueReader = GetTdfReader(valueDataType);
+            var keyReader = GetTdfReader(keyDataType);
+            var valueReader = GetTdfReader(valueDataType);
             if (keyReader == null || valueReader == null)
                 return false;
 
-            Type? mapFullType = field?.FieldType;
-            Type? mapKeyType = mapFullType?.GetGenericArguments()[0];
-            Type? mapValueType = mapFullType?.GetGenericArguments()[1];
+            var mapFullType = field?.FieldType;
+            var mapKeyType = mapFullType?.GetGenericArguments()[0];
+            var mapValueType = mapFullType?.GetGenericArguments()[1];
 
             //unknown type, skip it
             if (mapFullType == null || mapKeyType == null || mapValueType == null)
             {
-                object? obj = new object();
+                var obj = new object();
                 for (ulong i = 0; i < count; i++)
                 {
                     if (!keyReader(stream, ref obj, null))
@@ -342,13 +361,17 @@ namespace Tdf
             }
 
             var map = Activator.CreateInstance(mapFullType);
-            MethodInfo addMethod = mapFullType.GetMethod("Add")!;
+            var addMethod = mapFullType.GetMethod("Add")!;
 
-            object? keyContainerObj = Activator.CreateInstance(typeof(TdfValueContainer<>).MakeGenericType(mapKeyType))!;
-            ITdfValueContainer keyContainer = (ITdfValueContainer?)keyContainerObj!;
+            var keyContainerObj = Activator.CreateInstance(
+                typeof(TdfValueContainer<>).MakeGenericType(mapKeyType)
+            )!;
+            var keyContainer = (ITdfValueContainer?)keyContainerObj!;
 
-            object? valueContainerObj = Activator.CreateInstance(typeof(TdfValueContainer<>).MakeGenericType(mapValueType))!;
-            ITdfValueContainer valueContainer = (ITdfValueContainer?)valueContainerObj!;
+            var valueContainerObj = Activator.CreateInstance(
+                typeof(TdfValueContainer<>).MakeGenericType(mapValueType)
+            )!;
+            var valueContainer = (ITdfValueContainer?)valueContainerObj!;
 
             for (ulong i = 0; i < count; i++)
             {
@@ -357,21 +380,20 @@ namespace Tdf
                 if (!valueReader(stream, ref valueContainerObj, valueContainer.ValueFieldInfo))
                     return false;
 
-                addMethod.Invoke(map, new[] { keyContainer.Value, valueContainer.Value });
+                addMethod.Invoke(map, [keyContainer.Value, valueContainer.Value]);
             }
 
             field?.SetValue(instance, map);
             return true;
         }
 
-
         private bool ReadTdfUnion(Stream stream, ref object? instance, FieldInfo? field)
         {
-            int activeMember = stream.ReadByte();
+            var activeMember = stream.ReadByte();
             if (activeMember == -1)
                 return false;
 
-            byte[] peek = new byte[TdfUnion.TDF_VALU_TAG.Length];
+            var peek = new byte[TdfUnion.TDF_VALU_TAG.Length];
             if (!stream.ReadAll(peek, 0, peek.Length))
                 return false;
 
@@ -379,35 +401,32 @@ namespace Tdf
             if (!peek.SequenceEqual(TdfUnion.TDF_VALU_TAG))
                 stream.Seek(-peek.Length, SeekOrigin.Current);
 
-            Type? type = field?.FieldType;
+            var type = field?.FieldType;
             if (type == null)
             {
                 //object passed as a dummy type
-                if (ReadTdfStruct(stream, typeof(object)) == null)
-                    return false;
-                return true;
+                return ReadTdfStruct(stream, typeof(object)) != null;
             }
 
-            TdfUnion? union = (TdfUnion?)Activator.CreateInstance(type);
-            if (union == null)
-                throw new NotSupportedException($"'{type.FullName}' must have a parameterless constructor!");
-
+            var union =
+                (TdfUnion?)Activator.CreateInstance(type)
+                ?? throw new NotSupportedException(
+                    $"'{type.FullName}' must have a parameterless constructor!"
+                );
             if (activeMember == 0x7f)
             {
                 field?.SetValue(instance, union);
                 return true;
             }
 
-            Type? memberType = union.GetActiveMemberType((byte)activeMember);
+            var memberType = union.GetActiveMemberType((byte)activeMember);
             if (memberType == null)
             {
                 //object passed as a dummy type
-                if (ReadTdfStruct(stream, typeof(object)) == null)
-                    return false;
-                return true;
+                return ReadTdfStruct(stream, typeof(object)) != null;
             }
 
-            object? tdfStruct = ReadTdfStruct(stream, memberType);
+            var tdfStruct = ReadTdfStruct(stream, memberType);
             if (tdfStruct == null)
                 return false;
 
@@ -418,31 +437,37 @@ namespace Tdf
 
         private bool ReadTdfVariable(Stream stream, ref object? instance, FieldInfo? field)
         {
-            int b = stream.ReadByte();
+            var b = stream.ReadByte();
             if (b == -1)
                 return false;
 
-            bool present = b != 0;
+            var present = b != 0;
             if (!present)
             {
                 field?.SetValue(instance, null);
                 return true;
             }
 
-            uint? tdfId = (uint?)stream.ReadTdfInteger();
+            var tdfId = (uint?)stream.ReadTdfInteger();
             if (tdfId == null)
                 return false;
 
-            Type? fieldType = _factory.GetType(tdfId.Value);
+            var fieldType = _factory.GetType(tdfId.Value);
 
             stream.Seek(3, SeekOrigin.Current); //skip the same tag again
-            TdfBaseType baseType = stream.ReadTdfBaseType();
+            var baseType = stream.ReadTdfBaseType();
 
-            TdfReader? reader = GetTdfReader(baseType);
+            var reader = GetTdfReader(baseType);
             if (reader == null)
                 return false;
 
-            if (!reader(stream, ref instance, field != null ? new TdfVariableFieldInfo(field, fieldType) : null))
+            if (
+                !reader(
+                    stream,
+                    ref instance,
+                    field != null ? new TdfVariableFieldInfo(field, fieldType) : null
+                )
+            )
                 return false;
 
             return stream.ReadByte() == 0x00; //tdf variable terminator
@@ -450,7 +475,7 @@ namespace Tdf
 
         private bool ReadTdfBlazeObjectType(Stream stream, ref object? instance, FieldInfo? field)
         {
-            BlazeObjectType? value = stream.ReadTdfBlazeObjectType();
+            var value = stream.ReadTdfBlazeObjectType();
             if (value == null)
                 return false;
 
@@ -460,7 +485,7 @@ namespace Tdf
 
         private bool ReadTdfBlazeObjectId(Stream stream, ref object? instance, FieldInfo? field)
         {
-            BlazeObjectId? value = stream.ReadTdfBlazeObjectId();
+            var value = stream.ReadTdfBlazeObjectId();
             if (value == null)
                 return false;
 
@@ -470,7 +495,7 @@ namespace Tdf
 
         private bool ReadTdfFloat(Stream stream, ref object? instance, FieldInfo? field)
         {
-            float? value = stream.ReadTdfFloat();
+            var value = stream.ReadTdfFloat();
             if (value == null)
                 return false;
 
@@ -483,7 +508,5 @@ namespace Tdf
             //This should never happen, since TimeValues are encoded using TDF_TYPE_INTEGER
             return false;
         }
-
-
     }
 }

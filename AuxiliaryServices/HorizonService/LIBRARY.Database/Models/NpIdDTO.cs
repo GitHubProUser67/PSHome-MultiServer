@@ -1,5 +1,3 @@
-using System;
-
 namespace Horizon.LIBRARY.Database.Models
 {
     public partial class NpIdDTO

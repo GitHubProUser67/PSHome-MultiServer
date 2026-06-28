@@ -2,19 +2,12 @@ using Tdf;
 
 namespace BlazeCommon
 {
-    public class BlazeClientConfiguration
+    public class BlazeClientConfiguration(ITdfEncoder encoder, ITdfDecoder decoder)
     {
-        public ITdfEncoder Encoder { get; }
-        public ITdfDecoder Decoder { get; }
+        public ITdfEncoder Encoder { get; } = encoder;
+        public ITdfDecoder Decoder { get; } = decoder;
 
-        Dictionary<ushort, IBlazeClientComponent> _components;
-
-        public BlazeClientConfiguration(ITdfEncoder encoder, ITdfDecoder decoder)
-        {
-            Encoder = encoder;
-            Decoder = decoder;
-            _components = new Dictionary<ushort, IBlazeClientComponent>();
-        }
+        readonly Dictionary<ushort, IBlazeClientComponent> _components = [];
 
         public bool AddComponent(IBlazeClientComponent component)
         {
@@ -28,7 +21,7 @@ namespace BlazeCommon
 
         public IBlazeClientComponent? GetComponent(ushort componentId)
         {
-            _components.TryGetValue(componentId, out IBlazeClientComponent? component);
+            _components.TryGetValue(componentId, out var component);
             return component;
         }
     }

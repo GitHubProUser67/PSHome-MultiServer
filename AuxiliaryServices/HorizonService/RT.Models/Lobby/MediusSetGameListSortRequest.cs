@@ -1,19 +1,22 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.SetGameListSortRequest)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.SetGameListSortRequest
+    )]
     public class MediusSetGameListSortRequest : BaseLobbyExtMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.SetGameListSortRequest;
         public MessageId MessageID { get; set; }
-        public string SessionKey { get; set; } // Constants.SESSIONKEY_MAXLEN
+        public string SessionKey { get; set; }
         public int SortPriority;
         public MediusGameListFilterField SortField;
         public int Mask;
         public MediusGameListSortDirection SortDirection;
+
         public override void Deserialize(MessageReader reader)
         {
             base.Deserialize(reader);
@@ -24,6 +27,7 @@ namespace Horizon.RT.Models
             Mask = reader.ReadInt32();
             SortDirection = reader.Read<MediusGameListSortDirection>();
         }
+
         public override void Serialize(MessageWriter writer)
         {
             base.Serialize(writer);
@@ -34,15 +38,17 @@ namespace Horizon.RT.Models
             writer.Write(Mask);
             writer.Write(SortDirection);
         }
+
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"SortPriority: {SortPriority} " +
-                $"SortField: {SortField} " +
-                $"Mask: {Mask} " +
-                $"SortDirection: {SortDirection}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"SortPriority: {SortPriority} "
+                + $"SortField: {SortField} "
+                + $"Mask: {Mask} "
+                + $"SortDirection: {SortDirection}";
         }
     }
 }

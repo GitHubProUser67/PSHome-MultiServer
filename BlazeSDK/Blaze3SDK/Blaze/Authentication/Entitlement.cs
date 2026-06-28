@@ -2,57 +2,55 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Authentication
 {
-	[TdfStruct]
-	public struct Entitlement
-	{
+    [TdfStruct]
+    public struct Entitlement
+    {
+        [TdfMember("DEVI")]
+        public string mDeviceUri;
 
-		[TdfMember("DEVI")]
-		public string mDeviceUri;
+        [TdfMember("TAG")]
+        public string mEntitlementTag;
 
-		[TdfMember("TAG")]
-		public string mEntitlementTag;
+        [TdfMember("TYPE")]
+        public EntitlementType mEntitlementType;
 
-		[TdfMember("TYPE")]
-		public EntitlementType mEntitlementType;
+        [TdfMember("GDAY")]
+        public string mGrantDate;
 
-		[TdfMember("GDAY")]
-		public string mGrantDate;
+        [TdfMember("GNAM")]
+        public string mGroupName;
 
-		[TdfMember("GNAM")]
-		public string mGroupName;
+        [TdfMember("ID")]
+        public ulong mId;
 
-		[TdfMember("ID")]
-		public ulong mId;
+        [TdfMember("ISCO")]
+        public bool mIsConsumable;
 
-		[TdfMember("ISCO")]
-		public bool mIsConsumable;
+        [TdfMember("PID")]
+        public long mPersonaId;
 
-		[TdfMember("PID")]
-		public long mPersonaId;
+        [TdfMember("PRCA")]
+        public ProductCatalog mProductCatalog;
 
-		[TdfMember("PRCA")]
-		public ProductCatalog mProductCatalog;
+        [TdfMember("PRID")]
+        public string mProductId;
 
-		[TdfMember("PRID")]
-		public string mProductId;
+        [TdfMember("PJID")]
+        public string mProjectId;
 
-		[TdfMember("PJID")]
-		public string mProjectId;
+        [TdfMember("STAT")]
+        public EntitlementStatus mStatus;
 
-		[TdfMember("STAT")]
-		public EntitlementStatus mStatus;
+        [TdfMember("STRC")]
+        public StatusReason mStatusReasonCode;
 
-		[TdfMember("STRC")]
-		public StatusReason mStatusReasonCode;
+        [TdfMember("TDAY")]
+        public string mTerminationDate;
 
-		[TdfMember("TDAY")]
-		public string mTerminationDate;
+        [TdfMember("UCNT")]
+        public uint mUseCount;
 
-		[TdfMember("UCNT")]
-		public uint mUseCount;
-
-		[TdfMember("VER")]
-		public uint mVersion;
-
-	}
+        [TdfMember("VER")]
+        public uint mVersion;
+    }
 }

@@ -1,14 +1,14 @@
+using System.Collections.Concurrent;
+using System.Net;
 using CustomLogger;
 using EdNetService.Models;
 using MultiServerLibrary.Extension;
-using System.Collections.Concurrent;
-using System.Net;
 
 namespace EdenServer.EdNet
 {
     internal class ClientStore
     {
-        private readonly ConcurrentDictionary<uint, ClientObject> Clients = new ConcurrentDictionary<uint, ClientObject>();
+        private readonly ConcurrentDictionary<uint, ClientObject> Clients = new();
 
         private Thread? TickThread;
 
@@ -22,14 +22,20 @@ namespace EdenServer.EdNet
             {
                 foreach (var client in Clients.Values)
                 {
-                    if ((DateTimeUtils.GetHighPrecisionUtcTime() - client.lastRequestTime).TotalSeconds > EdenServerConfiguration.ClientLongTimeoutSeconds)
+                    if (
+                        (
+                            DateTimeUtils.GetHighPrecisionUtcTime() - client.lastRequestTime
+                        ).TotalSeconds > EdenServerConfiguration.ClientLongTimeoutSeconds
+                    )
                     {
                         foreach (var task in client.Tasks)
                         {
                             task.Disconnect();
                         }
                         Clients.TryRemove(client.Id, out _);
-                        LoggerAccessor.LogWarn($"[ClientStore] - Client:{client} was removed from the client store.");
+                        LoggerAccessor.LogWarn(
+                            $"[ClientStore] - Client:{client} was removed from the client store."
+                        );
                     }
                     else
                         client.RefreshClient();
@@ -96,10 +102,7 @@ namespace EdenServer.EdNet
 
         public ClientObject? GetClientById(uint id)
         {
-            if (Clients.ContainsKey(id))
-                return Clients[id];
-
-            return null;
+            return Clients.TryGetValue(id, out var value) ? value : null;
         }
 
         public ClientObject? GetClientByIp(IPAddress IP)

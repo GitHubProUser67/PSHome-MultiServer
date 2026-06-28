@@ -1,10 +1,12 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.GetLadderStatsWide)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.GetLadderStatsWide
+    )]
     public class MediusGetLadderStatsWideRequest : BaseLobbyExtMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.GetLadderStatsWide;
@@ -16,13 +18,10 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             reader.ReadBytes(3);
             AccountID_or_ClanID = reader.ReadInt32();
             LadderType = reader.Read<MediusLadderType>();
@@ -30,13 +29,10 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(new byte[3]);
             writer.Write(AccountID_or_ClanID);
             writer.Write(LadderType);
@@ -44,10 +40,11 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"AccountID_or_ClanID: {AccountID_or_ClanID} " +
-                $"LadderType: {LadderType}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"AccountID_or_ClanID: {AccountID_or_ClanID} "
+                + $"LadderType: {LadderType}";
         }
     }
 }

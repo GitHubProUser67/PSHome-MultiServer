@@ -1,13 +1,13 @@
-using QuazalServer.RDVServices.DDL.Models;
 using QuazalServer.QNetZ;
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.DDL;
 using QuazalServer.QNetZ.Interfaces;
+using QuazalServer.RDVServices.DDL.Models;
 
 namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 {
     /// <summary>
-    /// Game session 
+    /// Game session
     ///		Implements the sessions responsible for the gameplay process
     /// </summary>
     [RMCService((ushort)RMCProtocolId.GameSessionService)]
@@ -20,7 +20,7 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         {
             if (Context != null && Context.Client.PlayerInfo != null)
             {
-                PlayerInfo? plInfo = Context.Client.PlayerInfo;
+                var plInfo = Context.Client.PlayerInfo;
                 GameSessionData newSession = new();
                 GameSessions.SessionList.Add(newSession);
 
@@ -32,17 +32,35 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                     newSession.Attributes[attr.ID] = attr.Value;
 
                 uint temp;
-                if (!newSession.Attributes.TryGetValue((uint)GameSessionAttributeType.PublicSlots, out temp))
+                if (
+                    !newSession.Attributes.TryGetValue(
+                        (uint)GameSessionAttributeType.PublicSlots,
+                        out temp
+                    )
+                )
                     newSession.Attributes[(uint)GameSessionAttributeType.PublicSlots] = 0;
 
-                if (!newSession.Attributes.TryGetValue((uint)GameSessionAttributeType.PrivateSlots, out temp))
+                if (
+                    !newSession.Attributes.TryGetValue(
+                        (uint)GameSessionAttributeType.PrivateSlots,
+                        out temp
+                    )
+                )
                     newSession.Attributes[(uint)GameSessionAttributeType.PrivateSlots] = 8;
 
-                if (!newSession.Attributes.TryGetValue((uint)GameSessionAttributeType.GameType, out temp))
-                    newSession.Attributes[(uint)GameSessionAttributeType.GameType] = (uint)GameType.FreeForAll;
+                if (
+                    !newSession.Attributes.TryGetValue(
+                        (uint)GameSessionAttributeType.GameType,
+                        out temp
+                    )
+                )
+                    newSession.Attributes[(uint)GameSessionAttributeType.GameType] = (uint)
+                        GameType.FreeForAll;
 
-                newSession.Attributes[(uint)GameSessionAttributeType.FilledPublicSlots] = (uint)newSession.PublicParticipants.Count;
-                newSession.Attributes[(uint)GameSessionAttributeType.FilledPrivateSlots] = (uint)newSession.Participants.Count;
+                newSession.Attributes[(uint)GameSessionAttributeType.FilledPublicSlots] = (uint)
+                    newSession.PublicParticipants.Count;
+                newSession.Attributes[(uint)GameSessionAttributeType.FilledPrivateSlots] = (uint)
+                    newSession.Participants.Count;
 
                 // TODO: give names to attributes
                 if (!newSession.Attributes.TryGetValue(100, out temp))
@@ -73,9 +91,10 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         {
             if (gameSessionUpdate.m_sessionKey != null)
             {
-                var session = GameSessions.SessionList
-                .FirstOrDefault(x => x.Id == gameSessionUpdate.m_sessionKey.m_sessionID &&
-                                     x.TypeID == gameSessionUpdate.m_sessionKey.m_typeID);
+                var session = GameSessions.SessionList.FirstOrDefault(x =>
+                    x.Id == gameSessionUpdate.m_sessionKey.m_sessionID
+                    && x.TypeID == gameSessionUpdate.m_sessionKey.m_typeID
+                );
 
                 if (session != null && gameSessionUpdate.m_attributes != null)
                 {
@@ -86,12 +105,13 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                     }
                 }
                 else
-                    CustomLogger.LoggerAccessor.LogError($"GameSessionService.UpdateSession - no session with id={gameSessionUpdate.m_sessionKey.m_sessionID}");
+                    CustomLogger.LoggerAccessor.LogError(
+                        $"GameSessionService.UpdateSession - no session with id={gameSessionUpdate.m_sessionKey.m_sessionID}"
+                    );
             }
 
             return Error(0);
         }
-
 
         [RMCMethod(3)]
         public RMCResult DeleteSession(GameSessionKey gameSessionKey)
@@ -100,16 +120,17 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
             return Error(0);
         }
 
-
         [RMCMethod(4)]
         public RMCResult MigrateSession(GameSessionKey gameSessionKey)
         {
-            var oldSession = GameSessions.SessionList
-                .FirstOrDefault(x => x.Id == gameSessionKey.m_sessionID &&
-                                     x.TypeID == gameSessionKey.m_typeID);
+            var oldSession = GameSessions.SessionList.FirstOrDefault(x =>
+                x.Id == gameSessionKey.m_sessionID && x.TypeID == gameSessionKey.m_typeID
+            );
             if (oldSession == null)
             {
-                CustomLogger.LoggerAccessor.LogError($"GameSessionService.MigrateSession - no session with id={gameSessionKey.m_sessionID}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"GameSessionService.MigrateSession - no session with id={gameSessionKey.m_sessionID}"
+                );
                 return Result(new GameSessionKey());
             }
 
@@ -157,12 +178,13 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
             }
 
             // drop old session
-            CustomLogger.LoggerAccessor.LogWarn($"MigrateSession - Auto-deleted session {oldSession.Id}");
+            CustomLogger.LoggerAccessor.LogWarn(
+                $"MigrateSession - Auto-deleted session {oldSession.Id}"
+            );
             GameSessions.SessionList.Remove(oldSession);
 
             return Result(newSessionKey);
         }
-
 
         [RMCMethod(5)]
         public RMCResult LeaveSession(GameSessionKey gameSessionKey)
@@ -170,11 +192,11 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
             if (Context != null && Context.Client.PlayerInfo != null)
             {
                 // Same as AbandonSession
-                PlayerInfo? playerInfo = Context.Client.PlayerInfo;
-                uint myPlayerId = playerInfo.PID;
-                GameSessionData? session = GameSessions.SessionList
-                    .FirstOrDefault(x => x.Id == gameSessionKey.m_sessionID &&
-                                         x.TypeID == gameSessionKey.m_typeID);
+                var playerInfo = Context.Client.PlayerInfo;
+                var myPlayerId = playerInfo.PID;
+                var session = GameSessions.SessionList.FirstOrDefault(x =>
+                    x.Id == gameSessionKey.m_sessionID && x.TypeID == gameSessionKey.m_typeID
+                );
 
                 if (session != null)
                 {
@@ -197,35 +219,45 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 
                         if (qclient != null)
                         {
-                            var leaveNotification = new NotificationEvent(NotificationEventsType.GameSessionEvent, 4)
+                            var leaveNotification = new NotificationEvent(
+                                NotificationEventsType.GameSessionEvent,
+                                4
+                            )
                             {
                                 m_pidSource = playerInfo.PID,
                                 m_uiParam1 = playerInfo.PID,
                                 m_uiParam2 = session.Id,
                                 m_strParam = string.Empty,
-                                m_uiParam3 = session.TypeID
+                                m_uiParam3 = session.TypeID,
                             };
 
-                            NotificationQueue.SendNotification(Context.Handler, qclient, leaveNotification);
+                            NotificationQueue.SendNotification(
+                                Context.Handler,
+                                qclient,
+                                leaveNotification
+                            );
                         }
                     }
 
                     GameSessions.UpdateSessionParticipation(playerInfo, null, false);
                 }
                 else
-                    CustomLogger.LoggerAccessor.LogError($"GameSessionService.LeaveSession - no session with id={gameSessionKey.m_sessionID}");
+                    CustomLogger.LoggerAccessor.LogError(
+                        $"GameSessionService.LeaveSession - no session with id={gameSessionKey.m_sessionID}"
+                    );
             }
 
             return Error(0);
         }
-
 
         [RMCMethod(6)]
         public RMCResult GetSession(GameSessionKey gameSessionKey)
         {
             GameSessionSearchResult? searchResult = new();
 
-            GameSessionData? session = GameSessions.SessionList.FirstOrDefault(x => x.Id == gameSessionKey.m_sessionID && x.TypeID == gameSessionKey.m_typeID);
+            var session = GameSessions.SessionList.FirstOrDefault(x =>
+                x.Id == gameSessionKey.m_sessionID && x.TypeID == gameSessionKey.m_typeID
+            );
 
             if (session != null)
             {
@@ -233,12 +265,18 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                 {
                     m_hostPID = session.HostPID,
                     m_hostURLs = session.HostURLs,
-                    m_attributes = session.Attributes.Select(x => new GameSessionProperty { ID = x.Key, Value = x.Value }).ToArray(),
+                    m_attributes = session
+                        .Attributes.Select(x => new GameSessionProperty
+                        {
+                            ID = x.Key,
+                            Value = x.Value,
+                        })
+                        .ToArray(),
                     m_sessionKey = new GameSessionKey()
                     {
                         m_sessionID = session.Id,
-                        m_typeID = session.TypeID
-                    }
+                        m_typeID = session.TypeID,
+                    },
                 };
             }
 
@@ -246,44 +284,88 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         }
 
         [RMCMethod(7)]
-        public RMCResult SearchSessions(uint m_typeID, uint m_queryID, IEnumerable<GameSessionProperty> m_parameters)
+        public RMCResult SearchSessions(
+            uint m_typeID,
+            uint m_queryID,
+            IEnumerable<GameSessionProperty> m_parameters
+        )
         {
             var sessions = GameSessions.SessionList.Where(x => x.TypeID == m_typeID).ToArray();
 
             var resultList = new List<GameSessionSearchResult>();
 
-            foreach (GameSessionData ses in sessions)
+            foreach (var ses in sessions)
             {
                 uint value;
 
                 // cut out *private* sessions completely
-                if (ses.Attributes.TryGetValue((uint)GameSessionAttributeType.FreePrivateSlots, out value) && value > 0 ||
-                    ses.Attributes.TryGetValue((uint)GameSessionAttributeType.PrivateSlots, out value) && value > 0 ||
-                    ses.Attributes.TryGetValue((uint)GameSessionAttributeType.FilledPrivateSlots, out value) && value > 0)
+                if (
+                    (
+                        ses.Attributes.TryGetValue(
+                            (uint)GameSessionAttributeType.FreePrivateSlots,
+                            out value
+                        )
+                        && value > 0
+                    )
+                    || (
+                        ses.Attributes.TryGetValue(
+                            (uint)GameSessionAttributeType.PrivateSlots,
+                            out value
+                        )
+                        && value > 0
+                    )
+                    || (
+                        ses.Attributes.TryGetValue(
+                            (uint)GameSessionAttributeType.FilledPrivateSlots,
+                            out value
+                        )
+                        && value > 0
+                    )
+                )
                     continue;
 
-                GameSessionProperty? gameTypeMinParam = m_parameters.FirstOrDefault(x => x.ID == (uint)GameSessionAttributeType.GameTypeMin);
-                GameSessionProperty? gameTypeMaxParam = m_parameters.FirstOrDefault(x => x.ID == (uint)GameSessionAttributeType.GameTypeMax);
-                GameSessionProperty? totalPublicSlotsParam = m_parameters.FirstOrDefault(x => x.ID == (uint)GameSessionAttributeType.PublicSlots);
+                var gameTypeMinParam = m_parameters.FirstOrDefault(x =>
+                    x.ID == (uint)GameSessionAttributeType.GameTypeMin
+                );
+                var gameTypeMaxParam = m_parameters.FirstOrDefault(x =>
+                    x.ID == (uint)GameSessionAttributeType.GameTypeMax
+                );
+                var totalPublicSlotsParam = m_parameters.FirstOrDefault(x =>
+                    x.ID == (uint)GameSessionAttributeType.PublicSlots
+                );
 
-                uint sessionGameType = ses.Attributes[(uint)GameSessionAttributeType.GameType];
+                var sessionGameType = ses.Attributes[(uint)GameSessionAttributeType.GameType];
 
                 // check game mode matches criteria
                 // and if there are free slots
-                if (gameTypeMinParam != null && gameTypeMaxParam != null && totalPublicSlotsParam != null && sessionGameType >= gameTypeMinParam.Value && sessionGameType <= gameTypeMaxParam.Value &&
-                    ses.PublicParticipants.Count < totalPublicSlotsParam.Value)
+                if (
+                    gameTypeMinParam != null
+                    && gameTypeMaxParam != null
+                    && totalPublicSlotsParam != null
+                    && sessionGameType >= gameTypeMinParam.Value
+                    && sessionGameType <= gameTypeMaxParam.Value
+                    && ses.PublicParticipants.Count < totalPublicSlotsParam.Value
+                )
                 {
-                    resultList.Add(new GameSessionSearchResult()
-                    {
-                        m_hostPID = ses.HostPID,
-                        m_hostURLs = ses.HostURLs,
-                        m_attributes = ses.Attributes.Select(x => new GameSessionProperty { ID = x.Key, Value = x.Value }).ToArray(),
-                        m_sessionKey = new GameSessionKey()
+                    resultList.Add(
+                        new GameSessionSearchResult()
                         {
-                            m_sessionID = ses.Id,
-                            m_typeID = ses.TypeID
-                        },
-                    });
+                            m_hostPID = ses.HostPID,
+                            m_hostURLs = ses.HostURLs,
+                            m_attributes = ses
+                                .Attributes.Select(x => new GameSessionProperty
+                                {
+                                    ID = x.Key,
+                                    Value = x.Value,
+                                })
+                                .ToArray(),
+                            m_sessionKey = new GameSessionKey()
+                            {
+                                m_sessionID = ses.Id,
+                                m_typeID = ses.TypeID,
+                            },
+                        }
+                    );
                 }
             }
 
@@ -291,9 +373,15 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         }
 
         [RMCMethod(8)]
-        public RMCResult AddParticipants(GameSessionKey gameSessionKey, IEnumerable<uint> publicParticipantIDs, IEnumerable<uint> privateParticipantIDs)
+        public RMCResult AddParticipants(
+            GameSessionKey gameSessionKey,
+            IEnumerable<uint> publicParticipantIDs,
+            IEnumerable<uint> privateParticipantIDs
+        )
         {
-            GameSessionData? session = GameSessions.SessionList.FirstOrDefault(x => x.IsMatchingKey(gameSessionKey));
+            var session = GameSessions.SessionList.FirstOrDefault(x =>
+                x.IsMatchingKey(gameSessionKey)
+            );
 
             if (session != null)
             {
@@ -319,20 +407,28 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                     }
                 }
 
-                session.Attributes[(uint)GameSessionAttributeType.FilledPublicSlots] = (uint)session.PublicParticipants.Count;
-                session.Attributes[(uint)GameSessionAttributeType.FilledPrivateSlots] = (uint)session.Participants.Count;
+                session.Attributes[(uint)GameSessionAttributeType.FilledPublicSlots] = (uint)
+                    session.PublicParticipants.Count;
+                session.Attributes[(uint)GameSessionAttributeType.FilledPrivateSlots] = (uint)
+                    session.Participants.Count;
             }
             else
-                CustomLogger.LoggerAccessor.LogError($"GameSessionService.AddParticipants - no session with id={gameSessionKey.m_sessionID}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"GameSessionService.AddParticipants - no session with id={gameSessionKey.m_sessionID}"
+                );
 
             return Error(0);
         }
 
-
         [RMCMethod(9)]
-        public RMCResult RemoveParticipants(GameSessionKey gameSessionKey, IEnumerable<uint> participantIDs)
+        public RMCResult RemoveParticipants(
+            GameSessionKey gameSessionKey,
+            IEnumerable<uint> participantIDs
+        )
         {
-            GameSessionData? session = GameSessions.SessionList.FirstOrDefault(x => x.IsMatchingKey(gameSessionKey));
+            var session = GameSessions.SessionList.FirstOrDefault(x =>
+                x.IsMatchingKey(gameSessionKey)
+            );
 
             if (session != null)
             {
@@ -355,7 +451,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                         GameSessions.UpdateSessionParticipation(player, null, false);
                     else if (GameSessions.RemovePlayerFromSession(session, pid))
                     {
-                        CustomLogger.LoggerAccessor.LogWarn($"RemoveParticipants - Auto-deleted session {session.Id}");
+                        CustomLogger.LoggerAccessor.LogWarn(
+                            $"RemoveParticipants - Auto-deleted session {session.Id}"
+                        );
                         GameSessions.SessionList.Remove(session);
                     }
                 }
@@ -367,22 +465,31 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                         GameSessions.UpdateSessionParticipation(player, null, false);
                     else if (GameSessions.RemovePlayerFromSession(session, pid))
                     {
-                        CustomLogger.LoggerAccessor.LogWarn($"RemoveParticipants - Auto-deleted session {session.Id}");
+                        CustomLogger.LoggerAccessor.LogWarn(
+                            $"RemoveParticipants - Auto-deleted session {session.Id}"
+                        );
                         GameSessions.SessionList.Remove(session);
                     }
                 }
 
-                session.Attributes[(uint)GameSessionAttributeType.FilledPublicSlots] = (uint)session.PublicParticipants.Count;
-                session.Attributes[(uint)GameSessionAttributeType.FilledPrivateSlots] = (uint)session.Participants.Count;
+                session.Attributes[(uint)GameSessionAttributeType.FilledPublicSlots] = (uint)
+                    session.PublicParticipants.Count;
+                session.Attributes[(uint)GameSessionAttributeType.FilledPrivateSlots] = (uint)
+                    session.Participants.Count;
             }
             else
-                CustomLogger.LoggerAccessor.LogError($"GameSessionService.RemoveParticipants - no session with id={gameSessionKey.m_sessionID}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"GameSessionService.RemoveParticipants - no session with id={gameSessionKey.m_sessionID}"
+                );
 
             return Error(0);
         }
 
         [RMCMethod(10)]
-        public RMCResult GetParticipantCount(GameSessionKey gameSessionKey, IEnumerable<uint> participantIDs)
+        public RMCResult GetParticipantCount(
+            GameSessionKey gameSessionKey,
+            IEnumerable<uint> participantIDs
+        )
         {
             UNIMPLEMENTED();
             return Error(0);
@@ -453,9 +560,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         {
             if (Context != null && Context.Client.PlayerInfo != null)
             {
-                PlayerInfo? plInfo = Context.Client.PlayerInfo;
-                uint myPlayerId = plInfo.PID;
-                GameSessionData? session = GameSessions.SessionList.FirstOrDefault(x => x.HostPID == myPlayerId);
+                var plInfo = Context.Client.PlayerInfo;
+                var myPlayerId = plInfo.PID;
+                var session = GameSessions.SessionList.FirstOrDefault(x => x.HostPID == myPlayerId);
 
                 if (session != null)
                 {
@@ -463,7 +570,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                     session.HostURLs.AddRange(stationURLs);
                 }
                 else
-                    CustomLogger.LoggerAccessor.LogError($"GameSessionService.RegisterURLs - no session hosted by pid={myPlayerId}");
+                    CustomLogger.LoggerAccessor.LogError(
+                        $"GameSessionService.RegisterURLs - no session hosted by pid={myPlayerId}"
+                    );
             }
 
             return Error(0);

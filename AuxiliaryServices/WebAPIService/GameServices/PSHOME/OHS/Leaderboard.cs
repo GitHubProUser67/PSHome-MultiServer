@@ -1,14 +1,9 @@
+using System.Text;
 using CustomLogger;
 using HttpMultipartParser;
-using Microsoft.EntityFrameworkCore;
 using MultiServerLibrary.HTTP;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
 using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.PSHOME.OHS
@@ -16,35 +11,50 @@ namespace WebAPIService.GameServices.PSHOME.OHS
     public class Leaderboard
     {
         // Skip the filler on said project as they can mess-up the leaderboards (some relies on negative scores).
-        private static string[] _fillerProjectSkip = new string[] { "sodium_racer" };
+        private static readonly string[] _fillerProjectSkip = ["sodium_racer"];
 
-        private static Dictionary<string, OHSScoreBoardData> _leaderboards = new Dictionary<string, OHSScoreBoardData>();
+        private static readonly Dictionary<string, OHSScoreBoardData> _leaderboards = [];
 
         public static string Levelboard_GetAll(string project, int game, bool levelboard)
         {
-            string dataforohs = GetAllBetterScores(project, levelboard);
+            var dataforohs = GetAllBetterScores(project, levelboard);
 
-            if (string.IsNullOrEmpty(dataforohs))
-                return null;
-
-            return dataforohs;
+            return string.IsNullOrEmpty(dataforohs) ? null : dataforohs;
         }
 
-        public static string Leaderboard_RequestByUsers(string directorypath, byte[] PostData, string ContentType, string project, string batchparams, int game)
+        public static string Leaderboard_RequestByUsers(
+            string directorypath,
+            byte[] PostData,
+            string ContentType,
+            string project,
+            string batchparams,
+            int game
+        )
         {
             string dataforohs = null;
 
             if (string.IsNullOrEmpty(batchparams))
             {
-                string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+                var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
                 if (!string.IsNullOrEmpty(boundary))
                 {
-                    using (MemoryStream ms = new MemoryStream(PostData))
+                    using (var ms = new MemoryStream(PostData))
                     {
                         var data = MultipartFormDataParser.Parse(ms, boundary);
-                        LoggerAccessor.LogInfo($"[OHS] : Client Version - {data.GetParameterValue("version")}");
-                        dataforohs = RequestByUsers(directorypath, JaminProcessor.JaminDeFormat(data.GetParameterValue("data"), true, game), project, false);
+                        LoggerAccessor.LogInfo(
+                            $"[OHS] : Client Version - {data.GetParameterValue("version")}"
+                        );
+                        dataforohs = RequestByUsers(
+                            directorypath,
+                            JaminProcessor.JaminDeFormat(
+                                data.GetParameterValue("data"),
+                                true,
+                                game
+                            ),
+                            project,
+                            false
+                        );
                         ms.Flush();
                     }
                 }
@@ -54,37 +64,54 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
             if (!string.IsNullOrEmpty(batchparams))
             {
-                if (string.IsNullOrEmpty(dataforohs))
-                    return null;
-                else
-                    return dataforohs;
+                return string.IsNullOrEmpty(dataforohs) ? null : dataforohs;
             }
             else
             {
-                if (string.IsNullOrEmpty(dataforohs))
-                    dataforohs = JaminProcessor.JaminFormat("{ [\"status\"] = \"fail\" }", game);
-                else
-                    dataforohs = JaminProcessor.JaminFormat($"{{ [\"status\"] = \"success\", [\"value\"] = {dataforohs} }}", game);
+                dataforohs = string.IsNullOrEmpty(dataforohs)
+                    ? JaminProcessor.JaminFormat("{ [\"status\"] = \"fail\" }", game)
+                    : JaminProcessor.JaminFormat(
+                        $"{{ [\"status\"] = \"success\", [\"value\"] = {dataforohs} }}",
+                        game
+                    );
             }
 
             return dataforohs;
         }
 
-        public static string Leaderboard_RequestByRank(string directorypath, byte[] PostData, string ContentType, string project, string batchparams, int game)
+        public static string Leaderboard_RequestByRank(
+            string directorypath,
+            byte[] PostData,
+            string ContentType,
+            string project,
+            string batchparams,
+            int game
+        )
         {
             string dataforohs = null;
 
             if (string.IsNullOrEmpty(batchparams))
             {
-                string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+                var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
                 if (!string.IsNullOrEmpty(boundary))
                 {
-                    using (MemoryStream ms = new MemoryStream(PostData))
+                    using (var ms = new MemoryStream(PostData))
                     {
                         var data = MultipartFormDataParser.Parse(ms, boundary);
-                        LoggerAccessor.LogInfo($"[OHS] : Client Version - {data.GetParameterValue("version")}");
-                        dataforohs = RequestByRank(directorypath, JaminProcessor.JaminDeFormat(data.GetParameterValue("data"), true, game), project, false);
+                        LoggerAccessor.LogInfo(
+                            $"[OHS] : Client Version - {data.GetParameterValue("version")}"
+                        );
+                        dataforohs = RequestByRank(
+                            directorypath,
+                            JaminProcessor.JaminDeFormat(
+                                data.GetParameterValue("data"),
+                                true,
+                                game
+                            ),
+                            project,
+                            false
+                        );
                         ms.Flush();
                     }
                 }
@@ -94,38 +121,51 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
             if (!string.IsNullOrEmpty(batchparams))
             {
-                if (string.IsNullOrEmpty(dataforohs))
-                    return null;
-                else
-                    return dataforohs;
+                return string.IsNullOrEmpty(dataforohs) ? null : dataforohs;
             }
             else
             {
-                if (string.IsNullOrEmpty(dataforohs))
-                    dataforohs = JaminProcessor.JaminFormat("{ [\"status\"] = \"fail\" }", game);
-                else
-                    dataforohs = JaminProcessor.JaminFormat($"{{ [\"status\"] = \"success\", [\"value\"] = {dataforohs} }}", game);
+                dataforohs = string.IsNullOrEmpty(dataforohs)
+                    ? JaminProcessor.JaminFormat("{ [\"status\"] = \"fail\" }", game)
+                    : JaminProcessor.JaminFormat(
+                        $"{{ [\"status\"] = \"success\", [\"value\"] = {dataforohs} }}",
+                        game
+                    );
             }
 
             return dataforohs;
         }
 
-        public static string Leaderboard_Update(string directorypath, byte[] PostData, string ContentType, string project, string batchparams, int game, bool levelboard)
+        public static string Leaderboard_Update(
+            string directorypath,
+            byte[] PostData,
+            string ContentType,
+            string project,
+            string batchparams,
+            int game,
+            bool levelboard
+        )
         {
             string dataforohs = null;
-            string writekey = "11111111";
+            var writekey = "11111111";
 
             if (string.IsNullOrEmpty(batchparams))
             {
-                string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+                var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
                 if (!string.IsNullOrEmpty(boundary))
                 {
-                    using (MemoryStream ms = new MemoryStream(PostData))
+                    using (var ms = new MemoryStream(PostData))
                     {
                         var data = MultipartFormDataParser.Parse(ms, boundary);
-                        LoggerAccessor.LogInfo($"[OHS] : Client Version - {data.GetParameterValue("version")}");
-                        (string, string) dualresult = JaminProcessor.JaminDeFormatWithWriteKey(data.GetParameterValue("data"), true, game);
+                        LoggerAccessor.LogInfo(
+                            $"[OHS] : Client Version - {data.GetParameterValue("version")}"
+                        );
+                        var dualresult = JaminProcessor.JaminDeFormatWithWriteKey(
+                            data.GetParameterValue("data"),
+                            true,
+                            game
+                        );
                         writekey = dualresult.Item1;
                         dataforohs = dualresult.Item2;
                         ms.Flush();
@@ -143,28 +183,45 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 if (!string.IsNullOrEmpty(dataforohs))
                 {
                     // Deserialize the JSON string
-                    ScoreBoardUpdate rootObject = JsonConvert.DeserializeObject<ScoreBoardUpdate>(dataforohs, new JsonSerializerSettings
-                    {
-                        Converters = { new ScoreBoardUpdateConverter() }
-                    });
+                    var rootObject = JsonConvert.DeserializeObject<ScoreBoardUpdate>(
+                        dataforohs,
+                        new JsonSerializerSettings
+                        {
+                            Converters = { new ScoreBoardUpdateConverter() },
+                        }
+                    );
 
                     if (rootObject != null)
                     {
                         // Extract the values
-                        string user = rootObject.user;
-                        int score = rootObject.score;
-                        string key = rootObject.key;
+                        var user = rootObject.user;
+                        var score = rootObject.score;
+                        var key = rootObject.key;
 
-                        if (rootObject.value != null && rootObject.value.Length > 0 && rootObject.value[0] is string v)
+                        if (
+                            rootObject.value != null
+                            && rootObject.value.Length > 0
+                            && rootObject.value[0] is string v
+                        )
                         {
                             extraData = JaminProcessor.JaminDeFormat(v, false, 0, false);
 #if DEBUG
                             if (!string.IsNullOrEmpty(extraData))
-                                LoggerAccessor.LogInfo($"[OHS] : {(levelboard ? "Levelboard" : "Leaderboard")} has extra data: {extraData}");
+                                LoggerAccessor.LogInfo(
+                                    $"[OHS] : {(levelboard ? "Levelboard" : "Leaderboard")} has extra data: {extraData}"
+                                );
 #endif
                         }
 
-                        dataforohs = UpdateScoreboard(directorypath, user, score, project, key, levelboard, extraData);
+                        dataforohs = UpdateScoreboard(
+                            directorypath,
+                            user,
+                            score,
+                            project,
+                            key,
+                            levelboard,
+                            extraData
+                        );
                     }
                     else
                         dataforohs = null;
@@ -177,38 +234,53 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
             if (!string.IsNullOrEmpty(batchparams))
             {
-                if (string.IsNullOrEmpty(dataforohs))
-                    return null;
-                else
-                    return $"{{ [\"writeKey\"] = \"{writekey}\", [\"entries\"] = {dataforohs} }}";
+                return string.IsNullOrEmpty(dataforohs)
+                    ? null
+                    : $"{{ [\"writeKey\"] = \"{writekey}\", [\"entries\"] = {dataforohs} }}";
             }
             else
             {
-                if (string.IsNullOrEmpty(dataforohs))
-                    dataforohs = JaminProcessor.JaminFormat("{ [\"status\"] = \"fail\" }", game);
-                else
-                    dataforohs = JaminProcessor.JaminFormat($"{{ [\"status\"] = \"success\", [\"value\"] = {{ [\"writeKey\"] = \"{writekey}\", [\"entries\"] = {dataforohs} }} }}", game);
+                dataforohs = string.IsNullOrEmpty(dataforohs)
+                    ? JaminProcessor.JaminFormat("{ [\"status\"] = \"fail\" }", game)
+                    : JaminProcessor.JaminFormat(
+                        $"{{ [\"status\"] = \"success\", [\"value\"] = {{ [\"writeKey\"] = \"{writekey}\", [\"entries\"] = {dataforohs} }} }}",
+                        game
+                    );
             }
 
             return dataforohs;
         }
 
-        public static string Leaderboard_UpdatesSameEntry(string directorypath, byte[] PostData, string ContentType, string project, string batchparams, int game, bool levelboard)
+        public static string Leaderboard_UpdatesSameEntry(
+            string directorypath,
+            byte[] PostData,
+            string ContentType,
+            string project,
+            string batchparams,
+            int game,
+            bool levelboard
+        )
         {
             string dataforohs = null;
-            string writekey = "11111111";
+            var writekey = "11111111";
 
             if (string.IsNullOrEmpty(batchparams))
             {
-                string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+                var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
                 if (!string.IsNullOrEmpty(boundary))
                 {
-                    using (MemoryStream ms = new MemoryStream(PostData))
+                    using (var ms = new MemoryStream(PostData))
                     {
                         var data = MultipartFormDataParser.Parse(ms, boundary);
-                        LoggerAccessor.LogInfo($"[OHS] : Client Version - {data.GetParameterValue("version")}");
-                        (string, string) dualresult = JaminProcessor.JaminDeFormatWithWriteKey(data.GetParameterValue("data"), true, game);
+                        LoggerAccessor.LogInfo(
+                            $"[OHS] : Client Version - {data.GetParameterValue("version")}"
+                        );
+                        var dualresult = JaminProcessor.JaminDeFormatWithWriteKey(
+                            data.GetParameterValue("data"),
+                            true,
+                            game
+                        );
                         writekey = dualresult.Item1;
                         dataforohs = dualresult.Item2;
                         ms.Flush();
@@ -219,7 +291,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 dataforohs = batchparams;
             // TODO! writekey must be somewhere.
 
-            StringBuilder resultBuilder = new StringBuilder();
+            var resultBuilder = new StringBuilder();
 
             string extraData = null;
 
@@ -228,35 +300,65 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 if (!string.IsNullOrEmpty(dataforohs))
                 {
                     // Deserialize the JSON string
-                    ScoreBoardUpdateSameEntry rootObject = JsonConvert.DeserializeObject<ScoreBoardUpdateSameEntry>(dataforohs, new JsonSerializerSettings
-                    {
-                        Converters = { new ScoreBoardUpdateSameEntryConverter() }
-                    });
+                    var rootObject = JsonConvert.DeserializeObject<ScoreBoardUpdateSameEntry>(
+                        dataforohs,
+                        new JsonSerializerSettings
+                        {
+                            Converters = { new ScoreBoardUpdateSameEntryConverter() },
+                        }
+                    );
 
                     if (rootObject != null)
                     {
                         // Extract the values
-                        string user = rootObject.user;
-                        int score = rootObject.score;
-                        string[] keys = rootObject.keys;
+                        var user = rootObject.user;
+                        var score = rootObject.score;
+                        var keys = rootObject.keys;
 
-                        if (rootObject.value != null && rootObject.value.Length > 0 && rootObject.value[0] is string v)
+                        if (
+                            rootObject.value != null
+                            && rootObject.value.Length > 0
+                            && rootObject.value[0] is string v
+                        )
                         {
                             extraData = JaminProcessor.JaminDeFormat(v, false, 0, false);
 #if DEBUG
                             if (!string.IsNullOrEmpty(extraData))
-                                LoggerAccessor.LogInfo($"[OHS] : {(levelboard ? "Levelboard" : "Leaderboard")} has extra data: {extraData}");
+                                LoggerAccessor.LogInfo(
+                                    $"[OHS] : {(levelboard ? "Levelboard" : "Leaderboard")} has extra data: {extraData}"
+                                );
 #endif
                         }
 
                         if (keys != null)
                         {
-                            foreach (string key in keys)
+                            foreach (var key in keys)
                             {
                                 if (resultBuilder.Length == 0)
-                                    resultBuilder.Append(UpdateScoreboard(directorypath, user, score, project, key, levelboard, extraData));
+                                    resultBuilder.Append(
+                                        UpdateScoreboard(
+                                            directorypath,
+                                            user,
+                                            score,
+                                            project,
+                                            key,
+                                            levelboard,
+                                            extraData
+                                        )
+                                    );
                                 else
-                                    resultBuilder.Append(", " + UpdateScoreboard(directorypath, user, score, project, key, levelboard, extraData));
+                                    resultBuilder.Append(
+                                        ", "
+                                            + UpdateScoreboard(
+                                                directorypath,
+                                                user,
+                                                score,
+                                                project,
+                                                key,
+                                                levelboard,
+                                                extraData
+                                            )
+                                    );
                             }
                         }
                     }
@@ -267,60 +369,87 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 LoggerAccessor.LogError($"[Leaderboard] - UpdatesSameEntry failed - {ex}");
             }
 
-            string res = resultBuilder.ToString();
+            var res = resultBuilder.ToString();
 
             resultBuilder = null;
 
             if (!string.IsNullOrEmpty(batchparams))
             {
-                if (res.Length == 0)
-                    return null;
-                else
-                    return $"{{ [\"writeKey\"] = \"{writekey}\", [\"entries\"] = {res} }}";
+                return res.Length == 0
+                    ? null
+                    : $"{{ [\"writeKey\"] = \"{writekey}\", [\"entries\"] = {res} }}";
             }
             else
             {
-                if (res.Length == 0)
-                    dataforohs = JaminProcessor.JaminFormat("{ [\"status\"] = \"fail\" }", game);
-                else
-                    dataforohs = JaminProcessor.JaminFormat($"{{ [\"status\"] = \"success\", [\"value\"] = {{ [\"writeKey\"] = \"{writekey}\", [\"entries\"] = {res} }} }}", game);
+                dataforohs =
+                    res.Length == 0
+                        ? JaminProcessor.JaminFormat("{ [\"status\"] = \"fail\" }", game)
+                        : JaminProcessor.JaminFormat(
+                            $"{{ [\"status\"] = \"success\", [\"value\"] = {{ [\"writeKey\"] = \"{writekey}\", [\"entries\"] = {res} }} }}",
+                            game
+                        );
             }
 
             return dataforohs;
         }
 
-        public static void InitializeLeaderboard(string directorypath, string tablekey, bool fillResults = true)
+        public static void InitializeLeaderboard(
+            string directorypath,
+            string tablekey,
+            bool fillResults = true
+        )
         {
             if (!_leaderboards.ContainsKey(tablekey))
             {
-                OHSScoreBoardData scoreBoard = new OHSScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, tablekey);
+                var scoreBoard = new OHSScoreBoardData(
+                    LeaderboardDbContext.BuildOptions(
+                        0,
+                        $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}"
+                    ),
+                    tablekey
+                );
                 if (_leaderboards.TryAdd(tablekey, scoreBoard))
                 {
-                    string[] tableParams = tablekey.Split('|');
-                    string key = tableParams[1];
+                    var tableParams = tablekey.Split('|');
+                    var key = tableParams[1];
 
-                    _ = scoreBoard.PerformMigrationAsync(directorypath + $"/{tableParams[0]}/{(tableParams.Last().EndsWith("levelboard") ? $"Levelboard_Data/levelboard_{key}.json" : $"Leaderboard_Data/scoreboard_{key}.json")}");
+                    _ = scoreBoard.PerformMigrationAsync(
+                        directorypath
+                            + $"/{tableParams[0]}/{(tableParams.Last().EndsWith("levelboard") ? $"Levelboard_Data/levelboard_{key}.json" : $"Leaderboard_Data/scoreboard_{key}.json")}"
+                    );
 
                     if (fillResults)
                     {
-                        for (int j = 1; j < 11; j++)
+                        for (var j = 1; j < 11; j++)
                         {
-                            _ = _leaderboards[tablekey].UpdateScoreAsync(FrenchNameGenerator.GetRandomWord(), 0);
+                            _ = _leaderboards[tablekey]
+                                .UpdateScoreAsync(FrenchNameGenerator.GetRandomWord(), 0);
                         }
                     }
                 }
             }
         }
 
-        public static string UpdateScoreboard(string directorypath, string playerId, int newScore, string project, string key, bool levelboard, string extraData = null)
+        public static string UpdateScoreboard(
+            string directorypath,
+            string playerId,
+            int newScore,
+            string project,
+            string key,
+            bool levelboard,
+            string extraData = null
+        )
         {
-            string scoreboarddata = string.Empty;
-            string tablekey = levelboard ? project + $"|{key}" + "|levelboard" : project + $"|{key}";
+            var tablekey = levelboard ? project + $"|{key}" + "|levelboard" : project + $"|{key}";
 
             OHSScoreBoardData lb;
             lock (_leaderboards)
             {
-                InitializeLeaderboard(directorypath, tablekey, !_fillerProjectSkip.Contains(project));
+                InitializeLeaderboard(
+                    directorypath,
+                    tablekey,
+                    !_fillerProjectSkip.Contains(project)
+                );
                 lb = _leaderboards[tablekey];
             }
 
@@ -332,28 +461,31 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
         public static string GetAllBetterScores(string project, bool levelboard)
         {
-            string returnvalue = string.Empty;
+            var returnvalue = string.Empty;
 
             IEnumerable<KeyValuePair<string, OHSScoreBoardData>> leaderboardsToProcess;
 
             lock (_leaderboards)
             {
-                leaderboardsToProcess = _leaderboards
-                    .Where(x => x.Key.Contains(project) && (!levelboard || x.Key.Contains("|levelboard")));
+                leaderboardsToProcess = _leaderboards.Where(x =>
+                    x.Key.Contains(project) && (!levelboard || x.Key.Contains("|levelboard"))
+                );
             }
 
             foreach (var kvp in leaderboardsToProcess)
             {
                 var scoreEntries = kvp.Value.GetTopScoresAsync(1).Result;
 
-                if (scoreEntries.Any())
+                if (scoreEntries.Count != 0)
                 {
                     var scoreEntry = scoreEntries.First();
 
                     if (returnvalue.Length != 0)
-                        returnvalue += $", [\"{kvp.Key.Split('|')[1]}\"] = {{ [\"score\"] = {(int)scoreEntry.Score}, [\"user\"] = \"{scoreEntry.PsnId}\", [\"rank\"] = 1 }}";
+                        returnvalue +=
+                            $", [\"{kvp.Key.Split('|')[1]}\"] = {{ [\"score\"] = {(int)scoreEntry.Score}, [\"user\"] = \"{scoreEntry.PsnId}\", [\"rank\"] = 1 }}";
                     else
-                        returnvalue = $"{{ [\"{kvp.Key.Split('|')[1]}\"] = {{ [\"score\"] = {(int)scoreEntry.Score}, [\"user\"] = \"{scoreEntry.PsnId}\", [\"rank\"] = 1 }}";
+                        returnvalue =
+                            $"{{ [\"{kvp.Key.Split('|')[1]}\"] = {{ [\"score\"] = {(int)scoreEntry.Score}, [\"user\"] = \"{scoreEntry.PsnId}\", [\"rank\"] = 1 }}";
                 }
             }
 
@@ -365,23 +497,34 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             return returnvalue;
         }
 
-        public static string RequestByUsers(string directorypath, string jsontable, string project, bool levelboard)
+        public static string RequestByUsers(
+            string directorypath,
+            string jsontable,
+            string project,
+            bool levelboard
+        )
         {
-            string returnvalue = "{ [\"entries\"] = { }, [\"user\"] = { [\"score\"] = 0 } }";
+            var returnvalue = "{ [\"entries\"] = { }, [\"user\"] = { [\"score\"] = 0 } }";
 
             try
             {
-                ScoreBoardUsersRequest data = JsonConvert.DeserializeObject<ScoreBoardUsersRequest>(jsontable);
+                var data = JsonConvert.DeserializeObject<ScoreBoardUsersRequest>(jsontable);
 
                 if (data != null)
                 {
-                    string key = data.Key;
-                    string tablekey = levelboard ? project + $"|{key}" + "|levelboard" : project + $"|{key}";
-                    bool hasKey = false;
+                    var key = data.Key;
+                    var tablekey = levelboard
+                        ? project + $"|{key}" + "|levelboard"
+                        : project + $"|{key}";
+                    var hasKey = false;
 
                     lock (_leaderboards)
                     {
-                        InitializeLeaderboard(directorypath, tablekey, !_fillerProjectSkip.Contains(project));
+                        InitializeLeaderboard(
+                            directorypath,
+                            tablekey,
+                            !_fillerProjectSkip.Contains(project)
+                        );
                         hasKey = _leaderboards.ContainsKey(tablekey);
                     }
 
@@ -389,57 +532,80 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                     {
                         List<Entities.OHSScoreboardEntry> scoreEntries;
 
-                        bool isDaily = key.Contains("daily", StringComparison.InvariantCultureIgnoreCase);
-                        bool isWeekly = key.Contains("weekly", StringComparison.InvariantCultureIgnoreCase);
+                        var isDaily = key.Contains(
+                            "daily",
+                            StringComparison.InvariantCultureIgnoreCase
+                        );
+                        var isWeekly = key.Contains(
+                            "weekly",
+                            StringComparison.InvariantCultureIgnoreCase
+                        );
 
-                        if (isDaily)
-                            scoreEntries = _leaderboards[tablekey].GetTodayScoresAsync(-1).Result;
-                        else if (isWeekly)
-                            scoreEntries = _leaderboards[tablekey].GetCurrentWeekScoresAsync(-1).Result;
-                        else
-                            scoreEntries = _leaderboards[tablekey].GetAllScoresAsync().Result;
+                        scoreEntries =
+                            isDaily ? _leaderboards[tablekey].GetTodayScoresAsync(-1).Result
+                            : isWeekly
+                                ? _leaderboards[tablekey].GetCurrentWeekScoresAsync(-1).Result
+                            : _leaderboards[tablekey].GetAllScoresAsync().Result;
 
-                        if (scoreEntries.Any())
+                        if (scoreEntries.Count != 0)
                         {
-                            Dictionary<string, int> ranks = new Dictionary<string, int>();
-                            Dictionary<int, Dictionary<string, object>> luaTable = new Dictionary<int, Dictionary<string, object>>();
+                            Dictionary<string, int> ranks = [];
+                            Dictionary<int, Dictionary<string, object>> luaTable = [];
 
-                            int i = 1;
+                            var i = 1;
 
-                            foreach (var entry in scoreEntries.Where(entry => data.Users.Contains(entry.PsnId)).OrderByDescending(entry => entry.Score))
+                            foreach (
+                                var entry in scoreEntries
+                                    .Where(entry => data.Users.Contains(entry.PsnId))
+                                    .OrderByDescending(entry => entry.Score)
+                            )
                             {
                                 ranks.TryAdd(entry.PsnId, i);
 
-                                luaTable.Add(i, new Dictionary<string, object>
-                                                        {
-                                                            { "[\"user\"]", $"\"{entry.PsnId}\"" },
-                                                            { "[\"score\"]", $"{(int)entry.Score}" },
-                                                            { "[\"rank\"]", $"{i}" }
-                                                        });
+                                luaTable.Add(
+                                    i,
+                                    new Dictionary<string, object>
+                                    {
+                                        { "[\"user\"]", $"\"{entry.PsnId}\"" },
+                                        { "[\"score\"]", $"{(int)entry.Score}" },
+                                        { "[\"rank\"]", $"{i}" },
+                                    }
+                                );
 
                                 i++;
                             }
 
-                            StringBuilder resultBuilder = new StringBuilder();
+                            var resultBuilder = new StringBuilder();
 
-                            foreach (string user in data.Users)
+                            foreach (var user in data.Users)
                             {
                                 foreach (var entry in scoreEntries)
                                 {
                                     if (entry.PsnId == user)
                                     {
                                         if (resultBuilder.Length == 0)
-                                            resultBuilder.Append($"[\"user\"] = {{ [\"score\"] = {(int)entry.Score}, [\"rank\"] = {ranks[user]} }}");
+                                            resultBuilder.Append(
+                                                $"[\"user\"] = {{ [\"score\"] = {(int)entry.Score}, [\"rank\"] = {ranks[user]} }}"
+                                            );
                                         else
-                                            resultBuilder.Append($", [\"user\"] = {{ [\"score\"] = {(int)entry.Score}, [\"rank\"] = {ranks[user]} }}");
+                                            resultBuilder.Append(
+                                                $", [\"user\"] = {{ [\"score\"] = {(int)entry.Score}, [\"rank\"] = {ranks[user]} }}"
+                                            );
                                     }
                                 }
                             }
 
                             if (resultBuilder.Length == 0)
-                                resultBuilder.Append($"[\"user\"] = {{ [\"score\"] = 0, [\"rank\"] = 0 }}");
+                                resultBuilder.Append(
+                                    $"[\"user\"] = {{ [\"score\"] = 0, [\"rank\"] = 0 }}"
+                                );
 
-                            returnvalue = "{ [\"entries\"] = " + OHSScoreBoardData.FormatScoreBoardLuaTable(luaTable) + ", " + resultBuilder.ToString() + " }";
+                            returnvalue =
+                                "{ [\"entries\"] = "
+                                + OHSScoreBoardData.FormatScoreBoardLuaTable(luaTable)
+                                + ", "
+                                + resultBuilder.ToString()
+                                + " }";
                         }
                     }
                 }
@@ -452,13 +618,18 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             return returnvalue;
         }
 
-        public static string RequestByRank(string directorypath, string jsontable, string project, bool levelboard)
+        public static string RequestByRank(
+            string directorypath,
+            string jsontable,
+            string project,
+            bool levelboard
+        )
         {
             try
             {
-                int numEntries = 0;
+                var numEntries = 0;
 
-                int start = 1;
+                var start = 1;
 
                 string user = null;
 
@@ -466,15 +637,15 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
                 if (!string.IsNullOrEmpty(jsontable))
                 {
-                    JObject jsonDatainit = JObject.Parse(jsontable);
+                    var jsonDatainit = JObject.Parse(jsontable);
 
                     if (jsonDatainit != null)
                     {
-                        JToken numEntriesToken = jsonDatainit["numEntries"];
+                        var numEntriesToken = jsonDatainit["numEntries"];
                         if (numEntriesToken != null)
                             numEntries = (int)numEntriesToken;
 
-                        JToken startToken = jsonDatainit["start"];
+                        var startToken = jsonDatainit["start"];
                         if (startToken != null)
                             start = (int)startToken;
 
@@ -485,25 +656,42 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                     if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(key))
                         return null;
 
-                    bool hasKey = false;
-                    bool isDaily = key.Contains("daily", StringComparison.InvariantCultureIgnoreCase);
-                    bool isWeekly = key.Contains("weekly", StringComparison.InvariantCultureIgnoreCase);
-                    string tablekey = levelboard ? project + $"|{key}" + "|levelboard" : project + $"|{key}";
+                    var hasKey = false;
+                    var isDaily = key.Contains(
+                        "daily",
+                        StringComparison.InvariantCultureIgnoreCase
+                    );
+                    var isWeekly = key.Contains(
+                        "weekly",
+                        StringComparison.InvariantCultureIgnoreCase
+                    );
+                    var tablekey = levelboard
+                        ? project + $"|{key}" + "|levelboard"
+                        : project + $"|{key}";
 
                     lock (_leaderboards)
                     {
-                        InitializeLeaderboard(directorypath, tablekey, !_fillerProjectSkip.Contains(project) && !(isDaily || isWeekly));
+                        InitializeLeaderboard(
+                            directorypath,
+                            tablekey,
+                            !_fillerProjectSkip.Contains(project) && !(isDaily || isWeekly)
+                        );
                         hasKey = _leaderboards.ContainsKey(tablekey);
                     }
 
                     if (hasKey)
                     {
-                        if (isDaily)
-                            return _leaderboards[tablekey].SerializeToStringDailyEx(null, user, start, numEntries).Result;
-                        else if (isWeekly)
-                            return _leaderboards[tablekey].SerializeToWeeklyStringEx(null, user, start, numEntries).Result;
-                        else
-                            return _leaderboards[tablekey].SerializeToStringEx(null, user, start, numEntries).Result;
+                        return isDaily
+                                ? _leaderboards[tablekey]
+                                    .SerializeToStringDailyEx(null, user, start, numEntries)
+                                    .Result
+                            : isWeekly
+                                ? _leaderboards[tablekey]
+                                    .SerializeToWeeklyStringEx(null, user, start, numEntries)
+                                    .Result
+                            : _leaderboards[tablekey]
+                                .SerializeToStringEx(null, user, start, numEntries)
+                                .Result;
                     }
                 }
             }
@@ -551,31 +739,41 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
         private class ScoreBoardUpdateSameEntryConverter : JsonConverter<ScoreBoardUpdateSameEntry>
         {
-            public override ScoreBoardUpdateSameEntry ReadJson(JsonReader reader, Type objectType, ScoreBoardUpdateSameEntry existingValue, bool hasExistingValue, JsonSerializer serializer)
+            public override ScoreBoardUpdateSameEntry ReadJson(
+                JsonReader reader,
+                Type objectType,
+                ScoreBoardUpdateSameEntry existingValue,
+                bool hasExistingValue,
+                JsonSerializer serializer
+            )
             {
-                JObject jsonObject = JObject.Load(reader);
+                var jsonObject = JObject.Load(reader);
 
-                ScoreBoardUpdateSameEntry entry = new ScoreBoardUpdateSameEntry
+                var entry = new ScoreBoardUpdateSameEntry
                 {
                     user = jsonObject["user"]?.ToString(),
                     keys = jsonObject["keys"]?.ToObject<string[]>(),
-                    score = jsonObject["score"]?.ToObject<int>() ?? 0
+                    score = jsonObject["score"]?.ToObject<int>() ?? 0,
                 };
 
                 // Determine if "value" is a string or an array of objects
-                JToken valueToken = jsonObject["value"];
+                var valueToken = jsonObject["value"];
                 if (valueToken != null)
                 {
-                    if (valueToken.Type == JTokenType.String)
-                        entry.value = new object[] { valueToken.ToObject<string>() ?? string.Empty };
-                    else
-                        entry.value = valueToken.ToObject<object[]>();
+                    entry.value =
+                        valueToken.Type == JTokenType.String
+                            ? [valueToken.ToObject<string>() ?? string.Empty]
+                            : valueToken.ToObject<object[]>();
                 }
 
                 return entry;
             }
 
-            public override void WriteJson(JsonWriter writer, ScoreBoardUpdateSameEntry value, JsonSerializer serializer)
+            public override void WriteJson(
+                JsonWriter writer,
+                ScoreBoardUpdateSameEntry value,
+                JsonSerializer serializer
+            )
             {
                 throw new NotImplementedException();
             }
@@ -583,31 +781,41 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
         private class ScoreBoardUpdateConverter : JsonConverter<ScoreBoardUpdate>
         {
-            public override ScoreBoardUpdate ReadJson(JsonReader reader, Type objectType, ScoreBoardUpdate existingValue, bool hasExistingValue, JsonSerializer serializer)
+            public override ScoreBoardUpdate ReadJson(
+                JsonReader reader,
+                Type objectType,
+                ScoreBoardUpdate existingValue,
+                bool hasExistingValue,
+                JsonSerializer serializer
+            )
             {
-                JObject jsonObject = JObject.Load(reader);
+                var jsonObject = JObject.Load(reader);
 
-                ScoreBoardUpdate entry = new ScoreBoardUpdate
+                var entry = new ScoreBoardUpdate
                 {
                     user = jsonObject["user"]?.ToString(),
                     key = jsonObject["key"]?.ToObject<string>(),
-                    score = jsonObject["score"]?.ToObject<int>() ?? 0
+                    score = jsonObject["score"]?.ToObject<int>() ?? 0,
                 };
 
                 // Determine if "value" is a string or an array of objects
-                JToken valueToken = jsonObject["value"];
+                var valueToken = jsonObject["value"];
                 if (valueToken != null)
                 {
-                    if (valueToken.Type == JTokenType.String)
-                        entry.value = new object[] { valueToken.ToObject<string>() ?? string.Empty };
-                    else
-                        entry.value = valueToken.ToObject<object[]>();
+                    entry.value =
+                        valueToken.Type == JTokenType.String
+                            ? [valueToken.ToObject<string>() ?? string.Empty]
+                            : valueToken.ToObject<object[]>();
                 }
 
                 return entry;
             }
 
-            public override void WriteJson(JsonWriter writer, ScoreBoardUpdate value, JsonSerializer serializer)
+            public override void WriteJson(
+                JsonWriter writer,
+                ScoreBoardUpdate value,
+                JsonSerializer serializer
+            )
             {
                 throw new NotImplementedException();
             }

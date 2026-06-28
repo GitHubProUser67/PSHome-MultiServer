@@ -2,27 +2,25 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Locker
 {
-	[TdfStruct]
-	public struct LeaderboardViewColumn
-	{
+    [TdfStruct]
+    public struct LeaderboardViewColumn
+    {
+        [TdfMember("DISP")]
+        public int mDisplay;
 
-		[TdfMember("DISP")]
-		public int mDisplay;
+        [TdfMember("FRMT")]
+        public string mFormat;
 
-		[TdfMember("FRMT")]
-		public string mFormat;
+        [TdfMember("LDSC")]
+        public string mLongDesc;
 
-		[TdfMember("LDSC")]
-		public string mLongDesc;
+        [TdfMember("NAME")]
+        public string mName;
 
-		[TdfMember("NAME")]
-		public string mName;
+        [TdfMember("SDSC")]
+        public string mShortDesc;
 
-		[TdfMember("SDSC")]
-		public string mShortDesc;
-
-		[TdfMember("TYPE")]
-		public string mType;
-
-	}
+        [TdfMember("TYPE")]
+        public string mType;
+    }
 }

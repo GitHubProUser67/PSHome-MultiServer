@@ -1,10 +1,12 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.SetLobbyWorldFilter)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.SetLobbyWorldFilter
+    )]
     public class MediusSetLobbyWorldFilterRequest : BaseLobbyExtMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.SetLobbyWorldFilter;
@@ -20,13 +22,10 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             reader.ReadBytes(3);
             FilterMask1 = reader.ReadUInt32();
             FilterMask2 = reader.ReadUInt32();
@@ -38,13 +37,10 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            //
             writer.Write(new byte[3]);
             writer.Write(FilterMask1);
             writer.Write(FilterMask2);
@@ -54,17 +50,17 @@ namespace Horizon.RT.Models
             writer.Write(FilterMaskLevel);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"FilterMask1: {FilterMask1} " +
-                $"FilterMask2: {FilterMask2} " +
-                $"FilterMask3: {FilterMask3} " +
-                $"FilterMask4: {FilterMask4} " +
-                $"LobbyFilterType: {LobbyFilterType} " +
-                $"FilterMaskLevel: {System.Convert.ToInt32(FilterMaskLevel)}:{FilterMaskLevel}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"FilterMask1: {FilterMask1} "
+                + $"FilterMask2: {FilterMask2} "
+                + $"FilterMask3: {FilterMask3} "
+                + $"FilterMask4: {FilterMask4} "
+                + $"LobbyFilterType: {LobbyFilterType} "
+                + $"FilterMaskLevel: {System.Convert.ToInt32(FilterMaskLevel)}:{FilterMaskLevel}";
         }
     }
 }

@@ -1,7 +1,6 @@
 using EndianTools;
 using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using System;
 
 namespace Horizon.RT.Models
 {
@@ -14,6 +13,7 @@ namespace Horizon.RT.Models
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Session Key
         /// </summary>
@@ -52,11 +52,12 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{MessageID} " +
-                $"SessionKey:{SessionKey} " +
-                $"UNK0: {UNK0} " +
-                $"TicketData: {(TicketData != null ? BitConverter.ToString(TicketData) : string.Empty)} ";
+            return base.ToString()
+                + " "
+                + $"MessageID:{MessageID} "
+                + $"SessionKey:{SessionKey} "
+                + $"UNK0: {UNK0} "
+                + $"TicketData: {(TicketData != null ? BitConverter.ToString(TicketData) : string.Empty)} ";
         }
     }
 }

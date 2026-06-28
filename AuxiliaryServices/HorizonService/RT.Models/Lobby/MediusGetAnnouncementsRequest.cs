@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -36,13 +35,13 @@ namespace Horizon.RT.Models
             writer.Write(ApplicationID);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{MessageID} " +
-                $"SessionKey:{SessionKey} " +
-                $"ApplicationID:{ApplicationID}";
+            return base.ToString()
+                + " "
+                + $"MessageID:{MessageID} "
+                + $"SessionKey:{SessionKey} "
+                + $"ApplicationID:{ApplicationID}";
         }
     }
 }

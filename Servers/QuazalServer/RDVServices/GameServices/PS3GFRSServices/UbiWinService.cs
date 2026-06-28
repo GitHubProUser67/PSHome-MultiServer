@@ -1,6 +1,6 @@
-using QuazalServer.RDVServices.DDL.Models;
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
+using QuazalServer.RDVServices.DDL.Models;
 using RDVServices;
 
 namespace QuazalServer.RDVServices.GameServices.PS3GFRSServices
@@ -12,7 +12,12 @@ namespace QuazalServer.RDVServices.GameServices.PS3GFRSServices
     public class UbiWinService : RMCServiceBase
     {
         [RMCMethod(1)]
-        public RMCResult GetActions(int start_row_index, int maximum_rows, string sort_expression, string culture_name)
+        public RMCResult GetActions(
+            int start_row_index,
+            int maximum_rows,
+            string sort_expression,
+            string culture_name
+        )
         {
             UNIMPLEMENTED();
 
@@ -21,7 +26,12 @@ namespace QuazalServer.RDVServices.GameServices.PS3GFRSServices
         }
 
         [RMCMethod(2)]
-        public RMCResult GetActionsCompleted(int start_row_index, int maximum_rows, string sort_expression, string culture_name)
+        public RMCResult GetActionsCompleted(
+            int start_row_index,
+            int maximum_rows,
+            string sort_expression,
+            string culture_name
+        )
         {
             UNIMPLEMENTED();
             return Error(0);
@@ -32,7 +42,7 @@ namespace QuazalServer.RDVServices.GameServices.PS3GFRSServices
         {
             UNIMPLEMENTED();
 
-            int actions_count = 0;
+            var actions_count = 0;
             return Result(new { actions_count });
         }
 
@@ -44,25 +54,32 @@ namespace QuazalServer.RDVServices.GameServices.PS3GFRSServices
         }
 
         [RMCMethod(5)]
-        public RMCResult GetRewards(int start_row_index, int maximum_rows, string sort_expression, string culture_name)
+        public RMCResult GetRewards(
+            int start_row_index,
+            int maximum_rows,
+            string sort_expression,
+            string culture_name
+        )
         {
-            var rewards = new List<UPlayReward>()
-            {
+            var rewards = new List<UPlayReward>() { };
 
-            };
-
-            // return 
+            // return
             return Result(rewards);
         }
 
         [RMCMethod(6)]
-        public RMCResult GetRewardsPurchased(int startRowIndex, int maximumRows, string sortExpression, string cultureName)
+        public RMCResult GetRewardsPurchased(
+            int startRowIndex,
+            int maximumRows,
+            string sortExpression,
+            string cultureName
+        )
         {
             UNIMPLEMENTED();
 
             var rewards = new List<UPlayReward>();
 
-            // return 
+            // return
             return Result(rewards);
         }
 
@@ -85,12 +102,14 @@ namespace QuazalServer.RDVServices.GameServices.PS3GFRSServices
                 m_name = actionCode + "_action",
                 m_value = 1,
             };
-            unlockedAction.m_platforms.Add(new UplayActionPlatform()
-            {
-                m_completed = true,
-                m_platformCode = "PS3",
-                m_specificKey = string.Empty
-            });
+            unlockedAction.m_platforms.Add(
+                new UplayActionPlatform()
+                {
+                    m_completed = true,
+                    m_platformCode = "PS3",
+                    m_specificKey = string.Empty,
+                }
+            );
 
             return Result(unlockedAction);
         }
@@ -112,10 +131,13 @@ namespace QuazalServer.RDVServices.GameServices.PS3GFRSServices
         [RMCMethod(11)]
         public RMCResult GetVirtualCurrencyUserBalance()
         {
-            int numOfTokens = 0;
+            var numOfTokens = 0;
 
             if (Context != null && Context.Client.PlayerInfo != null)
-                numOfTokens = DBHelper.GetUbiTokensDataByUserName(Context.Handler.Factory.Item1, Context.Client.PlayerInfo.Name!);
+                numOfTokens = DBHelper.GetUbiTokensDataByUserName(
+                    Context.Handler.Factory.Item1,
+                    Context.Client.PlayerInfo.Name!
+                );
 
             return Result(new { numOfTokens });
         }

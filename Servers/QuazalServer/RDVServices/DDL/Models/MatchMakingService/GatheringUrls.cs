@@ -2,7 +2,7 @@
 
 namespace QuazalServer.RDVServices.DDL.Models.MatchMakingService
 {
-	// https://github.com/kinnay/NintendoClients/wiki/Match-Making-Types#gatheringurls-structure
+    // https://github.com/kinnay/NintendoClients/wiki/Match-Making-Types#gatheringurls-structure
     public class GatheringUrls
     {
         public uint gid { get; set; }

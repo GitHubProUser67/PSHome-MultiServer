@@ -1,5 +1,5 @@
-using CastleLibrary.Utils;
 using System.Text;
+using CastleLibrary.Utils;
 
 namespace MultiSocks.Utils
 {
@@ -11,9 +11,16 @@ namespace MultiSocks.Utils
 
             if (!string.IsNullOrEmpty(encodedPassword))
             {
-                byte[] decodeHexKey = ssc2Key.HexStrToBytes();
-                byte[] decodeBuffer = new byte[32];
-                CryptSSC2.cryptSSC2StringDecrypt(decodeBuffer, decodeBuffer.Length, Encoding.UTF8.GetBytes(encodedPassword), decodeHexKey, decodeHexKey.Length, decodeHexKey.Length);
+                var decodeHexKey = ssc2Key.HexStrToBytes();
+                var decodeBuffer = new byte[32];
+                CryptSSC2.cryptSSC2StringDecrypt(
+                    decodeBuffer,
+                    decodeBuffer.Length,
+                    Encoding.UTF8.GetBytes(encodedPassword),
+                    decodeHexKey,
+                    decodeHexKey.Length,
+                    decodeHexKey.Length
+                );
                 return TruncateAtNull(Encoding.UTF8.GetString(decodeBuffer));
             }
 
@@ -22,7 +29,7 @@ namespace MultiSocks.Utils
 
         public static string TruncateAtNull(string input)
         {
-            int nullPos = input.IndexOf('\0');
+            var nullPos = input.IndexOf('\0');
             return (nullPos != -1) ? input[..nullPos] : input;
         }
 

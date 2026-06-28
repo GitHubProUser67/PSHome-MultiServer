@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Locker
 {
-	[TdfStruct]
-	public struct ConfirmationRequest
-	{
+    [TdfStruct]
+    public struct ConfirmationRequest
+    {
+        [TdfMember("INFO")]
+        public ContentInfo mContentInfo;
 
-		[TdfMember("INFO")]
-		public ContentInfo mContentInfo;
-
-		[TdfMember("STST")]
-		public UploadStatus mUploadStatus;
-
-	}
+        [TdfMember("STST")]
+        public UploadStatus mUploadStatus;
+    }
 }

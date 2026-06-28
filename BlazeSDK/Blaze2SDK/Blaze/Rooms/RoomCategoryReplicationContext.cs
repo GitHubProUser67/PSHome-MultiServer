@@ -5,7 +5,6 @@ namespace Blaze2SDK.Blaze.Rooms
     [TdfStruct]
     public struct RoomCategoryReplicationContext
     {
-
         [TdfMember("SEID")]
         public uint mUserSessionId;
 
@@ -22,6 +21,5 @@ namespace Blaze2SDK.Blaze.Rooms
             ROOM_EXPANSION_CHANGE = 0x2,
             ATTRIBUTES_UPDATE = 0x3,
         }
-
     }
 }

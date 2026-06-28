@@ -1,7 +1,3 @@
-using System.Linq;
-using System;
-using System.IO;
-using System.Collections.Generic;
 using System.Xml.Linq;
 
 namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.farm.animal
@@ -13,36 +9,47 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.farm.animal
             if (QueryParameters != null)
             {
                 string permBoost = null;
-                string user = QueryParameters["user"];
-                string type = QueryParameters["type"];
-                string id = QueryParameters["id"];
-                string posix = QueryParameters["posix"];
+                var user = QueryParameters["user"];
+                var type = QueryParameters["type"];
+                var id = QueryParameters["id"];
+                var posix = QueryParameters["posix"];
                 try
                 {
                     permBoost = QueryParameters["permBoost"];
                 }
-                catch
-                {
-                }
+                catch { }
 
-                if (!string.IsNullOrEmpty(user) && !string.IsNullOrEmpty(type) && !string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(posix))
+                if (
+                    !string.IsNullOrEmpty(user)
+                    && !string.IsNullOrEmpty(type)
+                    && !string.IsNullOrEmpty(id)
+                    && !string.IsNullOrEmpty(posix)
+                )
                 {
                     Directory.CreateDirectory($"{apiPath}/juggernaut/farm/User_Data");
 
-                    if (string.IsNullOrEmpty(permBoost) && posix.Contains("="))
+                    if (string.IsNullOrEmpty(permBoost) && posix.Contains('='))
                     {
                         const string permDelimiter = "permBoost=";
-                        int permBoostIndex = posix.IndexOf(permDelimiter);
+                        var permBoostIndex = posix.IndexOf(permDelimiter);
                         if (permBoostIndex != -1)
                         {
-                            permBoost = posix.Substring(permBoostIndex + permDelimiter.Length);
-                            posix = posix.Substring(0, permBoostIndex);
+                            permBoost = posix[(permBoostIndex + permDelimiter.Length)..];
+                            posix = posix[..permBoostIndex];
                         }
                     }
 
                     if (File.Exists($"{apiPath}/juggernaut/farm/User_Data/{user}.xml"))
-                        File.WriteAllText($"{apiPath}/juggernaut/farm/User_Data/{user}.xml",
-                                UpdateFedAttributes(File.ReadAllText($"{apiPath}/juggernaut/farm/User_Data/{user}.xml"), id, type, posix, permBoost));
+                        File.WriteAllText(
+                            $"{apiPath}/juggernaut/farm/User_Data/{user}.xml",
+                            UpdateFedAttributes(
+                                File.ReadAllText($"{apiPath}/juggernaut/farm/User_Data/{user}.xml"),
+                                id,
+                                type,
+                                posix,
+                                permBoost
+                            )
+                        );
 
                     return string.Empty;
                 }
@@ -51,14 +58,22 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.farm.animal
             return null;
         }
 
-        private static string UpdateFedAttributes(string xmlData, string id, string type, string posix, string permBoost)
+        private static string UpdateFedAttributes(
+            string xmlData,
+            string id,
+            string type,
+            string posix,
+            string permBoost
+        )
         {
             try
             {
-                XDocument xdoc = XDocument.Parse(xmlData);
+                var xdoc = XDocument.Parse(xmlData);
 
-                XElement animalToUpdate = xdoc.Descendants("animal")
-                    .FirstOrDefault(a => a.Element("id")?.Value == id && a.Element("t")?.Value == type);
+                var animalToUpdate = xdoc.Descendants("animal")
+                    .FirstOrDefault(a =>
+                        a.Element("id")?.Value == id && a.Element("t")?.Value == type
+                    );
 
                 if (animalToUpdate != null)
                 {
@@ -68,10 +83,7 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.farm.animal
 
                 return xdoc.ToString();
             }
-            catch (Exception)
-            {
-
-            }
+            catch (Exception) { }
 
             return xmlData;
         }

@@ -1,13 +1,9 @@
 using CustomLogger;
-using DotNetty.Buffers;
 using DotNetty.Codecs;
 using DotNetty.Transport.Channels;
 using Horizon.RT.Common;
 using Horizon.RT.Cryptography;
 using Horizon.RT.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Horizon.LIBRARY.Pipeline.Tcp
 {
@@ -25,7 +21,11 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
             };
         }
 
-        protected override void Encode(IChannelHandlerContext ctx, BaseScertMessage message, List<object> output)
+        protected override void Encode(
+            IChannelHandlerContext ctx,
+            BaseScertMessage message,
+            List<object> output
+        )
         {
             if (message is null)
                 return;
@@ -36,14 +36,20 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
 
             if (!ctx.HasAttribute(Constants.SCERT_CLIENT))
                 ctx.GetAttribute(Constants.SCERT_CLIENT).Set(new Attribute.ScertClientAttribute());
-            Attribute.ScertClientAttribute scertClient = ctx.GetAttribute(Constants.SCERT_CLIENT).Get();
+            var scertClient = ctx.GetAttribute(Constants.SCERT_CLIENT).Get();
 
             scertClient.OnMessage(message);
 
             // Serialize
-            foreach (byte[] msg in message.Serialize(scertClient.MediusVersion, scertClient.ApplicationID, scertClient.CipherService))
+            foreach (
+                var msg in message.Serialize(
+                    scertClient.MediusVersion,
+                    scertClient.ApplicationID,
+                    scertClient.CipherService
+                )
+            )
             {
-                IByteBuffer byteBuffer = ctx.Allocator.Buffer(msg.Length);
+                var byteBuffer = ctx.Allocator.Buffer(msg.Length);
                 byteBuffer.WriteBytes(msg);
                 output.Add(byteBuffer);
             }
@@ -51,7 +57,9 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
 
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            LoggerAccessor.LogError($"[ScertEncoder] - Tcp: An assertion was caught. (Exception:{exception})");
+            LoggerAccessor.LogError(
+                $"[ScertEncoder] - Tcp: An assertion was caught. (Exception:{exception})"
+            );
             _ = context.CloseAsync();
         }
     }

@@ -5,7 +5,6 @@ namespace Blaze2SDK.Blaze.Playgroups
     [TdfStruct]
     public struct PlaygroupMemberInfo
     {
-
         /// <summary>
         /// Max Key String Length: 32
         /// Max Value String Length: 256
@@ -27,6 +26,5 @@ namespace Blaze2SDK.Blaze.Playgroups
 
         [TdfMember("USER")]
         public UserIdentification mUser;
-
     }
 }

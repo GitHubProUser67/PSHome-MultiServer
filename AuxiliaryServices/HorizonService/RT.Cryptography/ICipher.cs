@@ -13,7 +13,7 @@ namespace Horizon.RT.Cryptography
         ID_04,
         ID_05,
         ID_06,
-        RSA_AUTH
+        RSA_AUTH,
     }
 
     public interface ICipher

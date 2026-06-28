@@ -1,10 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.AddPlayerToClanResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.AddPlayerToClanResponse
+    )]
     public class MediusAddPlayerToClanResponse : BaseLobbyMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusLobbyMessageIds.AddPlayerToClanResponse;
@@ -32,12 +34,13 @@ namespace Horizon.RT.Models
             writer.Write(StatusCode);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{MessageID}" + " " +
-                $"StatusCode:{StatusCode}";
+            return base.ToString()
+                + " "
+                + $"MessageID:{MessageID}"
+                + " "
+                + $"StatusCode:{StatusCode}";
         }
     }
 }

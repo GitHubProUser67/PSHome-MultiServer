@@ -1,12 +1,27 @@
 using Horizon.RT.Cryptography;
 using Horizon.RT.Cryptography.RSA;
 using Horizon.RT.Models;
+using Org.BouncyCastle.Math;
 
 namespace Horizon.LIBRARY.Pipeline.Attribute
 {
     public class ScertClientAttribute
     {
-        public static RsaKeyPair DefaultRsaAuthKey = null;
+        /// <summary>
+        /// Key used to authenticate clients.
+        /// </summary>
+        public static RsaKeyPair DefaultRsaAuthKey { get; set; } =
+            new(
+                new BigInteger(
+                    "10315955513017997681600210131013411322695824559688299373570246338038100843097466504032586443986679280716603540690692615875074465586629501752500179100369237",
+                    10
+                ),
+                new BigInteger("17", 10),
+                new BigInteger(
+                    "4854567300243763614870687120476899445974505675147434999327174747312047455575182761195687859800492317495944895566174677168271650454805328075020357360662513",
+                    10
+                )
+            );
 
         public int? MediusVersion { get; set; }
         public int ApplicationID { get; set; }
@@ -55,12 +70,18 @@ namespace Horizon.LIBRARY.Pipeline.Attribute
             if (IsPS3Client)
             {
                 CipherService = new CipherService(new PS3CipherFactory());
-                CipherService.SetCipher(CipherContext.RSA_AUTH, (RsaAuthKey ?? DefaultRsaAuthKey).ToPS3());
+                CipherService.SetCipher(
+                    CipherContext.RSA_AUTH,
+                    (RsaAuthKey ?? DefaultRsaAuthKey).ToPS3()
+                );
             }
             else
             {
                 CipherService = new CipherService(new PS2CipherFactory());
-                CipherService.SetCipher(CipherContext.RSA_AUTH, (RsaAuthKey ?? DefaultRsaAuthKey).ToPS2());
+                CipherService.SetCipher(
+                    CipherContext.RSA_AUTH,
+                    (RsaAuthKey ?? DefaultRsaAuthKey).ToPS2()
+                );
             }
         }
         #endregion

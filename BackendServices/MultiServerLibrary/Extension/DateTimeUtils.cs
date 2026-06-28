@@ -1,5 +1,4 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace MultiServerLibrary.Extension
 {
@@ -38,9 +37,11 @@ namespace MultiServerLibrary.Extension
 
         public static long ToUnixTime(this DateTime time)
         {
-            return (time.Kind == DateTimeKind.Utc
-                 ? new DateTimeOffset(time)
-                 : new DateTimeOffset(time.ToUniversalTime())).ToUnixTimeSeconds();
+            return (
+                time.Kind == DateTimeKind.Utc
+                    ? new DateTimeOffset(time)
+                    : new DateTimeOffset(time.ToUniversalTime())
+            ).ToUnixTimeSeconds();
         }
 
         public static DateTime ToUtcDateTime(this uint unixTime)

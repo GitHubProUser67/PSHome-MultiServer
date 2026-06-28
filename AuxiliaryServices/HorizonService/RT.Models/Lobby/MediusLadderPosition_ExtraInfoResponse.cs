@@ -1,13 +1,16 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.LadderPosition_ExtraInfoResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.LadderPosition_ExtraInfoResponse
+    )]
     public class MediusLadderPosition_ExtraInfoResponse : BaseLobbyMessage, IMediusResponse
     {
-        public override byte PacketType => (byte)MediusLobbyMessageIds.LadderPosition_ExtraInfoResponse;
+        public override byte PacketType =>
+            (byte)MediusLobbyMessageIds.LadderPosition_ExtraInfoResponse;
 
         public bool IsSuccess => StatusCode >= 0;
 
@@ -19,13 +22,10 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             reader.ReadBytes(3);
             StatusCode = reader.Read<MediusCallbackStatus>();
             LadderPosition = reader.ReadUInt32();
@@ -34,27 +34,24 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(new byte[3]);
             writer.Write(StatusCode);
             writer.Write(LadderPosition);
             writer.Write(TotalRankings);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"LadderPosition: {LadderPosition} " +
-                $"TotalRankings: {TotalRankings}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"LadderPosition: {LadderPosition} "
+                + $"TotalRankings: {TotalRankings}";
         }
     }
 }

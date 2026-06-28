@@ -2,7 +2,8 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 {
     public static class LUAJaminCode
     {
-        public const string LUAJaminDecryptor = @"--
+        public const string LUAJaminDecryptor =
+            @"--
 -- Encode Lua values as strings and decode those strings back into Lua values.
 -- The name is a bad pun on Bencode on which it is based.
 --
@@ -1297,7 +1298,8 @@ return json.encode(Jamin.decode(PUT_FORMATEDJAMINVALUE_HERE))
 
 -------------------- End Custom code for PSMultiServer";
 
-        public const string LUAJaminEncryptor = @"--
+        public const string LUAJaminEncryptor =
+            @"--
 -- Encode Lua values as strings and decode those strings back into Lua values.
 -- The name is a bad pun on Bencode on which it is based.
 --

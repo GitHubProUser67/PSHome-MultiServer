@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -11,6 +10,7 @@ namespace Horizon.RT.Models
         /// the string. This means that the effective meta-data key length is 63 bytes.
         /// </summary>
         public string Key;
+
         /// <summary>
         /// Maximum bytes of file meta-data value. This length includes the null terminating byte at the end of the<Br></Br>
         /// string. This means that the effective value length is 255 bytes.
@@ -31,8 +31,7 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return $"MetaKey: {Key} " +
-                $"MetaValue: {Value}";
+            return $"MetaKey: {Key} " + $"MetaValue: {Value}";
         }
     }
 }

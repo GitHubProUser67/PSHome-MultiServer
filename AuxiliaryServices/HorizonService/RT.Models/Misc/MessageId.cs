@@ -1,12 +1,11 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     public class MessageId : IStreamSerializer
     {
-        public readonly static MessageId Empty = new MessageId(string.Empty);
+        public static readonly MessageId Empty = new(string.Empty);
 
         public string Value { get; protected set; }
 

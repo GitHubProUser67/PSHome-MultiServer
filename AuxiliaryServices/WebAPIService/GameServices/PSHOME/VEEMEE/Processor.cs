@@ -1,9 +1,7 @@
-using System;
+using System.Text;
+using CastleLibrary.NetHasher;
 using CustomLogger;
 using Newtonsoft.Json.Linq;
-using System.Text;
-using System.Collections.Generic;
-using NetHasher;
 
 namespace WebAPIService.GameServices.PSHOME.VEEMEE
 {
@@ -15,25 +13,26 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE
         {
             try
             {
-                string formattedJson = JToken.Parse(jsonData.Replace("\n", string.Empty)).ToString(Newtonsoft.Json.Formatting.None);
+                var formattedJson = JToken
+                    .Parse(jsonData.Replace("\n", string.Empty))
+                    .ToString(Newtonsoft.Json.Formatting.None);
 
-                string hash = DotNetHasher.ComputeSHA1String(Encoding.UTF8.GetBytes($"{HashSalt}{formattedJson}"));
+                var hash = DotNetHasher.ComputeSHA1String(
+                    Encoding.UTF8.GetBytes($"{HashSalt}{formattedJson}")
+                );
 
-                JToken token = JToken.Parse(formattedJson);
+                var token = JToken.Parse(formattedJson);
 
                 if (token.Type == JTokenType.Object)
                 {
-                    JObject obj = (JObject)token;
+                    var obj = (JObject)token;
                     obj["hash"] = hash;
                     formattedJson = obj.ToString(Newtonsoft.Json.Formatting.None);
                 }
                 else if (token.Type == JTokenType.Array)
                 {
-                    JArray array = (JArray)token;
-                    JObject obj = new JObject
-                    {
-                        ["hash"] = hash
-                    };
+                    var array = (JArray)token;
+                    var obj = new JObject { ["hash"] = hash };
                     array.Add(obj);
                     formattedJson = array.ToString(Newtonsoft.Json.Formatting.None);
                 }
@@ -42,19 +41,24 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[VEEMEE] : Exception in Sign, file might be incorrect : {ex}");
+                LoggerAccessor.LogError(
+                    $"[VEEMEE] : Exception in Sign, file might be incorrect : {ex}"
+                );
             }
 
             return null;
         }
 
-        public static string GetVerificationSalt(string hex, Dictionary<string, string> PostDataKeyValuesDic = null)
+        public static string GetVerificationSalt(
+            string hex,
+            Dictionary<string, string> PostDataKeyValuesDic = null
+        )
         {
-            string localSalt = HashSalt;
+            var localSalt = HashSalt;
 
             if (PostDataKeyValuesDic != null)
             {
-                foreach (KeyValuePair<string, string> KeyPair in PostDataKeyValuesDic)
+                foreach (var KeyPair in PostDataKeyValuesDic)
                 {
                     localSalt = localSalt + KeyPair.Key + KeyPair.Value;
                 }

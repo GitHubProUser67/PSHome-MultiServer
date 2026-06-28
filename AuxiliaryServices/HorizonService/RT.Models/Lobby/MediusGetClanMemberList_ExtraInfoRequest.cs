@@ -1,10 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.GetClanMemberList_ExtraInfo)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.GetClanMemberList_ExtraInfo
+    )]
     public class MediusGetClanMemberList_ExtraInfoRequest : BaseLobbyMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusLobbyMessageIds.GetClanMemberList_ExtraInfo;
@@ -43,11 +45,12 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"ClanID: {ClanID} " +
-                $"LadderStatIndex: {LadderStatIndex} " +
-                $"SortOrder: {SortOrder}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"ClanID: {ClanID} "
+                + $"LadderStatIndex: {LadderStatIndex} "
+                + $"SortOrder: {SortOrder}";
         }
     }
 }

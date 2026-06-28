@@ -1,7 +1,5 @@
-﻿using MultiServerLibrary.Extension;
-using System.IO;
-using System.Text;
-using System.Windows.Forms;
+﻿using System.Text;
+using MultiServerLibrary.Extension;
 
 namespace RemoteControl
 {
@@ -9,18 +7,22 @@ namespace RemoteControl
     {
         public static string OpenExecutableFile(this TextBox textBox)
         {
-            OpenFileDialog ofd = new OpenFileDialog()
+            var ofd = new OpenFileDialog()
             {
                 Title = "Please select an exe file.",
                 InitialDirectory = Program.currentDir,
-                Filter = "Executable files (*.exe)|*.exe"
+                Filter = "Executable files (*.exe)|*.exe",
             };
 
             if (ofd.ShowDialog() == DialogResult.OK)
             {
-                string fileName = ofd.FileName;
+                var fileName = ofd.FileName;
 
-                if (Encoding.ASCII.GetString(FileSystemUtils.TryReadFileChunck(fileName, 2, FileShare.ReadWrite)) == "MZ")
+                if (
+                    Encoding.ASCII.GetString(
+                        FileSystemUtils.TryReadFileChunck(fileName, 2, FileShare.ReadWrite)
+                    ) == "MZ"
+                )
                 {
                     textBox.Text = fileName;
                     return fileName;
@@ -37,7 +39,9 @@ namespace RemoteControl
             if (string.IsNullOrEmpty(exePath))
                 return null;
 
-            string result = Path.GetDirectoryName(exePath) + $"/static/{Path.GetFileNameWithoutExtension(exePath)}.json";
+            var result =
+                Path.GetDirectoryName(exePath)
+                + $"/static/{Path.GetFileNameWithoutExtension(exePath)}.json";
 
             textBox.Text = result;
 

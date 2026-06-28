@@ -1,6 +1,5 @@
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
-using QuazalServer.RDVServices.RMC;
 
 namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 {
@@ -14,7 +13,13 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         }
 
         [RMCMethod(2)]
-        public void PostFBMessage(string message, string urlText, string urlhref, string urlCaption, string urlDescription)
+        public void PostFBMessage(
+            string message,
+            string urlText,
+            string urlhref,
+            string urlCaption,
+            string urlDescription
+        )
         {
             UNIMPLEMENTED();
         }

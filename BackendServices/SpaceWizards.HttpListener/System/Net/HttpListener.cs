@@ -1,32 +1,29 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections;
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
-#endif
-using System.Collections.Generic;
 using System.Net;
+using System.Security.Authentication;
 using System.Security.Authentication.ExtendedProtection;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading.Tasks;
-using System.Security.Cryptography;
 using MultiServerLibrary.SSL;
-using System.Security.Authentication;
 
 namespace SpaceWizards.HttpListener
 {
     public sealed unsafe partial class HttpListener : IDisposable
     {
-        public delegate ExtendedProtectionPolicy ExtendedProtectionSelector(HttpListenerRequest request);
+        public delegate ExtendedProtectionPolicy ExtendedProtectionSelector(
+            HttpListenerRequest request
+        );
         public bool wildcardCertificates = false;
 
         private readonly object _internalLock;
         private volatile State _state; // _state is set only within lock blocks, but often read outside locks.
         private readonly HttpListenerPrefixCollection _prefixes;
-        internal Hashtable _uriPrefixes = new Hashtable();
+        internal Hashtable _uriPrefixes = new();
         private bool _ignoreWriteExceptions;
         private readonly ServiceNameStore _defaultServiceNames;
         private readonly HttpListenerTimeoutManager _timeoutManager;
@@ -39,11 +36,7 @@ namespace SpaceWizards.HttpListener
         private HashAlgorithmName _hashAlgorithm = HashAlgorithmName.SHA384;
 #pragma warning disable
         private SslProtocols _sslprotocols =
-#if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
             SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
-#else
-            SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
-#endif
 #pragma warning restore
         internal ICollection PrefixCollection => _uriPrefixes.Keys;
 
@@ -71,19 +64,14 @@ namespace SpaceWizards.HttpListener
             }
         }
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
         [DisallowNull]
-#endif
         public ExtendedProtectionSelector ExtendedProtectionSelectorDelegate
         {
             get => _extendedProtectionSelectorDelegate;
             set
             {
                 CheckDisposed();
-                if (value == null)
-                {
-                    throw new ArgumentNullException(nameof(value));
-                }
+                ArgumentNullException.ThrowIfNull(value);
 
                 _extendedProtectionSelectorDelegate = value;
             }
@@ -105,13 +93,13 @@ namespace SpaceWizards.HttpListener
             set
             {
                 CheckDisposed();
-                if (value == null)
-                {
-                    throw new ArgumentNullException(nameof(value));
-                }
+                ArgumentNullException.ThrowIfNull(value);
                 if (value.CustomChannelBinding != null)
                 {
-                    throw new ArgumentException(SR.net_listener_cannot_set_custom_cbt, nameof(value));
+                    throw new ArgumentException(
+                        SR.net_listener_cannot_set_custom_cbt,
+                        nameof(value)
+                    );
                 }
 
                 _extendedProtectionPolicy = value;
@@ -134,30 +122,30 @@ namespace SpaceWizards.HttpListener
             string registeredPrefix = null;
             try
             {
-                if (uriPrefix == null)
-                {
-                    throw new ArgumentNullException(nameof(uriPrefix));
-                }
+                ArgumentNullException.ThrowIfNull(uriPrefix);
                 CheckDisposed();
-                int i;
-                if (string.Compare(uriPrefix, 0, "http://", 0, 7, StringComparison.OrdinalIgnoreCase) == 0)
-                {
-                    i = 7;
-                }
-                else if (string.Compare(uriPrefix, 0, "https://", 0, 8, StringComparison.OrdinalIgnoreCase) == 0)
-                {
-                    i = 8;
-                }
-                else
-                {
-                    throw new ArgumentException(SR.net_listener_scheme, nameof(uriPrefix));
-                }
+                var i =
+                    string.Compare(
+                        uriPrefix,
+                        0,
+                        "http://",
+                        0,
+                        7,
+                        StringComparison.OrdinalIgnoreCase
+                    ) == 0
+                        ? 7
+                    : string.Compare(
+                        uriPrefix,
+                        0,
+                        "https://",
+                        0,
+                        8,
+                        StringComparison.OrdinalIgnoreCase
+                    ) == 0
+                        ? 8
+                    : throw new ArgumentException(SR.net_listener_scheme, nameof(uriPrefix));
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
-                int j = ServiceNameStore.FindEndOfHostname(uriPrefix, i);
-#else
-                int j = ServiceNameStore.FindEndOfHostname(uriPrefix.AsSpan(), i);
-#endif
+                var j = ServiceNameStore.FindEndOfHostname(uriPrefix, i);
                 if (i == j)
                 {
                     throw new ArgumentException(SR.net_listener_host, nameof(uriPrefix));
@@ -166,7 +154,7 @@ namespace SpaceWizards.HttpListener
                 {
                     throw new ArgumentException(SR.net_listener_slash, nameof(uriPrefix));
                 }
-                StringBuilder registeredPrefixBuilder = new StringBuilder();
+                var registeredPrefixBuilder = new StringBuilder();
                 if (uriPrefix[j] == ':')
                 {
                     registeredPrefixBuilder.Append(uriPrefix);
@@ -179,10 +167,15 @@ namespace SpaceWizards.HttpListener
                 }
                 for (i = 0; registeredPrefixBuilder[i] != ':'; i++)
                 {
-                    registeredPrefixBuilder[i] = (char)CaseInsensitiveAscii.AsciiToLower[(byte)registeredPrefixBuilder[i]];
+                    registeredPrefixBuilder[i] = (char)
+                        CaseInsensitiveAscii.AsciiToLower[(byte)registeredPrefixBuilder[i]];
                 }
                 registeredPrefix = registeredPrefixBuilder.ToString();
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"mapped uriPrefix: {uriPrefix} to registeredPrefix: {registeredPrefix}");
+                if (NetEventSource.Log.IsEnabled())
+                    NetEventSource.Info(
+                        this,
+                        $"mapped uriPrefix: {uriPrefix} to registeredPrefix: {registeredPrefix}"
+                    );
                 if (_state == State.Started)
                 {
                     AddPrefixCore(registeredPrefix);
@@ -192,7 +185,8 @@ namespace SpaceWizards.HttpListener
             }
             catch (Exception exception)
             {
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, exception);
+                if (NetEventSource.Log.IsEnabled())
+                    NetEventSource.Error(this, exception);
                 throw;
             }
         }
@@ -204,11 +198,9 @@ namespace SpaceWizards.HttpListener
             try
             {
                 CheckDisposed();
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"uriPrefix: {uriPrefix}");
-                if (uriPrefix == null)
-                {
-                    throw new ArgumentNullException(nameof(uriPrefix));
-                }
+                if (NetEventSource.Log.IsEnabled())
+                    NetEventSource.Info(this, $"uriPrefix: {uriPrefix}");
+                ArgumentNullException.ThrowIfNull(uriPrefix);
 
                 if (!_uriPrefixes.Contains(uriPrefix))
                 {
@@ -225,7 +217,8 @@ namespace SpaceWizards.HttpListener
             }
             catch (Exception exception)
             {
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, exception);
+                if (NetEventSource.Log.IsEnabled())
+                    NetEventSource.Error(this, exception);
                 throw;
             }
             return true;
@@ -280,25 +273,23 @@ namespace SpaceWizards.HttpListener
             return Task.Factory.FromAsync(
                 (callback, state) => ((HttpListener)state).BeginGetContext(callback, state),
                 iar => ((HttpListener)iar.AsyncState).EndGetContext(iar),
-                this);
+                this
+            );
         }
 
         public void SetCertificate(IPAddress addr, int port, X509Certificate2 certificate)
         {
-#if !NETCOREAPP2_1_OR_GREATER || !NETSTANDARD2_1_OR_GREATER
             if (CertificateHelper.IsCertificateAuthority(certificate))
             {
-                throw new NotSupportedException("The certificate store will only accept Authorities with .NETCORE 2.1 and up or .NETSTANDARD 2.1 and up");
+                throw new NotSupportedException(
+                    "The certificate store will only accept Authorities with .NETCORE 2.1 and up or .NETSTANDARD 2.1 and up"
+                );
             }
-#endif
             (IPAddress, int) cacheEntry = (addr, port);
 
             lock (_internalLock)
             {
-                if (_certificateCache == null)
-                {
-                    _certificateCache = new Dictionary<(IPAddress, int), X509Certificate2>();
-                }
+                _certificateCache ??= new Dictionary<(IPAddress, int), X509Certificate2>();
 
                 if (!_certificateCache.ContainsKey(cacheEntry))
                 {
@@ -323,36 +314,29 @@ namespace SpaceWizards.HttpListener
 
         public SslProtocols SslProtocols
         {
-            get
-            {
-                return _sslprotocols;
-            }
-            set
-            {
-                _sslprotocols = value;
-            }
+            get { return _sslprotocols; }
+            set { _sslprotocols = value; }
         }
 
         public void Close()
         {
             try
             {
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Info("HttpListenerRequest::Close()");
+                if (NetEventSource.Log.IsEnabled())
+                    NetEventSource.Info("HttpListenerRequest::Close()");
                 ((IDisposable)this).Dispose();
             }
             catch (Exception exception)
             {
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, $"Close {exception}");
+                if (NetEventSource.Log.IsEnabled())
+                    NetEventSource.Error(this, $"Close {exception}");
                 throw;
             }
         }
 
         internal void CheckDisposed()
         {
-            if (_state == State.Closed)
-            {
-                throw new ObjectDisposedException(GetType().FullName);
-            }
+            ObjectDisposedException.ThrowIf(_state == State.Closed, this);
         }
 
         private enum State

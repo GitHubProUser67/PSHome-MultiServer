@@ -1,31 +1,41 @@
-using System;
-using System.IO;
 using CustomLogger;
-using Newtonsoft.Json.Linq;
 using HttpMultipartParser;
-using Newtonsoft.Json;
 using MultiServerLibrary.HTTP;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace WebAPIService.GameServices.PSHOME.OHS
 {
     public class Community
     {
-        public static string Community_Getscore(byte[] PostData, string ContentType, string directorypath, string batchparams, int game)
+        public static string Community_Getscore(
+            byte[] PostData,
+            string ContentType,
+            string directorypath,
+            string batchparams,
+            int game
+        )
         {
             string dataforohs = null;
-            int output = 0;
+            var output = 0;
 
             if (string.IsNullOrEmpty(batchparams))
             {
-                string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+                var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
                 if (!string.IsNullOrEmpty(boundary))
                 {
-                    using (MemoryStream ms = new MemoryStream(PostData))
+                    using (var ms = new MemoryStream(PostData))
                     {
                         var data = MultipartFormDataParser.Parse(ms, boundary);
-                        LoggerAccessor.LogInfo($"[OHS] : Client Version - {data.GetParameterValue("version")}");
-                        dataforohs = JaminProcessor.JaminDeFormat(data.GetParameterValue("data"), true, game);
+                        LoggerAccessor.LogInfo(
+                            $"[OHS] : Client Version - {data.GetParameterValue("version")}"
+                        );
+                        dataforohs = JaminProcessor.JaminDeFormat(
+                            data.GetParameterValue("data"),
+                            true,
+                            game
+                        );
                         ms.Flush();
                     }
                 }
@@ -37,18 +47,24 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             {
                 if (!string.IsNullOrEmpty(dataforohs))
                 {
-                    JToken Token = JToken.Parse(dataforohs);
+                    var Token = JToken.Parse(dataforohs);
 
                     if (Token != null)
                     {
-                        object key = JtokenUtils.GetValueFromJToken(Token, "key");
+                        var key = JtokenUtils.GetValueFromJToken(Token, "key");
 
                         if (key != null)
                         {
                             if (File.Exists(directorypath + $"/Community_Profiles/{key}.json"))
                             {
                                 // Check if the key name already exists in the JSON
-                                JToken existingKey = JObject.Parse(File.ReadAllText(directorypath + $"/Community_Profiles/{key}.json"))?.SelectToken($"$..{key}");
+                                var existingKey = JObject
+                                    .Parse(
+                                        File.ReadAllText(
+                                            directorypath + $"/Community_Profiles/{key}.json"
+                                        )
+                                    )
+                                    ?.SelectToken($"$..{key}");
 
                                 if (existingKey != null)
                                     // Get the value of the existing key
@@ -63,28 +79,42 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 LoggerAccessor.LogError($"[Community] - Json Format Error - {ex}");
             }
 
-            if (!string.IsNullOrEmpty(batchparams))
-                return "{ [\"score\"] = " + output.ToString() + " }";
-
-            return JaminProcessor.JaminFormat($"{{ [\"status\"] = \"success\", [\"value\"] = {{ [\"score\"] = {output} }} }}", game);
+            return !string.IsNullOrEmpty(batchparams)
+                ? "{ [\"score\"] = " + output.ToString() + " }"
+                : JaminProcessor.JaminFormat(
+                    $"{{ [\"status\"] = \"success\", [\"value\"] = {{ [\"score\"] = {output} }} }}",
+                    game
+                );
         }
 
-        public static string Community_UpdateScore(byte[] PostData, string ContentType, string directorypath, string batchparams, int game)
+        public static string Community_UpdateScore(
+            byte[] PostData,
+            string ContentType,
+            string directorypath,
+            string batchparams,
+            int game
+        )
         {
             string dataforohs = null;
-            int output = 0;
+            var output = 0;
 
             if (string.IsNullOrEmpty(batchparams))
             {
-                string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+                var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
                 if (!string.IsNullOrEmpty(boundary))
                 {
-                    using (MemoryStream ms = new MemoryStream(PostData))
+                    using (var ms = new MemoryStream(PostData))
                     {
                         var data = MultipartFormDataParser.Parse(ms, boundary);
-                        LoggerAccessor.LogInfo($"[OHS] : Client Version - {data.GetParameterValue("version")}");
-                        dataforohs = JaminProcessor.JaminDeFormat(data.GetParameterValue("data"), true, game);
+                        LoggerAccessor.LogInfo(
+                            $"[OHS] : Client Version - {data.GetParameterValue("version")}"
+                        );
+                        dataforohs = JaminProcessor.JaminDeFormat(
+                            data.GetParameterValue("data"),
+                            true,
+                            game
+                        );
                         ms.Flush();
                     }
                 }
@@ -96,28 +126,33 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             {
                 if (!string.IsNullOrEmpty(dataforohs))
                 {
-                    JToken Token = JToken.Parse(dataforohs);
+                    var Token = JToken.Parse(dataforohs);
 
                     if (Token != null)
                     {
-                        object key = JtokenUtils.GetValueFromJToken(Token, "key");
+                        var key = JtokenUtils.GetValueFromJToken(Token, "key");
 
-                        int inc = Convert.ToInt32(JtokenUtils.GetValueFromJToken(Token, "inc"));
+                        var inc = Convert.ToInt32(JtokenUtils.GetValueFromJToken(Token, "inc"));
 
                         Directory.CreateDirectory(directorypath + $"/Community_Profiles");
 
-                        if (File.Exists(directorypath + $"/Community_Profiles/{key}.json") && key != null)
+                        if (
+                            File.Exists(directorypath + $"/Community_Profiles/{key}.json")
+                            && key != null
+                        )
                         {
-                            string tempreader = File.ReadAllText(directorypath + $"/Community_Profiles/{key}.json");
+                            var tempreader = File.ReadAllText(
+                                directorypath + $"/Community_Profiles/{key}.json"
+                            );
 
                             if (!string.IsNullOrEmpty(tempreader))
                             {
-                                JObject jObject = JObject.Parse(tempreader);
+                                var jObject = JObject.Parse(tempreader);
 
                                 if (jObject != null)
                                 {
                                     // Check if the key name already exists in the JSON
-                                    JToken existingKey = jObject.SelectToken($"$..{key}");
+                                    var existingKey = jObject.SelectToken($"$..{key}");
 
                                     if (existingKey != null)
                                     {
@@ -126,7 +161,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                                     }
                                     else if (key != null)
                                     {
-                                        string keyname = key.ToString();
+                                        var keyname = key.ToString();
                                         if (keyname != null)
                                         {
                                             output = inc;
@@ -135,7 +170,10 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                                     }
                                 }
 
-                                File.WriteAllText(directorypath + $"/Community_Profiles/{key}.json", JsonConvert.SerializeObject(jObject, Formatting.Indented));
+                                File.WriteAllText(
+                                    directorypath + $"/Community_Profiles/{key}.json",
+                                    JsonConvert.SerializeObject(jObject, Formatting.Indented)
+                                );
                             }
                         }
                         else if (key != null)
@@ -144,7 +182,10 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
                             Directory.CreateDirectory(directorypath + "/Community_Profiles");
 
-                            File.WriteAllText(directorypath + $"/Community_Profiles/{key}.json", $"{{ \"{key}\":{inc} }}");
+                            File.WriteAllText(
+                                directorypath + $"/Community_Profiles/{key}.json",
+                                $"{{ \"{key}\":{inc} }}"
+                            );
                         }
                     }
                 }
@@ -154,10 +195,12 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 LoggerAccessor.LogError($"[Community] - Json Format Error - {ex}");
             }
 
-            if (!string.IsNullOrEmpty(batchparams))
-                return "{ [\"score\"] = " + output.ToString() + " }";
-
-            return JaminProcessor.JaminFormat($"{{ [\"status\"] = \"success\", [\"value\"] = {{ [\"score\"] = {output} }} }}", game);
+            return !string.IsNullOrEmpty(batchparams)
+                ? "{ [\"score\"] = " + output.ToString() + " }"
+                : JaminProcessor.JaminFormat(
+                    $"{{ [\"status\"] = \"success\", [\"value\"] = {{ [\"score\"] = {output} }} }}",
+                    game
+                );
         }
     }
 }

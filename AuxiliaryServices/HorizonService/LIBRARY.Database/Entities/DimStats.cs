@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Horizon.LIBRARY.Database.Entities
 {
     public partial class DimStats

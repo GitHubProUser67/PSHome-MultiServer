@@ -1,18 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-	<IsTrimmable>true</IsTrimmable>
-	<IsPublishable>false</IsPublishable>
-	<Version>8.0.7.0</Version>
-  </PropertyGroup>
-
-  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- "latest" works on local PC but not in build pipeline; Visual Studio version difference? Whatever, preview it is. -->
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsTrimmable
+      Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))"
+      >true</IsTrimmable
+    >
+    <IsPublishable>false</IsPublishable>
+    <Version>8.0.7.0</Version>
     <NoWarn>1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MultiServerLibrary\MultiServerLibrary.csproj" />
   </ItemGroup>
-
 </Project>

@@ -1,13 +1,14 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.BinaryFwdMessage1)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.BinaryFwdMessage1
+    )]
     public class MediusBinaryFwdMessage1 : BaseLobbyExtMessage
     {
-
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.BinaryFwdMessage1;
 
         public MessageId MessageID { get; set; }
@@ -43,12 +44,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{MessageID} " +
-                $"OriginatorAccountID:{OriginatorAccountID} " +
-                $"MessageType:{MessageType} " +
-                $"MessageSize: {MessageSize} " +
-                $"Message:{string.Join(string.Empty, System.BitConverter.ToString(Message))}";
+            return base.ToString()
+                + " "
+                + $"MessageID:{MessageID} "
+                + $"OriginatorAccountID:{OriginatorAccountID} "
+                + $"MessageType:{MessageType} "
+                + $"MessageSize: {MessageSize} "
+                + $"Message:{string.Join(string.Empty, System.BitConverter.ToString(Message))}";
         }
     }
 }

@@ -1,7 +1,6 @@
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
 using QuazalServer.RDVServices.DDL.Models;
-using QuazalServer.RDVServices.RMC;
 
 namespace QuazalServer.RDVServices.GameServices.v2Services
 {

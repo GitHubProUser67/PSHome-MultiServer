@@ -1,31 +1,33 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.BanPlayer)]
     public class MediusBanPlayerRequest : BaseLobbyMessage
     {
-
         public override byte PacketType => (byte)MediusLobbyMessageIds.BanPlayer;
 
         /// <summary>
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Session Key
         /// </summary>
         public string SessionKey; // SESSIONKEY_MAXLEN
+
         /// <summary>
         /// BanAccountID
         /// </summary>
         public int BanAccountID;
+
         /// <summary>
         /// BanMinutes
         /// </summary>
         public int BanMinutes;
+
         /// <summary>
         /// MediusWorldID
         /// </summary>
@@ -60,16 +62,16 @@ namespace Horizon.RT.Models
             writer.Write(AppType);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"AccountID of Player to ban {BanAccountID} " +
-                $"Minutes to ban player {BanMinutes} " +
-                $"MediusWorldID: {MediusWorldID} " +
-                $"AppType: {AppType}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"AccountID of Player to ban {BanAccountID} "
+                + $"Minutes to ban player {BanMinutes} "
+                + $"MediusWorldID: {MediusWorldID} "
+                + $"AppType: {AppType}";
         }
     }
 }

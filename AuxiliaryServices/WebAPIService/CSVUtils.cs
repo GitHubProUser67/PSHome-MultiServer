@@ -1,10 +1,5 @@
-﻿using CustomLogger;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
+using CustomLogger;
 
 namespace WebAPIService
 {
@@ -23,13 +18,13 @@ namespace WebAPIService
             string filePath,
             IEnumerable<string> csvLines,
             bool delete,
-            string headerLine = null)
+            string headerLine = null
+        )
         {
             if (string.IsNullOrWhiteSpace(filePath))
                 throw new ArgumentException("File path cannot be null or empty.", nameof(filePath));
-            if (csvLines == null)
-                throw new ArgumentNullException(nameof(csvLines));
-            
+            ArgumentNullException.ThrowIfNull(csvLines);
+
             var inputLines = csvLines
                 .Where(line => line != null)
                 .Select(line => line.TrimEnd('\r', '\n'))
@@ -39,25 +34,26 @@ namespace WebAPIService
             if (inputLines.Count == 0)
                 return;
 
-            bool updated = false;
-            string targetClanId = string.Empty;
-            string targetClanName = string.Empty;
-            string targetUsername = string.Empty;
+            var updated = false;
+            var targetClanId = string.Empty;
+            var targetClanName = string.Empty;
+            var targetUsername = string.Empty;
 
             Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
 
-            string[] allLines = Array.Empty<string>();
-            bool fileExists = File.Exists(filePath);
-            bool isNewFile = !fileExists || new FileInfo(filePath).Length == 0;
+            string[] allLines = [];
+            var fileExists = File.Exists(filePath);
+            var isNewFile = !fileExists || new FileInfo(filePath).Length == 0;
 
             if (!isNewFile)
                 // Read all existing lines
-                allLines = await File.ReadAllLinesAsync(filePath, Encoding.UTF8).ConfigureAwait(false);
+                allLines = await File.ReadAllLinesAsync(filePath, Encoding.UTF8)
+                    .ConfigureAwait(false);
 
             var resultLines = new List<string>(allLines);
 
             // Take the first input line for potential update (the one containing clanId and username)
-            string primaryLine = inputLines[0];
+            var primaryLine = inputLines[0];
             var primaryFields = ParseCsvLine(primaryLine);
 
             switch (filePath.Split("/").LastOrDefault())
@@ -67,13 +63,15 @@ namespace WebAPIService
                         targetClanId = primaryFields[0].Trim();
                         targetUsername = primaryFields[3].Trim();
 
-                        for (int i = 0; i < resultLines.Count; i++)
+                        for (var i = 0; i < resultLines.Count; i++)
                         {
                             // Skip header if you have one (optional – adjust if your header shouldn't be checked)
                             var fields = ParseCsvLine(resultLines[i]);
-                            if (fields.Length >= 4 &&
-                                fields[0].Trim() == targetClanId &&
-                                fields[3].Trim() == targetUsername)
+                            if (
+                                fields.Length >= 4
+                                && fields[0].Trim() == targetClanId
+                                && fields[3].Trim() == targetUsername
+                            )
                             {
                                 // Replace the existing line
                                 resultLines[i] = primaryLine;
@@ -93,13 +91,15 @@ namespace WebAPIService
                     targetClanId = primaryFields[0].Trim();
                     targetClanName = primaryFields[1].Trim();
 
-                    for (int i = 0; i < resultLines.Count; i++)
+                    for (var i = 0; i < resultLines.Count; i++)
                     {
                         // Skip header if you have one (optional – adjust if your header shouldn't be checked)
                         var fields = ParseCsvLine(resultLines[i]);
-                        if (fields.Length >= 4 &&
-                            fields[0].Trim() == targetClanId &&
-                            fields[1].Trim() == targetClanName)
+                        if (
+                            fields.Length >= 4
+                            && fields[0].Trim() == targetClanId
+                            && fields[1].Trim() == targetClanName
+                        )
                         {
                             // Replace the existing line
                             resultLines[i] = primaryLine;
@@ -116,18 +116,17 @@ namespace WebAPIService
                     targetClanId = primaryFields[0].Trim();
                     targetUsername = primaryFields[1].Trim();
 
-                    for (int i = 0; i < resultLines.Count; i++)
+                    for (var i = 0; i < resultLines.Count; i++)
                     {
                         // Skip header if you have one (optional – adjust if your header shouldn't be checked)
                         var fields = ParseCsvLine(resultLines[i]);
-                        if (fields.Length >= 4 &&
-                            fields[0].Trim() == targetClanId &&
-                            fields[1].Trim() == targetUsername)
+                        if (
+                            fields.Length >= 4
+                            && fields[0].Trim() == targetClanId
+                            && fields[1].Trim() == targetUsername
+                        )
                         {
-                            if (delete)
-                                resultLines[i] = string.Empty;
-                            else
-                                resultLines[i] = primaryLine;
+                            resultLines[i] = delete ? string.Empty : primaryLine;
 
                             updated = true;
                             break;
@@ -140,11 +139,12 @@ namespace WebAPIService
                     break;
                 default:
                     // Fallback: if primary line doesn't have enough fields, just append it
-                    resultLines.Add(primaryLine); break;
+                    resultLines.Add(primaryLine);
+                    break;
             }
 
             // Append any additional lines beyond the first one
-            for (int i = 1; i < inputLines.Count; i++)
+            for (var i = 1; i < inputLines.Count; i++)
                 resultLines.Add(inputLines[i]);
 
             // Write header only if file is brand new and header provided
@@ -153,7 +153,8 @@ namespace WebAPIService
 
             try
             {
-                await File.WriteAllLinesAsync(filePath, resultLines, Encoding.UTF8).ConfigureAwait(false);
+                await File.WriteAllLinesAsync(filePath, resultLines, Encoding.UTF8)
+                    .ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -169,12 +170,12 @@ namespace WebAPIService
         private static string[] ParseCsvLine(string line)
         {
             var fields = new List<string>();
-            bool inQuotes = false;
+            var inQuotes = false;
             var field = new StringBuilder();
 
-            for (int i = 0; i < line.Length; i++)
+            for (var i = 0; i < line.Length; i++)
             {
-                char c = line[i];
+                var c = line[i];
 
                 if (c == '"')
                 {
@@ -197,13 +198,18 @@ namespace WebAPIService
             }
 
             fields.Add(field.ToString()); // last field
-            return fields.Select(f => f.Trim()).ToArray();
+            return [.. fields.Select(f => f.Trim())];
         }
 
         /// <summary>
         /// Convenience overload: Append a single pre-formatted CSV line.
         /// </summary>
-        public static Task AppendCsvLineAsync(string filePath, string csvLine, bool delete, string headerLine = null)
+        public static Task AppendCsvLineAsync(
+            string filePath,
+            string csvLine,
+            bool delete,
+            string headerLine = null
+        )
         {
             return AppendOrUpdateCsvLinesAsync(filePath, new[] { csvLine }, delete, headerLine);
         }
@@ -211,12 +217,24 @@ namespace WebAPIService
         /// <summary>
         /// Synchronous wrappers (use async where possible to avoid deadlocks)
         /// </summary>
-        public static void AppendCsvLines(string filePath, IEnumerable<string> csvLines, bool delete, string headerLine = null)
+        public static void AppendCsvLines(
+            string filePath,
+            IEnumerable<string> csvLines,
+            bool delete,
+            string headerLine = null
+        )
         {
-            AppendOrUpdateCsvLinesAsync(filePath, csvLines, delete, headerLine).GetAwaiter().GetResult();
+            AppendOrUpdateCsvLinesAsync(filePath, csvLines, delete, headerLine)
+                .GetAwaiter()
+                .GetResult();
         }
 
-        public static void AppendCsvLine(string filePath, string csvLine, bool delete, string headerLine = null)
+        public static void AppendCsvLine(
+            string filePath,
+            string csvLine,
+            bool delete,
+            string headerLine = null
+        )
         {
             AppendCsvLineAsync(filePath, csvLine, delete, headerLine).GetAwaiter().GetResult();
         }
@@ -228,17 +246,16 @@ namespace WebAPIService
         {
             try
             {
-                if (!File.Exists(filePath))
-                    return Array.Empty<string>();
-
-                return await File.ReadAllLinesAsync(filePath).ConfigureAwait(false);
+                return !File.Exists(filePath)
+                    ? []
+                    : await File.ReadAllLinesAsync(filePath).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 LoggerAccessor.LogError(ex, "Failed to read CSV: {FilePath}", filePath);
             }
 
-            return Array.Empty<string>();
+            return [];
         }
     }
 }

@@ -1,14 +1,16 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.AccountUpdateStats_OpenAccess)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.AccountUpdateStats_OpenAccess
+    )]
     public class MediusAccountUpdateStats_OpenAccessRequest : BaseLobbyExtMessage, IMediusRequest
     {
-
-        public override byte PacketType => (byte)MediusLobbyExtMessageIds.AccountUpdateStats_OpenAccess;
+        public override byte PacketType =>
+            (byte)MediusLobbyExtMessageIds.AccountUpdateStats_OpenAccess;
 
         public MessageId MessageID { get; set; }
 
@@ -37,10 +39,11 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"Stats: {System.BitConverter.ToString(Stats)}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"Stats: {System.BitConverter.ToString(Stats)}";
         }
     }
 }

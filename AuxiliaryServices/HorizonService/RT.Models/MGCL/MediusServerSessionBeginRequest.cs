@@ -1,13 +1,14 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyReport, MediusMGCLMessageIds.ServerSessionBeginRequest)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyReport,
+        MediusMGCLMessageIds.ServerSessionBeginRequest
+    )]
     public class MediusServerSessionBeginRequest : BaseMGCLMessage, IMediusRequest
     {
-
         public override byte PacketType => (byte)MediusMGCLMessageIds.ServerSessionBeginRequest;
 
         public MessageId MessageID { get; set; }
@@ -15,6 +16,7 @@ namespace Horizon.RT.Models
         public int ApplicationID;
         public MGCL_GAME_HOST_TYPE ServerType;
         public string ServerVersion; // MGCL_SERVERVERSION_MAXLEN
+
         /// <summary>
         /// Not used in version 2.10
         /// </summary>
@@ -46,16 +48,16 @@ namespace Horizon.RT.Models
             writer.Write(Port);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"LocationID: {LocationID} " +
-                $"ApplicationID: {ApplicationID} " +
-                $"ServerType: {ServerType} " +
-                $"ServerVersion: {ServerVersion} " +
-                $"Port: {Port}(ignored)";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"LocationID: {LocationID} "
+                + $"ApplicationID: {ApplicationID} "
+                + $"ServerType: {ServerType} "
+                + $"ServerVersion: {ServerVersion} "
+                + $"Port: {Port}(ignored)";
         }
     }
 }

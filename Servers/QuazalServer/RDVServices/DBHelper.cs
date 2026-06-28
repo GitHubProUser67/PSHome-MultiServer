@@ -1,6 +1,6 @@
-﻿using Alcatraz.Context;
-using Alcatraz.Context.Entities;
+﻿using Alcatraz.Context.Entities;
 using Alcatraz.DTO.Helpers;
+using AlcatrazService;
 using AlcatrazService.DTO;
 using CustomLogger;
 using Microsoft.EntityFrameworkCore;
@@ -10,24 +10,26 @@ using QuazalServer.RDVServices.DDL.Models;
 
 namespace RDVServices
 {
-	public static class DBHelper
-	{
-		public static MainDbContext? GetDbContext(string serviceClass)
-		{
-            bool initiateSharedUbiPlayers = false;
+    public static class DBHelper
+    {
+        public static MainDbContext? GetDbContext(string serviceClass)
+        {
+            var initiateSharedUbiPlayers = false;
             string connectionString;
             MainDbContext? retCtx = null;
 
             switch (serviceClass)
-			{
+            {
                 case "PCGFRSServices":
                 case "PCDriverServices":
                 case "PCUbisoftServices":
-					connectionString = $"{Program.configDir}/Quazal/Database/Uplay.sqlite";
+                    connectionString = $"{Program.configDir}/Quazal/Database/Uplay.sqlite";
 
-					Directory.CreateDirectory(Path.GetDirectoryName(connectionString)!);
+                    Directory.CreateDirectory(Path.GetDirectoryName(connectionString)!);
 
-                    retCtx = new MainDbContext(MainDbContext.OnContextBuilding(new DbContextOptionsBuilder<MainDbContext>(), 0, $"Data Source={connectionString}").Options);
+                    retCtx = new MainDbContext(
+                        MainDbContext.BuildOptions(0, $"Data Source={connectionString}")
+                    );
 
                     retCtx.Database.Migrate();
 
@@ -41,7 +43,9 @@ namespace RDVServices
 
                     Directory.CreateDirectory(Path.GetDirectoryName(connectionString)!);
 
-                    retCtx = new MainDbContext(MainDbContext.OnContextBuilding(new DbContextOptionsBuilder<MainDbContext>(), 0, $"Data Source={connectionString}").Options);
+                    retCtx = new MainDbContext(
+                        MainDbContext.BuildOptions(0, $"Data Source={connectionString}")
+                    );
 
                     retCtx.Database.Migrate();
 
@@ -52,40 +56,49 @@ namespace RDVServices
 
                     Directory.CreateDirectory(Path.GetDirectoryName(connectionString)!);
 
-                    retCtx = new MainDbContext(MainDbContext.OnContextBuilding(new DbContextOptionsBuilder<MainDbContext>(), 0, $"Data Source={connectionString}").Options);
+                    retCtx = new MainDbContext(
+                        MainDbContext.BuildOptions(0, $"Data Source={connectionString}")
+                    );
 
                     retCtx.Database.Migrate();
 
                     break;
                 default:
-					LoggerAccessor.LogWarn($"[DbHelper] - Unknwon: {serviceClass} Class passed to the database!");
-					break;
-			}
+                    LoggerAccessor.LogWarn(
+                        $"[DbHelper] - Unknwon: {serviceClass} Class passed to the database!"
+                    );
+                    break;
+            }
 
             if (retCtx != null)
                 InitiateDefaultPlayers(retCtx, initiateSharedUbiPlayers);
 
             return retCtx;
-		}
+        }
 
-        private static void InitiateDefaultPlayers(MainDbContext context, bool initiateSharedUbiPlayers)
+        private static void InitiateDefaultPlayers(
+            MainDbContext context,
+            bool initiateSharedUbiPlayers
+        )
         {
             if (!context.Users.Any())
             {
                 // Add dummy user with starting ID == 1000 and two guest accounts.
-                context.Users.Add(new User()
-                {
-                    Id = 1000,
-                    Username = "dummy",
-                    PlayerNickName = "dummy",
-                    Password = "dummy",
-                    RewardFlags = 0,
-                });
+                context.Users.Add(
+                    new User()
+                    {
+                        Id = 1000,
+                        Username = "dummy",
+                        PlayerNickName = "dummy",
+                        Password = "dummy",
+                        RewardFlags = 0,
+                    }
+                );
                 context.SaveChanges();
 
                 if (initiateSharedUbiPlayers)
                 {
-                    User newUser = new User()
+                    var newUser = new User()
                     {
                         Username = "AAAABBBB",
                         PlayerNickName = "AAAABBBB",
@@ -99,7 +112,9 @@ namespace RDVServices
                     }
                     catch
                     {
-                        LoggerAccessor.LogError($"[DBHelper] - Unable to add default ubi {newUser.Username} user (internal error)");
+                        LoggerAccessor.LogError(
+                            $"[DBHelper] - Unable to add default ubi {newUser.Username} user (internal error)"
+                        );
                         return;
                     }
 
@@ -121,7 +136,9 @@ namespace RDVServices
                     }
                     catch
                     {
-                        LoggerAccessor.LogError($"[DBHelper] - Unable to add default ubi {newUser.Username} user (internal error)");
+                        LoggerAccessor.LogError(
+                            $"[DBHelper] - Unable to add default ubi {newUser.Username} user (internal error)"
+                        );
                         return;
                     }
 
@@ -134,7 +151,7 @@ namespace RDVServices
 
         public static bool RegisterUplayUser(string serviceClass, UserRegisterModel model)
         {
-            using (MainDbContext? context = GetDbContext(serviceClass))
+            using (var context = GetDbContext(serviceClass))
             {
                 if (context == null)
                     return false;
@@ -155,7 +172,11 @@ namespace RDVServices
                     Password = "tmp",
                 };
 
-                if (context.Users.Any(x => x.Username == model.Username || x.PlayerNickName == model.PlayerNickName))
+                if (
+                    context.Users.Any(x =>
+                        x.Username == model.Username || x.PlayerNickName == model.PlayerNickName
+                    )
+                )
                     return false;
 
                 try
@@ -178,17 +199,29 @@ namespace RDVServices
             }
         }
 
-        public static bool RegisterUser(string serviceClass, string userName, string password, uint PID, string? NickName = null)
+        public static bool RegisterUser(
+            string serviceClass,
+            string userName,
+            string password,
+            uint PID,
+            string? NickName = null
+        )
         {
-            using (MainDbContext? context = GetDbContext(serviceClass))
+            using (var context = GetDbContext(serviceClass))
             {
                 if (context != null)
                 {
-                    bool HasNickName = !string.IsNullOrEmpty(NickName);
+                    var HasNickName = !string.IsNullOrEmpty(NickName);
 
-                    if (!context.Users.Any(x => x.Username == userName || x.Id == PID || (HasNickName && x.PlayerNickName == NickName)))
+                    if (
+                        !context.Users.Any(x =>
+                            x.Username == userName
+                            || x.Id == PID
+                            || (HasNickName && x.PlayerNickName == NickName)
+                        )
+                    )
                     {
-                        User dbUser = new User() { Id = PID, Username = userName };
+                        var dbUser = new User() { Id = PID, Username = userName };
 
                         if (HasNickName)
                             dbUser.PlayerNickName = NickName;
@@ -204,7 +237,9 @@ namespace RDVServices
                         }
                         catch (Exception ex)
                         {
-                            LoggerAccessor.LogError($"[DBHelper] - An assertion was thrown while adding User:{dbUser} to the database. (Exception: {ex})");
+                            LoggerAccessor.LogError(
+                                $"[DBHelper] - An assertion was thrown while adding User:{dbUser} to the database. (Exception: {ex})"
+                            );
                         }
                     }
                 }
@@ -213,17 +248,31 @@ namespace RDVServices
             return false;
         }
 
-        public static bool RegisterUserWithExtraData(string serviceClass, string userName, string password, uint PID, AnyData<PlayerData> oPublicData, AnyData<AccountInfoPrivateData> oPrivateData, string? NickName = null)
+        public static bool RegisterUserWithExtraData(
+            string serviceClass,
+            string userName,
+            string password,
+            uint PID,
+            AnyData<PlayerData> oPublicData,
+            AnyData<AccountInfoPrivateData> oPrivateData,
+            string? NickName = null
+        )
         {
-            using (MainDbContext? context = GetDbContext(serviceClass))
+            using (var context = GetDbContext(serviceClass))
             {
                 if (context != null)
                 {
-                    bool HasNickName = !string.IsNullOrEmpty(NickName);
+                    var HasNickName = !string.IsNullOrEmpty(NickName);
 
-                    if (!context.Users.Any(x => x.Username == userName || x.Id == PID || (HasNickName && x.PlayerNickName == NickName)))
+                    if (
+                        !context.Users.Any(x =>
+                            x.Username == userName
+                            || x.Id == PID
+                            || (HasNickName && x.PlayerNickName == NickName)
+                        )
+                    )
                     {
-                        User dbUser = new User() { Id = PID, Username = userName };
+                        var dbUser = new User() { Id = PID, Username = userName };
 
                         if (HasNickName)
                             dbUser.PlayerNickName = NickName;
@@ -249,7 +298,9 @@ namespace RDVServices
                         }
                         catch (Exception ex)
                         {
-                            LoggerAccessor.LogError($"[DBHelper] - An assertion was thrown while adding User:{dbUser} to the database. (Exception: {ex})");
+                            LoggerAccessor.LogError(
+                                $"[DBHelper] - An assertion was thrown while adding User:{dbUser} to the database. (Exception: {ex})"
+                            );
                         }
                     }
                 }
@@ -258,12 +309,15 @@ namespace RDVServices
             return false;
         }
 
-        public static bool UpdateUbiTokensDataByUserName(string serviceClass, string userName, int numOfTokens)
+        public static bool UpdateUbiTokensDataByUserName(
+            string serviceClass,
+            string userName,
+            int numOfTokens
+        )
         {
-            using (MainDbContext? context = GetDbContext(serviceClass))
+            using (var context = GetDbContext(serviceClass))
             {
-                User? user = context?.Users
-                    .SingleOrDefault(x => x.Username == userName);
+                var user = context?.Users.SingleOrDefault(x => x.Username == userName);
 
                 if (user != null)
                 {
@@ -277,12 +331,15 @@ namespace RDVServices
             return false;
         }
 
-        public static bool UpdateUbiAccountDataByUserName(string serviceClass, string userName, UbiAccount account)
+        public static bool UpdateUbiAccountDataByUserName(
+            string serviceClass,
+            string userName,
+            UbiAccount account
+        )
         {
-            using (MainDbContext? context = GetDbContext(serviceClass))
+            using (var context = GetDbContext(serviceClass))
             {
-                User? user = context?.Users
-                    .SingleOrDefault(x => x.Username == userName);
+                var user = context?.Users.SingleOrDefault(x => x.Username == userName);
 
                 if (user != null)
                 {
@@ -298,21 +355,24 @@ namespace RDVServices
 
         public static int GetUbiTokensDataByUserName(string serviceClass, string userName)
         {
-            using (MainDbContext? context = GetDbContext(serviceClass))
+            using (var context = GetDbContext(serviceClass))
             {
-                return context?.Users
-                    .AsNoTracking()
-                    .SingleOrDefault(x => x.Username == userName)?.UbiTokens ?? 0;
+                return context
+                        ?.Users.AsNoTracking()
+                        .SingleOrDefault(x => x.Username == userName)
+                        ?.UbiTokens
+                    ?? 0;
             }
         }
 
         public static UbiAccount? GetUbiAccountDataByUserName(string serviceClass, string userName)
         {
-            using (MainDbContext? context = GetDbContext(serviceClass))
+            using (var context = GetDbContext(serviceClass))
             {
-                string? ubiData = context?.Users
-                    .AsNoTracking()
-                    .SingleOrDefault(x => x.Username == userName)?.UbiData;
+                var ubiData = context
+                    ?.Users.AsNoTracking()
+                    .SingleOrDefault(x => x.Username == userName)
+                    ?.UbiData;
 
                 if (!string.IsNullOrEmpty(ubiData))
                     return JsonConvert.DeserializeObject<UbiAccount>(ubiData);
@@ -323,32 +383,26 @@ namespace RDVServices
 
         public static User? GetUserByUserName(string serviceClass, string userName)
         {
-            using (MainDbContext? context = GetDbContext(serviceClass))
+            using (var context = GetDbContext(serviceClass))
             {
-                return context?.Users
-                    .AsNoTracking()
-                    .SingleOrDefault(x => x.Username == userName);
+                return context?.Users.AsNoTracking().SingleOrDefault(x => x.Username == userName);
             }
         }
 
         public static User? GetUserByNickName(string serviceClass, string name)
-		{
-			using (MainDbContext? context = GetDbContext(serviceClass))
-			{
-				return context?.Users
-					.AsNoTracking()
-					.SingleOrDefault(x => x.PlayerNickName == name);
-			}
-		}
+        {
+            using (var context = GetDbContext(serviceClass))
+            {
+                return context?.Users.AsNoTracking().SingleOrDefault(x => x.PlayerNickName == name);
+            }
+        }
 
-		public static User? GetUserByPID(string serviceClass, uint PID)
-		{
-			using (MainDbContext? context = GetDbContext(serviceClass))
-			{
-				return context?.Users
-					.AsNoTracking()
-					.SingleOrDefault(x => x.Id == PID);
-			}
-		}
-	}
+        public static User? GetUserByPID(string serviceClass, uint PID)
+        {
+            using (var context = GetDbContext(serviceClass))
+            {
+                return context?.Users.AsNoTracking().SingleOrDefault(x => x.Id == PID);
+            }
+        }
+    }
 }

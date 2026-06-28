@@ -1,5 +1,5 @@
-using BlazeCommon.PacketDisplayAttributes;
 using System.ComponentModel.DataAnnotations;
+using BlazeCommon.PacketDisplayAttributes;
 using Tdf;
 
 namespace Blaze2SDK.Blaze.Redirector
@@ -7,7 +7,6 @@ namespace Blaze2SDK.Blaze.Redirector
     [TdfStruct]
     public struct IpAddress
     {
-
         /// <summary>
         /// Max String Length: 128
         /// </summary>
@@ -21,6 +20,5 @@ namespace Blaze2SDK.Blaze.Redirector
 
         [TdfMember("PORT")]
         public ushort mPort;
-
     }
 }

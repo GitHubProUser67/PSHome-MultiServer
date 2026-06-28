@@ -1,35 +1,44 @@
-﻿using CustomLogger;
-using System;
-using System.IO;
 using System.Net;
+using CustomLogger;
+using MultiServerLibrary.Extension.NET;
 using WatsonWebserver.Core;
 using WebAPIService.GameServices.PSHOME.OHS;
+using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 {
     internal static class IslandDevelopment
     {
-        private static UniqueIDGenerator UniqueIDCounter = new UniqueIDGenerator();
+        private static readonly UniqueIDGenerator UniqueIDCounter = new();
 
         public static void BuildIslandPlugin(WebserverBase server)
         {
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/static/Lockwood/Features/IslandDevelopment/Hub/{build}/{country}/setDressing.xml", async (ctx) =>
-            {
-                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                ctx.Response.ContentType = "text/xml";
-
-                string xmlPath = $"/static/Lockwood/Features/IslandDevelopment/Hub/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/setDressing.xml";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
-
-                if (File.Exists(filePath))
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/static/Lockwood/Features/IslandDevelopment/Hub/{build}/{country}/setDressing.xml",
+                async (ctx) =>
                 {
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
-                }
+                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                    ctx.Response.ContentType = "text/xml";
 
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - setDressing data was not found for IslandDevelopment scene:Hub, falling back to server file.");
+                    var xmlPath =
+                        $"/static/Lockwood/Features/IslandDevelopment/Hub/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/setDressing.xml";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
-                await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
+                    if (File.Exists(filePath))
+                    {
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - setDressing data was not found for IslandDevelopment scene:Hub, falling back to server file."
+                    );
+
+                    await ctx
+                        .Response.Send(
+                            LUA2XmlProcessor.TransformLuaTableToXml(
+                                @"
                             local maps = {
 	                            'colourMap', 'normalMap', 'specularMap', 'envMap', 'emissiveMap', 'colour2Map', 'normal2Map', 'specular2Map'
                             }
@@ -115,43 +124,56 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 				            }
 
                             return XmlConvert.LuaToXml(TableFromInput, 'lua', 1)
-                            "));
-            });
-
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/static/Lockwood/Features/IslandDevelopment/{sceneIdent}/{scenetype}/{build}/{country}/setDressing.xml", async (ctx) =>
-            {
-                string? sceneIdent = ctx.Request.Url.Parameters["sceneIdent"];
-                if (string.IsNullOrEmpty(sceneIdent))
-                {
-                    ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    ctx.Response.ContentType = "text/plain";
-                    await ctx.Response.Send();
-                    return;
+                            "
+                            )
+                        )
+                        .ConfigureAwait(false);
                 }
-                string xmlPath = $"/static/Lockwood/Features/IslandDevelopment/{sceneIdent}/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/setDressing.xml";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
+            );
 
-                if (File.Exists(filePath))
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/static/Lockwood/Features/IslandDevelopment/{sceneIdent}/{scenetype}/{build}/{country}/setDressing.xml",
+                async (ctx) =>
                 {
-                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                    ctx.Response.ContentType = "text/xml";
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
-                }
+                    var sceneIdent = ctx.Request.Url.Parameters["sceneIdent"];
+                    if (string.IsNullOrEmpty(sceneIdent))
+                    {
+                        ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        ctx.Response.ContentType = "text/plain";
+                        await ctx.Response.Send().ConfigureAwait(false);
+                        return;
+                    }
+                    var xmlPath =
+                        $"/static/Lockwood/Features/IslandDevelopment/{sceneIdent}/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/setDressing.xml";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - setDressing data was not found for IslandDevelopment scene:{sceneIdent}, falling back to server file.");
-
-                switch (sceneIdent)
-                {
-                    case "Lounge":
-                    case "Beach":
-                    case "Hideaway":
-                    case "Forest":
-                    case "Yacht":
-                    case "IceYacht":
+                    if (File.Exists(filePath))
+                    {
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                         ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - setDressing data was not found for IslandDevelopment scene:{sceneIdent}, falling back to server file."
+                    );
+
+                    switch (sceneIdent)
+                    {
+                        case "Lounge":
+                        case "Beach":
+                        case "Hideaway":
+                        case "Forest":
+                        case "Yacht":
+                        case "IceYacht":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    LUA2XmlProcessor.TransformLuaTableToXml(
+                                        @"
                             local maps = {
 	                            'colourMap', 'normalMap', 'specularMap', 'envMap', 'emissiveMap', 'colour2Map', 'normal2Map', 'specular2Map'
                             }
@@ -254,33 +276,48 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 				            }
 
                             return XmlConvert.LuaToXml(TableFromInput, 'lua', 1)
-                            "));
-                        return;
-                    default:
-                        LoggerAccessor.LogWarn($"[PostAuthParameters] - setDressing definition data was not found for scene:{sceneIdent}!");
-                        break;
+                            "
+                                    )
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        default:
+                            LoggerAccessor.LogWarn(
+                                $"[PostAuthParameters] - setDressing definition data was not found for scene:{sceneIdent}!"
+                            );
+                            break;
+                    }
+                    ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    await ctx.Response.Send().ConfigureAwait(false);
                 }
-                ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                await ctx.Response.Send();
-            });
+            );
 
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/static/Lockwood/Features/IslandDevelopment/Hub/{build}/{country}/features.xml", async (ctx) =>
-            {
-                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                ctx.Response.ContentType = "text/xml";
-
-                string xmlPath = $"/static/Lockwood/Features/IslandDevelopment/Hub/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/features.xml";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
-
-                if (File.Exists(filePath))
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/static/Lockwood/Features/IslandDevelopment/Hub/{build}/{country}/features.xml",
+                async (ctx) =>
                 {
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
-                }
+                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                    ctx.Response.ContentType = "text/xml";
 
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - features data was not found for IslandDevelopment scene:Hub, falling back to server file.");
+                    var xmlPath =
+                        $"/static/Lockwood/Features/IslandDevelopment/Hub/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/features.xml";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
-                await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
+                    if (File.Exists(filePath))
+                    {
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - features data was not found for IslandDevelopment scene:Hub, falling back to server file."
+                    );
+
+                    await ctx
+                        .Response.Send(
+                            LUA2XmlProcessor.TransformLuaTableToXml(
+                                @"
                             local TableFromInput = {
                                 ['commercePoints'] = {
                                     default = true
@@ -297,44 +334,57 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 				            }
 
                             return XmlConvert.LuaToXml(TableFromInput, 'lua', 1)
-                            "));
-            });
-
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/static/Lockwood/Features/IslandDevelopment/{sceneIdent}/{scenetype}/{build}/{country}/features.xml", async (ctx) =>
-            {
-                string? sceneIdent = ctx.Request.Url.Parameters["sceneIdent"];
-                if (string.IsNullOrEmpty(sceneIdent))
-                {
-                    ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    ctx.Response.ContentType = "text/plain";
-                    await ctx.Response.Send();
-                    return;
+                            "
+                            )
+                        )
+                        .ConfigureAwait(false);
                 }
-                string xmlPath = $"/static/Lockwood/Features/IslandDevelopment/{sceneIdent}/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/features.xml";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
+            );
 
-                if (File.Exists(filePath))
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/static/Lockwood/Features/IslandDevelopment/{sceneIdent}/{scenetype}/{build}/{country}/features.xml",
+                async (ctx) =>
                 {
-                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                    ctx.Response.ContentType = "text/xml";
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
-                }
+                    var sceneIdent = ctx.Request.Url.Parameters["sceneIdent"];
+                    if (string.IsNullOrEmpty(sceneIdent))
+                    {
+                        ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        ctx.Response.ContentType = "text/plain";
+                        await ctx.Response.Send().ConfigureAwait(false);
+                        return;
+                    }
+                    var xmlPath =
+                        $"/static/Lockwood/Features/IslandDevelopment/{sceneIdent}/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/features.xml";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - features data was not found for IslandDevelopment scene:{sceneIdent}, falling back to server file.");
-
-                switch (sceneIdent)
-                {
-                    case "Hub":
-                    case "Lounge":
-                    case "Beach":
-                    case "Hideaway":
-                    case "Forest":
-                    case "Yacht":
-                    case "IceYacht":
+                    if (File.Exists(filePath))
+                    {
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                         ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - features data was not found for IslandDevelopment scene:{sceneIdent}, falling back to server file."
+                    );
+
+                    switch (sceneIdent)
+                    {
+                        case "Hub":
+                        case "Lounge":
+                        case "Beach":
+                        case "Hideaway":
+                        case "Forest":
+                        case "Yacht":
+                        case "IceYacht":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    LUA2XmlProcessor.TransformLuaTableToXml(
+                                        @"
                             local TableFromInput = {
                                 ['Telescope'] = {
                                     default = true
@@ -375,134 +425,180 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 				            }
 
                             return XmlConvert.LuaToXml(TableFromInput, 'lua', 1)
-                            "));
+                            "
+                                    )
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        default:
+                            LoggerAccessor.LogWarn(
+                                $"[PostAuthParameters] - features definition data was not found for scene:{sceneIdent}!"
+                            );
+                            break;
+                    }
+                    ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    await ctx.Response.Send().ConfigureAwait(false);
+                }
+            );
+
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/static/Lockwood/Features/IslandDevelopment/Hub/{build}/{country}/camPath.xml",
+                async (ctx) =>
+                {
+                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                    ctx.Response.ContentType = "text/xml";
+                    var xmlPath =
+                        $"/static/Lockwood/Features/IslandDevelopment/Hub/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/camPath.xml";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
+
+                    if (File.Exists(filePath))
+                    {
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
                         return;
-                    default:
-                        LoggerAccessor.LogWarn($"[PostAuthParameters] - features definition data was not found for scene:{sceneIdent}!");
-                        break;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - camPath data was not found for IslandDevelopment scene:Hub, falling back to server file."
+                    );
+
+                    await ctx.Response.Send("<lua></lua>").ConfigureAwait(false);
                 }
-                ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                await ctx.Response.Send();
-            });
+            );
 
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/static/Lockwood/Features/IslandDevelopment/Hub/{build}/{country}/camPath.xml", async (ctx) =>
-            {
-                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                ctx.Response.ContentType = "text/xml";
-                string xmlPath = $"/static/Lockwood/Features/IslandDevelopment/Hub/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/camPath.xml";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
-
-                if (File.Exists(filePath))
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/static/Lockwood/Features/IslandDevelopment/{sceneIdent}/{scenetype}/{build}/{country}/camPath.xml",
+                async (ctx) =>
                 {
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
+                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                    ctx.Response.ContentType = "text/xml";
+                    var xmlPath =
+                        $"/static/Lockwood/Features/IslandDevelopment/{ctx.Request.Url.Parameters["sceneIdent"]}/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/camPath.xml";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
+
+                    if (File.Exists(filePath))
+                    {
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - camPath data was not found for IslandDevelopment scene:Hub, falling back to server file."
+                    );
+
+                    await ctx.Response.Send("<lua></lua>").ConfigureAwait(false);
                 }
+            );
 
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - camPath data was not found for IslandDevelopment scene:Hub, falling back to server file.");
-
-                await ctx.Response.Send("<lua></lua>");
-            });
-
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/static/Lockwood/Features/IslandDevelopment/{sceneIdent}/{scenetype}/{build}/{country}/camPath.xml", async (ctx) =>
-            {
-                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                ctx.Response.ContentType = "text/xml";
-                string xmlPath = $"/static/Lockwood/Features/IslandDevelopment/{ctx.Request.Url.Parameters["sceneIdent"]}/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/camPath.xml";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
-
-                if (File.Exists(filePath))
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/static/Lockwood/Features/IslandDevelopment/Hub/{build}/{country}/effects.xml",
+                async (ctx) =>
                 {
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
+                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                    ctx.Response.ContentType = "text/xml";
+                    var xmlPath =
+                        $"/static/Lockwood/Features/IslandDevelopment/Hub/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/effects.xml";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
+
+                    if (File.Exists(filePath))
+                    {
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - effects data was not found for IslandDevelopment scene:Hub, falling back to server file."
+                    );
+
+                    await ctx.Response.Send("<lua></lua>").ConfigureAwait(false);
                 }
+            );
 
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - camPath data was not found for IslandDevelopment scene:Hub, falling back to server file.");
-
-                await ctx.Response.Send("<lua></lua>");
-            });
-
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/static/Lockwood/Features/IslandDevelopment/Hub/{build}/{country}/effects.xml", async (ctx) =>
-            {
-                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                ctx.Response.ContentType = "text/xml";
-                string xmlPath = $"/static/Lockwood/Features/IslandDevelopment/Hub/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/effects.xml";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
-
-                if (File.Exists(filePath))
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/static/Lockwood/Features/IslandDevelopment/{sceneIdent}/{scenetype}/{build}/{country}/effects.xml",
+                async (ctx) =>
                 {
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
+                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                    ctx.Response.ContentType = "text/xml";
+                    var xmlPath =
+                        $"/static/Lockwood/Features/IslandDevelopment/{ctx.Request.Url.Parameters["sceneIdent"]}/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/effects.xml";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
+
+                    if (File.Exists(filePath))
+                    {
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - effects data was not found for IslandDevelopment scene:{ctx.Request.Url.Parameters["sceneIdent"]}, falling back to server file."
+                    );
+
+                    await ctx.Response.Send("<lua></lua>").ConfigureAwait(false);
                 }
+            );
 
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - effects data was not found for IslandDevelopment scene:Hub, falling back to server file.");
-
-                await ctx.Response.Send("<lua></lua>");
-            });
-
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/static/Lockwood/Features/IslandDevelopment/{sceneIdent}/{scenetype}/{build}/{country}/effects.xml", async (ctx) =>
-            {
-                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                ctx.Response.ContentType = "text/xml";
-                string xmlPath = $"/static/Lockwood/Features/IslandDevelopment/{ctx.Request.Url.Parameters["sceneIdent"]}/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/effects.xml";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
-
-                if (File.Exists(filePath))
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/static/Lockwood/Features/IslandDevelopment/Hub/{build}/{country}/{group_def}/{profile_def}",
+                async (ctx) =>
                 {
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
-                }
+                    var group_def = ctx.Request.Url.Parameters["group_def"];
+                    var profile_def = ctx.Request.Url.Parameters["profile_def"];
+                    if (string.IsNullOrEmpty(group_def) || string.IsNullOrEmpty(profile_def))
+                    {
+                        ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        ctx.Response.ContentType = "text/plain";
+                        await ctx.Response.Send().ConfigureAwait(false);
+                        return;
+                    }
+                    const string param_str = ".param_group";
+                    if (!profile_def.EndsWith(param_str))
+                    {
+                        LoggerAccessor.LogWarn(
+                            $"[PostAuthParameters] - profile_def definition path was invalid!"
+                        );
+                        ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        ctx.Response.ContentType = "text/plain";
+                        await ctx.Response.Send().ConfigureAwait(false);
+                        return;
+                    }
+                    var xmlPath =
+                        $"/static/Lockwood/Features/IslandDevelopment/Hub/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/{group_def}/{profile_def}";
+                    profile_def = profile_def[..^param_str.Length];
+                    if (string.IsNullOrEmpty(profile_def))
+                    {
+                        LoggerAccessor.LogWarn(
+                            $"[PostAuthParameters] - profile_def definition project was invalid!"
+                        );
+                        ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        ctx.Response.ContentType = "text/plain";
+                        await ctx.Response.Send().ConfigureAwait(false);
+                        return;
+                    }
+                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                    ctx.Response.ContentType = "text/xml";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - effects data was not found for IslandDevelopment scene:{ctx.Request.Url.Parameters["sceneIdent"]}, falling back to server file.");
+                    if (File.Exists(filePath))
+                    {
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
 
-                await ctx.Response.Send("<lua></lua>");
-            });
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - {profile_def} data was not found for IslandDevelopment scene:Hub, falling back to server file."
+                    );
 
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/static/Lockwood/Features/IslandDevelopment/Hub/{build}/{country}/{group_def}/{profile_def}", async (ctx) =>
-            {
-                string? group_def = ctx.Request.Url.Parameters["group_def"];
-                string? profile_def = ctx.Request.Url.Parameters["profile_def"];
-                if (string.IsNullOrEmpty(group_def) || string.IsNullOrEmpty(profile_def))
-                {
-                    ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    ctx.Response.ContentType = "text/plain";
-                    await ctx.Response.Send();
-                    return;
-                }
-                const string param_str = ".param_group";
-                if (!profile_def.EndsWith(param_str))
-                {
-                    LoggerAccessor.LogWarn($"[PostAuthParameters] - profile_def definition path was invalid!");
-                    ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    ctx.Response.ContentType = "text/plain";
-                    await ctx.Response.Send();
-                    return;
-                }
-                string xmlPath = $"/static/Lockwood/Features/IslandDevelopment/Hub/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/{group_def}/{profile_def}";
-                profile_def = profile_def.Substring(0, profile_def.Length - param_str.Length);
-                if (string.IsNullOrEmpty(profile_def))
-                {
-                    LoggerAccessor.LogWarn($"[PostAuthParameters] - profile_def definition project was invalid!");
-                    ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    ctx.Response.ContentType = "text/plain";
-                    await ctx.Response.Send();
-                    return;
-                }
-                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                ctx.Response.ContentType = "text/xml";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
-
-                if (File.Exists(filePath))
-                {
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
-                }
-
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - {profile_def} data was not found for IslandDevelopment scene:Hub, falling back to server file.");
-
-                switch (group_def)
-                {
-                    case "Gate":
-                        await ctx.Response.Send($@"<lua>
+                    switch (group_def)
+                    {
+                        case "Gate":
+                            await ctx
+                                .Response.Send(
+                                    $@"<lua>
 	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <UUIDGate_def></UUIDGate_def>
@@ -642,10 +738,14 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                        </detectors>
 		                                    </root_4>
 	                                    </feature_root>
-                                    </lua>");
-                        return;
-                    case "commercePoints":
-                        await ctx.Response.Send($@"<lua>
+                                    </lua>"
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "commercePoints":
+                            await ctx
+                                .Response.Send(
+                                    $@"<lua>
 	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <CommercePoint0_def></CommercePoint0_def>
@@ -790,10 +890,14 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                        </detectors>
 		                                    </root_4>
 	                                    </feature_root>
-                                    </lua>");
-                        return;
-                    case "Twitter":
-                        await ctx.Response.Send($@"<lua>
+                                    </lua>"
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "Twitter":
+                            await ctx
+                                .Response.Send(
+                                    $@"<lua>
 	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <Twitter_def></Twitter_def>
@@ -815,74 +919,95 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                        </applet>
 		                                    </root>
 	                                    </feature_root>
-                                    </lua>");
+                                    </lua>"
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        default:
+                            LoggerAccessor.LogWarn(
+                                $"[PostAuthParameters] - group_def definition data was not found for group_def:{group_def}!"
+                            );
+                            break;
+                    }
+
+                    await ctx.Response.Send("<lua></lua>").ConfigureAwait(false);
+                }
+            );
+
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/static/Lockwood/Features/IslandDevelopment/{sceneIdent}/{scenetype}/{build}/{country}/{group_def}/{profile_def}",
+                async (ctx) =>
+                {
+                    var group_def = ctx.Request.Url.Parameters["group_def"];
+                    var profile_def = ctx.Request.Url.Parameters["profile_def"];
+                    var sceneIdent = ctx.Request.Url.Parameters["sceneIdent"];
+                    if (
+                        string.IsNullOrEmpty(sceneIdent)
+                        || string.IsNullOrEmpty(group_def)
+                        || string.IsNullOrEmpty(profile_def)
+                    )
+                    {
+                        ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        ctx.Response.ContentType = "text/plain";
+                        await ctx.Response.Send().ConfigureAwait(false);
                         return;
-                    default:
-                        LoggerAccessor.LogWarn($"[PostAuthParameters] - group_def definition data was not found for group_def:{group_def}!");
-                        break;
-                }
+                    }
+                    const string param_str = ".param_group";
+                    if (!profile_def.EndsWith(param_str))
+                    {
+                        LoggerAccessor.LogWarn(
+                            $"[PostAuthParameters] - profile_def definition path was invalid!"
+                        );
+                        ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        ctx.Response.ContentType = "text/plain";
+                        await ctx.Response.Send().ConfigureAwait(false);
+                        return;
+                    }
+                    var xmlPath =
+                        $"/static/Lockwood/Features/IslandDevelopment/{sceneIdent}/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/{group_def}/{profile_def}";
+                    profile_def = profile_def[..^param_str.Length];
+                    if (string.IsNullOrEmpty(profile_def))
+                    {
+                        LoggerAccessor.LogWarn(
+                            $"[PostAuthParameters] - profile_def definition project was invalid!"
+                        );
+                        ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        ctx.Response.ContentType = "text/plain";
+                        await ctx.Response.Send().ConfigureAwait(false);
+                        return;
+                    }
+                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                    ctx.Response.ContentType = "text/xml";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
-                await ctx.Response.Send("<lua></lua>");
-            });
+                    if (File.Exists(filePath))
+                    {
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
 
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/static/Lockwood/Features/IslandDevelopment/{sceneIdent}/{scenetype}/{build}/{country}/{group_def}/{profile_def}", async (ctx) =>
-            {
-                string? group_def = ctx.Request.Url.Parameters["group_def"];
-                string? profile_def = ctx.Request.Url.Parameters["profile_def"];
-                string? sceneIdent = ctx.Request.Url.Parameters["sceneIdent"];
-                if (string.IsNullOrEmpty(sceneIdent) || string.IsNullOrEmpty(group_def) || string.IsNullOrEmpty(profile_def))
-                {
-                    ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    ctx.Response.ContentType = "text/plain";
-                    await ctx.Response.Send();
-                    return;
-                }
-                const string param_str = ".param_group";
-                if (!profile_def.EndsWith(param_str))
-                {
-                    LoggerAccessor.LogWarn($"[PostAuthParameters] - profile_def definition path was invalid!");
-                    ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    ctx.Response.ContentType = "text/plain";
-                    await ctx.Response.Send();
-                    return;
-                }
-                string xmlPath = $"/static/Lockwood/Features/IslandDevelopment/{sceneIdent}/{ctx.Request.Url.Parameters["scenetype"]}/{ctx.Request.Url.Parameters["build"]}/{ctx.Request.Url.Parameters["country"]}/{group_def}/{profile_def}";
-                profile_def = profile_def.Substring(0, profile_def.Length - param_str.Length);
-                if (string.IsNullOrEmpty(profile_def))
-                {
-                    LoggerAccessor.LogWarn($"[PostAuthParameters] - profile_def definition project was invalid!");
-                    ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    ctx.Response.ContentType = "text/plain";
-                    await ctx.Response.Send();
-                    return;
-                }
-                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                ctx.Response.ContentType = "text/xml";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - {profile_def} data was not found for IslandDevelopment scene:{sceneIdent}, falling back to server file."
+                    );
 
-                if (File.Exists(filePath))
-                {
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
-                }
-
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - {profile_def} data was not found for IslandDevelopment scene:{sceneIdent}, falling back to server file.");
-
-                switch (sceneIdent)
-                {
-                    case "Hub":
-                    case "Lounge":
-                    case "Beach":
-                    case "Hideaway":
-                    case "Forest":
-                    case "Yacht":
-                    case "IceYacht":
-                        switch (group_def)
-                        {
-                            case "Telescope":
-                                if (sceneIdent == "Beach")
-                                {
-                                    await ctx.Response.Send($@"<lua>
+                    switch (sceneIdent)
+                    {
+                        case "Hub":
+                        case "Lounge":
+                        case "Beach":
+                        case "Hideaway":
+                        case "Forest":
+                        case "Yacht":
+                        case "IceYacht":
+                            switch (group_def)
+                            {
+                                case "Telescope":
+                                    if (sceneIdent == "Beach")
+                                    {
+                                        await ctx
+                                            .Response.Send(
+                                                $@"<lua>
 	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <Telescope_def></Telescope_def>
@@ -936,14 +1061,18 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                        </entityGroup>
 		                                    </root_telescope>
 	                                    </feature_root>
-                                    </lua>");
-                                    return;
-                                }
-                                break;
-                            case "commercePoints":
-                                if (sceneIdent == "Beach")
-                                {
-                                    await ctx.Response.Send($@"<lua>
+                                    </lua>"
+                                            )
+                                            .ConfigureAwait(false);
+                                        return;
+                                    }
+                                    break;
+                                case "commercePoints":
+                                    if (sceneIdent == "Beach")
+                                    {
+                                        await ctx
+                                            .Response.Send(
+                                                $@"<lua>
 	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <CommercePointLux_def></CommercePointLux_def>
@@ -1005,14 +1134,18 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                        </detectors>
 		                                    </root>
 	                                    </feature_root>
-                                    </lua>");
-                                    return;
-                                }
-                                break;
-                            case "Posertrons":
-                                if (sceneIdent == "Beach")
-                                {
-                                    await ctx.Response.Send($@"<lua>
+                                    </lua>"
+                                            )
+                                            .ConfigureAwait(false);
+                                        return;
+                                    }
+                                    break;
+                                case "Posertrons":
+                                    if (sceneIdent == "Beach")
+                                    {
+                                        await ctx
+                                            .Response.Send(
+                                                $@"<lua>
 	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <Posertrons_V2></Posertrons_V2>
@@ -1059,12 +1192,16 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                        </applet>
 		                                    </root_commerce>
 	                                    </feature_root>
-                                    </lua>");
-                                    return;
-                                }
-                                else if (sceneIdent == "Lounge")
-                                {
-                                    await ctx.Response.Send($@"<lua>
+                                    </lua>"
+                                            )
+                                            .ConfigureAwait(false);
+                                        return;
+                                    }
+                                    else if (sceneIdent == "Lounge")
+                                    {
+                                        await ctx
+                                            .Response.Send(
+                                                $@"<lua>
 	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <Posertrons_V2></Posertrons_V2>
@@ -1090,14 +1227,18 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                        </applet>
 		                                    </root>
 	                                    </feature_root>
-                                    </lua>");
-                                    return;
-                                }
-                                break;
-                            case "Gate":
-                                if (sceneIdent == "Lounge")
-                                {
-                                    await ctx.Response.Send($@"<lua>
+                                    </lua>"
+                                            )
+                                            .ConfigureAwait(false);
+                                        return;
+                                    }
+                                    break;
+                                case "Gate":
+                                    if (sceneIdent == "Lounge")
+                                    {
+                                        await ctx
+                                            .Response.Send(
+                                                $@"<lua>
 	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <UUIDGate_def></UUIDGate_def>
@@ -1139,14 +1280,18 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                                 <pos type='vec'>6.752,0,21.779,0</pos>
 		                                    </gate_dest>
 	                                    </feature_root>
-                                    </lua>");
-                                    return;
-                                }
-                                break;
-                            case "Splashertron":
-                                if (sceneIdent == "Hideaway")
-                                {
-                                    await ctx.Response.Send($@"<lua>
+                                    </lua>"
+                                            )
+                                            .ConfigureAwait(false);
+                                        return;
+                                    }
+                                    break;
+                                case "Splashertron":
+                                    if (sceneIdent == "Hideaway")
+                                    {
+                                        await ctx
+                                            .Response.Send(
+                                                $@"<lua>
 	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <Splashertron_def></Splashertron_def>
@@ -1188,12 +1333,16 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                                 <pos type='vec'>119.739,2.246,-136.120,0</pos>
 		                                    </swim_dest>
 	                                    </feature_root>
-                                    </lua>");
-                                    return;
-                                }
-                                else if (sceneIdent == "Forest")
-                                {
-                                    await ctx.Response.Send($@"<lua>
+                                    </lua>"
+                                            )
+                                            .ConfigureAwait(false);
+                                        return;
+                                    }
+                                    else if (sceneIdent == "Forest")
+                                    {
+                                        await ctx
+                                            .Response.Send(
+                                                $@"<lua>
                                          <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                          <applet>
                                              <Splashertron_def></Splashertron_def>
@@ -1235,12 +1384,16 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                                  <pos type='vec'>-91,-3.285,-69.773,0</pos>
                                              </swim_dest>
                                          </feature_root>
-                                     </lua>");
-                                    return;
-                                }
-                                else if (sceneIdent == "Lounge")
-                                {
-                                    await ctx.Response.Send($@"<lua>
+                                     </lua>"
+                                            )
+                                            .ConfigureAwait(false);
+                                        return;
+                                    }
+                                    else if (sceneIdent == "Lounge")
+                                    {
+                                        await ctx
+                                            .Response.Send(
+                                                $@"<lua>
 	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <Splashertron_def></Splashertron_def>
@@ -1263,12 +1416,16 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                        </applet>
 		                                    </root>
 	                                    </feature_root>
-                                    </lua>");
-                                    return;
-                                }
-                                else if (sceneIdent == "Beach")
-                                {
-                                    await ctx.Response.Send($@"<lua>
+                                    </lua>"
+                                            )
+                                            .ConfigureAwait(false);
+                                        return;
+                                    }
+                                    else if (sceneIdent == "Beach")
+                                    {
+                                        await ctx
+                                            .Response.Send(
+                                                $@"<lua>
 	                                    <feature_com_context type='num'>{UniqueIDCounter.CreateSequentialID()}</feature_com_context>
                                         <applet>
 		                                    <Splashertron_def></Splashertron_def>
@@ -1291,21 +1448,28 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 		                                        </applet>
 		                                    </root>
 	                                    </feature_root>
-                                    </lua>");
-                                    return;
-                                }
-                                break;
-                            default:
-                                LoggerAccessor.LogWarn($"[PostAuthParameters] - group_def definition data was not found for group_def:{group_def}!");
-                                break;
-                        }
-                        break;
-                    default:
-                        LoggerAccessor.LogWarn($"[PostAuthParameters] - group_def definition data was not found for scene:{sceneIdent}!");
-                        break;
+                                    </lua>"
+                                            )
+                                            .ConfigureAwait(false);
+                                        return;
+                                    }
+                                    break;
+                                default:
+                                    LoggerAccessor.LogWarn(
+                                        $"[PostAuthParameters] - group_def definition data was not found for group_def:{group_def}!"
+                                    );
+                                    break;
+                            }
+                            break;
+                        default:
+                            LoggerAccessor.LogWarn(
+                                $"[PostAuthParameters] - group_def definition data was not found for scene:{sceneIdent}!"
+                            );
+                            break;
+                    }
+                    await ctx.Response.Send("<lua></lua>").ConfigureAwait(false);
                 }
-                await ctx.Response.Send("<lua></lua>");
-            });
+            );
         }
     }
 }

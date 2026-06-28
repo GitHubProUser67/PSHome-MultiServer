@@ -4,6 +4,6 @@ namespace Blaze3SDK.Blaze
     public enum HardwareFlags
     {
         None = 0,
-        VoipHeadsetStatus = 0x1
+        VoipHeadsetStatus = 0x1,
     }
 }

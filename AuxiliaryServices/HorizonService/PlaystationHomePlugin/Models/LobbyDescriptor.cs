@@ -1,4 +1,4 @@
-﻿namespace HorizonService.PlaystationHomePlugin.Models
+﻿namespace Horizon.PlaystationHomePlugin.Models
 {
     public class LobbyDescriptor
     {
@@ -14,15 +14,19 @@
         {
             if (string.IsNullOrEmpty(name))
             {
-                CustomLogger.LoggerAccessor.LogError("[LobbyDescriptor] - Input string cannot be null or empty.");
+                CustomLogger.LoggerAccessor.LogError(
+                    "[LobbyDescriptor] - Input string cannot be null or empty."
+                );
                 return null;
             }
 
-            string[] parts = name.Split('|');
+            var parts = name.Split('|');
 
             if (parts.Length != 7)
             {
-                CustomLogger.LoggerAccessor.LogError("[LobbyDescriptor] - Input string does not have the correct format.");
+                CustomLogger.LoggerAccessor.LogError(
+                    "[LobbyDescriptor] - Input string does not have the correct format."
+                );
                 return null;
             }
 
@@ -34,7 +38,7 @@
                 Code3 = parts[3],
                 Code4 = parts[4],
                 Description = parts[5],
-                Id = parts[6]
+                Id = parts[6],
             };
         }
 
@@ -43,6 +47,5 @@
         {
             return $"Type: {Type}, Codes: {Code1}-{Code2}-{Code3}-{Code4}, Description: {Description}, Id: {Id}";
         }
-
     }
 }

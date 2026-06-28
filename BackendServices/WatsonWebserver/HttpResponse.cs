@@ -1,16 +1,15 @@
-﻿    using MultiServerLibrary.Extension;
-    using SpaceWizards.HttpListener;
-    using System;
-    using System.Collections.Generic;
-    using System.Collections.Specialized;
-    using System.IO;
-    using System.Linq;
-    using System.Text;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using System.Text.Json.Serialization;
-    using WatsonWebserver.Core;
-	
+﻿using System;
+using System.Collections.Specialized;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
+using MultiServerLibrary.Extension;
+using SpaceWizards.HttpListener;
+using WatsonWebserver.Core;
+
 namespace WatsonWebserver
 {
     /// <summary>
@@ -28,11 +27,13 @@ namespace WatsonWebserver
         {
             get
             {
-                if (_DataAsBytes != null) return Encoding.UTF8.GetString(_DataAsBytes);
-                if (_Data != null && ContentLength > 0)
+                if (_DataAsBytes != null)
+                    return Encoding.UTF8.GetString(_DataAsBytes);
+                else if (_Data != null && ContentLength > 0)
                 {
                     _DataAsBytes = ReadStreamFully(_Data);
-                    if (_DataAsBytes != null) return Encoding.UTF8.GetString(_DataAsBytes);
+                    if (_DataAsBytes != null)
+                        return Encoding.UTF8.GetString(_DataAsBytes);
                 }
                 return null;
             }
@@ -46,8 +47,9 @@ namespace WatsonWebserver
         {
             get
             {
-                if (_DataAsBytes != null) return _DataAsBytes;
-                if (_Data != null && ContentLength > 0)
+                if (_DataAsBytes != null)
+                    return _DataAsBytes;
+                else if (_Data != null && ContentLength > 0)
                 {
                     _DataAsBytes = ReadStreamFully(_Data);
                     return _DataAsBytes;
@@ -66,22 +68,19 @@ namespace WatsonWebserver
             {
                 if (_Data == null)
                     throw new ArgumentNullException(nameof(_Data), "Input stream cannot be null");
-
                 else if (!_Data.CanRead)
                     throw new NotSupportedException("Input stream is not readable");
-
                 else if (!_Data.CanSeek)
                     throw new NotSupportedException("Input stream is not seekable");
-
                 else if (_Data is MemoryStream data)
                     return data;
 
-                MemoryStream ms = new MemoryStream();
+                var ms = new MemoryStream();
 
                 if (ContentLength <= 0)
                     return ms;
 
-                long dataPos = _Data.Position;
+                var dataPos = _Data.Position;
 
                 try
                 {
@@ -89,7 +88,9 @@ namespace WatsonWebserver
                 }
                 catch (Exception e)
                 {
-                    CustomLogger.LoggerAccessor.LogError($"[WatsonWebserver] - Data: an exception was thrown while copying data to the MemmoryStream: {e}");
+                    CustomLogger.LoggerAccessor.LogError(
+                        $"[WatsonWebserver] - Data: an exception was thrown while copying data to the MemmoryStream: {e}"
+                    );
                     ms.Clear();
                 }
 
@@ -104,22 +105,24 @@ namespace WatsonWebserver
 
         #region Private-Members
 
-        private HttpListenerResponse _Response = null;
-        private Stream _OutputStream = null;
+        private readonly HttpListenerResponse _Response = null;
+        private readonly Stream _OutputStream = null;
 
-        private HttpRequestBase _Request = null;
-        private HttpListenerContext _Context = null;
+        private readonly HttpRequestBase _Request = null;
+        private readonly HttpListenerContext _Context = null;
         private bool _Closed = false;
         private bool _HeadersSet = false;
-        private bool _KeepAliveData = true;
+        private readonly bool _KeepAliveData = true;
 
-        private WebserverSettings _Settings = new WebserverSettings();
-        private WebserverEvents _Events = new WebserverEvents();
+        private readonly WebserverSettings _Settings = new();
+        private readonly WebserverEvents _Events = new();
 
-        private NameValueCollection _Headers = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
+        private readonly NameValueCollection _Headers = new(
+            StringComparer.InvariantCultureIgnoreCase
+        );
         private byte[] _DataAsBytes = null;
         private Stream _Data = null;
-        private ISerializationHelper _Serializer = null;
+        private readonly ISerializationHelper _Serializer = null;
 
         #endregion
 
@@ -128,31 +131,21 @@ namespace WatsonWebserver
         /// <summary>
         /// Instantiate the object.
         /// </summary>
-        public HttpResponse()
-        {
-
-        }
-
         internal HttpResponse(
-            HttpRequestBase req, 
-            HttpListenerContext ctx, 
-            WebserverSettings settings, 
+            HttpRequestBase req,
+            HttpListenerContext ctx,
+            WebserverSettings settings,
             WebserverEvents events,
             ISerializationHelper serializer,
-            bool KeepAliveResponseData)
+            bool KeepAliveResponseData
+        )
         {
-            if (req == null) throw new ArgumentNullException(nameof(req));
-            if (ctx == null) throw new ArgumentNullException(nameof(ctx));
-            if (settings == null) throw new ArgumentNullException(nameof(settings));
-            if (events == null) throw new ArgumentNullException(nameof(events));
-            if (serializer == null) throw new ArgumentNullException(nameof(serializer));
-
-            _Serializer = serializer;
-            _Request = req;
-            _Context = ctx;
+            _Serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
+            _Request = req ?? throw new ArgumentNullException(nameof(req));
+            _Context = ctx ?? throw new ArgumentNullException(nameof(ctx));
             _Response = _Context.Response;
-            _Settings = settings;
-            _Events = events;
+            _Settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            _Events = events ?? throw new ArgumentNullException(nameof(events));
             _KeepAliveData = KeepAliveResponseData;
 
             _OutputStream = _Response.OutputStream;
@@ -173,7 +166,7 @@ namespace WatsonWebserver
             }
             catch { }
 
-            if (_Response != null) _Response.Close();
+            _Response?.Close();
 
             _Closed = true;
         }
@@ -181,14 +174,20 @@ namespace WatsonWebserver
         /// <inheritdoc />
         public override async Task<bool> Send(CancellationToken token = default)
         {
-            if (ChunkedTransfer) throw new IOException("Response is configured to use chunked transfer-encoding.  Use SendChunk() and SendFinalChunk().");
-            return await SendInternalAsync(0, null, token).ConfigureAwait(false);
+            return ChunkedTransfer
+                ? throw new IOException(
+                    "Response is configured to use chunked transfer-encoding.  Use SendChunk() and SendFinalChunk()."
+                )
+                : await SendInternalAsync(0, null, token).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
         public override async Task<bool> Send(long contentLength, CancellationToken token = default)
         {
-            if (ChunkedTransfer) throw new IOException("Response is configured to use chunked transfer-encoding.  Use SendChunk() and SendFinalChunk().");
+            if (ChunkedTransfer)
+                throw new IOException(
+                    "Response is configured to use chunked transfer-encoding.  Use SendChunk() and SendFinalChunk()."
+                );
             ContentLength = contentLength;
             return await SendInternalAsync(0, null, token).ConfigureAwait(false);
         }
@@ -196,11 +195,14 @@ namespace WatsonWebserver
         /// <inheritdoc />
         public override async Task<bool> Send(string data, CancellationToken token = default)
         {
-            if (ChunkedTransfer) throw new IOException("Response is configured to use chunked transfer-encoding.  Use SendChunk() and SendFinalChunk().");
+            if (ChunkedTransfer)
+                throw new IOException(
+                    "Response is configured to use chunked transfer-encoding.  Use SendChunk() and SendFinalChunk()."
+                );
             if (String.IsNullOrEmpty(data))
                 return await SendInternalAsync(0, null, token).ConfigureAwait(false);
 
-            byte[] bytes = Encoding.UTF8.GetBytes(data);
+            var bytes = Encoding.UTF8.GetBytes(data);
             using (var ms = new MemoryStream(bytes))
                 return await SendInternalAsync(bytes.Length, ms, token).ConfigureAwait(false);
         }
@@ -208,29 +210,46 @@ namespace WatsonWebserver
         /// <inheritdoc />
         public override async Task<bool> Send(byte[] data, CancellationToken token = default)
         {
-            if (ChunkedTransfer) throw new IOException("Response is configured to use chunked transfer-encoding.  Use SendChunk() and SendFinalChunk().");
+            if (ChunkedTransfer)
+                throw new IOException(
+                    "Response is configured to use chunked transfer-encoding.  Use SendChunk() and SendFinalChunk()."
+                );
             if (data == null || data.Length < 1)
-                    return await SendInternalAsync(0, null, token).ConfigureAwait(false);
+                return await SendInternalAsync(0, null, token).ConfigureAwait(false);
 
             using (var ms = new MemoryStream(data))
                 return await SendInternalAsync(data.Length, ms, token).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public override async Task<bool> Send(long contentLength, Stream stream, CancellationToken token = default)
+        public override async Task<bool> Send(
+            long contentLength,
+            Stream stream,
+            CancellationToken token = default
+        )
         {
-            if (ChunkedTransfer) throw new IOException("Response is configured to use chunked transfer-encoding.  Use SendChunk() and SendFinalChunk().");
-            if (stream == null || !stream.CanRead)
-                return await SendInternalAsync(0, null, token).ConfigureAwait(false);
-
-            return await SendInternalAsync(contentLength, stream, token).ConfigureAwait(false);
+            return ChunkedTransfer
+                    ? throw new IOException(
+                        "Response is configured to use chunked transfer-encoding.  Use SendChunk() and SendFinalChunk()."
+                    )
+                : stream == null || !stream.CanRead
+                    ? await SendInternalAsync(0, null, token).ConfigureAwait(false)
+                : await SendInternalAsync(contentLength, stream, token).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public override async Task<bool> SendChunk(byte[] chunk, bool isFinal, CancellationToken token = default)
+        public override async Task<bool> SendChunk(
+            byte[] chunk,
+            bool isFinal,
+            CancellationToken token = default
+        )
         {
-            if (!ChunkedTransfer) throw new IOException("Response is not configured to use chunked transfer-encoding.  Set ChunkedTransfer to true first, otherwise use Send().");
-            if (!_HeadersSet) SendHeaders();
+            if (!ChunkedTransfer)
+                throw new IOException(
+                    "Response is not configured to use chunked transfer-encoding.  Set ChunkedTransfer to true first, otherwise use Send()."
+                );
+            else if (!_HeadersSet)
+                SendHeaders();
 
             if (chunk != null && chunk.Length > 0)
                 ContentLength += chunk.Length;
@@ -240,7 +259,7 @@ namespace WatsonWebserver
                 // When SendChunked = true, http.sys expects us to write raw chunk data
                 // and it will handle the chunked encoding format automatically
                 if (chunk != null && chunk.Length > 0)
-                    await _OutputStream.WriteAsync(chunk, 0, chunk.Length, token).ConfigureAwait(false);
+                    await _OutputStream.WriteAsync(chunk, token).ConfigureAwait(false);
 
                 await _OutputStream.FlushAsync(token).ConfigureAwait(false);
 
@@ -261,19 +280,31 @@ namespace WatsonWebserver
         }
 
         /// <inheritdoc />
-        public override async Task<bool> SendEvent(ServerSentEvent sse, bool isFinal, CancellationToken token = default)
+        public override async Task<bool> SendEvent(
+            ServerSentEvent sse,
+            bool isFinal,
+            CancellationToken token = default
+        )
         {
-            if (!ServerSentEvents) throw new IOException("Response is not configured to use server-sent events.  Set ServerSentEvents to true first, otherwise use Send().");
-            if (!_HeadersSet) SendHeaders();
-            if (sse == null) throw new ArgumentNullException(nameof(sse));
+            if (!ServerSentEvents)
+                throw new IOException(
+                    "Response is not configured to use server-sent events.  Set ServerSentEvents to true first, otherwise use Send()."
+                );
+            if (!_HeadersSet)
+                SendHeaders();
+            ArgumentNullException.ThrowIfNull(sse);
 
-            string msg = sse.ToEventString();
-            if (String.IsNullOrEmpty(msg)) throw new ArgumentException("A null or unpopulated server-sent event object was supplied.");
+            var msg = sse.ToEventString();
+            if (string.IsNullOrEmpty(msg))
+                throw new ArgumentException(
+                    "A null or unpopulated server-sent event object was supplied."
+                );
 
             try
             {
-                byte[] msgBytes = Encoding.UTF8.GetBytes(msg);
-                await _OutputStream.WriteAsync(msgBytes, 0, msgBytes.Length, token).ConfigureAwait(false);
+                await _OutputStream
+                    .WriteAsync(Encoding.UTF8.GetBytes(msg), token)
+                    .ConfigureAwait(false);
                 await _OutputStream.FlushAsync(token).ConfigureAwait(false);
 
                 if (isFinal)
@@ -286,162 +317,117 @@ namespace WatsonWebserver
             }
             catch
             {
-                return false;
+                // Not Important.
             }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Dispose of resources.
+        /// </summary>
+        /// <param name="disposing">Disposing.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (_Data != null)
+                {
+                    try
+                    {
+                        _Data.Dispose();
+                    }
+                    catch { }
+                    _Data = null;
+                }
+            }
+
+            base.Dispose(disposing);
         }
 
         #endregion
 
         #region Private-Methods
 
-        private string GetStatusDescription(int statusCode)
+        private static string GetStatusDescription(int statusCode)
         {
-            //
             // Helpful links:
             // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
             // https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
-            // 
 
-            switch (statusCode)
+            return statusCode switch
             {
-                case 100:
-                    return "Continue";
-                case 101:
-                    return "Switching Protocols";
-                case 102:
-                    return "Processing";
-                case 103:
-                    return "Early Hints";
-
-                case 200:
-                    return "OK";
-                case 201:
-                    return "Created";
-                case 202:
-                    return "Accepted";
-                case 203:
-                    return "Non-Authoritative Information";
-                case 204:
-                    return "No Content";
-                case 205:
-                    return "Reset Content";
-                case 206:
-                    return "Partial Content";
-                case 207:
-                    return "Multi-Status";
-                case 208:
-                    return "Already Reported";
-                case 226:
-                    return "IM Used";
-
-                case 300:
-                    return "Multiple Choices";
-                case 301:
-                    return "Moved Permanently";
-                case 302:
-                    return "Moved Temporarily";
-                case 303:
-                    return "See Other";
-                case 304:
-                    return "Not Modified";
-                case 305:
-                    return "Use Proxy";
-                case 306:
-                    return "Switch Proxy";
-                case 307:
-                    return "Temporary Redirect";
-                case 308:
-                    return "Permanent Redirect";
-
-                case 400:
-                    return "Bad Request";
-                case 401:
-                    return "Unauthorized";
-                case 402:
-                    return "Payment Required";
-                case 403:
-                    return "Forbidden";
-                case 404:
-                    return "Not Found";
-                case 405:
-                    return "Method Not Allowed";
-                case 406:
-                    return "Not Acceptable";
-                case 407:
-                    return "Proxy Authentication Required";
-                case 408:
-                    return "Request Timeout";
-                case 409:
-                    return "Conflict";
-                case 410:
-                    return "Gone";
-                case 411:
-                    return "Length Required";
-                case 412:
-                    return "Precondition Failed";
-                case 413:
-                    return "Payload too Large";
-                case 414:
-                    return "URI Too Long";
-                case 415:
-                    return "Unsupported Media Type";
-                case 416:
-                    return "Range Not Satisfiable";
-                case 417:
-                    return "Expectation Failed";
-                case 418:
-                    return "I'm a teapot";
-                case 421:
-                    return "Misdirected Request";
-                case 422:
-                    return "Unprocessable Content";
-                case 423:
-                    return "Locked";
-                case 424:
-                    return "Failed Dependency";
-                case 425:
-                    return "Too Early";
-                case 426:
-                    return "Upgrade Required";
-                case 428:
-                    return "Precondition Required";
-                case 429:
-                    return "Too Many Requests";
-                case 431:
-                    return "Request Header Fields Too Large";
-                case 451:
-                    return "Unavailable For Legal Reasons";
-
-                case 500:
-                    return "Internal Server Error";
-                case 501:
-                    return "Not Implemented";
-                case 502:
-                    return "Bad Gateway";
-                case 503:
-                    return "Service Unavailable";
-                case 504:
-                    return "Gateway Timeout";
-                case 505:
-                    return "HTTP Version Not Supported";
-                case 506:
-                    return "Variant Also Negotiates";
-                case 507:
-                    return "Insufficient Storage";
-                case 508:
-                    return "Loop Detected";
-                case 510:
-                    return "Not Extended";
-                case 511:
-                    return "Network Authentication Required";
-            }
-
-            return "Unknown";
+                100 => "Continue",
+                101 => "Switching Protocols",
+                102 => "Processing",
+                103 => "Early Hints",
+                200 => "OK",
+                201 => "Created",
+                202 => "Accepted",
+                203 => "Non-Authoritative Information",
+                204 => "No Content",
+                205 => "Reset Content",
+                206 => "Partial Content",
+                207 => "Multi-Status",
+                208 => "Already Reported",
+                226 => "IM Used",
+                300 => "Multiple Choices",
+                301 => "Moved Permanently",
+                302 => "Moved Temporarily",
+                303 => "See Other",
+                304 => "Not Modified",
+                305 => "Use Proxy",
+                306 => "Switch Proxy",
+                307 => "Temporary Redirect",
+                308 => "Permanent Redirect",
+                400 => "Bad Request",
+                401 => "Unauthorized",
+                402 => "Payment Required",
+                403 => "Forbidden",
+                404 => "Not Found",
+                405 => "Method Not Allowed",
+                406 => "Not Acceptable",
+                407 => "Proxy Authentication Required",
+                408 => "Request Timeout",
+                409 => "Conflict",
+                410 => "Gone",
+                411 => "Length Required",
+                412 => "Precondition Failed",
+                413 => "Payload too Large",
+                414 => "URI Too Long",
+                415 => "Unsupported Media Type",
+                416 => "Range Not Satisfiable",
+                417 => "Expectation Failed",
+                418 => "I'm a teapot",
+                421 => "Misdirected Request",
+                422 => "Unprocessable Content",
+                423 => "Locked",
+                424 => "Failed Dependency",
+                425 => "Too Early",
+                426 => "Upgrade Required",
+                428 => "Precondition Required",
+                429 => "Too Many Requests",
+                431 => "Request Header Fields Too Large",
+                451 => "Unavailable For Legal Reasons",
+                500 => "Internal Server Error",
+                501 => "Not Implemented",
+                502 => "Bad Gateway",
+                503 => "Service Unavailable",
+                504 => "Gateway Timeout",
+                505 => "HTTP Version Not Supported",
+                506 => "Variant Also Negotiates",
+                507 => "Insufficient Storage",
+                508 => "Loop Detected",
+                510 => "Not Extended",
+                511 => "Network Authentication Required",
+                _ => "Unknown",
+            };
         }
 
         private void SendHeaders()
         {
-            if (_HeadersSet) throw new IOException("Headers already sent.");
+            if (_HeadersSet)
+                throw new IOException("Headers already sent.");
 
             _Response.ProtocolVersion = new Version(1, 1);
             _Response.ContentLength64 = ContentLength;
@@ -460,10 +446,10 @@ namespace WatsonWebserver
 
             if (Headers != null && Headers.Count > 0)
             {
-                for (int i = 0; i < Headers.Count; i++)
+                for (var i = 0; i < Headers.Count; i++)
                 {
-                    string key = Headers.GetKey(i);
-                    string[] vals = Headers.GetValues(i);
+                    var key = Headers.GetKey(i);
+                    var vals = Headers.GetValues(i);
 
                     if (vals == null || vals.Length < 1)
                     {
@@ -471,7 +457,7 @@ namespace WatsonWebserver
                     }
                     else
                     {
-                        for (int j = 0; j < vals.Length; j++)
+                        for (var j = 0; j < vals.Length; j++)
                         {
                             _Response.AddHeader(key, vals[j]);
                         }
@@ -479,9 +465,12 @@ namespace WatsonWebserver
                 }
             }
 
-            if (_Settings.Headers.DefaultHeaders != null && _Settings.Headers.DefaultHeaders.Count > 0)
+            if (
+                _Settings.Headers.DefaultHeaders != null
+                && _Settings.Headers.DefaultHeaders.Count > 0
+            )
             {
-                foreach (KeyValuePair<string, string> header in _Settings.Headers.DefaultHeaders)
+                foreach (var header in _Settings.Headers.DefaultHeaders)
                 {
                     if (Headers.Get(header.Key) != null || Headers.AllKeys.Contains(header.Key))
                     {
@@ -497,12 +486,13 @@ namespace WatsonWebserver
             _HeadersSet = true;
         }
 
-        private byte[] ReadStreamFully(Stream input)
+        private static byte[] ReadStreamFully(Stream input)
         {
-            if (input == null) throw new ArgumentNullException(nameof(input));
-            if (!input.CanRead) throw new InvalidOperationException("Input stream is not readable");
+            ArgumentNullException.ThrowIfNull(input);
+            if (!input.CanRead)
+                throw new InvalidOperationException("Input stream is not readable");
 
-            using (MemoryStream ms = new MemoryStream())
+            using (var ms = new MemoryStream())
             {
                 StreamUtils.CopyStream(input, ms);
 
@@ -510,13 +500,22 @@ namespace WatsonWebserver
             }
         }
 
-        private async Task<bool> SendInternalAsync(long contentLength, Stream stream, CancellationToken token = default)
+        private async Task<bool> SendInternalAsync(
+            long contentLength,
+            Stream stream,
+            CancellationToken token = default
+        )
         {
-            if (ChunkedTransfer) throw new IOException("Response is configured to use chunked transfer-encoding.  Use SendChunk() and SendFinalChunk().");
+            if (ChunkedTransfer)
+                throw new IOException(
+                    "Response is configured to use chunked transfer-encoding.  Use SendChunk() and SendFinalChunk()."
+                );
 
-            if (ContentLength == 0 && contentLength > 0) ContentLength = contentLength;
+            if (ContentLength == 0 && contentLength > 0)
+                ContentLength = contentLength;
 
-            if (!_HeadersSet) SendHeaders();
+            if (!_HeadersSet)
+                SendHeaders();
 
             try
             {
@@ -524,7 +523,7 @@ namespace WatsonWebserver
                 {
                     if (stream != null && stream.CanRead)
                     {
-                        int bufferSize = _Settings.IO.StreamBufferSize;
+                        var bufferSize = _Settings.IO.StreamBufferSize;
 
                         // Some clients might cut the connection while the data is being copied, this is expected, so we simply ignore failed writes.
                         if (ContentLength > 0)
@@ -532,19 +531,25 @@ namespace WatsonWebserver
                             if (_KeepAliveData)
                             {
                                 int bytesRead;
-                                long bytesRemaining = contentLength;
+                                var bytesRemaining = contentLength;
 
-                                byte[] buffer = new byte[bufferSize];
+                                var buffer = new byte[bufferSize];
 
                                 _Data = new MemoryStream();
 
                                 while (bytesRemaining > 0)
                                 {
-                                    bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
+                                    bytesRead = await stream
+                                        .ReadAsync(buffer, token)
+                                        .ConfigureAwait(false);
                                     if (bytesRead > 0)
                                     {
-                                        await _Data.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
-                                        await _OutputStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
+                                        await _Data
+                                            .WriteAsync(buffer.AsMemory(0, bytesRead), token)
+                                            .ConfigureAwait(false);
+                                        await _OutputStream
+                                            .WriteAsync(buffer.AsMemory(0, bytesRead), token)
+                                            .ConfigureAwait(false);
                                         bytesRemaining -= bytesRead;
                                     }
                                 }
@@ -552,10 +557,21 @@ namespace WatsonWebserver
                                 _Data.Seek(0, SeekOrigin.Begin);
                             }
                             else
-                                await StreamUtils.CopyStreamAsync(stream, _OutputStream, bufferSize, ContentLength, false, token).ConfigureAwait(false);
+                                await StreamUtils
+                                    .CopyStreamAsync(
+                                        stream,
+                                        _OutputStream,
+                                        bufferSize,
+                                        ContentLength,
+                                        false,
+                                        token
+                                    )
+                                    .ConfigureAwait(false);
                         }
                         else
-                            await StreamUtils.CopyStreamAsync(stream, _OutputStream, bufferSize, false, token).ConfigureAwait(false);
+                            await StreamUtils
+                                .CopyStreamAsync(stream, _OutputStream, bufferSize, false, token)
+                                .ConfigureAwait(false);
 
                         await _OutputStream.FlushAsync(token).ConfigureAwait(false);
                     }
@@ -568,6 +584,19 @@ namespace WatsonWebserver
             }
             catch
             {
+                if (_Data != null)
+                {
+                    try
+                    {
+                        _Data.Dispose();
+                    }
+                    catch
+                    {
+                        // Not Important.
+                    }
+                    _Data = null;
+                }
+
                 return false;
             }
         }

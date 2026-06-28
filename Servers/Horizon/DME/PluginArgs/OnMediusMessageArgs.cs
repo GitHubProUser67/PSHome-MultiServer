@@ -1,6 +1,6 @@
 using DotNetty.Transport.Channels;
-using Horizon.RT.Models;
 using Horizon.DME.Models;
+using Horizon.RT.Models;
 
 namespace Horizon.DME.PluginArgs
 {

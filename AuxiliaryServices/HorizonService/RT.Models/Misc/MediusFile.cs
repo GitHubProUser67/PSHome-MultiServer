@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -13,42 +12,52 @@ namespace Horizon.RT.Models
         /// Filename
         /// </summary>
         public string FileName;
+
         /// <summary>
         /// checksum of file data
         /// </summary>
         public string ServerChecksum;
+
         /// <summary>
         /// Read only ID of file assigned by server
         /// </summary>
         public int FileID;
+
         /// <summary>
         /// Read only file size in bytes
         /// </summary>
         public int FileSize;
+
         /// <summary>
         /// Read only datetime of file creation
         /// </summary>
         public int CreationTimeStamp;
+
         /// <summary>
         /// Owner's user account id
         /// </summary>
         public int OwnerID;
+
         /// <summary>
         /// Group id
         /// </summary>
         public int GroupID;
+
         /// <summary>
         /// Owner File Permissions
         /// </summary>
         public ushort OwnerPermissionRWX;
+
         /// <summary>
         /// Group File Permissions
         /// </summary>
         public ushort GroupPermissionRWX;
+
         /// <summary>
         /// Global File Permissions
         /// </summary>
         public ushort GlobalPermissionRWX;
+
         /// <summary>
         /// Read only ID used to identify the current operation being performed on file.
         /// </summary>
@@ -86,17 +95,17 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return $"Filename: {FileName} " +
-                $"ServerChecksum: {System.Convert.ToString(ServerChecksum)} " +
-                $"FileID: {FileID} " +
-                $"FileSize: {FileSize} " +
-                $"CreationTimeStamp: {CreationTimeStamp} " +
-                $"OwnerID: {OwnerID} " +
-                $"GroupID: {GroupID} " +
-                $"OwnerPermissionRWX: {OwnerPermissionRWX} " +
-                $"GroupPermissionRWX: {GroupPermissionRWX} " +
-                $"GlobalPermissionRWX: {GlobalPermissionRWX} " +
-                $"ServerOperationID: {ServerOperationID}";
+            return $"Filename: {FileName} "
+                + $"ServerChecksum: {ServerChecksum} "
+                + $"FileID: {FileID} "
+                + $"FileSize: {FileSize} "
+                + $"CreationTimeStamp: {CreationTimeStamp} "
+                + $"OwnerID: {OwnerID} "
+                + $"GroupID: {GroupID} "
+                + $"OwnerPermissionRWX: {OwnerPermissionRWX} "
+                + $"GroupPermissionRWX: {GroupPermissionRWX} "
+                + $"GlobalPermissionRWX: {GlobalPermissionRWX} "
+                + $"ServerOperationID: {ServerOperationID}";
         }
     }
 }

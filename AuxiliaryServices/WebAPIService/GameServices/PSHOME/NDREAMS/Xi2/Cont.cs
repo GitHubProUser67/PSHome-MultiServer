@@ -1,11 +1,7 @@
-using MultiServerLibrary.HTTP;
-using HttpMultipartParser;
-using System.IO;
-using System;
-using System.Xml.Serialization;
-using System.Collections.Generic;
 using System.Text;
-using System.Linq;
+using System.Xml.Serialization;
+using HttpMultipartParser;
+using MultiServerLibrary.HTTP;
 using WebAPIService.GameServices.PSHOME.NDREAMS.Aurora;
 
 namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
@@ -14,7 +10,7 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
     {
         public const string ContSignature = "nDreamsXi2Cont";
 
-        private static readonly Dictionary<int, string> dayDictionary = new Dictionary<int, string>
+        private static readonly Dictionary<int, string> dayDictionary = new()
         {
             { -1, "debug" },
             { 0, "day 0" },
@@ -65,12 +61,12 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
             { 45, "day 45" },
             { 46, "day 46" },
             { 47, "day 47" },
-            { 48, "Well Done!" }
+            { 48, "Well Done!" },
         };
 
         private static string FormatDayDictionary()
         {
-            StringBuilder formattedString = new StringBuilder();
+            var formattedString = new StringBuilder();
 
             foreach (var kvp in dayDictionary)
             {
@@ -89,52 +85,47 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
         // Function to retrieve the day value by index
         private static string GetDayValueByIndex(int index)
         {
-            int minIndex = dayDictionary.Keys.Min();
+            var minIndex = dayDictionary.Keys.Min();
 
             if (index < minIndex) // Wrap up to debug.
                 index = minIndex;
             else if (index > dayDictionary.Keys.Max()) // Wrap up to new game+
                 index = 0;
 
-            return dayDictionary.TryGetValue(index, out string value) ? value : string.Empty;
+            return dayDictionary.TryGetValue(index, out var value) ? value : string.Empty;
         }
 
-        public static string ProcessCont(DateTime CurrentDate, byte[] PostData, string ContentType, string apipath)
+        public static string ProcessCont(
+            DateTime CurrentDate,
+            byte[] PostData,
+            string ContentType,
+            string apipath
+        )
         {
-            string func = null;
-            string key = null;
-            string ExpectedHash = null;
             string name = null;
-            string region = null;
-            string territory = null;
-            string progress = null;
-            string stats = null;
-            string hash = null;
-            string day = null;
-
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
-                    func = data.GetParameterValue("func");
-                    key = data.GetParameterValue("key");
+                    var func = data.GetParameterValue("func");
+                    var key = data.GetParameterValue("key");
                     try
                     {
                         name = data.GetParameterValue("name");
                     }
-                    catch
-                    {
-                    }
+                    catch { }
 
                     if (!string.IsNullOrEmpty(func))
                     {
-                        string directoryPath = apipath + $"/NDREAMS/Xi2/PlayersInventory/{name}";
-                        string profilePath = directoryPath + "/Cont.xml";
-
+                        var directoryPath = apipath + $"/NDREAMS/Xi2/PlayersInventory/{name}";
+                        var profilePath = directoryPath + "/Cont.xml";
+                        string ExpectedHash;
+                        string territory;
+                        string day;
                         switch (func)
                         {
                             case "xoff":
@@ -171,77 +162,109 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
                                 }
                                 else
                                 {
-                                    string errMsg = $"[Xi2] - Xoff: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                                    var errMsg =
+                                        $"[Xi2] - Xoff: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessCont</function></xml>";
                                 }
                             case "init":
-                                ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(ContSignature, name, func, CurrentDate);
+                                ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(
+                                    ContSignature,
+                                    name,
+                                    func,
+                                    CurrentDate
+                                );
 
                                 if (ExpectedHash.Equals(key))
                                 {
-                                    region = data.GetParameterValue("region");
+                                    var region = data.GetParameterValue("region");
                                     territory = data.GetParameterValue("territory");
 
                                     ContProfileData profileData;
 
                                     if (File.Exists(profilePath))
-                                        profileData = ContProfileData.DeserializeProfileData(profilePath);
+                                        profileData = ContProfileData.DeserializeProfileData(
+                                            profilePath
+                                        );
                                     else
                                     {
-                                        profileData = new ContProfileData() { GameDay = "day 0", NextDay = "day 1", DayIdx = 0, UserType = 0, Stats = "AQAAAAAAAAAAAFAAAAAAAAA=", Hash = "11bf01dab261092b40969af7c4e2a6c5acc15f11" };
+                                        profileData = new ContProfileData()
+                                        {
+                                            GameDay = "day 0",
+                                            NextDay = "day 1",
+                                            DayIdx = 0,
+                                            UserType = 0,
+                                            Stats = "AQAAAAAAAAAAAFAAAAAAAAA=",
+                                            Hash = "11bf01dab261092b40969af7c4e2a6c5acc15f11",
+                                        };
 
                                         Directory.CreateDirectory(directoryPath);
                                         profileData.SerializeProfileData(profilePath);
                                     }
 
-                                    return $"<xml><success>true</success><result><GameDay>{profileData.GameDay}</GameDay><GameDayProgress>{profileData.GameDayProgress}</GameDayProgress><NextDay>{profileData.NextDay}</NextDay>" +
-                                        $"<Idx>{profileData.DayIdx}</Idx><UTId>{profileData.UserType}</UTId><Hash>{profileData.Hash}</Hash><Stats>{profileData.Stats}</Stats>" +
-                                        $"<confirm>{NDREAMSServerUtils.Server_GetSignatureCustom(ContSignature, name, $"{profileData.GameDay}{profileData.GameDayProgress}{profileData.Stats}", CurrentDate)}</confirm></result></xml>";
+                                    return $"<xml><success>true</success><result><GameDay>{profileData.GameDay}</GameDay><GameDayProgress>{profileData.GameDayProgress}</GameDayProgress><NextDay>{profileData.NextDay}</NextDay>"
+                                        + $"<Idx>{profileData.DayIdx}</Idx><UTId>{profileData.UserType}</UTId><Hash>{profileData.Hash}</Hash><Stats>{profileData.Stats}</Stats>"
+                                        + $"<confirm>{NDREAMSServerUtils.Server_GetSignatureCustom(ContSignature, name, $"{profileData.GameDay}{profileData.GameDayProgress}{profileData.Stats}", CurrentDate)}</confirm></result></xml>";
                                 }
                                 else
                                 {
-                                    string errMsg = $"[Xi2] - Cont: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                                    var errMsg =
+                                        $"[Xi2] - Cont: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessCont</function></xml>";
                                 }
                             case "update_progress":
-                                progress = data.GetParameterValue("progress");
+                                var progress = data.GetParameterValue("progress");
 
-                                ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(ContSignature, name, func + progress, CurrentDate);
+                                ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(
+                                    ContSignature,
+                                    name,
+                                    func + progress,
+                                    CurrentDate
+                                );
 
                                 if (ExpectedHash.Equals(key))
                                 {
                                     if (File.Exists(profilePath))
                                     {
-                                        ContProfileData profileData = ContProfileData.DeserializeProfileData(profilePath);
+                                        var profileData = ContProfileData.DeserializeProfileData(
+                                            profilePath
+                                        );
                                         profileData.GameDayProgress = progress;
                                         profileData.SerializeProfileData(profilePath);
 
                                         return $"<xml><success>true</success><result><Success>true</Success></result></xml>";
                                     }
 
-                                    string errMsg = $"[Xi2] - Cont: Profile doesn't exist!";
+                                    var errMsg = $"[Xi2] - Cont: Profile doesn't exist!";
                                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                     return $"<xml><success>false</success><error>No Profile available</error><extra>{errMsg}</extra><function>ProcessCont</function></xml>";
                                 }
                                 else
                                 {
-                                    string errMsg = $"[Xi2] - Cont: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                                    var errMsg =
+                                        $"[Xi2] - Cont: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessCont</function></xml>";
                                 }
                             case "update_stats":
-                                stats = data.GetParameterValue("stats");
-                                hash = data.GetParameterValue("hash");
+                                var stats = data.GetParameterValue("stats");
+                                var hash = data.GetParameterValue("hash");
 
-                                ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(ContSignature, name, func + hash + stats, CurrentDate);
+                                ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(
+                                    ContSignature,
+                                    name,
+                                    func + hash + stats,
+                                    CurrentDate
+                                );
 
                                 if (ExpectedHash.Equals(key))
                                 {
                                     if (File.Exists(profilePath))
                                     {
-                                        ContProfileData profileData = ContProfileData.DeserializeProfileData(profilePath);
+                                        var profileData = ContProfileData.DeserializeProfileData(
+                                            profilePath
+                                        );
                                         profileData.Stats = stats;
                                         profileData.Hash = hash;
                                         profileData.SerializeProfileData(profilePath);
@@ -249,41 +272,50 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
                                         return $"<xml><success>true</success><result><Success>true</Success></result></xml>";
                                     }
 
-                                    string errMsg = $"[Xi2] - Cont: Profile doesn't exist!";
+                                    var errMsg = $"[Xi2] - Cont: Profile doesn't exist!";
                                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                     return $"<xml><success>false</success><error>No Profile available</error><extra>{errMsg}</extra><function>ProcessCont</function></xml>";
                                 }
                                 else
                                 {
-                                    string errMsg = $"[Xi2] - Cont: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                                    var errMsg =
+                                        $"[Xi2] - Cont: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessCont</function></xml>";
                                 }
                             case "next_day":
                                 day = data.GetParameterValue("day");
 
-                                ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(ContSignature, name, func + day, CurrentDate);
+                                ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(
+                                    ContSignature,
+                                    name,
+                                    func + day,
+                                    CurrentDate
+                                );
 
                                 if (ExpectedHash.Equals(key))
                                 {
-                                    string errMsg = $"[Xi2] - Cont: Profile doesn't exist!";
+                                    var errMsg = $"[Xi2] - Cont: Profile doesn't exist!";
 
                                     if (File.Exists(profilePath))
                                     {
-                                        int? dayIdx = GetDayIndexByValue(day);
+                                        var dayIdx = GetDayIndexByValue(day);
 
                                         if (dayIdx.HasValue)
                                         {
-                                            ContProfileData profileData = ContProfileData.DeserializeProfileData(profilePath);
+                                            var profileData =
+                                                ContProfileData.DeserializeProfileData(profilePath);
                                             profileData.GameDay = day;
                                             profileData.GameDayProgress = string.Empty;
                                             profileData.DayIdx = dayIdx.Value;
-                                            profileData.NextDay = GetDayValueByIndex(dayIdx.Value + 1);
+                                            profileData.NextDay = GetDayValueByIndex(
+                                                dayIdx.Value + 1
+                                            );
 
                                             profileData.SerializeProfileData(profilePath);
 
-                                            return $"<xml><success>true</success><result><Success>true</Success><GameDay>{profileData.GameDay}</GameDay><GameDayProgress>{profileData.GameDayProgress}</GameDayProgress><NextDay>{profileData.NextDay}</NextDay>" +
-                                                $"<Idx>{profileData.DayIdx}</Idx><confirm>{NDREAMSServerUtils.Server_GetSignatureCustom(ContSignature, name, $"{profileData.GameDay}{profileData.GameDayProgress}", CurrentDate)}</confirm></result></xml>";
+                                            return $"<xml><success>true</success><result><Success>true</Success><GameDay>{profileData.GameDay}</GameDay><GameDayProgress>{profileData.GameDayProgress}</GameDayProgress><NextDay>{profileData.NextDay}</NextDay>"
+                                                + $"<Idx>{profileData.DayIdx}</Idx><confirm>{NDREAMSServerUtils.Server_GetSignatureCustom(ContSignature, name, $"{profileData.GameDay}{profileData.GameDayProgress}", CurrentDate)}</confirm></result></xml>";
                                         }
                                         else
                                         {
@@ -298,60 +330,75 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
                                 }
                                 else
                                 {
-                                    string errMsg = $"[Xi2] - Cont: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                                    var errMsg =
+                                        $"[Xi2] - Cont: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessCont</function></xml>";
                                 }
                             case "eta_next_day":
                                 day = data.GetParameterValue("day");
 
-                                ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(ContSignature, name, func + day, CurrentDate);
+                                ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(
+                                    ContSignature,
+                                    name,
+                                    func + day,
+                                    CurrentDate
+                                );
 
                                 if (ExpectedHash.Equals(key))
                                 {
-                                    int? dayIdx = GetDayIndexByValue(day);
+                                    var dayIdx = GetDayIndexByValue(day);
 
                                     if (dayIdx.HasValue)
-                                        return $"<xml><success>true</success><result><Success>true</Success><Available>true</Available><TooLong>false</TooLong><Mins>00</Mins><Hours>00</Hours><Days>00</Days><Next>{GetDayValueByIndex(dayIdx.Value + 1)}</Next>" +
-                                                $"<confirm>{NDREAMSServerUtils.Server_GetSignatureCustom(ContSignature, name, $"{GetDayValueByIndex(dayIdx.Value + 1)}00", CurrentDate)}</confirm></result></xml>";
+                                        return $"<xml><success>true</success><result><Success>true</Success><Available>true</Available><TooLong>false</TooLong><Mins>00</Mins><Hours>00</Hours><Days>00</Days><Next>{GetDayValueByIndex(dayIdx.Value + 1)}</Next>"
+                                            + $"<confirm>{NDREAMSServerUtils.Server_GetSignatureCustom(ContSignature, name, $"{GetDayValueByIndex(dayIdx.Value + 1)}00", CurrentDate)}</confirm></result></xml>";
                                     else
                                     {
-                                        string errMsg = $"[Xi2] - Cont: Requested day is invalid!";
+                                        var errMsg = $"[Xi2] - Cont: Requested day is invalid!";
                                         CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                         return $"<xml><success>false</success><error>Invalid day</error><extra>{errMsg}</extra><function>ProcessCont</function></xml>";
                                     }
                                 }
                                 else
                                 {
-                                    string errMsg = $"[Xi2] - Cont: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                                    var errMsg =
+                                        $"[Xi2] - Cont: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessCont</function></xml>";
                                 }
                             case "debug_set_day":
                                 day = data.GetParameterValue("day");
 
-                                ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(ContSignature, name, func + day, CurrentDate);
+                                ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(
+                                    ContSignature,
+                                    name,
+                                    func + day,
+                                    CurrentDate
+                                );
 
                                 if (ExpectedHash.Equals(key))
                                 {
-                                    string errMsg = $"[Xi2] - Cont: Profile doesn't exist!";
+                                    var errMsg = $"[Xi2] - Cont: Profile doesn't exist!";
 
                                     if (File.Exists(profilePath))
                                     {
-                                        int? dayIdx = GetDayIndexByValue(day);
+                                        var dayIdx = GetDayIndexByValue(day);
 
                                         if (dayIdx.HasValue)
                                         {
-                                            ContProfileData profileData = ContProfileData.DeserializeProfileData(profilePath);
+                                            var profileData =
+                                                ContProfileData.DeserializeProfileData(profilePath);
                                             profileData.GameDay = day;
                                             profileData.GameDayProgress = string.Empty;
                                             profileData.DayIdx = dayIdx.Value;
-                                            profileData.NextDay = GetDayValueByIndex(dayIdx.Value + 1);
+                                            profileData.NextDay = GetDayValueByIndex(
+                                                dayIdx.Value + 1
+                                            );
 
                                             profileData.SerializeProfileData(profilePath);
 
-                                            return $"<xml><success>true</success><result><Success>true</Success><GameDay>{profileData.GameDay}</GameDay><GameDayProgress>{profileData.GameDayProgress}</GameDayProgress><NextDay>{profileData.NextDay}</NextDay>" +
-                                                $"<Idx>{profileData.DayIdx}</Idx><confirm>{NDREAMSServerUtils.Server_GetSignatureCustom(ContSignature, name, $"{profileData.GameDay}{profileData.NextDay}", CurrentDate)}</confirm></result></xml>";
+                                            return $"<xml><success>true</success><result><Success>true</Success><GameDay>{profileData.GameDay}</GameDay><GameDayProgress>{profileData.GameDayProgress}</GameDayProgress><NextDay>{profileData.NextDay}</NextDay>"
+                                                + $"<Idx>{profileData.DayIdx}</Idx><confirm>{NDREAMSServerUtils.Server_GetSignatureCustom(ContSignature, name, $"{profileData.GameDay}{profileData.NextDay}", CurrentDate)}</confirm></result></xml>";
                                         }
                                         else
                                         {
@@ -366,29 +413,38 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
                                 }
                                 else
                                 {
-                                    string errMsg = $"[Xi2] - Cont: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                                    var errMsg =
+                                        $"[Xi2] - Cont: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessCont</function></xml>";
                                 }
                             case "debug_get_days":
-                                ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(ContSignature, name, func, CurrentDate);
+                                ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(
+                                    ContSignature,
+                                    name,
+                                    func,
+                                    CurrentDate
+                                );
 
                                 if (ExpectedHash.Equals(key))
                                 {
                                     if (File.Exists(profilePath))
                                     {
-                                        ContProfileData profileData = ContProfileData.DeserializeProfileData(profilePath);
+                                        var profileData = ContProfileData.DeserializeProfileData(
+                                            profilePath
+                                        );
 
                                         return $"<xml><success>true</success><result><Success>true</Success><Day>{FormatDayDictionary()}</Day></result></xml>";
                                     }
 
-                                    string errMsg = $"[Xi2] - Cont: Profile doesn't exist!";
+                                    var errMsg = $"[Xi2] - Cont: Profile doesn't exist!";
                                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                     return $"<xml><success>false</success><error>No Profile available</error><extra>{errMsg}</extra><function>ProcessCont</function></xml>";
                                 }
                                 else
                                 {
-                                    string errMsg = $"[Xi2] - Cont: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                                    var errMsg =
+                                        $"[Xi2] - Cont: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessCont</function></xml>";
                                 }
@@ -430,8 +486,8 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
 
         public void SerializeProfileData(string filePath)
         {
-            XmlSerializer serializer = new XmlSerializer(typeof(ContProfileData));
-            using (StreamWriter writer = new StreamWriter(filePath))
+            var serializer = new XmlSerializer(typeof(ContProfileData));
+            using (var writer = new StreamWriter(filePath))
             {
                 serializer.Serialize(writer, this);
             }
@@ -439,8 +495,8 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
 
         public static ContProfileData DeserializeProfileData(string filePath)
         {
-            XmlSerializer serializer = new XmlSerializer(typeof(ContProfileData));
-            using (StreamReader reader = new StreamReader(filePath))
+            var serializer = new XmlSerializer(typeof(ContProfileData));
+            using (var reader = new StreamReader(filePath))
             {
                 return (ContProfileData)serializer.Deserialize(reader);
             }

@@ -1,12 +1,13 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace Tdf
 {
     public class TdfFactory
     {
-        private ConcurrentDictionary<uint, Type> _tdfVariableTypeMap;
-        private ConcurrentDictionary<Type, Dictionary<string, FieldInfo>> _tdfTypeMap;
+        private readonly ConcurrentDictionary<uint, Type> _tdfVariableTypeMap;
+        private readonly ConcurrentDictionary<Type, Dictionary<string, FieldInfo>> _tdfTypeMap;
 
         public TdfFactory()
         {
@@ -16,23 +17,21 @@ namespace Tdf
 
         public bool RegisterTdfType(Type tdfType)
         {
-            TdfStruct? tdfStruct = tdfType.GetCustomAttribute<TdfStruct>();
+            var tdfStruct = tdfType.GetCustomAttribute<TdfStruct>();
 
             if (tdfStruct != null)
                 _tdfVariableTypeMap.TryAdd(tdfStruct.TdfId, tdfType);
             else if (tdfType.BaseType != typeof(TdfUnion))
                 return false;
 
-            if (!_tdfTypeMap.TryAdd(tdfType, getTypeFieldContext(tdfType)))
-                return false;
-
-            return true;
+            return _tdfTypeMap.TryAdd(tdfType, getTypeFieldContext(tdfType));
         }
 
+        [RequiresUnreferencedCode("Uses reflection that may break when trimming.")]
         public int RegisterNamespace(Assembly assembly, string nameSpace)
         {
-            int count = 0;
-            foreach (Type type in assembly.GetTypes())
+            var count = 0;
+            foreach (var type in assembly.GetTypes())
             {
                 if (type.Namespace == nameSpace && RegisterTdfType(type))
                     count++;
@@ -40,15 +39,16 @@ namespace Tdf
             return count;
         }
 
-
-        Dictionary<string, FieldInfo> getTypeFieldContext(Type type)
+        static Dictionary<string, FieldInfo> getTypeFieldContext(Type type)
         {
-            Dictionary<string, FieldInfo> map = new Dictionary<string, FieldInfo>();
+            Dictionary<string, FieldInfo> map = [];
 
-            FieldInfo[] fields = type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-            foreach (FieldInfo field in fields)
+            var fields = type.GetFields(
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
+            );
+            foreach (var field in fields)
             {
-                TdfMember? tag = field.GetCustomAttribute<TdfMember>();
+                var tag = field.GetCustomAttribute<TdfMember>();
                 if (tag == null)
                     continue;
 
@@ -80,36 +80,25 @@ namespace Tdf
 
         internal Dictionary<string, FieldInfo> GetContext(Type type)
         {
-            if (_tdfTypeMap.TryGetValue(type, out Dictionary<string, FieldInfo>? context))
-                return context;
-
-            if (RegisterTdfType(type))
-                return _tdfTypeMap[type];
-
-            return new Dictionary<string, FieldInfo>();
+            return _tdfTypeMap.TryGetValue(type, out var context) ? context
+                : RegisterTdfType(type) ? _tdfTypeMap[type]
+                : [];
         }
 
         internal Dictionary<string, FieldInfo> GetContext(uint tdfId)
         {
-            if (_tdfVariableTypeMap.TryGetValue(tdfId, out Type? type))
-                return GetContext(type);
-
-            return new Dictionary<string, FieldInfo>();
+            return _tdfVariableTypeMap.TryGetValue(tdfId, out var type) ? GetContext(type) : [];
         }
 
         internal Type GetType(uint tdfId)
         {
-            if (_tdfVariableTypeMap.TryGetValue(tdfId, out Type? type))
-                return type;
-            return typeof(object);
+            return _tdfVariableTypeMap.TryGetValue(tdfId, out var type) ? type : typeof(object);
         }
 
-        internal uint GetTdfId(Type type)
+        internal static uint GetTdfId(Type type)
         {
-            TdfStruct? tdfStruct = type.GetCustomAttribute<TdfStruct>();
-            if (tdfStruct != null)
-                return tdfStruct.TdfId;
-            return 0;
+            var tdfStruct = type.GetCustomAttribute<TdfStruct>();
+            return tdfStruct != null ? tdfStruct.TdfId : 0;
         }
     }
 }

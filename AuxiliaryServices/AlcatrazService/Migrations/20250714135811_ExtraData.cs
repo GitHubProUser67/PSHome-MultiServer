@@ -14,35 +14,32 @@ namespace Alcatraz.Context.Migrations
                 name: "MACAddress",
                 table: "Users",
                 type: "TEXT",
-                nullable: true);
+                nullable: true
+            );
 
             migrationBuilder.AddColumn<byte[]>(
                 name: "PrivateData",
                 table: "Users",
                 type: "BLOB",
-                nullable: true);
+                nullable: true
+            );
 
             migrationBuilder.AddColumn<byte[]>(
                 name: "PublicData",
                 table: "Users",
                 type: "BLOB",
-                nullable: true);
+                nullable: true
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "MACAddress",
-                table: "Users");
+            migrationBuilder.DropColumn(name: "MACAddress", table: "Users");
 
-            migrationBuilder.DropColumn(
-                name: "PrivateData",
-                table: "Users");
+            migrationBuilder.DropColumn(name: "PrivateData", table: "Users");
 
-            migrationBuilder.DropColumn(
-                name: "PublicData",
-                table: "Users");
+            migrationBuilder.DropColumn(name: "PublicData", table: "Users");
         }
     }
 }

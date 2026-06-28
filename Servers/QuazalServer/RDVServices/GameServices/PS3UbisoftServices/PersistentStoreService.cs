@@ -1,7 +1,6 @@
-using QuazalServer.RDVServices.DDL.Models;
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
-using QuazalServer.RDVServices.RMC;
+using QuazalServer.RDVServices.DDL.Models;
 
 namespace QuazalServer.RDVServices.GameServices.PS3UbisoftServices
 {
@@ -34,7 +33,10 @@ namespace QuazalServer.RDVServices.GameServices.PS3UbisoftServices
         {
             StorageFile reply = new();
 
-            string path = Path.Combine(QuazalServerConfiguration.QuazalStaticFolder + "/StaticFiles", strTag);
+            var path = Path.Combine(
+                QuazalServerConfiguration.QuazalStaticFolder + "/StaticFiles",
+                strTag
+            );
 
             if (File.Exists(path))
             {
@@ -62,6 +64,5 @@ namespace QuazalServer.RDVServices.GameServices.PS3UbisoftServices
         {
             UNIMPLEMENTED();
         }
-
     }
 }

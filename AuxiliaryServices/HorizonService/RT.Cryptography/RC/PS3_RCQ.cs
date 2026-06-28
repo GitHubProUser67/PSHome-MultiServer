@@ -1,6 +1,5 @@
-using EndianTools;
+﻿using EndianTools;
 using MultiServerLibrary.Extension;
-using System;
 
 namespace Horizon.RT.Cryptography.RC
 {
@@ -35,20 +34,25 @@ namespace Horizon.RT.Cryptography.RC
             hash = Hash(cipher, Context);
 
             // IV
-            byte[] iv_buffer = new byte[0x10];
-            uint[] iv = new uint[4];
+            var iv_buffer = new byte[0x10];
+            var iv = new uint[4];
             Array.Copy(_key, 0, iv_buffer, 0, 0x10);
 
             // Reload
-            for (int i = 0; i < 4; ++i)
-                iv[i] = BitConverter.ToUInt32(!BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(iv_buffer) : iv_buffer, i * 4);
+            for (var i = 0; i < 4; ++i)
+                iv[i] = BitConverter.ToUInt32(
+                    !EndianAwareConverter.isLittleEndianSystem
+                        ? EndianUtils.ReverseArray(iv_buffer)
+                        : iv_buffer,
+                    i * 4
+                );
             RC_Pass(hash, ref iv);
 
-            for (int i = 0; i < 4; ++i)
+            for (var i = 0; i < 4; ++i)
             {
-                byte[] b = BitConverter.GetBytes(iv[i]);
+                var b = BitConverter.GetBytes(iv[i]);
 
-                if (!BitConverter.IsLittleEndian)
+                if (!EndianAwareConverter.isLittleEndianSystem)
                     Array.Reverse(b);
 
                 Array.Copy(b, 0, iv_buffer, i * 4, 4);
@@ -57,10 +61,7 @@ namespace Horizon.RT.Cryptography.RC
             RC_Pass(iv_buffer, ref iv, true);
             RC_Pass(cipher, ref iv, true);
 
-            if (Decrypt(cipher, hash, out var plain))
-            {
-
-            }
+            if (Decrypt(cipher, hash, out var plain)) { }
 
             return true;
         }
@@ -80,19 +81,24 @@ namespace Horizon.RT.Cryptography.RC
                 return true;
 
             // IV
-            byte[] iv = new byte[0x10];
-            uint[] seed = new uint[4];
+            var iv = new byte[0x10];
+            var seed = new uint[4];
             Array.Copy(_key, 0, iv, 0, 0x10);
 
-            for (int i = 0; i < 4; ++i)
-                seed[i] = BitConverter.ToUInt32(!BitConverter.IsLittleEndian ? EndianUtils.ReverseArray(iv) : iv, i * 4);
+            for (var i = 0; i < 4; ++i)
+                seed[i] = BitConverter.ToUInt32(
+                    !EndianAwareConverter.isLittleEndianSystem
+                        ? EndianUtils.ReverseArray(iv)
+                        : iv,
+                    i * 4
+                );
             RC_Pass(hash, ref seed);
 
-            for (int i = 0; i < 4; ++i)
+            for (var i = 0; i < 4; ++i)
             {
-                byte[] b = BitConverter.GetBytes(seed[i]);
+                var b = BitConverter.GetBytes(seed[i]);
 
-                if (!BitConverter.IsLittleEndian)
+                if (!EndianAwareConverter.isLittleEndianSystem)
                     Array.Reverse(b);
 
                 Array.Copy(b, 0, iv, i * 4, 4);
@@ -109,10 +115,9 @@ namespace Horizon.RT.Cryptography.RC
 
         public virtual bool IsHashValid(byte[] hash)
         {
-            if (hash == null || hash.Length != 4)
-                return false;
-
-            return !(hash[0] == 0 && hash[1] == 0 && hash[2] == 0 && (hash[3] & 0x1F) == 0);
+            return hash != null
+                && hash.Length == 4
+                && !(hash[0] == 0 && hash[1] == 0 && hash[2] == 0 && (hash[3] & 0x1F) == 0);
         }
 
         public virtual void Hash(byte[] input, out byte[] hash)
@@ -125,26 +130,27 @@ namespace Horizon.RT.Cryptography.RC
             uint r0 = 0x00000000;
             const uint r3 = 0x5B3AA654;
             uint r5 = 0x75970A4D;
-            uint r6 = (uint)input.Length;
+            var r6 = (uint)input.Length;
 
-            int newLength = (input.Length % 4 != 0) ? (input.Length + (4 - (input.Length % 4))) : input.Length;
-            byte[] buffer = new byte[newLength];
+            var newLength =
+                (input.Length % 4 != 0) ? (input.Length + (4 - (input.Length % 4))) : input.Length;
+            var buffer = new byte[newLength];
             Array.Copy(input, 0, buffer, 0, input.Length);
             FlipWords(buffer);
 
             // IV
             // Here the IV is determined by performing an RC pass on an empty 16 byte buffer.
-            byte[] empty = new byte[0x10];
-            uint[] iv = new uint[4];
+            var empty = new byte[0x10];
+            var iv = new uint[4];
             RC_Pass(empty, ref iv);
 
             // B5A0559C 88AA4C20 013D2CC7 CB2DE2B6
-            uint r16 = iv[0];
-            uint r17 = iv[1];
-            uint r18 = iv[2];
-            uint r19 = iv[3];
+            var r16 = iv[0];
+            var r17 = iv[1];
+            var r18 = iv[2];
+            var r19 = iv[3];
 
-            for (int i = 0; i < input.Length; i += 4)
+            for (var i = 0; i < input.Length; i += 4)
             {
                 r19 ^= r3;
                 r18 += r16;
@@ -164,12 +170,22 @@ namespace Horizon.RT.Cryptography.RC
                 r19 += r0;
                 r16 = ~r16;
 
-                r0 = (uint)((buffer[i + 0] << 24) | (buffer[i + 1] << 16) | (buffer[i + 2] << 8) | (buffer[i + 3] << 0));
+                r0 = (uint)(
+                    (buffer[i + 0] << 24)
+                    | (buffer[i + 1] << 16)
+                    | (buffer[i + 2] << 8)
+                    | (buffer[i + 3] << 0)
+                );
                 r19 ^= r0;
             }
 
-            byte[] result = new byte[4];
-            EndianAwareConverter.WriteUInt32(result, Endianness.LittleEndian, 0, (uint)(((ulong)((r16 + r17 + r18 + r19) & 0x1FFFFFFF) | (ulong)context << 29)));
+            var result = new byte[4];
+            EndianAwareConverter.WriteUInt32(
+                result,
+                Endianness.LittleEndian,
+                0,
+                (uint)((ulong)((r16 + r17 + r18 + r19) & 0x1FFFFFFF) | ((ulong)context << 29))
+            );
             return result;
         }
 
@@ -179,7 +195,7 @@ namespace Horizon.RT.Cryptography.RC
         /// <param name="input"></param>
         protected static void FlipWords(byte[] input)
         {
-            for (int i = 0; i < input.Length; i += 4)
+            for (var i = 0; i < input.Length; i += 4)
             {
                 var temp = input[i + 0];
                 input[i + 0] = input[i + 3];
@@ -190,25 +206,31 @@ namespace Horizon.RT.Cryptography.RC
             }
         }
 
-        protected static void RC_Pass(byte[] input, ref uint[] iv, bool sign = false, bool decrypt = false)
+        protected static void RC_Pass(
+            byte[] input,
+            ref uint[] iv,
+            bool sign = false,
+            bool decrypt = false
+        )
         {
             uint r0 = 0x00000000;
             const uint r3 = 0x5B3AA654;
             uint r5 = 0x75970A4D;
             uint r6 = 0x00000000;
 
-            int newLength = (input.Length % 4 != 0) ? (input.Length + (4 - (input.Length % 4))) : input.Length;
-            byte[] buffer = new byte[newLength];
+            var newLength =
+                (input.Length % 4 != 0) ? (input.Length + (4 - (input.Length % 4))) : input.Length;
+            var buffer = new byte[newLength];
             Array.Copy(input, 0, buffer, 0, input.Length);
             FlipWords(buffer);
 
             // B5A0559C 88AA4C20 013D2CC7 CB2DE2B6
-            uint r16 = iv[0];
-            uint r17 = iv[1];
-            uint r18 = iv[2];
-            uint r19 = iv[3];
+            var r16 = iv[0];
+            var r17 = iv[1];
+            var r18 = iv[2];
+            var r19 = iv[3];
 
-            for (int i = 0; i < input.Length; i += 4)
+            for (var i = 0; i < input.Length; i += 4)
             {
                 r19 ^= r3;
                 r18 += r16;
@@ -228,16 +250,21 @@ namespace Horizon.RT.Cryptography.RC
                 r19 += r0;
                 r16 = ~r16;
 
-                r0 = (uint)((buffer[i + 0] << 24) | (buffer[i + 1] << 16) | (buffer[i + 2] << 8) | (buffer[i + 3] << 0));
+                r0 = (uint)(
+                    (buffer[i + 0] << 24)
+                    | (buffer[i + 1] << 16)
+                    | (buffer[i + 2] << 8)
+                    | (buffer[i + 3] << 0)
+                );
                 if (decrypt)
                     r0 ^= r19;
                 r19 ^= r0;
 
                 if (sign)
                 {
-                    byte[] r19_b = BitConverter.GetBytes(decrypt ? r0 : r19);
+                    var r19_b = BitConverter.GetBytes(decrypt ? r0 : r19);
 
-                    if (!BitConverter.IsLittleEndian)
+                    if (!EndianTools.EndianAwareConverter.isLittleEndianSystem)
                         Array.Reverse(r19_b);
 
                     buffer[i + 0] = r19_b[0];
@@ -255,7 +282,7 @@ namespace Horizon.RT.Cryptography.RC
             // Copy signed buffer back into input
             // This can be moved into the loop at some point
             if (sign)
-                for (int i = 0; i < input.Length; ++i)
+                for (var i = 0; i < input.Length; ++i)
                     input[i] = buffer[i];
         }
 
@@ -265,10 +292,7 @@ namespace Horizon.RT.Cryptography.RC
 
         public override bool Equals(object obj)
         {
-            if (obj is PS3_RCQ rc)
-                return rc.Equals(this);
-
-            return base.Equals(obj);
+            return obj is PS3_RCQ rc ? rc.Equals(this) : base.Equals(obj);
         }
 
         public bool Equals(PS3_RCQ b)
@@ -285,8 +309,12 @@ namespace Horizon.RT.Cryptography.RC
 
         public override string ToString()
         {
-            return $"PS3_RCQ({Context}, {BitConverter.ToString(_key).Replace("-", string.Empty)})";
+            return $"PS3_RCQ({Context}, {Convert.ToHexString(_key)})";
         }
 
+        public override int GetHashCode()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

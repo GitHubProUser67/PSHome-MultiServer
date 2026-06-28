@@ -26,13 +26,15 @@ public static class CounterExtensions
     /// Executes the provided operation and increments the counter if an exception occurs. The exception is re-thrown.
     /// If an exception filter is specified, only counts exceptions for which the filter returns true.
     /// </summary>
-    public static void CountExceptions(this ICounter counter, Action wrapped, Func<Exception, bool>? exceptionFilter = null)
+    public static void CountExceptions(
+        this ICounter counter,
+        Action wrapped,
+        Func<Exception, bool>? exceptionFilter = null
+    )
     {
-        if (counter == null)
-            throw new ArgumentNullException(nameof(counter));
+        ArgumentNullException.ThrowIfNull(counter);
 
-        if (wrapped == null)
-            throw new ArgumentNullException(nameof(wrapped));
+        ArgumentNullException.ThrowIfNull(wrapped);
 
         try
         {
@@ -49,13 +51,15 @@ public static class CounterExtensions
     /// Executes the provided operation and increments the counter if an exception occurs. The exception is re-thrown.
     /// If an exception filter is specified, only counts exceptions for which the filter returns true.
     /// </summary>
-    public static TResult CountExceptions<TResult>(this ICounter counter, Func<TResult> wrapped, Func<Exception, bool>? exceptionFilter = null)
+    public static TResult CountExceptions<TResult>(
+        this ICounter counter,
+        Func<TResult> wrapped,
+        Func<Exception, bool>? exceptionFilter = null
+    )
     {
-        if (counter == null)
-            throw new ArgumentNullException(nameof(counter));
+        ArgumentNullException.ThrowIfNull(counter);
 
-        if (wrapped == null)
-            throw new ArgumentNullException(nameof(wrapped));
+        ArgumentNullException.ThrowIfNull(wrapped);
 
         try
         {
@@ -72,13 +76,15 @@ public static class CounterExtensions
     /// Executes the provided async operation and increments the counter if an exception occurs. The exception is re-thrown.
     /// If an exception filter is specified, only counts exceptions for which the filter returns true.
     /// </summary>
-    public static async Task CountExceptionsAsync(this ICounter counter, Func<Task> wrapped, Func<Exception, bool>? exceptionFilter = null)
+    public static async Task CountExceptionsAsync(
+        this ICounter counter,
+        Func<Task> wrapped,
+        Func<Exception, bool>? exceptionFilter = null
+    )
     {
-        if (counter == null)
-            throw new ArgumentNullException(nameof(counter));
+        ArgumentNullException.ThrowIfNull(counter);
 
-        if (wrapped == null)
-            throw new ArgumentNullException(nameof(wrapped));
+        ArgumentNullException.ThrowIfNull(wrapped);
 
         try
         {
@@ -95,13 +101,15 @@ public static class CounterExtensions
     /// Executes the provided async operation and increments the counter if an exception occurs. The exception is re-thrown.
     /// If an exception filter is specified, only counts exceptions for which the filter returns true.
     /// </summary>
-    public static async Task<TResult> CountExceptionsAsync<TResult>(this ICounter counter, Func<Task<TResult>> wrapped, Func<Exception, bool>? exceptionFilter = null)
+    public static async Task<TResult> CountExceptionsAsync<TResult>(
+        this ICounter counter,
+        Func<Task<TResult>> wrapped,
+        Func<Exception, bool>? exceptionFilter = null
+    )
     {
-        if (counter == null)
-            throw new ArgumentNullException(nameof(counter));
+        ArgumentNullException.ThrowIfNull(counter);
 
-        if (wrapped == null)
-            throw new ArgumentNullException(nameof(wrapped));
+        ArgumentNullException.ThrowIfNull(wrapped);
 
         try
         {

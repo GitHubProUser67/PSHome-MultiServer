@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace WebAPIService.GameServices.UBISOFT.Models.Hermes.v1
 {
     public class V1SessionsResponse

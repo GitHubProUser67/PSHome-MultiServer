@@ -2,24 +2,22 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Redirector
 {
-	[TdfStruct]
-	public struct AddressRemapEntry
-	{
+    [TdfStruct]
+    public struct AddressRemapEntry
+    {
+        [TdfMember("DPRT")]
+        public ushort mDstPort;
 
-		[TdfMember("DPRT")]
-		public ushort mDstPort;
+        [TdfMember("MASK")]
+        public uint mNetMask;
 
-		[TdfMember("MASK")]
-		public uint mNetMask;
+        [TdfMember("SID")]
+        public uint mServiceId;
 
-		[TdfMember("SID")]
-		public uint mServiceId;
+        [TdfMember("SIP")]
+        public uint mSrcIp;
 
-		[TdfMember("SIP")]
-		public uint mSrcIp;
-
-		[TdfMember("SPRT")]
-		public ushort mSrcPort;
-
-	}
+        [TdfMember("SPRT")]
+        public ushort mSrcPort;
+    }
 }

@@ -1,13 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     public class MediusStatusResponse : BaseMediusMessage, IMediusResponse
     {
-        public NetMessageClass Class;
-        public byte Type;
+        public NetMessageClass Class { get; set; }
+        public byte Type { get; set; }
 
         public override byte PacketType => Type;
         public override NetMessageClass PacketClass => Class;
@@ -18,6 +17,7 @@ namespace Horizon.RT.Models
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Response code to a Ban Player request
         /// </summary>
@@ -45,9 +45,7 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode}";
+            return base.ToString() + " " + $"MessageID: {MessageID} " + $"StatusCode: {StatusCode}";
         }
     }
 }

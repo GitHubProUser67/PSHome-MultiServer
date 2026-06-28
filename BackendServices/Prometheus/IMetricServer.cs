@@ -1,4 +1,4 @@
-﻿namespace Prometheus;
+namespace Prometheus;
 
 /// <summary>
 /// A metric server exposes a Prometheus metric exporter endpoint in the background,
@@ -8,13 +8,13 @@ public interface IMetricServer : IDisposable
 {
     /// <summary>
     /// Starts serving metrics.
-    /// 
+    ///
     /// Returns the same instance that was called (for fluent-API-style chaining).
     /// </summary>
     IMetricServer Start();
 
     /// <summary>
-    /// Instructs the metric server to stop and returns a task you can await for it to stop.
+    /// Instructs the metric server to stop and returns a task you can await for it to stop..ConfigureAwait(false)
     /// </summary>
     Task StopAsync();
 

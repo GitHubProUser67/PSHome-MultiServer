@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-
-namespace DNS.Protocol {
-    public interface IMessage {
+﻿namespace DNSLibrary
+{
+    public interface IMessage
+    {
         IList<Question> Questions { get; }
 
         int Size { get; }

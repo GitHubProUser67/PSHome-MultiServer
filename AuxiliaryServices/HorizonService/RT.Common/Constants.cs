@@ -5,8 +5,9 @@ namespace Horizon.RT.Common
         public const int MESSAGEID_MAXLEN = 21;
         public const int SESSIONKEY_MAXLEN = 17;
 
-        #region Account 
+        #region Account
         public const int ACCOUNTNAME_MAXLEN = 32;
+
         /// <summary>
         /// The account stats field contains up to this many bytes of binary data.
         /// </summary>
@@ -23,6 +24,7 @@ namespace Horizon.RT.Common
         /// Maximum number of bytes in a clan name, including null termination.
         /// </summary>
         public const int CLANNAME_MAXLEN = 32;
+
         /// <summary>
         /// Maximum number of bytes in a clan stats field., This is a fixed length field, and is binary.
         /// There are no default values for this field. Please set the clan stats when creating the clan.
@@ -55,14 +57,17 @@ namespace Horizon.RT.Common
         /// Maximum number of bytes in a game name, including null termination.
         /// </summary>
         public const int GAMENAME_MAXLEN = 64;
+
         /// <summary>
         /// Maximum number of bytes in a game password, including null termination.
         /// </summary>
         public const int GAMEPASSWORD_MAXLEN = 32;
+
         /// <summary>
         /// Maximum number of bytes for the game stats, The is a binary field of fixed length, and no default value.
         /// </summary>
         public const int GAMESTATS_MAXLEN = 256;
+
         /// <summary>
         /// Maximum number of bytes in a spectator password, including null termination.
         /// </summary>
@@ -75,19 +80,23 @@ namespace Horizon.RT.Common
         /// Maximum number of bytes in a MACHINE signature post. All binary data. (DEPRECATED)
         /// </summary>
         public const int MACHINESIGNATURE_MAXLEN = 128;
+
         /// <summary>
         /// Maximum number of bytes in a DNAS signature post. All binary data.
         /// </summary>
         public const int DNASSIGNATURE_MAXLEN = 32;
+
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public const int VERSIONSERVER_MAXLEN = 56;
+
         /// <summary>
         /// The maximum number of bytes in a single announcement text chunk, as returned by the server, including
         /// null termination.
         /// </summary>
         public const int ANNOUNCEMENT_MAXLEN = 1000;
+
         /// <summary>
         /// The maximum number of bytes in a single announcement text chunk, as returned by the server, including
         /// null termination. PS3 Clients only
@@ -99,10 +108,12 @@ namespace Horizon.RT.Common
         public const int NEWS_MAXLEN = 256;
         public const int POLICY_MAXLEN = 256;
         public const int PLAYERNAME_MAXLEN = 32;
+
         /// <summary>
         /// The maximum number of bytes that an application can use to describe itself, including null termination.
         /// </summary>
         public const int APPNAME_MAXLEN = 32;
+
         /// <summary>
         /// Maximum number of bytes in a chat message, including null termination.
         /// </summary>
@@ -122,6 +133,7 @@ namespace Horizon.RT.Common
         public const int LADDERSTATSWIDE_MAXLEN = 100;
 
         public const int NET_SESSION_KEY_LEN = 17;
+
         /// <summary>
         /// Maximum number of bytes in the access key field
         /// </summary>
@@ -140,6 +152,7 @@ namespace Horizon.RT.Common
         public const int MGCL_SERVERIP_MAXLEN = 20;
         public const int MGCL_ACCESSKEY_MAXLEN = 17;
         public const int MGCL_SESSIONKEY_MAXLEN = 17;
+
         //PS3
         public const int MGCL_GAMENAME_MAXLEN1 = 15;
         public const int MGCL_GAMEPASSWORD_MAXLEN1 = 15;
@@ -161,6 +174,7 @@ namespace Horizon.RT.Common
         public const int MEDIUS_FILE_MAX_DOWNLOAD_DATA_SIZE = 464;
         public const int MEDIUS_FILE_MAX_FILENAME_LENGTH = 128;
         public const int MEDIUS_FILE_CHECKSUM_NUMBYTES = 16;
+
         //public const int MEDIUS_FILE_CHECKSUM_NUMBYTES = 48;
         public const int MEDIUS_FILE_MAX_DESCRIPTION_LENGTH = 256;
         public const int MEDIUS_FILE_MAX_KEY_LENGTH = 56;

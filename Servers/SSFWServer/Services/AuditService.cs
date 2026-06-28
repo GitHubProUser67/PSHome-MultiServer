@@ -1,30 +1,23 @@
-﻿using CastleLibrary.S0ny.SSFW;
+﻿using System.Text;
+using CastleLibrary.S0ny.SSFW;
 using CustomLogger;
 using NetCoreServer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Text;
 
 namespace SSFWServer.Services
 {
-    public class AuditService
+    public class AuditService(string sessionid, string env, string? key)
     {
-        private string? sessionid;
-        private string? env;
-        private string? key;
-
-        public AuditService(string sessionid, string env, string? key)
-        {
-            this.sessionid = sessionid;
-            this.env = env;
-            this.key = key;
-        }
+        private readonly string? sessionid = sessionid;
+        private readonly string? env = env;
+        private readonly string? key = key;
 
         public string HandleAuditService(string absolutepath, byte[] buffer, HttpRequest request)
         {
-            string fileNameGUID = GuidGenerator.SSFWGenerateGuid(sessionid, env);
-            string? personIdToCompare = SSFWUserSessionManager.GetIdBySessionId(sessionid);
-            string auditLogPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}";
+            var fileNameGUID = GuidGenerator.SSFWGenerateGuid(sessionid, env);
+            var personIdToCompare = SSFWUserSessionManager.GetIdBySessionId(sessionid);
+            var auditLogPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}";
 
             switch (request.Method)
             {
@@ -33,65 +26,80 @@ namespace SSFWServer.Services
                     {
                         Directory.CreateDirectory(auditLogPath);
 
-                        File.WriteAllText($"{auditLogPath}/{fileNameGUID}.json", Encoding.UTF8.GetString(buffer));
+                        File.WriteAllText(
+                            $"{auditLogPath}/{fileNameGUID}.json",
+                            Encoding.UTF8.GetString(buffer)
+                        );
 #if DEBUG
-                        LoggerAccessor.LogInfo($"[SSFW] AuditService - HandleAuditService Audit event log posted: {fileNameGUID}");
+                        LoggerAccessor.LogInfo(
+                            $"[SSFW] AuditService - HandleAuditService Audit event log posted: {fileNameGUID}"
+                        );
 #endif
                         return $"{{ \"result\": 0 }}";
                     }
                     catch (Exception ex)
                     {
-                        LoggerAccessor.LogError($"[SSFW] AuditService - HandleAuditService ERROR caught: \n{ex}");
+                        LoggerAccessor.LogError(
+                            $"[SSFW] AuditService - HandleAuditService ERROR caught: \n{ex}"
+                        );
                         return $"{{ \"result\": -1 }}";
                     }
                 case "GET":
 
-                    if(absolutepath.Contains("counts"))
+                    if (absolutepath.Contains("counts"))
                     {
                         var files = Directory.GetFiles(auditLogPath.Replace("/counts", ""));
 
-                        string newFileMatchingEntry = string.Empty;
+                        var newFileMatchingEntry = string.Empty;
 
-                        List<string> listOfEventsByUser = new();
-                        int userEventTotal = 1;
-                        int idxTotal = 0;
-                        foreach (string fileToRead in files)
+                        List<string> listOfEventsByUser = [];
+                        var userEventTotal = 1;
+                        var idxTotal = 0;
+                        foreach (var fileToRead in files)
                         {
-                            string fileContents = File.ReadAllText(fileToRead);
-                            JObject? jsonContents = JsonConvert.DeserializeObject<JObject>(fileContents); 
-                            if(fileContents != null )
-                            { 
-                                JObject mainFile = JObject.Parse(fileContents);
+                            var fileContents = File.ReadAllText(fileToRead);
+                            var jsonContents = JsonConvert.DeserializeObject<JObject>(fileContents);
+                            if (fileContents != null)
+                            {
+                                var mainFile = JObject.Parse(fileContents);
 
                                 var userNameInEvent = mainFile["owner"];
 
                                 if (personIdToCompare == (string?)userNameInEvent)
                                 {
-                                    string fileName = Path.GetFileNameWithoutExtension(fileToRead);
-                                    if(files.Length == userEventTotal)
-                                    {
-                                        newFileMatchingEntry = $"\"{fileName}\"";
-                                    } else 
-                                        newFileMatchingEntry = $"\"{fileName}\",";
+                                    var fileName = Path.GetFileNameWithoutExtension(fileToRead);
+                                    newFileMatchingEntry =
+                                        files.Length == userEventTotal
+                                            ? $"\"{fileName}\""
+                                            : $"\"{fileName}\",";
                                 }
                                 listOfEventsByUser.Add(newFileMatchingEntry);
                                 idxTotal++;
                             }
                         }
 #if DEBUG
-                        LoggerAccessor.LogInfo($"[SSFW] AuditService - HandleAuditService returning count list of logs for player {personIdToCompare}");
+                        LoggerAccessor.LogInfo(
+                            $"[SSFW] AuditService - HandleAuditService returning count list of logs for player {personIdToCompare}"
+                        );
 #endif
                         return $"{{ \"count\": {idxTotal}, \"events\": {{ {string.Join("", listOfEventsByUser)} }} }}";
-                    } else if(absolutepath.Contains("object"))
+                    }
+                    else if (absolutepath.Contains("object"))
                     {
 #if DEBUG
-                        LoggerAccessor.LogInfo("[SSFW] AuditService - HandleAuditService Event log get " + auditLogPath.Replace("/object", "") + ".json");
+                        LoggerAccessor.LogInfo(
+                            "[SSFW] AuditService - HandleAuditService Event log get "
+                                + auditLogPath.Replace("/object", "")
+                                + ".json"
+                        );
 #endif
                         return File.ReadAllText(auditLogPath.Replace("/object", "") + ".json");
                     }
                     break;
                 default:
-                    LoggerAccessor.LogError($"[SSFW] AuditService - HandleAuditService Method {request.Method} unhandled!");
+                    LoggerAccessor.LogError(
+                        $"[SSFW] AuditService - HandleAuditService Method {request.Method} unhandled!"
+                    );
                     return $"{{ \"result\": -1 }}";
             }
 

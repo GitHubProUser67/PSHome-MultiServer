@@ -5,27 +5,22 @@ namespace Blaze2SDK.Blaze.GameReporting
     [TdfStruct]
     public struct GameReport
     {
-
         [TdfStruct]
         public struct Report
         {
-
             /// <summary>
             /// Max Key String Length: 32
             /// Max Value String Length: 256
             /// </summary>
             [TdfMember("RPRT")]
             public SortedDictionary<string, string> mAttributeMap;
-
         }
 
         [TdfStruct]
         public struct ReportType
         {
-
             [TdfMember("RPMP")]
             public SortedDictionary<uint, Report> mReportMap;
-
         }
 
         /// <summary>
@@ -55,6 +50,5 @@ namespace Blaze2SDK.Blaze.GameReporting
         /// </summary>
         [TdfMember("RTM")]
         public SortedDictionary<string, ReportType> mReportTypeMap;
-
     }
 }

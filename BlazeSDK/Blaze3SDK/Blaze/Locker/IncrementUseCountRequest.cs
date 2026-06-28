@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Locker
 {
-	[TdfStruct]
-	public struct IncrementUseCountRequest
-	{
+    [TdfStruct]
+    public struct IncrementUseCountRequest
+    {
+        [TdfMember("CCAT")]
+        public string mContentCategory;
 
-		[TdfMember("CCAT")]
-		public string mContentCategory;
-
-		[TdfMember("CID")]
-		public int mContentId;
-
-	}
+        [TdfMember("CID")]
+        public int mContentId;
+    }
 }

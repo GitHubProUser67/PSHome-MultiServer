@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Clubs
 {
-	[TdfStruct]
-	public struct PostNewsRequest
-	{
+    [TdfStruct]
+    public struct PostNewsRequest
+    {
+        [TdfMember("CLID")]
+        public uint mClubId;
 
-		[TdfMember("CLID")]
-		public uint mClubId;
-
-		[TdfMember("NWLI")]
-		public ClubNews mClubNews;
-
-	}
+        [TdfMember("NWLI")]
+        public ClubNews mClubNews;
+    }
 }

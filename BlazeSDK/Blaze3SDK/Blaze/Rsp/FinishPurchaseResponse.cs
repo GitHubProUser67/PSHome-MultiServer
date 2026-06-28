@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Rsp
 {
-	[TdfStruct]
-	public struct FinishPurchaseResponse
-	{
+    [TdfStruct]
+    public struct FinishPurchaseResponse
+    {
+        [TdfMember("DATE")]
+        public TimeValue mExpirationDate;
 
-		[TdfMember("DATE")]
-		public TimeValue mExpirationDate;
+        [TdfMember("QUAN")]
+        public uint mQuantity;
 
-		[TdfMember("QUAN")]
-		public uint mQuantity;
-
-		[TdfMember("SID")]
-		public uint mServerId;
-
-	}
+        [TdfMember("SID")]
+        public uint mServerId;
+    }
 }

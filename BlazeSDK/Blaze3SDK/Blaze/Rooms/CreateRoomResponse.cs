@@ -2,21 +2,19 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Rooms
 {
-	[TdfStruct]
-	public struct CreateRoomResponse
-	{
+    [TdfStruct]
+    public struct CreateRoomResponse
+    {
+        [TdfMember("CDAT")]
+        public RoomCategoryData mCategoryData;
 
-		[TdfMember("CDAT")]
-		public RoomCategoryData mCategoryData;
+        [TdfMember("MDAT")]
+        public RoomMemberData mMemberData;
 
-		[TdfMember("MDAT")]
-		public RoomMemberData mMemberData;
+        [TdfMember("RDAT")]
+        public RoomData mRoomData;
 
-		[TdfMember("RDAT")]
-		public RoomData mRoomData;
-
-		[TdfMember("VDAT")]
-		public RoomViewData mViewData;
-
-	}
+        [TdfMember("VDAT")]
+        public RoomViewData mViewData;
+    }
 }

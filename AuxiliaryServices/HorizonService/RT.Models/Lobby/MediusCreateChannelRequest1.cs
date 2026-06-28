@@ -1,13 +1,11 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.CreateChannel1)]
     public class MediusCreateChannelRequest1 : BaseLobbyExtMessage, IMediusRequest
     {
-
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.CreateChannel1;
 
         public MessageId MessageID { get; set; }
@@ -48,13 +46,14 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"ApplicationID: {ApplicationID} " +
-                $"MaxPlayers: {MaxPlayers} " +
-                $"LobbyName: {LobbyName} " +
-                $"LobbyPassword: {LobbyPassword} ";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"ApplicationID: {ApplicationID} "
+                + $"MaxPlayers: {MaxPlayers} "
+                + $"LobbyName: {LobbyName} "
+                + $"LobbyPassword: {LobbyPassword} ";
         }
     }
 }

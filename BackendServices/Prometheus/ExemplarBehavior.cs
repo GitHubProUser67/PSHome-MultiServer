@@ -20,11 +20,9 @@ public sealed class ExemplarBehavior
 
     internal static readonly ExemplarBehavior Default = new()
     {
-        DefaultExemplarProvider = (_, _) => Exemplar.FromTraceContext()
+        DefaultExemplarProvider = (_, _) => Exemplar.FromTraceContext(),
     };
 
-    public static ExemplarBehavior NoExemplars() => new()
-    {
-        DefaultExemplarProvider = (_, _) => Exemplar.None
-    };
+    public static ExemplarBehavior NoExemplars() =>
+        new() { DefaultExemplarProvider = (_, _) => Exemplar.None };
 }

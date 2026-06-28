@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Rsp
 {
-	[TdfStruct]
-	public struct MapRotationEntry
-	{
+    [TdfStruct]
+    public struct MapRotationEntry
+    {
+        [TdfMember("MODE")]
+        public string mGameMode;
 
-		[TdfMember("MODE")]
-		public string mGameMode;
-
-		[TdfMember("MAP")]
-		public string mMap;
-
-	}
+        [TdfMember("MAP")]
+        public string mMap;
+    }
 }

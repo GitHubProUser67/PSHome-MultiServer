@@ -11,14 +11,13 @@ namespace Alcatraz.Context.Migrations
                 table: "Users",
                 type: "INTEGER",
                 nullable: false,
-                defaultValue: 0);
+                defaultValue: 0
+            );
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "RewardFlags",
-                table: "Users");
+            migrationBuilder.DropColumn(name: "RewardFlags", table: "Users");
         }
     }
 }

@@ -1,8 +1,7 @@
+using QuazalServer.QNetZ;
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
 using QuazalServer.RDVServices.DDL.Models;
-using QuazalServer.QNetZ;
-using QuazalServer.RDVServices.RMC;
 
 namespace QuazalServer.RDVServices.GameServices.PS3UbisoftServices
 {
@@ -14,8 +13,8 @@ namespace QuazalServer.RDVServices.GameServices.PS3UbisoftServices
         {
             if (Context != null && Context.Client.PlayerInfo != null)
             {
-                PlayerInfo? plInfo = Context.Client.PlayerInfo;
-                PresenceElement? presence = plInfo.GameData().CurrentPresence;
+                var plInfo = Context.Client.PlayerInfo;
+                var presence = plInfo.GameData().CurrentPresence;
 
                 //QLog.WriteLine(1, $"Presence set to {phraseId}, {argument.data}");
 
@@ -39,20 +38,22 @@ namespace QuazalServer.RDVServices.GameServices.PS3UbisoftServices
         {
             var presenceResult = new List<PresenceElement>();
 
-            foreach (uint principalId in pids)
+            foreach (var principalId in pids)
             {
-                PlayerInfo? playerInfo = NetworkPlayers.GetPlayerInfoByPID(principalId);
+                var playerInfo = NetworkPlayers.GetPlayerInfoByPID(principalId);
                 if (playerInfo != null && playerInfo.GameData().CurrentPresence != null)
                     presenceResult.Add(playerInfo.GameData().CurrentPresence);
                 else
                 {
-                    presenceResult.Add(new PresenceElement()
-                    {
-                        phraseId = 2,
-                        isConnected = false,
-                        principalId = principalId,
-                        argument = new QNetZ.DDL.qBuffer()
-                    });
+                    presenceResult.Add(
+                        new PresenceElement()
+                        {
+                            phraseId = 2,
+                            isConnected = false,
+                            principalId = principalId,
+                            argument = new QNetZ.DDL.qBuffer(),
+                        }
+                    );
                 }
             }
 

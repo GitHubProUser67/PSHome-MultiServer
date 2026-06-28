@@ -1,6 +1,6 @@
-/*
+﻿/*
  *   Mentalis.org Security Library
- * 
+ *
  *     Copyright � 2002-2005, The Mentalis.org Team
  *     All rights reserved.
  *     http://www.mentalis.org/
@@ -11,11 +11,11 @@
  *   are met:
  *
  *     - Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer. 
+ *        notice, this list of conditions and the following disclaimer.
  *
  *     - Neither the name of the Mentalis.org Team, nor the names of its contributors
  *        may be used to endorse or promote products derived from this
- *        software without specific prior written permission. 
+ *        software without specific prior written permission.
  *
  *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -31,15 +31,13 @@
  *   OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-using FixedSsl;
-using Org.Mentalis.Security.Certificates;
-using System;
 using System.Collections;
-using System.IO;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using CastleLibrary.FixedSsl.Crypto;
+using CastleLibrary.FixedSsl.Security.Certificates;
 
-namespace Org.Mentalis.Security.Ssl.Shared
+namespace CastleLibrary.FixedSsl.Security.Ssl.Shared
 {
     /*
       Client                                               Server
@@ -58,7 +56,7 @@ namespace Org.Mentalis.Security.Ssl.Shared
                                                [ChangeCipherSpec]
                                    <--------             Finished
       Application Data             <------->     Application Data
-	*/
+    */
     internal abstract class HandshakeLayer : IDisposable
     {
         public HandshakeLayer(RecordLayer recordLayer, SecurityOptions options)
@@ -69,26 +67,16 @@ namespace Org.Mentalis.Security.Ssl.Shared
             m_RecordLayer = recordLayer;
             m_State = HandshakeType.Nothing;
             m_IncompleteMessage = Array.Empty<byte>();
-#if NET6_0_OR_GREATER
             m_LocalMD5Hash = MD5.Create();
             m_LocalSHA1Hash = SHA1.Create();
             m_RemoteMD5Hash = MD5.Create();
             m_RemoteSHA1Hash = SHA1.Create();
-#else
-            m_LocalMD5Hash = new MD5CryptoServiceProvider();
-            m_LocalSHA1Hash = new SHA1CryptoServiceProvider();
-            m_RemoteMD5Hash = new MD5CryptoServiceProvider();
-            m_RemoteSHA1Hash = new SHA1CryptoServiceProvider();
-#endif
-            m_CertSignHash = new MD5SHA1CryptoServiceProvider
-            {
-                Protocol = this.GetProtocol()
-            };
-            if (options.Entity == ConnectionEnd.Server && ((int)options.Flags & (int)SecurityFlags.MutualAuthentication) != 0)
-                m_MutualAuthentication = true;
-            else
-                m_MutualAuthentication = false;
+            m_CertSignHash = new MD5SHA1CryptoServiceProvider { Protocol = GetProtocol() };
+            m_MutualAuthentication =
+                options.Entity == ConnectionEnd.Server
+                && ((int)options.Flags & (int)SecurityFlags.MutualAuthentication) != 0;
         }
+
         public HandshakeLayer(HandshakeLayer handshakeLayer)
         {
             m_Disposed = false;
@@ -102,17 +90,17 @@ namespace Org.Mentalis.Security.Ssl.Shared
             m_RemoteMD5Hash = handshakeLayer.m_RemoteMD5Hash;
             m_RemoteSHA1Hash = handshakeLayer.m_RemoteSHA1Hash;
             m_CertSignHash = handshakeLayer.m_CertSignHash;
-            m_CertSignHash.Protocol = this.GetProtocol();
+            m_CertSignHash.Protocol = GetProtocol();
             m_MutualAuthentication = handshakeLayer.m_MutualAuthentication;
             m_ClientTime = handshakeLayer.m_ClientTime;
             m_ClientRandom = handshakeLayer.m_ClientRandom;
             handshakeLayer.Dispose(false);
         }
+
         // processes Handshake & ChangeCipherSpec messages
         public SslHandshakeStatus ProcessMessages(RecordMessage message)
         {
-            if (message == null)
-                throw new ArgumentNullException();
+            ArgumentNullException.ThrowIfNull(message);
             SslHandshakeStatus ret;
             if (message.contentType == ContentType.ChangeCipherSpec)
             {
@@ -123,17 +111,23 @@ namespace Org.Mentalis.Security.Ssl.Shared
             {
                 ret = new SslHandshakeStatus();
                 // copy the new bytes and the old bytes in one buffer
-                MemoryStream ms = new MemoryStream();
-                byte[] fullbuffer = new byte[m_IncompleteMessage.Length + message.length];
+                var ms = new MemoryStream();
+                var fullbuffer = new byte[m_IncompleteMessage.Length + message.length];
                 Array.Copy(m_IncompleteMessage, 0, fullbuffer, 0, m_IncompleteMessage.Length);
-                Array.Copy(message.fragment, 0, fullbuffer, m_IncompleteMessage.Length, message.length);
+                Array.Copy(
+                    message.fragment,
+                    0,
+                    fullbuffer,
+                    m_IncompleteMessage.Length,
+                    message.length
+                );
                 // loop through all messages in buffer, if any
-                int offset = 0;
-                HandshakeMessage hm = GetHandshakeMessage(fullbuffer, offset);
+                var offset = 0;
+                var hm = GetHandshakeMessage(fullbuffer, offset);
                 while (hm != null)
                 {
                     offset += hm.fragment.Length + 4;
-                    SslHandshakeStatus status = ProcessMessage(hm);
+                    var status = ProcessMessage(hm);
                     if (status.Message != null)
                     {
                         ms.Write(status.Message, 0, status.Message.Length);
@@ -146,7 +140,13 @@ namespace Org.Mentalis.Security.Ssl.Shared
                 if (offset > 0)
                 {
                     m_IncompleteMessage = new byte[fullbuffer.Length - offset];
-                    Array.Copy(fullbuffer, offset, m_IncompleteMessage, 0, m_IncompleteMessage.Length);
+                    Array.Copy(
+                        fullbuffer,
+                        offset,
+                        m_IncompleteMessage,
+                        0,
+                        m_IncompleteMessage.Length
+                    );
                 }
                 else
                 {
@@ -164,23 +164,29 @@ namespace Org.Mentalis.Security.Ssl.Shared
             }
             return ret;
         }
+
         protected SslHandshakeStatus ProcessCertificate(HandshakeMessage message, bool client)
         {
             if (client)
             {
                 if (m_State != HandshakeType.ServerHello)
-                    throw new SslException(AlertDescription.UnexpectedMessage, "Certificate message must be preceded by a ServerHello message.");
+                    throw new SslException(
+                        AlertDescription.UnexpectedMessage,
+                        "Certificate message must be preceded by a ServerHello message."
+                    );
             }
             else
             { // server
                 if (m_State != HandshakeType.ClientHello)
-                    throw new SslException(AlertDescription.UnexpectedMessage, "Certificate message must be preceded by a ClientHello message.");
+                    throw new SslException(
+                        AlertDescription.UnexpectedMessage,
+                        "Certificate message must be preceded by a ClientHello message."
+                    );
             }
             UpdateHashes(message, HashUpdate.All); // input message
-            Certificate[] certs = null;
+            Certificate[] certs;
             try
             {
-
                 certs = ParseCertificateList(message.fragment);
                 if (certs.Length == 0)
                 {
@@ -190,11 +196,15 @@ namespace Org.Mentalis.Security.Ssl.Shared
             }
             catch (SslException t)
             {
-                throw t;
+                throw;
             }
             catch (Exception f)
             {
-                throw new SslException(f, AlertDescription.InternalError, "The Certificate message is invalid.");
+                throw new SslException(
+                    f,
+                    AlertDescription.InternalError,
+                    "The Certificate message is invalid."
+                );
             }
             CertificateChain chain = null;
             m_RemoteCertificate = null;
@@ -202,22 +212,19 @@ namespace Org.Mentalis.Security.Ssl.Shared
             {
                 m_RemoteCertificate = certs[0];
                 if (m_RemoteCertificate.GetPublicKeyLength() < 512)
-                {
-                    //throw new SslException(AlertDescription.HandshakeFailure, "The pulic key should be at least 512 bits.");
-                }
-                CertificateStore cs = new CertificateStore(certs);
-                for (int i = 0; i < certs.Length; i++)
-                {
-                    certs[i].Store = cs;
-                }
-                chain = new CertificateChain(m_RemoteCertificate, cs);
+                    throw new SslException(
+                        AlertDescription.HandshakeFailure,
+                        "The pulic key should be at least 512 bits."
+                    );
+                chain = new CertificateChain(m_RemoteCertificate);
             }
             VerifyChain(chain, client);
             return new SslHandshakeStatus(SslStatus.MessageIncomplete, null);
         }
+
         protected void VerifyChain(CertificateChain chain, bool client)
         {
-            VerifyEventArgs e = new VerifyEventArgs();
+            var e = new VerifyEventArgs();
             switch (m_Options.VerificationType)
             {
                 case CredentialVerification.Manual:
@@ -227,20 +234,29 @@ namespace Org.Mentalis.Security.Ssl.Shared
                     }
                     catch (Exception de)
                     {
-                        throw new SslException(de, AlertDescription.InternalError, "The code inside the CertVerifyEventHandler delegate threw an exception.");
+                        throw new SslException(
+                            de,
+                            AlertDescription.InternalError,
+                            "The code inside the CertVerifyEventHandler delegate threw an exception."
+                        );
                     }
                     break;
                 case CredentialVerification.Auto:
-                    if (chain != null)
-                        e.Valid = (chain.VerifyChain(m_Options.CommonName, client ? AuthType.Client : AuthType.Server) == CertificateStatus.ValidCertificate);
-                    else
-                        e.Valid = false;
+                    e.Valid =
+                        chain != null
+                        && chain.VerifyChain(
+                            m_Options.CommonName,
+                            client ? AuthType.Client : AuthType.Server
+                        ) == CertificateStatus.ValidCertificate;
                     break;
                 case CredentialVerification.AutoWithoutCName:
-                    if (chain != null)
-                        e.Valid = (chain.VerifyChain(m_Options.CommonName, client ? AuthType.Client : AuthType.Server, VerificationFlags.IgnoreInvalidName) == CertificateStatus.ValidCertificate);
-                    else
-                        e.Valid = false;
+                    e.Valid =
+                        chain != null
+                        && chain.VerifyChain(
+                            m_Options.CommonName,
+                            client ? AuthType.Client : AuthType.Server,
+                            VerificationFlags.IgnoreInvalidName
+                        ) == CertificateStatus.ValidCertificate;
                     break;
                 case CredentialVerification.None:
                 default:
@@ -249,24 +265,26 @@ namespace Org.Mentalis.Security.Ssl.Shared
             }
             if (!e.Valid)
             {
-                throw new SslException(AlertDescription.CertificateUnknown, "The certificate could not be verified.");
+                throw new SslException(
+                    AlertDescription.CertificateUnknown,
+                    "The certificate could not be verified."
+                );
             }
         }
-        protected Certificate[] ParseCertificateList(byte[] list)
+
+        protected static Certificate[] ParseCertificateList(byte[] list)
         {
-            Queue queue = new Queue();
-            int offset = 3;
+            var queue = new Queue();
+            var offset = 3;
             while (offset < list.Length)
             {
-                int length = list[offset] * 65536 + list[offset + 1] * 256 + list[offset + 2];
-                byte[] cert = new byte[length];
+                var length = (list[offset] * 65536) + (list[offset + 1] * 256) + list[offset + 2];
+                var cert = new byte[length];
                 Buffer.BlockCopy(list, offset + 3, cert, 0, length);
-                X509Certificate x5Cert = new X509Certificate(cert);
-                //queue.Enqueue(Certificate.CreateFromCerFile(list, offset + 3, length));
-                queue.Enqueue(new Certificate(x5Cert));
+                queue.Enqueue(new Certificate(new X509Certificate(cert)));
                 offset += length + 3;
             }
-            Certificate[] certs = new Certificate[queue.Count];
+            var certs = new Certificate[queue.Count];
             offset = 0;
             while (queue.Count > 0)
             {
@@ -275,14 +293,18 @@ namespace Org.Mentalis.Security.Ssl.Shared
             }
             return certs;
         }
+
         protected SslHandshakeStatus ProcessAlert(RecordMessage message)
         {
             if (message.length != 2 || message.fragment.Length != 2)
-                throw new SslException(AlertDescription.RecordOverflow, "The alert message is invalid.");
+                throw new SslException(
+                    AlertDescription.RecordOverflow,
+                    "The alert message is invalid."
+                );
             try
             {
-                AlertLevel level = (AlertLevel)message.fragment[0];
-                AlertDescription description = (AlertDescription)message.fragment[1];
+                var level = (AlertLevel)message.fragment[0];
+                var description = (AlertDescription)message.fragment[1];
                 if (level == AlertLevel.Fatal)
                     throw new SslException(description, "The other side has sent a failure alert.");
                 SslHandshakeStatus ret;
@@ -290,13 +312,16 @@ namespace Org.Mentalis.Security.Ssl.Shared
                 {
                     if (m_State == HandshakeType.ShuttingDown)
                     { // true if we've already sent a shutdown notification
-                      // close connection
+                        // close connection
                         ret = new SslHandshakeStatus(SslStatus.Close, null);
                     }
                     else
                     {
                         // send a shutdown notifications, and then close the connection
-                        ret = new SslHandshakeStatus(SslStatus.Close, GetControlBytes(ControlType.Shutdown));
+                        ret = new SslHandshakeStatus(
+                            SslStatus.Close,
+                            GetControlBytes(ControlType.Shutdown)
+                        );
                     }
                 }
                 else
@@ -307,104 +332,126 @@ namespace Org.Mentalis.Security.Ssl.Shared
             }
             catch (SslException t)
             {
-                throw t;
+                throw;
             }
             catch (Exception e)
             {
-                throw new SslException(e, AlertDescription.InternalError, "There was an internal error.");
+                throw new SslException(
+                    e,
+                    AlertDescription.InternalError,
+                    "There was an internal error."
+                );
             }
         }
-        protected HandshakeMessage GetHandshakeMessage(byte[] buffer, int offset)
+
+        protected static HandshakeMessage GetHandshakeMessage(byte[] buffer, int offset)
         {
             if (buffer.Length < offset + 4)
                 return null;
-            int size = buffer[offset + 1] * 65536 + buffer[offset + 2] * 256 + buffer[offset + 3];
+            var size =
+                (buffer[offset + 1] * 65536) + (buffer[offset + 2] * 256) + buffer[offset + 3];
             if (buffer.Length < offset + 4 + size)
                 return null;
-            byte[] fragment = new byte[size];
+            var fragment = new byte[size];
             Array.Copy(buffer, offset + 4, fragment, 0, size);
             return new HandshakeMessage((HandshakeType)buffer[offset], fragment);
         }
-        protected byte[] GetUnixTime()
+
+        protected static byte[] GetUnixTime()
         {
-            DateTime now = DateTime.Now.ToUniversalTime();
-            TimeSpan time = now.Subtract(new DateTime(1970, 1, 1));
-            byte[] ret = BitConverter.GetBytes((uint)time.TotalSeconds);
-            if (BitConverter.IsLittleEndian)
+            var now = DateTime.Now.ToUniversalTime();
+            var time = now.Subtract(new DateTime(1970, 1, 1));
+            var ret = BitConverter.GetBytes((uint)time.TotalSeconds);
+            if (EndianTools.EndianAwareConverter.isLittleEndianSystem)
                 Array.Reverse(ret);
             return ret;
         }
+
         public bool IsNegotiating()
         {
             return m_IsNegotiating;
         }
+
         protected void GenerateCiphers(byte[] premaster)
         {
-            byte[] clientrnd = new byte[32], serverrnd = new byte[32];
-            byte[] random = new byte[64];
+            byte[] clientrnd = new byte[32],
+                serverrnd = new byte[32];
             Array.Copy(m_ClientTime, 0, clientrnd, 0, 4);
             Array.Copy(m_ClientRandom, 0, clientrnd, 4, 28);
             Array.Copy(m_ServerTime, 0, serverrnd, 0, 4);
             Array.Copy(m_ServerRandom, 0, serverrnd, 4, 28);
             m_MasterSecret = GenerateMasterSecret(premaster, clientrnd, serverrnd);
-            m_CipherSuite = CipherSuites.GetCipherSuite(GetProtocol(), m_MasterSecret, clientrnd, serverrnd, m_EncryptionScheme, m_Options.Entity);
+            m_CipherSuite = CipherSuites.GetCipherSuite(
+                GetProtocol(),
+                m_MasterSecret,
+                clientrnd,
+                serverrnd,
+                m_EncryptionScheme,
+                m_Options.Entity
+            );
             Array.Clear(premaster, 0, premaster.Length);
         }
+
         protected void UpdateHashes(HandshakeMessage message, HashUpdate update)
         {
-            byte[] header = new byte[4];
+            var header = new byte[4];
             header[0] = (byte)message.type;
             header[1] = (byte)(message.fragment.Length / 65536);
-            header[2] = (byte)((message.fragment.Length % 65536) / 256);
+            header[2] = (byte)(message.fragment.Length % 65536 / 256);
             header[3] = (byte)(message.fragment.Length % 256);
             UpdateHashes(header, update);
             UpdateHashes(message.fragment, update);
         }
+
         protected void UpdateHashes(byte[] buffer, HashUpdate update)
         {
-            if (update == HashUpdate.All || update == HashUpdate.Local || update == HashUpdate.LocalRemote)
+            if (
+                update == HashUpdate.All
+                || update == HashUpdate.Local
+                || update == HashUpdate.LocalRemote
+            )
             {
                 m_LocalMD5Hash.TransformBlock(buffer, 0, buffer.Length, buffer, 0);
                 m_LocalSHA1Hash.TransformBlock(buffer, 0, buffer.Length, buffer, 0);
             }
-            if (update == HashUpdate.All || update == HashUpdate.Remote || update == HashUpdate.LocalRemote)
+            if (
+                update == HashUpdate.All
+                || update == HashUpdate.Remote
+                || update == HashUpdate.LocalRemote
+            )
             {
                 m_RemoteMD5Hash.TransformBlock(buffer, 0, buffer.Length, buffer, 0);
                 m_RemoteSHA1Hash.TransformBlock(buffer, 0, buffer.Length, buffer, 0);
             }
             if (update == HashUpdate.All)
-            {
                 m_CertSignHash.TransformBlock(buffer, 0, buffer.Length, buffer, 0);
-            }
         }
+
         public byte[] GetControlBytes(ControlType type)
         { // the GetControlBytes only handles Shutdown and Renegotiate; ClientHello should be implemented in inheriting classes
             if (type == ControlType.Shutdown)
             {
                 m_IsNegotiating = true;
                 m_State = HandshakeType.ShuttingDown;
-                return m_RecordLayer.EncryptBytes(new byte[] { (byte)AlertLevel.Warning, (byte)AlertDescription.CloseNotify }, 0, 2, ContentType.Alert);
+                return m_RecordLayer.EncryptBytes(
+                    new byte[] { (byte)AlertLevel.Warning, (byte)AlertDescription.CloseNotify },
+                    0,
+                    2,
+                    ContentType.Alert
+                );
             }
             else if (type == ControlType.Renegotiate)
-            {
                 return GetRenegotiateBytes();
-            }
             else if (type == ControlType.ClientHello)
-            {
                 return GetClientHello();
-            }
-            else
-            {
-                throw new NotSupportedException("The selected ControlType field is not supported.");
-            }
+            throw new NotSupportedException("The selected ControlType field is not supported.");
         }
+
         public SecureSocket Parent
         {
-            get
-            {
-                return m_RecordLayer.Parent;
-            }
+            get { return m_RecordLayer.Parent; }
         }
+
         protected void ClearHandshakeStructures()
         {
             try
@@ -431,10 +478,12 @@ namespace Org.Mentalis.Security.Ssl.Shared
             }
             catch { }
         }
+
         public void Dispose()
         {
             Dispose(true);
         }
+
         public void Dispose(bool clear)
         {
             if (m_Disposed)
@@ -464,34 +513,24 @@ namespace Org.Mentalis.Security.Ssl.Shared
                 }
             }
         }
+
         ~HandshakeLayer()
         {
             Dispose();
         }
+
         public SslAlgorithms ActiveEncryption
         {
-            get
-            {
-                return m_EncryptionScheme;
-            }
+            get { return m_EncryptionScheme; }
         }
         public Certificate RemoteCertificate
         {
-            get
-            {
-                return m_RemoteCertificate;
-            }
+            get { return m_RemoteCertificate; }
         }
         internal RecordLayer RecordLayer
         {
-            get
-            {
-                return m_RecordLayer;
-            }
-            set
-            {
-                m_RecordLayer = value;
-            }
+            get { return m_RecordLayer; }
+            set { m_RecordLayer = value; }
         }
         public abstract SecureProtocol GetProtocol();
         public abstract ProtocolVersion GetVersion();
@@ -500,7 +539,11 @@ namespace Org.Mentalis.Security.Ssl.Shared
         protected abstract SslHandshakeStatus ProcessMessage(HandshakeMessage message);
         protected abstract byte[] GetClientHello();
         protected abstract byte[] GetRenegotiateBytes();
-        protected abstract byte[] GenerateMasterSecret(byte[] premaster, byte[] clientRandom, byte[] serverRandom);
+        protected abstract byte[] GenerateMasterSecret(
+            byte[] premaster,
+            byte[] clientRandom,
+            byte[] serverRandom
+        );
         protected abstract byte[] GetFinishedMessage();
         protected abstract void VerifyFinishedMessage(byte[] peerFinished);
 

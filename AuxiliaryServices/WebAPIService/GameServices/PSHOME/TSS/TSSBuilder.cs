@@ -1,9 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Xml.Serialization;
+﻿using System.Xml.Serialization;
 
 namespace WebAPIService.GameServices.PSHOME.TSS
 {
-
     [XmlRoot("XML")]
     public class TSSBuilder
     {
@@ -101,7 +99,6 @@ namespace WebAPIService.GameServices.PSHOME.TSS
         public string UpdaterOverrideUrl { get; set; }
     }
 
-
     public class DataCapture
     {
         [XmlElement("url")]
@@ -188,17 +185,29 @@ namespace WebAPIService.GameServices.PSHOME.TSS
 
     public class Connect
     {
-        [XmlAttribute("address")] public string Address { get; set; }
-        [XmlAttribute("port")] public int Port { get; set; }
-        [XmlAttribute("login")] public string Login { get; set; }
-        [XmlAttribute("password")] public string Password { get; set; }
-        [XmlAttribute("vhost")] public string VHost { get; set; }
-        [XmlAttribute("isCritical")] public bool IsCritical { get; set; }
+        [XmlAttribute("address")]
+        public string Address { get; set; }
+
+        [XmlAttribute("port")]
+        public int Port { get; set; }
+
+        [XmlAttribute("login")]
+        public string Login { get; set; }
+
+        [XmlAttribute("password")]
+        public string Password { get; set; }
+
+        [XmlAttribute("vhost")]
+        public string VHost { get; set; }
+
+        [XmlAttribute("isCritical")]
+        public bool IsCritical { get; set; }
     }
 
     public class EventsSection
     {
-        [XmlElement("enabled")] public bool Enabled { get; set; }
+        [XmlElement("enabled")]
+        public bool Enabled { get; set; }
 
         [XmlElement("destination")]
         public Destination Destination { get; set; }
@@ -212,28 +221,53 @@ namespace WebAPIService.GameServices.PSHOME.TSS
 
     public class ContentSection
     {
-        [XmlElement("message")] public string Message { get; set; }
-        [XmlElement("score")] public string Score { get; set; }
+        [XmlElement("message")]
+        public string Message { get; set; }
+
+        [XmlElement("score")]
+        public string Score { get; set; }
     }
 
     public class SSFW
     {
-        [XmlElement("identity")] public Identity Identity { get; set; }
-        [XmlElement("rewards")] public string Rewards { get; set; }
-        [XmlElement("clan")] public string Clan { get; set; }
-        [XmlElement("savedata")] public string SaveData { get; set; }
-        [XmlElement("avatar")] public string Avatar { get; set; }
-        [XmlElement("layout")] public string Layout { get; set; }
-        [XmlElement("trunks")] public string Trunks { get; set; }
-        [XmlElement("avatarlayout")] public string AvatarLayout { get; set; }
-        [XmlElement("structured")] public string Structured { get; set; }
+        [XmlElement("identity")]
+        public Identity Identity { get; set; }
+
+        [XmlElement("rewards")]
+        public string Rewards { get; set; }
+
+        [XmlElement("clan")]
+        public string Clan { get; set; }
+
+        [XmlElement("savedata")]
+        public string SaveData { get; set; }
+
+        [XmlElement("avatar")]
+        public string Avatar { get; set; }
+
+        [XmlElement("layout")]
+        public string Layout { get; set; }
+
+        [XmlElement("trunks")]
+        public string Trunks { get; set; }
+
+        [XmlElement("avatarlayout")]
+        public string AvatarLayout { get; set; }
+
+        [XmlElement("structured")]
+        public string Structured { get; set; }
     }
 
     public class Identity
     {
-        [XmlAttribute("ttl")] public int Ttl { get; set; }
-        [XmlAttribute("secret")] public string Secret { get; set; }
-        [XmlText] public string Url { get; set; }
+        [XmlAttribute("ttl")]
+        public int Ttl { get; set; }
+
+        [XmlAttribute("secret")]
+        public string Secret { get; set; }
+
+        [XmlText]
+        public string Url { get; set; }
     }
 
     public class GlobalSection
@@ -244,11 +278,20 @@ namespace WebAPIService.GameServices.PSHOME.TSS
 
     public class Mode
     {
-        [XmlAttribute("SCEA")] public int SCEA { get; set; }
-        [XmlAttribute("SCEJ")] public int SCEJ { get; set; }
-        [XmlAttribute("SCEE")] public int SCEE { get; set; }
-        [XmlAttribute("SCEAsia")] public int SCEAsia { get; set; }
-        [XmlText] public int Value { get; set; }
+        [XmlAttribute("SCEA")]
+        public int SCEA { get; set; }
+
+        [XmlAttribute("SCEJ")]
+        public int SCEJ { get; set; }
+
+        [XmlAttribute("SCEE")]
+        public int SCEE { get; set; }
+
+        [XmlAttribute("SCEAsia")]
+        public int SCEAsia { get; set; }
+
+        [XmlText]
+        public int Value { get; set; }
     }
 
     public class AgeRestrictions
@@ -313,17 +356,29 @@ namespace WebAPIService.GameServices.PSHOME.TSS
 
     public class RegionType
     {
-        [XmlAttribute("name")] public string Name { get; set; }
-        [XmlAttribute("territory")] public string Territory { get; set; }
-        [XmlAttribute("instance")] public string Instance { get; set; }
-        [XmlText] public string Value { get; set; }
+        [XmlAttribute("name")]
+        public string Name { get; set; }
+
+        [XmlAttribute("territory")]
+        public string Territory { get; set; }
+
+        [XmlAttribute("instance")]
+        public string Instance { get; set; }
+
+        [XmlText]
+        public string Value { get; set; }
     }
 
     public class MapEntry
     {
-        [XmlAttribute("code")] public string Code { get; set; }
-        [XmlAttribute("loc")] public int Loc { get; set; }
-        [XmlText] public string Value { get; set; }
+        [XmlAttribute("code")]
+        public string Code { get; set; }
+
+        [XmlAttribute("loc")]
+        public int Loc { get; set; }
+
+        [XmlText]
+        public string Value { get; set; }
     }
 
     public class RefEntry

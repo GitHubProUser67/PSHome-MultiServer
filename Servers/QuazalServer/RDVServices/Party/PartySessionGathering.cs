@@ -1,12 +1,12 @@
-using QuazalServer.RDVServices.DDL.Models;
 using QuazalServer.QNetZ;
 using QuazalServer.QNetZ.DDL;
+using QuazalServer.RDVServices.DDL.Models;
 
 namespace QuazalServer.RDVServices
 {
-	public static class PartySessions
-	{
-		public static List<PartySessionGathering> GatheringList = new();
+    public static class PartySessions
+    {
+        public static List<PartySessionGathering> GatheringList = new();
 
         /// <summary>
         /// Removes player from all gatherings (except new one) and adds him to new one
@@ -17,7 +17,12 @@ namespace QuazalServer.RDVServices
         {
             // remove this participant from all gatherings
             // except new one and remove station urls associated
-            var oldGatherings = GatheringList.Where(x => x.Participants.Contains(playerInfo.PID) && x.Session.m_idMyself != newGatheringId).ToArray();
+            var oldGatherings = GatheringList
+                .Where(x =>
+                    x.Participants.Contains(playerInfo.PID)
+                    && x.Session.m_idMyself != newGatheringId
+                )
+                .ToArray();
             foreach (var gathering in oldGatherings)
             {
                 gathering.Urls?.RemoveAll(x => x.Compare(playerInfo.Url));
@@ -25,16 +30,21 @@ namespace QuazalServer.RDVServices
             }
 
             // add player to new gathering if he isn't there yet
-            var newGathering = GatheringList.SingleOrDefault(x => x.Session.m_idMyself == newGatheringId);
+            var newGathering = GatheringList.SingleOrDefault(x =>
+                x.Session.m_idMyself == newGatheringId
+            );
             if (newGathering != null && !newGathering.Participants.Contains(playerInfo.PID))
                 newGathering.Participants.Add(playerInfo.PID);
 
             // delete all outdated empty gatherings
-            GatheringList.RemoveAll(gathering => {
+            GatheringList.RemoveAll(gathering =>
+            {
                 if (gathering.Participants.Count > 0)
                     return false;
 
-                CustomLogger.LoggerAccessor.LogWarn($"[PartySessionGathering] - Auto-deleted gathering {gathering.Session.m_idMyself}");
+                CustomLogger.LoggerAccessor.LogWarn(
+                    $"[PartySessionGathering] - Auto-deleted gathering {gathering.Session.m_idMyself}"
+                );
                 return true;
             });
 
@@ -42,22 +52,22 @@ namespace QuazalServer.RDVServices
         }
     }
 
-	public class PartySessionGathering
-	{
-		public PartySessionGathering()
-		{
-			Session = new HermesPartySession();
-		}
+    public class PartySessionGathering
+    {
+        public PartySessionGathering()
+        {
+            Session = new HermesPartySession();
+        }
 
-		public PartySessionGathering(HermesPartySession session)
-		{
-			Session = session;
-			Urls = new List<StationURL>();
-			Participants = new HashSet<uint>();
-		}
+        public PartySessionGathering(HermesPartySession session)
+        {
+            Session = session;
+            Urls = new List<StationURL>();
+            Participants = new HashSet<uint>();
+        }
 
-		public HermesPartySession Session { get; set; }
-		public List<StationURL>? Urls { get; set; } // host and player URLs
-		public HashSet<uint>? Participants { get; set; }
-	}
+        public HermesPartySession Session { get; set; }
+        public List<StationURL>? Urls { get; set; } // host and player URLs
+        public HashSet<uint>? Participants { get; set; }
+    }
 }

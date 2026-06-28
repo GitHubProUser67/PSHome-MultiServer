@@ -4,7 +4,7 @@ namespace Tdf
     public class TdfStruct : Attribute
     {
         public bool HasData { get; private set; }
-        
+
         public uint TdfId { get; private set; }
 
         public TdfStruct()
@@ -18,6 +18,7 @@ namespace Tdf
             HasData = hasData;
             TdfId = 0;
         }
+
         public TdfStruct(uint tdfId)
         {
             TdfId = tdfId;

@@ -2,24 +2,22 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.League
 {
-	[TdfStruct]
-	public struct SetMetadataRequest
-	{
+    [TdfStruct]
+    public struct SetMetadataRequest
+    {
+        [TdfMember("SMET")]
+        public byte mIsStringMetadata;
 
-		[TdfMember("SMET")]
-		public byte mIsStringMetadata;
+        [TdfMember("LGID")]
+        public uint mLeagueId;
 
-		[TdfMember("LGID")]
-		public uint mLeagueId;
+        [TdfMember("GMID")]
+        public long mMemberId;
 
-		[TdfMember("GMID")]
-		public long mMemberId;
+        [TdfMember("META")]
+        public byte[] mMetadata;
 
-		[TdfMember("META")]
-		public byte[] mMetadata;
-
-		[TdfMember("CRC")]
-		public uint mRosterCrc;
-
-	}
+        [TdfMember("CRC")]
+        public uint mRosterCrc;
+    }
 }

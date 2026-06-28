@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Rooms
 {
-	[TdfStruct]
-	public struct KickUserRequest
-	{
+    [TdfStruct]
+    public struct KickUserRequest
+    {
+        [TdfMember("BANU")]
+        public bool mBanUser;
 
-		[TdfMember("BANU")]
-		public bool mBanUser;
+        [TdfMember("RMID")]
+        public uint mRoomId;
 
-		[TdfMember("RMID")]
-		public uint mRoomId;
-
-		[TdfMember("MBID")]
-		public long mUserId;
-
-	}
+        [TdfMember("MBID")]
+        public long mUserId;
+    }
 }

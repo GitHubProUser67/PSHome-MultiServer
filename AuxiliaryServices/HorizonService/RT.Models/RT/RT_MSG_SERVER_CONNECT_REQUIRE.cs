@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -17,10 +16,8 @@ namespace Horizon.RT.Models
         {
             ReqServerPassword = reader.ReadByte();
             MaxPacketSize = reader.ReadInt16();
-            if (reader.BaseStream.Length > reader.BaseStream.Position)
-                MaxUdpPacketSize = reader.ReadInt16();
-            else
-                MaxUdpPacketSize = null;
+            MaxUdpPacketSize =
+                reader.BaseStream.Length > reader.BaseStream.Position ? reader.ReadInt16() : null;
         }
 
         public override void Serialize(MessageWriter writer)
@@ -33,10 +30,11 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"ServerPassword: {ReqServerPassword} " +
-                $"MaxPacketSize: {MaxPacketSize} " +
-                $"MaxUdpPacketSize: {MaxUdpPacketSize}";
+            return base.ToString()
+                + " "
+                + $"ServerPassword: {ReqServerPassword} "
+                + $"MaxPacketSize: {MaxPacketSize} "
+                + $"MaxUdpPacketSize: {MaxUdpPacketSize}";
         }
     }
 }

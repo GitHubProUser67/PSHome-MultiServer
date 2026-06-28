@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.League
 {
-	[TdfStruct]
-	public struct GetNewsResponse
-	{
+    [TdfStruct]
+    public struct GetNewsResponse
+    {
+        [TdfMember("ITMS")]
+        public List<NewsItem> mNewsItems;
 
-		[TdfMember("ITMS")]
-		public List<NewsItem> mNewsItems;
-
-		[TdfMember("TOTL")]
-		public uint mTotalItems;
-
-	}
+        [TdfMember("TOTL")]
+        public uint mTotalItems;
+    }
 }

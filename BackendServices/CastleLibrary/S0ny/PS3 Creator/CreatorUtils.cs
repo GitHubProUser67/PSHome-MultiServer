@@ -1,5 +1,4 @@
-﻿using System;
-using System.Numerics;
+﻿using System.Numerics;
 using System.Security.Cryptography;
 
 namespace CastleLibrary.S0ny.PS3_Creator
@@ -14,44 +13,66 @@ namespace CastleLibrary.S0ny.PS3_Creator
             CustomLogger.LoggerAccessor.LogError($"[PS3 Creator] - CreatorUtils - Fail:{a}");
         }
 
-        public static void AesecbDecrypt(byte[] key, byte[] i, int inOffset, byte[] o, int outOffset, int len)
+        public static void AesecbDecrypt(
+            byte[] key,
+            byte[] i,
+            int inOffset,
+            byte[] o,
+            int outOffset,
+            int len
+        )
         {
-            CipherMode mode = CipherMode.ECB;
-            PaddingMode padding = PaddingMode.None;
-            
-            int opMode = DECRYPT_MODE;
+            var mode = CipherMode.ECB;
+            var padding = PaddingMode.None;
+
+            var opMode = DECRYPT_MODE;
             Crypto(key, mode, padding, null, opMode, i, inOffset, len, o, outOffset);
         }
 
-        public static void AesecbEncrypt(byte[] key, byte[] i, int inOffset, byte[] o, int outOffset, int len)
+        public static void AesecbEncrypt(
+            byte[] key,
+            byte[] i,
+            int inOffset,
+            byte[] o,
+            int outOffset,
+            int len
+        )
         {
-            CipherMode mode = CipherMode.ECB;
-            PaddingMode padding = PaddingMode.None;
-            int opMode = ENCRYPT_MODE;
+            var mode = CipherMode.ECB;
+            var padding = PaddingMode.None;
+            var opMode = ENCRYPT_MODE;
             Crypto(key, mode, padding, null, opMode, i, inOffset, len, o, outOffset);
         }
 
-        public static void AescbcDecrypt(byte[] key, byte[] iv, byte[] i, int inOffset, byte[] o, int outOffset, int len)
+        public static void AescbcDecrypt(
+            byte[] key,
+            byte[] iv,
+            byte[] i,
+            int inOffset,
+            byte[] o,
+            int outOffset,
+            int len
+        )
         {
-            CipherMode mode = CipherMode.CBC;
-            PaddingMode padding = PaddingMode.None;
-            int opMode = DECRYPT_MODE;
+            var mode = CipherMode.CBC;
+            var padding = PaddingMode.None;
+            var opMode = DECRYPT_MODE;
             Crypto(key, mode, padding, iv, opMode, i, inOffset, len, o, outOffset);
         }
 
         private static void CalculateSubkey(byte[] key, byte[] K1, byte[] K2)
         {
-            byte[] zero = new byte[0x10];
-            byte[] L = new byte[0x10];
+            var zero = new byte[0x10];
+            var L = new byte[0x10];
             AesecbEncrypt(key, zero, 0, L, 0, zero.Length);
-            BigInteger aux = new BigInteger(ConversionUtils.ReverseByteWithSizeFIX(L));
+            var aux = new BigInteger(ConversionUtils.ReverseByteWithSizeFIX(L));
 
             if ((L[0] & 0x80) != 0)
                 // Case MSB is set
                 aux = (aux << 1) ^ (new BigInteger(0x87));
             else
                 aux <<= 1;
-            byte[] aux1 = ConversionUtils.ReverseByteWithSizeFIX(aux.ToByteArray());
+            var aux1 = ConversionUtils.ReverseByteWithSizeFIX(aux.ToByteArray());
             if (aux1.Length >= 0x10)
                 ConversionUtils.Arraycopy(aux1, aux1.Length - 0x10, K1, 0, 0x10);
             else
@@ -75,11 +96,22 @@ namespace CastleLibrary.S0ny.PS3_Creator
             }
         }
 
-        private static void Crypto(byte[] key, CipherMode mode, PaddingMode padding, byte[] iv, int opMode, byte[] i, int inOffset, int len, byte[] o, int outOffset)
+        private static void Crypto(
+            byte[] key,
+            CipherMode mode,
+            PaddingMode padding,
+            byte[] iv,
+            int opMode,
+            byte[] i,
+            int inOffset,
+            int len,
+            byte[] o,
+            int outOffset
+        )
         {
             try
             {
-                Aes cipher = Aes.Create();
+                var cipher = Aes.Create();
                 cipher.Padding = padding;
                 cipher.Mode = mode;
                 cipher.KeySize = 0x80;
@@ -105,13 +137,13 @@ namespace CastleLibrary.S0ny.PS3_Creator
 
         public static byte[] CMAC128(byte[] key, byte[] i, int inOffset, int len)
         {
-            byte[] K1 = new byte[0x10];
-            byte[] K2 = new byte[0x10];
+            var K1 = new byte[0x10];
+            var K2 = new byte[0x10];
             CalculateSubkey(key, K1, K2);
-            byte[] input = new byte[0x10];
-            byte[] previous = new byte[0x10];
-            int currentOffset = inOffset;
-            int remaining = len;
+            var input = new byte[0x10];
+            var previous = new byte[0x10];
+            var currentOffset = inOffset;
+            var remaining = len;
             while (remaining > 0x10)
             {
                 ConversionUtils.Arraycopy(i, currentOffset, input, 0, 0x10);
@@ -136,19 +168,24 @@ namespace CastleLibrary.S0ny.PS3_Creator
             }
             AesecbEncrypt(key, input, 0, previous, 0, input.Length);
             return previous;
-
         }
 
         public static void XOR(byte[] output, byte[] inputA, byte[] inputB)
         {
-            for (int i = 0; i < inputA.Length; i++)
+            for (var i = 0; i < inputA.Length; i++)
                 output[i] = (byte)(inputA[i] ^ inputB[i]);
         }
 
-        public static bool CompareBytes(byte[] value1, int offset1, byte[] value2, int offset2, int len)
+        public static bool CompareBytes(
+            byte[] value1,
+            int offset1,
+            byte[] value2,
+            int offset2,
+            int len
+        )
         {
-            bool result = true;
-            for (int i = 0; i < len; i++)
+            var result = true;
+            for (var i = 0; i < len; i++)
             {
                 if (value1[i + offset1] != value2[i + offset2])
                 {

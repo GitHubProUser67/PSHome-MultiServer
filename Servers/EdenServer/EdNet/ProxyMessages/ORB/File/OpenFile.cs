@@ -1,9 +1,10 @@
-﻿using CustomLogger;
-using EdNetService.CRC;
-using EdNetService.Models;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Reflection;
+using CustomLogger;
+using EdNetService.CRC;
+using EdNetService.Models;
+using MultiServerLibrary.Extension.NET;
 
 namespace EdenServer.EdNet.ProxyMessages.ORB.File
 {
@@ -12,29 +13,38 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
         private const uint maxFsRetry = 10;
         private const uint timeout = 6000;
 
-        public static readonly UniqueIDGenerator FileSystemIdCounter = new UniqueIDGenerator();
+        public static readonly UniqueIDGenerator FileSystemIdCounter = new();
 
-        public static readonly ConcurrentDictionary<uint, (string, byte[], bool)> FileSystemCache = new ConcurrentDictionary<uint, (string, byte[], bool)>();
+        public static readonly ConcurrentDictionary<uint, (string, byte[], bool)> FileSystemCache =
+            new();
 
-        public override byte[]? Process(IPEndPoint endpoint, IPEndPoint target, ClientTask task, ushort PacketMagic)
+        public override byte[]? Process(
+            IPEndPoint endpoint,
+            IPEndPoint target,
+            ClientTask task,
+            ushort PacketMagic
+        )
         {
-            EdStore request = task.Request;
+            var request = task.Request;
 
-            byte facility = request.ExtractUInt8();
-            uint userId = request.ExtractUInt32();
-            string filename = request.ExtractString();
-            bool bupdload_wanted = request.ExtractUInt8() == 0x01;
-            uint uploadtotalsize = request.ExtractUInt32();
+            var facility = request.ExtractUInt8();
+            var userId = request.ExtractUInt32();
+            var filename = request.ExtractString();
+            var bupdload_wanted = request.ExtractUInt8() == 0x01;
+            var uploadtotalsize = request.ExtractUInt32();
 
-            EdStore response = new EdStore(null, 1400);
+            var response = new EdStore(null, 1400);
 
             response.InsertStart(edStoreBank.CRC_A_ORB_OPENFILE);
 
-            string staticUserHostedDir = Directory.GetCurrentDirectory() + $"/static/Eden/StaticUserHostedFiles/{userId}";
+            var staticUserHostedDir =
+                Directory.GetCurrentDirectory() + $"/static/Eden/StaticUserHostedFiles/{userId}";
 
             if (!bupdload_wanted && !Directory.Exists(staticUserHostedDir))
             {
-                LoggerAccessor.LogWarn($"[OpenFile] - Static User file repository expected at path:{staticUserHostedDir}, sending error response...");
+                LoggerAccessor.LogWarn(
+                    $"[OpenFile] - Static User file repository expected at path:{staticUserHostedDir}, sending error response..."
+                );
                 SetFailure(response);
             }
             else
@@ -47,7 +57,9 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
                         suffix = "/Core/";
                         break;
                     default:
-                        LoggerAccessor.LogWarn($"[OpenFile] - Unknown facility:{facility} requested, please report to GITHUB.");
+                        LoggerAccessor.LogWarn(
+                            $"[OpenFile] - Unknown facility:{facility} requested, please report to GITHUB."
+                        );
                         SetFailure(response);
 
                         response.InsertEnd();
@@ -59,16 +71,25 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
                         return null;
                 }
 
-                uint fileId = FileSystemIdCounter.CreateUniqueID();
-                string directoryPath = staticUserHostedDir + suffix;
-                string filePath = directoryPath + filename;
+                var fileId = FileSystemIdCounter.CreateUniqueID();
+                var directoryPath = staticUserHostedDir + suffix;
+                var filePath = directoryPath + filename;
 
                 Directory.CreateDirectory(directoryPath);
 
                 if (bupdload_wanted)
                 {
-                    DriveInfo drive = new DriveInfo(Path.GetPathRoot(Assembly.GetExecutingAssembly().Location));
-                    if (drive.IsReady && uploadtotalsize <= drive.AvailableFreeSpace && FileSystemCache.TryAdd(fileId, (filePath, new byte[uploadtotalsize], true)))
+                    var drive = new DriveInfo(
+                        Path.GetPathRoot(Assembly.GetExecutingAssembly().Location)
+                    );
+                    if (
+                        drive.IsReady
+                        && uploadtotalsize <= drive.AvailableFreeSpace
+                        && FileSystemCache.TryAdd(
+                            fileId,
+                            (filePath, new byte[uploadtotalsize], true)
+                        )
+                    )
                     {
                         response.InsertUInt8(0); // Success.
                         response.InsertUInt32(fileId);
@@ -84,9 +105,14 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
                 }
                 else if (System.IO.File.Exists(filePath))
                 {
-                    uint fileSize = (uint)new FileInfo(filePath).Length;
+                    var fileSize = (uint)new FileInfo(filePath).Length;
 
-                    if (FileSystemCache.TryAdd(fileId, (filePath, System.IO.File.ReadAllBytes(filePath), false)))
+                    if (
+                        FileSystemCache.TryAdd(
+                            fileId,
+                            (filePath, System.IO.File.ReadAllBytes(filePath), false)
+                        )
+                    )
                     {
                         response.InsertUInt8(0); // Success.
                         response.InsertUInt32(fileId);
@@ -103,7 +129,9 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
                 else
                 {
                     FileSystemIdCounter.ReleaseID(fileId);
-                    LoggerAccessor.LogWarn($"[OpenFile] - File:{filename} was not found for userId:{userId}, sending error response...");
+                    LoggerAccessor.LogWarn(
+                        $"[OpenFile] - File:{filename} was not found for userId:{userId}, sending error response..."
+                    );
                     SetFailure(response);
                 }
             }

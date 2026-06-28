@@ -5,15 +5,13 @@ namespace Blaze2SDK.Blaze.Playgroups
     [TdfStruct]
     public struct NotifyXboxSessionInfo
     {
-        
         [TdfMember("PGID")]
         public uint mId;
-        
+
         [TdfMember("XNNC")]
         public byte[] mXnetNonce;
-        
+
         [TdfMember("XSES")]
         public byte[] mXnetSession;
-        
     }
 }

@@ -1,10 +1,12 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.FileListExtResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.FileListExtResponse
+    )]
     public class MediusFileListExtResponse : BaseLobbyExtMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.FileListExtResponse;
@@ -19,10 +21,8 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MediusFileInfo = reader.Read<MediusFile>();
             MetaValue = reader.ReadString(Constants.MEDIUS_FILE_MAX_VALUE_LENGTH);
             StatusCode = reader.Read<MediusCallbackStatus>();
@@ -33,10 +33,8 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MediusFileInfo);
             writer.Write(MetaValue, Constants.MEDIUS_FILE_MAX_VALUE_LENGTH);
             writer.Write(StatusCode);
@@ -47,13 +45,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-
-                $"MediusFileInfo: {MediusFileInfo} " +
-                $"MetaValue: {MetaValue} " +
-                $"StatusCode: {StatusCode} " +
-                $"MessageID: {MessageID} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MediusFileInfo: {MediusFileInfo} "
+                + $"MetaValue: {MetaValue} "
+                + $"StatusCode: {StatusCode} "
+                + $"MessageID: {MessageID} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

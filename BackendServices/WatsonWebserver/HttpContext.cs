@@ -1,6 +1,6 @@
-﻿    using SpaceWizards.HttpListener;
-    using System;
-    using WatsonWebserver.Core;
+﻿using System;
+using SpaceWizards.HttpListener;
+using WatsonWebserver.Core;
 
 namespace WatsonWebserver
 {
@@ -20,14 +20,6 @@ namespace WatsonWebserver
         #region Constructors-and-Factories
 
         /// <summary>
-        /// Instantiate the object.
-        /// </summary>
-        public HttpContext()
-        {
-
-        }
-
-        /// <summary>
         /// Instantiate.
         /// </summary>
         /// <param name="listenerCtx">HTTP listener context.</param>
@@ -35,27 +27,42 @@ namespace WatsonWebserver
         /// <param name="events">Events.</param>
         /// <param name="serializer">Serializer.</param>
         internal HttpContext(
-            object listenerCtx, 
-            WebserverSettings settings, 
+            object listenerCtx,
+            WebserverSettings settings,
             WebserverEvents events,
             ISerializationHelper serializer,
-            bool KeepAliveResponseData)
+            bool KeepAliveResponseData
+        )
         {
-            if (events == null) throw new ArgumentNullException(nameof(events));
+            ArgumentNullException.ThrowIfNull(events);
 
             if (listenerCtx is System.Net.HttpListenerContext nativeCtx)
             {
                 nativeCtx.Response.KeepAlive = settings.IO.EnableKeepAlive;
                 Request = new HttpRequestNative(nativeCtx, serializer);
-                Response = new HttpResponseNative(Request, nativeCtx, settings, events, serializer, KeepAliveResponseData);
+                Response = new HttpResponseNative(
+                    Request,
+                    nativeCtx,
+                    settings,
+                    events,
+                    serializer,
+                    KeepAliveResponseData
+                );
             }
             else if (listenerCtx is HttpListenerContext managedCtx)
             {
                 managedCtx.Response.KeepAlive = settings.IO.EnableKeepAlive;
                 Request = new HttpRequest(managedCtx, serializer);
-                Response = new HttpResponse(Request, managedCtx, settings, events, serializer, KeepAliveResponseData);
+                Response = new HttpResponse(
+                    Request,
+                    managedCtx,
+                    settings,
+                    events,
+                    serializer,
+                    KeepAliveResponseData
+                );
             }
-            else 
+            else
                 // Implicit
                 throw new ArgumentNullException(nameof(listenerCtx));
         }

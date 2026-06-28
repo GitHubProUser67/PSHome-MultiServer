@@ -1,10 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models.Lobby
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.AssignedGameToJoinMessage)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.AssignedGameToJoinMessage
+    )]
     public class MediusAssignedGameToJoinMessage : BaseLobbyExtMessage
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.AssignedGameToJoinMessage;
@@ -127,72 +129,71 @@ namespace Horizon.RT.Models.Lobby
 
         public override string ToString()
         {
-            if (StatusCode == MediusCallbackStatus.MediusJoinAssignedGame)
-                return base.ToString() + " " +
-                $"AssignedGameMessageRequestData: {string.Join(string.Empty, AssignedGameMessageRequestData)} " +
-                $"AssignedGameMessageID:{AssignedGameMessageID} " +
-                $"AssignedGameType:{AssignedGameType} " +
-                $"StatusCode:{StatusCode} " +
-                $"SystemSpecificStatusCode:{SystemSpecificStatusCode} " +
-                $"GameWorldID: {GameWorldID} " +
-                $"TeamID: {TeamID} " +
-                $"PlayerCount:{PlayerCount} " +
-                $"GameName:{GameName} " +
-                $"GameStats:{System.BitConverter.ToString(GameStats)} " +
-                $"MinPlayers:{MinPlayers} " +
-                $"MaxPlayers:{MaxPlayers} " +
-                $"GameLevel:{GameLevel} " +
-                $"PlayerSkillLevel:{PlayerSkillLevel} " +
-                $"RulesSet:{RulesSet} " +
-                $"GenericField1:{GenericField1:X8} " +
-                $"GenericField2:{GenericField2:X8} " +
-                $"GenericField3:{GenericField3:X8} " +
-                $"GenericField4:{GenericField4:X8} " +
-                $"GenericField5:{GenericField5:X8} " +
-                $"GenericField6:{GenericField6:X8} " +
-                $"GenericField7:{GenericField7:X8} " +
-                $"GenericField8:{GenericField8:X8} " +
-                $"WorldStatus:{WorldStatus} " +
-                $"JoinType: {JoinType} " +
-                $"GamePassword: {GamePassword} " +
-                $"GameHostType:{GameHostType} " +
-                $"NetAddressList: {AddressList} " +
-                $"AppDataSize: {AppDataSize} " +
-                $"AppData: {string.Join(string.Empty, AppData)}";
-            else
-            {
-                return base.ToString() + " " +
-                $"AssignedGameMessageRequestData: {string.Join(string.Empty, AssignedGameMessageRequestData)} " +
-                $"AssignedGameMessageID:{AssignedGameMessageID} " +
-                $"AssignedGameType:{AssignedGameType} " +
-                $"StatusCode:{StatusCode} " +
-                $"SystemSpecificStatusCode:{SystemSpecificStatusCode} " +
-                $"GameWorldID: {GameWorldID} " +
-                $"TeamID: {TeamID} " +
-                $"PlayerCount:{PlayerCount} " +
-                $"GameName:{GameName} " +
-                $"GameStats: {System.BitConverter.ToString(GameStats)} " +
-                $"MinPlayers:{MinPlayers} " +
-                $"MaxPlayers:{MaxPlayers} " +
-                $"GameLevel:{GameLevel} " +
-                $"PlayerSkillLevel:{PlayerSkillLevel} " +
-                $"RulesSet:{RulesSet} " +
-                $"GenericField1:{GenericField1:X8} " +
-                $"GenericField2:{GenericField2:X8} " +
-                $"GenericField3:{GenericField3:X8} " +
-                $"GenericField4:{GenericField4:X8} " +
-                $"GenericField5:{GenericField5:X8} " +
-                $"GenericField6:{GenericField6:X8} " +
-                $"GenericField7:{GenericField7:X8} " +
-                $"GenericField8:{GenericField8:X8} " +
-                $"WorldStatus:{WorldStatus} " +
-                $"JoinType: {JoinType} " +
-                $"GamePassword: {GamePassword} " +
-                $"GameHostType:{GameHostType} " +
-                $"NetAddressList: {AddressList} " +
-                $"AppDataSize: {AppDataSize} " +
-                $"AppData: {string.Join(string.Empty, AppData)}";
-            }
+            return StatusCode == MediusCallbackStatus.MediusJoinAssignedGame
+                ? base.ToString()
+                    + " "
+                    + $"AssignedGameMessageRequestData: {string.Join(string.Empty, AssignedGameMessageRequestData)} "
+                    + $"AssignedGameMessageID:{AssignedGameMessageID} "
+                    + $"AssignedGameType:{AssignedGameType} "
+                    + $"StatusCode:{StatusCode} "
+                    + $"SystemSpecificStatusCode:{SystemSpecificStatusCode} "
+                    + $"GameWorldID: {GameWorldID} "
+                    + $"TeamID: {TeamID} "
+                    + $"PlayerCount:{PlayerCount} "
+                    + $"GameName:{GameName} "
+                    + $"GameStats:{System.BitConverter.ToString(GameStats)} "
+                    + $"MinPlayers:{MinPlayers} "
+                    + $"MaxPlayers:{MaxPlayers} "
+                    + $"GameLevel:{GameLevel} "
+                    + $"PlayerSkillLevel:{PlayerSkillLevel} "
+                    + $"RulesSet:{RulesSet} "
+                    + $"GenericField1:{GenericField1:X8} "
+                    + $"GenericField2:{GenericField2:X8} "
+                    + $"GenericField3:{GenericField3:X8} "
+                    + $"GenericField4:{GenericField4:X8} "
+                    + $"GenericField5:{GenericField5:X8} "
+                    + $"GenericField6:{GenericField6:X8} "
+                    + $"GenericField7:{GenericField7:X8} "
+                    + $"GenericField8:{GenericField8:X8} "
+                    + $"WorldStatus:{WorldStatus} "
+                    + $"JoinType: {JoinType} "
+                    + $"GamePassword: {GamePassword} "
+                    + $"GameHostType:{GameHostType} "
+                    + $"NetAddressList: {AddressList} "
+                    + $"AppDataSize: {AppDataSize} "
+                    + $"AppData: {string.Join(string.Empty, AppData)}"
+                : base.ToString()
+                    + " "
+                    + $"AssignedGameMessageRequestData: {string.Join(string.Empty, AssignedGameMessageRequestData)} "
+                    + $"AssignedGameMessageID:{AssignedGameMessageID} "
+                    + $"AssignedGameType:{AssignedGameType} "
+                    + $"StatusCode:{StatusCode} "
+                    + $"SystemSpecificStatusCode:{SystemSpecificStatusCode} "
+                    + $"GameWorldID: {GameWorldID} "
+                    + $"TeamID: {TeamID} "
+                    + $"PlayerCount:{PlayerCount} "
+                    + $"GameName:{GameName} "
+                    + $"GameStats: {System.BitConverter.ToString(GameStats)} "
+                    + $"MinPlayers:{MinPlayers} "
+                    + $"MaxPlayers:{MaxPlayers} "
+                    + $"GameLevel:{GameLevel} "
+                    + $"PlayerSkillLevel:{PlayerSkillLevel} "
+                    + $"RulesSet:{RulesSet} "
+                    + $"GenericField1:{GenericField1:X8} "
+                    + $"GenericField2:{GenericField2:X8} "
+                    + $"GenericField3:{GenericField3:X8} "
+                    + $"GenericField4:{GenericField4:X8} "
+                    + $"GenericField5:{GenericField5:X8} "
+                    + $"GenericField6:{GenericField6:X8} "
+                    + $"GenericField7:{GenericField7:X8} "
+                    + $"GenericField8:{GenericField8:X8} "
+                    + $"WorldStatus:{WorldStatus} "
+                    + $"JoinType: {JoinType} "
+                    + $"GamePassword: {GamePassword} "
+                    + $"GameHostType:{GameHostType} "
+                    + $"NetAddressList: {AddressList} "
+                    + $"AppDataSize: {AppDataSize} "
+                    + $"AppData: {string.Join(string.Empty, AppData)}";
         }
     }
 }

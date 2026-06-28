@@ -1,13 +1,15 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
     /// <summary>
-    /// 
+    ///
     /// </summary>
-    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.FindWorldByNameResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.FindWorldByNameResponse
+    )]
     public class MediusFindWorldByNameResponse : BaseLobbyMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusLobbyMessageIds.FindWorldByNameResponse;
@@ -18,34 +20,42 @@ namespace Horizon.RT.Models
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Response status to find a world by name
         /// </summary>
         public MediusCallbackStatus StatusCode;
+
         /// <summary>
         /// Application ID of the world
         /// </summary>
         public int ApplicationID;
+
         /// <summary>
         /// Application name related to the app-ID
         /// </summary>
         public string ApplicationName;
+
         /// <summary>
         /// Application type (game or chat channel)
         /// </summary>
         public MediusApplicationType ApplicationType;
+
         /// <summary>
         /// World ID
         /// </summary>
         public int MediusWorldID;
+
         /// <summary>
         /// World Name
         /// </summary>
         public string WorldName;
+
         /// <summary>
         /// World Status
         /// </summary>
         public MediusWorldStatus WorldStatus;
+
         /// <summary>
         /// Flag 0 or 1 to determine the end of list.
         /// </summary>
@@ -53,14 +63,11 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            // 
             MessageID = reader.Read<MessageId>();
             reader.ReadBytes(3);
 
-            //
             StatusCode = reader.Read<MediusCallbackStatus>();
             ApplicationID = reader.ReadInt32();
             ApplicationName = reader.ReadString(Constants.APPNAME_MAXLEN);
@@ -74,14 +81,11 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            // 
             writer.Write(MessageID ?? MessageId.Empty);
             writer.Write(new byte[3]);
 
-            //
             writer.Write(StatusCode);
             writer.Write(ApplicationID);
             writer.Write(ApplicationName, Constants.APPNAME_MAXLEN);
@@ -95,16 +99,17 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID}" +
-                $"StatusCode: {StatusCode} " +
-                $"ApplicationID: {ApplicationID} " +
-                $"ApplicationName: {ApplicationName} " +
-                $"ApplicationType: {ApplicationType} " +
-                $"MediusWorldID: {MediusWorldID} " +
-                $"WorldName: {WorldName} " +
-                $"WorldStatus: {WorldStatus} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID}"
+                + $"StatusCode: {StatusCode} "
+                + $"ApplicationID: {ApplicationID} "
+                + $"ApplicationName: {ApplicationName} "
+                + $"ApplicationType: {ApplicationType} "
+                + $"MediusWorldID: {MediusWorldID} "
+                + $"WorldName: {WorldName} "
+                + $"WorldStatus: {WorldStatus} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

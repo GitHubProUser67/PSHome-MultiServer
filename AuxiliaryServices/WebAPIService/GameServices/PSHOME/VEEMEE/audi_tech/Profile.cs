@@ -1,16 +1,14 @@
-using MultiServerLibrary.HTTP;
 using HttpMultipartParser;
+using MultiServerLibrary.HTTP;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Collections.Generic;
-using System.IO;
-using WebAPIService.GameServices.PSHOME.VEEMEE;
 
 namespace WebAPIService.GameServices.PSHOME.VEEMEE.audi_tech
 {
     public static class Profile
     {
-        private const string DefaultProfile = @"{
+        private const string DefaultProfile =
+            @"{
                 ""psnID"": ""PUT_MYPSNID_HERE"",
                 ""chosenTrack"": 1,
                 ""chosenChallenge"": 1,
@@ -42,16 +40,16 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.audi_tech
 
         public static string GetProfile(byte[] PostData, string ContentType, string apiPath)
         {
-            string psnid = string.Empty;
-            string hex = string.Empty;
-            string __salt = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var psnid = string.Empty;
+            var hex = string.Empty;
+            var __salt = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
-                    MultipartFormDataParser data = MultipartFormDataParser.Parse(ms, boundary);
+                    var data = MultipartFormDataParser.Parse(ms, boundary);
 
                     psnid = data.GetParameterValue("psnid");
 
@@ -62,22 +60,26 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.audi_tech
                     ms.Flush();
                 }
 
-                string verificationSalt = Processor.GetVerificationSalt(hex, new Dictionary<string, string> { { "psnid", psnid } });
+                var verificationSalt = Processor.GetVerificationSalt(
+                    hex,
+                    new Dictionary<string, string> { { "psnid", psnid } }
+                );
 
                 if (!__salt.Equals(verificationSalt))
                 {
-                    CustomLogger.LoggerAccessor.LogError($"[VEEMEE.audi_tech.Profile] - GetProfile - Invalid hex sent! Calculated:{verificationSalt} - Expected:{__salt}");
+                    CustomLogger.LoggerAccessor.LogError(
+                        $"[VEEMEE.audi_tech.Profile] - GetProfile - Invalid hex sent! Calculated:{verificationSalt} - Expected:{__salt}"
+                    );
                     return null;
                 }
 
                 if (!string.IsNullOrEmpty(psnid))
                 {
-                    string profilePath = $"{apiPath}/VEEMEE/Audi_Tech/{psnid}/Profile.json";
+                    var profilePath = $"{apiPath}/VEEMEE/Audi_Tech/{psnid}/Profile.json";
 
-                    if (File.Exists(profilePath))
-                        return Processor.Sign(File.ReadAllText(profilePath));
-
-                    return Processor.Sign(DefaultProfile.Replace("PUT_MYPSNID_HERE", psnid));
+                    return File.Exists(profilePath)
+                        ? Processor.Sign(File.ReadAllText(profilePath))
+                        : Processor.Sign(DefaultProfile.Replace("PUT_MYPSNID_HERE", psnid));
                 }
             }
 
@@ -86,34 +88,34 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.audi_tech
 
         public static string SetProfile(byte[] PostData, string ContentType, string apiPath)
         {
-            string profile = string.Empty;
-            string hex = string.Empty;
-            string __salt = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
-                    MultipartFormDataParser data = MultipartFormDataParser.Parse(ms, boundary);
+                    var data = MultipartFormDataParser.Parse(ms, boundary);
 
-                    profile = data.GetParameterValue("profile");
+                    var profile = data.GetParameterValue("profile");
+                    var hex = data.GetParameterValue("hex");
+                    var __salt = data.GetParameterValue("__salt");
 
-                    hex = data.GetParameterValue("hex");
-
-                    __salt = data.GetParameterValue("__salt");
-
-                    string verificationSalt = Processor.GetVerificationSalt(hex, new Dictionary<string, string> { { "profile", profile } });
+                    var verificationSalt = Processor.GetVerificationSalt(
+                        hex,
+                        new Dictionary<string, string> { { "profile", profile } }
+                    );
 
                     if (!__salt.Equals(verificationSalt))
                     {
-                        CustomLogger.LoggerAccessor.LogError($"[VEEMEE.audi_tech.Profile] - SetProfile - Invalid hex sent! Calculated:{verificationSalt} - Expected:{__salt}");
+                        CustomLogger.LoggerAccessor.LogError(
+                            $"[VEEMEE.audi_tech.Profile] - SetProfile - Invalid hex sent! Calculated:{verificationSalt} - Expected:{__salt}"
+                        );
                         return null;
                     }
 
                     if (!string.IsNullOrEmpty(profile))
                     {
-                        string psnID = JObject.Parse(profile)["psnID"].ToString();
+                        var psnID = JObject.Parse(profile)["psnID"].ToString();
 
                         if (!string.IsNullOrEmpty(psnID))
                         {
@@ -121,38 +123,56 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.audi_tech
                             {
                                 Directory.CreateDirectory($"{apiPath}/VEEMEE/Audi_Tech/{psnID}");
 
-                                File.WriteAllText($"{apiPath}/VEEMEE/Audi_Tech/{psnID}/Profile.json", profile);
+                                File.WriteAllText(
+                                    $"{apiPath}/VEEMEE/Audi_Tech/{psnID}/Profile.json",
+                                    profile
+                                );
 
-                                foreach (FilePart multipartfile in data.Files)
+                                foreach (var multipartfile in data.Files)
                                 {
                                     if (multipartfile.FileName.Equals("ghost.dat"))
                                     {
                                         try
                                         {
-                                            string ghostDirectoryPath = $"{apiPath}/VEEMEE/Audi_Tech/{psnID}/" + JObject.Parse(profile)["chosenTrack"].ToString() + " "
-                                                + JObject.Parse(profile)["chosenChallenge"].ToString() + " " + JObject.Parse(profile)["chosenModifiers"].ToString() + "/";
+                                            var ghostDirectoryPath =
+                                                $"{apiPath}/VEEMEE/Audi_Tech/{psnID}/"
+                                                + JObject.Parse(profile)["chosenTrack"].ToString()
+                                                + " "
+                                                + JObject
+                                                    .Parse(profile)["chosenChallenge"]
+                                                    .ToString()
+                                                + " "
+                                                + JObject
+                                                    .Parse(profile)["chosenModifiers"]
+                                                    .ToString()
+                                                + "/";
 
                                             Directory.CreateDirectory(ghostDirectoryPath);
 
-                                            using (Stream filedata = multipartfile.Data)
+                                            using (var filedata = multipartfile.Data)
                                             {
                                                 filedata.Position = 0;
 
                                                 // Find the number of bytes in the stream
-                                                int contentLength = (int)filedata.Length;
+                                                var contentLength = (int)filedata.Length;
 
                                                 // Create a byte array
-                                                byte[] buffer = new byte[contentLength];
+                                                var buffer = new byte[contentLength];
 
                                                 // Read the contents of the memory stream into the byte array
                                                 filedata.Read(buffer, 0, contentLength);
 
-                                                File.WriteAllBytes($"{ghostDirectoryPath}ghost.dat", buffer);
+                                                File.WriteAllBytes(
+                                                    $"{ghostDirectoryPath}ghost.dat",
+                                                    buffer
+                                                );
                                             }
                                         }
                                         catch (JsonReaderException)
                                         {
-                                            CustomLogger.LoggerAccessor.LogError($"[VEEMEE.audi_tech.Profile] - SetProfile - Invalid json profile was sent! Ignoring Ghost upload.");
+                                            CustomLogger.LoggerAccessor.LogError(
+                                                $"[VEEMEE.audi_tech.Profile] - SetProfile - Invalid json profile was sent! Ignoring Ghost upload."
+                                            );
                                         }
                                     }
                                 }

@@ -1,5 +1,4 @@
 using Newtonsoft.Json.Linq;
-using System;
 
 namespace WebAPIService.GameServices.PSHOME.OHS
 {
@@ -16,7 +15,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
         {
             try
             {
-                JToken valueToken = jToken[propertyName];
+                var valueToken = jToken[propertyName];
 
                 if (valueToken != null)
                 {
@@ -46,16 +45,20 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                         case JTokenType.TimeSpan:
                             return valueToken.ToObject<TimeSpan>();
                         default:
-                            {
-                                CustomLogger.LoggerAccessor.LogWarn($"[JtokenUtils] - GetValueFromJToken - Unsupported JTokenType: {valueToken.Type}");
-                                break;
-                            }
+                        {
+                            CustomLogger.LoggerAccessor.LogWarn(
+                                $"[JtokenUtils] - GetValueFromJToken - Unsupported JTokenType: {valueToken.Type}"
+                            );
+                            break;
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
-                CustomLogger.LoggerAccessor.LogError($"[JtokenUtils] - GetValueFromJToken - thrown an exception: {ex}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"[JtokenUtils] - GetValueFromJToken - thrown an exception: {ex}"
+                );
             }
 
             return null;
@@ -63,12 +66,12 @@ namespace WebAPIService.GameServices.PSHOME.OHS
 
         public static bool IsEmpty(this JToken token)
         {
-            return token == null ||
-                   token.Type == JTokenType.Null ||
-                   (token.Type == JTokenType.String && string.IsNullOrWhiteSpace(token.ToString())) ||
-                   (token.Type == JTokenType.Array && !token.HasValues) ||
-                   (token.Type == JTokenType.Object && !token.HasValues) ||
-                   (token.Type == JTokenType.Property && IsEmpty(((JProperty)token).Value));
+            return token == null
+                || token.Type == JTokenType.Null
+                || (token.Type == JTokenType.String && string.IsNullOrWhiteSpace(token.ToString()))
+                || (token.Type == JTokenType.Array && !token.HasValues)
+                || (token.Type == JTokenType.Object && !token.HasValues)
+                || (token.Type == JTokenType.Property && IsEmpty(((JProperty)token).Value));
         }
     }
 }

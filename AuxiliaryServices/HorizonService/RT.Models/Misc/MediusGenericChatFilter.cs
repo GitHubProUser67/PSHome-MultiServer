@@ -1,16 +1,19 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     public class MediusGenericChatFilter : IStreamSerializer
     {
-        public byte[] GenericChatFilterBitfield = new byte[Constants.MEDIUS_GENERIC_CHAT_FILTER_BYTES_LEN];
+        public byte[] GenericChatFilterBitfield = new byte[
+            Constants.MEDIUS_GENERIC_CHAT_FILTER_BYTES_LEN
+        ];
 
         public void Deserialize(BinaryReader reader)
         {
-            GenericChatFilterBitfield = reader.ReadBytes(Constants.MEDIUS_GENERIC_CHAT_FILTER_BYTES_LEN);
+            GenericChatFilterBitfield = reader.ReadBytes(
+                Constants.MEDIUS_GENERIC_CHAT_FILTER_BYTES_LEN
+            );
         }
 
         public void Serialize(BinaryWriter writer)
@@ -20,8 +23,9 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"GenericChatFilterBitfield: {System.BitConverter.ToString(GenericChatFilterBitfield)}";
+            return base.ToString()
+                + " "
+                + $"GenericChatFilterBitfield: {BitConverter.ToString(GenericChatFilterBitfield)}";
         }
     }
 }

@@ -3,16 +3,10 @@ using Tdf;
 
 namespace BlazeCommon
 {
-    public class ProtoFirePacket
+    public class ProtoFirePacket(FireFrame frame, byte[] data)
     {
-        public FireFrame Frame { get; set; }
-        public byte[] Data { get; set; }
-
-        public ProtoFirePacket(FireFrame frame, byte[] data)
-        {
-            Frame = frame;
-            Data = data;
-        }
+        public FireFrame Frame { get; set; } = frame;
+        public byte[] Data { get; set; } = data;
 
         public MemoryStream GetDataStream()
         {
@@ -21,8 +15,9 @@ namespace BlazeCommon
 
         public ProtoFirePacket CreateResponsePacket(int errorCode = 0)
         {
-            return new ProtoFirePacket(Frame.CreateResponseFrame(errorCode), Array.Empty<byte>());
+            return new ProtoFirePacket(Frame.CreateResponseFrame(errorCode), []);
         }
+
         public ProtoFirePacket CreateResponsePacket(byte[] data, int errorCode = 0)
         {
             return new ProtoFirePacket(Frame.CreateResponseFrame(errorCode), data);
@@ -44,11 +39,15 @@ namespace BlazeCommon
                 await stream.WriteAsync(Data, 0, Data.Length).ConfigureAwait(false);
         }
 
-        static MethodInfo decodeMethod = typeof(ITdfDecoder).GetMethod(nameof(ITdfDecoder.Decode), new Type[] { typeof(Type), typeof(Stream) })!;
+        static readonly MethodInfo decodeMethod = typeof(ITdfDecoder).GetMethod(
+            nameof(ITdfDecoder.Decode),
+            [typeof(Type), typeof(Stream)]
+        )!;
+
         public IBlazePacket Decode(Type type, ITdfDecoder decoder)
         {
-            Type blzPacketType = typeof(BlazePacket<>).MakeGenericType(type);
-            object obj = decodeMethod.Invoke(decoder, new object?[] { type, GetDataStream() })!;
+            var blzPacketType = typeof(BlazePacket<>).MakeGenericType(type);
+            var obj = decodeMethod.Invoke(decoder, [type, GetDataStream()])!;
             return (IBlazePacket)Activator.CreateInstance(blzPacketType, Frame, obj)!;
         }
     }

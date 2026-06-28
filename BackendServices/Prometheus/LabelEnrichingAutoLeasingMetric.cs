@@ -2,17 +2,14 @@
 
 namespace Prometheus;
 
-internal sealed class LabelEnrichingAutoLeasingMetric<TMetric> : ICollector<TMetric>
+internal sealed class LabelEnrichingAutoLeasingMetric<TMetric>(
+    ICollector<TMetric> inner,
+    string[] enrichWithLabelValues
+) : ICollector<TMetric>
     where TMetric : ICollectorChild
 {
-    public LabelEnrichingAutoLeasingMetric(ICollector<TMetric> inner, string[] enrichWithLabelValues)
-    {
-        _inner = inner;
-        _enrichWithLabelValues = enrichWithLabelValues;
-    }
-
-    private readonly ICollector<TMetric> _inner;
-    private readonly string[] _enrichWithLabelValues;
+    private readonly ICollector<TMetric> _inner = inner;
+    private readonly string[] _enrichWithLabelValues = enrichWithLabelValues;
 
     public TMetric Unlabelled
     {
@@ -64,13 +61,18 @@ internal sealed class LabelEnrichingAutoLeasingMetric<TMetric> : ICollector<TMet
     {
         // The ReadOnlySpan overload suggests that the label values may already be known to the metric,
         // so we should strongly avoid allocating memory here. Thus we copy everything to a reusable buffer.
-        var buffer = ArrayPool<string>.Shared.Rent(_enrichWithLabelValues.Length + labelValues.Length);
+        var buffer = ArrayPool<string>.Shared.Rent(
+            _enrichWithLabelValues.Length + labelValues.Length
+        );
 
         try
         {
             _enrichWithLabelValues.CopyTo(buffer, 0);
             labelValues.CopyTo(buffer.AsSpan(_enrichWithLabelValues.Length));
-            var finalLabelValues = buffer.AsSpan(0, _enrichWithLabelValues.Length + labelValues.Length);
+            var finalLabelValues = buffer.AsSpan(
+                0,
+                _enrichWithLabelValues.Length + labelValues.Length
+            );
 
             return _inner.WithLabels(finalLabelValues);
         }

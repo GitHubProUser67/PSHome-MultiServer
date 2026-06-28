@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -11,25 +10,28 @@ namespace Horizon.RT.Models
     [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.BinaryMessage)]
     public class MediusBinaryMessage : BaseLobbyExtMessage
     {
-
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.BinaryMessage;
 
         /// <summary>
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Session Key
         /// </summary>
         public string SessionKey; // SESSIONKEY_MAXLEN
+
         /// <summary>
         /// BinaryMessageType
         /// </summary>
         public MediusBinaryMessageType MessageType;
+
         /// <summary>
         /// TargetAccountID to send Binary Message to
         /// </summary>
         public int TargetAccountID;
+
         /// <summary>
         /// Game Developer binary message
         /// </summary>
@@ -63,15 +65,15 @@ namespace Horizon.RT.Models
             writer.Write(Message, Constants.BINARYMESSAGE_MAXLEN);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"MessageType: {MessageType} " +
-                $"TargetAccountID: {TargetAccountID} " +
-                $"Message: {System.BitConverter.ToString(Message)}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"MessageType: {MessageType} "
+                + $"TargetAccountID: {TargetAccountID} "
+                + $"Message: {System.BitConverter.ToString(Message)}";
         }
     }
 }

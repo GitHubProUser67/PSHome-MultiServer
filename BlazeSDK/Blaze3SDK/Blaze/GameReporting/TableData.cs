@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameReporting
 {
-	[TdfStruct]
-	public struct TableData
-	{
+    [TdfStruct]
+    public struct TableData
+    {
+        [TdfMember("COLS")]
+        public List<string> mColumns;
 
-		[TdfMember("COLS")]
-		public List<string> mColumns;
+        [TdfMember("PKEY")]
+        public List<string> mPrimaryKey;
 
-		[TdfMember("PKEY")]
-		public List<string> mPrimaryKey;
-
-		[TdfMember("TABN")]
-		public string mTable;
-
-	}
+        [TdfMember("TABN")]
+        public string mTable;
+    }
 }

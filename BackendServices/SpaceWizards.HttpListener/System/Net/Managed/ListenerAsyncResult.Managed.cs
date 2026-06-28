@@ -1,16 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-//
 // System.Net.ListenerAsyncResult
-//
 // Authors:
 //  Gonzalo Paniagua Javier (gonzalo@ximian.com)
-//
 // Copyright (c) 2005 Ximian, Inc (http://www.ximian.com)
-//
 
-//
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
 // "Software"), to deal in the Software without restriction, including
@@ -18,10 +13,8 @@
 // distribute, sublicense, and/or sell copies of the Software, and to
 // permit persons to whom the Software is furnished to do so, subject to
 // the following conditions:
-//
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 // MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -29,14 +22,10 @@
 // LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-//
 
-using System;
 using System.Net;
-using System.Threading;
-#if NETCOREAPP1_0_OR_GREATER
 using System.Runtime.ExceptionServices;
-#endif
+
 namespace SpaceWizards.HttpListener
 {
     internal sealed class ListenerAsyncResult : IAsyncResult
@@ -44,11 +33,11 @@ namespace SpaceWizards.HttpListener
         private ManualResetEvent _handle;
         private bool _synch;
         private bool _completed;
-        private AsyncCallback _cb;
-        private object _state;
+        private readonly AsyncCallback _cb;
+        private readonly object _state;
         private Exception _exception;
         private HttpListenerContext _context;
-        private object _locker = new object();
+        private readonly object _locker = new();
         private ListenerAsyncResult _forward;
         internal readonly HttpListener _parent;
         internal bool _endCalled;
@@ -70,7 +59,10 @@ namespace SpaceWizards.HttpListener
             }
             _exception = exc;
             if (_inGet && (exc is ObjectDisposedException))
-                _exception = new HttpListenerException((int)HttpStatusCode.InternalServerError, SR.net_listener_close);
+                _exception = new HttpListenerException(
+                    (int)HttpStatusCode.InternalServerError,
+                    SR.net_listener_close
+                );
             lock (_locker)
             {
                 _completed = true;
@@ -82,10 +74,11 @@ namespace SpaceWizards.HttpListener
             }
         }
 
-        private static WaitCallback s_invokeCB = new WaitCallback(InvokeCallback);
+        private static readonly WaitCallback s_invokeCB = new(InvokeCallback);
+
         private static void InvokeCallback(object o)
         {
-            ListenerAsyncResult ares = (ListenerAsyncResult)o;
+            var ares = (ListenerAsyncResult)o;
             if (ares._forward != null)
             {
                 InvokeCallback(ares._forward);
@@ -95,9 +88,7 @@ namespace SpaceWizards.HttpListener
             {
                 ares._cb(ares);
             }
-            catch
-            {
-            }
+            catch { }
         }
 
         internal void Complete(HttpListenerContext context)
@@ -116,10 +107,12 @@ namespace SpaceWizards.HttpListener
             _context = context;
             lock (_locker)
             {
-                bool authFailure = false;
+                var authFailure = false;
                 try
                 {
-                    context.AuthenticationSchemes = context._listener.SelectAuthenticationScheme(context);
+                    context.AuthenticationSchemes = context._listener.SelectAuthenticationScheme(
+                        context
+                    );
                 }
                 catch (OutOfMemoryException oom)
                 {
@@ -132,27 +125,42 @@ namespace SpaceWizards.HttpListener
                     context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 }
 
-                if (context.AuthenticationSchemes != AuthenticationSchemes.None &&
-                    (context.AuthenticationSchemes & AuthenticationSchemes.Anonymous) != AuthenticationSchemes.Anonymous &&
-                    (context.AuthenticationSchemes & AuthenticationSchemes.Basic) != AuthenticationSchemes.Basic)
+                if (
+                    context.AuthenticationSchemes != AuthenticationSchemes.None
+                    && (context.AuthenticationSchemes & AuthenticationSchemes.Anonymous)
+                        != AuthenticationSchemes.Anonymous
+                    && (context.AuthenticationSchemes & AuthenticationSchemes.Basic)
+                        != AuthenticationSchemes.Basic
+                )
                 {
                     authFailure = true;
                     context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
                 }
                 else if (context.AuthenticationSchemes == AuthenticationSchemes.Basic)
                 {
-                    HttpStatusCode errorCode = HttpStatusCode.Unauthorized;
-                    string authHeader = context.Request.Headers["Authorization"];
-                    if (authHeader == null ||
-                        !HttpListenerContext.IsBasicHeader(authHeader) ||
-                        authHeader.Length < AuthenticationTypes.Basic.Length + 2 ||
-                        !HttpListenerContext.TryParseBasicAuth(authHeader.Substring(AuthenticationTypes.Basic.Length + 1), out errorCode, out _, out _))
+                    var errorCode = HttpStatusCode.Unauthorized;
+                    var authHeader = context.Request.Headers["Authorization"];
+                    if (
+                        authHeader == null
+                        || !HttpListenerContext.IsBasicHeader(authHeader)
+                        || authHeader.Length < AuthenticationTypes.Basic.Length + 2
+                        || !HttpListenerContext.TryParseBasicAuth(
+                            authHeader.Substring(AuthenticationTypes.Basic.Length + 1),
+                            out errorCode,
+                            out _,
+                            out _
+                        )
+                    )
                     {
                         authFailure = true;
                         context.Response.StatusCode = (int)errorCode;
                         if (errorCode == HttpStatusCode.Unauthorized)
                         {
-                            context.Response.Headers["WWW-Authenticate"] = context.AuthenticationSchemes + " realm=\"" + context._listener.Realm + "\"";
+                            context.Response.Headers["WWW-Authenticate"] =
+                                context.AuthenticationSchemes
+                                + " realm=\""
+                                + context._listener.Realm
+                                + "\"";
                         }
                     }
                 }
@@ -160,18 +168,23 @@ namespace SpaceWizards.HttpListener
                 if (authFailure)
                 {
                     context.Response.OutputStream.Close();
-                    IAsyncResult ares = context._listener.BeginGetContext(_cb, _state);
+                    var ares = context._listener.BeginGetContext(_cb, _state);
                     _forward = (ListenerAsyncResult)ares;
                     lock (_forward._locker)
                     {
                         if (_handle != null)
                             _forward._handle = _handle;
                     }
-                    ListenerAsyncResult next = _forward;
-                    for (int i = 0; next._forward != null; i++)
+                    var next = _forward;
+                    for (var i = 0; next._forward != null; i++)
                     {
                         if (i > 20)
-                            Complete(new HttpListenerException((int)HttpStatusCode.Unauthorized, SR.net_listener_auth_errors));
+                            Complete(
+                                new HttpListenerException(
+                                    (int)HttpStatusCode.Unauthorized,
+                                    SR.net_listener_auth_errors
+                                )
+                            );
                         next = next._forward;
                     }
                 }
@@ -198,11 +211,7 @@ namespace SpaceWizards.HttpListener
 
             if (_exception != null)
             {
-#if NETCOREAPP1_0_OR_GREATER
                 ExceptionDispatchInfo.Throw(_exception);
-#else
-                throw _exception;
-#endif
             }
 
             return _context;
@@ -210,12 +219,7 @@ namespace SpaceWizards.HttpListener
 
         public object AsyncState
         {
-            get
-            {
-                if (_forward != null)
-                    return _forward.AsyncState;
-                return _state;
-            }
+            get { return _forward != null ? _forward.AsyncState : _state; }
         }
 
         public WaitHandle AsyncWaitHandle
@@ -227,8 +231,7 @@ namespace SpaceWizards.HttpListener
 
                 lock (_locker)
                 {
-                    if (_handle == null)
-                        _handle = new ManualResetEvent(_completed);
+                    _handle ??= new ManualResetEvent(_completed);
                 }
 
                 return _handle;
@@ -237,12 +240,7 @@ namespace SpaceWizards.HttpListener
 
         public bool CompletedSynchronously
         {
-            get
-            {
-                if (_forward != null)
-                    return _forward.CompletedSynchronously;
-                return _synch;
-            }
+            get { return _forward != null ? _forward.CompletedSynchronously : _synch; }
         }
 
         public bool IsCompleted

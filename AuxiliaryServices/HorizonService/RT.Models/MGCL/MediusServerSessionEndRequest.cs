@@ -1,9 +1,12 @@
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyReport, MediusMGCLMessageIds.ServerSessionEndRequest)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyReport,
+        MediusMGCLMessageIds.ServerSessionEndRequest
+    )]
     public class MediusServerSessionEndRequest : BaseMGCLMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusMGCLMessageIds.ServerSessionEndRequest;
@@ -26,8 +29,7 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID}";
+            return base.ToString() + " " + $"MessageID: {MessageID}";
         }
     }
 }

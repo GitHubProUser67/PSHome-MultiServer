@@ -25,7 +25,7 @@ SOFTWARE.
 
 using static System.Math;
 
-namespace System
+namespace MultiServerLibrary.Extension.NET
 {
     public class Decoded
     {
@@ -50,19 +50,20 @@ namespace System
     {
         public static Decoded Decode(char[] data, bool trimPadding = false)
         {
-            bool done;
+            bool done = false;
             char[] data4;
-            double quads, i, currentQuad, currentTriplet, padding;
-            Decoded decoded3, decoded;
-            double[] table;
-            bool[] validTable;
+            double quads,
+                i,
+                currentQuad,
+                currentTriplet,
+                padding = 0d;
+            Decoded decoded3,
+                decoded = new Decoded();
 
-            decoded = new Decoded();
-            table = GetRevTable();
+            double[] table = GetRevTable();
             /* Alloc 1*/
-            validTable = GetValidTable();
+            bool[] validTable = GetValidTable();
             /* Alloc 3*/
-            padding = 0d;
             if (data.Length > 1d)
             {
                 if (data[(int)(data.Length - 1d)] == '=')
@@ -77,7 +78,7 @@ namespace System
             /* Fixup some issues with Python driven base64 encoded data */
             if (trimPadding && padding == 2)
             {
-                char[] trimmedData = new char[data.Length - 1];
+                var trimmedData = new char[data.Length - 1];
                 Array.Copy(data, 0, trimmedData, 0, data.Length - 1);
                 data = trimmedData;
                 padding = 1d;
@@ -86,11 +87,10 @@ namespace System
 
             /* TODO: Require init?*/
             /* Init*/
-            decoded.data = new double[(int)(quads * 3d - padding)];
+            decoded.data = new double[(int)((quads * 3d) - padding)];
             decoded.errorMessage = Array.Empty<char>();
             decoded.success = true;
 
-            done = false;
             for (i = 0d; i < quads && !done; i++)
             {
                 data4 = new char[4];
@@ -156,15 +156,12 @@ namespace System
 
         public static Decoded Decode3(char[] data)
         {
-            double[] table;
-            bool[] validTable;
-            Decoded decoded;
+            double[] table = GetRevTable();
 
-            table = GetRevTable();
             /* Alloc 1*/
-            validTable = GetValidTable();
+            bool[] validTable = GetValidTable();
             /* Alloc 2*/
-            decoded = Decode3table(data, table, validTable);
+            Decoded decoded = Decode3table(data, table, validTable);
 
             Delete(validTable);
             /* Unalloc 2*/
@@ -175,7 +172,8 @@ namespace System
 
         public static Decoded Decode3table(char[] data, double[] table, bool[] validTable)
         {
-            double i, valid;
+            double i,
+                valid;
             Decoded decoded;
 
             decoded = new Decoded
@@ -183,7 +181,7 @@ namespace System
                 /* Alloc r*/
                 success = false,
                 data = new double[3],
-                errorMessage = string.Empty.ToCharArray()
+                errorMessage = string.Empty.ToCharArray(),
             };
 
             if (data.Length == 4d)
@@ -191,7 +189,7 @@ namespace System
                 valid = 0d;
                 for (i = 0d; i < 4d; i++)
                 {
-                    if (IsValidBase64characterTable(data[(int)(i)], validTable))
+                    if (IsValidBase64characterTable(data[(int)i], validTable))
                         valid++;
                 }
                 if (valid == 4d)
@@ -207,7 +205,8 @@ namespace System
             }
             else
             {
-                decoded.errorMessage = "There must be exactly four characters in the input string.".ToCharArray();
+                decoded.errorMessage =
+                    "There must be exactly four characters in the input string.".ToCharArray();
                 decoded.success = false;
             }
 
@@ -216,22 +215,21 @@ namespace System
 
         public static bool IsValidBase64characterTable(char c, bool[] validTable)
         {
-            return validTable[(int)(c)];
+            return validTable[(int)c];
         }
 
         public static void Decode3NoChecks(Decoded decoded, char[] data)
         {
-            double[] table;
-
-            table = GetRevTable();
-            Decode3NoChecksTable(decoded, data, table);
+            Decode3NoChecksTable(decoded, data, GetRevTable());
         }
 
         public static void Decode3NoChecksTable(Decoded decoded, char[] data, double[] table)
         {
-            double total, i, n, r;
+            double total = 0d,
+                i,
+                n,
+                r;
 
-            total = 0d;
             for (i = 0d; i < 4d; i++)
             {
                 n = GetNumber(data[(int)(4d - i - 1d)], table);
@@ -248,31 +246,31 @@ namespace System
 
         public static double GetNumber(char c, double[] table)
         {
-            return table[(int)(c)];
+            return table[(int)c];
         }
 
         public static Encoded Encode(double[] data)
         {
-            Encoded encoded, encoded3;
-            double padding, triplets, i, currentTriplet, currentQuad;
+            Encoded encoded = new Encoded(),
+                encoded3;
+            double padding = 0d,
+                triplets = Ceiling(data.Length / 3d),
+                i,
+                currentTriplet,
+                currentQuad;
             double[] data3;
-            bool done;
+            bool done = false;
 
-            encoded = new Encoded();
-
-            padding = 0d;
             if ((data.Length % 3d) == 1d)
                 padding = 2d;
             if ((data.Length % 3d) == 2d)
                 padding = 1d;
-            triplets = Ceiling(data.Length / 3d);
 
             /* Init*/
             encoded.data = new char[(int)(triplets * 4d)];
             encoded.errorMessage = Array.Empty<char>();
             encoded.success = true;
 
-            done = false;
             for (i = 0d; i < triplets && !done; i++)
             {
                 data3 = new double[3];
@@ -292,7 +290,6 @@ namespace System
                         data3[1] = data[(int)(currentTriplet + 1d)];
                         data3[2] = 0d;
                     }
-
                 }
                 else
                 {
@@ -317,7 +314,6 @@ namespace System
                             encoded.data[(int)(currentQuad + 2d)] = encoded3.data[2];
                             encoded.data[(int)(currentQuad + 3d)] = '=';
                         }
-
                     }
                     else
                     {
@@ -340,13 +336,16 @@ namespace System
         public static Encoded Encode3(double[] data)
         {
             Encoded encoded;
-            double elementsVerified, i, e;
-            bool isWithinBounds, isWhole;
+            double elementsVerified,
+                i,
+                e;
+            bool isWithinBounds,
+                isWhole;
 
             encoded = new Encoded
             {
                 /* Init*/
-                data = new char[4]
+                data = new char[4],
             };
             encoded.data[0] = 'A';
             encoded.data[1] = 'A';
@@ -361,14 +360,15 @@ namespace System
                 elementsVerified = 0d;
                 for (i = 0d; i < data.Length; i++)
                 {
-                    e = data[(int)(i)];
+                    e = data[(int)i];
                     isWithinBounds = (e >= 0d) && (e < Pow(2d, 8d));
                     isWhole = (e % 1d) == 0d;
                     if (isWithinBounds && isWhole)
                         elementsVerified++;
                     else
                     {
-                        encoded.errorMessage = "Input number is too high, too low or is not a whole number.".ToCharArray();
+                        encoded.errorMessage =
+                            "Input number is too high, too low or is not a whole number.".ToCharArray();
                         encoded.success = false;
                     }
                 }
@@ -389,14 +389,13 @@ namespace System
 
         public static void Encode3NoChecks(Encoded encoded, double[] data)
         {
-            double total, i, bit6;
+            double total = 0d,
+                i,
+                bit6;
             char c;
 
-            total = 0d;
             for (i = 0d; i < data.Length; i++)
-            {
                 total += data[(int)(data.Length - i - 1d)] * Pow(2d, i * 8d);
-            }
 
             for (i = 0d; i < 4d; i++)
             {
@@ -409,7 +408,7 @@ namespace System
 
         public static char GetCharacter(double bit6)
         {
-            return GetTable()[(int)(bit6)];
+            return GetTable()[(int)bit6];
         }
 
         public static char[] GetTable()
@@ -420,51 +419,39 @@ namespace System
 
         public static double[] GetRevTable()
         {
-            char[] table;
-            double i, max;
-            double[] revTable;
-
-            table = GetTable();
-            max = GetMax(table) + 1d;
-            revTable = new double[(int)(max + 1d)];
+            char[] table = GetTable();
+            double i,
+                max = GetMax(table) + 1d;
+            double[] revTable = new double[(int)(max + 1d)];
 
             for (i = 0d; i < table.Length; i++)
-            {
-                revTable[(int)(table[(int)(i)])] = i;
-            }
+                revTable[(int)table[(int)i]] = i;
 
             return revTable;
         }
 
         public static bool[] GetValidTable()
         {
-            char[] table;
-            double max, i;
-            bool[] validTable;
-
-            table = GetTable();
-            max = GetMax(table) + 1d;
-            validTable = new bool[(int)(max)];
+            char[] table = GetTable();
+            double max = GetMax(table) + 1d,
+                i;
+            bool[] validTable = new bool[(int)max];
 
             for (i = 0d; i < max; i++)
-            {
-                validTable[(int)(i)] = IsValidBase64character((char)(i));
-            }
+                validTable[(int)i] = IsValidBase64character((char)i);
 
             return validTable;
         }
 
         public static double GetMax(char[] table)
         {
-            double maxValue;
+            double maxValue = 0d;
             double v;
             double i;
 
-            maxValue = 0d;
-
             for (i = 0d; i < table.Length; i++)
             {
-                v = table[(int)(i)];
+                v = table[(int)i];
                 maxValue = Max(maxValue, v);
             }
             return maxValue;
@@ -472,16 +459,13 @@ namespace System
 
         public static bool IsValidBase64character(char c)
         {
-            char[] table;
-            bool isValid;
+            char[] table = GetTable();
+            bool isValid = false;
             double i;
-
-            table = GetTable();
-            isValid = false;
 
             for (i = 0d; i < table.Length; i++)
             {
-                if (table[(int)(i)] == c)
+                if (table[(int)i] == c)
                     isValid = true;
             }
 
@@ -490,52 +474,43 @@ namespace System
 
         public static Stringx StringFrom(char[] src)
         {
-            return new Stringx
-            {
-                str = src
-            };
+            return new Stringx { str = src };
         }
 
         public static double[] StringToNumberArray(char[] stringx)
         {
             double i;
-            double[] array;
-
-            array = new double[(int)(stringx.Length)];
+            double[] array = new double[(int)stringx.Length];
 
             for (i = 0d; i < stringx.Length; i++)
-            {
-                array[(int)(i)] = stringx[(int)(i)];
-            }
+                array[(int)i] = stringx[(int)i];
+
             return array;
         }
 
         public static char[] NumberArrayToString(double[] array)
         {
             double i;
-            char[] stringx;
-
-            stringx = new char[(int)(array.Length)];
+            char[] stringx = new char[(int)array.Length];
 
             for (i = 0d; i < array.Length; i++)
-            {
-                stringx[(int)(i)] = (char)(array[(int)(i)]);
-            }
+                stringx[(int)i] = (char)array[(int)i];
+
             return stringx;
         }
 
         public static bool StringsEqual(char[] data1, char[] data2)
         {
-            bool equal;
-            double nrEqual, i;
+            bool equal = false;
+            double nrEqual,
+                i;
 
-            equal = false;
             if (data1.Length == data2.Length)
             {
                 nrEqual = 0d;
                 for (i = 0d; i < data1.Length; i++)
                 {
-                    if (data1[(int)(i)] == data2[(int)(i)])
+                    if (data1[(int)i] == data2[(int)i])
                         nrEqual++;
                 }
                 if (nrEqual == data1.Length)
@@ -549,16 +524,16 @@ namespace System
 
         public static bool NumberArraysEqual(double[] data1, double[] data2)
         {
-            bool equal;
-            double nrEqual, i;
+            bool equal = false;
+            double nrEqual,
+                i;
 
-            equal = false;
             if (data1.Length == data2.Length)
             {
                 nrEqual = 0d;
                 for (i = 0d; i < data1.Length; i++)
                 {
-                    if (data1[(int)(i)] == data2[(int)(i)])
+                    if (data1[(int)i] == data2[(int)i])
                         nrEqual++;
                 }
                 if (nrEqual == data1.Length)

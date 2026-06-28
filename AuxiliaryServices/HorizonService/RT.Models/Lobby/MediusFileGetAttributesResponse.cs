@@ -1,10 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.FileGetAttributesResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.FileGetAttributesResponse
+    )]
     public class MediusFileGetAttributesResponse : BaseLobbyMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusLobbyMessageIds.FileGetAttributesResponse;
@@ -42,11 +44,12 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-             $"MediusFileInfo: {MediusFileInfo}" +
-             $"MediusFileAttributesResponse: {MediusFileAttributesResponse} " +
-             $"StatusCode: {StatusCode} " +
-             $"MessageID: {MessageID} ";
+            return base.ToString()
+                + " "
+                + $"MediusFileInfo: {MediusFileInfo}"
+                + $"MediusFileAttributesResponse: {MediusFileAttributesResponse} "
+                + $"StatusCode: {StatusCode} "
+                + $"MessageID: {MessageID} ";
         }
     }
 }

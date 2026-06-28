@@ -2,7 +2,7 @@
 
 public sealed class HistogramConfiguration : MetricConfiguration
 {
-    internal static readonly HistogramConfiguration Default = new HistogramConfiguration();
+    internal static readonly HistogramConfiguration Default = new();
 
     /// <summary>
     /// Custom histogram buckets to use. If null, will use Histogram.DefaultBuckets.

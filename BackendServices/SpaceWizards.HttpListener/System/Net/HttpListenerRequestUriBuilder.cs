@@ -1,12 +1,10 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Diagnostics;
-using System.Text;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Net;
+using System.Text;
 
 namespace SpaceWizards.HttpListener
 {
@@ -18,7 +16,11 @@ namespace SpaceWizards.HttpListener
     internal sealed class HttpListenerRequestUriBuilder
     {
         private static readonly Encoding s_utf8Encoding = new UTF8Encoding(false, true);
-        private static readonly Encoding s_ansiEncoding = Encoding.GetEncoding(0, new EncoderExceptionFallback(), new DecoderExceptionFallback());
+        private static readonly Encoding s_ansiEncoding = Encoding.GetEncoding(
+            0,
+            new EncoderExceptionFallback(),
+            new DecoderExceptionFallback()
+        );
 
         private readonly string _rawUri;
         private readonly string _cookedUriScheme;
@@ -34,7 +36,6 @@ namespace SpaceWizards.HttpListener
         // rawOctets will be set to { 0xC3, 0x84 } when we reach character 't' and it will be { 0x2F } when
         // we reach the final '/'. I.e. after a sequence of percent encoded octets ends, we use rawOctets as
         // input to the encoding and percent encode the resulting string into UTF-8 octets.
-        //
         // When parsing ANSI (Latin 1) encoded path '/pa%C4th/', %C4 will be added to rawOctets and when
         // we reach 't', the content of rawOctets { 0xC4 } will be fed into the ANSI encoding. The resulting
         // string '\u00C4' will be percent encoded into UTF-8 octets and appended to requestUriString. The final
@@ -45,8 +46,13 @@ namespace SpaceWizards.HttpListener
         // Holds the final request Uri.
         private Uri _requestUri;
 
-        private HttpListenerRequestUriBuilder(string rawUri, string cookedUriScheme, string cookedUriHost,
-            string cookedUriPath, string cookedUriQuery)
+        private HttpListenerRequestUriBuilder(
+            string rawUri,
+            string cookedUriScheme,
+            string cookedUriHost,
+            string cookedUriPath,
+            string cookedUriQuery
+        )
         {
             Debug.Assert(!string.IsNullOrEmpty(rawUri), "Empty raw URL.");
             Debug.Assert(!string.IsNullOrEmpty(cookedUriScheme), "Empty cooked URL scheme.");
@@ -60,11 +66,21 @@ namespace SpaceWizards.HttpListener
             _cookedUriQuery = cookedUriQuery ?? string.Empty;
         }
 
-        public static Uri GetRequestUri(string rawUri, string cookedUriScheme, string cookedUriHost,
-            string cookedUriPath, string cookedUriQuery)
+        public static Uri GetRequestUri(
+            string rawUri,
+            string cookedUriScheme,
+            string cookedUriHost,
+            string cookedUriPath,
+            string cookedUriQuery
+        )
         {
-            HttpListenerRequestUriBuilder builder = new HttpListenerRequestUriBuilder(rawUri,
-                cookedUriScheme, cookedUriHost, cookedUriPath, cookedUriQuery);
+            var builder = new HttpListenerRequestUriBuilder(
+                rawUri,
+                cookedUriScheme,
+                cookedUriHost,
+                cookedUriPath,
+                cookedUriQuery
+            );
 
             return builder.Build();
         }
@@ -83,55 +99,75 @@ namespace SpaceWizards.HttpListener
 
         private void BuildRequestUriUsingCookedPath()
         {
-            bool isValid = Uri.TryCreate(_cookedUriScheme + Uri.SchemeDelimiter + _cookedUriHost + _cookedUriPath +
-                _cookedUriQuery, UriKind.Absolute, out _requestUri);
+            var isValid = Uri.TryCreate(
+                _cookedUriScheme
+                    + Uri.SchemeDelimiter
+                    + _cookedUriHost
+                    + _cookedUriPath
+                    + _cookedUriQuery,
+                UriKind.Absolute,
+                out _requestUri
+            );
 
             // Creating a Uri from the cooked Uri should really always work: If not, we log at least.
             if (!isValid)
             {
                 if (NetEventSource.Log.IsEnabled())
-                    NetEventSource.Error(this, SR.Format(SR.net_log_listener_cant_create_uri, _cookedUriScheme, _cookedUriHost, _cookedUriPath, _cookedUriQuery));
+                    NetEventSource.Error(
+                        this,
+                        SR.Format(
+                            SR.net_log_listener_cant_create_uri,
+                            _cookedUriScheme,
+                            _cookedUriHost,
+                            _cookedUriPath,
+                            _cookedUriQuery
+                        )
+                    );
             }
         }
 
         private void BuildRequestUriUsingRawPath()
         {
-            bool isValid = false;
+            var isValid = false;
 
             // Initialize 'rawPath' only if really needed; i.e. if we build the request Uri from the raw Uri.
             _rawPath = GetPath(_rawUri);
 
             // Try to check the raw path using first the primary encoding (according to http.sys settings);
             // if it fails try the secondary encoding.
-            ParsingResult result = BuildRequestUriUsingRawPath(GetEncoding(EncodingType.Primary));
+            var result = BuildRequestUriUsingRawPath(GetEncoding(EncodingType.Primary));
             if (result == ParsingResult.EncodingError)
             {
-                Encoding secondaryEncoding = GetEncoding(EncodingType.Secondary);
+                var secondaryEncoding = GetEncoding(EncodingType.Secondary);
                 result = BuildRequestUriUsingRawPath(secondaryEncoding);
             }
-            isValid = (result == ParsingResult.Success) ? true : false;
+            isValid = result == ParsingResult.Success;
 
             // Log that we weren't able to create a Uri from the raw string.
             if (!isValid)
             {
                 if (NetEventSource.Log.IsEnabled())
-                    NetEventSource.Error(this, SR.Format(SR.net_log_listener_cant_create_uri, _cookedUriScheme, _cookedUriHost, _rawPath, _cookedUriQuery));
+                    NetEventSource.Error(
+                        this,
+                        SR.Format(
+                            SR.net_log_listener_cant_create_uri,
+                            _cookedUriScheme,
+                            _cookedUriHost,
+                            _rawPath,
+                            _cookedUriQuery
+                        )
+                    );
             }
         }
 
         private static Encoding GetEncoding(EncodingType type)
         {
-            Debug.Assert((type == EncodingType.Primary) || (type == EncodingType.Secondary),
-                $"Unknown 'EncodingType' value: {type}");
+            Debug.Assert(
+                (type == EncodingType.Primary) || (type == EncodingType.Secondary),
+                $"Unknown 'EncodingType' value: {type}"
+            );
 
-            if (type == EncodingType.Secondary)
-            {
-                return s_ansiEncoding;
-            }
-            else
-            {
-                return s_utf8Encoding;
-            }
+            return type == EncodingType.Secondary ? s_ansiEncoding : s_utf8Encoding;
         }
 
         private ParsingResult BuildRequestUriUsingRawPath(Encoding encoding)
@@ -144,13 +180,15 @@ namespace SpaceWizards.HttpListener
             _requestUriString.Append(Uri.SchemeDelimiter);
             _requestUriString.Append(_cookedUriHost);
 
-            ParsingResult result = ParseRawPath(encoding);
+            var result = ParseRawPath(encoding);
             if (result == ParsingResult.Success)
             {
                 _requestUriString.Append(_cookedUriQuery);
 
-                Debug.Assert(_rawOctets.Count == 0,
-                    "Still raw octets left. They must be added to the result path.");
+                Debug.Assert(
+                    _rawOctets.Count == 0,
+                    "Still raw octets left. They must be added to the result path."
+                );
 
                 if (!Uri.TryCreate(_requestUriString.ToString(), UriKind.Absolute, out _requestUri))
                 {
@@ -163,7 +201,14 @@ namespace SpaceWizards.HttpListener
             if (result != ParsingResult.Success)
             {
                 if (NetEventSource.Log.IsEnabled())
-                    NetEventSource.Error(this, SR.Format(SR.net_log_listener_cant_convert_raw_path, _rawPath, encoding.EncodingName));
+                    NetEventSource.Error(
+                        this,
+                        SR.Format(
+                            SR.net_log_listener_cant_convert_raw_path,
+                            _rawPath,
+                            encoding.EncodingName
+                        )
+                    );
             }
 
             return result;
@@ -173,8 +218,8 @@ namespace SpaceWizards.HttpListener
         {
             Debug.Assert(encoding != null, "'encoding' must be assigned.");
 
-            int index = 0;
-            char current = '\0';
+            var index = 0;
+            var current = '\0';
             Debug.Assert(_rawPath != null);
             while (index < _rawPath.Length)
             {
@@ -182,14 +227,20 @@ namespace SpaceWizards.HttpListener
                 if (current == '%')
                 {
                     // Assert is enough, since http.sys accepted the request string already. This should never happen.
-                    Debug.Assert(index + 2 < _rawPath.Length, "Expected >=2 characters after '%' (e.g. %2F)");
+                    Debug.Assert(
+                        index + 2 < _rawPath.Length,
+                        "Expected >=2 characters after '%' (e.g. %2F)"
+                    );
 
                     index++;
                     current = _rawPath[index];
                     if (current == 'u' || current == 'U')
                     {
                         // We found "%u" which means, we have a Unicode code point of the form "%uXXXX".
-                        Debug.Assert(index + 4 < _rawPath.Length, "Expected >=4 characters after '%u' (e.g. %u0062)");
+                        Debug.Assert(
+                            index + 4 < _rawPath.Length,
+                            "Expected >=4 characters after '%u' (e.g. %u0062)"
+                        );
 
                         // Decode the content of rawOctets into percent encoded UTF-8 characters and append them
                         // to requestUriString.
@@ -197,7 +248,11 @@ namespace SpaceWizards.HttpListener
                         {
                             return ParsingResult.EncodingError;
                         }
-                        if (!AppendUnicodeCodePointValuePercentEncoded(_rawPath.Substring(index + 1, 4)))
+                        if (
+                            !AppendUnicodeCodePointValuePercentEncoded(
+                                _rawPath.Substring(index + 1, 4)
+                            )
+                        )
                         {
                             return ParsingResult.InvalidString;
                         }
@@ -206,7 +261,12 @@ namespace SpaceWizards.HttpListener
                     else
                     {
                         // We found '%', but not followed by 'u', i.e. we have a percent encoded octed: %XX
-                        if (!AddPercentEncodedOctetToRawOctetsList(encoding, _rawPath.Substring(index, 2)))
+                        if (
+                            !AddPercentEncodedOctetToRawOctetsList(
+                                encoding,
+                                _rawPath.Substring(index, 2)
+                            )
+                        )
                         {
                             return ParsingResult.InvalidString;
                         }
@@ -230,12 +290,9 @@ namespace SpaceWizards.HttpListener
 
             // if the raw path ends with a sequence of percent encoded octets, make sure those get added to the
             // result (requestUriString).
-            if (!EmptyDecodeAndAppendRawOctetsList(encoding))
-            {
-                return ParsingResult.EncodingError;
-            }
-
-            return ParsingResult.Success;
+            return !EmptyDecodeAndAppendRawOctetsList(encoding)
+                ? ParsingResult.EncodingError
+                : ParsingResult.Success;
         }
 
         private bool AppendUnicodeCodePointValuePercentEncoded(string codePoint)
@@ -243,10 +300,20 @@ namespace SpaceWizards.HttpListener
             // http.sys only supports %uXXXX (4 hex-digits), even though unicode code points could have up to
             // 6 hex digits. Therefore we parse always 4 characters after %u and convert them to an int.
             int codePointValue;
-            if (!int.TryParse(codePoint, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out codePointValue))
+            if (
+                !int.TryParse(
+                    codePoint,
+                    NumberStyles.HexNumber,
+                    CultureInfo.InvariantCulture,
+                    out codePointValue
+                )
+            )
             {
                 if (NetEventSource.Log.IsEnabled())
-                    NetEventSource.Error(this, SR.Format(SR.net_log_listener_cant_convert_percent_value, codePoint));
+                    NetEventSource.Error(
+                        this,
+                        SR.Format(SR.net_log_listener_cant_convert_percent_value, codePoint)
+                    );
                 return false;
             }
 
@@ -254,30 +321,58 @@ namespace SpaceWizards.HttpListener
             try
             {
                 unicodeString = char.ConvertFromUtf32(codePointValue);
-                AppendOctetsPercentEncoded(_requestUriString, s_utf8Encoding.GetBytes(unicodeString));
+                AppendOctetsPercentEncoded(
+                    _requestUriString,
+                    s_utf8Encoding.GetBytes(unicodeString)
+                );
 
                 return true;
             }
             catch (ArgumentOutOfRangeException)
             {
                 if (NetEventSource.Log.IsEnabled())
-                    NetEventSource.Error(this, SR.Format(SR.net_log_listener_cant_convert_percent_value, codePoint));
+                    NetEventSource.Error(
+                        this,
+                        SR.Format(SR.net_log_listener_cant_convert_percent_value, codePoint)
+                    );
             }
             catch (EncoderFallbackException e)
             {
                 // If utf8Encoding.GetBytes() fails
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, SR.Format(SR.net_log_listener_cant_convert_to_utf8, unicodeString, e.Message));
+                if (NetEventSource.Log.IsEnabled())
+                    NetEventSource.Error(
+                        this,
+                        SR.Format(
+                            SR.net_log_listener_cant_convert_to_utf8,
+                            unicodeString,
+                            e.Message
+                        )
+                    );
             }
 
             return false;
         }
 
-        private bool AddPercentEncodedOctetToRawOctetsList(Encoding encoding, string escapedCharacter)
+        private bool AddPercentEncodedOctetToRawOctetsList(
+            Encoding encoding,
+            string escapedCharacter
+        )
         {
             byte encodedValue;
-            if (!byte.TryParse(escapedCharacter, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out encodedValue))
+            if (
+                !byte.TryParse(
+                    escapedCharacter,
+                    NumberStyles.HexNumber,
+                    CultureInfo.InvariantCulture,
+                    out encodedValue
+                )
+            )
             {
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, SR.Format(SR.net_log_listener_cant_convert_percent_value, escapedCharacter));
+                if (NetEventSource.Log.IsEnabled())
+                    NetEventSource.Error(
+                        this,
+                        SR.Format(SR.net_log_listener_cant_convert_percent_value, escapedCharacter)
+                    );
                 return false;
             }
 
@@ -307,7 +402,10 @@ namespace SpaceWizards.HttpListener
                 }
                 else
                 {
-                    AppendOctetsPercentEncoded(_requestUriString, s_utf8Encoding.GetBytes(decodedString));
+                    AppendOctetsPercentEncoded(
+                        _requestUriString,
+                        s_utf8Encoding.GetBytes(decodedString)
+                    );
                 }
 
                 _rawOctets.Clear();
@@ -316,20 +414,39 @@ namespace SpaceWizards.HttpListener
             }
             catch (DecoderFallbackException e)
             {
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, SR.Format(SR.net_log_listener_cant_convert_bytes, GetOctetsAsString(_rawOctets), e.Message));
+                if (NetEventSource.Log.IsEnabled())
+                    NetEventSource.Error(
+                        this,
+                        SR.Format(
+                            SR.net_log_listener_cant_convert_bytes,
+                            GetOctetsAsString(_rawOctets),
+                            e.Message
+                        )
+                    );
             }
             catch (EncoderFallbackException e)
             {
                 // If utf8Encoding.GetBytes() fails
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, SR.Format(SR.net_log_listener_cant_convert_to_utf8, decodedString, e.Message));
+                if (NetEventSource.Log.IsEnabled())
+                    NetEventSource.Error(
+                        this,
+                        SR.Format(
+                            SR.net_log_listener_cant_convert_to_utf8,
+                            decodedString,
+                            e.Message
+                        )
+                    );
             }
 
             return false;
         }
 
-        private static void AppendOctetsPercentEncoded(StringBuilder target, IEnumerable<byte> octets)
+        private static void AppendOctetsPercentEncoded(
+            StringBuilder target,
+            IEnumerable<byte> octets
+        )
         {
-            foreach (byte octet in octets)
+            foreach (var octet in octets)
             {
                 target.Append($"%{octet:X2}");
             }
@@ -337,10 +454,10 @@ namespace SpaceWizards.HttpListener
 
         private static string GetOctetsAsString(IEnumerable<byte> octets)
         {
-            StringBuilder octetString = new StringBuilder();
+            var octetString = new StringBuilder();
 
-            bool first = true;
-            foreach (byte octet in octets)
+            var first = true;
+            foreach (var octet in octets)
             {
                 if (first)
                 {
@@ -361,7 +478,7 @@ namespace SpaceWizards.HttpListener
             Debug.Assert(uriString != null, "uriString must not be null");
             Debug.Assert(uriString.Length > 0, "uriString must not be empty");
 
-            int pathStartIndex = 0;
+            var pathStartIndex = 0;
 
             // Perf. improvement: nearly all strings are relative Uris. So just look if the
             // string starts with '/'. If so, we have a relative Uri and the path starts at position 0.
@@ -371,7 +488,7 @@ namespace SpaceWizards.HttpListener
                 // We can't check against cookedUriScheme, since http.sys allows for request http://myserver/ to
                 // use a request line 'GET https://myserver/' (note http vs. https). Therefore check if the
                 // Uri starts with either http:// or https://.
-                int authorityStartIndex = 0;
+                var authorityStartIndex = 0;
                 if (uriString.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
                 {
                     authorityStartIndex = 7;
@@ -401,8 +518,12 @@ namespace SpaceWizards.HttpListener
                     // 'authority' can only be used with CONNECT which is never received by HttpListener.
                     // I.e. if we don't have an absolute path (must start with '/') and we don't have
                     // an absolute Uri (must start with http:// or https://), then 'uriString' must be '*'.
-                    Debug.Assert((uriString.Length == 1) && (uriString[0] == '*'), "Unknown request Uri string format",
-                        "Request Uri string is not an absolute Uri, absolute path, or '*': {0}", uriString);
+                    Debug.Assert(
+                        (uriString.Length == 1) && (uriString[0] == '*'),
+                        "Unknown request Uri string format",
+                        "Request Uri string is not an absolute Uri, absolute path, or '*': {0}",
+                        uriString
+                    );
 
                     // Should we ever get here, be consistent with 2.0/3.5 behavior: just add an initial
                     // slash to the string and treat it as a path:
@@ -415,14 +536,16 @@ namespace SpaceWizards.HttpListener
             // - the first '#' character: This is never the case here, since http.sys won't accept
             //   Uris containing fragments. Also, RFC2616 doesn't allow fragments in request Uris.
             // - end of Uri string
-            int queryIndex = uriString.IndexOf('?');
+            var queryIndex = uriString.IndexOf('?');
             if (queryIndex == -1)
             {
                 queryIndex = uriString.Length;
             }
 
             // will always return a != null string.
-            return AddSlashToAsteriskOnlyPath(uriString.Substring(pathStartIndex, queryIndex - pathStartIndex));
+            return AddSlashToAsteriskOnlyPath(
+                uriString.Substring(pathStartIndex, queryIndex - pathStartIndex)
+            );
         }
 
         private static string AddSlashToAsteriskOnlyPath(string path)
@@ -431,25 +554,20 @@ namespace SpaceWizards.HttpListener
 
             // If a request like "OPTIONS * HTTP/1.1" is sent to the listener, then the request Uri
             // should be "http[s]://server[:port]/*" to be compatible with pre-4.0 behavior.
-            if ((path.Length == 1) && (path[0] == '*'))
-            {
-                return "/*";
-            }
-
-            return path;
+            return (path.Length == 1) && (path[0] == '*') ? "/*" : path;
         }
 
         private enum ParsingResult
         {
             Success,
             InvalidString,
-            EncodingError
+            EncodingError,
         }
 
         private enum EncodingType
         {
             Primary,
-            Secondary
+            Secondary,
         }
     }
 }

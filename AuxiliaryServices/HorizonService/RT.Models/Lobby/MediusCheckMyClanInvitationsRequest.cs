@@ -1,13 +1,11 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.CheckMyClanInvitations)]
     public class MediusCheckMyClanInvitationsRequest : BaseLobbyMessage, IMediusRequest
     {
-
         public override byte PacketType => (byte)MediusLobbyMessageIds.CheckMyClanInvitations;
 
         public MessageId MessageID { get; set; }
@@ -24,7 +22,7 @@ namespace Horizon.RT.Models
 
             SessionKey = reader.ReadString(Constants.SESSIONKEY_MAXLEN);
             reader.ReadBytes(2);
-            
+
             Start = reader.ReadInt32();
             PageSize = reader.ReadInt32();
         }
@@ -44,11 +42,12 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"Start: {Start} " +
-                $"PageSize: {PageSize}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"Start: {Start} "
+                + $"PageSize: {PageSize}";
         }
     }
 }

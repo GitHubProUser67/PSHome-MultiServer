@@ -1,13 +1,12 @@
-﻿using CustomLogger;
-using FixedSsl;
-using Org.BouncyCastle.Bcpg;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using CastleLibrary.FixedSsl;
+using CustomLogger;
 
 namespace BlazeCommon
 {
@@ -23,46 +22,38 @@ namespace BlazeCommon
         public byte[]? Content;
     }
 
-    public abstract class MitmProtoFireServer
+    public abstract class MitmProtoFireServer(
+        BlazeServerConfiguration settings,
+        uint addressEncryptionKey
+    )
     {
         const int ReadTimeout = 100;
 
         const string blazeDumpDir = "blaze_dump";
 
-        public string Name { get; private set; }
-        public IPEndPoint LocalEP { get; private set; }
-        public bool IsRunning { get; private set; }
-        public uint AddressEncryptionKey { get; private set; }
-        public X509Certificate2? Certificate { get; private set; }
-        public bool ForceSsl { get; private set; }
+        public string Name { get; private set; } = settings.Name;
+        public IPEndPoint LocalEP { get; private set; } = settings.LocalEP;
+        public bool IsRunning { get; private set; } = false;
+        public uint AddressEncryptionKey { get; private set; } = addressEncryptionKey;
+        public X509Certificate2? Certificate { get; private set; } = settings.Certificate;
+        public bool ForceSsl { get; private set; } = settings.ForceSsl;
 
         [MemberNotNullWhen(true, nameof(Certificate))]
-        public bool Secure { get => Certificate != null; }
-        public BlazeServerConfiguration Configuration { get; }
+        public bool Secure
+        {
+            get => Certificate != null;
+        }
+        public BlazeServerConfiguration Configuration { get; } = settings;
 
         private Socket? _listenSocket;
-        private long _nextConnectionId;
-        private ConcurrentDictionary<long, ProtoFireConnection> _connections;
-        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private long _nextConnectionId = 0;
+        private readonly ConcurrentDictionary<long, ProtoFireConnection> _connections = new();
+        private CancellationTokenSource _cancellationTokenSource = new();
 #pragma warning disable
-        private static readonly SslProtocols _sslProtocols = SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
+        private static readonly SslProtocols _sslProtocols =
+            SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12;
+
 #pragma warning restore
-        public MitmProtoFireServer(BlazeServerConfiguration settings, uint addressEncryptionKey)
-        {
-            AddressEncryptionKey = addressEncryptionKey;
-
-            Configuration = settings;
-
-            Name = settings.Name;
-            LocalEP = settings.LocalEP;
-            IsRunning = false;
-            Certificate = settings.Certificate;
-            ForceSsl = settings.ForceSsl;
-
-            _connections = new ConcurrentDictionary<long, ProtoFireConnection>();
-            _cancellationTokenSource = new CancellationTokenSource();
-            _nextConnectionId = 0;
-        }
 
         public void KillConnection(ProtoFireConnection connection)
         {
@@ -90,16 +81,26 @@ namespace BlazeCommon
             //server not running, start it
             try
             {
-                LoggerAccessor.LogInfo($"[MitmProtoFireServer] - Starting {(Secure ? "secure" : "insecure")} MitmProtoFireServer({Name}) on port {LocalEP.Port}...");
-                _listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                LoggerAccessor.LogInfo(
+                    $"[MitmProtoFireServer] - Starting {(Secure ? "secure" : "insecure")} MitmProtoFireServer({Name}) on port {LocalEP.Port}..."
+                );
+                _listenSocket = new Socket(
+                    AddressFamily.InterNetwork,
+                    SocketType.Stream,
+                    ProtocolType.Tcp
+                );
                 _listenSocket.Bind(LocalEP);
                 _listenSocket.Listen(backlog);
                 IsRunning = true;
-                LoggerAccessor.LogInfo($"[MitmProtoFireServer] - MitmProtoFireServer({Name}) started.");
+                LoggerAccessor.LogInfo(
+                    $"[MitmProtoFireServer] - MitmProtoFireServer({Name}) started."
+                );
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[MitmProtoFireServer] - Failed to start {(Secure ? "secure" : "insecure")} MitmProtoFireServer({Name}) on port {LocalEP.Port} (Exception: {ex}).");
+                LoggerAccessor.LogError(
+                    $"[MitmProtoFireServer] - Failed to start {(Secure ? "secure" : "insecure")} MitmProtoFireServer({Name}) on port {LocalEP.Port} (Exception: {ex})."
+                );
                 IsRunning = false;
                 return;
             }
@@ -109,10 +110,12 @@ namespace BlazeCommon
                 //start accepting connections
                 while (!_cancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    Socket socket = await _listenSocket.AcceptAsync(_cancellationTokenSource.Token).ConfigureAwait(false);
-                    long clientId = Interlocked.Increment(ref _nextConnectionId);
+                    var socket = await _listenSocket
+                        .AcceptAsync(_cancellationTokenSource.Token)
+                        .ConfigureAwait(false);
+                    var clientId = Interlocked.Increment(ref _nextConnectionId);
 
-                    ProtoFireConnection connection = new ProtoFireConnection(clientId, this, socket);
+                    var connection = new ProtoFireConnection(clientId, this, socket);
                     await OnProtoFireConnectInternalAsync(connection).ConfigureAwait(false);
                 }
             }
@@ -126,22 +129,25 @@ namespace BlazeCommon
             foreach (var connection in _connections.Values)
                 connection.Disconnect();
             _connections.Clear();
-
         }
 
         public async void AuthenticateAsServerCallback(IAsyncResult result)
         {
             string blazePcapDir;
-            ProtoFireConnection connection = (ProtoFireConnection)result.AsyncState!;
+            var connection = (ProtoFireConnection)result.AsyncState!;
 
             try
             {
-                blazePcapDir = blazeDumpDir + $"/{Name}/{Configuration.MitmTargetHostname}/{GetCipheredRemoteIPvalue(connection)}/{DateTime.UtcNow:yyyyMMdd_HHmmss}";
+                blazePcapDir =
+                    blazeDumpDir
+                    + $"/{Name}/{Configuration.MitmTargetHostname}/{GetCipheredRemoteIPvalue(connection)}/{DateTime.UtcNow:yyyyMMdd_HHmmss}";
 
-                Stream? stream = SslSocket.EndAuthenticateAsServer(result);
+                var stream = SslSocket.EndAuthenticateAsServer(result);
                 if (stream == null)
                 {
-                    LoggerAccessor.LogError($"[MitmProtoFireServer] - Failed to authenticate as server for connection({connection.ID}).");
+                    LoggerAccessor.LogError(
+                        $"[MitmProtoFireServer] - Failed to authenticate as server for connection({connection.ID})."
+                    );
                     connection.Disconnect();
                     return;
                 }
@@ -149,28 +155,35 @@ namespace BlazeCommon
                 connection.SetStream(stream);
 
                 if (Secure)
-                    LoggerAccessor.LogInfo($"[MitmProtoFireServer] - Authenticated as server for connection({connection.ID}). Stream type: {stream.GetType().Name}");
+                    LoggerAccessor.LogInfo(
+                        $"[MitmProtoFireServer] - Authenticated as server for connection({connection.ID}). Stream type: {stream.GetType().Name}"
+                    );
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[MitmProtoFireServer] - Failed to authenticate as server for connection({connection.ID}) (Exception: {ex}).");
+                LoggerAccessor.LogError(
+                    $"[MitmProtoFireServer] - Failed to authenticate as server for connection({connection.ID}) (Exception: {ex})."
+                );
                 connection.Disconnect();
                 return;
             }
 
             // Use a named tuple so it's clearer when using ref
-            (TcpClient? target, SslStream? stream) targetClient = (null, null);
+            (TcpClient? target, Stream? stream) targetClient = (null, null);
 
             // First-time target connection (now pass by ref so RestartTargetConnectionAsync updates caller tuple)
-            if (!await RestartTargetConnectionAsync(ref targetClient, connection).ConfigureAwait(false))
+            if (
+                !await RestartTargetConnectionAsync(ref targetClient, connection)
+                    .ConfigureAwait(false)
+            )
             {
                 // failed to connect to target initially
                 connection.Disconnect();
                 return;
             }
 
-            int clientCounter = 0;
-            int targetCounter = 0;
+            var clientCounter = 0;
+            var targetCounter = 0;
             byte[] clientRequest;
             byte[] targetResponse;
 
@@ -180,23 +193,21 @@ namespace BlazeCommon
                 {
                     Directory.CreateDirectory(blazePcapDir);
                 }
-                catch
-                {
-                }
+                catch { }
             }
 
             ProtoFirePacket? packet;
 
             // local references - will be refreshed from the tuple each loop iteration and after reconnects
-            TcpClient? target = targetClient.target;
-            SslStream? targetStream = targetClient.stream;
+            var target = targetClient.target;
+            var targetStream = targetClient.stream;
 
             while (IsRunning && connection.Connected)
             {
                 // small delay, but check connection health frequently
                 await Task.Delay(10).ConfigureAwait(false);
-                clientRequest = Array.Empty<byte>();
-                targetResponse = Array.Empty<byte>();
+                clientRequest = [];
+                targetResponse = [];
 
                 try
                 {
@@ -205,12 +216,24 @@ namespace BlazeCommon
                     targetStream = targetClient.stream;
 
                     // if target connection dropped, attempt to restart before any I/O
-                    if (target == null || target.Client == null || !target.Connected || targetStream == null)
+                    if (
+                        target == null
+                        || target.Client == null
+                        || !target.Connected
+                        || targetStream == null
+                    )
                     {
-                        LoggerAccessor.LogWarn($"[MitmProtoFireServer] - Target not connected. Attempting restart for connection({connection.ID}).");
-                        if (!await RestartTargetConnectionAsync(ref targetClient, connection).ConfigureAwait(false))
+                        LoggerAccessor.LogWarn(
+                            $"[MitmProtoFireServer] - Target not connected. Attempting restart for connection({connection.ID})."
+                        );
+                        if (
+                            !await RestartTargetConnectionAsync(ref targetClient, connection)
+                                .ConfigureAwait(false)
+                        )
                         {
-                            LoggerAccessor.LogError($"[MitmProtoFireServer] - Failed to restart target for connection({connection.ID}). Disconnecting client.");
+                            LoggerAccessor.LogError(
+                                $"[MitmProtoFireServer] - Failed to restart target for connection({connection.ID}). Disconnecting client."
+                            );
                             break;
                         }
 
@@ -223,30 +246,56 @@ namespace BlazeCommon
                     packet = await ReadPacketBytes(clientRequest).ConfigureAwait(false);
                     if (clientRequest.Length >= 0xC)
                     {
-                        LoggerAccessor.LogInfo($"[MitmProtoFireServer] - Outgoing packet for connection({connection.ID}) -> {{{BitConverter.ToString(clientRequest).Replace("-", string.Empty)}}}.");
+                        LoggerAccessor.LogInfo(
+                            $"[MitmProtoFireServer] - Outgoing packet for connection({connection.ID}) -> {{{BitConverter.ToString(clientRequest).Replace("-", string.Empty)}}}."
+                        );
                         if (Configuration.MitmWriteToFile)
                         {
                             if (packet != null)
-                                _ = File.WriteAllTextAsync(blazePcapDir + $"/outgoing_{clientCounter}.log", BlazeUtils.LogPacket(Configuration.GetComponent(packet.Frame.Component), DecodeMitmPacket(packet), true));
-                            File.WriteAllBytes(blazePcapDir + $"/outgoing_{clientCounter}.cap", clientRequest);
+                                _ = File.WriteAllTextAsync(
+                                    blazePcapDir + $"/outgoing_{clientCounter}.log",
+                                    BlazeUtils.LogPacket(
+                                        Configuration.GetComponent(packet.Frame.Component),
+                                        DecodeMitmPacket(packet),
+                                        true
+                                    )
+                                );
+                            File.WriteAllBytes(
+                                blazePcapDir + $"/outgoing_{clientCounter}.cap",
+                                clientRequest
+                            );
                         }
                         else if (packet != null)
-                            BlazeUtils.LogPacket(Configuration.GetComponent(packet.Frame.Component), DecodeMitmPacket(packet), true);
+                            BlazeUtils.LogPacket(
+                                Configuration.GetComponent(packet.Frame.Component),
+                                DecodeMitmPacket(packet),
+                                true
+                            );
                         clientCounter++;
 
                         // wrap send to target in try so we can detect broken pipe / socket closed
                         try
                         {
-                            await targetStream!.WriteAsync(clientRequest, 0, clientRequest.Length).ConfigureAwait(false);
+                            await targetStream!
+                                .WriteAsync(clientRequest, 0, clientRequest.Length)
+                                .ConfigureAwait(false);
                             await targetStream.FlushAsync().ConfigureAwait(false);
                         }
                         catch (Exception writeEx)
                         {
-                            LoggerAccessor.LogWarn($"[MitmProtoFireServer] - Write to target failed for connection({connection.ID}) (Exception: {writeEx}). Attempting restart.");
-                            bool reconnected = await RestartTargetConnectionAsync(ref targetClient, connection).ConfigureAwait(false);
+                            LoggerAccessor.LogWarn(
+                                $"[MitmProtoFireServer] - Write to target failed for connection({connection.ID}) (Exception: {writeEx}). Attempting restart."
+                            );
+                            var reconnected = await RestartTargetConnectionAsync(
+                                    ref targetClient,
+                                    connection
+                                )
+                                .ConfigureAwait(false);
                             if (!reconnected)
                             {
-                                LoggerAccessor.LogError($"[MitmProtoFireServer] - Could not reconnect to target after write failure for connection({connection.ID}).");
+                                LoggerAccessor.LogError(
+                                    $"[MitmProtoFireServer] - Could not reconnect to target after write failure for connection({connection.ID})."
+                                );
                                 break;
                             }
 
@@ -254,7 +303,9 @@ namespace BlazeCommon
                             target = targetClient.target;
                             targetStream = targetClient.stream;
 
-                            await targetStream!.WriteAsync(clientRequest, 0, clientRequest.Length).ConfigureAwait(false);
+                            await targetStream!
+                                .WriteAsync(clientRequest, 0, clientRequest.Length)
+                                .ConfigureAwait(false);
                             await targetStream.FlushAsync().ConfigureAwait(false);
                         }
                     }
@@ -266,10 +317,17 @@ namespace BlazeCommon
                     }
                     catch (Exception readTargetEx)
                     {
-                        LoggerAccessor.LogWarn($"[MitmProtoFireServer] - Read from target failed for connection({connection.ID}) (Exception: {readTargetEx}). Attempting restart.");
-                        if (!await RestartTargetConnectionAsync(ref targetClient, connection).ConfigureAwait(false))
+                        LoggerAccessor.LogWarn(
+                            $"[MitmProtoFireServer] - Read from target failed for connection({connection.ID}) (Exception: {readTargetEx}). Attempting restart."
+                        );
+                        if (
+                            !await RestartTargetConnectionAsync(ref targetClient, connection)
+                                .ConfigureAwait(false)
+                        )
                         {
-                            LoggerAccessor.LogError($"[MitmProtoFireServer] - Could not reconnect to target after read failure for connection({connection.ID}).");
+                            LoggerAccessor.LogError(
+                                $"[MitmProtoFireServer] - Could not reconnect to target after read failure for connection({connection.ID})."
+                            );
                             break;
                         }
 
@@ -283,7 +341,7 @@ namespace BlazeCommon
                     packet = await ReadPacketBytes(targetResponse).ConfigureAwait(false);
                     if (targetResponse.Length > 5 && targetResponse[0] == 0x17)
                     {
-                        using (MemoryStream m = new MemoryStream())
+                        using (var m = new MemoryStream())
                         {
                             m.Write(targetResponse, 5, targetResponse.Length - 5);
                             targetResponse = m.ToArray();
@@ -291,15 +349,31 @@ namespace BlazeCommon
                     }
                     if (targetResponse.Length >= 0xC)
                     {
-                        LoggerAccessor.LogInfo($"[MitmProtoFireServer] - Incomming packet for connection({connection.ID}) -> {{{BitConverter.ToString(targetResponse).Replace("-", string.Empty)}}}.");
+                        LoggerAccessor.LogInfo(
+                            $"[MitmProtoFireServer] - Incomming packet for connection({connection.ID}) -> {{{BitConverter.ToString(targetResponse).Replace("-", string.Empty)}}}."
+                        );
                         if (Configuration.MitmWriteToFile)
                         {
                             if (packet != null)
-                                _ = File.WriteAllTextAsync(blazePcapDir + $"/incomming_{targetCounter}.log", BlazeUtils.LogPacket(Configuration.GetComponent(packet.Frame.Component), DecodeMitmPacket(packet), true));
-                            File.WriteAllBytes(blazePcapDir + $"/incomming_{targetCounter}.cap", targetResponse);
+                                _ = File.WriteAllTextAsync(
+                                    blazePcapDir + $"/incomming_{targetCounter}.log",
+                                    BlazeUtils.LogPacket(
+                                        Configuration.GetComponent(packet.Frame.Component),
+                                        DecodeMitmPacket(packet),
+                                        true
+                                    )
+                                );
+                            File.WriteAllBytes(
+                                blazePcapDir + $"/incomming_{targetCounter}.cap",
+                                targetResponse
+                            );
                         }
                         else if (packet != null)
-                            BlazeUtils.LogPacket(Configuration.GetComponent(packet.Frame.Component), DecodeMitmPacket(packet), true);
+                            BlazeUtils.LogPacket(
+                                Configuration.GetComponent(packet.Frame.Component),
+                                DecodeMitmPacket(packet),
+                                true
+                            );
                         targetCounter++;
                         connection.Stream?.Write(targetResponse, 0, targetResponse.Length);
                         connection.Stream?.Flush();
@@ -310,11 +384,15 @@ namespace BlazeCommon
                     // try to detect if it's target related; best effort: SocketException, IOException, AuthenticationException
                     if (IsTargetRelatedException(ex))
                     {
-                        LoggerAccessor.LogWarn($"[MitmProtoFireServer] - Detected target-related exception for connection({connection.ID}) (Exception: {ex}). Attempting restart.");
-                        bool ok = await RestartTargetConnectionAsync(ref targetClient, connection).ConfigureAwait(false);
+                        LoggerAccessor.LogWarn(
+                            $"[MitmProtoFireServer] - Detected target-related exception for connection({connection.ID}) (Exception: {ex}). Attempting restart."
+                        );
+                        var ok = await RestartTargetConnectionAsync(ref targetClient, connection)
+                            .ConfigureAwait(false);
                         if (!ok)
                         {
-                            await OnProtoFireErrorInternalAsync(connection, ex).ConfigureAwait(false);
+                            await OnProtoFireErrorInternalAsync(connection, ex)
+                                .ConfigureAwait(false);
                             break;
                         }
 
@@ -330,9 +408,18 @@ namespace BlazeCommon
             }
 
             // final cleanup
-            _ = Task.Run(() => {
-                try { targetClient.stream?.Dispose(); } catch { }
-                try { targetClient.target?.Dispose(); } catch { }
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    targetClient.stream?.Dispose();
+                }
+                catch { }
+                try
+                {
+                    targetClient.target?.Dispose();
+                }
+                catch { }
             });
 
             connection.Disconnect();
@@ -344,12 +431,13 @@ namespace BlazeCommon
         /// Updates the provided tuple (by ref) so the caller sees the new objects.
         /// </summary>
         private Task<bool> RestartTargetConnectionAsync(
-            ref (TcpClient? target, SslStream? stream) targetClient,
+            ref (TcpClient? target, Stream? stream) targetClient,
             ProtoFireConnection connection,
             int maxAttempts = 3,
-            int baseDelayMs = 250)
+            int baseDelayMs = 250
+        )
         {
-            int attempt = 0;
+            var attempt = 0;
             Exception? lastEx = null;
 
             // Start by disposing any existing objects referenced in the tuple (best-effort)
@@ -357,25 +445,39 @@ namespace BlazeCommon
             {
                 if (targetClient.stream != null)
                 {
-                    try { targetClient.stream.Close(); targetClient.stream.Dispose(); } catch { }
+                    try
+                    {
+                        targetClient.stream.Close();
+                        targetClient.stream.Dispose();
+                    }
+                    catch { }
                     targetClient.stream = null;
                 }
             }
-            catch { /* ignore */ }
+            catch
+            { /* ignore */
+            }
 
             try
             {
                 if (targetClient.target != null)
                 {
-                    try { targetClient.target.Close(); targetClient.target.Dispose(); } catch { }
+                    try
+                    {
+                        targetClient.target.Close();
+                        targetClient.target.Dispose();
+                    }
+                    catch { }
                     targetClient.target = null;
                 }
             }
-            catch { /* ignore */ }
+            catch
+            { /* ignore */
+            }
 
             // We'll use local variables while attempting, then assign back to the tuple on success
             TcpClient? target = null;
-            SslStream? targetStream = null;
+            Stream? targetStream = null;
 
             while (attempt < maxAttempts && IsRunning && connection.Connected)
             {
@@ -385,21 +487,40 @@ namespace BlazeCommon
                     target = new TcpClient();
                     // optional timeout for connect
                     var timeout = Task.Delay(5000);
-                    if (Task.WhenAny(target.ConnectAsync(Configuration.MitmTargetIp, Configuration.MitmTargetPort), timeout).Result == timeout)
+                    if (
+                        Task.WhenAny(
+                            target.ConnectAsync(
+                                Configuration.MitmTargetIp,
+                                Configuration.MitmTargetPort
+                            ),
+                            timeout
+                        ).Result == timeout
+                    )
                         throw new TimeoutException("Timed out while connecting to target.");
 
-                    LoggerAccessor.LogInfo($"[MitmProtoFireServer] - Connected to target for connection({connection.ID}) (attempt {attempt}).");
+                    LoggerAccessor.LogInfo(
+                        $"[MitmProtoFireServer] - Connected to target for connection({connection.ID}) (attempt {attempt})."
+                    );
 
                     // create SSL stream and authenticate as client
-                    targetStream = new SslStream(target.GetStream(), true, new RemoteCertificateValidationCallback(ValidateAlways), null);
+                    targetStream = new SslStream(
+                        target.GetStream(),
+                        true,
+                        new RemoteCertificateValidationCallback(ValidateAlways),
+                        null
+                    );
 
-                    targetStream.AuthenticateAsClient(new SslClientAuthenticationOptions
-                    {
-                        TargetHost = Configuration.MitmTargetHostname,
-                        EnabledSslProtocols = Configuration.MitmProtocols,
-                    });
+                    ((SslStream)targetStream).AuthenticateAsClient(
+                        new SslClientAuthenticationOptions
+                        {
+                            TargetHost = Configuration.MitmTargetHostname,
+                            EnabledSslProtocols = Configuration.MitmProtocols,
+                        }
+                    );
 
-                    LoggerAccessor.LogInfo($"[MitmProtoFireServer] - Authenticated as client for connection({connection.ID}) (attempt {attempt}).");
+                    LoggerAccessor.LogInfo(
+                        $"[MitmProtoFireServer] - Authenticated as client for connection({connection.ID}) (attempt {attempt})."
+                    );
 
                     // success: update the caller tuple so they see the new objects
                     targetClient = (target, targetStream);
@@ -408,12 +529,24 @@ namespace BlazeCommon
                 catch (Exception ex)
                 {
                     lastEx = ex;
-                    LoggerAccessor.LogWarn($"[MitmProtoFireServer] - Restart attempt {attempt}/{maxAttempts} failed for connection({connection.ID}) (Exception: {ex}).");
+                    LoggerAccessor.LogWarn(
+                        $"[MitmProtoFireServer] - Restart attempt {attempt}/{maxAttempts} failed for connection({connection.ID}) (Exception: {ex})."
+                    );
 
                     // dispose partially created objects before retry
-                    try { targetStream?.Close(); targetStream?.Dispose(); } catch { }
+                    try
+                    {
+                        targetStream?.Close();
+                        targetStream?.Dispose();
+                    }
+                    catch { }
                     targetStream = null;
-                    try { target?.Close(); target?.Dispose(); } catch { }
+                    try
+                    {
+                        target?.Close();
+                        target?.Dispose();
+                    }
+                    catch { }
                     target = null;
 
                     // exponential backoff (best-effort)
@@ -421,7 +554,9 @@ namespace BlazeCommon
                 }
             }
 
-            LoggerAccessor.LogError($"[MitmProtoFireServer] - All restart attempts failed for connection({connection.ID}). Last exception: {lastEx}");
+            LoggerAccessor.LogError(
+                $"[MitmProtoFireServer] - All restart attempts failed for connection({connection.ID}). Last exception: {lastEx}"
+            );
 
             // ensure tuple does not hold any stale references
             targetClient = (null, null);
@@ -431,32 +566,42 @@ namespace BlazeCommon
         /// <summary>
         /// Best-effort check if exception is likely related to the target socket/ssl
         /// </summary>
-        private bool IsTargetRelatedException(Exception ex)
+        private static bool IsTargetRelatedException(Exception ex)
         {
-            if (ex == null) return false;
+            if (ex == null)
+                return false;
             // direct socket/io exceptions
-            if (ex is SocketException) return true;
-            if (ex is IOException) return true;
-            if (ex is AuthenticationException) return true;
+            if (ex is SocketException)
+                return true;
+            if (ex is IOException)
+                return true;
+            if (ex is AuthenticationException)
+                return true;
             // unwrap AggregateException / InnerException
             if (ex is AggregateException agg)
             {
                 foreach (var inner in agg.InnerExceptions)
-                    if (IsTargetRelatedException(inner)) return true;
+                    if (IsTargetRelatedException(inner))
+                        return true;
             }
-            if (ex.InnerException != null) return IsTargetRelatedException(ex.InnerException);
+            if (ex.InnerException != null)
+                return IsTargetRelatedException(ex.InnerException);
             // fallback: check message text (not ideal, but sometimes useful)
             var msg = ex.Message?.ToLowerInvariant() ?? string.Empty;
-            if (msg.Contains("connection") && (msg.Contains("reset") || msg.Contains("refused") || msg.Contains("closed") || msg.Contains("broken pipe") || msg.Contains("timed out")))
-                return true;
-
-            return false;
+            return msg.Contains("connection")
+                && (
+                    msg.Contains("reset")
+                    || msg.Contains("refused")
+                    || msg.Contains("closed")
+                    || msg.Contains("broken pipe")
+                    || msg.Contains("timed out")
+                );
         }
 
         public uint GetCipheredRemoteIPvalue(ProtoFireConnection connection)
         {
-            byte[] byteip = ((IPEndPoint)connection.Socket.RemoteEndPoint!).Address.GetAddressBytes();
-            if (BitConverter.IsLittleEndian)
+            var byteip = ((IPEndPoint)connection.Socket.RemoteEndPoint!).Address.GetAddressBytes();
+            if (EndianTools.EndianAwareConverter.isLittleEndianSystem)
                 Array.Reverse(byteip);
             // Prevents leaking of IP Addresses.
             return BitConverter.ToUInt32(byteip, 0) ^ ushort.MaxValue ^ AddressEncryptionKey;
@@ -464,43 +609,31 @@ namespace BlazeCommon
 
         IBlazePacket DecodeMitmPacket(ProtoFirePacket packet)
         {
-            FireFrame frame = packet.Frame;
-            IBlazeServerComponent? component = Configuration.GetComponent(frame.Component);
+            var frame = packet.Frame;
+            var component = Configuration.GetComponent(frame.Component);
             if (component == null)
                 return packet.Decode(typeof(NullStruct), Configuration.Decoder);
-
-            Type? type;
-
-            switch (frame.MsgType)
+            var type = frame.MsgType switch
             {
-                case FireFrame.MessageType.MESSAGE:
-                    type = component.GetCommandRequestType(frame.Command);
-                    break;
-                case FireFrame.MessageType.REPLY:
-                    type = component.GetCommandResponseType(frame.Command);
-                    break;
-                case FireFrame.MessageType.NOTIFICATION:
-                    type = component.GetNotificationType(frame.Command);
-                    break;
-                case FireFrame.MessageType.ERROR_REPLY:
-                    type = component.GetCommandErrorResponseType(frame.Command);
-                    break;
-                default:
-                    type = typeof(NullStruct);
-                    break;
-            }
-
+                FireFrame.MessageType.MESSAGE => component.GetCommandRequestType(frame.Command),
+                FireFrame.MessageType.REPLY => component.GetCommandResponseType(frame.Command),
+                FireFrame.MessageType.NOTIFICATION => component.GetNotificationType(frame.Command),
+                FireFrame.MessageType.ERROR_REPLY => component.GetCommandErrorResponseType(
+                    frame.Command
+                ),
+                _ => typeof(NullStruct),
+            };
             type ??= typeof(NullStruct);
             return packet.Decode(type, Configuration.Decoder);
         }
 
-        public static byte[] ReadContentSSL(SslStream sslStream)
+        public static byte[] ReadContentSSL(Stream sslStream)
         {
             const int bufferSize = 0x10000;
             int bytesRead;
-            byte[] buff = new byte[bufferSize];
+            var buff = new byte[bufferSize];
 
-            using (MemoryStream res = new MemoryStream())
+            using (var res = new MemoryStream())
             {
                 try
                 {
@@ -515,7 +648,9 @@ namespace BlazeCommon
                 }
                 catch (Exception e)
                 {
-                    LoggerAccessor.LogDebug("[MitmProtoFireServer] - ReadContentSSL | " + e.Message);
+                    LoggerAccessor.LogDebug(
+                        "[MitmProtoFireServer] - ReadContentSSL | " + e.Message
+                    );
                 }
 
                 return res.ToArray();
@@ -528,12 +663,12 @@ namespace BlazeCommon
                 throw new InvalidOperationException("Stream is not set");
 
             int bytesRead;
-            byte[] buff = new byte[0x10000];
+            var buff = new byte[0x10000];
 
             try
             {
                 stream.ReadTimeout = ReadTimeout;
-                using (MemoryStream res = new MemoryStream())
+                using (var res = new MemoryStream())
                 {
                     while ((bytesRead = stream.Read(buff, 0, 0x10000)) > 0)
                     {
@@ -550,32 +685,39 @@ namespace BlazeCommon
                 LoggerAccessor.LogDebug("[MitmProtoFireServer] - ReadContent | " + e.Message);
             }
 
-            return Array.Empty<byte>();
+            return [];
         }
 
-        public async Task<ProtoFirePacket?> ReadPacketBytes(byte[] packet)
+        public static async Task<ProtoFirePacket?> ReadPacketBytes(byte[] packet)
         {
-            using (MemoryStream ms = new MemoryStream(packet))
+            using (var ms = new MemoryStream(packet))
             {
                 try
                 {
-                    FireFrame frame = new FireFrame();
-                    if (!await ms.ReadAllAsync(frame.Frame, 0, FireFrame.MIN_HEADER_SIZE).ConfigureAwait(false))
+                    var frame = new FireFrame();
+                    if (
+                        !await ms.ReadAllAsync(frame.Frame, 0, FireFrame.MIN_HEADER_SIZE)
+                            .ConfigureAwait(false)
+                    )
                         return null;
 
-                    ushort extraFrameBytesNeeded = frame.ExtraHeaderSize;
-                    if (!await ms.ReadAllAsync(frame.Frame, FireFrame.MIN_HEADER_SIZE, extraFrameBytesNeeded).ConfigureAwait(false))
+                    var extraFrameBytesNeeded = frame.ExtraHeaderSize;
+                    if (
+                        !await ms.ReadAllAsync(
+                                frame.Frame,
+                                FireFrame.MIN_HEADER_SIZE,
+                                extraFrameBytesNeeded
+                            )
+                            .ConfigureAwait(false)
+                    )
                         return null;
 
-                    byte[] data = new byte[frame.Size];
-                    if (!await ms.ReadAllAsync(data, 0, data.Length).ConfigureAwait(false))
-                        return null;
-
-                    return new ProtoFirePacket(frame, data);
+                    var data = new byte[frame.Size];
+                    return !await ms.ReadAllAsync(data, 0, data.Length).ConfigureAwait(false)
+                        ? null
+                        : new ProtoFirePacket(frame, data);
                 }
-                catch
-                {
-                }
+                catch { }
             }
 
             return null;
@@ -584,7 +726,7 @@ namespace BlazeCommon
         public static bool CheckIfStreamComplete(MemoryStream m)
         {
             m.Seek(0, 0);
-            byte t = (byte)m.ReadByte();
+            var t = (byte)m.ReadByte();
             if (t == 0x17)
                 m.Seek(5, 0);
             else
@@ -593,7 +735,7 @@ namespace BlazeCommon
             while (m.Position + len < m.Length)
             {
                 m.Seek(m.Position + len, 0);
-                MitmBlazePacket p = ReadBlazePacketHeader(m);
+                var p = ReadBlazePacketHeader(m);
                 len = p.Length + (p.extLength << 16);
                 if (m.Position + len == m.Length)
                     return true;
@@ -604,32 +746,34 @@ namespace BlazeCommon
 
         public static MitmBlazePacket ReadBlazePacketHeader(Stream s)
         {
-            MitmBlazePacket res = new MitmBlazePacket
+            var res = new MitmBlazePacket
             {
                 Length = ReadUShort(s),
                 Component = ReadUShort(s),
                 Command = ReadUShort(s),
                 Error = ReadUShort(s),
                 QType = ReadUShort(s),
-                ID = ReadUShort(s)
+                ID = ReadUShort(s),
             };
-            if ((res.QType & 0x10) != 0)
-                res.extLength = ReadUShort(s);
-            else
-                res.extLength = 0;
-            int len = res.Length + (res.extLength << 16);
+            res.extLength = (res.QType & 0x10) != 0 ? ReadUShort(s) : (ushort)0;
+            var len = res.Length + (res.extLength << 16);
             res.Content = new byte[len];
             return res;
         }
 
         public static ushort ReadUShort(Stream s)
         {
-            byte[] buff = new byte[2];
+            var buff = new byte[2];
             s.Read(buff, 0, 2);
             return (ushort)((buff[0] << 8) + buff[1]);
         }
 
-        public static bool ValidateAlways(object? sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors)
+        public static bool ValidateAlways(
+            object? sender,
+            X509Certificate? certificate,
+            X509Chain? chain,
+            SslPolicyErrors sslPolicyErrors
+        )
         {
             return true;
         }
@@ -653,7 +797,9 @@ namespace BlazeCommon
                 return;
             }
 
-            LoggerAccessor.LogInfo($"[ProtoFireServer] - Connection({connection.ID}) accepted from {connection.Socket.RemoteEndPoint}.");
+            LoggerAccessor.LogInfo(
+                $"[ProtoFireServer] - Connection({connection.ID}) accepted from {connection.Socket.RemoteEndPoint}."
+            );
 
             try
             {
@@ -667,9 +813,19 @@ namespace BlazeCommon
             if (connection.Connected)
             {
                 if (Secure)
-                    LoggerAccessor.LogInfo($"[ProtoFireServer] - Authenticating as server for connection({connection.ID}).");
+                    LoggerAccessor.LogInfo(
+                        $"[ProtoFireServer] - Authenticating as server for connection({connection.ID})."
+                    );
 
-                SslSocket.BeginAuthenticateAsServer(_sslProtocols, connection.Socket, Certificate, ForceSsl, true, AuthenticateAsServerCallback, connection);
+                SslSocket.BeginAuthenticateAsServer(
+                    _sslProtocols,
+                    connection.Socket,
+                    Certificate,
+                    ForceSsl,
+                    true,
+                    AuthenticateAsServerCallback,
+                    connection
+                );
             }
         }
 
@@ -678,7 +834,9 @@ namespace BlazeCommon
             if (!_connections.TryRemove(connection.ID, out _))
                 return;
 
-            LoggerAccessor.LogInfo($"[ProtoFireServer] - Connection({connection.ID}) disconnected.");
+            LoggerAccessor.LogInfo(
+                $"[ProtoFireServer] - Connection({connection.ID}) disconnected."
+            );
 
             try
             {
@@ -690,8 +848,10 @@ namespace BlazeCommon
             }
         }
 
-
-        private async Task OnProtoFireErrorInternalAsync(ProtoFireConnection connection, Exception exception)
+        private async Task OnProtoFireErrorInternalAsync(
+            ProtoFireConnection connection,
+            Exception exception
+        )
         {
             try
             {
@@ -706,6 +866,9 @@ namespace BlazeCommon
 
         public abstract Task OnProtoFireConnectAsync(ProtoFireConnection connection);
         public abstract Task OnProtoFireDisconnectAsync(ProtoFireConnection connection);
-        public abstract Task OnProtoFireErrorAsync(ProtoFireConnection connection, Exception exception);
+        public abstract Task OnProtoFireErrorAsync(
+            ProtoFireConnection connection,
+            Exception exception
+        );
     }
 }

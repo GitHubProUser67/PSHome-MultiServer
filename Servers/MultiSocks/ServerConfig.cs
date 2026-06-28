@@ -1,5 +1,5 @@
-﻿using Newtonsoft.Json;
-using System.Security.Authentication;
+﻿using System.Security.Authentication;
+using Newtonsoft.Json;
 
 namespace MultiSocks
 {
@@ -13,12 +13,13 @@ namespace MultiSocks
 
     public class ServerConfig
     {
-        public string Type { get; set; } = string.Empty;   // Aries, Blaze2, Blaze3
+        public string Type { get; set; } = string.Empty; // Aries, Blaze2, Blaze3
         public string Subtype { get; set; } = string.Empty; // Redirector, Main, Matchmaker, etc.
         public ushort Port { get; set; }
 
         [JsonProperty("target_ip")]
         public string? TargetIP { get; set; }
+
         [JsonProperty("target_hostname")]
         public string? TargetHostname { get; set; }
 
@@ -40,15 +41,17 @@ namespace MultiSocks
 
         // Blaze-specific
         public string? Game { get; set; }
+
         [JsonProperty("storage_encryption_key")]
         public uint StorageEncryptionKey { get; set; } = 0;
+
         [JsonProperty("ssl_protocols")]
 #pragma warning disable
-        public int SSLProtocols { get; set; } = (int)(SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12);
+        public int SSLProtocols { get; set; } =
+            (int)(SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12);
 #pragma warning restore
         [JsonProperty("write_client_report_to_file")]
         public bool WriteClientReportToFile { get; set; } = true;
         public List<string>? Components { get; set; }
     }
-
 }

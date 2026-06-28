@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace ZTn.Json.JsonTreeView
+﻿namespace ZTn.Json.JsonTreeView
 {
     [Flags]
     enum KeyStates
@@ -10,6 +8,6 @@ namespace ZTn.Json.JsonTreeView
         Shift = 4,
         Control = 8,
         MiddleButton = 16,
-        Alt = 32
+        Alt = 32,
     }
 }

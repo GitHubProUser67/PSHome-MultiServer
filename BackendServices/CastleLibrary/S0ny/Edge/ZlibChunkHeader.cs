@@ -1,5 +1,4 @@
-﻿using EndianTools;
-using System;
+using EndianTools;
 
 namespace CastleLibrary.S0ny.Edge
 {
@@ -7,22 +6,18 @@ namespace CastleLibrary.S0ny.Edge
     {
         public const byte sizeOf = 4;
 
-#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
         internal readonly byte[] GetBytes()
-#else
-        internal byte[] GetBytes()
-#endif
         {
-            byte[] array = new byte[sizeOf];
-            EndianAwareConverter.WriteUInt16(array, Endianness.LittleEndian, 2, SourceSize);
-            EndianAwareConverter.WriteUInt16(array, Endianness.LittleEndian, 0, CompressedSize);
+            var array = new byte[sizeOf];
+            EndianAwareConverter.WriteUInt16(array, Endianness.BigEndian, 0, SourceSize);
+            EndianAwareConverter.WriteUInt16(array, Endianness.BigEndian, 2, CompressedSize);
             return array;
         }
 
         internal static ZlibChunkHeader FromBytes(byte[] inData)
         {
             ZlibChunkHeader result = default;
-            byte[] array = inData;
+            var array = inData;
 
             if (inData.Length > sizeOf)
             {
@@ -30,8 +25,8 @@ namespace CastleLibrary.S0ny.Edge
                 Array.Copy(inData, array, sizeOf);
             }
 
-            result.SourceSize = EndianAwareConverter.ToUInt16(array, Endianness.LittleEndian, 2);
-            result.CompressedSize = EndianAwareConverter.ToUInt16(array, Endianness.LittleEndian, 0);
+            result.SourceSize = EndianAwareConverter.ToUInt16(array, Endianness.BigEndian, 0);
+            result.CompressedSize = EndianAwareConverter.ToUInt16(array, Endianness.BigEndian, 2);
             return result;
         }
 

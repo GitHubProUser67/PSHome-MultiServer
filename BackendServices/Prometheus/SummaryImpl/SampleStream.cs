@@ -1,15 +1,10 @@
 namespace Prometheus.SummaryImpl;
 
-internal sealed class SampleStream
+internal sealed class SampleStream(Invariant invariant)
 {
     public double N;
-    private readonly List<Sample> _samples = new List<Sample>();
-    private readonly Invariant _invariant;
-
-    public SampleStream(Invariant invariant)
-    {
-        _invariant = invariant;
-    }
+    private readonly List<Sample> _samples = [];
+    private readonly Invariant _invariant = invariant;
 
     public void Merge(List<Sample> samples)
     {
@@ -32,16 +27,31 @@ internal sealed class SampleStream
                 if (c.Value > sample.Value)
                 {
                     // Insert at position i
-                    _samples.Insert(i, new Sample { Value = sample.Value, Width = sample.Width, Delta = Math.Max(sample.Delta, Math.Floor(_invariant(this, r)) - 1) });
+                    _samples.Insert(
+                        i,
+                        new Sample
+                        {
+                            Value = sample.Value,
+                            Width = sample.Width,
+                            Delta = Math.Max(sample.Delta, Math.Floor(_invariant(this, r)) - 1),
+                        }
+                    );
                     i++;
                     goto inserted;
                 }
                 r += c.Width;
             }
-            _samples.Add(new Sample { Value = sample.Value, Width = sample.Width, Delta = 0 });
+            _samples.Add(
+                new Sample
+                {
+                    Value = sample.Value,
+                    Width = sample.Width,
+                    Delta = 0,
+                }
+            );
             i++;
 
-        inserted:
+            inserted:
             N += sample.Width;
             r += sample.Width;
         }
@@ -54,7 +64,7 @@ internal sealed class SampleStream
         if (_samples.Count < 2)
             return;
 
-        var x = _samples[_samples.Count - 1];
+        var x = _samples[^1];
         var xi = _samples.Count - 1;
         var r = N - 1 - x.Width;
 

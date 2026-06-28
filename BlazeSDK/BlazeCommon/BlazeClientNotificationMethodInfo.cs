@@ -4,7 +4,12 @@ namespace BlazeCommon
 {
     public class BlazeClientNotificationMethodInfo
     {
-        public BlazeClientNotificationMethodInfo(IBlazeClientComponent component, ushort notificationId, Type notificationType, MethodInfo notificationMethod)
+        public BlazeClientNotificationMethodInfo(
+            IBlazeClientComponent component,
+            ushort notificationId,
+            Type notificationType,
+            MethodInfo notificationMethod
+        )
         {
             Component = component;
             Id = notificationId;
@@ -21,7 +26,7 @@ namespace BlazeCommon
 
         public Task InvokeAsync(object notification)
         {
-            return (Task)Method.Invoke(Component, new object?[] { notification })!;
+            return (Task)Method.Invoke(Component, [notification])!;
         }
     }
 }

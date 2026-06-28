@@ -1,13 +1,16 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.UniverseStatusList_ExtraInfoResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.UniverseStatusList_ExtraInfoResponse
+    )]
     public class MediusUniverseStatusList_ExtraInfoResponse : BaseLobbyExtMessage, IMediusResponse
     {
-        public override byte PacketType => (byte)MediusLobbyExtMessageIds.UniverseStatusList_ExtraInfoResponse;
+        public override byte PacketType =>
+            (byte)MediusLobbyExtMessageIds.UniverseStatusList_ExtraInfoResponse;
 
         public bool IsSuccess => StatusCode >= 0;
 
@@ -28,13 +31,10 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            //
             reader.ReadBytes(3);
             StatusCode = reader.Read<MediusCallbackStatus>();
             UniverseName = reader.ReadString(Constants.UNIVERSENAME_MAXLEN);
@@ -53,13 +53,10 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            //
             writer.Write(new byte[3]);
             writer.Write(StatusCode);
             writer.Write(UniverseName, Constants.UNIVERSENAME_MAXLEN);
@@ -78,20 +75,21 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"UniverseName: {UniverseName} " +
-                $"DNS: {DNS} " +
-                $"Port: {Port} " +
-                $"UniverseDescription: {UniverseDescription} " +
-                $"Status: {Status} " +
-                $"UserCount: {UserCount} " +
-                $"MaxUsers: {MaxUsers} " +
-                $"UniverseBilling: {UniverseBilling} " +
-                $"BillingSystemName: {BillingSystemName} " +
-                $"EndOfList: {EndOfList}" +
-                $"ExtendedInfo: {ExtendedInfo}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"UniverseName: {UniverseName} "
+                + $"DNS: {DNS} "
+                + $"Port: {Port} "
+                + $"UniverseDescription: {UniverseDescription} "
+                + $"Status: {Status} "
+                + $"UserCount: {UserCount} "
+                + $"MaxUsers: {MaxUsers} "
+                + $"UniverseBilling: {UniverseBilling} "
+                + $"BillingSystemName: {BillingSystemName} "
+                + $"EndOfList: {EndOfList}"
+                + $"ExtendedInfo: {ExtendedInfo}";
         }
     }
 }

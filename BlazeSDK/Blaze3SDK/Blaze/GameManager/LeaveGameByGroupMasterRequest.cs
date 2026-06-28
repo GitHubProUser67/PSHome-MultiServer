@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct LeaveGameByGroupMasterRequest
-	{
+    [TdfStruct]
+    public struct LeaveGameByGroupMasterRequest
+    {
+        [TdfMember("GID")]
+        public uint mGameId;
 
-		[TdfMember("GID")]
-		public uint mGameId;
+        [TdfMember("CNTX")]
+        public ushort mPlayerRemovedTitleContext;
 
-		[TdfMember("CNTX")]
-		public ushort mPlayerRemovedTitleContext;
-
-		[TdfMember("SIDL")]
-		public List<uint> mSessionIdList;
-
-	}
+        [TdfMember("SIDL")]
+        public List<uint> mSessionIdList;
+    }
 }

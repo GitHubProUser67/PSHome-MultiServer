@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -8,7 +7,7 @@ namespace Horizon.RT.Models
     /// Introduced in Medius API v2.7.<br/>
     /// Allow an application to post ascii information about a <br/>
     /// problem that occurred during online gameplay.This function is strictly used <br/>
-    /// only during development, QA and Public Beta phases of a title. <br/> In general, an 
+    /// only during development, QA and Public Beta phases of a title. <br/> In general, an
     /// application should not ship with calls to this function.
     /// </summary>
     [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.PostDebugInfo)]

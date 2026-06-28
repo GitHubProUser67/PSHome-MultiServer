@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Authentication
 {
-	[TdfStruct]
-	public struct DecrementUseCount
-	{
+    [TdfStruct]
+    public struct DecrementUseCount
+    {
+        [TdfMember("UCTC")]
+        public uint mUseCountConsumed;
 
-		[TdfMember("UCTC")]
-		public uint mUseCountConsumed;
-
-		[TdfMember("UCTR")]
-		public uint mUseCountRemain;
-
-	}
+        [TdfMember("UCTR")]
+        public uint mUseCountRemain;
+    }
 }

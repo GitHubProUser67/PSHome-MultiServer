@@ -1,6 +1,5 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
@@ -16,18 +15,22 @@ namespace Horizon.RT.Models
         /// Session Key
         /// </summary>
         public string SessionKey; // SESSIONKEY_MAXLEN
+
         /// <summary>
         /// World ID of the game to terminate
         /// </summary>
         public int MediusWorldID;
+
         /// <summary>
         /// Winning Team information N/A
         /// </summary>
         public string WinningTeam; // WINNINGTEAM_MAXLEN
+
         /// <summary>
         /// Winning Player Information N/A
         /// </summary>
         public string WinningPlayer; // ACCOUNTNAME_MAXLEN
+
         /// <summary>
         /// Final Score N/A
         /// </summary>
@@ -35,14 +38,11 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            // 
             SessionKey = reader.ReadString(Constants.SESSIONKEY_MAXLEN);
             reader.ReadBytes(3);
 
-            //
             MediusWorldID = reader.ReadInt32();
             WinningTeam = reader.ReadString(Constants.WINNINGTEAM_MAXLEN);
             WinningPlayer = reader.ReadString(Constants.ACCOUNTNAME_MAXLEN);
@@ -51,14 +51,11 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            // 
             writer.Write(SessionKey, Constants.SESSIONKEY_MAXLEN);
             writer.Write(new byte[3]);
 
-            //
             writer.Write(MediusWorldID);
             writer.Write(WinningTeam, Constants.WINNINGTEAM_MAXLEN);
             writer.Write(WinningPlayer, Constants.ACCOUNTNAME_MAXLEN);
@@ -67,12 +64,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-             $"SessionKey: {SessionKey} " +
-             $"MediusWorldID: {MediusWorldID} " +
-             $"WinningTeam: {WinningTeam} " +
-             $"WinningPlayer: {WinningPlayer} " +
-             $"FinalScore: {FinalScore}";
+            return base.ToString()
+                + " "
+                + $"SessionKey: {SessionKey} "
+                + $"MediusWorldID: {MediusWorldID} "
+                + $"WinningTeam: {WinningTeam} "
+                + $"WinningPlayer: {WinningPlayer} "
+                + $"FinalScore: {FinalScore}";
         }
     }
 }

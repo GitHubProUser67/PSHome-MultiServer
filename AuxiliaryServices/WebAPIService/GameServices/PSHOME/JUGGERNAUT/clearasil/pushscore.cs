@@ -1,8 +1,4 @@
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Xml;
 using WebAPIService.LeaderboardService;
 
@@ -10,43 +6,45 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil
 {
     public class pushscore
     {
-        public static readonly ClearasilScoreBoardData[] Leaderboards = new ClearasilScoreBoardData[2] { null, null };
+        public static readonly ClearasilScoreBoardData[] Leaderboards = [null, null];
 
-        public static string ProcessPushScore(IDictionary<string, string> QueryParameters, string apiPath)
+        public static string ProcessPushScore(
+            IDictionary<string, string> QueryParameters,
+            string apiPath
+        )
         {
             if (QueryParameters != null)
             {
-                string user = QueryParameters["user"];
-                string score = QueryParameters["score"];
+                var user = QueryParameters["user"];
+                var score = QueryParameters["score"];
 
                 if (!string.IsNullOrEmpty(user) && !string.IsNullOrEmpty(score))
                 {
                     Directory.CreateDirectory($"{apiPath}/juggernaut/clearasil/space_access");
 
-                    string profilePath = $"{apiPath}/juggernaut/clearasil/space_access/{user}.xml";
+                    var profilePath = $"{apiPath}/juggernaut/clearasil/space_access/{user}.xml";
 
                     if (File.Exists(profilePath))
                     {
                         // Load the XML string into an XmlDocument
-                        XmlDocument xmlDoc = new XmlDocument();
+                        var xmlDoc = new XmlDocument();
                         xmlDoc.Load(profilePath);
 
                         // Find the <score> element
-                        XmlElement scoreElement = xmlDoc.SelectSingleNode("/xml/score") as XmlElement;
 
-                        if (scoreElement != null)
+                        if (xmlDoc.SelectSingleNode("/xml/score") is XmlElement scoreElement)
                         {
                             // Find the <phase2> element
-                            XmlElement phase2Element = xmlDoc.SelectSingleNode("/xml/phase2") as XmlElement;
 
-                            if (phase2Element != null)
+                            if (xmlDoc.SelectSingleNode("/xml/phase2") is XmlElement phase2Element)
                             {
-                                bool phase2 = phase2Element.InnerText != "0";
+                                var phase2 = phase2Element.InnerText != "0";
                                 try
                                 {
-                                    int increment = (int)double.Parse(score, CultureInfo.InvariantCulture);
-                                    int existingscore = int.Parse(scoreElement.InnerText);
-                                    int combinedscore = existingscore + increment;
+                                    var increment = (int)
+                                        double.Parse(score, CultureInfo.InvariantCulture);
+                                    var existingscore = int.Parse(scoreElement.InnerText);
+                                    var combinedscore = existingscore + increment;
                                     ClearasilScoreBoardData scoreboard;
 
                                     lock (Leaderboards)
@@ -55,7 +53,13 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil
 
                                         if (scoreboard == null)
                                         {
-                                            scoreboard = new ClearasilScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, phase2 ? "phase2" : "phase1");
+                                            scoreboard = new ClearasilScoreBoardData(
+                                                LeaderboardDbContext.BuildOptions(
+                                                    0,
+                                                    $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}"
+                                                ),
+                                                phase2 ? "phase2" : "phase1"
+                                            );
                                             Leaderboards[phase2 ? 1 : 0] = scoreboard;
                                         }
                                     }
@@ -67,11 +71,16 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil
                                 }
                                 catch (Exception ex)
                                 {
-                                    CustomLogger.LoggerAccessor.LogError($"[pushscore] - Failed to update the user profile:{profilePath} with score:{scoreElement.InnerText}. (Exception:{ex})");
+                                    CustomLogger.LoggerAccessor.LogError(
+                                        $"[pushscore] - Failed to update the user profile:{profilePath} with score:{scoreElement.InnerText}. (Exception:{ex})"
+                                    );
                                 }
                             }
 
-                            File.WriteAllText($"{apiPath}/juggernaut/clearasil/space_access/{user}.xml", xmlDoc.OuterXml);
+                            File.WriteAllText(
+                                $"{apiPath}/juggernaut/clearasil/space_access/{user}.xml",
+                                xmlDoc.OuterXml
+                            );
                         }
                     }
 

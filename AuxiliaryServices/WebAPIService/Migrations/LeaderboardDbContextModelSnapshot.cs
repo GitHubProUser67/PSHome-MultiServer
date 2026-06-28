@@ -15,7 +15,7 @@ namespace WebAPIService.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "7.0.20");
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
 
             modelBuilder.Entity("WebAPIService.GameServices.PSHOME.CODEGLUE.Entities.WipeoutShooterScoreboardEntry", b =>
                 {
@@ -48,6 +48,7 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PsnId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<float>("Score")
@@ -92,6 +93,7 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PsnId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<float>("Score")
@@ -136,6 +138,7 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PsnId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<float>("Score")
@@ -180,6 +183,7 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PsnId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<float>("Score")
@@ -224,6 +228,7 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PsnId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<float>("Score")
@@ -268,12 +273,14 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PsnId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<float>("Score")
                         .HasColumnType("REAL");
 
                     b.Property<string>("Time")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -315,12 +322,14 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PsnId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<float>("Score")
                         .HasColumnType("REAL");
 
                     b.Property<string>("Time")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -362,6 +371,7 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PsnId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<float>("Score")
@@ -406,6 +416,7 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PsnId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<float>("Score")
@@ -450,6 +461,7 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PsnId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<float>("Score")
@@ -497,6 +509,7 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PsnId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<float>("Score")
@@ -544,6 +557,7 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PsnId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<float>("Score")
@@ -726,6 +740,7 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PsnId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<float>("Score")
@@ -735,9 +750,11 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("duration")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("guest")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -776,6 +793,7 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PsnId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<float>("Score")
@@ -785,12 +803,15 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("biggestfishweight")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("fishcount")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("totalfishweight")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -829,6 +850,7 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PsnId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<float>("Score")
@@ -838,6 +860,7 @@ namespace WebAPIService.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("throws")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

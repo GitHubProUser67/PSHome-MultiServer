@@ -1,29 +1,30 @@
+using System.Text.RegularExpressions;
 using CustomLogger;
 using Newtonsoft.Json.Linq;
 using SSFWServer.Helpers.FileHelper;
-using System.Text.RegularExpressions;
 
 namespace SSFWServer.Services
 {
-    public class AvatarLayoutService
+    public partial class AvatarLayoutService(string sessionid, string? key)
     {
-        private string? key;
+        private readonly string? key = key;
 
-        public AvatarLayoutService(string sessionid, string? key)
-        {
-            this.key = key;
-        }
-
-        public bool HandleAvatarLayout(byte[] buffer, string directorypath, string filepath, string absolutepath, bool delete)
+        public bool HandleAvatarLayout(
+            byte[] buffer,
+            string directorypath,
+            string filepath,
+            string absolutepath,
+            bool delete
+        )
         {
             // Define the regular expression pattern to match a number at the end of the string
-            Regex regex = new(@"\d+(?![\d/])$");
+            var regex = MyRegex();
 
             // Check if the string ends with a number
             if (regex.IsMatch(absolutepath))
             {
                 // Check if the number is valid
-                if (int.TryParse(regex.Match(absolutepath).Value, out int number))
+                if (int.TryParse(regex.Match(absolutepath).Value, out var number))
                 {
                     SSFWUpdateAvatarLayout(directorypath + "/list.json", number, delete);
 
@@ -35,7 +36,10 @@ namespace SSFWServer.Services
                     else if (buffer != null)
                     {
                         Directory.CreateDirectory(directorypath);
-                        File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.json", buffer);
+                        File.WriteAllBytes(
+                            $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.json",
+                            buffer
+                        );
                         return true;
                     }
                 }
@@ -56,21 +60,24 @@ namespace SSFWServer.Services
                 if (json != null)
                 {
                     // Parse the JSON content
-                    JArray jsonArray = JArray.Parse(json);
+                    var jsonArray = JArray.Parse(json);
 
                     if (delete)
                         // Remove the element(s) with the specified number
-                        jsonArray = new JArray(jsonArray.Where(item => item.Value<int>(string.Empty) != contentToUpdate));
+                        jsonArray = new JArray(
+                            jsonArray.Where(item =>
+                                item.Value<int>(string.Empty) != contentToUpdate
+                            )
+                        );
                     else
                     {
                         // Create a new JSON object with the specified number
-                        JObject jsonObject = new()
-                        {
-                            [string.Empty] = contentToUpdate
-                        };
+                        JObject jsonObject = new() { [string.Empty] = contentToUpdate };
 
                         // Check if the element already exists
-                        JToken? existingItem = jsonArray.FirstOrDefault(item => item.Value<int>(string.Empty) == contentToUpdate);
+                        var existingItem = jsonArray.FirstOrDefault(item =>
+                            item.Value<int>(string.Empty) == contentToUpdate
+                        );
 
                         if (existingItem != null)
                             // Update the existing element
@@ -85,8 +92,13 @@ namespace SSFWServer.Services
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[SSFW] - SSFWUpdateAvatarLayout errored out with this exception - {ex}");
+                LoggerAccessor.LogError(
+                    $"[SSFW] - SSFWUpdateAvatarLayout errored out with this exception - {ex}"
+                );
             }
         }
+
+        [GeneratedRegex(@"\d+(?![\d/])$")]
+        private static partial Regex MyRegex();
     }
 }

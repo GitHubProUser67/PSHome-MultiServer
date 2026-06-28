@@ -1,11 +1,7 @@
-using System;
-using System.Collections.Generic;
-
 namespace Horizon.LIBRARY.Database.Models
 {
     public class ClanDTO
     {
-
         public int ClanId { get; set; }
         public string ClanName { get; set; }
         public string ClanTAG { get; set; }

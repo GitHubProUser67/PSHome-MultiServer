@@ -1,13 +1,15 @@
-using DotNetty.Transport.Channels;
-using Horizon.RT.Common;
-using Horizon.RT.Models;
-using Horizon.LIBRARY.Pipeline.Udp;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 using CustomLogger;
-using Horizon.RT.Cryptography;
-using MultiServerLibrary.Extension;
+using DotNetty.Transport.Channels;
+using Horizon.LIBRARY.Pipeline.Udp;
 using Horizon.MUM.Models;
+using Horizon.RT.Common;
+using Horizon.RT.Cryptography;
+using Horizon.RT.Models;
+using MultiServerLibrary.Extension;
+using Org.BouncyCastle.Utilities.Encoders;
 
 namespace Horizon.DME.Models
 {
@@ -18,29 +20,29 @@ namespace Horizon.DME.Models
         public IPAddress IP { get; protected set; } = IPAddress.Any;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        public UdpServer? Udp { get; protected set; } = null;
+        public UDPClientServer? Udp { get; protected set; } = null;
 
         public ClientObject mumClient { get; protected set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int UdpPort => Udp?.Port ?? -1;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public IChannel? Tcp { get; protected set; } = null;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int DmeId { get; protected set; } = 0;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public World? DmeWorld { get; protected set; } = null;
 
@@ -50,49 +52,59 @@ namespace Horizon.DME.Models
         public string? Token { get; protected set; } = null;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string? SessionKey { get; protected set; } = null;
 
         /// <summary>
-        /// 
+        /// Used for encrypting UDP packets. This is generated during the connection process.
+        /// </summary>
+        public CipherService? CryptoContext { get; set; } = null;
+
+        /// <summary>
+        ///
         /// </summary>
         public int ApplicationId { get; set; } = 0;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int? MediusVersion { get; set; } = 0;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public uint ScertId { get; set; } = 0;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        public RT_RECV_FLAG RecvFlag { get; set; } = RT_RECV_FLAG.RECV_SINGLE | RT_RECV_FLAG.RECV_LIST;
+        public RT_RECV_FLAG RecvFlag { get; set; } =
+            RT_RECV_FLAG.RECV_SINGLE | RT_RECV_FLAG.RECV_LIST;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        public ConcurrentQueue<BaseScertMessage> TcpSendMessageQueue { get; } = new ConcurrentQueue<BaseScertMessage>();
+        public ConcurrentQueue<BaseScertMessage> TcpSendMessageQueue { get; } =
+            new ConcurrentQueue<BaseScertMessage>();
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        public ConcurrentQueue<ScertDatagramPacket> UdpSendMessageQueue { get; } = new ConcurrentQueue<ScertDatagramPacket>();
+        public ConcurrentQueue<ScertDatagramPacket> UdpSendMessageQueue { get; } =
+            new ConcurrentQueue<ScertDatagramPacket>();
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        public DateTime UtcLastServerEchoSent { get; set; } = DateTimeUtils.GetHighPrecisionUtcTime();
+        public DateTime UtcLastServerEchoSent { get; set; } =
+            DateTimeUtils.GetHighPrecisionUtcTime();
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        public DateTime UtcLastMessageReceived { get; protected set; } = DateTimeUtils.GetHighPrecisionUtcTime();
+        public DateTime UtcLastMessageReceived { get; protected set; } =
+            DateTimeUtils.GetHighPrecisionUtcTime();
 
         /// <summary>
         /// RTT (ms)
@@ -100,41 +112,47 @@ namespace Horizon.DME.Models
         public uint LatencyMs { get; protected set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        public DateTime TimeCreated { get; protected set; } = DateTimeUtils.GetHighPrecisionUtcTime();
+        public DateTime TimeCreated { get; protected set; } =
+            DateTimeUtils.GetHighPrecisionUtcTime();
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public DateTime? TimeAuthenticated { get; protected set; } = null;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public bool Disconnected { get; protected set; } = false;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public IPEndPoint? RemoteUdpEndpoint { get; set; } = null;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int AggTimeMs { get; set; } = 20;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         long? LastAggTime { get; set; } = null;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public bool HasJoined { get; set; } = false;
 
-        public virtual bool IsConnectingGracePeriod => !TimeAuthenticated.HasValue && (DateTimeUtils.GetHighPrecisionUtcTime() - TimeCreated).TotalSeconds < DmeClass.GetAppSettingsOrDefault(ApplicationId).ClientTimeoutSeconds;
+        public virtual bool IsConnectingGracePeriod =>
+            !TimeAuthenticated.HasValue
+            && (DateTimeUtils.GetHighPrecisionUtcTime() - TimeCreated).TotalSeconds
+                < DATABASE
+                    .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                    .ClientTimeoutSeconds;
         public virtual bool Timedout
         {
             get
@@ -144,8 +162,12 @@ namespace Horizon.DME.Models
                 else
                 {
                     const int expirationDelay = 2;
-                    double deltaSec = (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds;
-                    int timeoutThreshold = DmeClass.GetAppSettingsOrDefault(ApplicationId).ClientTimeoutSeconds;
+                    var deltaSec = (
+                        DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived
+                    ).TotalSeconds;
+                    var timeoutThreshold = DATABASE
+                        .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                        .ClientTimeoutSeconds;
 
                     if (deltaSec > timeoutThreshold + expirationDelay)
                     {
@@ -153,8 +175,8 @@ namespace Horizon.DME.Models
                         {
                             _missedEchos++;
                             LoggerAccessor.LogWarn(
-                                   $"[DMEObject] - TIMEOUT - Client {mumClient.AccountName} missed echo #{_missedEchos}. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
-                               );
+                                $"[DMEObject] - TIMEOUT - Client {mumClient.AccountName} missed echo #{_missedEchos}. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
+                            );
 
                             if (_missedEchos > expirationDelay)
                             {
@@ -186,8 +208,12 @@ namespace Horizon.DME.Models
             get
             {
                 const int expirationDelay = 2;
-                double deltaSec = (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds;
-                int timeoutThreshold = DmeClass.GetAppSettingsOrDefault(ApplicationId).ClientLongTimeoutSeconds;
+                var deltaSec = (
+                    DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived
+                ).TotalSeconds;
+                var timeoutThreshold = DATABASE
+                    .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                    .ClientLongTimeoutSeconds;
 
                 if (deltaSec > timeoutThreshold + expirationDelay)
                 {
@@ -195,8 +221,8 @@ namespace Horizon.DME.Models
                     {
                         _missedLongEchos++;
                         LoggerAccessor.LogWarn(
-                                 $"[DMEObject] - LONG_TIMEOUT - Client {mumClient.AccountName} missed echo #{_missedLongEchos}. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
-                             );
+                            $"[DMEObject] - LONG_TIMEOUT - Client {mumClient.AccountName} missed echo #{_missedLongEchos}. Delta={deltaSec:0.000}s, Threshold={timeoutThreshold}s"
+                        );
 
                         if (_missedLongEchos > expirationDelay)
                         {
@@ -222,37 +248,40 @@ namespace Horizon.DME.Models
                 return _long_timedout;
             }
         }
-        public virtual bool IsConnected => !Disconnected && Tcp != null && Tcp.Active && mumClient.IsInGame && !LongTimedout;
+        public virtual bool IsConnected =>
+            !Disconnected && Tcp != null && Tcp.Active && mumClient.IsInGame && !LongTimedout;
         public virtual bool IsAuthenticated => TimeAuthenticated.HasValue;
         public virtual bool Destroy => Disconnected || (!IsConnected && !IsConnectingGracePeriod);
         public virtual bool IsDestroyed { get; protected set; } = false;
-        public virtual bool IsAggTime => !LastAggTime.HasValue || (DateTimeUtils.GetMillisecondsSinceStartup() - LastAggTime.Value) >= AggTimeMs;
+        public virtual bool IsAggTime =>
+            !LastAggTime.HasValue
+            || (DateTimeUtils.GetMillisecondsSinceStartup() - LastAggTime.Value) >= AggTimeMs;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected int _missedEchos;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected int _missedLongEchos;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected bool _timedout;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected bool _long_timedout;
 
         public Action<DMEObject>? OnDestroyed;
 
-
         private DateTime _lastServerEchoValue = DateTime.UnixEpoch;
         private DateTime? _lastForceDisconnect = null;
+        private int _isStopping = 0;
 
         public DMEObject(string sessionKey, World dmeWorld, int dmeId, ClientObject mumClient)
         {
@@ -260,32 +289,38 @@ namespace Horizon.DME.Models
 
             DmeId = dmeId;
             DmeWorld = dmeWorld;
-            AggTimeMs = DmeClass.GetAppSettingsOrDefault(ApplicationId).DefaultClientWorldAggTime;
+            AggTimeMs = DATABASE
+                .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                .DefaultClientWorldAggTime;
 
             // Generate new token
-            byte[] tokenBuf = new byte[12];
+            var tokenBuf = new byte[12];
             RNG.NextBytes(tokenBuf);
-            Token = Convert.ToBase64String(tokenBuf);
+            Token = Base64.ToBase64String(tokenBuf);
 
             this.mumClient = mumClient;
 
-            UtcLastMessageReceived = UtcLastServerEchoSent = DateTimeUtils.GetHighPrecisionUtcTime();
+            UtcLastMessageReceived = UtcLastServerEchoSent =
+                DateTimeUtils.GetHighPrecisionUtcTime();
         }
 
         public DMEObject(string sessionKey, ClientObject mumClient)
         {
             SessionKey = sessionKey;
 
-            AggTimeMs = DmeClass.GetAppSettingsOrDefault(ApplicationId).DefaultClientWorldAggTime;
+            AggTimeMs = DATABASE
+                .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                .DefaultClientWorldAggTime;
 
             // Generate new token
-            byte[] tokenBuf = new byte[12];
+            var tokenBuf = new byte[12];
             RNG.NextBytes(tokenBuf);
-            Token = Convert.ToBase64String(tokenBuf);
+            Token = Base64.ToBase64String(tokenBuf);
 
             this.mumClient = mumClient;
 
-            UtcLastMessageReceived = UtcLastServerEchoSent = DateTimeUtils.GetHighPrecisionUtcTime();
+            UtcLastMessageReceived = UtcLastServerEchoSent =
+                DateTimeUtils.GetHighPrecisionUtcTime();
         }
 
         public void BeginUdp(CipherService? cipher)
@@ -293,7 +328,7 @@ namespace Horizon.DME.Models
             if (Udp != null)
                 return;
 
-            Udp = new UdpServer(this, cipher);
+            Udp = new UDPClientServer(this, cipher);
             _ = Udp.Start();
         }
 
@@ -305,8 +340,8 @@ namespace Horizon.DME.Models
 
         public void OnRecvServerEcho(RT_MSG_SERVER_ECHO echo)
         {
-            DateTime echoTime = echo.UnixTimestamp.ToUtcDateTime();
-            double latencyMs = (DateTimeUtils.GetHighPrecisionUtcTime() - echoTime).TotalMilliseconds;
+            var echoTime = echo.UnixTimestamp.ToUtcDateTime();
+            var latencyMs = (DateTimeUtils.GetHighPrecisionUtcTime() - echoTime).TotalMilliseconds;
 
             if (latencyMs >= 0 && latencyMs < 10000)
                 LatencyMs = (uint)latencyMs;
@@ -336,22 +371,16 @@ namespace Horizon.DME.Models
         public Task HandleIncomingMessages()
         {
             // udp
-            if (Udp != null)
-                return Udp.HandleIncomingMessages();
-
-            return Task.CompletedTask;
+            return Udp != null ? Udp.HandleIncomingMessages() : Task.CompletedTask;
         }
 
         public void HandleOutgoingMessages()
         {
-            List<BaseScertMessage> responses = new List<BaseScertMessage>();
+            var responses = new List<BaseScertMessage>();
 
             // set aggtime to locked intervals of whatever is stored in AggTimeMs
             // sometimes this server will be +- a few milliseconds on an agg and
             // we don't want that to change when messages get sent
-            //if (LastAggTime.HasValue)
-            //    LastAggTime += AggTimeMs * ((Utils.GetMillisecondsSinceStartup() - LastAggTime.Value) / AggTimeMs);
-            //else
             LastAggTime = DateTimeUtils.GetMillisecondsSinceStartup();
 
             // tcp
@@ -373,32 +402,45 @@ namespace Horizon.DME.Models
 
         public async Task Stop()
         {
-            if (IsDestroyed)
+            if (IsDestroyed || Interlocked.Exchange(ref _isStopping, 1) == 1)
                 return;
+
+            var udp = Udp;
+            var tcp = Tcp;
+
+            // Mark destroyed and detach channels early to prevent re-entrant close races.
+            Udp = null;
+            Tcp = null;
+            IsDestroyed = true;
 
             try
             {
-                if (Udp != null)
-                    await Udp.Stop();
+                if (udp != null)
+                    await udp.Stop().ConfigureAwait(false);
 
-                if (Tcp != null)
+                if (tcp != null)
                 {
-                    await Tcp.CloseAsync();
-                    Tcp = null;
+                    var closeTask = tcp.CloseAsync();
+                    if (
+                        !await closeTask
+                            .TryAwait(TimeSpan.FromMilliseconds(2000))
+                            .ConfigureAwait(false)
+                    )
+                        LoggerAccessor.LogWarn(
+                            $"[DMEObject] - Timed out waiting for TCP close for client {this}"
+                        );
                 }
             }
-            catch
+            catch (Exception ex)
             {
-
+                LoggerAccessor.LogError(
+                    $"[DMEObject] - Client connection stop thrown an assertion. (Exception:{ex})"
+                );
             }
             finally
             {
                 OnDestroyed?.Invoke(this);
             }
-
-            Tcp = null;
-            Udp = null;
-            IsDestroyed = true;
         }
 
         public void OnTcpConnected(IChannel channel)
@@ -411,10 +453,7 @@ namespace Horizon.DME.Models
             Disconnected = true;
         }
 
-        public void OnUdpConnected()
-        {
-
-        }
+        public static void OnUdpConnected() { }
 
         public void OnConnectionCompleted()
         {
@@ -423,7 +462,7 @@ namespace Horizon.DME.Models
 
         public void ForceDisconnect()
         {
-            DateTime now = DateTimeUtils.GetHighPrecisionUtcTime();
+            var now = DateTimeUtils.GetHighPrecisionUtcTime();
             if ((now - _lastForceDisconnect)?.TotalSeconds < 5)
                 return;
 
@@ -447,11 +486,6 @@ namespace Horizon.DME.Models
                 EnqueueTcp(message);
         }
 
-        public void EnqueueTcp(IEnumerable<BaseMediusMessage> messages)
-        {
-            EnqueueTcp(messages.Select(x => new RT_MSG_SERVER_APP() { Message = x }));
-        }
-
         public void EnqueueUdp(BaseScertMessage message)
         {
             Udp?.Send(message);
@@ -463,24 +497,11 @@ namespace Horizon.DME.Models
                 EnqueueUdp(message);
         }
 
-        public void EnqueueUdp(BaseMediusMessage message)
-        {
-            EnqueueUdp(new RT_MSG_SERVER_APP() { Message = message });
-        }
-
-        public void EnqueueUdp(IEnumerable<BaseMediusMessage> messages)
-        {
-            EnqueueUdp(messages.Select(x => new RT_MSG_SERVER_APP() { Message = x }));
-        }
-
         #endregion
 
         public bool HasRecvFlag(RT_RECV_FLAG flag)
         {
-            if (MediusVersion <= 108)
-                return true;
-
-            return RecvFlag.HasFlag(flag);
+            return MediusVersion <= 108 || RecvFlag.HasFlag(flag);
         }
 
         #region SetIP
@@ -492,25 +513,27 @@ namespace Horizon.DME.Models
             switch (Uri.CheckHostName(ip))
             {
                 case UriHostNameType.IPv4:
-                    {
-                        IP = IPAddress.Parse(ip);
-                        break;
-                    }
+                {
+                    IP = IPAddress.Parse(ip);
+                    break;
+                }
                 case UriHostNameType.IPv6:
-                    {
-                        IP = IPAddress.Parse(ip).MapToIPv4();
-                        break;
-                    }
+                {
+                    IP = IPAddress.Parse(ip).MapToIPv4();
+                    break;
+                }
                 case UriHostNameType.Dns:
-                    {
-                        IP = Dns.GetHostAddresses(ip).FirstOrDefault()?.MapToIPv4() ?? IPAddress.Any;
-                        break;
-                    }
+                {
+                    IP = Dns.GetHostAddresses(ip).FirstOrDefault()?.MapToIPv4() ?? IPAddress.Any;
+                    break;
+                }
                 default:
-                    {
-                        LoggerAccessor.LogError($"Unhandled UriHostNameType {Uri.CheckHostName(ip)} from {ip} in DMEObject.SetIp()");
-                        break;
-                    }
+                {
+                    LoggerAccessor.LogError(
+                        $"Unhandled UriHostNameType {Uri.CheckHostName(ip)} from {ip} in DMEObject.SetIp()"
+                    );
+                    break;
+                }
             }
         }
         #endregion

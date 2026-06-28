@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct PredefinedPingSiteRuleConfig
-	{
+    [TdfStruct]
+    public struct PredefinedPingSiteRuleConfig
+    {
+        [TdfMember("POSV")]
+        public List<string> mPossibleValues;
 
-		[TdfMember("POSV")]
-		public List<string> mPossibleValues;
-
-		[TdfMember("PDRC")]
-		public PredefinedRuleConfig mPredefinedRuleConfig;
-
-	}
+        [TdfMember("PDRC")]
+        public PredefinedRuleConfig mPredefinedRuleConfig;
+    }
 }

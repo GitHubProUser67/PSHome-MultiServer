@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct TeamSizeRuleStatus
-	{
+    [TdfStruct]
+    public struct TeamSizeRuleStatus
+    {
+        [TdfMember("TMAX")]
+        public ushort mMaxTeamSizeAccepted;
 
-		[TdfMember("TMAX")]
-		public ushort mMaxTeamSizeAccepted;
-
-		[TdfMember("TMIN")]
-		public ushort mMinTeamSizeAccepted;
-
-	}
+        [TdfMember("TMIN")]
+        public ushort mMinTeamSizeAccepted;
+    }
 }

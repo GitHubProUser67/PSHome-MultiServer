@@ -1,10 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
 using CustomLogger;
+using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
 using Horizon.RT.Cryptography;
-using Horizon.LIBRARY.Common.Stream;
-using System;
-using System.Collections.Generic;
-using System.IO;
 
 namespace Horizon.RT.Models
 {
@@ -23,10 +21,7 @@ namespace Horizon.RT.Models
         /// </summary>
         public virtual bool SkipEncryption { get; set; } = false;
 
-        public BaseScertMessage()
-        {
-
-        }
+        public BaseScertMessage() { }
 
         #region Serialization
 
@@ -42,44 +37,73 @@ namespace Horizon.RT.Models
         public List<byte[]> Serialize(int? mediusVersion, int appId, CipherService cipherService)
         {
             var results = new List<byte[]>();
-            byte[] result = null;
+            byte[] result;
             var buffer = new byte[1024 * 10];
-            int length = 0;
-            int totalHeaderSize = HEADER_SIZE;
+            var length = 0;
+            var totalHeaderSize = HEADER_SIZE;
 
             // Serialize message
-            using (MemoryStream stream = new MemoryStream(buffer, true))
-            using (MessageWriter writer = new MessageWriter(stream) { MediusVersion = mediusVersion != null ? (int)mediusVersion : 108, AppId = appId })
+            using (var stream = new MemoryStream(buffer, true))
+            using (
+                var writer = new MessageWriter(stream)
+                {
+                    MediusVersion = mediusVersion != null ? (int)mediusVersion : 108,
+                    AppId = appId,
+                }
+            )
             {
                 Serialize(writer);
                 length = (int)writer.BaseStream.Position;
             }
 
-            CipherContext ctx = (Id == RT_MSG_TYPE.RT_MSG_SERVER_CRYPTKEY_PEER || Id == RT_MSG_TYPE.RT_MSG_CLIENT_CRYPTKEY_PUBLIC) ? CipherContext.RSA_AUTH : CipherContext.RC_CLIENT_SESSION;
+            var ctx =
+                (
+                    Id == RT_MSG_TYPE.RT_MSG_SERVER_CRYPTKEY_PEER
+                    || Id == RT_MSG_TYPE.RT_MSG_CLIENT_CRYPTKEY_PUBLIC
+                )
+                    ? CipherContext.RSA_AUTH
+                    : CipherContext.RC_CLIENT_SESSION;
 
             // Check for fragmentation
-            if (Id == RT_MSG_TYPE.RT_MSG_SERVER_APP && length > Constants.MEDIUS_MESSAGE_MAXLEN && mediusVersion != 108 && appId != 21834)
+            if (
+                Id == RT_MSG_TYPE.RT_MSG_SERVER_APP
+                && length > Constants.MEDIUS_MESSAGE_MAXLEN
+                && mediusVersion != 108
+                && appId != 21834
+            )
             {
-                List<TypePacketFragment> fragments = TypePacketFragment.FromPayload((NetMessageClass)buffer[0], buffer[1], buffer, 2, length - 2);
+                var fragments = TypePacketFragment.FromPayload(
+                    (NetMessageClass)buffer[0],
+                    buffer[1],
+                    buffer,
+                    2,
+                    length - 2
+                );
 
-                foreach (TypePacketFragment frag in fragments)
+                foreach (var frag in fragments)
                 {
                     totalHeaderSize = HEADER_SIZE;
 
                     // Serialize message
-                    using (MemoryStream stream = new MemoryStream(buffer, true))
-                    using (MessageWriter writer = new MessageWriter(stream))
+                    using (var stream = new MemoryStream(buffer, true))
+                    using (var writer = new MessageWriter(stream))
                     {
                         // Serialize message
                         new RT_MSG_SERVER_APP() { Message = frag }.Serialize(writer);
                         length = (int)stream.Position;
 
-                        byte[] data = new byte[length];
+                        var data = new byte[length];
                         Array.Copy(buffer, data, length);
-                        if (!SkipEncryption && cipherService != null && cipherService.Encrypt(ctx, data, out byte[] signed, out byte[] hash))
+                        if (
+                            !SkipEncryption
+                            && cipherService != null
+                            && cipherService.Encrypt(ctx, data, out var signed, out var hash)
+                        )
                         {
                             if (hash == null || signed == null)
-                                throw new NullReferenceException("hash or signed was null during the encryption!");
+                                throw new NullReferenceException(
+                                    "[BaseScertMessage-Serialize] - hash or signed was null during the encryption!"
+                                );
                             else
                             {
                                 totalHeaderSize += HASH_SIZE;
@@ -110,22 +134,57 @@ namespace Horizon.RT.Models
             }
             else
             {
-                byte[] data = new byte[length];
-                Array.Copy(buffer, data, length);
-                if (!SkipEncryption && cipherService != null && cipherService.Encrypt(ctx, data, out byte[] signed, out byte[] hash))
+                byte[] dataToCopy = null;
+                byte[] dataToEncrypt;
+
+                // Massive thanks to score3229!!
+                if (Id == RT_MSG_TYPE.RT_MSG_CLIENT_APP_SINGLE)
+                {
+                    dataToCopy = [buffer[0], buffer[1]];
+                    dataToEncrypt = new byte[length - 2];
+                    Array.Copy(buffer, 2, dataToEncrypt, 0, dataToEncrypt.Length);
+                }
+                else if (Id == RT_MSG_TYPE.RT_MSG_CLIENT_APP_LIST)
+                {
+                    dataToCopy = new byte[buffer[0]];
+                    Array.Copy(buffer, 1, dataToCopy, 0, dataToCopy.Length);
+
+                    dataToEncrypt = new byte[length - dataToCopy.Length - 1];
+                    Array.Copy(buffer, 1 + dataToCopy.Length, dataToEncrypt, 0, dataToEncrypt.Length);
+                }
+                else
+                {
+                    dataToEncrypt = new byte[length];
+                    Array.Copy(buffer, dataToEncrypt, length);
+                }
+
+                if (
+                    !SkipEncryption
+                    && cipherService != null
+                    && cipherService.Encrypt(ctx, dataToEncrypt, out var signed, out var hash)
+                )
                 {
                     if (hash == null || signed == null)
-                        throw new NullReferenceException("hash or signed was null during the encryption!");
+                        throw new NullReferenceException(
+                            "[BaseScertMessage-Serialize] - hash or signed was null during the encryption!"
+                        );
                     else
                     {
                         totalHeaderSize += HASH_SIZE;
 
                         result = new byte[length + totalHeaderSize];
                         result[0] = (byte)((byte)Id | 0x80);
-                        result[1] = (byte)(length & 0xFF);
-                        result[2] = (byte)((length >> 8) & 0xFF);
+                        result[1] = (byte)(length & byte.MaxValue);
+                        result[2] = (byte)((length >> 8) & byte.MaxValue);
                         Array.Copy(hash, 0, result, HEADER_SIZE, HASH_SIZE);
-                        Array.Copy(signed, 0, result, totalHeaderSize, length);
+                        if (dataToCopy != null)
+                        {
+                            var copyLength = dataToCopy.Length;
+                            Array.Copy(dataToCopy, 0, result, totalHeaderSize, copyLength);
+                            Array.Copy(signed, 0, result, totalHeaderSize + copyLength, dataToEncrypt.Length);
+                        }
+                        else
+                            Array.Copy(signed, 0, result, totalHeaderSize, length);
                     }
                 }
                 else
@@ -133,8 +192,8 @@ namespace Horizon.RT.Models
                     // Add id and length to header
                     result = new byte[length + totalHeaderSize];
                     result[0] = (byte)Id;
-                    result[1] = (byte)(length & 0xFF);
-                    result[2] = (byte)((length >> 8) & 0xFF);
+                    result[1] = (byte)(length & byte.MaxValue);
+                    result[2] = (byte)((length >> 8) & byte.MaxValue);
                     Array.Copy(buffer, 0, result, totalHeaderSize, length);
                 }
 
@@ -170,9 +229,10 @@ namespace Horizon.RT.Models
         #region Dynamic Instantiation
 
         private static Dictionary<RT_MSG_TYPE, Type> _messageClassById = null;
-        private static int _messageClassByIdLockValue = 0;
-        private static object _messageClassByIdLockObject = _messageClassByIdLockValue;
+        private static readonly int _messageClassByIdLockValue = 0;
+        private static readonly object _messageClassByIdLockObject = _messageClassByIdLockValue;
 
+        [RequiresUnreferencedCode("Calls System.Reflection.Assembly.GetTypes()")]
         private static void Initialize()
         {
             lock (_messageClassByIdLockObject)
@@ -180,17 +240,20 @@ namespace Horizon.RT.Models
                 if (_messageClassById != null)
                     return;
 
-                _messageClassById = new Dictionary<RT_MSG_TYPE, Type>();
+                _messageClassById = [];
 
                 // Populate
-                Type[] types = System.Reflection.Assembly.GetAssembly(typeof(BaseScertMessage))?.GetTypes();
+                var types = System
+                    .Reflection.Assembly.GetAssembly(typeof(BaseScertMessage))
+                    ?.GetTypes();
 
                 if (types != null)
                 {
-                    foreach (Type classType in types)
+                    foreach (var classType in types)
                     {
                         // Objects by Id
-                        ScertMessageAttribute[] attrs = (ScertMessageAttribute[])classType.GetCustomAttributes(typeof(ScertMessageAttribute), true);
+                        var attrs = (ScertMessageAttribute[])
+                            classType.GetCustomAttributes(typeof(ScertMessageAttribute), true);
                         if (attrs != null && attrs.Length > 0)
                             _messageClassById.Add(attrs[0].MessageId, classType);
                     }
@@ -198,6 +261,7 @@ namespace Horizon.RT.Models
             }
         }
 
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public static void RegisterMessage(RT_MSG_TYPE id, Type type)
         {
             // Init first
@@ -206,32 +270,36 @@ namespace Horizon.RT.Models
             if (_messageClassById != null)
             {
                 // Set or overwrite.
-                if (!_messageClassById.ContainsKey(id))
-                    _messageClassById.Add(id, type);
-                else
+                if (!_messageClassById.TryAdd(id, type))
                     _messageClassById[id] = type;
             }
         }
 
         public static BaseScertMessage Instantiate(MessageReader reader)
         {
-            byte id = reader.ReadByte();
-            RT_MSG_TYPE rtId = (RT_MSG_TYPE)(id & 0x7f);
-            short len = reader.ReadInt16();
-            byte[] messageBytes = reader.ReadBytes(len);
-            if (id >= 0x80)
-                throw new Exception($"Unable instantiate encrypted message {id} without a cipher!");
-
-
-            return Instantiate(rtId, null, messageBytes, reader.MediusVersion, reader.AppId, null);
+            var id = reader.ReadByte();
+            var rtId = (RT_MSG_TYPE)(id & 0x7F);
+            var len = reader.ReadInt16();
+            var messageBytes = reader.ReadBytes(len);
+            return id >= 0x80
+                ? throw new Exception(
+                    $"[BaseScertMessage-Instantiate] - Unable instantiate encrypted message {id} without a cipher!"
+                )
+                : Instantiate(rtId, null, messageBytes, reader.MediusVersion, reader.AppId, null);
         }
 
-        public static BaseScertMessage Instantiate(RT_MSG_TYPE id, byte[] hash, byte[] messageBuffer, int mediusVersion, int appId, CipherService cipherService)
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
+        public static BaseScertMessage Instantiate(
+            RT_MSG_TYPE id,
+            byte[] hash,
+            byte[] messageBuffer,
+            int mediusVersion,
+            int appId,
+            CipherService cipherService
+        )
         {
             // Init first
             Initialize();
-
-            BaseScertMessage msg = null;
 
             Type classType = null;
 
@@ -242,22 +310,80 @@ namespace Horizon.RT.Models
             // Decrypt
             if (hash != null)
             {
-                if (cipherService != null && cipherService.Decrypt(messageBuffer, hash, out var plain))
-                    msg = Instantiate(classType, id, plain, mediusVersion, appId);
-                else
-                    LoggerAccessor.LogError($"Unable to decrypt {id}, HASH:{BitConverter.ToString(hash)} DATA:{BitConverter.ToString(messageBuffer).Replace("-", "")}");
+                if (cipherService != null)
+                {
+                    byte[] dataToCopy = null;
+                    byte[] dataToDecrypt;
+
+                    // Massive thanks to score3229!!
+                    if (id == RT_MSG_TYPE.RT_MSG_CLIENT_APP_SINGLE)
+                    {
+                        dataToCopy = new byte[2];
+                        Array.Copy(messageBuffer, 0, dataToCopy, 0, 2);
+
+                        dataToDecrypt = new byte[messageBuffer.Length - 2];
+                        Array.Copy(messageBuffer, 2, dataToDecrypt, 0, dataToDecrypt.Length);
+                    }
+                    else if (id == RT_MSG_TYPE.RT_MSG_CLIENT_APP_LIST)
+                    {
+                        byte maskLength = messageBuffer[0];
+                        dataToCopy = new byte[maskLength + 1];
+                        Array.Copy(messageBuffer, 1, dataToCopy, 1, maskLength);
+                        dataToCopy[0] = maskLength;
+
+                        dataToDecrypt = new byte[messageBuffer.Length - dataToCopy.Length];
+                        Array.Copy(messageBuffer, dataToCopy.Length, dataToDecrypt, 0, dataToDecrypt.Length);
+                    }
+                    else
+                        dataToDecrypt = messageBuffer;
+
+                    if (cipherService.Decrypt(dataToDecrypt, hash, out var plain))
+                    {
+                        byte[] finalBuffer;
+
+                        if (dataToCopy != null)
+                        {
+                            var copyLength = dataToCopy.Length;
+                            var plainLength = plain.Length;
+
+                            finalBuffer = new byte[copyLength + plainLength];
+
+                            Array.Copy(dataToCopy, 0, finalBuffer, 0, copyLength);
+                            Array.Copy(plain, 0, finalBuffer, copyLength, plainLength);
+                        }
+                        else
+                            finalBuffer = plain;
+
+                        return Instantiate(classType, id, finalBuffer, mediusVersion, appId);
+                    }
+                }
+
+                LoggerAccessor.LogError(
+                        $"[BaseScertMessage-Instantiate] - Unable to decrypt {id}, HASH:{BitConverter.ToString(hash)} DATA:{Convert.ToHexString(messageBuffer)}"
+                    );
             }
             else
-                msg = Instantiate(classType, id, messageBuffer, mediusVersion, appId);
+                return Instantiate(classType, id, messageBuffer, mediusVersion, appId);
 
-            return msg;
+            return null;
         }
 
-        private static BaseScertMessage Instantiate(Type classType, RT_MSG_TYPE id, byte[] plain, int mediusVersion, int appId)
+        private static BaseScertMessage Instantiate(
+            [DynamicallyAccessedMembers(
+                DynamicallyAccessedMemberTypes.PublicParameterlessConstructor
+            )]
+                Type classType,
+            RT_MSG_TYPE id,
+            byte[] plain,
+            int mediusVersion,
+            int appId
+        )
         {
             if (plain == null)
             {
-                LoggerAccessor.LogError("[BaseScertMessage-Instantiate] - null plain given to function!");
+                LoggerAccessor.LogError(
+                    "[BaseScertMessage-Instantiate] - null plain given to function!"
+                );
                 return null;
             }
 
@@ -265,12 +391,18 @@ namespace Horizon.RT.Models
 
             using (var stream = new MemoryStream(plain))
             {
-                using (var reader = new MessageReader(stream) { MediusVersion = mediusVersion, AppId = appId })
+                using (
+                    var reader = new MessageReader(stream)
+                    {
+                        MediusVersion = mediusVersion,
+                        AppId = appId,
+                    }
+                )
                 {
-                    if (classType == null)
-                        msg = new RawScertMessage(id);
-                    else
-                        msg = (BaseScertMessage)Activator.CreateInstance(classType);
+                    msg =
+                        classType == null
+                            ? new RawScertMessage(id)
+                            : (BaseScertMessage)Activator.CreateInstance(classType);
 
                     try
                     {
@@ -278,8 +410,9 @@ namespace Horizon.RT.Models
                     }
                     catch (Exception e)
                     {
-                        LoggerAccessor.LogError($"Error deserializing {id} {BitConverter.ToString(plain)}");
-                        LoggerAccessor.LogError(e);
+                        LoggerAccessor.LogError(
+                            $"[BaseScertMessage-Instantiate] - Error deserializing {id}, DATA:{BitConverter.ToString(plain)} (Exception: {e})"
+                        );
                     }
                 }
             }
@@ -296,13 +429,8 @@ namespace Horizon.RT.Models
     }
 
     [AttributeUsage(AttributeTargets.Class)]
-    public class ScertMessageAttribute : Attribute
+    public class ScertMessageAttribute(RT_MSG_TYPE id) : Attribute
     {
-        public RT_MSG_TYPE MessageId;
-
-        public ScertMessageAttribute(RT_MSG_TYPE id)
-        {
-            MessageId = id;
-        }
+        public RT_MSG_TYPE MessageId = id;
     }
 }

@@ -1,19 +1,13 @@
 using CustomLogger;
-using System.Collections.Generic;
 
 namespace Horizon.RT.Cryptography
 {
-    public class CipherService
+    public class CipherService(ICipherFactory factory)
     {
-        private ICipherFactory _factory = null;
-        private Dictionary<CipherContext, ICipher> _ciphers = new Dictionary<CipherContext, ICipher>();
+        private readonly ICipherFactory _factory = factory;
+        private readonly Dictionary<CipherContext, ICipher> _ciphers = [];
 
         public bool EnableEncryption { get; set; } = true;
-
-        public CipherService(ICipherFactory factory)
-        {
-            _factory = factory;
-        }
 
         public void GenerateCipher(CipherContext context)
         {
@@ -40,23 +34,9 @@ namespace Horizon.RT.Cryptography
                 _ciphers[context] = _factory.CreateNew(rsaKeyPair);
         }
 
-        public ICipher GetCipher(CipherContext context)
-        {
-            ICipher cipher = _ciphers[context];
-            if (cipher == null)
-            {
-                LoggerAccessor.LogError($"The CipherContext {context} does not have a cipher associated with it.");
-                return null;
-            }
-
-            return cipher;
-        }
-
         public void SetCipher(CipherContext context, ICipher cipher)
         {
-            if (!_ciphers.ContainsKey(context))
-                _ciphers.Add(context, cipher);
-            else
+            if (!_ciphers.TryAdd(context, cipher))
                 _ciphers[context] = cipher;
         }
 
@@ -70,7 +50,7 @@ namespace Horizon.RT.Cryptography
             ICipher cipher = _ciphers[context];
             if (cipher == null)
             {
-                LoggerAccessor.LogError($"The CipherContext {context} does not have a cipher associated with it.");
+                LoggerAccessor.LogError($"[CipherService-GetPublicKey] - The CipherContext {context} does not have a cipher associated with it.");
                 return null;
             }
 
@@ -89,21 +69,19 @@ namespace Horizon.RT.Cryptography
 
         public bool Decrypt(byte[] input, byte[] hash, out byte[] plain)
         {
-            CipherContext cipherContext = (CipherContext)(hash[3] >> 5);
-            return Decrypt(cipherContext, input, hash, out plain);
+            return Decrypt((CipherContext)(hash[3] >> 5), input, hash, out plain);
         }
 
         public bool Decrypt(CipherContext context, byte[] input, byte[] hash, out byte[] plain)
         {
             if (!_ciphers.TryGetValue(context, out var cipher) || cipher == null)
             {
-                LoggerAccessor.LogError($"The CipherContext {context} does not have a cipher associated with it.");
+                LoggerAccessor.LogError($"[CipherService-Decrypt] - The CipherContext {context} does not have a cipher associated with it.");
                 plain = null;
                 return false;
             }
 
             return cipher.Decrypt(input, hash, out plain);
         }
-
     }
 }

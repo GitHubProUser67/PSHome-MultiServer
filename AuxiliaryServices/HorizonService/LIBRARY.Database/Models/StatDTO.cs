@@ -78,6 +78,7 @@ namespace Horizon.LIBRARY.Database.Models
         /// </summary>
         public int[] Stats { get; set; }
     }
+
     public class ClanStatPostDTO
     {
         /// <summary>

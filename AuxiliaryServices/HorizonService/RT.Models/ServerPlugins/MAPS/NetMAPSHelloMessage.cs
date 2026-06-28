@@ -1,32 +1,39 @@
-using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 using EndianTools.ZipperEndian;
-using Horizon.RT.Models;
-using HorizonService.ZipperPlugin.Models;
+using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
+using Horizon.ZipperPlugin.Models;
+using MultiServerLibrary.Extension;
 using Org.BouncyCastle.Math;
-using System;
-using EndianTools;
 
-namespace HorizonService.RT.Models.ServerPlugins.MAPS
+namespace Horizon.RT.Models.ServerPlugins.MAPS
 {
-    [MediusMessage(NetMessageClass.MessageClassApplication, NetMessageTypeIds.NetMessageTypeMAPSHelloMessage)]
-    public class NetMAPSHelloMessage : BaseApplicationMessage
+    [MediusMessage(
+        NetMessageClass.MessageClassApplication,
+        NetMessageTypeIds.NetMessageTypeMAPSHelloMessage
+    )]
+    public class NetMAPSHelloMessage : BaseMediusPluginMessage
     {
-        public override NetMessageTypeIds PacketType => NetMessageTypeIds.NetMessageTypeMAPSHelloMessage;
+        public override NetMessageTypeIds PacketType =>
+            NetMessageTypeIds.NetMessageTypeMAPSHelloMessage;
 
-        public override byte IncomingMessage => 0;
-        public override int Size => 8;
-        public override byte PluginId => 31;
+        public override int Size => (4 * 16) + 10;
+        public override ushort ClientBufferSize => (ushort)(Size + 2);
+        public override byte PluginId => (byte)NetPluginType.kNetPluginMAPS;
 
-        public BigInteger RsaPublicKey = BigInteger.Zero;
+        private readonly int m_transId = 0; // No need for transaction id at this stage.
+
+        public BigInteger RsaPublicKey;
+
         public bool m_success;
         public bool m_isOnline;
         public CBitset3u m_availableFactions;
+
 #if DEBUG
-        private static bool debug = true;
+        private static readonly bool debug = true;
 #else
         private static bool debug = false;
 #endif
+
         public override void DeserializePlugin(MessageReader reader)
         {
             throw new NotImplementedException();
@@ -34,16 +41,8 @@ namespace HorizonService.RT.Models.ServerPlugins.MAPS
 
         public override void SerializePlugin(MessageWriter writer)
         {
-            int BitIndex = 0;
-            int statusBitIndex = 0;
-            byte[] buffer = new byte[72];
-            byte[] statusBuffer = new byte[4];
-
-            BufferImpl.WritePrimitive(statusBuffer, m_success ? (byte)1 : (byte)0, ref statusBitIndex, debug);
-            BufferImpl.WritePrimitive(statusBuffer, m_isOnline ? (byte)1 : (byte)0, ref statusBitIndex, debug);
-
-            BufferImpl.WritePrimitive(buffer, EndianAwareConverter.ToInt32(statusBuffer, Endianness.BigEndian, 0), ref BitIndex, debug);
-            BufferImpl.WritePrimitive(buffer, m_availableFactions.m_bitArray, ref BitIndex, debug);
+            var BitIndex = 0;
+            var buffer = new byte[Size];
 
             // serialize rsa modulus
             // this is sent in maps hello
@@ -53,37 +52,25 @@ namespace HorizonService.RT.Models.ServerPlugins.MAPS
             // fix to 64 bytes (512 bit)
             Array.Resize(ref rsakey, 0x40);
 
-            uint[] key = BigEndianBytesToUIntArray(rsakey);
-
-            foreach (uint val in key)
-            {
+            foreach (var val in MathUtils.BigEndianRsa512BytesToUIntArray(rsakey))
                 BufferImpl.WritePrimitive(buffer, val, ref BitIndex, debug);
-            }
+
+            BufferImpl.WritePrimitive(buffer, m_transId, ref BitIndex, debug);
+
+            BufferImpl.WritePrimitive(buffer, m_success, ref BitIndex, debug);
+            BufferImpl.WritePrimitive(buffer, m_isOnline, ref BitIndex, debug);
+            BufferImpl.WritePrimitive(buffer, m_availableFactions.m_bitArray, ref BitIndex, debug);
 
             writer.Write(buffer, buffer.Length);
         }
 
-        private static uint[] BigEndianBytesToUIntArray(byte[] bigEndianBytes)
-        {
-            if (bigEndianBytes.Length != 64)
-                throw new ArgumentException("Array length must be 64 bytes.");
-
-            uint[] result = new uint[16];
-
-            for (int i = 0; i < result.Length; i += 4)
-            {
-                result[i] = EndianAwareConverter.ToUInt32(bigEndianBytes, Endianness.LittleEndian, (uint)i);
-            }
-
-            return result;
-        }
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"m_success: {m_success} " +
-                $"m_isOnline: {m_isOnline} " +
-                $"m_availableFactions: {m_availableFactions}";
+            return base.ToString()
+                + " "
+                + $"m_success: {m_success} "
+                + $"m_isOnline: {m_isOnline} "
+                + $"m_availableFactions: {m_availableFactions.m_bitArray:X8}";
         }
     }
 }

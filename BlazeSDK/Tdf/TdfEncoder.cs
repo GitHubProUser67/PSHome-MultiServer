@@ -7,8 +7,8 @@ namespace Tdf
 {
     public class TdfEncoder : ITdfEncoder
     {
-        private TdfFactory _factory;
-        private bool _heat1Bug;
+        private readonly TdfFactory _factory;
+        private readonly bool _heat1Bug;
 
         internal delegate void TdfWriter(Stream stream, TdfMember tag, object value);
 
@@ -18,9 +18,10 @@ namespace Tdf
             _heat1Bug = heat1Bug;
         }
 
-        public byte[] Encode<T>(T obj) where T : notnull
+        public byte[] Encode<T>(T obj)
+            where T : notnull
         {
-            using (MemoryStream payload = new MemoryStream())
+            using (var payload = new MemoryStream())
             {
                 WriteTo(payload, obj);
                 return payload.ToArray();
@@ -29,25 +30,29 @@ namespace Tdf
 
         public byte[] Encode(object obj)
         {
-            using (MemoryStream payload = new MemoryStream())
+            using (var payload = new MemoryStream())
             {
                 WriteTo(payload, obj);
                 return payload.ToArray();
             }
         }
 
-        public void WriteTo<T>(Stream stream, T obj) where T : notnull => WriteTo(stream, (object)obj);
+        public void WriteTo<T>(Stream stream, T obj)
+            where T : notnull => WriteTo(stream, (object)obj);
 
         public void WriteTo(Stream stream, object obj)
         {
-            Type objectType = obj.GetType();
+            var objectType = obj.GetType();
 
+            Dictionary<TdfMember, FieldInfo> keyValuePairs = [];
 
-            Dictionary<TdfMember, FieldInfo> keyValuePairs = new Dictionary<TdfMember, FieldInfo>();
-
-            foreach (FieldInfo field in objectType.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
+            foreach (
+                var field in objectType.GetFields(
+                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
+                )
+            )
             {
-                TdfMember? tag = field.GetCustomAttribute<TdfMember>();
+                var tag = field.GetCustomAttribute<TdfMember>();
                 if (tag == null) //no tag, skip it
                     continue;
 
@@ -55,17 +60,17 @@ namespace Tdf
             }
 
             //need to encode it alphabetically
-            foreach (KeyValuePair<TdfMember, FieldInfo> kvp in keyValuePairs.OrderBy(x => x.Key.Tag))
+            foreach (var kvp in keyValuePairs.OrderBy(x => x.Key.Tag))
             {
-                TdfMember? tag = kvp.Key;
-                FieldInfo field = kvp.Value;
+                var tag = kvp.Key;
+                var field = kvp.Value;
 
-                object? fieldValue = field.GetValue(obj);
+                var fieldValue = field.GetValue(obj);
                 if (fieldValue == null) //no value, we skip encoding it
                     continue;
 
-                TdfBaseType baseType = GetTdfBaseType(field.FieldType);
-                TdfWriter? writer = GetTdfWriter(field.FieldType, baseType, false);
+                var baseType = GetTdfBaseType(field.FieldType);
+                var writer = GetTdfWriter(field.FieldType, baseType, false);
 
                 if (writer != null)
                 {
@@ -113,8 +118,7 @@ namespace Tdf
             }
         }
 
-
-        private TdfBaseType GetTdfBaseType(Type fieldType)
+        private static TdfBaseType GetTdfBaseType(Type fieldType)
         {
             switch (Type.GetTypeCode(fieldType))
             {
@@ -136,12 +140,15 @@ namespace Tdf
 
             if (fieldType.IsGenericType)
             {
-                Type genericType = fieldType.GetGenericTypeDefinition();
+                var genericType = fieldType.GetGenericTypeDefinition();
 
                 if (genericType == typeof(List<>))
                     return TdfBaseType.TDF_TYPE_LIST;
 
-                if (genericType == typeof(Dictionary<,>) || genericType == typeof(SortedDictionary<,>))
+                if (
+                    genericType == typeof(Dictionary<,>)
+                    || genericType == typeof(SortedDictionary<,>)
+                )
                     return TdfBaseType.TDF_TYPE_MAP;
             }
 
@@ -161,15 +168,12 @@ namespace Tdf
                 return TdfBaseType.TDF_TYPE_UNION;
 
             //NOTE: Time values are encoded as integers, TDF_TYPE_TIMEVALUE is not actually used
-            if (fieldType.BaseType == typeof(TimeValue))
-                return TdfBaseType.TDF_TYPE_INTEGER;
-
-            if (fieldType == typeof(object) || Nullable.GetUnderlyingType(fieldType) == typeof(object))
-                return TdfBaseType.TDF_TYPE_VARIABLE;
-
-            return TdfBaseType.TDF_TYPE_MAX;
+            return fieldType.BaseType == typeof(TimeValue) ? TdfBaseType.TDF_TYPE_INTEGER
+                : fieldType == typeof(object)
+                || Nullable.GetUnderlyingType(fieldType) == typeof(object)
+                    ? TdfBaseType.TDF_TYPE_VARIABLE
+                : TdfBaseType.TDF_TYPE_MAX;
         }
-
 
         private void WriteTdfBoolean(Stream stream, TdfMember tag, object value)
         {
@@ -178,21 +182,12 @@ namespace Tdf
 
         private void WriteTdfInteger(Stream stream, TdfMember tag, object value)
         {
-            BigInteger integer;
-            switch (Type.GetTypeCode(value.GetType()))
+            var integer = Type.GetTypeCode(value.GetType()) switch
             {
-                case TypeCode.SByte:
-                case TypeCode.Int16:
-                case TypeCode.Int32:
-                case TypeCode.Int64:
-                    integer = Convert.ToInt64(value);
-                    break;
-                default:
-                    integer = Convert.ToUInt64(value);
-                    break;
-            }
-
-
+                TypeCode.SByte or TypeCode.Int16 or TypeCode.Int32 or TypeCode.Int64 => (BigInteger)
+                    Convert.ToInt64(value),
+                _ => (BigInteger)Convert.ToUInt64(value),
+            };
             stream.WriteTdfInteger(integer);
         }
 
@@ -214,12 +209,13 @@ namespace Tdf
 
         private void WriteTdfList(Stream stream, TdfMember tag, object value)
         {
-            Type listType = value.GetType().GetGenericArguments()[0];
-            TdfBaseType baseType = GetTdfBaseType(listType);
-            TdfWriter? writer = GetTdfWriter(listType, baseType, true);
-
-            if (writer == null)
-                throw new NotSupportedException($"List type '{listType.FullName}' not supported!");
+            var listType = value.GetType().GetGenericArguments()[0];
+            var baseType = GetTdfBaseType(listType);
+            var writer =
+                GetTdfWriter(listType, baseType, true)
+                ?? throw new NotSupportedException(
+                    $"List type '{listType.FullName}' not supported!"
+                );
 
             #region bug implementation fix
             if (_heat1Bug)
@@ -227,50 +223,59 @@ namespace Tdf
                 if (listType.IsGenericType)
                     listType = listType.GetGenericTypeDefinition();
 
-                if (listType.BaseType == typeof(TdfUnion) || listType == typeof(List<>) || listType == typeof(Dictionary<,>) || listType == typeof(SortedDictionary<,>))
+                if (
+                    listType.BaseType == typeof(TdfUnion)
+                    || listType == typeof(List<>)
+                    || listType == typeof(Dictionary<,>)
+                    || listType == typeof(SortedDictionary<,>)
+                )
                     baseType = TdfBaseType.TDF_TYPE_STRUCT;
             }
             #endregion
 
-            IList list = (IList)value;
+            var list = (IList)value;
             stream.WriteTdfBaseType(baseType);
             stream.WriteTdfInteger(list.Count);
 
-            foreach (object item in list)
+            foreach (var item in list)
                 writer(stream, tag, item);
         }
 
         private void WriteTdfMap(Stream stream, TdfMember tag, object value)
         {
-            ICollection collection = (ICollection)value;
-            Type[] genericArguments = value.GetType().GetGenericArguments();
-            Type keyType = genericArguments[0];
-            Type valueType = genericArguments[1];
+            var collection = (ICollection)value;
+            var genericArguments = value.GetType().GetGenericArguments();
+            var keyType = genericArguments[0];
+            var valueType = genericArguments[1];
 
-            TdfBaseType keyBaseType = GetTdfBaseType(keyType);
-            TdfBaseType valueBaseType = GetTdfBaseType(valueType);
+            var keyBaseType = GetTdfBaseType(keyType);
+            var valueBaseType = GetTdfBaseType(valueType);
 
-            TdfWriter? keyWriter = GetTdfWriter(keyType, keyBaseType, false);
-            TdfWriter? valueWriter = GetTdfWriter(valueType, valueBaseType, false);
+            var keyWriter = GetTdfWriter(keyType, keyBaseType, false);
+            var valueWriter = GetTdfWriter(valueType, valueBaseType, false);
 
             if (keyWriter == null)
-                throw new NotSupportedException($"Map key type '{keyType.FullName}' not supported!");
+                throw new NotSupportedException(
+                    $"Map key type '{keyType.FullName}' not supported!"
+                );
             if (valueWriter == null)
-                throw new NotSupportedException($"Map value type '{valueType.FullName}' not supported!");
+                throw new NotSupportedException(
+                    $"Map value type '{valueType.FullName}' not supported!"
+                );
 
             stream.WriteTdfBaseType(keyBaseType);
             stream.WriteTdfBaseType(valueBaseType);
             stream.WriteTdfInteger(collection.Count);
 
             //item type KeyValuePair<KeyType, ValueType>
-            Type itemType = typeof(KeyValuePair<,>).MakeGenericType(keyType, valueType);
-            PropertyInfo keyProperty = itemType.GetProperty("Key")!;
-            PropertyInfo valueProperty = itemType.GetProperty("Value")!;
+            var itemType = typeof(KeyValuePair<,>).MakeGenericType(keyType, valueType);
+            var keyProperty = itemType.GetProperty("Key")!;
+            var valueProperty = itemType.GetProperty("Value")!;
 
-            foreach (object item in collection)
+            foreach (var item in collection)
             {
-                object kvpKey = keyProperty.GetValue(item, null)!;
-                object kvpValue = valueProperty.GetValue(item, null)!;
+                var kvpKey = keyProperty.GetValue(item, null)!;
+                var kvpValue = valueProperty.GetValue(item, null)!;
 
                 keyWriter(stream, tag, kvpKey);
                 valueWriter(stream, tag, kvpValue);
@@ -279,10 +284,10 @@ namespace Tdf
 
         private void WriteTdfUnion(Stream stream, TdfMember tag, object value)
         {
-            TdfUnion union = (TdfUnion)value;
+            var union = (TdfUnion)value;
 
-            object? obj = union.GetValue();
-            byte activeMember = obj != null ? union.ActiveMember : (byte)0x7f;
+            var obj = union.GetValue();
+            var activeMember = obj != null ? union.ActiveMember : (byte)0x7f;
             stream.WriteByte(activeMember);
 
             if (activeMember != 0x7F)
@@ -294,10 +299,10 @@ namespace Tdf
 
         private void WriteTdfUnionAsListElement(Stream stream, TdfMember tag, object value)
         {
-            TdfUnion union = (TdfUnion)value;
+            var union = (TdfUnion)value;
 
-            object? obj = union.GetValue();
-            byte activeMember = obj != null ? union.ActiveMember : (byte)0x7f;
+            var obj = union.GetValue();
+            var activeMember = obj != null ? union.ActiveMember : (byte)0x7f;
             stream.WriteByte(activeMember);
 
             if (activeMember != 0x7F)
@@ -306,20 +311,20 @@ namespace Tdf
 
         private void WriteTdfVariable(Stream stream, TdfMember tag, object value)
         {
-            Type valueType = value.GetType(); //getting the runtime value, not the field value which is object
-            bool present = valueType != typeof(object);
+            var valueType = value.GetType(); //getting the runtime value, not the field value which is object
+            var present = valueType != typeof(object);
             stream.WriteTdfBool(present);
 
-            uint tdfId = _factory.GetTdfId(valueType); //if zero, then the receiving client will probably just skip the encoded variable
+            var tdfId = TdfFactory.GetTdfId(valueType); //if zero, then the receiving client will probably just skip the encoded variable
             stream.WriteTdfInteger(tdfId);
 
-            TdfBaseType baseType = GetTdfBaseType(valueType);
+            var baseType = GetTdfBaseType(valueType);
             stream.WriteTdfTag(tag);
             stream.WriteTdfBaseType(baseType);
 
-            TdfWriter? writer = GetTdfWriter(valueType, baseType, false);
-            if (writer == null)
-                throw new NotSupportedException($"Type '{valueType.FullName}' not supported!");
+            var writer =
+                GetTdfWriter(valueType, baseType, false)
+                ?? throw new NotSupportedException($"Type '{valueType.FullName}' not supported!");
             writer(stream, tag, value);
             stream.WriteByte(0x00); //tdf variable terminator
         }

@@ -2,33 +2,31 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct GenericRuleConfig
-	{
+    [TdfStruct]
+    public struct GenericRuleConfig
+    {
+        [TdfMember("ANME")]
+        public string mAttributeName;
 
-		[TdfMember("ANME")]
-		public string mAttributeName;
+        [TdfMember("ATYP")]
+        public GenericRuleAttributeType mAttributeType;
 
-		[TdfMember("ATYP")]
-		public GenericRuleAttributeType mAttributeType;
+        [TdfMember("POSV")]
+        public List<string> mPossibleValues;
 
-		[TdfMember("POSV")]
-		public List<string> mPossibleValues;
+        [TdfMember("RNME")]
+        public string mRuleName;
 
-		[TdfMember("RNME")]
-		public string mRuleName;
+        [TdfMember("THLS")]
+        public List<string> mThresholdNames;
 
-		[TdfMember("THLS")]
-		public List<string> mThresholdNames;
+        [TdfMember("WGHT")]
+        public uint mWeight;
 
-		[TdfMember("WGHT")]
-		public uint mWeight;
-
-		public enum GenericRuleAttributeType : int
-		{
-			PLAYER_ATTRIBUTE = 0,
-			GAME_ATTRIBUTE = 1,
-		}
-
-	}
+        public enum GenericRuleAttributeType : int
+        {
+            PLAYER_ATTRIBUTE = 0,
+            GAME_ATTRIBUTE = 1,
+        }
+    }
 }

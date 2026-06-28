@@ -1,12 +1,12 @@
-using CustomLogger;
 using System.Buffers;
 using System.Collections.Concurrent;
+using CustomLogger;
 
 namespace Prometheus;
 
 /// <summary>
 /// Maintains references to a set of collectors, from which data for metrics is collected at data export time.
-/// 
+///
 /// Use methods on the <see cref="Metrics"/> class to add metrics to a collector registry.
 /// </summary>
 /// <remarks>
@@ -20,19 +20,18 @@ public sealed class CollectorRegistry : ICollectorRegistry
     /// Registers an action to be called before metrics are collected.
     /// This enables you to do last-minute updates to metric values very near the time of collection.
     /// Callbacks will delay the metric collection, so do not make them too long or it may time out.
-    /// 
+    ///
     /// The callback will be executed synchronously and should not take more than a few milliseconds.
     /// To execute longer-duration callbacks, register an asynchronous callback (Func&lt;Task&gt;).
-    /// 
+    ///
     /// If the callback throws <see cref="ScrapeFailedException"/> then the entire metric collection will fail.
     /// This will result in an appropriate HTTP error code or a skipped push, depending on type of exporter.
-    /// 
+    ///
     /// If multiple concurrent collections occur, the callback may be called multiple times concurrently.
     /// </summary>
     public void AddBeforeCollectCallback(Action callback)
     {
-        if (callback == null)
-            throw new ArgumentNullException(nameof(callback));
+        ArgumentNullException.ThrowIfNull(callback);
 
         _beforeCollectCallbacks.Add(callback);
     }
@@ -41,18 +40,17 @@ public sealed class CollectorRegistry : ICollectorRegistry
     /// Registers an action to be called before metrics are collected.
     /// This enables you to do last-minute updates to metric values very near the time of collection.
     /// Callbacks will delay the metric collection, so do not make them too long or it may time out.
-    /// 
+    ///
     /// Asynchronous callbacks will be executed concurrently and may last longer than a few milliseconds.
-    /// 
+    ///
     /// If the callback throws <see cref="ScrapeFailedException"/> then the entire metric collection will fail.
     /// This will result in an appropriate HTTP error code or a skipped push, depending on type of exporter.
-    /// 
+    ///
     /// If multiple concurrent collections occur, the callback may be called multiple times concurrently.
     /// </summary>
     public void AddBeforeCollectCallback(Func<CancellationToken, Task> callback)
     {
-        if (callback == null)
-            throw new ArgumentNullException(nameof(callback));
+        ArgumentNullException.ThrowIfNull(callback);
 
         _beforeCollectAsyncCallbacks.Add(callback);
     }
@@ -74,8 +72,7 @@ public sealed class CollectorRegistry : ICollectorRegistry
     /// </summary>
     public void SetStaticLabels(IDictionary<string, string> labels)
     {
-        if (labels == null)
-            throw new ArgumentNullException(nameof(labels));
+        ArgumentNullException.ThrowIfNull(labels);
 
         // Read lock is taken when creating metrics, so we know that no metrics can be created while we hold this lock.
         _staticLabelsLock.EnterWriteLock();
@@ -83,16 +80,22 @@ public sealed class CollectorRegistry : ICollectorRegistry
         try
         {
             if (_staticLabels.Length != 0)
-                throw new InvalidOperationException("Static labels have already been defined - you can only do it once per registry.");
+                throw new InvalidOperationException(
+                    "Static labels have already been defined - you can only do it once per registry."
+                );
 
             if (_families.Count != 0)
-                throw new InvalidOperationException("Metrics have already been added to the registry - cannot define static labels anymore.");
+                throw new InvalidOperationException(
+                    "Metrics have already been added to the registry - cannot define static labels anymore."
+                );
 
             // Keep the lock for the duration of this method to make sure no publishing happens while we are setting labels.
             lock (_firstCollectLock)
             {
                 if (_hasPerformedFirstCollect)
-                    throw new InvalidOperationException("The metrics registry has already been published - cannot define static labels anymore.");
+                    throw new InvalidOperationException(
+                        "The metrics registry has already been published - cannot define static labels anymore."
+                    );
 
                 foreach (var pair in labels)
                 {
@@ -134,33 +137,51 @@ public sealed class CollectorRegistry : ICollectorRegistry
 
     /// <summary>
     /// Collects all metrics and exports them in text document format to the provided stream.
-    /// 
+    ///
     /// This method is designed to be used with custom output mechanisms that do not use an IMetricServer.
     /// </summary>
-    public Task CollectAndExportAsTextAsync(Stream to, CancellationToken cancel = default)
-        => CollectAndExportAsTextAsync(to, ExpositionFormat.PrometheusText, cancel);
+    public Task CollectAndExportAsTextAsync(Stream to, CancellationToken cancel = default) =>
+        CollectAndExportAsTextAsync(to, ExpositionFormat.PrometheusText, cancel);
 
     /// <summary>
     /// Collects all metrics and exports them in text document format to the provided stream.
-    /// 
+    ///
     /// This method is designed to be used with custom output mechanisms that do not use an IMetricServer.
     /// </summary>
-    public Task CollectAndExportAsTextAsync(Stream to, ExpositionFormat format, CancellationToken cancel = default)
+    public Task CollectAndExportAsTextAsync(
+        Stream to,
+        ExpositionFormat format,
+        CancellationToken cancel = default
+    )
     {
-        if (to == null)
-            throw new ArgumentNullException(nameof(to));
+        ArgumentNullException.ThrowIfNull(to);
 
         return CollectAndSerializeAsync(new TextSerializer(to, format), cancel);
     }
 
-    internal delegate TCollector CollectorInitializer<TCollector, TConfiguration>(string name, string help, in StringSequence instanceLabelNames, in LabelSequence staticLabels, TConfiguration configuration, ExemplarBehavior exemplarBehavior)
+    internal delegate TCollector CollectorInitializer<TCollector, TConfiguration>(
+        string name,
+        string help,
+        in StringSequence instanceLabelNames,
+        in LabelSequence staticLabels,
+        TConfiguration configuration,
+        ExemplarBehavior exemplarBehavior
+    )
         where TCollector : Collector
         where TConfiguration : MetricConfiguration;
 
     /// <summary>
     /// Adds a collector to the registry, returning an existing instance if one with a matching name was already registered.
     /// </summary>
-    internal TCollector GetOrAdd<TCollector, TConfiguration>(string name, string help, in StringSequence instanceLabelNames, in LabelSequence staticLabels, TConfiguration configuration, ExemplarBehavior exemplarBehavior, in CollectorInitializer<TCollector, TConfiguration> initializer)
+    internal TCollector GetOrAdd<TCollector, TConfiguration>(
+        string name,
+        string help,
+        in StringSequence instanceLabelNames,
+        in LabelSequence staticLabels,
+        TConfiguration configuration,
+        ExemplarBehavior exemplarBehavior,
+        in CollectorInitializer<TCollector, TConfiguration> initializer
+    )
         where TCollector : Collector
         where TConfiguration : MetricConfiguration
     {
@@ -168,7 +189,15 @@ public sealed class CollectorRegistry : ICollectorRegistry
 
         var collectorIdentity = new CollectorIdentity(instanceLabelNames, staticLabels);
 
-        return (TCollector)family.GetOrAdd(collectorIdentity, name, help, configuration, exemplarBehavior, initializer);
+        return (TCollector)
+            family.GetOrAdd(
+                collectorIdentity,
+                name,
+                help,
+                configuration,
+                exemplarBehavior,
+                initializer
+            );
     }
 
     private CollectorFamily GetOrAddCollectorFamily<TCollector>(string finalName)
@@ -179,10 +208,11 @@ public sealed class CollectorRegistry : ICollectorRegistry
             // We either created a new collector family or found one with a matching identity.
             // We do some basic validation here to avoid silly API usage mistakes.
 
-            if (candidate.CollectorType != typeof(TCollector))
-                throw new InvalidOperationException("Collector of a different type with the same name is already registered.");
-
-            return candidate;
+            return candidate.CollectorType != typeof(TCollector)
+                ? throw new InvalidOperationException(
+                    "Collector of a different type with the same name is already registered."
+                )
+                : candidate;
         }
 
         // First try to get the family with only a read lock, with the assumption that it might already exist and therefore we do not need an expensive write lock.
@@ -205,20 +235,10 @@ public sealed class CollectorRegistry : ICollectorRegistry
 
         try
         {
-#if NET
             // It could be that someone beats us to it! Probably not, though.
-            if (_families.TryAdd(finalName, newFamily))
-                return newFamily;
-
-            return ValidateFamily(_families[finalName]);
-#else
-            // On .NET Fx we need to do the pessimistic case first because there is no TryAdd().
-            if (_families.TryGetValue(finalName, out var existing))
-                return ValidateFamily(existing);
-
-            _families.Add(finalName, newFamily);
-            return newFamily;
-#endif
+            return _families.TryAdd(finalName, newFamily)
+                ? newFamily
+                : ValidateFamily(_families[finalName]);
         }
         finally
         {
@@ -252,7 +272,10 @@ public sealed class CollectorRegistry : ICollectorRegistry
     /// <summary>
     /// Collects metrics from all the registered collectors and sends them to the specified serializer.
     /// </summary>
-    internal async Task CollectAndSerializeAsync(IMetricsSerializer serializer, CancellationToken cancel)
+    internal async Task CollectAndSerializeAsync(
+        IMetricsSerializer serializer,
+        CancellationToken cancel
+    )
     {
         lock (_firstCollectLock)
         {
@@ -264,7 +287,7 @@ public sealed class CollectorRegistry : ICollectorRegistry
             }
         }
 
-        await RunBeforeCollectCallbacksAsync(cancel);
+        await RunBeforeCollectCallbacksAsync(cancel).ConfigureAwait(false);
 
         UpdateRegistryMetrics();
 
@@ -291,7 +314,7 @@ public sealed class CollectorRegistry : ICollectorRegistry
             for (var i = 0; i < familiesCount; i++)
             {
                 var family = buffer[i];
-                await family.CollectAndSerializeAsync(serializer, cancel);
+                await family.CollectAndSerializeAsync(serializer, cancel).ConfigureAwait(false);
             }
         }
         finally
@@ -299,8 +322,8 @@ public sealed class CollectorRegistry : ICollectorRegistry
             ArrayPool<CollectorFamily>.Shared.Return(buffer, clearArray: true);
         }
 
-        await serializer.WriteEnd(cancel);
-        await serializer.FlushAsync(cancel);
+        await serializer.WriteEnd(cancel).ConfigureAwait(false);
+        await serializer.FlushAsync(cancel).ConfigureAwait(false);
     }
 
     private async Task RunBeforeCollectCallbacksAsync(CancellationToken cancel)
@@ -313,21 +336,30 @@ public sealed class CollectorRegistry : ICollectorRegistry
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[CollectorRegistry] - Metrics before-collect callback failed: {ex}");
+                LoggerAccessor.LogError(
+                    $"[CollectorRegistry] - Metrics before-collect callback failed: {ex}"
+                );
             }
         }
 
-        await Task.WhenAll(_beforeCollectAsyncCallbacks.Select(async (callback) =>
-        {
-            try
-            {
-                await callback(cancel);
-            }
-            catch (Exception ex)
-            {
-                LoggerAccessor.LogError($"[CollectorRegistry] - Metrics before-collect callback failed: {ex}");
-            }
-        }));
+        await Task.WhenAll(
+                _beforeCollectAsyncCallbacks.Select(
+                    async (callback) =>
+                    {
+                        try
+                        {
+                            await callback(cancel).ConfigureAwait(false);
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggerAccessor.LogError(
+                                $"[CollectorRegistry] - Metrics before-collect callback failed: {ex}"
+                            );
+                        }
+                    }
+                )
+            )
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -337,9 +369,21 @@ public sealed class CollectorRegistry : ICollectorRegistry
     {
         var factory = Metrics.WithCustomRegistry(this);
 
-        _metricFamilies = factory.CreateGauge("prometheus_net_metric_families", "Number of metric families currently registered.", labelNames: [MetricTypeDebugLabel]);
-        _metricInstances = factory.CreateGauge("prometheus_net_metric_instances", "Number of metric instances currently registered across all metric families.", labelNames: [MetricTypeDebugLabel]);
-        _metricTimeseries = factory.CreateGauge("prometheus_net_metric_timeseries", "Number of metric timeseries currently generated from all metric instances.", labelNames: [MetricTypeDebugLabel]);
+        _metricFamilies = factory.CreateGauge(
+            "prometheus_net_metric_families",
+            "Number of metric families currently registered.",
+            labelNames: [MetricTypeDebugLabel]
+        );
+        _metricInstances = factory.CreateGauge(
+            "prometheus_net_metric_instances",
+            "Number of metric instances currently registered across all metric families.",
+            labelNames: [MetricTypeDebugLabel]
+        );
+        _metricTimeseries = factory.CreateGauge(
+            "prometheus_net_metric_timeseries",
+            "Number of metric timeseries currently generated from all metric instances.",
+            labelNames: [MetricTypeDebugLabel]
+        );
 
         _metricFamiliesPerType = [];
         _metricInstancesPerType = [];
@@ -362,11 +406,13 @@ public sealed class CollectorRegistry : ICollectorRegistry
     /// </summary>
     internal void OnStartCollectingRegistryMetrics(Action callback)
     {
-        _startedCollectingRegistryMetrics.Task.ContinueWith(delegate
-        {
-            callback();
-            return Task.CompletedTask;
-        });
+        _startedCollectingRegistryMetrics.Task.ContinueWith(
+            delegate
+            {
+                callback();
+                return Task.CompletedTask;
+            }
+        );
     }
 
     private readonly TaskCompletionSource<object> _startedCollectingRegistryMetrics = new();
@@ -383,7 +429,11 @@ public sealed class CollectorRegistry : ICollectorRegistry
 
     private void UpdateRegistryMetrics()
     {
-        if (_metricFamiliesPerType == null || _metricInstancesPerType == null || _metricTimeseriesPerType == null)
+        if (
+            _metricFamiliesPerType == null
+            || _metricInstancesPerType == null
+            || _metricTimeseriesPerType == null
+        )
             return; // Debug metrics are not enabled.
 
         // We copy references to the metric families to a temporary buffer to avoid having to hold locks to keep the collection consistent.
@@ -415,7 +465,7 @@ public sealed class CollectorRegistry : ICollectorRegistry
                 {
                     var family = familiesBuffer[i];
 
-                    bool hadMatchingType = false;
+                    var hadMatchingType = false;
 
                     family.ForEachCollector(collector =>
                     {

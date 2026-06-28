@@ -1,6 +1,5 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
@@ -31,13 +30,10 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             reader.ReadBytes(3);
             StatusCode = reader.Read<MediusCallbackStatus>();
             ApplicationID = reader.ReadInt32();
@@ -58,13 +54,10 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(new byte[3]);
             writer.Write(StatusCode);
             writer.Write(ApplicationID);
@@ -85,23 +78,24 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"ApplicationID: {ApplicationID} " +
-                $"MinPlayers: {MinPlayers} " +
-                $"MaxPlayers: {MaxPlayers} " +
-                $"GameLevel: {GameLevel} " +
-                $"PlayerSkillLevel: {PlayerSkillLevel} " +
-                $"PlayerCount: {PlayerCount} " +
-                $"GameStats: {System.BitConverter.ToString(GameStats)} " +
-                $"GameName: {GameName} " +
-                $"RulesSet: {RulesSet} " +
-                $"GenericField1: {GenericField1:X8} " +
-                $"GenericField2: {GenericField2:X8} " +
-                $"GenericField3: {GenericField3:X8} " +
-                $"WorldStatus: {WorldStatus} " +
-                $"GameHostType: {GameHostType}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"ApplicationID: {ApplicationID} "
+                + $"MinPlayers: {MinPlayers} "
+                + $"MaxPlayers: {MaxPlayers} "
+                + $"GameLevel: {GameLevel} "
+                + $"PlayerSkillLevel: {PlayerSkillLevel} "
+                + $"PlayerCount: {PlayerCount} "
+                + $"GameStats: {System.BitConverter.ToString(GameStats)} "
+                + $"GameName: {GameName} "
+                + $"RulesSet: {RulesSet} "
+                + $"GenericField1: {GenericField1:X8} "
+                + $"GenericField2: {GenericField2:X8} "
+                + $"GenericField3: {GenericField3:X8} "
+                + $"WorldStatus: {WorldStatus} "
+                + $"GameHostType: {GameHostType}";
         }
     }
 }

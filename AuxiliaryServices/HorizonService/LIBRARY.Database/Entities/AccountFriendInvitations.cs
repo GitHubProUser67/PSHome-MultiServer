@@ -1,5 +1,3 @@
-using System;
-
 namespace Horizon.LIBRARY.Database.Entities
 {
     public partial class AccountFriendInvitations

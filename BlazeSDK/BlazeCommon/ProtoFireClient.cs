@@ -9,7 +9,7 @@ namespace BlazeCommon
 
         uint nextReqNum;
 
-        ConcurrentDictionary<uint, TaskCompletionSource<ProtoFirePacket>> replyTasks;
+        readonly ConcurrentDictionary<uint, TaskCompletionSource<ProtoFirePacket>> replyTasks;
 
         public ProtoFireClient(ProtoFireConnection connection)
         {
@@ -27,7 +27,7 @@ namespace BlazeCommon
         {
             while (Connection.Connected)
             {
-                ProtoFirePacket? packet = await Connection.ReadPacketAsync().ConfigureAwait(false);
+                var packet = await Connection.ReadPacketAsync().ConfigureAwait(false);
 
                 if (packet == null)
                 {
@@ -49,7 +49,7 @@ namespace BlazeCommon
 
         void HandleReplyPacket(ProtoFirePacket reply)
         {
-            if (replyTasks.TryRemove(reply.Frame.MsgNum, out TaskCompletionSource<ProtoFirePacket>? tcs))
+            if (replyTasks.TryRemove(reply.Frame.MsgNum, out var tcs))
                 tcs.SetResult(reply);
         }
 
@@ -58,10 +58,9 @@ namespace BlazeCommon
             return Interlocked.Increment(ref nextReqNum);
         }
 
-
         public ProtoFirePacket SendRequest(ProtoFirePacket packet)
         {
-            TaskCompletionSource<ProtoFirePacket> tcs = new TaskCompletionSource<ProtoFirePacket>();
+            var tcs = new TaskCompletionSource<ProtoFirePacket>();
             replyTasks.TryAdd(packet.Frame.MsgNum, tcs);
 
             if (!Connection.Send(packet))
@@ -70,19 +69,21 @@ namespace BlazeCommon
                 throw new Exception("Failed to send packet."); //TODO: better exception
             }
 
-            CancellationTokenSource cts = new CancellationTokenSource(RequestTimeout);
+            var cts = new CancellationTokenSource(RequestTimeout);
             cts.Token.Register(() => tcs.TrySetCanceled(), useSynchronizationContext: false);
-            try { return tcs.Task.GetAwaiter().GetResult(); }
+            try
+            {
+                return tcs.Task.GetAwaiter().GetResult();
+            }
             catch (TaskCanceledException)
             {
                 throw new TimeoutException("The request timed out.");
             }
-
         }
 
         public async Task<ProtoFirePacket> SendRequestAsync(ProtoFirePacket packet)
         {
-            TaskCompletionSource<ProtoFirePacket> tcs = new TaskCompletionSource<ProtoFirePacket>();
+            var tcs = new TaskCompletionSource<ProtoFirePacket>();
             replyTasks.TryAdd(packet.Frame.MsgNum, tcs);
 
             if (!await Connection.SendAsync(packet).ConfigureAwait(false))
@@ -91,14 +92,16 @@ namespace BlazeCommon
                 throw new Exception("Failed to send packet."); //TODO: better exception
             }
 
-            CancellationTokenSource cts = new CancellationTokenSource(RequestTimeout);
+            var cts = new CancellationTokenSource(RequestTimeout);
             cts.Token.Register(() => tcs.TrySetCanceled(), useSynchronizationContext: false);
-            try { return await tcs.Task.ConfigureAwait(false); }
+            try
+            {
+                return await tcs.Task.ConfigureAwait(false);
+            }
             catch (TaskCanceledException)
             {
                 throw new TimeoutException("The request timed out.");
             }
-
         }
 
         public abstract void OnClientDisconnected();

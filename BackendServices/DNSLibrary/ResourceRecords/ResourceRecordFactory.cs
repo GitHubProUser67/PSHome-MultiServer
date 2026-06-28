@@ -1,51 +1,50 @@
-﻿using System.Collections.Generic;
-
-namespace DNS.Protocol.ResourceRecords {
-    public static class ResourceRecordFactory {
-        public static IList<IResourceRecord> GetAllFromArray(byte[] message, int offset, int count) {
+﻿namespace DNSLibrary.ResourceRecords
+{
+    public static class ResourceRecordFactory
+    {
+        public static IList<IResourceRecord> GetAllFromArray(byte[] message, int offset, int count)
+        {
             return GetAllFromArray(message, offset, count, out offset);
         }
 
-        public static IList<IResourceRecord> GetAllFromArray(byte[] message, int offset, int count, out int endOffset) {
-            IList<IResourceRecord> result = new List<IResourceRecord>(count);
+        public static IList<IResourceRecord> GetAllFromArray(
+            byte[] message,
+            int offset,
+            int count,
+            out int endOffset
+        )
+        {
+            IList<IResourceRecord> result = [with(count)];
 
-            for (int i = 0; i < count; i++) {
+            for (var i = 0; i < count; i++)
                 result.Add(FromArray(message, offset, out offset));
-            }
 
             endOffset = offset;
             return result;
         }
 
-        public static IResourceRecord FromArray(byte[] message, int offset) {
-            return FromArray(message, offset, out offset);
+        public static IResourceRecord FromArray(byte[] message, int offset)
+        {
+            return FromArray(message, offset, out _);
         }
 
-        public static IResourceRecord FromArray(byte[] message, int offset, out int endOffest) {
-            ResourceRecord record = ResourceRecord.FromArray(message, offset, out endOffest);
-            int dataOffset = endOffest - record.DataLength;
+        public static IResourceRecord FromArray(byte[] message, int offset, out int endOffest)
+        {
+            var record = ResourceRecord.FromArray(message, offset, out endOffest);
+            var dataOffset = endOffest - record.DataLength;
 
-            switch (record.Type) {
-                case RecordType.A:
-                case RecordType.AAAA:
-                    return new IPAddressResourceRecord(record);
-                case RecordType.NS:
-                    return new NameServerResourceRecord(record, message, dataOffset);
-                case RecordType.CNAME:
-                    return new CanonicalNameResourceRecord(record, message, dataOffset);
-                case RecordType.SOA:
-                    return new StartOfAuthorityResourceRecord(record, message, dataOffset);
-                case RecordType.PTR:
-                    return new PointerResourceRecord(record, message, dataOffset);
-                case RecordType.MX:
-                    return new MailExchangeResourceRecord(record, message, dataOffset);
-                case RecordType.TXT:
-                    return new TextResourceRecord(record);
-                case RecordType.SRV:
-                    return new ServiceResourceRecord(record, message, dataOffset);
-                default:
-                    return record;
-            }
+            return record.Type switch
+            {
+                RecordType.A or RecordType.AAAA => new IPAddressResourceRecord(record),
+                RecordType.NS => new NameServerResourceRecord(record, message, dataOffset),
+                RecordType.CNAME => new CanonicalNameResourceRecord(record, message, dataOffset),
+                RecordType.SOA => new StartOfAuthorityResourceRecord(record, message, dataOffset),
+                RecordType.PTR => new PointerResourceRecord(record, message, dataOffset),
+                RecordType.MX => new MailExchangeResourceRecord(record, message, dataOffset),
+                RecordType.TXT => new TextResourceRecord(record),
+                RecordType.SRV => new ServiceResourceRecord(record, message, dataOffset),
+                _ => record,
+            };
         }
     }
 }

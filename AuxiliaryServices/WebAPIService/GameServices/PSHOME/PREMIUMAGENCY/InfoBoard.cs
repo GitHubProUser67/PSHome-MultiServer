@@ -1,8 +1,6 @@
-using System.IO;
-using System.Collections.Generic;
-using MultiServerLibrary.HTTP;
 using CustomLogger;
 using HttpMultipartParser;
+using MultiServerLibrary.HTTP;
 using Newtonsoft.Json.Linq;
 
 namespace WebAPIService.GameServices.PSHOME.PREMIUMAGENCY
@@ -12,14 +10,14 @@ namespace WebAPIService.GameServices.PSHOME.PREMIUMAGENCY
         private static HashSet<string> validLoungesCache = null;
         private static string loungesJsonPathCache = null;
 
-        private static readonly HashSet<string> DefaultLounges = new HashSet<string>
-        {
+        private static readonly HashSet<string> DefaultLounges =
+        [
             "HomeSquare",
             "Cafe",
             "Theater",
             "GameSpace",
-            "MarketPlace"
-        };
+            "MarketPlace",
+        ];
 
         private static HashSet<string> LoadValidLounges(string jsonPath)
         {
@@ -48,44 +46,51 @@ namespace WebAPIService.GameServices.PSHOME.PREMIUMAGENCY
             }
         }
 
-        public static string getInformationBoardSchedulePOST(byte[] PostData, string ContentType, string workpath, string eventId)
+        public static string getInformationBoardSchedulePOST(
+            byte[] PostData,
+            string ContentType,
+            string workpath,
+            string eventId
+        )
         {
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
-            string lounge = string.Empty;
-            string lang = string.Empty;
-            string regcd = string.Empty;
-
-            using (MemoryStream ms = new MemoryStream(PostData))
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var lounge = string.Empty;
+            using (var ms = new MemoryStream(PostData))
             {
                 var data = MultipartFormDataParser.Parse(ms, boundary);
 
                 lounge = data.GetParameterValue("lounge");
-                lang = data.GetParameterValue("lang");
-                regcd = data.GetParameterValue("regcd");
+                var lang = data.GetParameterValue("lang");
+                var regcd = data.GetParameterValue("regcd");
             }
 
             // Use the original string interpolation style
-            string infoBoardSchedulePath = $"{workpath}/eventController/InfoBoards/Schedule";
-			
+            var infoBoardSchedulePath = $"{workpath}/eventController/InfoBoards/Schedule";
+
             Directory.CreateDirectory(infoBoardSchedulePath);
 
-            string filePath = $"{infoBoardSchedulePath}/{lounge}.xml";
+            var filePath = $"{infoBoardSchedulePath}/{lounge}.xml";
 
             if (LoadValidLounges($"{infoBoardSchedulePath}/lounges.json").Contains(lounge))
             {
                 if (File.Exists(filePath))
                 {
-                    LoggerAccessor.LogInfo($"[PREMIUMAGENCY] - InfoBoardSchedule for {lounge} found and sent!");
+                    LoggerAccessor.LogInfo(
+                        $"[PREMIUMAGENCY] - InfoBoardSchedule for {lounge} found and sent!"
+                    );
                     return File.ReadAllText(filePath);
                 }
                 else
-                    LoggerAccessor.LogError($"[PREMIUMAGENCY] - Failed to find InfoBoardSchedule for {lounge}. Expected path {filePath}!");
+                    LoggerAccessor.LogError(
+                        $"[PREMIUMAGENCY] - Failed to find InfoBoardSchedule for {lounge}. Expected path {filePath}!"
+                    );
             }
             else
-                LoggerAccessor.LogError($"[PREMIUMAGENCY] - Unsupported scene lounge {lounge} found for InfoBoardSchedule");
+                LoggerAccessor.LogError(
+                    $"[PREMIUMAGENCY] - Unsupported scene lounge {lounge} found for InfoBoardSchedule"
+                );
 
             return null;
         }
     }
 }
-

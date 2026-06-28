@@ -1,13 +1,15 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     /// <summary>
     ///  Response to grant or deny game creation on this MGCL host. The confirmation maps to MGCL_ERROR_CODE.
     /// </summary>
-	[MediusMessage(NetMessageClass.MessageClassLobbyReport, MediusMGCLMessageIds.ServerCreateGameResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyReport,
+        MediusMGCLMessageIds.ServerCreateGameResponse
+    )]
     public class MediusServerCreateGameResponse : BaseMGCLMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusMGCLMessageIds.ServerCreateGameResponse;
@@ -40,10 +42,11 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"Confirmation: {Confirmation} " +
-                $"WorldID: {MediusWorldID}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"Confirmation: {Confirmation} "
+                + $"WorldID: {MediusWorldID}";
         }
     }
 }

@@ -2,21 +2,19 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Locker
 {
-	[TdfStruct]
-	public struct SubContentInfo
-	{
+    [TdfStruct]
+    public struct SubContentInfo
+    {
+        [TdfMember("GURL")]
+        public string mGetURL;
 
-		[TdfMember("GURL")]
-		public string mGetURL;
+        [TdfMember("STTS")]
+        public Status mStatus;
 
-		[TdfMember("STTS")]
-		public Status mStatus;
+        [TdfMember("UURL")]
+        public string mUploadURL;
 
-		[TdfMember("UURL")]
-		public string mUploadURL;
-
-		[TdfMember("XID")]
-		public string mXrefId;
-
-	}
+        [TdfMember("XID")]
+        public string mXrefId;
+    }
 }

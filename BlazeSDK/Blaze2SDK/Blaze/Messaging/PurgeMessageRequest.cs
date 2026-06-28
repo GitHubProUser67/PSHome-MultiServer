@@ -5,7 +5,6 @@ namespace Blaze2SDK.Blaze.Messaging
     [TdfStruct]
     public struct PurgeMessageRequest
     {
-
         [TdfMember("FLAG")]
         public MatchFlags mFlags;
 
@@ -23,6 +22,5 @@ namespace Blaze2SDK.Blaze.Messaging
 
         [TdfMember("TYPE")]
         public uint mType;
-
     }
 }

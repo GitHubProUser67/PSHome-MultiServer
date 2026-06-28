@@ -1,18 +1,24 @@
-using CustomLogger;
-using DotNetty.Common.Internal.Logging;
-using Horizon.LIBRARY.Database.Models;
-using MultiServerLibrary.Extension;
-using Org.BouncyCastle.Asn1.Ocsp;
-using SVO;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
+using CustomLogger;
+using MultiServerLibrary.Extension;
 
 namespace SVO.Games.PS3
 {
-    public class RFOM
+    public partial class RFOM
     {
+        private static readonly string[] separator = new[]
+        {
+            "&endStatus=1",
+            "&endStatus=2",
+            "&endStatus=3",
+            "&endStatus=4",
+            "&endStatus=5",
+            "&endStatus=6",
+            "&endStatus=7",
+        };
 
         public static async Task RFOM_SVO(HttpListenerContext context)
         {
@@ -23,40 +29,45 @@ namespace SVO.Games.PS3
                     switch (context.Request.Url.AbsolutePath)
                     {
                         case "/RESISTANCE_SVML/index.jsp":
+                        {
+                            switch (context.Request.HttpMethod)
                             {
-                                switch (context.Request.HttpMethod)
-                                {
-                                    case "GET":
-                                        HttpListenerRequest req = context.Request;
-                                        HttpListenerResponse resp = context.Response;
-                                        resp.Headers.Set("Content-Type", "text/svml");
+                                case "GET":
+                                    var req = context.Request;
+                                    var resp = context.Response;
+                                    resp.Headers.Set("Content-Type", "text/svml");
 
-                                        string clientMac = req.Headers.Get("X-SVOMac");
-                                        string serverMac = CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
-                                        if (string.IsNullOrEmpty(serverMac))
+                                    var clientMac = req.Headers.Get("X-SVOMac");
+                                    var serverMac =
+                                        CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(
+                                            clientMac
+                                        );
+                                    if (string.IsNullOrEmpty(serverMac))
+                                    {
+                                        response.StatusCode = (int)HttpStatusCode.Forbidden;
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        if (!req.HasEntityBody)
                                         {
-                                            response.StatusCode = (int)HttpStatusCode.Forbidden;
+                                            response.StatusCode = (int)
+                                                System.Net.HttpStatusCode.Forbidden;
                                             return;
                                         }
-                                        else
-                                        {
-                                            if (!req.HasEntityBody)
-                                            {
-                                                response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
-                                                return;
-                                            }
 
-                                            resp.Headers.Set("X-SVOMac", serverMac);
+                                        resp.Headers.Set("X-SVOMac", serverMac);
 
-                                            string domain = "resistanceps3.svo.online.scea.com";
+                                        var domain = "resistanceps3.svo.online.scea.com";
 
-                                            if (!SVOServerConfiguration.PreferDNSUrls)
-                                                await InternetProtocolUtils.TryGetServerIP(out domain).ConfigureAwait(false);
+                                        if (!SVOServerConfiguration.PreferDNSUrls)
+                                            await InternetProtocolUtils
+                                                .TryGetServerIP(out domain)
+                                                .ConfigureAwait(false);
 
-                                            byte[] uriStore = null;
-                                            if (SVOServerConfiguration.SVOHTTPSBypass)
-                                            {
-                                                uriStore = Encoding.UTF8.GetBytes($@"<?xml version=""1.0"" encoding=""UTF-8""?>   
+                                        var uriStore = SVOServerConfiguration.SVOHTTPSBypass
+                                            ? Encoding.UTF8.GetBytes(
+                                                $@"<?xml version=""1.0"" encoding=""UTF-8""?>   
                                             <SVML>  
                                                 <SET name=""IP"" IPAddress=""127.0.0.1"" />       
                                                 <DATA dataType=""URI"" name=""entryURI"" value=""http://{domain}:10060/RESISTANCE_SVML/account/Account_Login.jsp"" />  
@@ -100,11 +111,10 @@ namespace SVO.Games.PS3
                                                 <DATA dataType=""DATA"" name=""SetUniversePasswordURI"" value=""http://{domain}:10060/RESISTANCE_SVML/account/SP_SetPassword_Submit.jsp"" />  
   
                                                 <BROWSER_INIT name=""init"" />  
-                                            </SVML>");
-                                            }
-                                            else
-                                            {
-                                                uriStore = Encoding.UTF8.GetBytes($@"<?xml version=""1.0"" encoding=""UTF-8""?>   
+                                            </SVML>"
+                                            )
+                                            : Encoding.UTF8.GetBytes(
+                                                $@"<?xml version=""1.0"" encoding=""UTF-8""?>   
                                                 <SVML>  
                                                     <SET name=""IP"" IPAddress=""127.0.0.1"" />       
                                                     <DATA dataType=""URI"" name=""entryURI"" value=""https://{domain}:10060/RESISTANCE_SVML/account/Account_Login.jsp"" />  
@@ -148,34 +158,40 @@ namespace SVO.Games.PS3
                                                     <DATA dataType=""DATA"" name=""SetUniversePasswordURI"" value=""https://{domain}:10060/RESISTANCE_SVML/account/SP_SetPassword_Submit.jsp"" />  
   
                                                     <BROWSER_INIT name=""init"" />  
-                                                </SVML>");
-                                            }
-
-                                            resp.OutputStream.Write(uriStore);
+                                                </SVML>"
+                                            );
+                                        resp.OutputStream.Write(uriStore);
 #if DEBUG
-                                            LoggerAccessor.LogInfo($"Start URIStore for Resistance: Fall of Man SENT!");
+                                        LoggerAccessor.LogInfo(
+                                            $"Start URIStore for Resistance: Fall of Man SENT!"
+                                        );
 #endif
-                                        }
-                                        break;
-                                }
-                                break;
+                                    }
+                                    break;
                             }
+                            break;
+                        }
 
                         #region TicketLogin
                         case "/RESISTANCE_SVML/account/SP_Login_Submit.jsp":
                             switch (context.Request.HttpMethod)
                             {
                                 case "POST":
-                                    HttpListenerRequest req = context.Request;
-                                    HttpListenerResponse resp = context.Response;
+                                    var req = context.Request;
+                                    var resp = context.Response;
 
-                                    string psnname = string.Empty;
+                                    var psnname = string.Empty;
 
                                     resp.Headers.Set("Content-Type", "text/svml;charset=UTF-8");
-                                    string clientMac = req.Headers.Get("X-SVOMac");
+                                    var clientMac = req.Headers.Get("X-SVOMac");
 
-                                    string sig = HttpUtility.ParseQueryString(req.Url.Query).Get("sig");
-                                    string serverMac = CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
+                                    var sig = HttpUtility
+                                        .ParseQueryString(req.Url.Query)
+                                        .Get("sig");
+                                    var serverMac =
+                                        CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(
+                                            clientMac
+                                        );
 
                                     resp.Headers.Set("X-SVOMac", serverMac);
                                     if (string.IsNullOrEmpty(serverMac))
@@ -187,86 +203,115 @@ namespace SVO.Games.PS3
                                     {
                                         if (!req.HasEntityBody)
                                         {
-                                            response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                            response.StatusCode = (int)
+                                                System.Net.HttpStatusCode.Forbidden;
                                             return;
                                         }
-                                        int appId = 20174;
-                                        string s = string.Empty;
+                                        var appId = 20174;
+                                        var s = string.Empty;
 
                                         // Get the data from the HTTP stream
-                                        using (StreamReader reader = new(req.InputStream, req.ContentEncoding))
+                                        using (
+                                            StreamReader reader = new(
+                                                req.InputStream,
+                                                req.ContentEncoding
+                                            )
+                                        )
                                         {
                                             // Convert the data to a string and display it on the console.
                                             s = reader.ReadToEnd();
                                             reader.Close();
                                         }
 
-                                        byte[] bytes = Encoding.ASCII.GetBytes(s);
-                                        int AcctNameLen = Convert.ToInt32(bytes.GetValue(81));
+                                        var bytes = Encoding.ASCII.GetBytes(s);
+                                        var AcctNameLen = Convert.ToInt32(bytes.GetValue(81));
 
-                                        string acctName = s.Substring(82, 32);
+                                        var acctName = s.Substring(82, 32);
 
-                                        string acctNameREX = Regex.Replace(acctName, @"[^a-zA-Z0-9]+", string.Empty);
+                                        var acctNameREX = MyRegex().Replace(acctName, string.Empty);
 
 #if DEBUG
-                                        LoggerAccessor.LogInfo($"Logging user {acctNameREX} into SVO...\n");
+                                        LoggerAccessor.LogInfo(
+                                            $"Logging user {acctNameREX} into SVO...\n"
+                                        );
 #endif
-                                        int accountId = -1;
-                                        string langId = string.Empty;
+                                        var accountId = -1;
+                                        var langId = string.Empty;
 
                                         try
                                         {
-                                            await SVOServerConfiguration.Database.GetAccountByName(acctNameREX, appId).ContinueWith((r) =>
-                                            {
-                                                //Found in database so keep.
-                                                langId = req.Url.Query.Substring(94, req.Url.Query.Length - 94);
-                                                if (r.Result != null)
-                                                    accountId = r.Result.AccountId;
-                                            });
+                                            await SVOServerConfiguration
+                                                .Database.GetAccountByName(acctNameREX, appId)
+                                                .ContinueWith(
+                                                    (r) =>
+                                                    {
+                                                        //Found in database so keep.
+                                                        langId = req.Url.Query.Substring(
+                                                            94,
+                                                            req.Url.Query.Length - 94
+                                                        );
+                                                        if (r.Result != null)
+                                                            accountId = r.Result.AccountId;
+                                                    }
+                                                )
+                                                .ConfigureAwait(false);
                                         }
                                         catch (Exception)
                                         {
-                                            langId = req.Url.Query.Substring(94, req.Url.Query.Length - 94);
+                                            langId = req.Url.Query.Substring(
+                                                94,
+                                                req.Url.Query.Length - 94
+                                            );
                                             accountId = 0;
                                         }
-                                    
 
-                                        int clanId = -1;
+                                        var clanId = -1;
 
                                         response.AppendHeader("Set-Cookie", $"AcctID=1");
                                         response.AppendHeader("Set-Cookie", $"NPCountry=us");
                                         response.AppendHeader("Set-Cookie", $"ClanID={clanId}");
-                                        response.AppendHeader("Set-Cookie", $"AuthKeyTime=03-11-2023 16:03:41");
+                                        response.AppendHeader(
+                                            "Set-Cookie",
+                                            $"AuthKeyTime=03-11-2023 16:03:41"
+                                        );
                                         response.AppendHeader("Set-Cookie", $"NPLang=1");
                                         response.AppendHeader("Set-Cookie", $"ModerateMode=false");
                                         response.AppendHeader("Set-Cookie", $"TimeZone=PST");
                                         response.AppendHeader("Set-Cookie", $"AssocID=-1");
-                                        response.AppendHeader("Set-Cookie", $"NPContentRating=201326592");
-                                        response.AppendHeader("Set-Cookie", $"AuthKey=nRqnf97f~UaSANLErurJIzq9GXGWqWCADdA3TfqUIVXXisJyMnHsQ34kA&C^0R#&~JULZ7xUOY*rXW85slhQF&P&Eq$7kSB&VBtf`V8rb^BC`53jGCgIT");
+                                        response.AppendHeader(
+                                            "Set-Cookie",
+                                            $"NPContentRating=201326592"
+                                        );
+                                        response.AppendHeader(
+                                            "Set-Cookie",
+                                            $"AuthKey=nRqnf97f~UaSANLErurJIzq9GXGWqWCADdA3TfqUIVXXisJyMnHsQ34kA&C^0R#&~JULZ7xUOY*rXW85slhQF&P&Eq$7kSB&VBtf`V8rb^BC`53jGCgIT"
+                                        );
                                         response.AppendHeader("Set-Cookie", $"AcctName={psnname}");
                                         response.AppendHeader("Set-Cookie", $"OwnerID=-255");
                                         response.AppendHeader("Set-Cookie", $"Sig={sig}==");
                                         response.AppendHeader("Set-Cookie", $"AppId={appId}");
 
-
                                         //resp.SetCookie(new Cookie("LangID", langId));
                                         //resp.SetCookie(new Cookie("AcctID", accountId.ToString()));
 
-                                        string sp_Login = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
-                                            "<SVML>\r\n" +
-                                            "    <SP_Login>\r\n" +
-                                            "        <status>\r\n" +
-                                            "            <id>20600</id>\r\n" +
-                                            "            <message>ACCT_LOGIN_SUCCESS</message>\r\n" +
-                                            "        </status>\r\n" +
-                                           $"        <accountID>1</accountID>\r\n" +
-                                            "        <userContext>0</userContext>\r\n" +
-                                            "    </SP_Login>\r\n\t\r\n" +
-                                            "</SVML>";
+                                        var sp_Login =
+                                            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"
+                                            + "<SVML>\r\n"
+                                            + "    <SP_Login>\r\n"
+                                            + "        <status>\r\n"
+                                            + "            <id>20600</id>\r\n"
+                                            + "            <message>ACCT_LOGIN_SUCCESS</message>\r\n"
+                                            + "        </status>\r\n"
+                                            + $"        <accountID>1</accountID>\r\n"
+                                            + "        <userContext>0</userContext>\r\n"
+                                            + "    </SP_Login>\r\n\t\r\n"
+                                            + "</SVML>";
 
                                         resp.OutputStream.Write(Encoding.ASCII.GetBytes(sp_Login));
 #if DEBUG
-                                        LoggerAccessor.LogInfo($"Player {psnname} successfully logged into SVO!\n");
+                                        LoggerAccessor.LogInfo(
+                                            $"Player {psnname} successfully logged into SVO!\n"
+                                        );
 #endif
                                     }
                                     break;
@@ -280,13 +325,15 @@ namespace SVO.Games.PS3
                             switch (context.Request.HttpMethod)
                             {
                                 case "GET":
-                                    HttpListenerRequest req = context.Request;
-                                    HttpListenerResponse resp = context.Response;
+                                    var req = context.Request;
+                                    var resp = context.Response;
                                     resp.Headers.Set("Content-Type", "text/svml;charset=UTF-8");
 
-
-                                    string clientMac = req.Headers.Get("X-SVOMac");
-                                    string serverMac = CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
+                                    var clientMac = req.Headers.Get("X-SVOMac");
+                                    var serverMac =
+                                        CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(
+                                            clientMac
+                                        );
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
                                         response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -296,7 +343,8 @@ namespace SVO.Games.PS3
                                     {
                                         if (!req.HasEntityBody)
                                         {
-                                            response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                            response.StatusCode = (int)
+                                                System.Net.HttpStatusCode.Forbidden;
                                             return;
                                         }
                                         resp.Headers.Set("X-SVOMac", serverMac);
@@ -304,26 +352,30 @@ namespace SVO.Games.PS3
                                         resp.Headers.Set("x-statuscode", "0");
                                         resp.StatusCode = 200;
 
-                                        string game_Create_Submit = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
-                                            "<SVML>\r\n" +
-                                            "    <Create_Game>\r\n" +
-                                            "       <GamePlayer>\r\n" +
-                                            "        <status>\r\n" +
-                                            "            <id>20422</id>\r\n" +
-                                            "            <message>GAME_CREATE_SUCCESS</message>\r\n" +
-                                            "        </status>\r\n" +
-                                            $"       <gameID>{HttpUtility.ParseQueryString(req.Url.Query).Get("scertGameID")}</gameID>\r\n" +
-                                            "       </GamePlayer>\r\n" +
-                                            "    </Create_Game>\r\n" +
-                                            "</SVML>";
+                                        var game_Create_Submit =
+                                            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"
+                                            + "<SVML>\r\n"
+                                            + "    <Create_Game>\r\n"
+                                            + "       <GamePlayer>\r\n"
+                                            + "        <status>\r\n"
+                                            + "            <id>20422</id>\r\n"
+                                            + "            <message>GAME_CREATE_SUCCESS</message>\r\n"
+                                            + "        </status>\r\n"
+                                            + $"       <gameID>{HttpUtility.ParseQueryString(req.Url.Query).Get("scertGameID")}</gameID>\r\n"
+                                            + "       </GamePlayer>\r\n"
+                                            + "    </Create_Game>\r\n"
+                                            + "</SVML>";
 
-                                        resp.OutputStream.Write(Encoding.ASCII.GetBytes(game_Create_Submit));
+                                        resp.OutputStream.Write(
+                                            Encoding.ASCII.GetBytes(game_Create_Submit)
+                                        );
 #if DEBUG
-                                        LoggerAccessor.LogInfo($"SVO Game created with SVOGameID {HttpUtility.ParseQueryString(req.Url.Query).Get("scertGameID")}");
+                                        LoggerAccessor.LogInfo(
+                                            $"SVO Game created with SVOGameID {HttpUtility.ParseQueryString(req.Url.Query).Get("scertGameID")}"
+                                        );
 #endif
                                     }
                                     break;
-
                             }
                             break;
 
@@ -331,13 +383,15 @@ namespace SVO.Games.PS3
                             switch (context.Request.HttpMethod)
                             {
                                 case "GET":
-                                    HttpListenerRequest req = context.Request;
-                                    HttpListenerResponse resp = context.Response;
+                                    var req = context.Request;
+                                    var resp = context.Response;
                                     resp.Headers.Set("Content-Type", "text/svml;charset=UTF-8");
 
-
-                                    string clientMac = req.Headers.Get("X-SVOMac");
-                                    string serverMac = CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
+                                    var clientMac = req.Headers.Get("X-SVOMac");
+                                    var serverMac =
+                                        CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(
+                                            clientMac
+                                        );
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
                                         response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -347,7 +401,8 @@ namespace SVO.Games.PS3
                                     {
                                         if (!req.HasEntityBody)
                                         {
-                                            response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                            response.StatusCode = (int)
+                                                System.Net.HttpStatusCode.Forbidden;
                                             return;
                                         }
 
@@ -356,7 +411,8 @@ namespace SVO.Games.PS3
                                         resp.Headers.Set("x-statuscode", "0");
                                         resp.StatusCode = 200;
 
-                                        string game_Create_Submit = @"<XML>
+                                        var game_Create_Submit =
+                                            @"<XML>
                                             <GamePlayer>
                                                 <status>
                                                     <id>20422</id>
@@ -365,11 +421,14 @@ namespace SVO.Games.PS3
                                             </GamePlayer>
                                         </XML>";
 
-                                        resp.OutputStream.Write(Encoding.ASCII.GetBytes(game_Create_Submit));
-                                        LoggerAccessor.LogInfo($"SVO Game Player created with SVOGameID {HttpUtility.ParseQueryString(req.Url.Query).Get("SVOGameID")} and playerside {HttpUtility.ParseQueryString(req.Url.Query).Get("playerSide")}");
+                                        resp.OutputStream.Write(
+                                            Encoding.ASCII.GetBytes(game_Create_Submit)
+                                        );
+                                        LoggerAccessor.LogInfo(
+                                            $"SVO Game Player created with SVOGameID {HttpUtility.ParseQueryString(req.Url.Query).Get("SVOGameID")} and playerside {HttpUtility.ParseQueryString(req.Url.Query).Get("playerSide")}"
+                                        );
                                     }
                                     break;
-
                             }
                             break;
 
@@ -377,37 +436,41 @@ namespace SVO.Games.PS3
                             switch (context.Request.HttpMethod)
                             {
                                 case "POST":
-                                    HttpListenerRequest req = context.Request;
-                                    HttpListenerResponse resp = context.Response;
+                                    var req = context.Request;
+                                    var resp = context.Response;
                                     resp.Headers.Set("Content-Type", "text/svml;charset=UTF-8");
 
-
-                                    string clientMac = req.Headers.Get("X-SVOMac");
-                                    string serverMac = CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
+                                    var clientMac = req.Headers.Get("X-SVOMac");
+                                    var serverMac =
+                                        CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(
+                                            clientMac
+                                        );
                                     if (serverMac == null)
                                     {
-                                        string forbidden = "500 Forbidden";
-                                        LoggerAccessor.LogWarn("Client connected abnormally... returning 500 Forbidden");
+                                        var forbidden = "500 Forbidden";
+                                        LoggerAccessor.LogWarn(
+                                            "Client connected abnormally... returning 500 Forbidden"
+                                        );
 
                                         resp.StatusCode = 500;
                                         resp.OutputStream.Write(Encoding.ASCII.GetBytes(forbidden));
                                     }
                                     else
                                     {
-
-                                        var formData = HttpUtility.ParseQueryString(req.QueryString.ToString());
+                                        var formData = HttpUtility.ParseQueryString(
+                                            req.QueryString.ToString()
+                                        );
 
                                         Console.WriteLine(formData.AllKeys.ToString());
 
                                         byte[] urlEncoded;
 
-                                        using (MemoryStream ms = new MemoryStream())
+                                        using (var ms = new MemoryStream())
                                         {
-                                            StreamWriter writer = new StreamWriter(ms);
-
+                                            var writer = new StreamWriter(ms);
 
                                             // Find number of bytes in stream.
-                                            int strLen = Convert.ToInt32(req.ContentLength64);
+                                            var strLen = Convert.ToInt32(req.ContentLength64);
                                             // Create a byte array.
                                             urlEncoded = new byte[strLen];
 
@@ -416,7 +479,9 @@ namespace SVO.Games.PS3
                                             //You have to rewind the MemoryStream before copying
                                             ms.Read(urlEncoded, 0, strLen);
 
-                                            Console.WriteLine($"Stats attempting to be uploaded: {urlEncoded}");
+                                            Console.WriteLine(
+                                                $"Stats attempting to be uploaded: {urlEncoded}"
+                                            );
 
                                             /*
                                             using (FileStream fs = new FileStream($"./BOURBON_XML/fileservices/{toUpload}", FileMode.OpenOrCreate))
@@ -428,19 +493,18 @@ namespace SVO.Games.PS3
                                             */
                                         }
 
-
                                         // Split the URL-encoded string based on "endStatus"
-                                        string[] parts = Encoding.UTF8.GetString(urlEncoded, 0, urlEncoded.Length).Split(new[] { "&endStatus=1", "&endStatus=2", "&endStatus=3", "&endStatus=4", "&endStatus=5", "&endStatus=6", "&endStatus=7", }, StringSplitOptions.None);
+                                        var parts = Encoding
+                                            .UTF8.GetString(urlEncoded, 0, urlEncoded.Length)
+                                            .Split(separator, StringSplitOptions.None);
 
                                         // Create a directory to store the binary blob files
-                                        string directoryPath = "wwwsvoroot/BOURBON_XML/stats/StatBlobs/";
+                                        var directoryPath =
+                                            "wwwsvoroot/BOURBON_XML/stats/StatBlobs/";
                                         Directory.CreateDirectory(directoryPath);
 
                                         // Initialize a list to store statistics for each part
-                                        List<Dictionary<string, string>> statisticsList = new List<Dictionary<string, string>>();
-
-
-
+                                        var statisticsList = new List<Dictionary<string, string>>();
 
                                         // Iterate through each part
                                         foreach (var part in parts)
@@ -452,8 +516,8 @@ namespace SVO.Games.PS3
                                             if (parsedData.AllKeys.Contains("AccountID"))
                                             {
                                                 // Extract the AccountID and statistics for the part
-                                                string accountId = parsedData["AccountID"];
-                                                Dictionary<string, string> statistics = new Dictionary<string, string>();
+                                                var accountId = parsedData["AccountID"];
+                                                var statistics = new Dictionary<string, string>();
 
                                                 // Iterate through all keys except "AccountID" to collect statistics
                                                 foreach (var key in parsedData.AllKeys)
@@ -469,8 +533,13 @@ namespace SVO.Games.PS3
                                                         case "type1":
                                                             {
                                                                 // Convert Base64 to bytes
-                                                                byte[] data = parsedData["data1"].IsBase64().Item2;
-                                                                string filePath = Path.Combine(directoryPath, $"svoStatsBlob-a{accountId}-{key}.bin");
+                                                                var data = parsedData["data1"]
+                                                                    .IsBase64()
+                                                                    .DecodedBytes;
+                                                                var filePath = Path.Combine(
+                                                                    directoryPath,
+                                                                    $"svoStatsBlob-a{accountId}-{key}.bin"
+                                                                );
                                                                 File.WriteAllBytes(filePath, data);
                                                             }
                                                             break;
@@ -478,16 +547,26 @@ namespace SVO.Games.PS3
                                                         case "type2":
                                                             {
                                                                 // Convert Base64 to bytes
-                                                                byte[] data = parsedData["data2"].IsBase64().Item2;
-                                                                string filePath = Path.Combine(directoryPath, $"svoStatsBlob-a{accountId}-{key}.bin");
+                                                                var data = parsedData["data2"]
+                                                                    .IsBase64()
+                                                                    .DecodedBytes;
+                                                                var filePath = Path.Combine(
+                                                                    directoryPath,
+                                                                    $"svoStatsBlob-a{accountId}-{key}.bin"
+                                                                );
                                                                 File.WriteAllBytes(filePath, data);
                                                             }
                                                             break;
                                                         case "type3":
                                                             {
                                                                 // Convert Base64 to bytes
-                                                                byte[] data = parsedData["data3"].IsBase64().Item2;
-                                                                string filePath = Path.Combine(directoryPath, $"svoStatsBlob-a{accountId}-{key}.bin");
+                                                                var data = parsedData["data3"]
+                                                                    .IsBase64()
+                                                                    .DecodedBytes;
+                                                                var filePath = Path.Combine(
+                                                                    directoryPath,
+                                                                    $"svoStatsBlob-a{accountId}-{key}.bin"
+                                                                );
 
                                                                 File.WriteAllBytes(filePath, data);
                                                             }
@@ -495,25 +574,39 @@ namespace SVO.Games.PS3
                                                         case "type4":
                                                             {
                                                                 // Convert Base64 to bytes
-                                                                byte[] data = parsedData["data4"].IsBase64().Item2;
-                                                                string filePath = Path.Combine(directoryPath, $"svoStatsBlob-a{accountId}-{key}.bin");
+                                                                var data = parsedData["data4"]
+                                                                    .IsBase64()
+                                                                    .DecodedBytes;
+                                                                var filePath = Path.Combine(
+                                                                    directoryPath,
+                                                                    $"svoStatsBlob-a{accountId}-{key}.bin"
+                                                                );
                                                                 File.WriteAllBytes(filePath, data);
                                                             }
                                                             break;
                                                         case "type5":
                                                             {
                                                                 // Convert Base64 to bytes
-                                                                byte[] data = parsedData["data5"].IsBase64().Item2;
-                                                                string filePath = Path.Combine(directoryPath, $"svoStatsBlob-a{accountId}-{key}.bin");
+                                                                var data = parsedData["data5"]
+                                                                    .IsBase64()
+                                                                    .DecodedBytes;
+                                                                var filePath = Path.Combine(
+                                                                    directoryPath,
+                                                                    $"svoStatsBlob-a{accountId}-{key}.bin"
+                                                                );
                                                                 File.WriteAllBytes(filePath, data);
                                                             }
                                                             break;
                                                         case "type6":
                                                             {
-
                                                                 // Convert Base64 to bytes
-                                                                byte[] data = parsedData["data6"].IsBase64().Item2;
-                                                                string filePath = Path.Combine(directoryPath, $"svoStatsBlob-a{accountId}-{key}.bin");
+                                                                var data = parsedData["data6"]
+                                                                    .IsBase64()
+                                                                    .DecodedBytes;
+                                                                var filePath = Path.Combine(
+                                                                    directoryPath,
+                                                                    $"svoStatsBlob-a{accountId}-{key}.bin"
+                                                                );
                                                                 File.WriteAllBytes(filePath, data);
                                                             }
                                                             break;
@@ -521,8 +614,13 @@ namespace SVO.Games.PS3
                                                         case "type7":
                                                             {
                                                                 // Convert Base64 to bytes
-                                                                byte[] data = parsedData["data7"].IsBase64().Item2;
-                                                                string filePath = Path.Combine(directoryPath, $"svoStatsBlob-a{accountId}-{key}.bin");
+                                                                var data = parsedData["data7"]
+                                                                    .IsBase64()
+                                                                    .DecodedBytes;
+                                                                var filePath = Path.Combine(
+                                                                    directoryPath,
+                                                                    $"svoStatsBlob-a{accountId}-{key}.bin"
+                                                                );
 
                                                                 File.WriteAllBytes(filePath, data);
                                                             }
@@ -530,62 +628,88 @@ namespace SVO.Games.PS3
                                                         // StarhawkWeaponsSummary
                                                         case "type8":
                                                             {
-
                                                                 // Convert Base64 to bytes
-                                                                byte[] data = parsedData["data8"].IsBase64().Item2;
-                                                                string filePath = Path.Combine(directoryPath, $"svoStatsBlob-a{accountId}-{key}.bin");
+                                                                var data = parsedData["data8"]
+                                                                    .IsBase64()
+                                                                    .DecodedBytes;
+                                                                var filePath = Path.Combine(
+                                                                    directoryPath,
+                                                                    $"svoStatsBlob-a{accountId}-{key}.bin"
+                                                                );
 
                                                                 File.WriteAllBytes(filePath, data);
                                                             }
                                                             break;
                                                         case "type9":
                                                             {
-
                                                                 // Convert Base64 to bytes
-                                                                byte[] data = parsedData["data9"].IsBase64().Item2;
-                                                                string filePath = Path.Combine(directoryPath, $"svoStatsBlob-a{accountId}-{key}.bin");
+                                                                var data = parsedData["data9"]
+                                                                    .IsBase64()
+                                                                    .DecodedBytes;
+                                                                var filePath = Path.Combine(
+                                                                    directoryPath,
+                                                                    $"svoStatsBlob-a{accountId}-{key}.bin"
+                                                                );
                                                                 File.WriteAllBytes(filePath, data);
                                                             }
                                                             break;
                                                         case "type100":
                                                             {
-
                                                                 // Convert Base64 to bytes
-                                                                byte[] data = parsedData["data100"].IsBase64().Item2;
-                                                                string filePath = Path.Combine(directoryPath, $"svoStatsBlob-a{accountId}-{key}.bin");
+                                                                var data = parsedData["data100"]
+                                                                    .IsBase64()
+                                                                    .DecodedBytes;
+                                                                var filePath = Path.Combine(
+                                                                    directoryPath,
+                                                                    $"svoStatsBlob-a{accountId}-{key}.bin"
+                                                                );
                                                                 File.WriteAllBytes(filePath, data);
                                                             }
                                                             break;
                                                         case "type102":
                                                             {
-
                                                                 // Convert Base64 to bytes
-                                                                byte[] data = parsedData["data102"].IsBase64().Item2;
-                                                                string filePath = Path.Combine(directoryPath, $"svoStatsBlob-a{accountId}-{key}.bin");
+                                                                var data = parsedData["data102"]
+                                                                    .IsBase64()
+                                                                    .DecodedBytes;
+                                                                var filePath = Path.Combine(
+                                                                    directoryPath,
+                                                                    $"svoStatsBlob-a{accountId}-{key}.bin"
+                                                                );
                                                                 File.WriteAllBytes(filePath, data);
                                                             }
                                                             break;
                                                         case "type300":
                                                             {
-
                                                                 // Convert Base64 to bytes
-                                                                byte[] data = parsedData["data300"].IsBase64().Item2;
-                                                                string filePath = Path.Combine(directoryPath, $"svoStatsBlob-a{accountId}-{key}.bin");
+                                                                var data = parsedData["data300"]
+                                                                    .IsBase64()
+                                                                    .DecodedBytes;
+                                                                var filePath = Path.Combine(
+                                                                    directoryPath,
+                                                                    $"svoStatsBlob-a{accountId}-{key}.bin"
+                                                                );
                                                                 File.WriteAllBytes(filePath, data);
                                                             }
                                                             break;
                                                         case "type500":
                                                             {
                                                                 // Convert Base64 to bytes
-                                                                byte[] data = parsedData["data500"].IsBase64().Item2;
-                                                                string filePath = Path.Combine(directoryPath, $"svoStatsBlob-a{accountId}-{key}.bin");
+                                                                var data = parsedData["data500"]
+                                                                    .IsBase64()
+                                                                    .DecodedBytes;
+                                                                var filePath = Path.Combine(
+                                                                    directoryPath,
+                                                                    $"svoStatsBlob-a{accountId}-{key}.bin"
+                                                                );
                                                                 File.WriteAllBytes(filePath, data);
                                                             }
                                                             break;
                                                         default:
                                                             {
-                                                                LoggerAccessor.LogWarn($"Unhandled Stat type! {key}");
-
+                                                                LoggerAccessor.LogWarn(
+                                                                    $"Unhandled Stat type! {key}"
+                                                                );
                                                             }
                                                             break;
                                                     }
@@ -599,32 +723,30 @@ namespace SVO.Games.PS3
 
                                         //resp.Headers.Set("X-SVOMac", serverMac);
 
-
                                         resp.Headers.Set("x-statuscode", "0");
                                         resp.StatusCode = 200;
 
-                                        string game_Create_Submit = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
-                                            "<SVML>\r\n" +
-                                            "    <Finish_Game>\r\n" +
-                                            "        <status>\r\n" +
-                                            "            <id>41010</id>\r\n" +
-                                            "            <message>GAME_FINISH_SUCCESS</message>\r\n" +
-                                            "        </status>\r\n" +
-                                            "    </Finish_Game>\r\n" +
-                                            "</SVML>";
+                                        var game_Create_Submit =
+                                            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"
+                                            + "<SVML>\r\n"
+                                            + "    <Finish_Game>\r\n"
+                                            + "        <status>\r\n"
+                                            + "            <id>41010</id>\r\n"
+                                            + "            <message>GAME_FINISH_SUCCESS</message>\r\n"
+                                            + "        </status>\r\n"
+                                            + "    </Finish_Game>\r\n"
+                                            + "</SVML>";
 
-
-                                        resp.OutputStream.Write(Encoding.ASCII.GetBytes(game_Create_Submit));
+                                        resp.OutputStream.Write(
+                                            Encoding.ASCII.GetBytes(game_Create_Submit)
+                                        );
                                     }
 
-
                                     break;
-
                             }
                             break;
 
-                            #endregion
-
+                        #endregion
                     }
                 }
                 catch (Exception ex)
@@ -634,6 +756,8 @@ namespace SVO.Games.PS3
                 }
             }
         }
-    }
 
+        [GeneratedRegex(@"[^a-zA-Z0-9]+")]
+        private static partial Regex MyRegex();
+    }
 }

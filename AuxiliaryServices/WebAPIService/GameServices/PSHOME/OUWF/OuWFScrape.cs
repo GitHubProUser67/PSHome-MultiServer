@@ -1,10 +1,7 @@
-using System.IO;
-using MultiServerLibrary.HTTP;
+using System.Xml;
 using CustomLogger;
 using HttpMultipartParser;
-using System.Xml;
-using System.Collections.Generic;
-using System;
+using MultiServerLibrary.HTTP;
 
 namespace WebAPIService.GameServices.PSHOME.OUWF
 {
@@ -12,21 +9,23 @@ namespace WebAPIService.GameServices.PSHOME.OUWF
     {
         public static string Scrape(byte[] PostData, string ContentType)
         {
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
-            using (MemoryStream ms = new MemoryStream(PostData))
+            using (var ms = new MemoryStream(PostData))
             {
                 var multipartData = MultipartFormDataParser.Parse(ms, boundary);
 
-                int instanceId = Convert.ToInt32(multipartData.GetParameterValue("instanceId"));
-                string vers = multipartData.GetParameterValue("version");
-                string path = multipartData.GetParameterValue("path");
-                string data = multipartData.GetParameterValue("data");
+                var instanceId = Convert.ToInt32(multipartData.GetParameterValue("instanceId"));
+                var vers = multipartData.GetParameterValue("version");
+                var path = multipartData.GetParameterValue("path");
+                var data = multipartData.GetParameterValue("data");
 
-                LoggerAccessor.LogInfo($"[OuWF] - Requested Execute with instanceId {instanceId} | version {vers} | path {path} | data {data}");
+                LoggerAccessor.LogInfo(
+                    $"[OuWF] - Requested Execute with instanceId {instanceId} | version {vers} | path {path} | data {data}"
+                );
 
-                List<string> matches = Scrape(path);
-                string xmlString = GenerateXml(matches);
+                var matches = Scrape(path);
+                var xmlString = GenerateXml(matches);
 
                 ms.Flush();
 
@@ -36,19 +35,19 @@ namespace WebAPIService.GameServices.PSHOME.OUWF
 
         static List<string> Scrape(string mdlFilePath)
         {
-            List<string> matches = new List<string>();
+            List<string> matches = [];
             ScrapeRecursive(Path.GetDirectoryName(mdlFilePath), matches);
             return matches;
         }
 
         static void ScrapeRecursive(string directory, List<string> matches)
         {
-            foreach (string filePath in Directory.GetFiles(directory, "*.dds"))
+            foreach (var filePath in Directory.GetFiles(directory, "*.dds"))
             {
                 matches.Add(filePath);
             }
 
-            foreach (string subdirectory in Directory.GetDirectories(directory))
+            foreach (var subdirectory in Directory.GetDirectories(directory))
             {
                 ScrapeRecursive(subdirectory, matches);
             }
@@ -56,24 +55,23 @@ namespace WebAPIService.GameServices.PSHOME.OUWF
 
         static string GenerateXml(List<string> matches)
         {
-            XmlDocument xmlDoc = new XmlDocument();
-            XmlElement rootElement = xmlDoc.CreateElement("scrape");
+            var xmlDoc = new XmlDocument();
+            var rootElement = xmlDoc.CreateElement("scrape");
 
-            foreach (string match in matches)
+            foreach (var match in matches)
             {
-                XmlElement matchElement = xmlDoc.CreateElement("match");
+                var matchElement = xmlDoc.CreateElement("match");
                 matchElement.InnerText = match;
                 rootElement.AppendChild(matchElement);
             }
 
             xmlDoc.AppendChild(rootElement);
 
-            StringWriter stringWriter = new StringWriter();
-            XmlTextWriter xmlTextWriter = new XmlTextWriter(stringWriter);
+            var stringWriter = new StringWriter();
+            var xmlTextWriter = new XmlTextWriter(stringWriter);
             xmlDoc.WriteTo(xmlTextWriter);
 
             return stringWriter.ToString();
         }
-
     }
 }

@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -19,6 +17,7 @@ namespace NetCoreServer
         {
             Clear();
         }
+
         /// <summary>
         /// Initialize a new HTTP request with a given method, URL and protocol
         /// </summary>
@@ -33,7 +32,11 @@ namespace NetCoreServer
         /// <summary>
         /// Is the HTTP request empty?
         /// </summary>
-        public bool IsEmpty { get { return _cache.Size == 0; } }
+        public bool IsEmpty
+        {
+            get { return _cache.Size == 0; }
+        }
+
         /// <summary>
         /// Is the HTTP request error flag set?
         /// </summary>
@@ -42,19 +45,35 @@ namespace NetCoreServer
         /// <summary>
         /// Get the HTTP request method
         /// </summary>
-        public string Method { get { return _method; } }
+        public string Method
+        {
+            get { return _method; }
+        }
+
         /// <summary>
         /// Get the HTTP request URL
         /// </summary>
-        public string Url { get { return _url; } }
+        public string Url
+        {
+            get { return _url; }
+        }
+
         /// <summary>
         /// Get the HTTP request protocol version
         /// </summary>
-        public string Protocol { get { return _protocol; } }
+        public string Protocol
+        {
+            get { return _protocol; }
+        }
+
         /// <summary>
         /// Get the HTTP request headers count
         /// </summary>
-        public long Headers { get { return _headers.Count; } }
+        public long Headers
+        {
+            get { return _headers.Count; }
+        }
+
         /// <summary>
         /// Get the HTTP request header by index
         /// </summary>
@@ -63,15 +82,17 @@ namespace NetCoreServer
 #if DEBUG
             Debug.Assert(i < _headers.Count, "Index out of bounds!");
 #endif
-            if (i >= _headers.Count)
-                return (string.Empty, string.Empty);
-
-            return _headers[i];
+            return i >= _headers.Count ? (string.Empty, string.Empty) : _headers[i];
         }
+
         /// <summary>
         /// Get the HTTP request cookies count
         /// </summary>
-        public long Cookies { get { return _cookies.Count; } }
+        public long Cookies
+        {
+            get { return _cookies.Count; }
+        }
+
         /// <summary>
         /// Get the HTTP request cookie by index
         /// </summary>
@@ -80,53 +101,66 @@ namespace NetCoreServer
 #if DEBUG
             Debug.Assert(i < _cookies.Count, "Index out of bounds!");
 #endif
-            if (i >= _cookies.Count)
-                return (string.Empty, string.Empty);
-
-            return _cookies[i];
+            return i >= _cookies.Count ? (string.Empty, string.Empty) : _cookies[i];
         }
+
         /// <summary>
         /// Get the HTTP request body as string
         /// </summary>
 #if true // Serve as a HTTP json debugging.
         [JsonIgnore]
 #endif
-        public string Body { get { return _cache.ExtractString(_bodyIndex, _bodySize); } }
+        public string Body
+        {
+            get { return _cache.ExtractString(_bodyIndex, _bodySize); }
+        }
 
         /// <summary>
         /// Get the HTTP request body as byte array
         /// </summary>
         [JsonIgnore]
-        public byte[] BodyBytes { get { return _cache.Data[_bodyIndex..(_bodyIndex + _bodySize)]; } }
+        public byte[] BodyBytes
+        {
+            get { return _cache.Data[_bodyIndex..(_bodyIndex + _bodySize)]; }
+        }
 
         /// <summary>
         /// Get the HTTP request body as byte span
         /// </summary>
         [JsonIgnore]
-        public Span<byte> BodySpan { get { return new Span<byte>(_cache.Data, _bodyIndex, _bodySize); } }
+        public Span<byte> BodySpan
+        {
+            get { return new Span<byte>(_cache.Data, _bodyIndex, _bodySize); }
+        }
 
         /// <summary>
         /// Get the HTTP request body length
         /// </summary>
-        public long BodyLength { get { return _bodyLength; } }
+        public long BodyLength
+        {
+            get { return _bodyLength; }
+        }
 
         /// <summary>
         /// Get the HTTP request cache content
         /// </summary>
         [JsonIgnore]
-        public Buffer Cache { get { return _cache; } }
+        public Buffer Cache
+        {
+            get { return _cache; }
+        }
 
         /// <summary>
         /// Get string from the current HTTP request
         /// </summary>
         public override string ToString()
         {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             sb.AppendLine($"Request method: {Method}");
             sb.AppendLine($"Request URL: {Url}");
             sb.AppendLine($"Request protocol: {Protocol}");
             sb.AppendLine($"Request headers: {Headers}");
-            for (int i = 0; i < Headers; i++)
+            for (var i = 0; i < Headers; i++)
             {
                 var header = Header(i);
                 sb.AppendLine($"{header.Item1} : {header.Item2}");
@@ -217,8 +251,8 @@ namespace NetCoreServer
         /// <param name="value">Cookie value</param>
         public HttpRequest SetCookie(string name, string value)
         {
-            string key = "Cookie";
-            string cookie = name + "=" + value;
+            var key = "Cookie";
+            var cookie = name + "=" + value;
 
             // Append the HTTP request header's key
             _cache.Append(key);
@@ -267,14 +301,14 @@ namespace NetCoreServer
         /// <param name="body">Body string content as a span of characters</param>
         public HttpRequest SetBody(ReadOnlySpan<char> body)
         {
-            int length = body.IsEmpty ? 0 : Encoding.UTF8.GetByteCount(body);
+            var length = body.IsEmpty ? 0 : Encoding.UTF8.GetByteCount(body);
 
             // Append content length header
             SetHeader("Content-Length", length.ToString());
 
             _cache.Append("\r\n");
 
-            int index = (int)_cache.Size;
+            var index = (int)_cache.Size;
 
             // Append the HTTP request body
             _cache.Append(body);
@@ -302,7 +336,7 @@ namespace NetCoreServer
 
             _cache.Append("\r\n");
 
-            int index = (int)_cache.Size;
+            var index = (int)_cache.Size;
 
             // Append the HTTP request body
             _cache.Append(body);
@@ -324,7 +358,7 @@ namespace NetCoreServer
 
             _cache.Append("\r\n");
 
-            int index = (int)_cache.Size;
+            var index = (int)_cache.Size;
 
             // Clear the HTTP request body
             _bodyIndex = index;
@@ -364,7 +398,11 @@ namespace NetCoreServer
         /// <param name="url">URL to request</param>
         /// <param name="content">String content</param>
         /// <param name="contentType">Content type (default is "text/plain; charset=UTF-8")</param>
-        public HttpRequest MakePostRequest(string url, string content, string contentType = "text/plain; charset=UTF-8") => MakePostRequest(url, content.AsSpan(), contentType);
+        public HttpRequest MakePostRequest(
+            string url,
+            string content,
+            string contentType = "text/plain; charset=UTF-8"
+        ) => MakePostRequest(url, content.AsSpan(), contentType);
 
         /// <summary>
         /// Make POST request
@@ -372,7 +410,11 @@ namespace NetCoreServer
         /// <param name="url">URL to request</param>
         /// <param name="content">String content as a span of characters</param>
         /// <param name="contentType">Content type (default is "text/plain; charset=UTF-8")</param>
-        public HttpRequest MakePostRequest(string url, ReadOnlySpan<char> content, string contentType = "text/plain; charset=UTF-8")
+        public HttpRequest MakePostRequest(
+            string url,
+            ReadOnlySpan<char> content,
+            string contentType = "text/plain; charset=UTF-8"
+        )
         {
             Clear();
             SetBegin("POST", url);
@@ -388,7 +430,8 @@ namespace NetCoreServer
         /// <param name="url">URL to request</param>
         /// <param name="content">Binary content</param>
         /// <param name="contentType">Content type (default is "")</param>
-        public HttpRequest MakePostRequest(string url, byte[] content, string contentType = "") => MakePostRequest(url, content.AsSpan(), contentType);
+        public HttpRequest MakePostRequest(string url, byte[] content, string contentType = "") =>
+            MakePostRequest(url, content.AsSpan(), contentType);
 
         /// <summary>
         /// Make POST request
@@ -396,7 +439,11 @@ namespace NetCoreServer
         /// <param name="url">URL to request</param>
         /// <param name="content">Binary content as a span of bytes</param>
         /// <param name="contentType">Content type (default is "")</param>
-        public HttpRequest MakePostRequest(string url, ReadOnlySpan<byte> content, string contentType = "")
+        public HttpRequest MakePostRequest(
+            string url,
+            ReadOnlySpan<byte> content,
+            string contentType = ""
+        )
         {
             Clear();
             SetBegin("POST", url);
@@ -412,7 +459,11 @@ namespace NetCoreServer
         /// <param name="url">URL to request</param>
         /// <param name="content">String content</param>
         /// <param name="contentType">Content type (default is "text/plain; charset=UTF-8")</param>
-        public HttpRequest MakePutRequest(string url, string content, string contentType = "text/plain; charset=UTF-8") => MakePutRequest(url, content.AsSpan(), contentType);
+        public HttpRequest MakePutRequest(
+            string url,
+            string content,
+            string contentType = "text/plain; charset=UTF-8"
+        ) => MakePutRequest(url, content.AsSpan(), contentType);
 
         /// <summary>
         /// Make PUT request
@@ -420,7 +471,11 @@ namespace NetCoreServer
         /// <param name="url">URL to request</param>
         /// <param name="content">String content as a span of characters</param>
         /// <param name="contentType">Content type (default is "text/plain; charset=UTF-8")</param>
-        public HttpRequest MakePutRequest(string url, ReadOnlySpan<char> content, string contentType = "text/plain; charset=UTF-8")
+        public HttpRequest MakePutRequest(
+            string url,
+            ReadOnlySpan<char> content,
+            string contentType = "text/plain; charset=UTF-8"
+        )
         {
             Clear();
             SetBegin("PUT", url);
@@ -436,7 +491,8 @@ namespace NetCoreServer
         /// <param name="url">URL to request</param>
         /// <param name="content">Binary content</param>
         /// <param name="contentType">Content type (default is "")</param>
-        public HttpRequest MakePutRequest(string url, byte[] content, string contentType = "") => MakePutRequest(url, content.AsSpan(), contentType);
+        public HttpRequest MakePutRequest(string url, byte[] content, string contentType = "") =>
+            MakePutRequest(url, content.AsSpan(), contentType);
 
         /// <summary>
         /// Make PUT request
@@ -444,7 +500,11 @@ namespace NetCoreServer
         /// <param name="url">URL to request</param>
         /// <param name="content">Binary content as a span of bytes</param>
         /// <param name="contentType">Content type (default is "")</param>
-        public HttpRequest MakePutRequest(string url, ReadOnlySpan<byte> content, string contentType = "")
+        public HttpRequest MakePutRequest(
+            string url,
+            ReadOnlySpan<byte> content,
+            string contentType = ""
+        )
         {
             Clear();
             SetBegin("PUT", url);
@@ -492,14 +552,19 @@ namespace NetCoreServer
 
         // HTTP request method
         private string _method;
+
         // HTTP request URL
         private string _url;
+
         // HTTP request protocol
         private string _protocol;
+
         // HTTP request headers
-        private readonly List<(string, string)> _headers = new List<(string, string)>();
+        private readonly List<(string, string)> _headers = [];
+
         // HTTP request cookies
-        private readonly List<(string, string)> _cookies = new List<(string, string)>();
+        private readonly List<(string, string)> _cookies = [];
+
         // HTTP request body
         private int _bodyIndex;
         private int _bodySize;
@@ -507,7 +572,7 @@ namespace NetCoreServer
         private bool _bodyLengthProvided;
 
         // HTTP request cache
-        private readonly Buffer _cache = new Buffer();
+        private readonly Buffer _cache = new();
         private int _cacheSize;
 
         // Is pending parts of HTTP request
@@ -515,6 +580,7 @@ namespace NetCoreServer
         {
             return !IsErrorSet && (_bodyIndex == 0);
         }
+
         internal bool IsPendingBody()
         {
             return !IsErrorSet && (_bodyIndex > 0) && (_bodySize > 0);
@@ -526,23 +592,28 @@ namespace NetCoreServer
             _cache.Append(buffer, offset, size);
 
             // Try to seek for HTTP header separator
-            for (int i = _cacheSize; i < (int)_cache.Size; i++)
+            for (var i = _cacheSize; i < (int)_cache.Size; i++)
             {
                 // Check for the request cache out of bounds
                 if ((i + 3) >= (int)_cache.Size)
                     break;
 
                 // Check for the header separator
-                if ((_cache[i + 0] == '\r') && (_cache[i + 1] == '\n') && (_cache[i + 2] == '\r') && (_cache[i + 3] == '\n'))
+                if (
+                    (_cache[i + 0] == '\r')
+                    && (_cache[i + 1] == '\n')
+                    && (_cache[i + 2] == '\r')
+                    && (_cache[i + 3] == '\n')
+                )
                 {
-                    int index = 0;
+                    var index = 0;
 
                     // Set the error flag for a while...
                     IsErrorSet = true;
 
                     // Parse method
-                    int methodIndex = index;
-                    int methodSize = 0;
+                    var methodIndex = index;
+                    var methodSize = 0;
                     while (_cache[index] != ' ')
                     {
                         methodSize++;
@@ -556,8 +627,8 @@ namespace NetCoreServer
                     _method = _cache.ExtractString(methodIndex, methodSize);
 
                     // Parse URL
-                    int urlIndex = index;
-                    int urlSize = 0;
+                    var urlIndex = index;
+                    var urlSize = 0;
                     while (_cache[index] != ' ')
                     {
                         urlSize++;
@@ -571,8 +642,8 @@ namespace NetCoreServer
                     _url = _cache.ExtractString(urlIndex, urlSize);
 
                     // Parse protocol version
-                    int protocolIndex = index;
-                    int protocolSize = 0;
+                    var protocolIndex = index;
+                    var protocolSize = 0;
                     while (_cache[index] != '\r')
                     {
                         protocolSize++;
@@ -592,8 +663,8 @@ namespace NetCoreServer
                     while ((index < (int)_cache.Size) && (index < i))
                     {
                         // Parse header name
-                        int headerNameIndex = index;
-                        int headerNameSize = 0;
+                        var headerNameIndex = index;
+                        var headerNameSize = 0;
                         while (_cache[index] != ':')
                         {
                             headerNameSize++;
@@ -620,8 +691,8 @@ namespace NetCoreServer
                         }
 
                         // Parse header value
-                        int headerValueIndex = index;
-                        int headerValueSize = 0;
+                        var headerValueIndex = index;
+                        var headerValueSize = 0;
                         while (_cache[index] != '\r')
                         {
                             headerValueSize++;
@@ -643,14 +714,26 @@ namespace NetCoreServer
                             return false;
 
                         // Add a new header
-                        string headerName = _cache.ExtractString(headerNameIndex, headerNameSize);
-                        _headers.Add((headerName, _cache.ExtractString(headerValueIndex, headerValueSize)));
+                        var headerName = _cache.ExtractString(headerNameIndex, headerNameSize);
+                        _headers.Add(
+                            (headerName, _cache.ExtractString(headerValueIndex, headerValueSize))
+                        );
 
                         // Try to find the body content length
-                        if (string.Compare(headerName, "Content-Length", StringComparison.OrdinalIgnoreCase) == 0)
+                        if (
+                            string.Compare(
+                                headerName,
+                                "Content-Length",
+                                StringComparison.OrdinalIgnoreCase
+                            ) == 0
+                        )
                         {
                             _bodyLength = 0;
-                            for (int j = headerValueIndex; j < (headerValueIndex + headerValueSize); j++)
+                            for (
+                                var j = headerValueIndex;
+                                j < (headerValueIndex + headerValueSize);
+                                j++
+                            )
                             {
                                 if ((_cache[j] < '0') || (_cache[j] > '9'))
                                     return false;
@@ -661,16 +744,23 @@ namespace NetCoreServer
                         }
 
                         // Try to find Cookies
-                        if (string.Compare(headerName, "Cookie", StringComparison.OrdinalIgnoreCase) == 0)
+                        if (
+                            string.Compare(headerName, "Cookie", StringComparison.OrdinalIgnoreCase)
+                            == 0
+                        )
                         {
-                            bool name = true;
-                            bool token = false;
-                            int current = headerValueIndex;
-                            int nameIndex = index;
-                            int nameSize = 0;
-                            int cookieIndex = index;
-                            int cookieSize = 0;
-                            for (int j = headerValueIndex; j < (headerValueIndex + headerValueSize); j++)
+                            var name = true;
+                            var token = false;
+                            var current = headerValueIndex;
+                            var nameIndex = index;
+                            var nameSize = 0;
+                            var cookieIndex = index;
+                            var cookieSize = 0;
+                            for (
+                                var j = headerValueIndex;
+                                j < (headerValueIndex + headerValueSize);
+                                j++
+                            )
                             {
                                 if (_cache[j] == ' ')
                                 {
@@ -728,7 +818,12 @@ namespace NetCoreServer
                                         if ((nameSize > 0) && (cookieSize > 0))
                                         {
                                             // Add the cookie to the corresponding collection
-                                            _cookies.Add((_cache.ExtractString(nameIndex, nameSize), _cache.ExtractString(cookieIndex, cookieSize)));
+                                            _cookies.Add(
+                                                (
+                                                    _cache.ExtractString(nameIndex, nameSize),
+                                                    _cache.ExtractString(cookieIndex, cookieSize)
+                                                )
+                                            );
 
                                             // Resset the current cookie values
                                             nameIndex = j;
@@ -766,7 +861,12 @@ namespace NetCoreServer
                                 if ((nameSize > 0) && (cookieSize > 0))
                                 {
                                     // Add the cookie to the corresponding collection
-                                    _cookies.Add((_cache.ExtractString(nameIndex, nameSize), _cache.ExtractString(cookieIndex, cookieSize)));
+                                    _cookies.Add(
+                                        (
+                                            _cache.ExtractString(nameIndex, nameSize),
+                                            _cache.ExtractString(cookieIndex, cookieSize)
+                                        )
+                                    );
                                 }
                             }
                         }
@@ -816,7 +916,13 @@ namespace NetCoreServer
             else
             {
                 // HEAD/GET/DELETE/OPTIONS/TRACE request might have no body
-                if ((Method == "HEAD") || (Method == "GET") || (Method == "DELETE") || (Method == "OPTIONS") || (Method == "TRACE"))
+                if (
+                    (Method == "HEAD")
+                    || (Method == "GET")
+                    || (Method == "DELETE")
+                    || (Method == "OPTIONS")
+                    || (Method == "TRACE")
+                )
                 {
                     _bodyLength = 0;
                     _bodySize = 0;
@@ -826,10 +932,15 @@ namespace NetCoreServer
                 // Check the body content to find the request body end
                 if (_bodySize >= 4)
                 {
-                    int index = _bodyIndex + _bodySize - 4;
+                    var index = _bodyIndex + _bodySize - 4;
 
                     // Was the body fully received?
-                    if ((_cache[index + 0] == '\r') && (_cache[index + 1] == '\n') && (_cache[index + 2] == '\r') && (_cache[index + 3] == '\n'))
+                    if (
+                        (_cache[index + 0] == '\r')
+                        && (_cache[index + 1] == '\n')
+                        && (_cache[index + 2] == '\r')
+                        && (_cache[index + 3] == '\n')
+                    )
                     {
                         _bodyLength = _bodySize;
                         return true;

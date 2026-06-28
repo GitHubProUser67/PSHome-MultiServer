@@ -1,7 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using ApacheNet.Models;
+﻿using ApacheNet.Models;
 using CustomLogger;
 
 namespace ApacheNet
@@ -10,22 +7,22 @@ namespace ApacheNet
     {
         public static async Task<bool> ProcessPlugin(ApacheContext ctx)
         {
-            bool sent = false;
+            var sent = false;
 
-            if (ApacheNetServerConfiguration.plugins.Any())
+            if (!ApacheNetServerConfiguration.plugins.IsEmpty)
             {
-                foreach (PluginManager.HTTPPlugin plugin in ApacheNetServerConfiguration.plugins.Values)
+                foreach (var plugin in ApacheNetServerConfiguration.plugins.Values)
                 {
                     try
                     {
-                        object? objReturn = plugin.ProcessPluginMessage(ctx);
+                        var objReturn = plugin.ProcessPluginMessage(ctx);
                         if (objReturn != null)
                         {
                             if (objReturn is bool v)
                                 sent = v;
                             else if (objReturn is Task<object?> t)
                             {
-                                object? taskResult = await t.ConfigureAwait(false);
+                                var taskResult = await t.ConfigureAwait(false);
                                 if (taskResult != null && taskResult is bool v0)
                                     sent = v0;
                             }
@@ -40,7 +37,7 @@ namespace ApacheNet
                                     sent = v;
                                 else if (objReturn is Task<object?> t)
                                 {
-                                    object? taskResult = await t.ConfigureAwait(false);
+                                    var taskResult = await t.ConfigureAwait(false);
                                     if (taskResult != null && taskResult is bool v0)
                                         sent = v0;
                                 }
@@ -51,7 +48,9 @@ namespace ApacheNet
                     }
                     catch (Exception ex)
                     {
-                        LoggerAccessor.LogError($"[{(ctx.Secure ? "HTTPS" : "HTTP")}] - Plugin {plugin.GetHashCode()} thrown an assertion: {ex}");
+                        LoggerAccessor.LogError(
+                            $"[{(ctx.Secure ? "HTTPS" : "HTTP")}] - Plugin {plugin.GetHashCode()} thrown an assertion: {ex}"
+                        );
                     }
                 }
             }

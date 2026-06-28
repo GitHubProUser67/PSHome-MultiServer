@@ -1,5 +1,3 @@
-using System;
-using System.IO;
 using System.Net;
 
 namespace NetCoreServer
@@ -16,26 +14,45 @@ namespace NetCoreServer
         /// <param name="context">SSL context</param>
         /// <param name="address">IP address</param>
         /// <param name="port">Port number</param>
-        public HttpsServer(SslContext context, IPAddress address, int port) : base(context, address, port) { Cache = new FileCache(); }
+        public HttpsServer(SslContext context, IPAddress address, int port)
+            : base(context, address, port)
+        {
+            Cache = new FileCache();
+        }
+
         /// <summary>
         /// Initialize HTTPS server with a given IP address and port number
         /// </summary>
         /// <param name="context">SSL context</param>
         /// <param name="address">IP address</param>
         /// <param name="port">Port number</param>
-        public HttpsServer(SslContext context, string address, int port) : base(context, address, port) { Cache = new FileCache(); }
+        public HttpsServer(SslContext context, string address, int port)
+            : base(context, address, port)
+        {
+            Cache = new FileCache();
+        }
+
         /// <summary>
         /// Initialize HTTPS server with a given DNS endpoint
         /// </summary>
         /// <param name="context">SSL context</param>
         /// <param name="endpoint">DNS endpoint</param>
-        public HttpsServer(SslContext context, DnsEndPoint endpoint) : base(context, endpoint) { Cache = new FileCache(); }
+        public HttpsServer(SslContext context, DnsEndPoint endpoint)
+            : base(context, endpoint)
+        {
+            Cache = new FileCache();
+        }
+
         /// <summary>
         /// Initialize HTTPS server with a given IP endpoint
         /// </summary>
         /// <param name="context">SSL context</param>
         /// <param name="endpoint">IP endpoint</param>
-        public HttpsServer(SslContext context, IPEndPoint endpoint) : base(context, endpoint) { Cache = new FileCache(); }
+        public HttpsServer(SslContext context, IPEndPoint endpoint)
+            : base(context, endpoint)
+        {
+            Cache = new FileCache();
+        }
 
         /// <summary>
         /// Get the static content cache
@@ -49,11 +66,16 @@ namespace NetCoreServer
         /// <param name="prefix">Cache prefix (default is "/")</param>
         /// <param name="filter">Cache filter (default is "*.*")</param>
         /// <param name="timeout">Refresh cache timeout (default is 1 hour)</param>
-        public void AddStaticContent(string path, string prefix = "/", string filter = "*.*", TimeSpan? timeout = null)
+        public void AddStaticContent(
+            string path,
+            string prefix = "/",
+            string filter = "*.*",
+            TimeSpan? timeout = null
+        )
         {
             timeout ??= TimeSpan.FromHours(1);
 
-            bool Handler(FileCache cache, string key, byte[] value, TimeSpan timespan)
+            static bool Handler(FileCache cache, string key, byte[] value, TimeSpan timespan)
             {
                 var response = new HttpResponse();
                 response.SetBegin((int)HttpStatusCode.OK);
@@ -65,17 +87,28 @@ namespace NetCoreServer
 
             Cache.InsertPath(path, prefix, filter, timeout.Value, Handler);
         }
+
         /// <summary>
         /// Remove static content cache
         /// </summary>
         /// <param name="path">Static content path</param>
-        public void RemoveStaticContent(string path) { Cache.RemovePath(path); }
+        public void RemoveStaticContent(string path)
+        {
+            Cache.RemovePath(path);
+        }
+
         /// <summary>
         /// Clear static content cache
         /// </summary>
-        public void ClearStaticContent() { Cache.Clear(); }
+        public void ClearStaticContent()
+        {
+            Cache.Clear();
+        }
 
-        protected override SslSession CreateSession() { return new HttpsSession(this); }
+        protected override SslSession CreateSession()
+        {
+            return new HttpsSession(this);
+        }
 
         #region IDisposable implementation
 

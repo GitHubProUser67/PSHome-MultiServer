@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Mail
 {
-	[TdfStruct]
-	public struct SetMailOptInFlagsRequest
-	{
+    [TdfStruct]
+    public struct SetMailOptInFlagsRequest
+    {
+        [TdfMember("OPTF")]
+        public EmailOptInFlags mEmailOptInFlags;
 
-		[TdfMember("OPTF")]
-		public EmailOptInFlags mEmailOptInFlags;
-
-		[TdfMember("UID")]
-		public long mUserId;
-
-	}
+        [TdfMember("UID")]
+        public long mUserId;
+    }
 }

@@ -5,7 +5,10 @@
 /// * Any difference in static labels (keys or values) means it is a different collector.
 /// * Any difference in the names of instance labels means it is a different collector.
 /// </summary>
-internal readonly struct CollectorIdentity(StringSequence instanceLabelNames, LabelSequence staticLabels) : IEquatable<CollectorIdentity>
+internal readonly struct CollectorIdentity(
+    StringSequence instanceLabelNames,
+    LabelSequence staticLabels
+) : IEquatable<CollectorIdentity>
 {
     public readonly StringSequence InstanceLabelNames = instanceLabelNames;
     public readonly LabelSequence StaticLabels = staticLabels;
@@ -17,16 +20,9 @@ internal readonly struct CollectorIdentity(StringSequence instanceLabelNames, La
         if (_hashCode != other._hashCode)
             return false;
 
-        if (InstanceLabelNames.Length != other.InstanceLabelNames.Length)
-            return false;
-
-        if (!InstanceLabelNames.Equals(other.InstanceLabelNames))
-            return false;
-
-        if (!StaticLabels.Equals(other.StaticLabels))
-            return false;
-
-        return true;
+        return InstanceLabelNames.Length == other.InstanceLabelNames.Length
+            && InstanceLabelNames.Equals(other.InstanceLabelNames)
+            && StaticLabels.Equals(other.StaticLabels);
     }
 
     public override int GetHashCode()
@@ -34,11 +30,14 @@ internal readonly struct CollectorIdentity(StringSequence instanceLabelNames, La
         return _hashCode;
     }
 
-    private static int CalculateHashCode(StringSequence instanceLabelNames, LabelSequence staticLabels)
+    private static int CalculateHashCode(
+        StringSequence instanceLabelNames,
+        LabelSequence staticLabels
+    )
     {
         unchecked
         {
-            int hashCode = 0;
+            var hashCode = 0;
 
             hashCode ^= instanceLabelNames.GetHashCode() * 397;
             hashCode ^= staticLabels.GetHashCode() * 397;

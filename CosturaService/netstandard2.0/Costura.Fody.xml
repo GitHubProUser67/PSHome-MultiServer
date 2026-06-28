@@ -1,0 +1,121 @@
+<?xml version="1.0"?>
+<doc>
+  <assembly>
+    <name>Costura.Fody</name>
+  </assembly>
+  <members>
+    <member name="T:MethodTimeLogger">
+      <summary>
+            Note: do not rename this class or put it inside a namespace.
+            </summary>
+    </member>
+    <member name="T:NetStandardAssemblyResolver">
+      <summary>
+            An assembly resolver that resolves with the <see cref="T:Mono.Cecil.IAssemblyResolver" /> of the <see cref="T:Mono.Cecil.ModuleDefinition" />
+            of the given <see cref="T:ModuleWeaver" /> with special handling for the <c>netstandard</c> assembly reference to
+            support .NET Framework 4.7 and lower.
+            </summary
+      >
+    </member>
+    <member name="M:ComponentAce.Compression.Libs.zlib.SupportClass.Identity(System.Int64)">
+      <summary>
+            This method returns the literal value received
+            </summary>
+      <param name="literal">The literal to return</param>
+      <returns>The received value</returns>
+    </member>
+    <member name="M:ComponentAce.Compression.Libs.zlib.SupportClass.Identity(System.UInt64)">
+      <summary>
+            This method returns the literal value received
+            </summary>
+      <param name="literal">The literal to return</param>
+      <returns>The received value</returns>
+    </member>
+    <member name="M:ComponentAce.Compression.Libs.zlib.SupportClass.Identity(System.Single)">
+      <summary>
+            This method returns the literal value received
+            </summary>
+      <param name="literal">The literal to return</param>
+      <returns>The received value</returns>
+    </member>
+    <member name="M:ComponentAce.Compression.Libs.zlib.SupportClass.Identity(System.Double)">
+      <summary>
+            This method returns the literal value received
+            </summary>
+      <param name="literal">The literal to return</param>
+      <returns>The received value</returns>
+    </member>
+    <member name="M:ComponentAce.Compression.Libs.zlib.SupportClass.URShift(System.Int32,System.Int32)">
+      <summary>
+            Performs an unsigned bitwise right shift with the specified number
+            </summary>
+      <param name="number">Number to operate on</param>
+      <param name="bits">Ammount of bits to shift</param>
+      <returns>The resulting number from the shift operation</returns>
+    </member>
+    <member name="M:ComponentAce.Compression.Libs.zlib.SupportClass.URShift(System.Int32,System.Int64)">
+      <summary>
+            Performs an unsigned bitwise right shift with the specified number
+            </summary>
+      <param name="number">Number to operate on</param>
+      <param name="bits">Ammount of bits to shift</param>
+      <returns>The resulting number from the shift operation</returns>
+    </member>
+    <member name="M:ComponentAce.Compression.Libs.zlib.SupportClass.URShift(System.Int64,System.Int32)">
+      <summary>
+            Performs an unsigned bitwise right shift with the specified number
+            </summary>
+      <param name="number">Number to operate on</param>
+      <param name="bits">Ammount of bits to shift</param>
+      <returns>The resulting number from the shift operation</returns>
+    </member>
+    <member name="M:ComponentAce.Compression.Libs.zlib.SupportClass.URShift(System.Int64,System.Int64)">
+      <summary>
+            Performs an unsigned bitwise right shift with the specified number
+            </summary>
+      <param name="number">Number to operate on</param>
+      <param name="bits">Ammount of bits to shift</param>
+      <returns>The resulting number from the shift operation</returns>
+    </member>
+    <member name="M:ComponentAce.Compression.Libs.zlib.SupportClass.ReadInput(System.IO.Stream,System.Byte[],System.Int32,System.Int32)">
+      <summary>Reads a number of characters from the current source Stream and writes the data to the target array at the specified index.</summary>
+      <param name="sourceStream">The source Stream to read from.</param>
+      <param name="target">Contains the array of characteres read from the source Stream.</param>
+      <param name="start">The starting index of the target array.</param>
+      <param name="count">The maximum number of characters to read from the source Stream.</param>
+      <returns>The number of characters read. The number will be less than or equal to count depending on the data available in the source Stream. Returns -1 if the end of the stream is reached.</returns>
+    </member>
+    <member name="M:ComponentAce.Compression.Libs.zlib.SupportClass.ReadInput(System.IO.TextReader,System.Byte[],System.Int32,System.Int32)">
+      <summary>Reads a number of characters from the current source TextReader and writes the data to the target array at the specified index.</summary>
+      <param name="sourceTextReader">The source TextReader to read from</param>
+      <param name="target"
+        >Contains the array of characteres read from the source TextReader.</param
+      >
+      <param name="start">The starting index of the target array.</param>
+      <param name="count"
+        >The maximum number of characters to read from the source TextReader.</param
+      >
+      <returns>The number of characters read. The number will be less than or equal to count depending on the data available in the source TextReader. Returns -1 if the end of the stream is reached.</returns>
+    </member>
+    <member name="M:ComponentAce.Compression.Libs.zlib.SupportClass.ToByteArray(System.String)">
+      <summary>
+            Converts a string to an array of bytes
+            </summary>
+      <param name="sourceString">The string to be converted</param>
+      <returns>The new array of bytes</returns>
+    </member>
+    <member name="M:ComponentAce.Compression.Libs.zlib.SupportClass.ToCharArray(System.Byte[])">
+      <summary>
+            Converts an array of bytes to an array of chars
+            </summary>
+      <param name="byteArray">The array of bytes to convert</param>
+      <returns>The new array of chars</returns>
+    </member>
+    <member name="P:ComponentAce.Compression.Libs.zlib.ZInputStream.TotalIn">
+      <summary> Returns the total number of bytes input so far.</summary>
+    </member>
+    <member name="P:ComponentAce.Compression.Libs.zlib.ZInputStream.TotalOut">
+      <summary> Returns the total number of bytes output so far.</summary>
+    </member>
+  </members>
+</doc>

@@ -2,24 +2,22 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Authentication
 {
-	[TdfStruct]
-	public struct DecrementUseCountRequest
-	{
+    [TdfStruct]
+    public struct DecrementUseCountRequest
+    {
+        [TdfMember("DEUC")]
+        public uint mDecrementCount;
 
-		[TdfMember("DEUC")]
-		public uint mDecrementCount;
+        [TdfMember("ETAG")]
+        public string mEntitlementTag;
 
-		[TdfMember("ETAG")]
-		public string mEntitlementTag;
+        [TdfMember("GNAM")]
+        public string mGroupName;
 
-		[TdfMember("GNAM")]
-		public string mGroupName;
+        [TdfMember("PRID")]
+        public string mProductId;
 
-		[TdfMember("PRID")]
-		public string mProductId;
-
-		[TdfMember("PJID")]
-		public string mProjectId;
-
-	}
+        [TdfMember("PJID")]
+        public string mProjectId;
+    }
 }

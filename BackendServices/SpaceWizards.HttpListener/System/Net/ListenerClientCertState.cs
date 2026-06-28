@@ -7,6 +7,6 @@ namespace SpaceWizards.HttpListener
     {
         NotInitialized,
         InProgress,
-        Completed
+        Completed,
     }
 }

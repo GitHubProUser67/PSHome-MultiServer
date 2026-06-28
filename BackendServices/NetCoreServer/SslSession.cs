@@ -1,16 +1,13 @@
-using CustomLogger;
-using FixedSsl;
-using MultiServerLibrary;
-using MultiServerLibrary.SSL;
-using System;
-using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading;
+using CastleLibrary.FixedSsl;
+using CustomLogger;
+using MultiServerLibrary;
+using MultiServerLibrary.SSL;
 
 namespace NetCoreServer
 {
@@ -18,29 +15,22 @@ namespace NetCoreServer
     /// SSL session is used to read and write data from the connected SSL client
     /// </summary>
     /// <remarks>Thread-safe</remarks>
-    public class SslSession : IDisposable
+    /// <remarks>
+    /// Initialize the session with a given server
+    /// </remarks>
+    /// <param name="server">SSL server</param>
+    public class SslSession(SslServer server) : IDisposable
     {
-        /// <summary>
-        /// Initialize the session with a given server
-        /// </summary>
-        /// <param name="server">SSL server</param>
-        public SslSession(SslServer server)
-        {
-            Id = Guid.NewGuid();
-            Server = server;
-            OptionReceiveBufferSize = server.OptionReceiveBufferSize;
-            OptionSendBufferSize = server.OptionSendBufferSize;
-        }
-
         /// <summary>
         /// Session Id
         /// </summary>
-        public Guid Id { get; }
+        public Guid Id { get; } = Guid.NewGuid();
 
         /// <summary>
         /// Server
         /// </summary>
-        public SslServer Server { get; }
+        public SslServer Server { get; } = server;
+
         /// <summary>
         /// Socket
         /// </summary>
@@ -50,14 +40,17 @@ namespace NetCoreServer
         /// Number of bytes pending sent by the session
         /// </summary>
         public long BytesPending { get; private set; }
+
         /// <summary>
         /// Number of bytes sending by the session
         /// </summary>
         public long BytesSending { get; private set; }
+
         /// <summary>
         /// Number of bytes sent by the session
         /// </summary>
         public long BytesSent { get; private set; }
+
         /// <summary>
         /// Number of bytes received by the session
         /// </summary>
@@ -67,18 +60,21 @@ namespace NetCoreServer
         /// Option: receive buffer limit
         /// </summary>
         public int OptionReceiveBufferLimit { get; set; } = 0;
+
         /// <summary>
         /// Option: receive buffer size
         /// </summary>
-        public int OptionReceiveBufferSize { get; set; } = 8192;
+        public int OptionReceiveBufferSize { get; set; } = server.OptionReceiveBufferSize;
+
         /// <summary>
         /// Option: send buffer limit
         /// </summary>
         public int OptionSendBufferLimit { get; set; } = 0;
+
         /// <summary>
         /// Option: send buffer size
         /// </summary>
-        public int OptionSendBufferSize { get; set; } = 8192;
+        public int OptionSendBufferSize { get; set; } = server.OptionSendBufferSize;
 
         #region Connect/Disconnect session
 
@@ -93,6 +89,7 @@ namespace NetCoreServer
         /// Is the session connected?
         /// </summary>
         public bool IsConnected { get; private set; }
+
         /// <summary>
         /// Is the session handshaked?
         /// </summary>
@@ -110,9 +107,14 @@ namespace NetCoreServer
 
         public static bool IsIPBanned(string ipAddress, int? clientport)
         {
-            if (MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibraryConfiguration.BannedIPs.Contains(ipAddress))
+            if (
+                MultiServerLibraryConfiguration.BannedIPs != null
+                && MultiServerLibraryConfiguration.BannedIPs.Contains(ipAddress)
+            )
             {
-                LoggerAccessor.LogError($"[SECURITY] - {ipAddress}:{clientport} Requested the NCHTTP TLS Server while being banned!");
+                LoggerAccessor.LogError(
+                    $"[SECURITY] - {ipAddress}:{clientport} Requested the NCHTTP TLS Server while being banned!"
+                );
                 return true;
             }
 
@@ -125,7 +127,6 @@ namespace NetCoreServer
         /// <param name="socket">Session socket</param>
         internal void Connect(Socket socket)
         {
-
             Socket = socket;
 
             // Update the session socket disposed flag
@@ -140,13 +141,23 @@ namespace NetCoreServer
             if (Server.OptionKeepAlive)
                 Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
             if (Server.OptionTcpKeepAliveTime >= 0)
-#if NET6_0_OR_GREATER
-                Socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, Server.OptionTcpKeepAliveTime);
+                Socket.SetSocketOption(
+                    SocketOptionLevel.Tcp,
+                    SocketOptionName.TcpKeepAliveTime,
+                    Server.OptionTcpKeepAliveTime
+                );
             if (Server.OptionTcpKeepAliveInterval >= 0)
-                Socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, Server.OptionTcpKeepAliveInterval);
+                Socket.SetSocketOption(
+                    SocketOptionLevel.Tcp,
+                    SocketOptionName.TcpKeepAliveInterval,
+                    Server.OptionTcpKeepAliveInterval
+                );
             if (Server.OptionTcpKeepAliveRetryCount >= 0)
-                Socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, Server.OptionTcpKeepAliveRetryCount);
-#endif
+                Socket.SetSocketOption(
+                    SocketOptionLevel.Tcp,
+                    SocketOptionName.TcpKeepAliveRetryCount,
+                    Server.OptionTcpKeepAliveRetryCount
+                );
             // Apply the option: no delay
             if (Server.OptionNoDelay)
                 Socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
@@ -195,7 +206,9 @@ namespace NetCoreServer
                 }
                 catch { }
 #if DEBUG
-                LoggerAccessor.LogInfo($"[SslSession] - Connection received on NCHTTP TLS (Thread {Environment.CurrentManagedThreadId})");
+                LoggerAccessor.LogInfo(
+                    $"[SslSession] - Connection received on NCHTTP TLS (Thread {Environment.CurrentManagedThreadId})"
+                );
 #endif
                 string clientip = null;
                 try
@@ -203,70 +216,126 @@ namespace NetCoreServer
                     clientip = remoteEndPoint?.Address.ToString();
                 }
                 catch { }
-                int? clientport = remoteEndPoint?.Port;
-                bool isEndpointMissing = !clientport.HasValue || string.IsNullOrEmpty(clientip);
+                var clientport = remoteEndPoint?.Port;
+                var isEndpointMissing = !clientport.HasValue || string.IsNullOrEmpty(clientip);
 #if DEBUG
                 LoggerAccessor.LogInfo($"[SslSession] - endpoint = {!isEndpointMissing}");
 #endif
-                if (!(isEndpointMissing || IsIPBanned(clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
+                if (
+                    !(
+                        isEndpointMissing
+                        || IsIPBanned(clientip, clientport)
+                        || (
+                            MultiServerLibraryConfiguration.VpnCheck != null
+                            && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip)
+                        )
+                    )
+                )
                 {
                     // Begin the SSL handshake
-                    SslSocket.BeginAuthenticateAsServer(Socket, new SslServerAuthenticationOptions
-                    {
-                        ClientCertificateRequired = Server.Context.ClientCertificateRequired,
-                        EnabledSslProtocols = Server.Context.Protocols,
-                        CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
-                        RemoteCertificateValidationCallback = Server.Context.CertificateValidationCallback,
-                        ServerCertificateSelectionCallback = (sender, actualHostName) =>
+                    SslSocket.BeginAuthenticateAsServer(
+                        Socket,
+                        new SslServerAuthenticationOptions
                         {
-                            IPEndPoint localEndpoint = (IPEndPoint)Socket.LocalEndPoint;
+                            ClientCertificateRequired = Server.Context.ClientCertificateRequired,
+                            EnabledSslProtocols = Server.Context.Protocols,
+                            CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
+                            RemoteCertificateValidationCallback = Server
+                                .Context
+                                .CertificateValidationCallback,
+                            ServerCertificateSelectionCallback = (sender, actualHostName) =>
+                            {
+                                var localEndpoint = (IPEndPoint)Socket.LocalEndPoint;
 
-                            if (string.IsNullOrEmpty(actualHostName))
-                                _sniDomain = localEndpoint.Address.ToString() ?? IPAddress.Loopback.ToString();
-                            else
-                                _sniDomain = actualHostName;
-#if NET5_0_OR_GREATER
-                            // Actually load the certificate
-                            try
-                            {
-                                string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
-                                    , ".mono");
-                                path = Path.Combine(path, "httplistener");
-                                string cert_prefix = _sniDomain + $"-{localEndpoint.Port}";
-                                string cert_file = Path.Combine(path, string.Format("{0}.pem", cert_prefix));
-                                string pvk_file = Path.Combine(path, string.Format("{0}_privkey.pem", cert_prefix));
-                                if (File.Exists(cert_file) && File.Exists(pvk_file))
-                                    return CertificateHelper.LoadCertificate(cert_file, pvk_file);
-                                cert_file = Path.Combine(path, string.Format("{0}.cer", cert_prefix));
-                                pvk_file = Path.Combine(path, string.Format("{0}.pvk", cert_prefix));
-                                if (File.Exists(cert_file) && File.Exists(pvk_file))
-                                    return CertificateHelper.LoadCertificate(cert_file, pvk_file);
-                                string origin_directory = Path.Combine(path, cert_prefix);
-                                if (Directory.Exists(origin_directory))
+                                _sniDomain = string.IsNullOrEmpty(actualHostName)
+                                    ? localEndpoint.Address.ToString()
+                                        ?? IPAddress.Loopback.ToString()
+                                    : actualHostName;
+                                // Actually load the certificate
+                                try
                                 {
-                                    cert_file = Path.Combine(origin_directory, "Origin Certificate");
-                                    pvk_file = Path.Combine(origin_directory, "Private Key");
+                                    var path = Path.Combine(
+                                        Environment.GetFolderPath(
+                                            Environment.SpecialFolder.ApplicationData
+                                        ),
+                                        ".mono"
+                                    );
+                                    path = Path.Combine(path, "httplistener");
+                                    var cert_prefix = _sniDomain + $"-{localEndpoint.Port}";
+                                    var cert_file = Path.Combine(
+                                        path,
+                                        string.Format("{0}.pem", cert_prefix)
+                                    );
+                                    var pvk_file = Path.Combine(
+                                        path,
+                                        string.Format("{0}_privkey.pem", cert_prefix)
+                                    );
                                     if (File.Exists(cert_file) && File.Exists(pvk_file))
-                                        return CertificateHelper.LoadCertificate(cert_file, pvk_file);
+                                        return CertificateHelper.LoadCertificate(
+                                            cert_file,
+                                            pvk_file
+                                        );
+                                    cert_file = Path.Combine(
+                                        path,
+                                        string.Format("{0}.cer", cert_prefix)
+                                    );
+                                    pvk_file = Path.Combine(
+                                        path,
+                                        string.Format("{0}.pvk", cert_prefix)
+                                    );
+                                    if (File.Exists(cert_file) && File.Exists(pvk_file))
+                                        return CertificateHelper.LoadCertificate(
+                                            cert_file,
+                                            pvk_file
+                                        );
+                                    var origin_directory = Path.Combine(path, cert_prefix);
+                                    if (Directory.Exists(origin_directory))
+                                    {
+                                        cert_file = Path.Combine(
+                                            origin_directory,
+                                            "Origin Certificate"
+                                        );
+                                        pvk_file = Path.Combine(origin_directory, "Private Key");
+                                        if (File.Exists(cert_file) && File.Exists(pvk_file))
+                                            return CertificateHelper.LoadCertificate(
+                                                cert_file,
+                                                pvk_file
+                                            );
+                                    }
                                 }
-                            }
-                            catch
-                            {
-                                // ignore errors
-                            }
-#endif
-                            return CertificateHelper.IsCertificateAuthority(Server.Context.Certificate) ? CertificateHelper.MakeChainSignedCert(_sniDomain, Server.Context.Certificate, GetPreferedHashAlgorithm(),
-                            remoteEndPoint.Address, DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now.AddDays(7),
-                            wildcardCertificates) : Server.Context.Certificate;
-                        }
-                    }, true, false, ProcessHandshake, _sslStreamId, out _, out _);
+                                catch
+                                {
+                                    // ignore errors
+                                }
+                                return CertificateHelper.IsCertificateAuthority(
+                                    Server.Context.Certificate
+                                )
+                                    ? CertificateHelper.MakeChainSignedCert(
+                                        _sniDomain,
+                                        Server.Context.Certificate,
+                                        GetPreferedHashAlgorithm(),
+                                        remoteEndPoint.Address,
+                                        DateTimeOffset.Now.AddDays(-1),
+                                        DateTimeOffset.Now.AddDays(7),
+                                        wildcardCertificates
+                                    )
+                                    : Server.Context.Certificate;
+                            },
+                        },
+                        true,
+                        false,
+                        ProcessHandshake,
+                        _sslStreamId,
+                        out _,
+                        out _
+                    );
 
                     return;
                 }
             }
             catch
             {
-               // Not Important.
+                // Not Important.
             }
 
             SendError(SocketError.NotConnected);
@@ -315,7 +384,7 @@ namespace NetCoreServer
                     // Shutdown the socket associated with the client
                     Socket.Shutdown(SocketShutdown.Both);
                 }
-                catch (SocketException) {}
+                catch (SocketException) { }
 
                 // Close the session socket
                 Socket.Close();
@@ -326,7 +395,7 @@ namespace NetCoreServer
                 // Update the session socket disposed flag
                 IsSocketDisposed = true;
             }
-            catch (ObjectDisposedException) {}
+            catch (ObjectDisposedException) { }
 
             // Update the handshaked flag
             IsHandshaked = false;
@@ -356,15 +425,16 @@ namespace NetCoreServer
             return true;
         }
 
-#endregion
+        #endregion
 
         #region Send/Receive data
 
         // Receive buffer
         private bool _receiving;
         private Buffer _receiveBuffer;
+
         // Send buffer
-        private readonly object _sendLock = new object();
+        private readonly object _sendLock = new();
         private bool _sending;
         private Buffer _sendBufferMain;
         private Buffer _sendBufferFlush;
@@ -384,7 +454,8 @@ namespace NetCoreServer
         /// <param name="offset">Buffer offset</param>
         /// <param name="size">Buffer size</param>
         /// <returns>Size of sent data</returns>
-        public virtual long Send(byte[] buffer, long offset, long size) => Send(buffer.AsSpan((int)offset, (int)size));
+        public virtual long Send(byte[] buffer, long offset, long size) =>
+            Send(buffer.AsSpan((int)offset, (int)size));
 
         /// <summary>
         /// Send data to the client (synchronous)
@@ -435,7 +506,8 @@ namespace NetCoreServer
         /// </summary>
         /// <param name="text">Text to send as a span of characters</param>
         /// <returns>Size of sent text</returns>
-        public virtual long Send(ReadOnlySpan<char> text) => Send(Encoding.UTF8.GetBytes(text.ToArray()));
+        public virtual long Send(ReadOnlySpan<char> text) =>
+            Send(Encoding.UTF8.GetBytes(text.ToArray()));
 
         /// <summary>
         /// Send data to the client (asynchronous)
@@ -451,7 +523,8 @@ namespace NetCoreServer
         /// <param name="offset">Buffer offset</param>
         /// <param name="size">Buffer size</param>
         /// <returns>'true' if the data was successfully sent, 'false' if the session is not connected</returns>
-        public virtual bool SendAsync(byte[] buffer, long offset, long size) => SendAsync(buffer.AsSpan((int)offset, (int)size));
+        public virtual bool SendAsync(byte[] buffer, long offset, long size) =>
+            SendAsync(buffer.AsSpan((int)offset, (int)size));
 
         /// <summary>
         /// Send data to the client (asynchronous)
@@ -469,7 +542,10 @@ namespace NetCoreServer
             lock (_sendLock)
             {
                 // Check the send buffer limit
-                if (((_sendBufferMain.Size + buffer.Length) > OptionSendBufferLimit) && (OptionSendBufferLimit > 0))
+                if (
+                    ((_sendBufferMain.Size + buffer.Length) > OptionSendBufferLimit)
+                    && (OptionSendBufferLimit > 0)
+                )
                 {
                     SendError(SocketError.NoBufferSpaceAvailable);
                     return false;
@@ -506,14 +582,18 @@ namespace NetCoreServer
         /// </summary>
         /// <param name="text">Text to send as a span of characters</param>
         /// <returns>'true' if the text was successfully sent, 'false' if the session is not connected</returns>
-        public virtual bool SendAsync(ReadOnlySpan<char> text) => SendAsync(Encoding.UTF8.GetBytes(text.ToArray()));
+        public virtual bool SendAsync(ReadOnlySpan<char> text) =>
+            SendAsync(Encoding.UTF8.GetBytes(text.ToArray()));
 
         /// <summary>
         /// Receive data from the client (synchronous)
         /// </summary>
         /// <param name="buffer">Buffer to receive</param>
         /// <returns>Size of received data</returns>
-        public virtual long Receive(byte[] buffer) { return Receive(buffer, 0, buffer.Length); }
+        public virtual long Receive(byte[] buffer)
+        {
+            return Receive(buffer, 0, buffer.Length);
+        }
 
         /// <summary>
         /// Receive data from the client (synchronous)
@@ -596,10 +676,16 @@ namespace NetCoreServer
                         return;
 
                     _receiving = true;
-                    result = _sslStream.BeginRead(_receiveBuffer.Data, 0, (int)_receiveBuffer.Capacity, ProcessReceive, _sslStreamId);
+                    result = _sslStream.BeginRead(
+                        _receiveBuffer.Data,
+                        0,
+                        (int)_receiveBuffer.Capacity,
+                        ProcessReceive,
+                        _sslStreamId
+                    );
                 } while (result.CompletedSynchronously);
             }
-            catch (ObjectDisposedException) {}
+            catch (ObjectDisposedException) { }
         }
 
         /// <summary>
@@ -610,7 +696,7 @@ namespace NetCoreServer
             if (!IsHandshaked)
                 return;
 
-            bool empty = false;
+            var empty = false;
 
             lock (_sendLock)
             {
@@ -649,9 +735,15 @@ namespace NetCoreServer
             try
             {
                 // Async write with the write handler
-                _sslStream.BeginWrite(_sendBufferFlush.Data, (int)_sendBufferFlushOffset, (int)(_sendBufferFlush.Size - _sendBufferFlushOffset), ProcessSend, _sslStreamId);
+                _sslStream.BeginWrite(
+                    _sendBufferFlush.Data,
+                    (int)_sendBufferFlushOffset,
+                    (int)(_sendBufferFlush.Size - _sendBufferFlushOffset),
+                    ProcessSend,
+                    _sslStreamId
+                );
             }
-            catch (ObjectDisposedException) {}
+            catch (ObjectDisposedException) { }
         }
 
         /// <summary>
@@ -664,7 +756,7 @@ namespace NetCoreServer
                 // Clear send buffers
                 _sendBufferMain.Clear();
                 _sendBufferFlush.Clear();
-                _sendBufferFlushOffset= 0;
+                _sendBufferFlushOffset = 0;
 
                 // Update statistic
                 BytesPending = 0;
@@ -720,7 +812,9 @@ namespace NetCoreServer
             catch (Exception ex)
             {
 #if DEBUG
-                CustomLogger.LoggerAccessor.LogError($"[SslSession] - Failed to accept TLS client connection. (Exception:{ex})");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"[SslSession] - Failed to accept TLS client connection. (Exception:{ex})"
+                );
 #endif
                 SendError(SocketError.NotConnected);
                 Disconnect();
@@ -759,7 +853,10 @@ namespace NetCoreServer
                     if (_receiveBuffer.Capacity == size)
                     {
                         // Check the receive buffer limit
-                        if (((2 * size) > OptionReceiveBufferLimit) && (OptionReceiveBufferLimit > 0))
+                        if (
+                            ((2 * size) > OptionReceiveBufferLimit)
+                            && (OptionReceiveBufferLimit > 0)
+                        )
                         {
                             SendError(SocketError.NoBufferSpaceAvailable);
                             Disconnect();
@@ -806,7 +903,7 @@ namespace NetCoreServer
                 // End the SSL write
                 _sslStream.EndWrite(result);
 
-                long size = _sendBufferFlush.Size;
+                var size = _sendBufferFlush.Size;
 
                 // Send some data to the client
                 if (size > 0)
@@ -848,27 +945,32 @@ namespace NetCoreServer
         /// <summary>
         /// Handle client connecting notification
         /// </summary>
-        protected virtual void OnConnecting() {}
+        protected virtual void OnConnecting() { }
+
         /// <summary>
         /// Handle client connected notification
         /// </summary>
-        protected virtual void OnConnected() {}
+        protected virtual void OnConnected() { }
+
         /// <summary>
         /// Handle client handshaking notification
         /// </summary>
-        protected virtual void OnHandshaking() {}
+        protected virtual void OnHandshaking() { }
+
         /// <summary>
         /// Handle client handshaked notification
         /// </summary>
-        protected virtual void OnHandshaked() {}
+        protected virtual void OnHandshaked() { }
+
         /// <summary>
         /// Handle client disconnecting notification
         /// </summary>
-        protected virtual void OnDisconnecting() {}
+        protected virtual void OnDisconnecting() { }
+
         /// <summary>
         /// Handle client disconnected notification
         /// </summary>
-        protected virtual void OnDisconnected() {}
+        protected virtual void OnDisconnected() { }
 
         /// <summary>
         /// Handle buffer received notification
@@ -879,7 +981,8 @@ namespace NetCoreServer
         /// <remarks>
         /// Notification is called when another part of buffer was received from the client
         /// </remarks>
-        protected virtual void OnReceived(byte[] buffer, long offset, long size) {}
+        protected virtual void OnReceived(byte[] buffer, long offset, long size) { }
+
         /// <summary>
         /// Handle buffer sent notification
         /// </summary>
@@ -889,7 +992,7 @@ namespace NetCoreServer
         /// Notification is called when another part of buffer was sent to the client.
         /// This handler could be used to send another buffer to the client for instance when the pending size is zero.
         /// </remarks>
-        protected virtual void OnSent(long sent, long pending) {}
+        protected virtual void OnSent(long sent, long pending) { }
 
         /// <summary>
         /// Handle empty send buffer notification
@@ -898,13 +1001,13 @@ namespace NetCoreServer
         /// Notification is called when the send buffer is empty and ready for a new data to send.
         /// This handler could be used to send another buffer to the client.
         /// </remarks>
-        protected virtual void OnEmpty() {}
+        protected virtual void OnEmpty() { }
 
         /// <summary>
         /// Handle error notification
         /// </summary>
         /// <param name="error">Socket error code</param>
-        protected virtual void OnError(SocketError error) {}
+        protected virtual void OnError(SocketError error) { }
 
         #endregion
 
@@ -917,11 +1020,13 @@ namespace NetCoreServer
         private void SendError(SocketError error)
         {
             // Skip disconnect errors
-            if ((error == SocketError.ConnectionAborted) ||
-                (error == SocketError.ConnectionRefused) ||
-                (error == SocketError.ConnectionReset) ||
-                (error == SocketError.OperationAborted) ||
-                (error == SocketError.Shutdown))
+            if (
+                (error == SocketError.ConnectionAborted)
+                || (error == SocketError.ConnectionRefused)
+                || (error == SocketError.ConnectionReset)
+                || (error == SocketError.OperationAborted)
+                || (error == SocketError.Shutdown)
+            )
                 return;
 
             OnError(error);

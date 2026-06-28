@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct MatchmakingDedicatedServerOverrideRequest
-	{
+    [TdfStruct]
+    public struct MatchmakingDedicatedServerOverrideRequest
+    {
+        [TdfMember("GID")]
+        public uint mGameId;
 
-		[TdfMember("GID")]
-		public uint mGameId;
-
-		[TdfMember("PID")]
-		public long mPlayerId;
-
-	}
+        [TdfMember("PID")]
+        public long mPlayerId;
+    }
 }

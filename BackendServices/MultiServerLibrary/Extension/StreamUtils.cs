@@ -1,8 +1,3 @@
-﻿using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace MultiServerLibrary.Extension
 {
     public static class StreamUtils
@@ -14,13 +9,20 @@ namespace MultiServerLibrary.Extension
         /// <param name="input">The Stream to copy.</param>
         /// <param name="output">the Steam to copy to.</param>
         /// <param name="BufferSize">the buffersize for the copy.</param>
-        public static void CopyStream(Stream input, Stream output, long BufferSize = 16 * 1024, bool ignore_errors = false)
+        public static void CopyStream(
+            Stream input,
+            Stream output,
+            long BufferSize = 16 * 1024,
+            bool ignore_errors = false
+        )
         {
             if (BufferSize <= 0)
-                throw new ArgumentOutOfRangeException(nameof(BufferSize), "[StreamUtils] - CopyStream() - Buffer size must be greater than zero.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(BufferSize),
+                    "[StreamUtils] - CopyStream() - Buffer size must be greater than zero."
+                );
 
             int bytesRead;
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
             Span<byte> buffer = new byte[BufferSize];
             while ((bytesRead = input.Read(buffer)) > 0)
             {
@@ -30,27 +32,14 @@ namespace MultiServerLibrary.Extension
                     {
                         output.Write(buffer[..bytesRead]);
                     }
-                    catch { }
+                    catch
+                    {
+                        // Not Important.
+                    }
                 }
                 else
                     output.Write(buffer[..bytesRead]);
             }
-#else
-            byte[] buffer = new byte[BufferSize];
-            while ((bytesRead = input.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                if (ignore_errors)
-                {
-                    try
-                    {
-                        output.Write(buffer, 0, bytesRead);
-                    }
-                    catch { }
-                }
-                else
-                    output.Write(buffer, 0, bytesRead);
-            }
-#endif
         }
 
         /// <summary>
@@ -61,50 +50,46 @@ namespace MultiServerLibrary.Extension
         /// <param name="output">The Stream to copy to.</param>
         /// <param name="BufferSize">The buffer size to use for copying.</param>
         /// <param name="numOfBytes">The number of bytes to copy.</param>
-        public static void CopyStream(Stream input, Stream output, int BufferSize, long numOfBytes, bool ignore_errors = false)
+        public static void CopyStream(
+            Stream input,
+            Stream output,
+            int BufferSize,
+            long numOfBytes,
+            bool ignore_errors = false
+        )
         {
             if (BufferSize <= 0)
-                throw new ArgumentOutOfRangeException(nameof(BufferSize), "[StreamUtils] - CopyStream() - Buffer size must be greater than zero.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(BufferSize),
+                    "[StreamUtils] - CopyStream() - Buffer size must be greater than zero."
+                );
             else if (numOfBytes < 0)
-                throw new ArgumentOutOfRangeException(nameof(numOfBytes), "[StreamUtils] - CopyStream() - Number of bytes to copy must be non-negative.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(numOfBytes),
+                    "[StreamUtils] - CopyStream() - Number of bytes to copy must be non-negative."
+                );
 
             int bytesRead;
             long bytesCopied = 0;
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
             Span<byte> buffer = new byte[BufferSize];
             while (bytesCopied < numOfBytes && (bytesRead = input.Read(buffer)) > 0)
             {
-                int bytesToWrite = (int)Math.Min(bytesRead, numOfBytes - bytesCopied);
+                var bytesToWrite = (int)Math.Min(bytesRead, numOfBytes - bytesCopied);
                 if (ignore_errors)
                 {
                     try
                     {
                         output.Write(buffer[..bytesToWrite]);
                     }
-                    catch { }
+                    catch
+                    {
+                        // Not Important.
+                    }
                 }
                 else
                     output.Write(buffer[..bytesToWrite]);
                 bytesCopied += bytesToWrite;
             }
-#else
-            byte[] buffer = new byte[BufferSize];
-            while (bytesCopied < numOfBytes && (bytesRead = input.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                int bytesToWrite = (int)Math.Min(bytesRead, numOfBytes - bytesCopied);
-                if (ignore_errors)
-                {
-                    try
-                    {
-                        output.Write(buffer, 0, bytesToWrite);
-                    }
-                    catch { }
-                }
-                else
-                    output.Write(buffer, 0, bytesToWrite);
-                bytesCopied += bytesToWrite;
-            }
-#endif
         }
 
         /// <summary>
@@ -114,25 +99,41 @@ namespace MultiServerLibrary.Extension
         /// <param name="input">The Stream to copy.</param>
         /// <param name="output">the Steam to copy to.</param>
         /// <param name="BufferSize">the buffersize for the copy.</param>
-        public static async Task CopyStreamAsync(Stream input, Stream output, long BufferSize, bool ignore_errors = false, CancellationToken token = default)
+        public static async Task CopyStreamAsync(
+            Stream input,
+            Stream output,
+            long BufferSize,
+            bool ignore_errors = false,
+            CancellationToken token = default
+        )
         {
             if (BufferSize <= 0)
-                throw new ArgumentOutOfRangeException(nameof(BufferSize), "[StreamUtils] - CopyStreamAsync() - Buffer size must be greater than zero.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(BufferSize),
+                    "[StreamUtils] - CopyStreamAsync() - Buffer size must be greater than zero."
+                );
 
             int bytesRead;
-            byte[] buffer = new byte[BufferSize];
+            var buffer = new byte[BufferSize];
             while ((bytesRead = await input.ReadAsync(buffer, token).ConfigureAwait(false)) > 0)
             {
                 if (ignore_errors)
                 {
                     try
                     {
-                        await output.WriteAsync(buffer.AsMemory(0, bytesRead), token).ConfigureAwait(false);
+                        await output
+                            .WriteAsync(buffer.AsMemory(0, bytesRead), token)
+                            .ConfigureAwait(false);
                     }
-                    catch { }
+                    catch
+                    {
+                        // Not Important.
+                    }
                 }
                 else
-                    await output.WriteAsync(buffer.AsMemory(0, bytesRead), token).ConfigureAwait(false);
+                    await output
+                        .WriteAsync(buffer.AsMemory(0, bytesRead), token)
+                        .ConfigureAwait(false);
             }
         }
 
@@ -144,29 +145,52 @@ namespace MultiServerLibrary.Extension
         /// <param name="output">The Stream to copy to.</param>
         /// <param name="BufferSize">The buffer size to use for copying.</param>
         /// <param name="numOfBytes">The number of bytes to copy.</param>
-        public static async Task CopyStreamAsync(Stream input, Stream output, int BufferSize, long numOfBytes, bool ignore_errors = false, CancellationToken token = default)
+        public static async Task CopyStreamAsync(
+            Stream input,
+            Stream output,
+            int BufferSize,
+            long numOfBytes,
+            bool ignore_errors = false,
+            CancellationToken token = default
+        )
         {
             if (BufferSize <= 0)
-                throw new ArgumentOutOfRangeException(nameof(BufferSize), "[StreamUtils] - CopyStreamAsync() - Buffer size must be greater than zero.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(BufferSize),
+                    "[StreamUtils] - CopyStreamAsync() - Buffer size must be greater than zero."
+                );
             else if (numOfBytes < 0)
-                throw new ArgumentOutOfRangeException(nameof(numOfBytes), "[StreamUtils] - CopyStreamAsync() - Number of bytes to copy must be non-negative.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(numOfBytes),
+                    "[StreamUtils] - CopyStreamAsync() - Number of bytes to copy must be non-negative."
+                );
 
             int bytesRead;
             long bytesCopied = 0;
-            byte[] buffer = new byte[BufferSize];
-            while (bytesCopied < numOfBytes && (bytesRead = await input.ReadAsync(buffer, token).ConfigureAwait(false)) > 0)
+            var buffer = new byte[BufferSize];
+            while (
+                bytesCopied < numOfBytes
+                && (bytesRead = await input.ReadAsync(buffer, token).ConfigureAwait(false)) > 0
+            )
             {
-                int bytesToWrite = (int)Math.Min(bytesRead, numOfBytes - bytesCopied);
+                var bytesToWrite = (int)Math.Min(bytesRead, numOfBytes - bytesCopied);
                 if (ignore_errors)
                 {
                     try
                     {
-                        await output.WriteAsync(buffer.AsMemory(0, bytesToWrite), token).ConfigureAwait(false);
+                        await output
+                            .WriteAsync(buffer.AsMemory(0, bytesToWrite), token)
+                            .ConfigureAwait(false);
                     }
-                    catch { }
+                    catch
+                    {
+                        // Not Important.
+                    }
                 }
                 else
-                    await output.WriteAsync(buffer.AsMemory(0, bytesToWrite), token).ConfigureAwait(false);
+                    await output
+                        .WriteAsync(buffer.AsMemory(0, bytesToWrite), token)
+                        .ConfigureAwait(false);
                 bytesCopied += bytesToWrite;
             }
         }

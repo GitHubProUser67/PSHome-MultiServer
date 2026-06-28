@@ -4,17 +4,12 @@
 
 // Package quantile computes approximate quantiles over an unbounded data
 // stream within low memory and CPU bounds.
-//
 // A small amount of accuracy is traded to achieve the above properties.
-//
 // Multiple streams can be merged before calling Query to generate a single set
 // of results. This is meaningful when the streams represent the same type of
 // data. See Merge and Samples.
-//
 // For more detailed information about the algorithm used, see:
-//
 // Effective Computation of Biased Quantiles over Data Streams
-//
 // http://www.cs.rutgers.edu/~muthu/bquant.pdf
 
 internal delegate double Invariant(SampleStream stream, double r);
@@ -34,7 +29,11 @@ internal sealed class QuantileStream
 
     public static QuantileStream NewStream(Invariant invariant)
     {
-        return new QuantileStream(new SampleStream(invariant), new List<Sample> { Capacity = 500 }, true);
+        return new QuantileStream(
+            new SampleStream(invariant),
+            new List<Sample> { Capacity = 500 },
+            true
+        );
     }
 
     // NewTargeted returns an initialized Stream concerned with a particular set of
@@ -42,30 +41,29 @@ internal sealed class QuantileStream
     // space and computation time. The targets map maps the desired quantiles to
     // their absolute errors, i.e. the true quantile of a value returned by a query
     // is guaranteed to be within (Quantile±Epsilon).
-    //
     // See http://www.cs.rutgers.edu/~muthu/bquant.pdf for time, space, and error properties.
     public static QuantileStream NewTargeted(IReadOnlyList<QuantileEpsilonPair> targets)
     {
-        return NewStream((stream, r) =>
-        {
-            var m = double.MaxValue;
-
-            for (var i = 0; i < targets.Count; i++)
+        return NewStream(
+            (stream, r) =>
             {
-                var target = targets[i];
+                var m = double.MaxValue;
 
-                double f;
-                if (target.Quantile * stream.N <= r)
-                    f = (2 * target.Epsilon * r) / target.Quantile;
-                else
-                    f = (2 * target.Epsilon * (stream.N - r)) / (1 - target.Quantile);
+                for (var i = 0; i < targets.Count; i++)
+                {
+                    var target = targets[i];
 
-                if (f < m)
-                    m = f;
+                    var f =
+                        target.Quantile * stream.N <= r
+                            ? 2 * target.Epsilon * r / target.Quantile
+                            : 2 * target.Epsilon * (stream.N - r) / (1 - target.Quantile);
+                    if (f < m)
+                        m = f;
+                }
+
+                return m;
             }
-
-            return m;
-        });
+        );
     }
 
     public void Insert(double value)

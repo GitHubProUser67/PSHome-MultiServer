@@ -1,16 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-//
 // System.Net.HttpListenerRequest
-//
 // Authors:
 //  Gonzalo Paniagua Javier (gonzalo.mono@gmail.com)
 //  Marek Safar (marek.safar@gmail.com)
-//
 // Copyright (c) 2005 Novell, Inc. (http://www.novell.com)
 // Copyright (c) 2011-2012 Xamarin, Inc. (http://xamarin.com)
-//
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
 // "Software"), to deal in the Software without restriction, including
@@ -18,10 +14,8 @@
 // distribute, sublicense, and/or sell copies of the Software, and to
 // permit persons to whom the Software is furnished to do so, subject to
 // the following conditions:
-//
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 // MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -29,13 +23,9 @@
 // LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-//
 
-using System;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Globalization;
-using System.IO;
 using System.Net;
 using System.Security.Authentication.ExtendedProtection;
 using System.Security.Cryptography.X509Certificates;
@@ -49,24 +39,25 @@ namespace SpaceWizards.HttpListener
         {
             public override ChannelBinding GetChannelBinding(ChannelBindingKind kind)
             {
-                if (kind != ChannelBindingKind.Endpoint)
-                {
-                    throw new NotSupportedException(SR.Format(SR.net_listener_invalid_cbt_type, kind.ToString()));
-                }
-
-                return null;
+                return kind != ChannelBindingKind.Endpoint
+                    ? throw new NotSupportedException(
+                        SR.Format(SR.net_listener_invalid_cbt_type, kind.ToString())
+                    )
+                    : null;
             }
         }
 
         private long _contentLength;
         private bool _clSet;
-        private WebHeaderCollection _headers;
+        private readonly WebHeaderCollection _headers;
         private string _method;
         private Stream _inputStream;
-        private HttpListenerContext _context;
+        private readonly HttpListenerContext _context;
         private bool _isChunked;
 
-        private static byte[] s_100continue = Encoding.ASCII.GetBytes("HTTP/1.1 100 Continue\r\n\r\n");
+        private static readonly byte[] s_100continue = Encoding.ASCII.GetBytes(
+            "HTTP/1.1 100 Continue\r\n\r\n"
+        );
 
         internal HttpListenerRequest(HttpListenerContext context)
         {
@@ -79,7 +70,7 @@ namespace SpaceWizards.HttpListener
 
         internal void SetRequestLine(string req)
         {
-            string[] parts = req.Split(s_separators, 3);
+            var parts = req.Split(s_separators, 3);
             if (parts.Length != 3)
             {
                 _context.ErrorMessage = "Invalid request line (parts).";
@@ -87,15 +78,35 @@ namespace SpaceWizards.HttpListener
             }
 
             _method = parts[0];
-            foreach (char c in _method)
+            foreach (var c in _method)
             {
-                int ic = (int)c;
+                var ic = (int)c;
 
-                if ((ic >= 'A' && ic <= 'Z') ||
-                    (ic > 32 && c < 127 && c != '(' && c != ')' && c != '<' &&
-                     c != '<' && c != '>' && c != '@' && c != ',' && c != ';' &&
-                     c != ':' && c != '\\' && c != '"' && c != '/' && c != '[' &&
-                     c != ']' && c != '?' && c != '=' && c != '{' && c != '}'))
+                if (
+                    (ic >= 'A' && ic <= 'Z')
+                    || (
+                        ic > 32
+                        && c < 127
+                        && c != '('
+                        && c != ')'
+                        && c != '<'
+                        && c != '<'
+                        && c != '>'
+                        && c != '@'
+                        && c != ','
+                        && c != ';'
+                        && c != ':'
+                        && c != '\\'
+                        && c != '"'
+                        && c != '/'
+                        && c != '['
+                        && c != ']'
+                        && c != '?'
+                        && c != '='
+                        && c != '{'
+                        && c != '}'
+                    )
+                )
                     continue;
 
                 _context.ErrorMessage = "(Invalid verb)";
@@ -127,21 +138,17 @@ namespace SpaceWizards.HttpListener
             if (_version.Major > 1)
             {
                 _context.ErrorStatus = (int)HttpStatusCode.HttpVersionNotSupported;
-                _context.ErrorMessage = HttpStatusDescription.Get(HttpStatusCode.HttpVersionNotSupported);
+                _context.ErrorMessage = HttpStatusDescription.Get(
+                    HttpStatusCode.HttpVersionNotSupported
+                );
                 return;
             }
         }
 
         private static bool MaybeUri(string s)
         {
-            int p = s.IndexOf(':');
-            if (p == -1)
-                return false;
-
-            if (p >= 10)
-                return false;
-
-            return IsPredefinedScheme(s.Substring(0, p));
+            var p = s.IndexOf(':');
+            return p != -1 && p < 10 && IsPredefinedScheme(s.Substring(0, p));
         }
 
         private static bool IsPredefinedScheme(string scheme)
@@ -149,30 +156,28 @@ namespace SpaceWizards.HttpListener
             if (scheme == null || scheme.Length < 3)
                 return false;
 
-            char c = scheme[0];
+            var c = scheme[0];
             if (c == 'h')
-                return (scheme == UriScheme.Http ||  scheme == UriScheme.Https);
+                return scheme == UriScheme.Http || scheme == UriScheme.Https;
             if (c == 'f')
-                return (scheme == UriScheme.File || scheme == UriScheme.Ftp);
+                return scheme == UriScheme.File || scheme == UriScheme.Ftp;
 
             if (c == 'n')
             {
                 c = scheme[1];
-                if (c == 'e')
-                    return (scheme == UriScheme.News || scheme == UriScheme.NetPipe || scheme == UriScheme.NetTcp);
-                if (scheme == UriScheme.Nntp)
-                    return true;
-                return false;
+                return c == 'e'
+                    ? scheme == UriScheme.News
+                        || scheme == UriScheme.NetPipe
+                        || scheme == UriScheme.NetTcp
+                    : scheme == UriScheme.Nntp;
             }
-            if ((c == 'g' && scheme == UriScheme.Gopher) || (c == 'm' && scheme == UriScheme.Mailto))
-                return true;
-
-            return false;
+            return (c == 'g' && scheme == UriScheme.Gopher)
+                || (c == 'm' && scheme == UriScheme.Mailto);
         }
 
         internal void FinishInitialization()
         {
-            string host = UserHostName;
+            var host = UserHostName;
             if (_version > HttpVersion.Version10 && (host == null || host.Length == 0))
             {
                 _context.ErrorMessage = "Invalid host name";
@@ -182,10 +187,11 @@ namespace SpaceWizards.HttpListener
             string path;
             Uri raw_uri = null;
             Debug.Assert(_rawUrl != null);
-            if (MaybeUri(_rawUrl.ToLowerInvariant()) && Uri.TryCreate(_rawUrl, UriKind.Absolute, out raw_uri))
-                path = raw_uri.PathAndQuery;
-            else
-                path = _rawUrl;
+            path =
+                MaybeUri(_rawUrl.ToLowerInvariant())
+                && Uri.TryCreate(_rawUrl, UriKind.Absolute, out raw_uri)
+                    ? raw_uri.PathAndQuery
+                    : _rawUrl;
 
             if (host == null || host.Length == 0)
                 host = UserHostAddress;
@@ -193,28 +199,34 @@ namespace SpaceWizards.HttpListener
             if (raw_uri != null)
                 host = raw_uri.Host;
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
             host = host.Substring(0, ServiceNameStore.FindEndOfHostname(host, 0));
-#else
-            host = host.Substring(0, ServiceNameStore.FindEndOfHostname(host.AsSpan(), 0));
-#endif
 
-            string base_uri = $"{RequestScheme}://{host}:{LocalEndPoint.Port}";
+            var base_uri = $"{RequestScheme}://{host}:{LocalEndPoint.Port}";
 
             // Invalidate requests with empty _rawUrl ('rawPath' must have at least one character. assertion)
-            if (!Uri.TryCreate(base_uri + path, UriKind.Absolute, out _requestUri) || string.IsNullOrEmpty(_rawUrl))
+            if (
+                !Uri.TryCreate(base_uri + path, UriKind.Absolute, out _requestUri)
+                || string.IsNullOrEmpty(_rawUrl)
+            )
             {
                 _context.ErrorMessage = WebUtility.HtmlEncode("Invalid url: " + base_uri + path);
                 return;
             }
 
-            _requestUri = HttpListenerRequestUriBuilder.GetRequestUri(_rawUrl, _requestUri.Scheme,
-                                _requestUri.Authority, _requestUri.LocalPath, _requestUri.Query);
+            _requestUri = HttpListenerRequestUriBuilder.GetRequestUri(
+                _rawUrl,
+                _requestUri.Scheme,
+                _requestUri.Authority,
+                _requestUri.LocalPath,
+                _requestUri.Query
+            );
 
             if (_version >= HttpVersion.Version11)
             {
-                string t_encoding = Headers[HttpKnownHeaderNames.TransferEncoding];
-                _isChunked = (t_encoding != null && string.Equals(t_encoding, "chunked", StringComparison.OrdinalIgnoreCase));
+                var t_encoding = Headers[HttpKnownHeaderNames.TransferEncoding];
+                _isChunked =
+                    t_encoding != null
+                    && string.Equals(t_encoding, "chunked", StringComparison.OrdinalIgnoreCase);
                 // 'identity' is not valid!
                 if (t_encoding != null && !_isChunked)
                 {
@@ -238,17 +250,23 @@ namespace SpaceWizards.HttpListener
                 }
             }
 
-            if (string.Equals(Headers[HttpKnownHeaderNames.Expect], "100-continue", StringComparison.OrdinalIgnoreCase))
+            if (
+                string.Equals(
+                    Headers[HttpKnownHeaderNames.Expect],
+                    "100-continue",
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
             {
-                HttpResponseStream output = _context.Connection.GetResponseStream();
+                var output = _context.Connection.GetResponseStream();
                 output.InternalWrite(s_100continue, 0, s_100continue.Length);
             }
         }
 
         internal static string Unquote(string str)
         {
-            int start = str.IndexOf('\"');
-            int end = str.LastIndexOf('\"');
+            var start = str.IndexOf('\"');
+            var end = str.LastIndexOf('\"');
             if (start >= 0 && end >= 0)
                 str = str.Substring(start + 1, end - 1);
             return str.Trim();
@@ -256,7 +274,7 @@ namespace SpaceWizards.HttpListener
 
         internal void AddHeader(string header)
         {
-            int colon = header.IndexOf(':');
+            var colon = header.IndexOf(':');
             if (colon == -1 || colon == 0)
             {
                 _context.ErrorMessage = HttpStatusDescription.Get(400);
@@ -264,8 +282,8 @@ namespace SpaceWizards.HttpListener
                 return;
             }
 
-            string name = header.AsSpan(0, colon).Trim().ToString();
-            string val = header.AsSpan(colon + 1).Trim().ToString();
+            var name = header.AsSpan(0, colon).Trim().ToString();
+            var val = header.AsSpan(colon + 1).Trim().ToString();
             if (name.Equals("content-length", StringComparison.OrdinalIgnoreCase))
             {
                 // To match Windows behavior:
@@ -273,9 +291,13 @@ namespace SpaceWizards.HttpListener
                 // Content lengths > long.MaxValue and <= ulong.MaxValue are treated as 0.
                 // Content lengths < 0 cause the requests to fail.
                 // Other input is a failure, too.
-                long parsedContentLength =
-                    ulong.TryParse(val, out ulong parsedUlongContentLength) ? (parsedUlongContentLength <= long.MaxValue ? (long)parsedUlongContentLength : 0) :
-                    long.Parse(val);
+                var parsedContentLength = ulong.TryParse(val, out var parsedUlongContentLength)
+                    ? (
+                        parsedUlongContentLength <= long.MaxValue
+                            ? (long)parsedUlongContentLength
+                            : 0
+                    )
+                    : long.Parse(val);
                 if (parsedContentLength < 0 || (_clSet && parsedContentLength != _contentLength))
                 {
                     _context.ErrorMessage = "Invalid Content-Length.";
@@ -291,7 +313,9 @@ namespace SpaceWizards.HttpListener
                 if (Headers[HttpKnownHeaderNames.TransferEncoding] != null)
                 {
                     _context.ErrorStatus = (int)HttpStatusCode.NotImplemented;
-                    _context.ErrorMessage = HttpStatusDescription.Get(HttpStatusCode.NotImplemented);
+                    _context.ErrorMessage = HttpStatusDescription.Get(
+                        HttpStatusCode.NotImplemented
+                    );
                 }
             }
 
@@ -307,16 +331,16 @@ namespace SpaceWizards.HttpListener
             if (!HasEntityBody)
                 return true;
 
-            int length = 2048;
+            var length = 2048;
             if (_contentLength > 0)
                 length = (int)Math.Min(_contentLength, (long)length);
 
-            byte[] bytes = new byte[length];
+            var bytes = new byte[length];
             while (true)
             {
                 try
                 {
-                    IAsyncResult ares = InputStream.BeginRead(bytes, 0, length, null, null);
+                    var ares = InputStream.BeginRead(bytes, 0, length, null, null);
                     if (!ares.IsCompleted && !ares.AsyncWaitHandle.WaitOne(1000))
                         return false;
                     if (InputStream.EndRead(ares) <= 0)
@@ -334,17 +358,16 @@ namespace SpaceWizards.HttpListener
             }
         }
 
-        private X509Certificate2 GetClientCertificateCore() => ClientCertificate = _context.Connection.ClientCertificate;
+        private X509Certificate2 GetClientCertificateCore() =>
+            ClientCertificate = _context.Connection.ClientCertificate;
 
         private int GetClientCertificateErrorCore()
         {
-            HttpConnection cnc = _context.Connection;
+            var cnc = _context.Connection;
             if (cnc.ClientCertificate == null)
                 return 0;
-            int[] errors = cnc.ClientCertificateErrors;
-            if (errors != null && errors.Length > 0)
-                return errors[0];
-            return 0;
+            var errors = cnc.ClientCertificateErrors;
+            return errors != null && errors.Length > 0 ? errors[0] : 0;
         }
 
         public long ContentLength64
@@ -358,7 +381,7 @@ namespace SpaceWizards.HttpListener
             }
         }
 
-        public bool HasEntityBody => (_contentLength > 0 || _isChunked);
+        public bool HasEntityBody => _contentLength > 0 || _isChunked;
 
         public NameValueCollection Headers => _headers;
 
@@ -368,19 +391,16 @@ namespace SpaceWizards.HttpListener
         {
             get
             {
-                if (_inputStream == null)
-                {
-                    if (_isChunked || _contentLength > 0)
-                        _inputStream = _context.Connection.GetRequestStream(_isChunked, _contentLength);
-                    else
-                        _inputStream = Stream.Null;
-                }
+                _inputStream ??=
+                    _isChunked || _contentLength > 0
+                        ? _context.Connection.GetRequestStream(_isChunked, _contentLength)
+                        : Stream.Null;
 
                 return _inputStream;
             }
         }
 
-        public bool IsAuthenticated => false;
+        public static bool IsAuthenticated => false;
 
         public bool IsSecureConnection => _context.Connection.IsSecure;
 
@@ -390,7 +410,10 @@ namespace SpaceWizards.HttpListener
 
         public Guid RequestTraceIdentifier { get; } = Guid.NewGuid();
 
-        private IAsyncResult BeginGetClientCertificateCore(AsyncCallback requestCallback, object state)
+        private IAsyncResult BeginGetClientCertificateCore(
+            AsyncCallback requestCallback,
+            object state
+        )
         {
             var asyncResult = new GetClientCertificateAsyncResult(this, state, requestCallback);
 
@@ -404,33 +427,39 @@ namespace SpaceWizards.HttpListener
 
         public X509Certificate2 EndGetClientCertificate(IAsyncResult asyncResult)
         {
-            if (asyncResult == null)
-                throw new ArgumentNullException(nameof(asyncResult));
+            ArgumentNullException.ThrowIfNull(asyncResult);
 
-            GetClientCertificateAsyncResult clientCertAsyncResult = asyncResult as GetClientCertificateAsyncResult;
+            var clientCertAsyncResult = asyncResult as GetClientCertificateAsyncResult;
             if (clientCertAsyncResult == null || clientCertAsyncResult.AsyncObject != this)
             {
                 throw new ArgumentException(SR.net_io_invalidasyncresult, nameof(asyncResult));
             }
             if (clientCertAsyncResult.EndCalled)
             {
-                throw new InvalidOperationException(SR.Format(SR.net_io_invalidendcall, nameof(EndGetClientCertificate)));
+                throw new InvalidOperationException(
+                    SR.Format(SR.net_io_invalidendcall, nameof(EndGetClientCertificate))
+                );
             }
             clientCertAsyncResult.EndCalled = true;
 
             return (X509Certificate2)clientCertAsyncResult.Result;
         }
 
-        public string ServiceName => null;
+        public static string ServiceName => null;
 
-        public TransportContext TransportContext => new Context();
+        public static TransportContext TransportContext => new Context();
 
         private Uri RequestUri => _requestUri;
-        private bool SupportsWebSockets => true;
+        private static bool SupportsWebSockets => true;
 
         private sealed class GetClientCertificateAsyncResult : LazyAsyncResult
         {
-            public GetClientCertificateAsyncResult(object myObject, object myState, AsyncCallback myCallBack) : base(myObject, myState, myCallBack) { }
+            public GetClientCertificateAsyncResult(
+                object myObject,
+                object myState,
+                AsyncCallback myCallBack
+            )
+                : base(myObject, myState, myCallBack) { }
         }
     }
 }

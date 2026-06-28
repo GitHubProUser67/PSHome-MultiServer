@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -37,9 +36,9 @@ namespace Horizon.RT.Models
         }
 
         public override void Serialize(MessageWriter writer)
-        { 
+        {
             base.Serialize(writer);
- 
+
             writer.Write(SourceClientIndex);
             writer.Write(SourceConnectionIndex);
             writer.Write(ClientObjectIndex);
@@ -54,17 +53,18 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                 $"SourceClientIndex: {SourceClientIndex} " +
-                 $"SourceConnectionIndex: {SourceConnectionIndex} " +
-                 $"ClientObjectIndex: {ClientObjectIndex} " +
-                 $"NetObjectBufferStart: {NetObjectBufferStart} " +
-                 $"NetObjectBufferCount: {NetObjectBufferCount} " +
-                 $"NetDataStreamStart: {NetDataStreamStart} " +
-                 $"NetDataStreamCount: {NetDataStreamCount} " +
-                 $"ConnectTime: {ConnectTime} " +
-                 $"unused_field: {unused_field} " +
-                 $"Name: {Name}";
+            return base.ToString()
+                + " "
+                + $"SourceClientIndex: {SourceClientIndex} "
+                + $"SourceConnectionIndex: {SourceConnectionIndex} "
+                + $"ClientObjectIndex: {ClientObjectIndex} "
+                + $"NetObjectBufferStart: {NetObjectBufferStart} "
+                + $"NetObjectBufferCount: {NetObjectBufferCount} "
+                + $"NetDataStreamStart: {NetDataStreamStart} "
+                + $"NetDataStreamCount: {NetDataStreamCount} "
+                + $"ConnectTime: {ConnectTime} "
+                + $"unused_field: {unused_field} "
+                + $"Name: {Name}";
         }
     }
 }

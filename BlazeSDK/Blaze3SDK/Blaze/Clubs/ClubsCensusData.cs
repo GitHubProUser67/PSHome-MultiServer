@@ -2,33 +2,31 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Clubs
 {
-	[TdfStruct(0xDE7B5AB1)]
-	public struct ClubsCensusData
-	{
+    [TdfStruct(0xDE7B5AB1)]
+    public struct ClubsCensusData
+    {
+        [TdfMember("TCM")]
+        public uint mNumOfClubMembers;
 
-		[TdfMember("TCM")]
-		public uint mNumOfClubMembers;
+        [TdfMember("MBD")]
+        public SortedDictionary<uint, uint> mNumOfClubMembersByDomain;
 
-		[TdfMember("MBD")]
-		public SortedDictionary<uint, uint> mNumOfClubMembersByDomain;
+        [TdfMember("TNC")]
+        public uint mNumOfClubs;
 
-		[TdfMember("TNC")]
-		public uint mNumOfClubs;
+        [TdfMember("CBD")]
+        public SortedDictionary<uint, uint> mNumOfClubsByDomain;
 
-		[TdfMember("CBD")]
-		public SortedDictionary<uint, uint> mNumOfClubsByDomain;
+        [TdfMember("OCM")]
+        public uint mNumOfOnlineClubMembers;
 
-		[TdfMember("OCM")]
-		public uint mNumOfOnlineClubMembers;
+        [TdfMember("OMD")]
+        public SortedDictionary<uint, uint> mNumOfOnlineClubMembersByDomain;
 
-		[TdfMember("OMD")]
-		public SortedDictionary<uint, uint> mNumOfOnlineClubMembersByDomain;
+        [TdfMember("TOC")]
+        public uint mNumOfOnlineClubs;
 
-		[TdfMember("TOC")]
-		public uint mNumOfOnlineClubs;
-
-		[TdfMember("OCD")]
-		public SortedDictionary<uint, uint> mNumOfOnlineClubsByDomain;
-
-	}
+        [TdfMember("OCD")]
+        public SortedDictionary<uint, uint> mNumOfOnlineClubsByDomain;
+    }
 }

@@ -1,11 +1,7 @@
-using System.Linq;
-
 namespace EdNetService.CRC
 {
     public class Utils
     {
-        private static readonly object _lock = new object();
-
         private static bool IsCRCTableInitiated = false;
 
         private static readonly uint[] CRCTable = new uint[256];
@@ -22,38 +18,44 @@ namespace EdNetService.CRC
 
         public static ushort GetCRCFromBuffer(char[] b)
         {
-            uint CRCValue = GetCRCFromBuffer32(b);
-            return (ushort)((CRCValue ^ uint.MaxValue) & 65535U ^ ((CRCValue ^ uint.MaxValue) & 4294901760U) >> 16);
+            var CRCValue = GetCRCFromBuffer32(b);
+            return (ushort)(
+                ((CRCValue ^ uint.MaxValue) & 65535U)
+                ^ (((CRCValue ^ uint.MaxValue) & 4294901760U) >> 16)
+            );
         }
 
         public static ushort GetCRCFromBuffer(byte[] b)
         {
-            uint CRCValue = GetCRCFromBuffer32(b);
-            return (ushort)((CRCValue ^ uint.MaxValue) & 65535U ^ ((CRCValue ^ uint.MaxValue) & 4294901760U) >> 16);
+            var CRCValue = GetCRCFromBuffer32(b);
+            return (ushort)(
+                ((CRCValue ^ uint.MaxValue) & 65535U)
+                ^ (((CRCValue ^ uint.MaxValue) & 4294901760U) >> 16)
+            );
         }
 
         private static uint GetCRCFromBuffer32(char[] b)
         {
-            uint CRCValue = uint.MaxValue;
+            var CRCValue = uint.MaxValue;
 
             if (!IsCRCTableInitiated)
                 InitializeCRCTable();
 
-            foreach (byte byteValue in b.Select(v => (byte)v))
-                CRCValue = CRCValue >> 8 ^ CRCTable[(CRCValue ^ byteValue) & byte.MaxValue];
+            foreach (var byteValue in b.Select(v => (byte)v))
+                CRCValue = (CRCValue >> 8) ^ CRCTable[(CRCValue ^ byteValue) & byte.MaxValue];
 
             return ~CRCValue;
         }
 
         private static uint GetCRCFromBuffer32(byte[] b)
         {
-            uint CRCValue = uint.MaxValue;
+            var CRCValue = uint.MaxValue;
 
             if (!IsCRCTableInitiated)
                 InitializeCRCTable();
 
-            foreach (byte byteValue in b)
-                CRCValue = CRCValue >> 8 ^ CRCTable[(CRCValue ^ byteValue) & byte.MaxValue];
+            foreach (var byteValue in b)
+                CRCValue = (CRCValue >> 8) ^ CRCTable[(CRCValue ^ byteValue) & byte.MaxValue];
 
             return ~CRCValue;
         }
@@ -62,32 +64,27 @@ namespace EdNetService.CRC
         {
             uint uVar2 = 0;
 
-            lock (_lock)
+            do
             {
+                var iVar1 = 8;
+                var uVar3 = uVar2;
+
                 do
                 {
-                    int iVar1 = 8;
-                    uint uVar3 = uVar2;
+                    if ((uVar3 & 1) == 0)
+                        uVar3 >>= 1;
+                    else
+                        uVar3 = (uVar3 >> 1) ^ 0xEDB88320;
 
-                    do
-                    {
-                        if ((uVar3 & 1) == 0)
-                            uVar3 >>= 1;
-                        else
-                            uVar3 = uVar3 >> 1 ^ 0xEDB88320;
+                    iVar1--;
+                } while (iVar1 > 0);
 
-                        iVar1--;
+                CRCTable[uVar2] = uVar3;
 
-                    } while (iVar1 > 0);
+                uVar2++;
+            } while (uVar2 < 256);
 
-                    CRCTable[uVar2] = uVar3;
-
-                    uVar2++;
-
-                } while (uVar2 < 256);
-
-                IsCRCTableInitiated = true;
-            }
+            IsCRCTableInitiated = true;
         }
     }
 }

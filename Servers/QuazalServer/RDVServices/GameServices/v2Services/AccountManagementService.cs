@@ -13,12 +13,27 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
     public class AccountManagementService : RMCServiceBase
     {
         [RMCMethod(1)]
-        public RMCResult CreateAccount(string strPrincipalName, string strKey, uint uiGroups, string strEmail)
+        public RMCResult CreateAccount(
+            string strPrincipalName,
+            string strKey,
+            uint uiGroups,
+            string strEmail
+        )
         {
-            if (Context != null && DBHelper.RegisterUser(Context.Handler.Factory.Item1, strPrincipalName, strKey, NetworkPlayers.GenerateUniqueUint(strPrincipalName)))
+            if (
+                Context != null
+                && DBHelper.RegisterUser(
+                    Context.Handler.Factory.Item1,
+                    strPrincipalName,
+                    strKey,
+                    NetworkPlayers.GenerateUniqueUint(strPrincipalName)
+                )
+            )
                 return new RMCResult(new RMCPResponseEmpty());
             else
-                CustomLogger.LoggerAccessor.LogError($"[AccountManagementService] - Failed to Create Account: {strPrincipalName} with Email: {strEmail}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"[AccountManagementService] - Failed to Create Account: {strPrincipalName} with Email: {strEmail}"
+                );
 
             return Error((int)ErrorCode.Core_RegistrationError);
         }
@@ -156,12 +171,31 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
         }
 
         [RMCMethod(21)]
-        public RMCResult CreateAccountWithCustomData(string strPrincipalName, string strKey, uint uiGroups, string strEmail, AnyData<PlayerData> oPublicData, AnyData<AccountInfoPrivateData> oPrivateData)
+        public RMCResult CreateAccountWithCustomData(
+            string strPrincipalName,
+            string strKey,
+            uint uiGroups,
+            string strEmail,
+            AnyData<PlayerData> oPublicData,
+            AnyData<AccountInfoPrivateData> oPrivateData
+        )
         {
-            if (Context != null && DBHelper.RegisterUserWithExtraData(Context.Handler.Factory.Item1, strPrincipalName, strKey, NetworkPlayers.GenerateUniqueUint(strPrincipalName), oPublicData, oPrivateData))
+            if (
+                Context != null
+                && DBHelper.RegisterUserWithExtraData(
+                    Context.Handler.Factory.Item1,
+                    strPrincipalName,
+                    strKey,
+                    NetworkPlayers.GenerateUniqueUint(strPrincipalName),
+                    oPublicData,
+                    oPrivateData
+                )
+            )
                 return new RMCResult(new RMCPResponseEmpty());
             else
-                CustomLogger.LoggerAccessor.LogError($"[AccountManagementService] - Failed to Create Account: {strPrincipalName} with Email: {strEmail}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"[AccountManagementService] - Failed to Create Account: {strPrincipalName} with Email: {strEmail}"
+                );
 
             return Error((int)ErrorCode.Core_RegistrationError);
         }

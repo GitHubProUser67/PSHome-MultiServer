@@ -1,4 +1,4 @@
-using System.Numerics;
+﻿using System.Numerics;
 using System.Text;
 
 namespace Tdf.Extensions
@@ -7,15 +7,16 @@ namespace Tdf.Extensions
     {
         internal static BigInteger? ReadTdfInteger(this Stream stream)
         {
-            BigInteger b, value = stream.ReadByte();
+            BigInteger b,
+                value = stream.ReadByte();
 
             if (value == -1)
                 return null;
 
             byte i = 6;
 
-            bool negative = (value & 0x40) != 0;
-            bool readNext = (value & 0x80) != 0;
+            var negative = (value & 0x40) != 0;
+            var readNext = (value & 0x80) != 0;
             value &= 0x3F;
 
             while (readNext)
@@ -31,26 +32,26 @@ namespace Tdf.Extensions
                 readNext = b >> 7 != 0;
             }
 
-            if (negative)
-                return value != 0 ? -value : long.MinValue;
-            return value;
+            return negative
+                ? value != 0
+                    ? -value
+                    : long.MinValue
+                : value;
         }
 
         internal static BigInteger? ReadTdfLegacyInteger(this Stream stream, byte size)
         {
-            if (size < 15)
-                return size;
-
-            return stream.ReadTdfLegacyInteger();
+            return size < 15 ? (BigInteger?)size : stream.ReadTdfLegacyInteger();
         }
 
         internal static BigInteger? ReadTdfLegacyInteger(this Stream stream)
         {
-            BigInteger b, value = stream.ReadByte();
+            BigInteger b,
+                value = stream.ReadByte();
             if (value == -1)
                 return null;
 
-            bool readNext = (value & 0x80) != 0;
+            var readNext = (value & 0x80) != 0;
             value &= 0x7F;
 
             while (readNext)
@@ -68,16 +69,15 @@ namespace Tdf.Extensions
 
         internal static string? ReadTdfString(this Stream stream)
         {
-            byte[]? data = stream.ReadTdfBlob();
+            var data = stream.ReadTdfBlob();
             if (data == null)
                 return null;
 
-
             //checking whether we should include last char in the string or not
-            int len = data.Length;
+            var len = data.Length;
             if (len > 0)
             {
-                int lengthWithoutTrailingByte = len - 1;
+                var lengthWithoutTrailingByte = len - 1;
                 if (data[lengthWithoutTrailingByte] == 0x00)
                     len = lengthWithoutTrailingByte;
             }
@@ -87,15 +87,15 @@ namespace Tdf.Extensions
 
         internal static string? ReadTdfLegacyString(this Stream stream, byte size)
         {
-            byte[]? data = stream.ReadTdfLegacyBlob(size);
+            var data = stream.ReadTdfLegacyBlob(size);
             if (data == null)
                 return null;
 
             //checking whether we should include last char in the string or not
-            int len = data.Length;
+            var len = data.Length;
             if (len > 0)
             {
-                int lengthWithoutTrailingByte = len - 1;
+                var lengthWithoutTrailingByte = len - 1;
                 if (data[lengthWithoutTrailingByte] == 0x00)
                     len = lengthWithoutTrailingByte;
             }
@@ -105,81 +105,74 @@ namespace Tdf.Extensions
 
         internal static byte[]? ReadTdfBlob(this Stream stream)
         {
-            BigInteger? len = stream.ReadTdfInteger();
+            var len = stream.ReadTdfInteger();
             if (len == null || len.Value < 0)
                 return null;
 
-            byte[] blob = new byte[(int)len.Value];
+            var blob = new byte[(int)len.Value];
 
-            if (!stream.ReadAll(blob, 0, blob.Length))
-                return null;
-
-            return blob;
+            return !stream.ReadAll(blob, 0, blob.Length) ? null : blob;
         }
 
         internal static byte[]? ReadTdfLegacyBlob(this Stream stream, byte size)
         {
-            BigInteger? len = stream.ReadTdfLegacyInteger(size);
+            var len = stream.ReadTdfLegacyInteger(size);
             if (len == null || len.Value < 0)
                 return null;
 
-            byte[] blob = new byte[(int)len.Value];
+            var blob = new byte[(int)len.Value];
 
-            if (!stream.ReadAll(blob, 0, blob.Length))
-                return null;
-
-            return blob;
+            return !stream.ReadAll(blob, 0, blob.Length) ? null : blob;
         }
 
         internal static BlazeObjectType? ReadTdfBlazeObjectType(this Stream stream)
         {
-            ushort? component = (ushort?)stream.ReadTdfInteger();
+            var component = (ushort?)stream.ReadTdfInteger();
             if (component == null)
                 return null;
 
-            ushort? type = (ushort?)stream.ReadTdfInteger();
-            if (type == null)
-                return null;
-
-            return new BlazeObjectType(component.Value, type.Value);
+            var type = (ushort?)stream.ReadTdfInteger();
+            return type == null ? null : new BlazeObjectType(component.Value, type.Value);
         }
 
         internal static BlazeObjectId? ReadTdfBlazeObjectId(this Stream stream)
         {
-            BlazeObjectType? type = stream.ReadTdfBlazeObjectType();
+            var type = stream.ReadTdfBlazeObjectType();
             if (type == null)
                 return null;
 
-            long? id = (long?)stream.ReadTdfInteger();
-            if (id == null)
-                return null;
-
-            return new BlazeObjectId(id.Value, type.Value);
+            var id = (long?)stream.ReadTdfInteger();
+            return id == null ? null : new BlazeObjectId(id.Value, type.Value);
         }
 
         internal static float? ReadTdfFloat(this Stream stream)
         {
-            byte[] temp = new byte[4];
+            var temp = new byte[4];
             if (!stream.ReadAll(temp, 0, 4))
                 return null;
-            if (BitConverter.IsLittleEndian)
+            if (EndianTools.EndianAwareConverter.isLittleEndianSystem)
                 Array.Reverse(temp);
             return BitConverter.ToSingle(temp, 0);
         }
+
         internal static TdfMember? ReadTdfTag(this Stream stream) => TdfMember.FromStream(stream);
-        internal static Task<TdfMember?> ReadTdfTagAsync(this Stream stream) => TdfMember.FromStreamAsync(stream);
+
+        internal static Task<TdfMember?> ReadTdfTagAsync(this Stream stream) =>
+            TdfMember.FromStreamAsync(stream);
 
         internal static TdfBaseType ReadTdfBaseType(this Stream stream)
         {
-            int b = stream.ReadByte();
-            if (b == -1)
-                return TdfBaseType.TDF_TYPE_MAX;
-            return (TdfBaseType)b;
+            var b = stream.ReadByte();
+            return b == -1 ? TdfBaseType.TDF_TYPE_MAX : (TdfBaseType)b;
         }
 
-        internal static bool ReadTdfLegacyBaseTypeAndSize(this Stream stream, out TdfLegacyBaseType baseType, out byte size)
+        internal static bool ReadTdfLegacyBaseTypeAndSize(
+            this Stream stream,
+            out TdfLegacyBaseType baseType,
+            out byte size
+        )
         {
-            int typeAndSize = stream.ReadByte();
+            var typeAndSize = stream.ReadByte();
             if (typeAndSize == -1)
             {
                 baseType = (TdfLegacyBaseType)255;
@@ -192,24 +185,35 @@ namespace Tdf.Extensions
             return true;
         }
 
-        internal static void WriteTdfTag(this Stream stream, TdfMember tag) => stream.Write(tag.Bytes, 0, tag.Bytes.Length);
-        internal static Task WriteTdfTagAsync(this Stream stream, TdfMember tag) => stream.WriteAsync(tag.Bytes, 0, tag.Bytes.Length);
+        internal static void WriteTdfTag(this Stream stream, TdfMember tag) =>
+            stream.Write(tag.Bytes, 0, tag.Bytes.Length);
 
-        internal static void WriteTdfBaseType(this Stream stream, TdfBaseType type) => stream.WriteByte((byte)type);
+        internal static Task WriteTdfTagAsync(this Stream stream, TdfMember tag) =>
+            stream.WriteAsync(tag.Bytes, 0, tag.Bytes.Length);
 
-        internal static void WriteTdfLegacyBaseTypeAndSize(this Stream stream, TdfLegacyBaseType baseType, int size)
+        internal static void WriteTdfBaseType(this Stream stream, TdfBaseType type) =>
+            stream.WriteByte((byte)type);
+
+        internal static void WriteTdfLegacyBaseTypeAndSize(
+            this Stream stream,
+            TdfLegacyBaseType baseType,
+            int size
+        )
         {
-            byte sizeByte = size > 0xF ? (byte)0xF : (byte)size;
+            var sizeByte = size > 0xF ? (byte)0xF : (byte)size;
             stream.WriteByte((byte)(((byte)baseType << 4) | sizeByte));
             if (sizeByte == 0xF)
                 stream.WriteTdfLegacyInteger(size);
         }
 
-        internal static void WriteTdfLegacyBaseTypeAndSize(this Stream stream, TdfLegacyBaseType baseType, byte size)
+        internal static void WriteTdfLegacyBaseTypeAndSize(
+            this Stream stream,
+            TdfLegacyBaseType baseType,
+            byte size
+        )
         {
             stream.WriteByte((byte)(((byte)baseType << 4) | size));
         }
-
 
         internal static void WriteTdfBool(this Stream stream, bool value)
         {
@@ -224,21 +228,20 @@ namespace Tdf.Extensions
 
                 //calculate the first byte
                 if (value >= 0)
-                    curByte = (byte)(value & 0x3F | 0x80); //set first six bits + pos sign bit (0) + and next bit (1)
+                    curByte = (byte)((value & 0x3F) | 0x80); //set first six bits + pos sign bit (0) + and next bit (1)
                 else
                 {
                     value = -value;
-                    curByte = (byte)(value & 0x3F | 0xC0); //set first six bits + neg sign bit (1) + and next bit (1)
+                    curByte = (byte)((value & 0x3F) | 0xC0); //set first six bits + neg sign bit (1) + and next bit (1)
                 }
 
-                for (BigInteger i = value >> 6; i > 0; i >>= 7)
+                for (var i = value >> 6; i > 0; i >>= 7)
                 {
                     stream.WriteByte(curByte);
                     curByte = (byte)((i | 0x80) & 0xFF);
                 }
 
                 stream.WriteByte((byte)(curByte & 0x7F)); //change next bit to 0
-
             }
             else
                 stream.WriteByte(0x00);
@@ -248,22 +251,23 @@ namespace Tdf.Extensions
         {
             if (value != 0)
             {
-                long returnPosition = stream.Position;
+                var returnPosition = stream.Position;
 
                 //calculate the first byte
-                byte curByte = (byte)(value & 0x7F); //this is the last byte, next bit is 0
-                int byteCount = 1;
+                var curByte = (byte)(value & 0x7F); //this is the last byte, next bit is 0
+                var byteCount = 1;
 
-                for (BigInteger i = value >> 7; i > 0; i >>= 7)
+                for (var i = value >> 7; i > 0; i >>= 7)
                 {
-                    stream.WriteByte(curByte); byteCount++;
+                    stream.WriteByte(curByte);
+                    byteCount++;
                     curByte = (byte)((i | 0x80) & 0xFF);
                 }
 
                 stream.WriteByte(curByte);
 
                 //for some stupid reason the bytes are reversed, so we need to fix it in stream
-                byte[] bytes = new byte[byteCount];
+                var bytes = new byte[byteCount];
 
                 stream.Position = returnPosition;
                 stream.Read(bytes, 0, byteCount);
@@ -279,7 +283,7 @@ namespace Tdf.Extensions
 
         internal static void WriteTdfString(this Stream stream, string value)
         {
-            byte[] data = Encoding.UTF8.GetBytes(value);
+            var data = Encoding.UTF8.GetBytes(value);
 
             stream.WriteTdfInteger(data.Length + 1);
             stream.Write(data, 0, data.Length);
@@ -288,8 +292,8 @@ namespace Tdf.Extensions
 
         internal static void WriteTdfLegacyString(this Stream stream, string value, bool withType)
         {
-            byte[] data = Encoding.UTF8.GetBytes(value);
-            int len = data.Length + 1;
+            var data = Encoding.UTF8.GetBytes(value);
+            var len = data.Length + 1;
 
             if (withType)
                 stream.WriteTdfLegacyBaseTypeAndSize(TdfLegacyBaseType.TYPE_STRING, len);
@@ -308,7 +312,7 @@ namespace Tdf.Extensions
 
         internal static void WriteTdfLegacyBlob(this Stream stream, byte[] value, bool withType)
         {
-            int len = value.Length;
+            var len = value.Length;
 
             if (withType)
                 stream.WriteTdfLegacyBaseTypeAndSize(TdfLegacyBaseType.TYPE_BLOB, len);
@@ -332,8 +336,8 @@ namespace Tdf.Extensions
 
         internal static void WriteTdfFloat(this Stream stream, float value)
         {
-            byte[] temp = BitConverter.GetBytes(value);
-            if (BitConverter.IsLittleEndian)
+            var temp = BitConverter.GetBytes(value);
+            if (EndianTools.EndianAwareConverter.isLittleEndianSystem)
                 Array.Reverse(temp);
             stream.Write(temp, 0, 4);
         }
@@ -342,7 +346,5 @@ namespace Tdf.Extensions
         {
             stream.WriteTdfInteger(value.Time);
         }
-
-
     }
 }

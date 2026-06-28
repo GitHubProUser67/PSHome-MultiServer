@@ -1,19 +1,23 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-
-namespace MultiServerLibrary.Extension
+﻿namespace MultiServerLibrary.Extension
 {
     public static class ArrayUtils
     {
-        public static T[] AddElementToArray<T>(this T[] array, T newElement)
+        extension<T>(T[] array)
         {
-            return array.Concat(new[] { newElement }).ToArray();
-        }
+            public T[] AddElementToArray(T newElement)
+            {
+                return [.. array, newElement];
+            }
 
-        public static T[] RemoveElementFromArray<T>(this T[] array, T elementToRemove)
-        {
-            return array.Where(item => !EqualityComparer<T>.Default.Equals(item, elementToRemove))
-                        .ToArray();
+            public T[] RemoveElementFromArray(T elementToRemove)
+            {
+                return
+                [
+                    .. array.Where(item =>
+                        !EqualityComparer<T>.Default.Equals(item, elementToRemove)
+                    ),
+                ];
+            }
         }
     }
 }

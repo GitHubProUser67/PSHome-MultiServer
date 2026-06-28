@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -71,20 +70,21 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"ApplicationID: {ApplicationID} " +
-                $"MinPlayers: {MinPlayers} " +
-                $"MaxPlayers: {MaxPlayers} " +
-                $"GameLevel: {GameLevel} " +
-                $"GamePassword: {GamePassword} " +
-                $"PlayerSkillLevel: {PlayerSkillLevel} " +
-                $"Ruleset: {RulesSet} " +
-                $"GenericField1: {GenericField1:X8} " +
-                $"GenericField2: {GenericField2:X8} " +
-                $"GenericField3: {GenericField3:X8} " +
-                $"GameHostType: {GameHostType}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"ApplicationID: {ApplicationID} "
+                + $"MinPlayers: {MinPlayers} "
+                + $"MaxPlayers: {MaxPlayers} "
+                + $"GameLevel: {GameLevel} "
+                + $"GamePassword: {GamePassword} "
+                + $"PlayerSkillLevel: {PlayerSkillLevel} "
+                + $"Ruleset: {RulesSet} "
+                + $"GenericField1: {GenericField1:X8} "
+                + $"GenericField2: {GenericField2:X8} "
+                + $"GenericField3: {GenericField3:X8} "
+                + $"GameHostType: {GameHostType}";
         }
     }
 }

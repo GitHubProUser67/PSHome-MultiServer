@@ -1,6 +1,6 @@
-using QuazalServer.RDVServices.DDL.Models;
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
+using QuazalServer.RDVServices.DDL.Models;
 
 namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
 {
@@ -33,7 +33,10 @@ namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
         {
             StorageFile reply = new();
 
-            string path = Path.Combine(QuazalServerConfiguration.QuazalStaticFolder + "/StaticFiles/DriverPS3", strTag);
+            var path = Path.Combine(
+                QuazalServerConfiguration.QuazalStaticFolder + "/StaticFiles/DriverPS3",
+                strTag
+            );
 
             if (File.Exists(path))
             {
@@ -61,6 +64,5 @@ namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
         {
             UNIMPLEMENTED();
         }
-
     }
 }

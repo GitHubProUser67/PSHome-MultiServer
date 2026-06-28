@@ -3,37 +3,25 @@
 /// <summary>
 /// For managed lifetime metrics, we just want to uniquely identify metric instances so we can cache them.
 /// We differentiate by the family name + the set of unique instance label names applied to the instance.
-/// 
+///
 /// Managed lifetime metrics are not differentiated by static labels because the static labels are applied
 /// in a lower layer (the underlying MetricFactory) and cannot differ within a single ManagedLifetimeMetricFactory.
 /// </summary>
-internal readonly struct ManagedLifetimeMetricIdentity : IEquatable<ManagedLifetimeMetricIdentity>
+internal readonly struct ManagedLifetimeMetricIdentity(
+    string metricFamilyName,
+    StringSequence instanceLabelNames
+) : IEquatable<ManagedLifetimeMetricIdentity>
 {
-    public readonly string MetricFamilyName;
-    public readonly StringSequence InstanceLabelNames;
+    public readonly string MetricFamilyName = metricFamilyName;
+    public readonly StringSequence InstanceLabelNames = instanceLabelNames;
 
-    private readonly int _hashCode;
-
-    public ManagedLifetimeMetricIdentity(string metricFamilyName, StringSequence instanceLabelNames)
-    {
-        MetricFamilyName = metricFamilyName;
-        InstanceLabelNames = instanceLabelNames;
-
-        _hashCode = CalculateHashCode(metricFamilyName, instanceLabelNames);
-    }
+    private readonly int _hashCode = CalculateHashCode(metricFamilyName, instanceLabelNames);
 
     public bool Equals(ManagedLifetimeMetricIdentity other)
     {
-        if (_hashCode != other._hashCode)
-            return false;
-
-        if (!string.Equals(MetricFamilyName, other.MetricFamilyName, StringComparison.Ordinal))
-            return false;
-
-        if (!InstanceLabelNames.Equals(other.InstanceLabelNames))
-            return false;
-
-        return true;
+        return _hashCode == other._hashCode
+            && string.Equals(MetricFamilyName, other.MetricFamilyName, StringComparison.Ordinal)
+            && InstanceLabelNames.Equals(other.InstanceLabelNames);
     }
 
     public override int GetHashCode()
@@ -45,7 +33,7 @@ internal readonly struct ManagedLifetimeMetricIdentity : IEquatable<ManagedLifet
     {
         unchecked
         {
-            int hashCode = 0;
+            var hashCode = 0;
 
             hashCode ^= metricFamilyName.GetHashCode() * 997;
             hashCode ^= instanceLabelNames.GetHashCode() * 397;

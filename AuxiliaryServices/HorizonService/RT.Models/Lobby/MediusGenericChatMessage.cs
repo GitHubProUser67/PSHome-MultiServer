@@ -1,11 +1,13 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
 using Horizon.RT.Models.Misc;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.GenericChatMessage)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.GenericChatMessage
+    )]
     public class MediusGenericChatMessage : BaseLobbyExtMessage, IMediusChatMessage
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.GenericChatMessage;
@@ -19,13 +21,10 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             SessionKey = reader.ReadString(Constants.SESSIONKEY_MAXLEN);
             reader.ReadBytes(2);
             MessageType = reader.Read<MediusChatMessageType>();
@@ -35,13 +34,10 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(SessionKey, Constants.SESSIONKEY_MAXLEN);
             writer.Write(new byte[2]);
             writer.Write(MessageType);
@@ -49,15 +45,15 @@ namespace Horizon.RT.Models
             writer.Write(Message, Constants.CHATMESSAGE_MAXLEN);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"MessageType: {MessageType} " +
-                $"TargetID: {TargetID} " +
-                $"Message: {Message}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"MessageType: {MessageType} "
+                + $"TargetID: {TargetID} "
+                + $"Message: {Message}";
         }
     }
 }

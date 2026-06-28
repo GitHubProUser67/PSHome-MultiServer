@@ -28,14 +28,15 @@ namespace QuazalServer.RDVServices.RMC
     }
 
     // Wrapper class for DDL (or ANY object)
-    public class RMCPResponseDDL<T> : RMCPResponse where T : class
+    public class RMCPResponseDDL<T> : RMCPResponse
+        where T : class
     {
         public RMCPResponseDDL(T data)
         {
             objectData = data;
         }
 
-        T objectData;
+        readonly T objectData;
 
         public override string PayloadToString()
         {

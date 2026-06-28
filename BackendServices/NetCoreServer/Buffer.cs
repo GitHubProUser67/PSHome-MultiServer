@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics;
 using System.Text;
 
@@ -17,18 +16,22 @@ namespace NetCoreServer
         /// Is the buffer empty?
         /// </summary>
         public bool IsEmpty => (_data == null) || (_size == 0);
+
         /// <summary>
         /// Bytes memory buffer
         /// </summary>
         public byte[] Data => _data;
+
         /// <summary>
         /// Bytes memory buffer capacity
         /// </summary>
         public long Capacity => _data.Length;
+
         /// <summary>
         /// Bytes memory buffer size
         /// </summary>
         public long Size => _size;
+
         /// <summary>
         /// Bytes memory buffer offset
         /// </summary>
@@ -42,15 +45,32 @@ namespace NetCoreServer
         /// <summary>
         /// Initialize a new expandable buffer with zero capacity
         /// </summary>
-        public Buffer() { _data = new byte[0]; _size = 0; _offset = 0; }
+        public Buffer()
+        {
+            _data = [];
+            _size = 0;
+            _offset = 0;
+        }
+
         /// <summary>
         /// Initialize a new expandable buffer with the given capacity
         /// </summary>
-        public Buffer(long capacity) { _data = new byte[capacity]; _size = 0; _offset = 0; }
+        public Buffer(long capacity)
+        {
+            _data = new byte[capacity];
+            _size = 0;
+            _offset = 0;
+        }
+
         /// <summary>
         /// Initialize a new expandable buffer with the given data
         /// </summary>
-        public Buffer(byte[] data) { _data = data; _size = data.Length; _offset = 0; }
+        public Buffer(byte[] data)
+        {
+            _data = data;
+            _size = data.Length;
+            _offset = 0;
+        }
 
         #region Memory buffer methods
 
@@ -87,10 +107,9 @@ namespace NetCoreServer
 #if DEBUG
             Debug.Assert((offset + size) <= Size, "Invalid offset & size!");
 #endif
-            if ((offset + size) > Size)
-                throw new ArgumentException("Invalid offset & size!", nameof(offset));
-
-            return Encoding.UTF8.GetString(_data, (int)offset, (int)size);
+            return (offset + size) > Size
+                ? throw new ArgumentException("Invalid offset & size!", nameof(offset))
+                : Encoding.UTF8.GetString(_data, (int)offset, (int)size);
         }
 
         /// <summary>
@@ -99,7 +118,7 @@ namespace NetCoreServer
         public void Remove(long offset, long size)
         {
 #if DEBUG
-            Debug.Assert(((offset + size) <= Size), "Invalid offset & size!");
+            Debug.Assert((offset + size) <= Size, "Invalid offset & size!");
 #endif
             if ((offset + size) > Size)
                 throw new ArgumentException("Invalid offset & size!", nameof(offset));
@@ -129,7 +148,7 @@ namespace NetCoreServer
 
             if (capacity > Capacity)
             {
-                byte[] data = new byte[Math.Max(capacity, 2 * Capacity)];
+                var data = new byte[Math.Max(capacity, 2 * Capacity)];
                 Array.Copy(_data, 0, data, 0, _size);
                 _data = data;
             }
@@ -149,11 +168,18 @@ namespace NetCoreServer
         /// <summary>
         /// Shift the current buffer offset
         /// </summary>
-        public void Shift(long offset) { _offset += offset; }
+        public void Shift(long offset)
+        {
+            _offset += offset;
+        }
+
         /// <summary>
         /// Unshift the current buffer offset
         /// </summary>
-        public void Unshift(long offset) { _offset -= offset; }
+        public void Unshift(long offset)
+        {
+            _offset -= offset;
+        }
 
         #endregion
 
@@ -227,7 +253,7 @@ namespace NetCoreServer
         /// <returns>Count of append bytes</returns>
         public long Append(string text)
         {
-            int length = Encoding.UTF8.GetMaxByteCount(text.Length);
+            var length = Encoding.UTF8.GetMaxByteCount(text.Length);
             Reserve(_size + length);
             long result = Encoding.UTF8.GetBytes(text, 0, text.Length, _data, (int)_size);
             _size += result;
@@ -241,7 +267,7 @@ namespace NetCoreServer
         /// <returns>Count of append bytes</returns>
         public long Append(ReadOnlySpan<char> text)
         {
-            int length = Encoding.UTF8.GetMaxByteCount(text.Length);
+            var length = Encoding.UTF8.GetMaxByteCount(text.Length);
             Reserve(_size + length);
             long result = Encoding.UTF8.GetBytes(text, new Span<byte>(_data, (int)_size, length));
             _size += result;

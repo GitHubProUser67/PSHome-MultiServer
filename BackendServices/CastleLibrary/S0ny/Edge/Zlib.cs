@@ -1,12 +1,7 @@
+using CastleLibrary.ICSharpCode.SharpZipLib.Zip.Compression;
+using CastleLibrary.ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 using EndianTools;
-using ICSharpCode.SharpZipLib.Zip.Compression;
-using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 using Org.BouncyCastle.Utilities.Zlib;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CastleLibrary.S0ny.Edge
 {
@@ -28,33 +23,44 @@ namespace CastleLibrary.S0ny.Edge
             return EdgeZlibDecompressInternalAsync(inData, false).GetAwaiter().GetResult(); // Keep the exception handling intact for backward compatibility.
         }
 
-        private static async Task<byte[]> EdgeZlibDecompressInternalAsync(byte[] inData, bool icSharp)
+        private static async Task<byte[]> EdgeZlibDecompressInternalAsync(
+            byte[] inData,
+            bool icSharp
+        )
         {
-            int chunkIndex = 0;
-            List<KeyValuePair<int, Task<byte[]>>> zlibResults = new List<KeyValuePair<int, Task<byte[]>>>();
+            var chunkIndex = 0;
+            var zlibResults = new List<KeyValuePair<int, Task<byte[]>>>();
 
-            using (MemoryStream memoryStream = new MemoryStream(inData))
+            using (var memoryStream = new MemoryStream(inData))
             {
-                byte[] array = new byte[ZlibChunkHeader.sizeOf];
+                var array = new byte[ZlibChunkHeader.sizeOf];
                 while (memoryStream.Position < memoryStream.Length)
                 {
-                    await memoryStream.ReadAsync(array, 0, array.Length).ConfigureAwait(false);
-                    ZlibChunkHeader header = ZlibChunkHeader.FromBytes(EndianUtils.EndianSwap(array));
+                    await memoryStream.ReadAsync(array).ConfigureAwait(false);
+                    var header = ZlibChunkHeader.FromBytes(EndianUtils.EndianSwap(array));
                     int compressedSize = header.CompressedSize;
-                    byte[] array2 = new byte[compressedSize];
-                    await memoryStream.ReadAsync(array2, 0, compressedSize).ConfigureAwait(false);
-                    zlibResults.Add(new KeyValuePair<int, Task<byte[]>>(chunkIndex, icSharp ? DecompressEdgeZlibChunkICSharpAsync(array2, header) : DecompressEdgeZlibChunkAsync(array2, header)));
+                    var array2 = new byte[compressedSize];
+                    await memoryStream
+                        .ReadAsync(array2.AsMemory(0, compressedSize))
+                        .ConfigureAwait(false);
+                    zlibResults.Add(
+                        new KeyValuePair<int, Task<byte[]>>(
+                            chunkIndex,
+                            icSharp
+                                ? DecompressEdgeZlibChunkICSharpAsync(array2, header)
+                                : DecompressEdgeZlibChunkAsync(array2, header)
+                        )
+                    );
                     chunkIndex++;
                 }
             }
 
-            using (MemoryStream memoryStream = new MemoryStream())
+            using (var memoryStream = new MemoryStream())
             {
                 foreach (var result in zlibResults.OrderBy(kv => kv.Key))
-                {
-                    byte[] decompressedChunk = await result.Value.ConfigureAwait(false);
-                    await memoryStream.WriteAsync(decompressedChunk, 0, decompressedChunk.Length).ConfigureAwait(false);
-                }
+                    await memoryStream
+                        .WriteAsync(await result.Value.ConfigureAwait(false))
+                        .ConfigureAwait(false);
 
                 return memoryStream.ToArray();
             }
@@ -62,64 +68,82 @@ namespace CastleLibrary.S0ny.Edge
 
         public static byte[] EdgeZlibCompress(byte[] inData)
         {
-            return Task.Run(async() => {
-                int chunkIndex = 0;
-                List<KeyValuePair<int, Task<byte[]>>> zlibResults = new List<KeyValuePair<int, Task<byte[]>>>();
-
-                using (MemoryStream memoryStream = new MemoryStream(inData))
+            return Task.Run(async () =>
                 {
-                    while (memoryStream.Position < memoryStream.Length)
-                    {
-                        int currentBlockSize = Math.Min((int)(memoryStream.Length - memoryStream.Position), ushort.MaxValue);
-                        byte[] array = new byte[currentBlockSize];
-                        await memoryStream.ReadAsync(array, 0, currentBlockSize).ConfigureAwait(false);
-                        zlibResults.Add(new KeyValuePair<int, Task<byte[]>>(chunkIndex, CompressEdgeZlibChunkAsync(array)));
-                        chunkIndex++;
-                    }
-                }
+                    var chunkIndex = 0;
+                    var zlibResults = new List<KeyValuePair<int, Task<byte[]>>>();
 
-                using (MemoryStream memoryStream = new MemoryStream(inData.Length))
-                {
-                    foreach (var result in zlibResults.OrderBy(kv => kv.Key))
+                    using (var memoryStream = new MemoryStream(inData))
                     {
-                        byte[] compressedChunk = await result.Value.ConfigureAwait(false);
-                        await memoryStream.WriteAsync(compressedChunk, 0, compressedChunk.Length).ConfigureAwait(false);
+                        while (memoryStream.Position < memoryStream.Length)
+                        {
+                            var currentBlockSize = Math.Min(
+                                (int)(memoryStream.Length - memoryStream.Position),
+                                ushort.MaxValue
+                            );
+                            var compressedBytes = new byte[currentBlockSize];
+                            await memoryStream
+                                .ReadAsync(compressedBytes.AsMemory(0, currentBlockSize))
+                                .ConfigureAwait(false);
+                            zlibResults.Add(
+                                new KeyValuePair<int, Task<byte[]>>(
+                                    chunkIndex,
+                                    CompressEdgeZlibChunkAsync(compressedBytes)
+                                )
+                            );
+                            chunkIndex++;
+                        }
                     }
 
-                    return memoryStream.ToArray();
-                }
-            }).GetAwaiter().GetResult(); // Keep the exception handling intact for backward compatibility.
+                    using (var memoryStream = new MemoryStream(inData.Length))
+                    {
+                        foreach (var result in zlibResults.OrderBy(kv => kv.Key))
+                            await memoryStream
+                                .WriteAsync(await result.Value.ConfigureAwait(false))
+                                .ConfigureAwait(false);
+
+                        return memoryStream.ToArray();
+                    }
+                })
+                .GetAwaiter()
+                .GetResult(); // Keep the exception handling intact for backward compatibility.
         }
 
-        private static async Task<byte[]> DecompressEdgeZlibChunkICSharpAsync(byte[] inData, ZlibChunkHeader header)
+        private static async Task<byte[]> DecompressEdgeZlibChunkICSharpAsync(
+            byte[] inData,
+            ZlibChunkHeader header
+        )
         {
             if (header.CompressedSize == header.SourceSize)
                 return inData;
             const ushort blkSize = 4096;
-            MemoryStream baseInputStream = new MemoryStream(inData);
-            InflaterInputStream inflaterInputStream = new InflaterInputStream(baseInputStream, new Inflater(true));
-            using (MemoryStream memoryStream = new MemoryStream())
+            var baseInputStream = new MemoryStream(inData);
+            var inflaterInputStream = new InflaterInputStream(baseInputStream, new Inflater(true));
+            using (var memoryStream = new MemoryStream())
             {
-                byte[] array = new byte[blkSize];
+                var array = new byte[blkSize];
                 for (; ; )
                 {
-                    int num = inflaterInputStream.Read(array, 0, array.Length);
+                    var num = inflaterInputStream.Read(array, 0, array.Length);
                     if (num <= 0)
                         break;
-                    await memoryStream.WriteAsync(array, 0, num).ConfigureAwait(false);
+                    await memoryStream.WriteAsync(array.AsMemory(0, num)).ConfigureAwait(false);
                 }
                 inflaterInputStream.Close();
                 return memoryStream.ToArray();
             }
         }
 
-        private static Task<byte[]> DecompressEdgeZlibChunkAsync(byte[] InData, ZlibChunkHeader header)
+        private static Task<byte[]> DecompressEdgeZlibChunkAsync(
+            byte[] InData,
+            ZlibChunkHeader header
+        )
         {
             if (header.CompressedSize == header.SourceSize)
                 return Task.FromResult(InData);
-            MemoryStream memoryStream = new MemoryStream();
-            ZOutputStream zoutputStream = new ZOutputStream(memoryStream, true);
-            byte[] zlibPayload = new byte[InData.Length];
+            var memoryStream = new MemoryStream();
+            var zoutputStream = new ZOutputStream(memoryStream, true);
+            var zlibPayload = new byte[InData.Length];
             Array.Copy(InData, 0, zlibPayload, 0, InData.Length);
             zoutputStream.Write(zlibPayload, 0, zlibPayload.Length);
             zoutputStream.Close();
@@ -129,23 +153,27 @@ namespace CastleLibrary.S0ny.Edge
 
         private static Task<byte[]> CompressEdgeZlibChunkAsync(byte[] InData)
         {
-            byte[] zlibPayload, compressedData;
-            MemoryStream memoryStream = new MemoryStream();
-            ZOutputStream zoutputStream = new ZOutputStream(memoryStream, 9, true);
+            byte[] zlibPayload,
+                compressedData;
+            var memoryStream = new MemoryStream();
+            var zoutputStream = new ZOutputStream(memoryStream, 9, true);
             zoutputStream.Write(InData, 0, InData.Length);
             zoutputStream.Close();
             memoryStream.Close();
             zlibPayload = memoryStream.ToArray();
-            if (zlibPayload.Length >= InData.Length)
-                compressedData = InData;
-            else
-                compressedData = zlibPayload;
-            byte[] finalOuput = new byte[compressedData.Length + 4];
-            Array.Copy(compressedData, 0, finalOuput, 4, compressedData.Length);
+            compressedData = zlibPayload.Length >= InData.Length ? InData : zlibPayload;
+            var finalOuput = new byte[compressedData.Length + ZlibChunkHeader.sizeOf];
+            Array.Copy(
+                compressedData,
+                0,
+                finalOuput,
+                ZlibChunkHeader.sizeOf,
+                compressedData.Length
+            );
             ZlibChunkHeader chunkHeader = default;
             chunkHeader.SourceSize = (ushort)InData.Length;
             chunkHeader.CompressedSize = (ushort)compressedData.Length;
-            Array.Copy(EndianUtils.EndianSwap(chunkHeader.GetBytes()), 0, finalOuput, 0, ZlibChunkHeader.sizeOf);
+            Array.Copy(chunkHeader.GetBytes(), 0, finalOuput, 0, ZlibChunkHeader.sizeOf);
             return Task.FromResult(finalOuput);
         }
     }

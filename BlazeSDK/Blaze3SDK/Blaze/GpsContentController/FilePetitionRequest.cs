@@ -2,30 +2,28 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GpsContentController
 {
-	[TdfStruct]
-	public struct FilePetitionRequest
-	{
+    [TdfStruct]
+    public struct FilePetitionRequest
+    {
+        [TdfMember("ANVP")]
+        public SortedDictionary<string, string> mAttributeMap;
 
-		[TdfMember("ANVP")]
-		public SortedDictionary<string, string> mAttributeMap;
+        [TdfMember("COTY")]
+        public string mComplaintType;
 
-		[TdfMember("COTY")]
-		public string mComplaintType;
+        [TdfMember("COID")]
+        public BlazeObjectId mContentId;
 
-		[TdfMember("COID")]
-		public BlazeObjectId mContentId;
+        [TdfMember("PTDE")]
+        public string mPetitionDetail;
 
-		[TdfMember("PTDE")]
-		public string mPetitionDetail;
+        [TdfMember("SUBJ")]
+        public string mSubject;
 
-		[TdfMember("SUBJ")]
-		public string mSubject;
+        [TdfMember("TRGT")]
+        public List<long> mTargetUsers;
 
-		[TdfMember("TRGT")]
-		public List<long> mTargetUsers;
-
-		[TdfMember("TMZO")]
-		public string mTimeZone;
-
-	}
+        [TdfMember("TMZO")]
+        public string mTimeZone;
+    }
 }

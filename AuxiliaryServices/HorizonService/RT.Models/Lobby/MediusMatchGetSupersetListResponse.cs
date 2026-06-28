@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -8,10 +7,14 @@ namespace Horizon.RT.Models
     /// Response returning a list of Match Supersets from the database <br></br>
     /// StatusCode: MediusNoResult, MediusSuccess
     /// </summary>
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.MatchGetSupersetListResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.MatchGetSupersetListResponse
+    )]
     public class MediusMatchGetSupersetListResponse : BaseLobbyExtMessage, IMediusResponse
     {
-        public override byte PacketType => (byte)MediusLobbyExtMessageIds.MatchGetSupersetListResponse;
+        public override byte PacketType =>
+            (byte)MediusLobbyExtMessageIds.MatchGetSupersetListResponse;
 
         public bool IsSuccess => StatusCode >= 0;
 
@@ -19,26 +22,32 @@ namespace Horizon.RT.Models
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Response code to fetching superset list
         /// </summary>
         public MediusCallbackStatus StatusCode;
+
         /// <summary>
         /// End of List flag
         /// </summary>
         public bool EndOfList;
+
         /// <summary>
         /// Superset ID
         /// </summary>
         public uint SupersetID;
+
         /// <summary>
         /// Superset Name
         /// </summary>
         public string SupersetName;
+
         /// <summary>
         /// Superset Description
         /// </summary>
         public string SupersetDescription;
+
         /// <summary>
         /// Superset ExtraInfo
         /// </summary>
@@ -76,14 +85,15 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"SupersetID: {SupersetID} " +
-                $"SupersetName: {SupersetName} " +
-                $"SupersetDescription: {SupersetDescription} " +
-                $"SupersetExtraInfo: {ExtraInfo} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"SupersetID: {SupersetID} "
+                + $"SupersetName: {SupersetName} "
+                + $"SupersetDescription: {SupersetDescription} "
+                + $"SupersetExtraInfo: {ExtraInfo} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

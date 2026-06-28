@@ -1,5 +1,5 @@
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -30,12 +30,9 @@ namespace Horizon.RT.Models
             writer.Write(SessionKey, Constants.SESSIONKEY_MAXLEN);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey}";
+            return base.ToString() + " " + $"MessageID: {MessageID} " + $"SessionKey: {SessionKey}";
         }
     }
 }

@@ -1,10 +1,10 @@
-﻿using CustomLogger;
-using MultiServerLibrary.CustomServers;
-using MultiServerLibrary.Extension;
-using NetHasher.CRC;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Text;
+using CastleLibrary.NetHasher.CRC;
+using CustomLogger;
+using MultiServerLibrary.CustomServers;
+using MultiServerLibrary.Extension;
 
 namespace EdenServer.TelnetDebugger
 {
@@ -14,12 +14,11 @@ namespace EdenServer.TelnetDebugger
 
         private readonly ConcurrentDictionary<uint, TcpClient> _clients = new();
 
-        private TCPServer _server;
+        private readonly TCPServer _server;
 
         public TelnetServer()
         {
-            if (_server == null)
-                _server = new TCPServer();
+            _server ??= new TCPServer();
         }
 
         public void Start(ushort port)
@@ -32,22 +31,28 @@ namespace EdenServer.TelnetDebugger
                 null,
                 (serverPort, client, remoteEP) =>
                 {
-                    uint clientId = CRC32.Create(Encoding.ASCII.GetBytes(serverPort.ToString() + $"MS4|{client.GetHashCode()}|{remoteEP}"));
+                    var clientId = CRC32.Create(
+                        Encoding.ASCII.GetBytes(
+                            serverPort.ToString() + $"MS4|{client.GetHashCode()}|{remoteEP}"
+                        )
+                    );
 
                     if (_clients.TryAdd(clientId, client))
                     {
 #if DEBUG
-                        LoggerAccessor.LogInfo($"[TELNET] - Adding client with id:{clientId} to the cache.");
+                        LoggerAccessor.LogInfo(
+                            $"[TELNET] - Adding client with id:{clientId} to the cache."
+                        );
 #endif
                         client.Client.Send(_encoding.GetBytes(" \r\nEdenServerDebugTelnet>")); // Send prompt.
                     }
 
                     const ushort telnetBuffSize = 1024;
 
-                    byte[] buffer = new byte[telnetBuffSize];
+                    var buffer = new byte[telnetBuffSize];
 
-                    using TcpClient storedClient = _clients[clientId];
-                    using NetworkStream stream = storedClient.GetStream();
+                    using var storedClient = _clients[clientId];
+                    using var stream = storedClient.GetStream();
 
                     try
                     {
@@ -57,27 +62,34 @@ namespace EdenServer.TelnetDebugger
                             {
                                 if (storedClient.Available > 0)
                                 {
-                                    int bytesRead = stream.Read(buffer, 0, buffer.Length);
+                                    var bytesRead = stream.Read(buffer, 0, buffer.Length);
                                     if (bytesRead == 0)
                                         // Client disconnected
                                         break;
 
-                                    int startIndex = 0;
+                                    var startIndex = 0;
                                     // Skip Telnet negotiation bytes (255, etc.)
-                                    while (startIndex < bytesRead && buffer[startIndex] == byte.MaxValue)
+                                    while (
+                                        startIndex < bytesRead
+                                        && buffer[startIndex] == byte.MaxValue
+                                    )
                                         startIndex += 3; // Telnet sequences are 3 bytes
 
                                     if (startIndex >= bytesRead)
                                         continue;
 
-                                    LoggerAccessor.LogInfo($"[TELNET] - id:{clientId} sent Text:{{{_encoding.GetString(buffer, startIndex, bytesRead - startIndex)}}}");
+                                    LoggerAccessor.LogInfo(
+                                        $"[TELNET] - id:{clientId} sent Text:{{{_encoding.GetString(buffer, startIndex, bytesRead - startIndex)}}}"
+                                    );
                                 }
                                 else
                                     Thread.Sleep(1);
                             }
                             catch (Exception ex)
                             {
-                                LoggerAccessor.LogError($"[TELNET] - Error reading from client: {ex}");
+                                LoggerAccessor.LogError(
+                                    $"[TELNET] - Error reading from client: {ex}"
+                                );
                                 break;
                             }
                         }
@@ -91,14 +103,18 @@ namespace EdenServer.TelnetDebugger
                     if (_clients.TryRemove(clientId, out _))
                     {
 #if DEBUG
-                        LoggerAccessor.LogWarn($"[TELNET] - Removed client with id:{clientId} from the cache.");
+                        LoggerAccessor.LogWarn(
+                            $"[TELNET] - Removed client with id:{clientId} from the cache."
+                        );
 #endif
                     }
                     else
-                        LoggerAccessor.LogError($"[TELNET] - Failed to remove client with id:{clientId} from the cache. Should never happen!!!");
+                        LoggerAccessor.LogError(
+                            $"[TELNET] - Failed to remove client with id:{clientId} from the cache. Should never happen!!!"
+                        );
                 },
                 new CancellationTokenSource().Token
-                );
+            );
         }
 
         public void Stop()

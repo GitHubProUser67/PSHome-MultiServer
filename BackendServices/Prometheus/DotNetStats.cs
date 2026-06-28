@@ -27,21 +27,25 @@ public sealed class DotNetStats
     }
 
     private readonly Process _process;
-    private readonly List<Counter.Child> _collectionCounts = new List<Counter.Child>();
-    private Gauge _totalMemory;
-    private Gauge _virtualMemorySize;
-    private Gauge _workingSet;
-    private Gauge _privateMemorySize;
-    private Counter _cpuTotal;
-    private Gauge _openHandles;
-    private Gauge _startTime;
-    private Gauge _numThreads;
+    private readonly List<Counter.Child> _collectionCounts = [];
+    private readonly Gauge _totalMemory;
+    private readonly Gauge _virtualMemorySize;
+    private readonly Gauge _workingSet;
+    private readonly Gauge _privateMemorySize;
+    private readonly Counter _cpuTotal;
+    private readonly Gauge _openHandles;
+    private readonly Gauge _startTime;
+    private readonly Gauge _numThreads;
 
     private DotNetStats(IMetricFactory metricFactory)
     {
         _process = Process.GetCurrentProcess();
 
-        var collectionCountsParent = metricFactory.CreateCounter("dotnet_collection_count_total", "GC collection count", new[] { "generation" });
+        var collectionCountsParent = metricFactory.CreateCounter(
+            "dotnet_collection_count_total",
+            "GC collection count",
+            ["generation"]
+        );
 
         for (var gen = 0; gen <= GC.MaxGeneration; gen++)
         {
@@ -53,23 +57,38 @@ public sealed class DotNetStats
         // This is fixed in newer versions but keep the help text synchronized with the Go implementation just in case.
         // See https://github.com/prometheus/pushgateway/issues/194
         // and https://github.com/prometheus-net/prometheus-net/issues/89
-        _startTime = metricFactory.CreateGauge("process_start_time_seconds", "Start time of the process since unix epoch in seconds.");
-        _cpuTotal = metricFactory.CreateCounter("process_cpu_seconds_total", "Total user and system CPU time spent in seconds.");
+        _startTime = metricFactory.CreateGauge(
+            "process_start_time_seconds",
+            "Start time of the process since unix epoch in seconds."
+        );
+        _cpuTotal = metricFactory.CreateCounter(
+            "process_cpu_seconds_total",
+            "Total user and system CPU time spent in seconds."
+        );
 
-        _virtualMemorySize = metricFactory.CreateGauge("process_virtual_memory_bytes", "Virtual memory size in bytes.");
+        _virtualMemorySize = metricFactory.CreateGauge(
+            "process_virtual_memory_bytes",
+            "Virtual memory size in bytes."
+        );
         _workingSet = metricFactory.CreateGauge("process_working_set_bytes", "Process working set");
-        _privateMemorySize = metricFactory.CreateGauge("process_private_memory_bytes", "Process private memory size");
+        _privateMemorySize = metricFactory.CreateGauge(
+            "process_private_memory_bytes",
+            "Process private memory size"
+        );
         _openHandles = metricFactory.CreateGauge("process_open_handles", "Number of open handles");
         _numThreads = metricFactory.CreateGauge("process_num_threads", "Total number of threads");
 
         // .net specific metrics
-        _totalMemory = metricFactory.CreateGauge("dotnet_total_memory_bytes", "Total known allocated memory");
+        _totalMemory = metricFactory.CreateGauge(
+            "dotnet_total_memory_bytes",
+            "Total known allocated memory"
+        );
 
         _startTime.SetToTimeUtc(_process.StartTime);
     }
 
     // The Process class is not thread-safe so let's synchronize the updates to avoid data tearing.
-    private readonly object _updateLock = new object();
+    private readonly object _updateLock = new();
 
     private void UpdateMetrics()
     {
@@ -91,8 +110,6 @@ public sealed class DotNetStats
                 _numThreads.Set(_process.Threads.Count);
             }
         }
-        catch (Exception)
-        {
-        }
+        catch (Exception) { }
     }
 }

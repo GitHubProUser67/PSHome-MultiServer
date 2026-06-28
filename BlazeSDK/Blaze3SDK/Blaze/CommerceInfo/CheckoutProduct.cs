@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.CommerceInfo
 {
-	[TdfStruct]
-	public struct CheckoutProduct
-	{
+    [TdfStruct]
+    public struct CheckoutProduct
+    {
+        [TdfMember("PDID")]
+        public string mProductId;
 
-		[TdfMember("PDID")]
-		public string mProductId;
-
-		[TdfMember("PDRN")]
-		public uint mQuantity;
-
-	}
+        [TdfMember("PDRN")]
+        public uint mQuantity;
+    }
 }

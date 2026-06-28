@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct GetMatchmakingConfigResponse
-	{
+    [TdfStruct]
+    public struct GetMatchmakingConfigResponse
+    {
+        [TdfMember("GLST")]
+        public List<GenericRuleConfig> mGenericRules;
 
-		[TdfMember("GLST")]
-		public List<GenericRuleConfig> mGenericRules;
+        [TdfMember("PPSR")]
+        public PredefinedPingSiteRuleConfig mPingSiteRule;
 
-		[TdfMember("PPSR")]
-		public PredefinedPingSiteRuleConfig mPingSiteRule;
-
-		[TdfMember("RLST")]
-		public List<PredefinedRuleConfig> mPredefinedRules;
-
-	}
+        [TdfMember("RLST")]
+        public List<PredefinedRuleConfig> mPredefinedRules;
+    }
 }

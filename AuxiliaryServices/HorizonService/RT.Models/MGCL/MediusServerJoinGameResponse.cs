@@ -1,10 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyReport, MediusMGCLMessageIds.ServerJoinGameResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyReport,
+        MediusMGCLMessageIds.ServerJoinGameResponse
+    )]
     public class MediusServerJoinGameResponse : BaseMGCLMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusMGCLMessageIds.ServerJoinGameResponse;
@@ -43,12 +45,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"Confirmation: {Confirmation} " +
-                $"AccessKey: {AccessKey} " +
-                $"pubKey: {pubKey} " +
-                $"DmeClientIndex: {DmeClientIndex}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"Confirmation: {Confirmation} "
+                + $"AccessKey: {AccessKey} "
+                + $"pubKey: {pubKey} "
+                + $"DmeClientIndex: {DmeClientIndex}";
         }
     }
 }

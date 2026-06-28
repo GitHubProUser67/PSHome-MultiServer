@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Rooms
 {
-	[TdfStruct]
-	public struct CheckEntryCriteriaResponse
-	{
+    [TdfStruct]
+    public struct CheckEntryCriteriaResponse
+    {
+        [TdfMember("FCRI")]
+        public string mFailedCriteria;
 
-		[TdfMember("FCRI")]
-		public string mFailedCriteria;
-
-		[TdfMember("PASS")]
-		public bool mPassed;
-
-	}
+        [TdfMember("PASS")]
+        public bool mPassed;
+    }
 }

@@ -1,6 +1,5 @@
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
-using System;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -19,7 +18,9 @@ namespace Horizon.RT.Models
         public override void Serialize(MessageWriter writer)
         {
             if (PublicKey == null || PublicKey.Length != 0x40)
-                throw new InvalidOperationException("Unable to serialize CLIENT_GET_KEY key because key is either null or not 64 bytes long!");
+                throw new InvalidOperationException(
+                    "Unable to serialize CLIENT_GET_KEY key because key is either null or not 64 bytes long!"
+                );
 
             writer.Write(PublicKey);
         }

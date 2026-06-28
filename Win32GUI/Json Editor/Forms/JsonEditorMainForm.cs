@@ -1,9 +1,4 @@
-﻿using System;
-using System.Drawing;
-using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -96,7 +91,7 @@ namespace ZTn.Json.Editor.Forms
             get
             {
                 var cp = base.CreateParams;
-                cp.ExStyle |= 0x02000000;    // Turn on WS_EX_COMPOSITED
+                cp.ExStyle |= 0x02000000; // Turn on WS_EX_COMPOSITED
                 return cp;
             }
         }
@@ -109,7 +104,7 @@ namespace ZTn.Json.Editor.Forms
             {
                 Filter = @"json files (*.json)|*.json|All files (*.*)|*.*",
                 FilterIndex = 1,
-                RestoreDirectory = true
+                RestoreDirectory = true,
             };
 
             if (openFileDialog.ShowDialog() == DialogResult.OK)
@@ -137,7 +132,11 @@ namespace ZTn.Json.Editor.Forms
             }
             catch
             {
-                MessageBox.Show(this, $"An error occured when saving file as \"{OpenedFileName}\".", @"Save As...");
+                MessageBox.Show(
+                    this,
+                    $"An error occured when saving file as \"{OpenedFileName}\".",
+                    @"Save As..."
+                );
 
                 OpenedFileName = null;
                 SetActionStatus(@"Document NOT saved.", true);
@@ -154,7 +153,7 @@ namespace ZTn.Json.Editor.Forms
             {
                 Filter = DefaultFileFilters,
                 FilterIndex = 1,
-                RestoreDirectory = true
+                RestoreDirectory = true,
             };
 
             if (saveFileDialog.ShowDialog() != DialogResult.OK)
@@ -175,7 +174,11 @@ namespace ZTn.Json.Editor.Forms
             }
             catch
             {
-                MessageBox.Show(this, $"An error occured when saving file as \"{OpenedFileName}\".", @"Save As...");
+                MessageBox.Show(
+                    this,
+                    $"An error occured when saving file as \"{OpenedFileName}\".",
+                    @"Save As..."
+                );
 
                 OpenedFileName = null;
                 SetActionStatus(@"Document NOT saved.", true);
@@ -220,7 +223,10 @@ namespace ZTn.Json.Editor.Forms
             jsonValueTextBox.TextChanged += jsonValueTextBox_TextChanged;
         }
 
-        private void jTokenTree_AfterSelect(object sender, JsonTreeView.AfterSelectEventArgs eventArgs)
+        private void jTokenTree_AfterSelect(
+            object sender,
+            JsonTreeView.AfterSelectEventArgs eventArgs
+        )
         {
             newtonsoftJsonTypeTextBox.Text = eventArgs.TypeName;
 
@@ -235,10 +241,7 @@ namespace ZTn.Json.Editor.Forms
 
         private void SetJsonSourceStream(Stream stream, string fileName)
         {
-            if (stream == null)
-            {
-                throw new ArgumentNullException(nameof(stream));
-            }
+            ArgumentNullException.ThrowIfNull(stream);
 
             OpenedFileName = fileName;
 
@@ -248,7 +251,11 @@ namespace ZTn.Json.Editor.Forms
             }
             catch
             {
-                MessageBox.Show(this, $"An error occured when reading \"{OpenedFileName}\"", @"Open...");
+                MessageBox.Show(
+                    this,
+                    $"An error occured when reading \"{OpenedFileName}\"",
+                    @"Open..."
+                );
 
                 OpenedFileName = null;
                 SetActionStatus(@"Document NOT loaded.", true);
@@ -305,24 +312,17 @@ namespace ZTn.Json.Editor.Forms
             try
             {
                 // Hotfix: Replace single backslashes not already escaped
-#if NET7_0_OR_GREATER
-                string fixedText = JsonSlashEscape().Replace(jsonValueTextBox.Text, @"\\");
-#else
-                string fixedText = Regex.Replace(
-                    jsonValueTextBox.Text,
-                    jsonSlashEscapePattern, // matches a single '\' not followed by valid escape
-                    @"\\"
-                );
-#endif
+                var fixedText = JsonSlashEscape().Replace(jsonValueTextBox.Text, @"\\");
                 jTokenTree.UpdateSelected(fixedText);
 
                 // Save the current cursor position
-                int selectionStart = jsonValueTextBox.SelectionStart;
+                var selectionStart = jsonValueTextBox.SelectionStart;
 
                 // Reformat JSON text
-                string formattedJson = JsonConvert.SerializeObject(
+                var formattedJson = JsonConvert.SerializeObject(
                     JsonConvert.DeserializeObject(fixedText),
-                    Formatting.Indented);
+                    Formatting.Indented
+                );
 
                 jsonValueTextBox.Text = formattedJson;
 
@@ -339,7 +339,8 @@ namespace ZTn.Json.Editor.Forms
             {
                 SetJsonStatus(
                     $"INVALID Json format at (line {exception.LineNumber}, position {exception.LinePosition})",
-                    true);
+                    true
+                );
             }
             catch
             {
@@ -356,9 +357,8 @@ namespace ZTn.Json.Editor.Forms
                 e.Handled = true;
             }
         }
-#if NET7_0_OR_GREATER
+
         [GeneratedRegex(jsonSlashEscapePattern)]
         private static partial Regex JsonSlashEscape();
-#endif
     }
 }

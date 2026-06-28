@@ -1,12 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.IO;
 using System.Net;
-using System.Net.Security;
 
 namespace SpaceWizards.HttpListener
 {
@@ -14,10 +10,10 @@ namespace SpaceWizards.HttpListener
     {
         public static bool IsSupported => true;
 
-        private Dictionary<HttpListenerContext, HttpListenerContext> _listenerContexts = new Dictionary<HttpListenerContext, HttpListenerContext>();
-        private List<HttpListenerContext> _contextQueue = new List<HttpListenerContext>();
-        private List<ListenerAsyncResult> _asyncWaitQueue = new List<ListenerAsyncResult>();
-        private Dictionary<HttpConnection, HttpConnection> _connections = new Dictionary<HttpConnection, HttpConnection>();
+        private Dictionary<HttpListenerContext, HttpListenerContext> _listenerContexts = new();
+        private List<HttpListenerContext> _contextQueue = new();
+        private List<ListenerAsyncResult> _asyncWaitQueue = new();
+        private Dictionary<HttpConnection, HttpConnection> _connections = new();
         private bool _unsafeConnectionNtlmAuthentication;
 
         public HttpListenerTimeoutManager TimeoutManager
@@ -29,9 +25,11 @@ namespace SpaceWizards.HttpListener
             }
         }
 
-        private void AddPrefixCore(string uriPrefix) => HttpEndPointManager.AddPrefix(uriPrefix, this);
+        private void AddPrefixCore(string uriPrefix) =>
+            HttpEndPointManager.AddPrefix(uriPrefix, this);
 
-        private void RemovePrefixCore(string uriPrefix) => HttpEndPointManager.RemovePrefix(uriPrefix, this);
+        private void RemovePrefixCore(string uriPrefix) =>
+            HttpEndPointManager.RemovePrefix(uriPrefix, this);
 
         public void Start()
         {
@@ -50,7 +48,8 @@ namespace SpaceWizards.HttpListener
                 catch (Exception exception)
                 {
                     _state = State.Closed;
-                    if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, $"Start {exception}");
+                    if (NetEventSource.Log.IsEnabled())
+                        NetEventSource.Error(this, $"Start {exception}");
                     throw;
                 }
             }
@@ -69,7 +68,6 @@ namespace SpaceWizards.HttpListener
 
         public void Stop()
         {
-
             lock (_internalLock)
             {
                 try
@@ -84,7 +82,8 @@ namespace SpaceWizards.HttpListener
                 }
                 catch (Exception exception)
                 {
-                    if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, $"Stop {exception}");
+                    if (NetEventSource.Log.IsEnabled())
+                        NetEventSource.Error(this, $"Stop {exception}");
                     throw;
                 }
                 finally
@@ -96,7 +95,6 @@ namespace SpaceWizards.HttpListener
 
         public void Abort()
         {
-
             lock (_internalLock)
             {
                 try
@@ -114,7 +112,8 @@ namespace SpaceWizards.HttpListener
                 }
                 catch (Exception exception)
                 {
-                    if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, $"Abort {exception}");
+                    if (NetEventSource.Log.IsEnabled())
+                        NetEventSource.Error(this, $"Abort {exception}");
                     throw;
                 }
                 finally
@@ -126,7 +125,6 @@ namespace SpaceWizards.HttpListener
 
         private void Dispose()
         {
-
             lock (_internalLock)
             {
                 try
@@ -140,7 +138,8 @@ namespace SpaceWizards.HttpListener
                 }
                 catch (Exception exception)
                 {
-                    if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, $"Dispose {exception}");
+                    if (NetEventSource.Log.IsEnabled())
+                        NetEventSource.Error(this, $"Dispose {exception}");
                     throw;
                 }
                 finally
@@ -165,7 +164,7 @@ namespace SpaceWizards.HttpListener
             }
             lock ((_contextQueue as ICollection).SyncRoot)
             {
-                int idx = _contextQueue.IndexOf(context);
+                var idx = _contextQueue.IndexOf(context);
                 if (idx >= 0)
                     _contextQueue.RemoveAt(idx);
             }
@@ -226,7 +225,7 @@ namespace SpaceWizards.HttpListener
                     var all = new HttpListenerContext[keys.Count];
                     keys.CopyTo(all, 0);
                     _listenerContexts.Clear();
-                    for (int i = all.Length - 1; i >= 0; i--)
+                    for (var i = all.Length - 1; i >= 0; i--)
                         all[i].Connection.Close(true);
                 }
 
@@ -236,21 +235,21 @@ namespace SpaceWizards.HttpListener
                     var conns = new HttpConnection[keys.Count];
                     keys.CopyTo(conns, 0);
                     _connections.Clear();
-                    for (int i = conns.Length - 1; i >= 0; i--)
+                    for (var i = conns.Length - 1; i >= 0; i--)
                         conns[i].Close(true);
                 }
                 lock ((_contextQueue as ICollection).SyncRoot)
                 {
                     var ctxs = (HttpListenerContext[])_contextQueue.ToArray();
                     _contextQueue.Clear();
-                    for (int i = ctxs.Length - 1; i >= 0; i--)
+                    for (var i = ctxs.Length - 1; i >= 0; i--)
                         ctxs[i].Connection.Close(true);
                 }
 
                 lock ((_asyncWaitQueue as ICollection).SyncRoot)
                 {
                     Exception exc = new ObjectDisposedException("listener");
-                    foreach (ListenerAsyncResult ares in _asyncWaitQueue)
+                    foreach (var ares in _asyncWaitQueue)
                     {
                         ares.Complete(exc);
                     }
@@ -268,7 +267,7 @@ namespace SpaceWizards.HttpListener
                     return null;
                 }
 
-                HttpListenerContext context = _contextQueue[0];
+                var context = _contextQueue[0];
                 _contextQueue.RemoveAt(0);
 
                 return context;
@@ -283,14 +282,14 @@ namespace SpaceWizards.HttpListener
                 throw new InvalidOperationException(SR.Format(SR.net_listener_mustcall, "Start()"));
             }
 
-            ListenerAsyncResult ares = new ListenerAsyncResult(this, callback, state);
+            var ares = new ListenerAsyncResult(this, callback, state);
 
             // lock wait_queue early to avoid race conditions
             lock ((_asyncWaitQueue as ICollection).SyncRoot)
             {
                 lock ((_contextQueue as ICollection).SyncRoot)
                 {
-                    HttpListenerContext ctx = GetContextFromQueue();
+                    var ctx = GetContextFromQueue();
                     if (ctx != null)
                     {
                         ares.Complete(ctx, true);
@@ -307,19 +306,18 @@ namespace SpaceWizards.HttpListener
         public HttpListenerContext EndGetContext(IAsyncResult asyncResult)
         {
             CheckDisposed();
-            if (asyncResult == null)
-            {
-                throw new ArgumentNullException(nameof(asyncResult));
-            }
+            ArgumentNullException.ThrowIfNull(asyncResult);
 
-            ListenerAsyncResult ares = asyncResult as ListenerAsyncResult;
+            var ares = asyncResult as ListenerAsyncResult;
             if (ares == null || !ReferenceEquals(this, ares._parent))
             {
                 throw new ArgumentException(SR.net_io_invalidasyncresult, nameof(asyncResult));
             }
             if (ares._endCalled)
             {
-                throw new InvalidOperationException(SR.Format(SR.net_io_invalidendcall, nameof(EndGetContext)));
+                throw new InvalidOperationException(
+                    SR.Format(SR.net_io_invalidendcall, nameof(EndGetContext))
+                );
             }
 
             ares._endCalled = true;
@@ -329,19 +327,21 @@ namespace SpaceWizards.HttpListener
 
             lock ((_asyncWaitQueue as ICollection).SyncRoot)
             {
-                int idx = _asyncWaitQueue.IndexOf(ares);
+                var idx = _asyncWaitQueue.IndexOf(ares);
                 if (idx >= 0)
                     _asyncWaitQueue.RemoveAt(idx);
             }
 
-            HttpListenerContext context = ares.GetContext();
+            var context = ares.GetContext();
             context.ParseAuthentication(context.AuthenticationSchemes);
             return context;
         }
 
         internal AuthenticationSchemes SelectAuthenticationScheme(HttpListenerContext context)
         {
-            return AuthenticationSchemeSelectorDelegate != null ? AuthenticationSchemeSelectorDelegate(context.Request) : _authenticationScheme;
+            return AuthenticationSchemeSelectorDelegate != null
+                ? AuthenticationSchemeSelectorDelegate(context.Request)
+                : _authenticationScheme;
         }
 
         public HttpListenerContext GetContext()
@@ -353,10 +353,12 @@ namespace SpaceWizards.HttpListener
             }
             if (_prefixes.Count == 0)
             {
-                throw new InvalidOperationException(SR.Format(SR.net_listener_mustcall, "AddPrefix()"));
+                throw new InvalidOperationException(
+                    SR.Format(SR.net_listener_mustcall, "AddPrefix()")
+                );
             }
 
-            ListenerAsyncResult ares = (ListenerAsyncResult)BeginGetContext(null, null);
+            var ares = (ListenerAsyncResult)BeginGetContext(null, null);
             ares._inGet = true;
 
             return EndGetContext(ares);

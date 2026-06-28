@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct IndirectJoinGameSetupContext
-	{
+    [TdfStruct]
+    public struct IndirectJoinGameSetupContext
+    {
+        [TdfMember("RPVC")]
+        public bool mRequiresClientVersionCheck;
 
-		[TdfMember("RPVC")]
-		public bool mRequiresClientVersionCheck;
-
-		[TdfMember("GRID")]
-		public BlazeObjectId mUserGroupId;
-
-	}
+        [TdfMember("GRID")]
+        public BlazeObjectId mUserGroupId;
+    }
 }

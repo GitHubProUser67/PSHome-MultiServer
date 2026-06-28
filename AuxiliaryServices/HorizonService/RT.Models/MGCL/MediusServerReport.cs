@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -19,23 +18,28 @@ namespace Horizon.RT.Models
         /// not look up the server by connection. MGCL populates internally.
         /// </summary>
         public string SessionKey;
+
         /// <summary>
         /// Maximum number of game worlds supported by the game server.
         /// </summary>
         public short MaxWorlds;
+
         /// <summary>
         /// The maximum number of players per game world.
         /// </summary>
         public short MaxPlayersPerWorld;
+
         /// <summary>
-        /// The number of active game worlds on this game server. <br></br> 
+        /// The number of active game worlds on this game server. <br></br>
         /// Usually 1 for peer-to-peer hosts, or more for DME Servers.
         /// </summary>
         public short ActiveWorldCount;
+
         /// <summary>
         /// The total number of active players connected to the game server.
         /// </summary>
         public short TotalActivePlayers;
+
         /// <summary>
         /// Alert level to allow for load balancing.
         /// </summary>
@@ -75,13 +79,14 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"SessionKey: {SessionKey} " +
-                $"MaxWorlds: {MaxWorlds} " +
-                $"MaxPlayersPerWorld: {MaxPlayersPerWorld} " +
-                $"ActiveWorldCount: {ActiveWorldCount} " +
-                $"TotalActivePlayers: {TotalActivePlayers} " +
-                $"AlertLevel: {AlertLevel}";
+            return base.ToString()
+                + " "
+                + $"SessionKey: {SessionKey} "
+                + $"MaxWorlds: {MaxWorlds} "
+                + $"MaxPlayersPerWorld: {MaxPlayersPerWorld} "
+                + $"ActiveWorldCount: {ActiveWorldCount} "
+                + $"TotalActivePlayers: {TotalActivePlayers} "
+                + $"AlertLevel: {AlertLevel}";
         }
     }
 }

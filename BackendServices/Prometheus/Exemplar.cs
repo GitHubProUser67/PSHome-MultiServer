@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.Extensions.ObjectPool;
@@ -7,13 +7,13 @@ namespace Prometheus;
 
 /// <summary>
 /// A fully-formed exemplar, describing a set of label name-value pairs.
-/// 
+///
 /// One-time use only - when you pass an instance to a prometheus-net method, it will take ownership of it.
-/// 
+///
 /// You should preallocate and cache:
 /// 1. The exemplar keys created via Exemplar.Key().
 /// 2. Exemplar key-value pairs created vvia key.WithValue() or Exemplar.Pair().
-/// 
+///
 /// From the key-value pairs you can create one-use Exemplar values using Exemplar.From().
 /// You can clone Exemplar instances using Exemplar.Clone() - each clone can only be used once!
 /// </summary>
@@ -117,7 +117,14 @@ public sealed class Exemplar
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Exemplar From(in LabelPair labelPair1, in LabelPair labelPair2, in LabelPair labelPair3, in LabelPair labelPair4, in LabelPair labelPair5, in LabelPair labelPair6)
+    public static Exemplar From(
+        in LabelPair labelPair1,
+        in LabelPair labelPair2,
+        in LabelPair labelPair3,
+        in LabelPair labelPair4,
+        in LabelPair labelPair5,
+        in LabelPair labelPair6
+    )
     {
         var exemplar = Exemplar.AllocateFromPool(length: 6);
         exemplar.LabelPair1 = labelPair1;
@@ -131,7 +138,13 @@ public sealed class Exemplar
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Exemplar From(in LabelPair labelPair1, in LabelPair labelPair2, in LabelPair labelPair3, in LabelPair labelPair4, in LabelPair labelPair5)
+    public static Exemplar From(
+        in LabelPair labelPair1,
+        in LabelPair labelPair2,
+        in LabelPair labelPair3,
+        in LabelPair labelPair4,
+        in LabelPair labelPair5
+    )
     {
         var exemplar = Exemplar.AllocateFromPool(length: 5);
         exemplar.LabelPair1 = labelPair1;
@@ -144,7 +157,12 @@ public sealed class Exemplar
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Exemplar From(in LabelPair labelPair1, in LabelPair labelPair2, in LabelPair labelPair3, in LabelPair labelPair4)
+    public static Exemplar From(
+        in LabelPair labelPair1,
+        in LabelPair labelPair2,
+        in LabelPair labelPair3,
+        in LabelPair labelPair4
+    )
     {
         var exemplar = Exemplar.AllocateFromPool(length: 4);
         exemplar.LabelPair1 = labelPair1;
@@ -156,7 +174,11 @@ public sealed class Exemplar
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Exemplar From(in LabelPair labelPair1, in LabelPair labelPair2, in LabelPair labelPair3)
+    public static Exemplar From(
+        in LabelPair labelPair1,
+        in LabelPair labelPair2,
+        in LabelPair labelPair3
+    )
     {
         var exemplar = Exemplar.AllocateFromPool(length: 3);
         exemplar.LabelPair1 = labelPair1;
@@ -190,12 +212,18 @@ public sealed class Exemplar
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get
         {
-            if (index == 0) return ref LabelPair1;
-            if (index == 1) return ref LabelPair2;
-            if (index == 2) return ref LabelPair3;
-            if (index == 3) return ref LabelPair4;
-            if (index == 4) return ref LabelPair5;
-            if (index == 5) return ref LabelPair6;
+            if (index == 0)
+                return ref LabelPair1;
+            if (index == 1)
+                return ref LabelPair2;
+            if (index == 2)
+                return ref LabelPair3;
+            if (index == 3)
+                return ref LabelPair4;
+            if (index == 4)
+                return ref LabelPair5;
+            if (index == 5)
+                return ref LabelPair6;
             throw new ArgumentOutOfRangeException(nameof(index));
         }
     }
@@ -204,11 +232,11 @@ public sealed class Exemplar
     private static readonly LabelKey DefaultTraceIdKey = Key("trace_id");
     private static readonly LabelKey DefaultSpanIdKey = Key("span_id");
 
-    public static Exemplar FromTraceContext() => FromTraceContext(DefaultTraceIdKey, DefaultSpanIdKey);
+    public static Exemplar FromTraceContext() =>
+        FromTraceContext(DefaultTraceIdKey, DefaultSpanIdKey);
 
     public static Exemplar FromTraceContext(in LabelKey traceIdKey, in LabelKey spanIdKey)
     {
-#if NET6_0_OR_GREATER
         var activity = Activity.Current;
         if (activity != null)
         {
@@ -218,15 +246,12 @@ public sealed class Exemplar
 
             return From(traceIdLabel, spanIdLabel);
         }
-#endif
 
         // Trace context based exemplars are only supported in .NET Core, not .NET Framework.
         return None;
     }
 
-    public Exemplar()
-    {
-    }
+    public Exemplar() { }
 
     private Exemplar(int length)
     {
@@ -281,7 +306,9 @@ public sealed class Exemplar
     internal void MarkAsConsumed()
     {
         if (Interlocked.Exchange(ref _consumed, IsConsumed) == IsConsumed)
-            throw new InvalidOperationException($"An instance of {nameof(Exemplar)} was reused. You must obtain a new instance via Exemplar.From() or Exemplar.Clone() for each metric value observation.");
+            throw new InvalidOperationException(
+                $"An instance of {nameof(Exemplar)} was reused. You must obtain a new instance via Exemplar.From() or Exemplar.Clone() for each metric value observation."
+            );
     }
 
     /// <summary>
@@ -290,7 +317,9 @@ public sealed class Exemplar
     public Exemplar Clone()
     {
         if (Interlocked.Read(ref _consumed) == IsConsumed)
-            throw new InvalidOperationException($"An instance of {nameof(Exemplar)} cannot be cloned after it has already been used.");
+            throw new InvalidOperationException(
+                $"An instance of {nameof(Exemplar)} cannot be cloned after it has already been used."
+            );
 
         var clone = AllocateFromPool(Length);
         clone.LabelPair1 = LabelPair1;

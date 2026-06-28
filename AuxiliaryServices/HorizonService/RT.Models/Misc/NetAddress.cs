@@ -1,12 +1,14 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     public class NetAddress : IStreamSerializer
     {
-        public static readonly NetAddress Empty = new NetAddress() { AddressType = NetAddressType.NetAddressNone };
+        public static readonly NetAddress Empty = new()
+        {
+            AddressType = NetAddressType.NetAddressNone,
+        };
 
         public NetAddressType AddressType;
         public string Address;
@@ -23,15 +25,19 @@ namespace Horizon.RT.Models
         {
             AddressType = reader.Read<NetAddressType>();
 
-            if (AddressType == NetAddressType.NetAddressTypeBinaryExternal
-                || AddressType == NetAddressType.NetAddressTypeBinaryInternal)
+            if (
+                AddressType == NetAddressType.NetAddressTypeBinaryExternal
+                || AddressType == NetAddressType.NetAddressTypeBinaryInternal
+            )
             {
                 BinaryAddress = reader.ReadUInt32();
                 Port = reader.ReadInt32();
             }
 
-            if (AddressType == NetAddressType.NetAddressTypeBinaryExternalVport
-                || AddressType == NetAddressType.NetAddressTypeBinaryInternalVport)
+            if (
+                AddressType == NetAddressType.NetAddressTypeBinaryExternalVport
+                || AddressType == NetAddressType.NetAddressTypeBinaryInternalVport
+            )
             {
                 IPBinaryBitOne = reader.ReadByte();
                 IPBinaryBitTwo = reader.ReadByte();
@@ -48,10 +54,12 @@ namespace Horizon.RT.Models
                 Port = reader.ReadInt32();
             }
 
-            if (AddressType == NetAddressType.NetAddressTypeInternal
+            if (
+                AddressType == NetAddressType.NetAddressTypeInternal
                 || AddressType == NetAddressType.NetAddressTypeExternal
                 || AddressType == NetAddressType.NetAddressTypeNATService
-                || AddressType == NetAddressType.NetAddressNone)
+                || AddressType == NetAddressType.NetAddressNone
+            )
             {
                 Address = reader.ReadString(Constants.NET_MAX_NETADDRESS_LENGTH);
                 Port = reader.ReadInt32();
@@ -61,15 +69,19 @@ namespace Horizon.RT.Models
         public void Serialize(BinaryWriter writer)
         {
             writer.Write(AddressType);
-            if (AddressType == NetAddressType.NetAddressTypeBinaryExternal
-                || AddressType == NetAddressType.NetAddressTypeBinaryInternal)
+            if (
+                AddressType == NetAddressType.NetAddressTypeBinaryExternal
+                || AddressType == NetAddressType.NetAddressTypeBinaryInternal
+            )
             {
                 writer.Write(BinaryAddress);
                 writer.Write(Port);
             }
 
-            if (AddressType == NetAddressType.NetAddressTypeBinaryExternalVport
-                || AddressType == NetAddressType.NetAddressTypeBinaryInternalVport)
+            if (
+                AddressType == NetAddressType.NetAddressTypeBinaryExternalVport
+                || AddressType == NetAddressType.NetAddressTypeBinaryInternalVport
+            )
             {
                 writer.Write(IPBinaryBitOne);
                 writer.Write(IPBinaryBitTwo);
@@ -87,10 +99,12 @@ namespace Horizon.RT.Models
                 writer.Write(Port);
             }
 
-            if (AddressType == NetAddressType.NetAddressTypeInternal
+            if (
+                AddressType == NetAddressType.NetAddressTypeInternal
                 || AddressType == NetAddressType.NetAddressTypeExternal
                 || AddressType == NetAddressType.NetAddressTypeNATService
-                || AddressType == NetAddressType.NetAddressNone)
+                || AddressType == NetAddressType.NetAddressNone
+            )
             {
                 if (Address != null)
                     writer.Write(Address, Constants.NET_MAX_NETADDRESS_LENGTH);
@@ -102,30 +116,25 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            if (AddressType == NetAddressType.NetAddressTypeBinaryExternal
-                || AddressType == NetAddressType.NetAddressTypeBinaryInternal)
-            {
-                return base.ToString() + " " +
-                $"AddressType: {AddressType} " +
-                $"BinaryAddress: {BinaryAddress} " +
-                $"Port: {Port}";
-            }
-            else if (AddressType == NetAddressType.NetAddressTypeBinaryExternalVport
-                || AddressType == NetAddressType.NetAddressTypeBinaryInternalVport)
-            {
-                return base.ToString() + " " +
-                $"AddressType: {AddressType} " +
-                $"(Binary) IP : {IPBinaryBitOne}.{IPBinaryBitTwo}.{IPBinaryBitThree}.{IPBinaryBitFour} " +
-                $"(Vport/Port) Port: {BinaryPort}";
-            }
-            else
-            {
-                return base.ToString() + " " +
-                $"AddressType: {AddressType} " +
-                $"Address: {string.Join(" ", Address)} " +
-                $"Port: {Port}";
-            }
-
+            return AddressType == NetAddressType.NetAddressTypeBinaryExternal
+                || AddressType == NetAddressType.NetAddressTypeBinaryInternal
+                    ? base.ToString()
+                        + " "
+                        + $"AddressType: {AddressType} "
+                        + $"BinaryAddress: {BinaryAddress} "
+                        + $"Port: {Port}"
+                : AddressType == NetAddressType.NetAddressTypeBinaryExternalVport
+                || AddressType == NetAddressType.NetAddressTypeBinaryInternalVport
+                    ? base.ToString()
+                        + " "
+                        + $"AddressType: {AddressType} "
+                        + $"(Binary) IP : {IPBinaryBitOne}.{IPBinaryBitTwo}.{IPBinaryBitThree}.{IPBinaryBitFour} "
+                        + $"(Vport/Port) Port: {BinaryPort}"
+                : base.ToString()
+                    + " "
+                    + $"AddressType: {AddressType} "
+                    + $"Address: {string.Join(" ", Address)} "
+                    + $"Port: {Port}";
         }
     }
 }

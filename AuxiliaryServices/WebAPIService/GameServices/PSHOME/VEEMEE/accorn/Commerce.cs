@@ -1,15 +1,13 @@
-using System.Collections.Generic;
-using WebAPIService.GameServices.PSHOME.VEEMEE;
-
 namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
 {
     public static class Commerce
     {
         public static string Get_Count()
         {
-            VEEMEELoginCounter counter = new VEEMEELoginCounter();
-            string returnstring = Processor.Sign($"{{\"count\":{counter.GetLoginCount("Voodooperson05")}}}");
-            counter = null;
+            var counter = new VEEMEELoginCounter();
+            var returnstring = Processor.Sign(
+                $"{{\"count\":{counter.GetLoginCount("Voodooperson05")}}}"
+            );
             return returnstring;
         }
 
@@ -20,16 +18,16 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
 
         private class VEEMEELoginCounter
         {
-            private Dictionary<string, int> loginCounts;
+            private readonly Dictionary<string, int> loginCounts;
 
             public VEEMEELoginCounter()
             {
-                loginCounts = new Dictionary<string, int>();
+                loginCounts = [];
             }
 
             public void ProcessLogin(string username)
             {
-                if (loginCounts.TryGetValue(username, out int value))
+                if (loginCounts.TryGetValue(username, out var value))
                     loginCounts[username] = ++value;
                 else
                     loginCounts.Add(username, 1);
@@ -37,10 +35,7 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
 
             public int GetLoginCount(string username)
             {
-                if (loginCounts.TryGetValue(username, out int value))
-                    return value;
-
-                return 0;
+                return loginCounts.TryGetValue(username, out var value) ? value : 0;
             }
         }
     }

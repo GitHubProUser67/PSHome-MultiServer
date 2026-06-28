@@ -1,4 +1,4 @@
-﻿namespace HorizonService.PlaystationHomePlugin.Models
+﻿namespace Horizon.PlaystationHomePlugin.Models
 {
     public enum ReservedHubMessageId : int
     {
@@ -77,6 +77,6 @@
         HUB_ONLINE_MSG_PERSON_REFRESH_NETFLAGS = -6,
         HUB_ONLINE_MSG_PERSON_REQUEST_JOIN_RESEND = -5,
         HUB_ONLINE_MSG_PERSON_MOVE = -4,
-        HUB_ONLINE_MSG_PERSON_JOIN_HUB = -2
+        HUB_ONLINE_MSG_PERSON_JOIN_HUB = -2,
     }
 }

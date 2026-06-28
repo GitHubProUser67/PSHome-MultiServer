@@ -1,11 +1,8 @@
-﻿using EndianTools;
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Net.Security;
-using System.Text;
+using EndianTools;
+using static System.Net.Security.TlsFrameHelper;
 
-namespace FixedSsl
+namespace CastleLibrary.FixedSsl
 {
     // Modified from https://github.com/dlundquist/sniproxy/blob/master/src/tls.c with additional field checks.
     /*
@@ -54,14 +51,21 @@ namespace FixedSsl
         /// <param name="clientHello">TLS record bytes</param>
         /// <param name="hostname">Extracted hostname, if found</param>
         /// <returns>
-        ///  >=0  - length of hostname  
-        ///  -1   - Incomplete request  
-        ///  -2   - No Host header (SNI missing)  
-        ///  -3   - Invalid hostname pointer  
-        ///  -4   - Memory allocation failure (not applicable in managed code, but kept for parity)  
+        ///  >=0  - length of hostname
+        ///  -1   - Incomplete request
+        ///  -2   - No Host header (SNI missing)
+        ///  -3   - Invalid hostname pointer
+        ///  -4   - Memory allocation failure (not applicable in managed code, but kept for parity)
         ///  < -4 - Invalid TLS client hello
         /// </returns>
-        public static int ParseTlsHeader(byte[] clientHello, out string hostname, out bool isSslV2, out int maxSslVersion, out List<int> versions, out List<int> cipherSuites)
+        public static int ParseTlsHeader(
+            byte[] clientHello,
+            out string hostname,
+            out bool isSslV2,
+            out int maxSslVersion,
+            out List<int> versions,
+            out List<int> cipherSuites
+        )
         {
             isSslV2 = false;
             maxSslVersion = -1;
@@ -85,12 +89,11 @@ namespace FixedSsl
 
             maxSslVersion = EndianAwareConverter.ToUInt16(clientHello, Endianness.BigEndian, 9);
 
-            byte tlsContentType = clientHello[0];
-            if (tlsContentType != TLS_HANDSHAKE_CONTENT_TYPE)
+            if (clientHello[0] != TLS_HANDSHAKE_CONTENT_TYPE)
                 return -5;
 
-            byte tlsVersionMajor = clientHello[1];
-            byte tlsVersionMinor = clientHello[2];
+            var tlsVersionMajor = clientHello[1];
+            var tlsVersionMinor = clientHello[2];
 
             if (tlsVersionMajor < 3)
                 return -2;
@@ -101,7 +104,7 @@ namespace FixedSsl
             if (clientHello.Length < recordLen)
                 return -1;
 
-            int pos = TLS_HEADER_LEN;
+            var pos = TLS_HEADER_LEN;
             if (pos + 1 > clientHello.Length)
                 return -5;
 
@@ -129,28 +132,24 @@ namespace FixedSsl
             if (pos == clientHello.Length && tlsVersionMajor == 3 && tlsVersionMinor == 0)
                 return -2; // SSL 3.0 without extensions
 
-            int statusCode;
-#if WRITE_TEMP_BAD_CLIENTHELLO_DATA
-            const string badCHDirName = "bad_ssl_clienthello";
-#endif
-            // Prefer using a modified version of the NETCORE 2.1 SNI parser
-#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+            // Prefer using a modified version of the NET10 SNI parser
             try
             {
-                var sniHelperRes = SniHelper.GetServerName(clientHello, versions);
-                statusCode = sniHelperRes.Item1;
+                (int, string) sniHelperRes = default;
+                TlsFrameInfo info = default;
+                if (!TryGetFrameInfo(clientHello, ref info))
+                    sniHelperRes = (-5, null);
+                else
+                {
+                    var ret = info.TargetName;
+                    foreach (var version in info.SupportedVersions ?? new List<int>())
+                        versions.Add(version);
+                    sniHelperRes = (ret == null ? -2 : 0, ret);
+                }
+                var statusCode = sniHelperRes.Item1;
 
                 if (statusCode != 0)
-                {
-#if WRITE_TEMP_BAD_CLIENTHELLO_DATA
-                    if (statusCode < -4) // Bad ClientHello data.
-                    {
-                        Directory.CreateDirectory(badCHDirName);
-                        File.WriteAllBytes($"{badCHDirName}/" + DateTime.Now.Ticks + ".bin", clientHello);
-                    }
-#endif
                     return statusCode;
-                }
 
                 hostname = sniHelperRes.Item2;
                 return hostname.Length;
@@ -158,25 +157,21 @@ namespace FixedSsl
             catch (Exception ex)
             {
 #if DEBUG
-                CustomLogger.LoggerAccessor.LogWarn($"[TlsParser] - DotNet SniHelper failed to parse attributes, falling back to managed implementation. (Exception:{ex})");
+                CustomLogger.LoggerAccessor.LogWarn(
+                    $"[TlsParser] - DotNet TlsFrameInfo failed to parse attributes, falling back to managed implementation. (Exception:{ex})"
+                );
 #endif
             }
 
-            statusCode = ParseExtensions(clientHello, pos, ref versions, out hostname);
-#else
-            statusCode = ParseExtensions(clientHello, pos, ref versions, out hostname);
-#endif
-#if WRITE_TEMP_BAD_CLIENTHELLO_DATA
-            if (statusCode < -4) // Bad ClientHello data.
-            {
-                Directory.CreateDirectory(badCHDirName);
-                File.WriteAllBytes($"{badCHDirName}/" + DateTime.Now.Ticks + ".bin", clientHello);
-            }
-#endif
-            return statusCode;
+            return ParseExtensions(clientHello, pos, ref versions, out hostname);
         }
 
-        private static bool IsSslV2ClientHello(byte[] data, out int maxSslVersion, out List<int> versions, out List<int> cipherSuites)
+        private static bool IsSslV2ClientHello(
+            byte[] data,
+            out int maxSslVersion,
+            out List<int> versions,
+            out List<int> cipherSuites
+        )
         {
             maxSslVersion = -1;
             versions = new List<int>();
@@ -195,8 +190,8 @@ namespace FixedSsl
                 return false;
 
             // Check for SSLv2 length indicator (high bit set in first byte)
-            bool hasLengthIndicator = (data[0] & 0x80) != 0;
-            bool isClientHelloType = data[2] == SSLV2_CLIENT_HELLO;
+            var hasLengthIndicator = (data[0] & 0x80) != 0;
+            var isClientHelloType = data[2] == SSLV2_CLIENT_HELLO;
 
             if (!hasLengthIndicator || !isClientHelloType)
                 return false;
@@ -206,16 +201,16 @@ namespace FixedSsl
 
             // Parse cipher specs to determine additional capabilities
             int cipherSpecLength = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, 5);
-            int sessionIdLength = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, 7);
-            int challengeLength = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, 9);
 
-            int pos = 11;
+            var pos = 11;
             if (data.Length < pos + cipherSpecLength)
                 return false;
 
             // SSLv2 cipher specs are of type Uint24
-            for (int i = 0; i + 2 < cipherSpecLength; i += 3)
-                cipherSuites.Add(EndianAwareConverter.ToUInt24(data, Endianness.BigEndian, (uint)(pos + i)));
+            for (var i = 0; i + 2 < cipherSpecLength; i += 3)
+                cipherSuites.Add(
+                    EndianAwareConverter.ToUInt24(data, Endianness.BigEndian, (uint)(pos + i))
+                );
 
             versions.Add(maxSslVersion);
             return true;
@@ -226,24 +221,33 @@ namespace FixedSsl
             if (pos + 2 > data.Length)
                 return Array.Empty<int>();
 
-            int len = (data[pos] << 8) | data[pos + 1];
+            var len = (data[pos] << 8) | data[pos + 1];
             pos += 2;
 
             // Must be even (each cipher is 2 bytes) and within bounds
             if (len % 2 != 0 || pos + len > data.Length)
                 return Array.Empty<int>();
 
-            int count = len / 2;
-            int[] ciphers = new int[count];
+            var count = len / 2;
+            var ciphers = new int[count];
 
-            for (int i = 0; i < count; i++)
-                ciphers[i] = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, (uint)(pos + i * 2));
+            for (var i = 0; i < count; i++)
+                ciphers[i] = EndianAwareConverter.ToUInt16(
+                    data,
+                    Endianness.BigEndian,
+                    (uint)(pos + (i * 2))
+                );
 
             pos += len;
             return ciphers;
         }
 
-        private static int ParseExtensions(byte[] data, int offset, ref List<int> versions, out string hostname)
+        private static int ParseExtensions(
+            byte[] data,
+            int offset,
+            ref List<int> versions,
+            out string hostname
+        )
         {
             hostname = null;
 
@@ -256,24 +260,35 @@ namespace FixedSsl
             if (offset + dataLen > data.Length)
                 return -5;
 
-            int pos = 0;
+            var pos = 0;
 
             while (pos + 4 <= dataLen)
             {
-                ushort extType = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, (uint)(offset + pos));
-                int len = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, (uint)(offset + pos + 2));
+                var extType = EndianAwareConverter.ToUInt16(
+                    data,
+                    Endianness.BigEndian,
+                    (uint)(offset + pos)
+                );
+                int len = EndianAwareConverter.ToUInt16(
+                    data,
+                    Endianness.BigEndian,
+                    (uint)(offset + pos + 2)
+                );
 
-                if (extType == (ushort)SniHelper.ExtensionType.ServerName) // Server Name extension
+                if (extType == (ushort)ExtensionType.ServerName) // Server Name extension
+                    return pos + 4 + len > dataLen
+                        ? -5
+                        : ParseServerNameExtension(data, offset + pos + 4, len, out hostname);
+                else if (extType == (ushort)ExtensionType.SupportedVersions) // Supported Versions extension
                 {
-                    if (pos + 4 + len > dataLen)
-                        return -5;
-
-                    return ParseServerNameExtension(data, offset + pos + 4, len, out hostname);
-                }
-                else if (extType == (ushort)SniHelper.ExtensionType.SupportedVersions) // Supported Versions extension
-                {
-                    for (int i = 0; i < data[offset + pos + 4]; i += 2)
-                        versions.Add(EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, (uint)(offset + pos + 5 + i)));
+                    for (var i = 0; i < data[offset + pos + 4]; i += 2)
+                        versions.Add(
+                            EndianAwareConverter.ToUInt16(
+                                data,
+                                Endianness.BigEndian,
+                                (uint)(offset + pos + 5 + i)
+                            )
+                        );
                     break;
                 }
 
@@ -286,34 +301,40 @@ namespace FixedSsl
             return -2; // No SNI
         }
 
-        private static int ParseServerNameExtension(byte[] data, int offset, int dataLen, out string hostname)
+        private static int ParseServerNameExtension(
+            byte[] data,
+            int offset,
+            int dataLen,
+            out string hostname
+        )
         {
             hostname = null;
-            int pos = 2; // skip server name list length
+            var pos = 2; // skip server name list length
 
             while (pos + 3 < dataLen)
             {
                 int nameType = data[offset + pos];
-                int len = EndianAwareConverter.ToUInt16(data, Endianness.BigEndian, (uint)(offset + pos + 1));
+                int len = EndianAwareConverter.ToUInt16(
+                    data,
+                    Endianness.BigEndian,
+                    (uint)(offset + pos + 1)
+                );
 
                 if (pos + 3 + len > dataLen)
                     return -5;
 
                 if (nameType == 0x00) // host_name
                 {
-                    byte[] hostnameBytes = new byte[len];
+                    var hostnameBytes = new byte[len];
                     Array.Copy(data, offset + pos + 3, hostnameBytes, 0, len);
-                    hostname = SniHelper.DecodeString(hostnameBytes);
+                    hostname = DecodeString(hostnameBytes);
                     return hostname.Length;
                 }
 
                 pos += 3 + len;
             }
 
-            if (pos != dataLen)
-                return -5;
-
-            return -2;
+            return pos != dataLen ? -5 : -2;
         }
     }
 }

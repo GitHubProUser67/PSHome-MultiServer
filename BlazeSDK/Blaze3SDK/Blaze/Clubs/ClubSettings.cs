@@ -2,69 +2,67 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Clubs
 {
-	[TdfStruct]
-	public struct ClubSettings
-	{
+    [TdfStruct]
+    public struct ClubSettings
+    {
+        [TdfMember("CLAF")]
+        public ClubAcceptanceFlags mAcceptanceFlags;
 
-		[TdfMember("CLAF")]
-		public ClubAcceptanceFlags mAcceptanceFlags;
+        [TdfMember("ARPT")]
+        public ArtPackageType mArtPackageType;
 
-		[TdfMember("ARPT")]
-		public ArtPackageType mArtPackageType;
+        [TdfMember("BNID")]
+        public uint mBannerId;
 
-		[TdfMember("BNID")]
-		public uint mBannerId;
+        [TdfMember("CASF")]
+        public ClubArtSettingsFlags mClubArtSettingsFlags;
 
-		[TdfMember("CASF")]
-		public ClubArtSettingsFlags mClubArtSettingsFlags;
+        [TdfMember("CLCS")]
+        public CustClubSettings mCustClubSettings;
 
-		[TdfMember("CLCS")]
-		public CustClubSettings mCustClubSettings;
+        [TdfMember("CLDS")]
+        public string mDescription;
 
-		[TdfMember("CLDS")]
-		public string mDescription;
+        [TdfMember("HSPW")]
+        public bool mHasPassword;
 
-		[TdfMember("HSPW")]
-		public bool mHasPassword;
+        [TdfMember("LANG")]
+        public string mLanguage;
 
-		[TdfMember("LANG")]
-		public string mLanguage;
+        [TdfMember("LUPD")]
+        public int mLastSeasonLevelUpdate;
 
-		[TdfMember("LUPD")]
-		public int mLastSeasonLevelUpdate;
+        [TdfMember("LOID")]
+        public uint mLogoId;
 
-		[TdfMember("LOID")]
-		public uint mLogoId;
+        [TdfMember("CLMD")]
+        public string mMetaData;
 
-		[TdfMember("CLMD")]
-		public string mMetaData;
+        [TdfMember("CLD2")]
+        public string mMetaData2;
 
-		[TdfMember("CLD2")]
-		public string mMetaData2;
+        [TdfMember("CLMT")]
+        public MetaDataType mMetaDataType;
 
-		[TdfMember("CLMT")]
-		public MetaDataType mMetaDataType;
+        [TdfMember("CLT2")]
+        public MetaDataType mMetaDataType2;
 
-		[TdfMember("CLT2")]
-		public MetaDataType mMetaDataType2;
+        [TdfMember("NUQN")]
+        public string mNonUniqueName;
 
-		[TdfMember("NUQN")]
-		public string mNonUniqueName;
+        [TdfMember("PSWD")]
+        public string mPassword;
 
-		[TdfMember("PSWD")]
-		public string mPassword;
+        [TdfMember("PLVL")]
+        public uint mPreviousSeasonLevel;
 
-		[TdfMember("PLVL")]
-		public uint mPreviousSeasonLevel;
+        [TdfMember("CLRG")]
+        public uint mRegion;
 
-		[TdfMember("CLRG")]
-		public uint mRegion;
+        [TdfMember("SLVL")]
+        public uint mSeasonLevel;
 
-		[TdfMember("SLVL")]
-		public uint mSeasonLevel;
-
-		[TdfMember("TMID")]
-		public uint mTeamId;
-
-	}
+        [TdfMember("TMID")]
+        public uint mTeamId;
+    }
 }

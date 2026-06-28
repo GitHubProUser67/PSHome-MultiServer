@@ -1,11 +1,10 @@
-using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using CastleLibrary.Utils.Crypto;
 using EdNetService.CRC;
-using EdNetService.Crypto;
 using EndianTools;
 using MultiServerLibrary.Extension;
+using MultiServerLibrary.Extension.NET;
 
 namespace EdNetService.Models
 {
@@ -18,7 +17,7 @@ namespace EdNetService.Models
         Sent = 3,
         Error = 4,
         Destroyed = 5,
-        TimedOut = 6
+        TimedOut = 6,
     }
 
     [Flags]
@@ -28,13 +27,13 @@ namespace EdNetService.Models
         Server = 1,
         ProxyServer = 2,
         ProxyServerRaw = 3,
-        Client = 4
+        Client = 4,
     }
 
-    public class ClientTask
+    public class ClientTask(ClientObject client, uint targetIp, ushort targetPort)
     {
-        public uint TargetIp;
-        public ushort TargetPort;
+        public uint TargetIp = targetIp;
+        public ushort TargetPort = targetPort;
         public uint SequenceId = 0;
         public uint ReliableId = 0;
         public uint ReliableBufferSize = 0;
@@ -42,7 +41,7 @@ namespace EdNetService.Models
         public uint TimeOut;
         public uint RetryCount;
 
-        public ClientObject Client;
+        public ClientObject Client = client;
 
         protected DateTime _lastBufferEmited;
 
@@ -52,35 +51,19 @@ namespace EdNetService.Models
         protected RequestMode _mode = RequestMode.Reliable;
         protected ClientState _state = ClientState.Default;
 
-        protected IPEndPoint _target = new IPEndPoint(IPAddress.Any, byte.MinValue);
+        protected IPEndPoint _target = new(IPAddress.Any, byte.MinValue);
 
         protected ClientMode _clientMode;
 
-        public ClientTask(ClientObject client, uint targetIp, ushort targetPort)
-        {
-            Client = client;
-            TargetIp = targetIp;
-            TargetPort = targetPort;
-        }
-
         public EdStore Request
         {
-            get
-            {
-                return _request;
-            }
-            set
-            {
-                _request = value;
-            }
+            get { return _request; }
+            set { _request = value; }
         }
 
         public EdStore Response
         {
-            get
-            {
-                return _response;
-            }
+            get { return _response; }
             set
             {
                 _response = value;
@@ -90,34 +73,19 @@ namespace EdNetService.Models
 
         public RequestMode Mode
         {
-            get
-            {
-                return _mode;
-            }
-            set
-            {
-                _mode = value;
-            }
+            get { return _mode; }
+            set { _mode = value; }
         }
 
         public IPEndPoint Target
         {
-            get
-            {
-                return _target;
-            }
-            set
-            {
-                _target = value;
-            }
+            get { return _target; }
+            set { _target = value; }
         }
 
         public ClientMode ClientMode
         {
-            get
-            {
-                return _clientMode;
-            }
+            get { return _clientMode; }
             set
             {
                 _clientMode = value;
@@ -127,26 +95,22 @@ namespace EdNetService.Models
 
         public ClientState State
         {
-            get
-            {
-                return _state;
-            }
+            get { return _state; }
         }
 
         public bool Completed
         {
             get
             {
-                return Error || (_state & ClientState.Sent) != ClientState.Default || (_state & ClientState.Destroyed) != ClientState.Default;
+                return Error
+                    || (_state & ClientState.Sent) != ClientState.Default
+                    || (_state & ClientState.Destroyed) != ClientState.Default;
             }
         }
 
         public bool Error
         {
-            get
-            {
-                return (_state & ClientState.Error) != ClientState.Default;
-            }
+            get { return (_state & ClientState.Error) != ClientState.Default; }
         }
 
         public void Disconnect()
@@ -159,7 +123,7 @@ namespace EdNetService.Models
             Client.LastPacketSent = DateTimeUtils.GetHighPrecisionUtcTime();
             _lastBufferEmited = DateTimeUtils.GetHighPrecisionUtcTime();
 
-            EdStore store = new EdStore(null, 1400);
+            var store = new EdStore(null, 1400);
 
             _state = ClientState.Sending;
 
@@ -186,13 +150,13 @@ namespace EdNetService.Models
             Client.LastPacketSent = DateTimeUtils.GetHighPrecisionUtcTime();
             _lastBufferEmited = DateTimeUtils.GetHighPrecisionUtcTime();
 
-            bool result = true;
+            var result = true;
 
             _state = ClientState.Sending;
 
             if (_response != null && _response.CurrentSize != 0)
             {
-                EdStore store = new EdStore(null, 1400);
+                var store = new EdStore(null, 1400);
                 if (SequenceId != 0U)
                 {
                     if (ReliableId != 0U)
@@ -224,14 +188,14 @@ namespace EdNetService.Models
             Client.LastPacketSent = DateTimeUtils.GetHighPrecisionUtcTime();
             _lastBufferEmited = DateTimeUtils.GetHighPrecisionUtcTime();
 
-            bool result = true;
+            var result = true;
 
             _state = ClientState.Sending;
 
             if (_response != null && _response.CurrentSize != 0)
             {
-                EdStore fromProxyStore = new EdStore(null, 1400);
-                EdStore store = new EdStore(null, 1400);
+                var fromProxyStore = new EdStore(null, 1400);
+                var store = new EdStore(null, 1400);
                 fromProxyStore.InsertStart((ushort)ProxyCrcList.FROM_PROXY_HEADER);
                 fromProxyStore.InsertUInt8(5); // ORB To Client
                 fromProxyStore.InsertUInt8(0);
@@ -259,16 +223,21 @@ namespace EdNetService.Models
                 if (_response.CurrentSize > 0)
                     store.InsertDataStore(_response);
                 store.InsertEnd();
-                ushort responseSize = (ushort)store.CurrentSize;
+                var responseSize = (ushort)store.CurrentSize;
                 fromProxyStore.InsertUInt16(responseSize);
                 fromProxyStore.InsertUInt16(0);
                 if (Client.BCipher)
                 {
-                    ushort length = (ushort)(responseSize + (Blowfish.BlockSize - (responseSize % Blowfish.BlockSize)));
-                    byte[] payloadToEncrypt = new byte[length];
+                    var length = (ushort)(
+                        responseSize + (Blowfish.BlockSize - (responseSize % Blowfish.BlockSize))
+                    );
+                    var payloadToEncrypt = new byte[length];
                     Array.Copy(store.Data, 0, payloadToEncrypt, 0, responseSize);
                     Client.EncipherData(payloadToEncrypt);
-                    fromProxyStore.InsertRawBytes(payloadToEncrypt, (ushort)payloadToEncrypt.Length);
+                    fromProxyStore.InsertRawBytes(
+                        payloadToEncrypt,
+                        (ushort)payloadToEncrypt.Length
+                    );
                 }
                 else
                     fromProxyStore.InsertRawBytes(store.Data, responseSize);
@@ -284,13 +253,13 @@ namespace EdNetService.Models
             Client.LastPacketSent = DateTimeUtils.GetHighPrecisionUtcTime();
             _lastBufferEmited = DateTimeUtils.GetHighPrecisionUtcTime();
 
-            bool result = true;
+            var result = true;
 
             _state = ClientState.Sending;
 
             if (_response != null && _response.CurrentSize != 0)
             {
-                EdStore fromProxyStore = new EdStore(null, 1400);
+                var fromProxyStore = new EdStore(null, 1400);
                 fromProxyStore.InsertStart((ushort)ProxyCrcList.FROM_PROXY_HEADER);
                 fromProxyStore.InsertUInt8(5); // ORB To Client
                 fromProxyStore.InsertUInt8(0);
@@ -298,16 +267,21 @@ namespace EdNetService.Models
                 fromProxyStore.InsertUInt16(TargetPort);
                 fromProxyStore.InsertUInt16(0);
                 fromProxyStore.InsertUInt32(Client.Id);
-                ushort responseSize = (ushort)_response.CurrentSize;
+                var responseSize = (ushort)_response.CurrentSize;
                 fromProxyStore.InsertUInt16(responseSize);
                 fromProxyStore.InsertUInt16(0);
                 if (Client.BCipher)
                 {
-                    ushort length = (ushort)(responseSize + (Blowfish.BlockSize - (responseSize % Blowfish.BlockSize)));
-                    byte[] payloadToEncrypt = new byte[length];
+                    var length = (ushort)(
+                        responseSize + (Blowfish.BlockSize - (responseSize % Blowfish.BlockSize))
+                    );
+                    var payloadToEncrypt = new byte[length];
                     Array.Copy(_response.Data, 0, payloadToEncrypt, 0, responseSize);
                     Client.EncipherData(payloadToEncrypt);
-                    fromProxyStore.InsertRawBytes(payloadToEncrypt, (ushort)payloadToEncrypt.Length);
+                    fromProxyStore.InsertRawBytes(
+                        payloadToEncrypt,
+                        (ushort)payloadToEncrypt.Length
+                    );
                 }
                 else
                     fromProxyStore.InsertRawBytes(_response.Data, responseSize);
@@ -322,7 +296,15 @@ namespace EdNetService.Models
         {
             if (!InternetProtocolUtils.IsZeroIpv4Address(_target.Address) && _target.Port != 0)
             {
-                if (((_state & (ClientState.Sending | ClientState.ReadyToSend)) != ClientState.Default) && (DateTimeUtils.GetHighPrecisionUtcTime() - _lastBufferEmited).TotalMilliseconds > TimeOut)
+                if (
+                    (
+                        (_state & (ClientState.Sending | ClientState.ReadyToSend))
+                        != ClientState.Default
+                    )
+                    && (
+                        DateTimeUtils.GetHighPrecisionUtcTime() - _lastBufferEmited
+                    ).TotalMilliseconds > TimeOut
+                )
                 {
                     if (RetryCount > 0U)
                     {
@@ -357,20 +339,20 @@ namespace EdNetService.Models
         }
     }
 
-    public class ClientObject
+    public class ClientObject(UdpClient client, bool cipher)
     {
-        private static readonly UniqueIDGenerator _IdCounter = new UniqueIDGenerator();
-        private static readonly UniqueIDGenerator _reliableIdCounter = new UniqueIDGenerator();
+        private static readonly UniqueIDGenerator _IdCounter = new();
+        private static readonly UniqueIDGenerator _reliableIdCounter = new();
 
         public const byte DefaultRetryCount = 3;
         public const uint DefaultTimeOut = 1000U;
 
-        public readonly ConcurrentList<ClientTask> Tasks = new ConcurrentList<ClientTask>();
+        public readonly ConcurrentList<ClientTask> Tasks = [];
 
-        public readonly bool BCipher;
+        public readonly bool BCipher = cipher;
 
         public Endianness CPUEndianness = Endianness.LittleEndian;
-        public uint Id;
+        public uint Id = _IdCounter.CreateSequentialID();
         public uint Answer1;
         public uint Answer2;
         public uint Answer3;
@@ -394,39 +376,26 @@ namespace EdNetService.Models
 
         protected EdStore _user_rights = null;
 
-        public Blowfish fish = new Blowfish();
+        public Blowfish fish = new();
 
-        protected UdpClient _client;
-
-        public ClientObject(UdpClient client, bool cipher)
-        {
-            Id = _IdCounter.CreateSequentialID();
-            _client = client;
-            BCipher = cipher;
-        }
+        protected UdpClient _client = client;
 
         public EdStore UserRights
         {
-            get
-            {
-                return _user_rights;
-            }
-            set
-            {
-                _user_rights = value;
-            }
+            get { return _user_rights; }
+            set { _user_rights = value; }
         }
 
         public ClientTask AddTask(uint TargetIp, ushort TargetPort)
         {
-            ClientTask task = new ClientTask(this, TargetIp, TargetPort);
+            var task = new ClientTask(this, TargetIp, TargetPort);
             Tasks.Add(task);
             return task;
         }
 
         public void RefreshClient()
         {
-            List<ClientTask> tasksToRemove = new List<ClientTask>();
+            List<ClientTask> tasksToRemove = [];
 
             foreach (var task in Tasks)
             {
@@ -447,7 +416,7 @@ namespace EdNetService.Models
 
             while (offset < array.Length / 8)
             {
-                fish.Decipher(array, offset * 8U, CPUEndianness);
+                fish.Decipher(array, CPUEndianness, offset * 8U);
                 offset += 1;
             }
         }
@@ -458,7 +427,7 @@ namespace EdNetService.Models
 
             while (offset < array.Length / 8)
             {
-                fish.Encipher(array, offset * 8U, CPUEndianness);
+                fish.Encipher(array, CPUEndianness, offset * 8U);
                 offset += 1;
             }
         }
@@ -467,13 +436,9 @@ namespace EdNetService.Models
         {
             try
             {
-                if (_client.Send(data.Data, (int)data.CurrentSize, target) < 0)
-                    return false;
-                return true;
+                return _client.Send(data.Data, (int)data.CurrentSize, target) >= 0;
             }
-            catch
-            {
-            }
+            catch { }
             return false;
         }
     }

@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GpsContentController
 {
-	[TdfStruct]
-	public struct FetchContentResponse
-	{
+    [TdfStruct]
+    public struct FetchContentResponse
+    {
+        [TdfMember("ANVP")]
+        public SortedDictionary<string, string> mAttributeMap;
 
-		[TdfMember("ANVP")]
-		public SortedDictionary<string, string> mAttributeMap;
-
-		[TdfMember("EURL")]
-		public string mExternalURL;
-
-	}
+        [TdfMember("EURL")]
+        public string mExternalURL;
+    }
 }

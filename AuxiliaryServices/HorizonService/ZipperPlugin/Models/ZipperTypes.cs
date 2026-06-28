@@ -1,4 +1,4 @@
-﻿namespace HorizonService.ZipperPlugin.Models
+﻿namespace Horizon.ZipperPlugin.Models
 {
     public class CBitset3u
     {

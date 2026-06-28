@@ -1,7 +1,4 @@
-﻿
-namespace ZTn.Json.JsonTreeView
+﻿namespace ZTn.Json.JsonTreeView
 {
-    class JValueContextMenuStrip : JTokenContextMenuStrip
-    {
-    }
+    class JValueContextMenuStrip : JTokenContextMenuStrip { }
 }

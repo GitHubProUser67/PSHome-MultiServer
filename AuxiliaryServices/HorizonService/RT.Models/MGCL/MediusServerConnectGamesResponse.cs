@@ -1,13 +1,15 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     /// <summary>
     /// Response to Medius Servers with the status of a particular world and whether it is allowed to be connected to this host
     /// </summary>
-    [MediusMessage(NetMessageClass.MessageClassLobbyReport, MediusMGCLMessageIds.ServerConnectGamesResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyReport,
+        MediusMGCLMessageIds.ServerConnectGamesResponse
+    )]
     public class MediusServerConnectGamesResponse : BaseMGCLMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusMGCLMessageIds.ServerConnectGamesResponse;
@@ -16,14 +18,17 @@ namespace Horizon.RT.Models
         /// Message ID used for asynchronous request processing.
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Game World ID of the world being requested.
         /// </summary>
         public int GameWorldID;
+
         /// <summary>
         /// Spectator World ID of the world being requested.
         /// </summary>
         public int SpectatorWorldID;
+
         /// <summary>
         /// MGCL_SUCESS or other code to indicate error in Medius
         /// </summary>
@@ -57,11 +62,12 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"GameWorldID: {GameWorldID} " +
-                $"SpectatorWorldID: {SpectatorWorldID} " +
-                $"Confirmation: {Confirmation}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"GameWorldID: {GameWorldID} "
+                + $"SpectatorWorldID: {SpectatorWorldID} "
+                + $"Confirmation: {Confirmation}";
         }
     }
 }

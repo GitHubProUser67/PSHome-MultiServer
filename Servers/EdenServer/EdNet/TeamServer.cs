@@ -2,12 +2,10 @@
 {
     public class TeamServer : AbstractEdenServer
     {
-        public override Dictionary<ushort, Type?> CrcToClass { get; } = new Dictionary<ushort, Type?>() {
-        };
+        public override Dictionary<ushort, Type?> CrcToClass { get; } =
+            new Dictionary<ushort, Type?>() { };
 
-        public TeamServer() : base()
-        {
-
-        }
+        public TeamServer()
+            : base() { }
     }
 }

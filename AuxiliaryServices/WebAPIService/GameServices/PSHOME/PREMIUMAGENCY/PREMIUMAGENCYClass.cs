@@ -1,56 +1,40 @@
-using MultiServerLibrary.HTTP;
-using CustomLogger;
-using HttpMultipartParser;
-using System;
-using System.IO;
-using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
-
-
-
-
-
-#if !NETFRAMEWORK
 using System.Web;
-#endif
+using CustomLogger;
+using HttpMultipartParser;
+using MultiServerLibrary.HTTP;
+
 namespace WebAPIService.GameServices.PSHOME.PREMIUMAGENCY
 {
-    public class PREMIUMAGENCYClass
+    public partial class PREMIUMAGENCYClass(
+        string method,
+        string absolutepath,
+        string workpath,
+        string fulluripath
+    )
     {
-        private readonly string workpath;
-        private readonly string absolutepath;
-        private readonly string fulluripath;
-        private readonly string method;
-
-        public PREMIUMAGENCYClass(string method, string absolutepath, string workpath, string fulluripath)
-        {
-            this.workpath = workpath;
-            this.absolutepath = absolutepath;
-            this.fulluripath = fulluripath;
-            this.method = method;
-        }
+        private readonly string workpath = workpath;
+        private readonly string absolutepath = absolutepath;
+        private readonly string fulluripath = fulluripath;
+        private readonly string method = method;
 
         public string ProcessRequest(byte[] PostData, string ContentType)
         {
             if (string.IsNullOrEmpty(absolutepath))
                 return null;
 
-            string evid = string.Empty;
+            var evid = string.Empty;
 
             if (ContentType == null)
             {
-#if NETFRAMEWORK
-                evid = HTTPProcessor.GetQueryParameters(fulluripath)["evid"];
-#else
                 evid = HttpUtility.ParseQueryString(fulluripath).Get("evid");
-#endif
             }
             else
             {
-                string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+                var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
@@ -66,30 +50,100 @@ namespace WebAPIService.GameServices.PSHOME.PREMIUMAGENCY
                     switch (absolutepath)
                     {
                         case "/eventController/getResource.do":
-                            return Resource.getResourcePOST(PostData, ContentType, workpath, fulluripath, method);
+                            return Resource.getResourcePOST(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/confirmEvent.do":
-                        //return Event.confirmEventRequestPOST(PostData, ContentType, evid, workpath, fulluripath); //Unimplemented 
+                        //return Event.confirmEventRequestPOST(PostData, ContentType, evid, workpath, fulluripath); //Unimplemented
                         case "/eventController/checkEvent.do":
-                            return Event.checkEventRequestPOST(PostData, ContentType, evid, workpath, fulluripath, method);
+                            return Event.checkEventRequestPOST(
+                                PostData,
+                                ContentType,
+                                evid,
+                                workpath,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/entryEvent.do":
-                            return Event.entryEventRequestPOST(PostData, ContentType, evid, workpath, fulluripath, method);
+                            return Event.entryEventRequestPOST(
+                                PostData,
+                                ContentType,
+                                evid,
+                                workpath,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/clearEvent.do":
-                            return Event.clearEventRequestPOST(PostData, ContentType, evid, workpath, fulluripath, method);
+                            return Event.clearEventRequestPOST(
+                                PostData,
+                                ContentType,
+                                evid,
+                                workpath,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/setUserEventCustom.do":
-                            return Custom.setUserEventCustomPOST(PostData, ContentType, workpath, evid, fulluripath, method);
+                            return Custom.setUserEventCustomPOST(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                evid,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/getUserEventCustom.do":
-                            return Custom.getUserEventCustomRequestPOST(PostData, ContentType, workpath, evid, method);
+                            return Custom.getUserEventCustomRequestPOST(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                evid,
+                                method
+                            );
                         case "/eventController/getUserEventCustomList.do":
-                            return Custom.getUserEventCustomRequestListPOST(PostData, ContentType, workpath, evid, fulluripath, method);
+                            return Custom.getUserEventCustomRequestListPOST(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                evid,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/getItemRankingTable.do":
-                            return Ranking.getItemRankingTableHandler(PostData, ContentType, workpath, evid, fulluripath, method);
+                            return Ranking.getItemRankingTableHandler(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                evid,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/entryItemRankingPoints.do":
-                            return Ranking.entryItemRankingPointsHandler(PostData, ContentType, workpath, evid, fulluripath, method);
+                            return Ranking.entryItemRankingPointsHandler(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                evid,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/getItemRankingTargetList.do":
-                            return Ranking.getItemRankingTargetListHandler(PostData, ContentType, workpath, evid, fulluripath, method);
+                            return Ranking.getItemRankingTargetListHandler(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                evid,
+                                fulluripath,
+                                method
+                            );
                         default:
                             {
-                                LoggerAccessor.LogError($"[PREMIUMAGENCY] - Unhandled {method} server request discovered: {absolutepath.Replace("/eventController/", "")} | DETAILS: \n{Encoding.UTF8.GetString(PostData)}");
+                                LoggerAccessor.LogError(
+                                    $"[PREMIUMAGENCY] - Unhandled {method} server request discovered: {absolutepath.Replace("/eventController/", "")} | DETAILS: \n{Encoding.UTF8.GetString(PostData)}"
+                                );
                             }
                             break;
                     }
@@ -99,52 +153,151 @@ namespace WebAPIService.GameServices.PSHOME.PREMIUMAGENCY
                     switch (absolutepath)
                     {
                         case "/eventController/getResource.do":
-                            return Resource.getResourcePOST(PostData, ContentType, workpath, fulluripath, method);
+                            return Resource.getResourcePOST(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/confirmEvent.do":
-                            return Event.confirmEventRequestPOST(PostData, ContentType, evid, workpath, fulluripath, method);
+                            return Event.confirmEventRequestPOST(
+                                PostData,
+                                ContentType,
+                                evid,
+                                workpath,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/checkEvent.do":
-                            return Event.checkEventRequestPOST(PostData, ContentType, evid, workpath, fulluripath, method);
+                            return Event.checkEventRequestPOST(
+                                PostData,
+                                ContentType,
+                                evid,
+                                workpath,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/entryEvent.do":
-                            return Event.entryEventRequestPOST(PostData, ContentType, evid, workpath, fulluripath, method);
+                            return Event.entryEventRequestPOST(
+                                PostData,
+                                ContentType,
+                                evid,
+                                workpath,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/clearEvent.do":
-                            return Event.clearEventRequestPOST(PostData, ContentType, evid, workpath, fulluripath, method);
+                            return Event.clearEventRequestPOST(
+                                PostData,
+                                ContentType,
+                                evid,
+                                workpath,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/getEventTrigger.do":
-                            return Trigger.getEventTriggerRequestPOST(PostData, ContentType, workpath, evid);
+                            return Trigger.getEventTriggerRequestPOST(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                evid
+                            );
                         case "/eventController/getEventTriggerEx.do":
-                            return Trigger.getEventTriggerExRequestPOST(PostData, ContentType, workpath, evid);
+                            return Trigger.getEventTriggerExRequestPOST(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                evid
+                            );
                         case "/eventController/confirmEventTrigger.do":
-                            return Trigger.confirmEventTriggerRequestPOST(PostData, ContentType, workpath, evid);
+                            return Trigger.confirmEventTriggerRequestPOST(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                evid
+                            );
                         case "/eventController/setUserEventCustom.do":
-                            return Custom.setUserEventCustomPOST(PostData, ContentType, workpath, evid, fulluripath, method);
+                            return Custom.setUserEventCustomPOST(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                evid,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/getUserEventCustom.do":
-                            return Custom.getUserEventCustomRequestPOST(PostData, ContentType, workpath, evid, method);
+                            return Custom.getUserEventCustomRequestPOST(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                evid,
+                                method
+                            );
                         case "/eventController/getUserEventCustomList.do":
-                            return Custom.getUserEventCustomRequestListPOST(PostData, ContentType, workpath, evid, fulluripath, method);
+                            return Custom.getUserEventCustomRequestListPOST(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                evid,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/getItemRankingTable.do":
-                            return Ranking.getItemRankingTableHandler(PostData, ContentType, workpath, evid, fulluripath, method);
+                            return Ranking.getItemRankingTableHandler(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                evid,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/entryItemRankingPoints.do":
-                            return Ranking.entryItemRankingPointsHandler(PostData, ContentType, workpath, evid, fulluripath, method);
+                            return Ranking.entryItemRankingPointsHandler(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                evid,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/getItemRankingTargetList.do":
-                            return Ranking.getItemRankingTargetListHandler(PostData, ContentType, workpath, evid, fulluripath, method);
+                            return Ranking.getItemRankingTargetListHandler(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                evid,
+                                fulluripath,
+                                method
+                            );
                         case "/eventController/getInformationBoardSchedule.do":
-                            return InfoBoard.getInformationBoardSchedulePOST(PostData, ContentType, workpath, evid);
+                            return InfoBoard.getInformationBoardSchedulePOST(
+                                PostData,
+                                ContentType,
+                                workpath,
+                                evid
+                            );
                         case "/eventController/checkAccount.do":
                             return Account.checkAccount(PostData, ContentType, workpath);
                         case "/eventController/entryAccount.do":
                             return Account.entryAccount(PostData, ContentType, workpath);
                         case "/eventController/confirmAccount.do":
-                            //return Account.confirmAccount(PostData, ContentType, workpath, evid);
+                        //return Account.confirmAccount(PostData, ContentType, workpath, evid);
                         default:
                             {
-                                LoggerAccessor.LogError($"[PREMIUMAGENCY] - Unhandled {method} server request discovered: {absolutepath.Replace("/eventController/", "")} | DETAILS: \n{Encoding.UTF8.GetString(PostData)}");
+                                LoggerAccessor.LogError(
+                                    $"[PREMIUMAGENCY] - Unhandled {method} server request discovered: {absolutepath.Replace("/eventController/", "")} | DETAILS: \n{Encoding.UTF8.GetString(PostData)}"
+                                );
                             }
-                        break;
+                            break;
                     }
-                break;
+                    break;
 
                 default:
                     {
-                        LoggerAccessor.LogError($"[PREMIUMAGENCY] - Unhandled Server method: {method}");
+                        LoggerAccessor.LogError(
+                            $"[PREMIUMAGENCY] - Unhandled Server method: {method}"
+                        );
                     }
                     break;
             }
@@ -157,15 +310,15 @@ namespace WebAPIService.GameServices.PSHOME.PREMIUMAGENCY
             try
             {
                 // Regular expression to match each key-value pair
-                Regex regex = new Regex(@"name=""([^""]+)""\s*([\s\S]*?)\s*---------");
-                MatchCollection matches = regex.Matches(formData);
+                var regex = MyRegex();
+                var matches = regex.Matches(formData);
 
-                using (StreamWriter writer = new StreamWriter(filePath))
+                using (var writer = new StreamWriter(filePath))
                 {
                     foreach (Match match in matches)
                     {
-                        string key = match.Groups[1].Value.Trim();
-                        string value = match.Groups[2].Value.Trim();
+                        var key = match.Groups[1].Value.Trim();
+                        var value = match.Groups[2].Value.Trim();
 
                         // Write key-value pair to the file
                         writer.WriteLine($"{key}: {value}");
@@ -174,7 +327,10 @@ namespace WebAPIService.GameServices.PSHOME.PREMIUMAGENCY
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"Fatal exception occured in WriteFormDataToFile with exception:\n", ex);
+                LoggerAccessor.LogError(
+                    $"Fatal exception occured in WriteFormDataToFile with exception:\n",
+                    ex
+                );
             }
         }
 
@@ -182,20 +338,19 @@ namespace WebAPIService.GameServices.PSHOME.PREMIUMAGENCY
         {
             try
             {
+                List<(string, string)> formData = [];
 
-                List<(string, string)> formData = new List<(string, string)>();
-
-                using (StreamReader reader = new StreamReader(filePath))
+                using (var reader = new StreamReader(filePath))
                 {
                     string line = null;
-                    string currentKey = string.Empty;
-                    string currentValue = string.Empty;
+                    var currentKey = string.Empty;
+                    var currentValue = string.Empty;
 
                     while ((line = reader.ReadLine()) != null)
                     {
-                        if (line.Contains(":"))
+                        if (line.Contains(':'))
                         {
-                            string[] parts = line.Split(new char[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
+                            var parts = line.Split([':'], 2, StringSplitOptions.RemoveEmptyEntries);
                             if (parts.Length == 2)
                             {
                                 if (currentKey != null)
@@ -219,9 +374,15 @@ namespace WebAPIService.GameServices.PSHOME.PREMIUMAGENCY
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"Fatal exception occured in ReadFormDataFromFile with exception:\n", ex);
+                LoggerAccessor.LogError(
+                    $"Fatal exception occured in ReadFormDataFromFile with exception:\n",
+                    ex
+                );
                 return null;
             }
         }
+
+        [GeneratedRegex(@"name=""([^""]+)""\s*([\s\S]*?)\s*---------")]
+        private static partial Regex MyRegex();
     }
 }

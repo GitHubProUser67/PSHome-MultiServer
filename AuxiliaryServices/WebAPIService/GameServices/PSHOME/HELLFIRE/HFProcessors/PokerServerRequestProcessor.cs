@@ -1,9 +1,6 @@
-using MultiServerLibrary.HTTP;
-using CustomLogger;
+﻿using CustomLogger;
 using HttpMultipartParser;
-using System.IO;
-using System.Collections.Generic;
-using System;
+using MultiServerLibrary.HTTP;
 using WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers;
 using WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Poker;
 
@@ -13,21 +10,23 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
     {
         public List<PokerPlayer> pokerPlayers;
 
-        public static string ProcessPokerMainPHP(byte[] PostData, string ContentType, string PHPSessionID, string WorkPath)
+        public static string ProcessPokerMainPHP(
+            byte[] PostData,
+            string ContentType,
+            string PHPSessionID,
+            string WorkPath
+        )
         {
             if (PostData == null || string.IsNullOrEmpty(ContentType))
                 return null;
 
-            string Command = string.Empty;
-            string UserID = string.Empty;
-            string DisplayName = string.Empty;
-            string InstanceID = string.Empty;
-            string Region = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var Command = string.Empty;
+            var UserID = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (boundary != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
                     Command = data.GetParameterValue("Command");
@@ -37,7 +36,7 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
 
                     try
                     {
-                        DisplayName = data.GetParameterValue("DisplayName");
+                        var DisplayName = data.GetParameterValue("DisplayName");
                     }
                     catch
                     {
@@ -45,7 +44,7 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                     }
                     try
                     {
-                        InstanceID = data.GetParameterValue("InstanceID");
+                        var InstanceID = data.GetParameterValue("InstanceID");
                     }
                     catch
                     {
@@ -53,7 +52,7 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                     }
                     try
                     {
-                        Region = data.GetParameterValue("Region");
+                        var Region = data.GetParameterValue("Region");
                     }
                     catch
                     {
@@ -63,11 +62,11 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                 }
 
                 // Get the current UTC time
-                DateTime currentTime = DateTime.UtcNow;
+                var currentTime = DateTime.UtcNow;
                 // Add 5 minutes
-                DateTime futureTime = currentTime.AddMinutes(3);
+                var futureTime = currentTime.AddMinutes(3);
                 // Convert to Unix timestamp
-                long unixTimestamp = new DateTimeOffset(futureTime).ToUnixTimeSeconds();
+                var unixTimestamp = new DateTimeOffset(futureTime).ToUnixTimeSeconds();
 
                 if (!string.IsNullOrEmpty(Command))
                 {
@@ -78,7 +77,7 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                         case "RequestNPTicket":
                             return Helpers.Poker.NPTicket.RequestNPTicket(PostData, boundary);
                         case "RequestRewards":
-                            
+
                             return @"<Response>
 	                                    <Rewards>
 		                                    <Reward>
@@ -119,7 +118,7 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                         case "AwardTourneyPrize":
                             //Bankroll
                             return "<Response></Response>";
-                        case "PlayerLeftGame":  
+                        case "PlayerLeftGame":
                             return "<Response></Response>";
 
                         case "UserTourneySeat":
@@ -175,19 +174,19 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                                     </Response>";
 
                         case "SetInstanceUUID":
-                            //Request 
+                            //Request
                             //InstanceID
                             //InstanceUUID
 
-                            //Response 
+                            //Response
                             //StartupValue - SITNGO_STARTUP_VALUE = -1337,  DAILY_STARTUP_VALUE = -4331, FINALTABLE_STARTUP_VALUE = -74513
                             return "<Response><StartupValue>-4331</StartupValue></Response>";
                         case "GetStartupValue":
-                            //Request 
+                            //Request
                             //InstanceID
                             //InstanceUUID
 
-                            //Response 
+                            //Response
                             //StartupValue - SITNGO_STARTUP_VALUE = -1337,  DAILY_STARTUP_VALUE = -4331, FINALTABLE_STARTUP_VALUE = -74513
                             return "<Response><StartupValue>-4331</StartupValue></Response>";
 
@@ -210,20 +209,19 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                             return "<Response></Response>";
 
                         case "TourneyChipstackSavepoint":
-                            //Request DisplayNameChipstacks 
+                            //Request DisplayNameChipstacks
                             //InstanceID
                             //TableNum
 
                             //Response
-                            //
 
                             return "<Response></Response>";
 
                         case "GetDailyPlayerStacks":
                             //Request TransitDisplaynames
 
-                            //Response 
-                            // Players -> Player 
+                            //Response
+                            // Players -> Player
                             // Player -> DisplayName, InstanceID, TableNum, SeatNum, Stack
 
                             return "<Response></Response>";
@@ -235,12 +233,14 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                             return "<Response></Response>";
 
                         case "RequestLeaderboard":
-                            return "<Response></Response>";//Leaderboards.GetLeaderboardsClearasil(PostData, boundary, UserID, WorkPath);
+                            return "<Response></Response>"; //Leaderboards.GetLeaderboardsClearasil(PostData, boundary, UserID, WorkPath);
                         case "LogMetric":
                             return "<Response></Response>"; // We don't really care about Metrics just yet
 
                         default:
-                            LoggerAccessor.LogWarn($"[HFGAMES] - Client Request a Command I don't know about, please post the message on GITHUB : {Command}");
+                            LoggerAccessor.LogWarn(
+                                $"[HFGAMES] - Client Request a Command I don't know about, please post the message on GITHUB : {Command}"
+                            );
                             return "<Response></Response>";
                     }
                 }

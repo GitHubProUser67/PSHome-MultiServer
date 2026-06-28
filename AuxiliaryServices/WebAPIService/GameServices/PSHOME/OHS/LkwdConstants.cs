@@ -1,21 +1,19 @@
-using System.Collections.Generic;
-
 namespace WebAPIService.GameServices.PSHOME.OHS
 {
     public class LkwdConstants
     {
-        public static readonly Dictionary<string, ushort> TokensUUIDs = new Dictionary<string, ushort>
+        public static readonly Dictionary<string, ushort> TokensUUIDs = new()
         {
-            { "3CE5F061-126E455D-81BE66A9-A5FFE0DD", 61},
-            { "41572A7D-7472434F-A9CC5E74-1C46EC72", 6240},
-            { "558EDF38-5064415B-9D523BB1-E4826C88", 480},
+            { "3CE5F061-126E455D-81BE66A9-A5FFE0DD", 61 },
+            { "41572A7D-7472434F-A9CC5E74-1C46EC72", 6240 },
+            { "558EDF38-5064415B-9D523BB1-E4826C88", 480 },
             { "5B9BCC58-E794496A-B10A027C-DAFB1C19", 80 },
             { "DA1418BE-3B5B4493-BF2A2FDC-FF4E7EBD", 2780 },
-            { "FAE204D3-40CA42AA-8055A1D3-8721EE08", 1180 }
+            { "FAE204D3-40CA42AA-8055A1D3-8721EE08", 1180 },
         };
 
-        public static readonly List<string> LockwoodLifeSceneList = new List<string>
-        {
+        public static readonly List<string> LockwoodLifeSceneList =
+        [
             "Dream_Yacht_Club_946D_7710",
             "Sunset_Lounge_EBEF_AD7C",
             "Dream_Forest_Apt_82AC_F9C3",
@@ -33,11 +31,11 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             "Ajagaras_Peak_Apt_4A94_3E08",
             "Millionaires_Beach_BC6F_6E33",
             "Dream_Forest_Club_6A43_ADD6",
-            "Dream_Hideaway_Apt_577C_70EE"
-        };
+            "Dream_Hideaway_Apt_577C_70EE",
+        ];
 
-        public static readonly List<string> LockwoodDreamApartmentEntitlements = new List<string>
-        {
+        public static readonly List<string> LockwoodDreamApartmentEntitlements =
+        [
             "1F06C254-A7E64A30-B6D21BDC-AA465F64", // Dream Yacht
             "2E962339-5B474D6B-B5330518-E9C24241", // Dream Yacht
             "1FA691D0-0F0444E1-8406D8F9-701754E7", // Dream Forest
@@ -49,7 +47,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             "65658D4A-1D7D46CD-9B99B056-639DB504", // Dream Hideaway
             "6480F726-67B14578-B068C0B6-977AF7E0", // Dream Yacht Nightmare
             "8D2C0A43-D2F54E94-B0D6C424-63D81900", // Dream Yacht Artic
-            "E238192E-7D914A60-9BBC1F8A-58DE38F7" // Dream Yacht Artic
-        };
+            "E238192E-7D914A60-9BBC1F8A-58DE38F7", // Dream Yacht Artic
+        ];
     }
 }

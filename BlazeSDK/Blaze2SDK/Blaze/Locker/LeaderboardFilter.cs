@@ -6,27 +6,25 @@ namespace Blaze2SDK.Blaze.Locker
     [TdfStruct]
     public struct LeaderboardFilter
     {
-        
         /// <summary>
         /// Max String Length: 32
         /// </summary>
         [TdfMember("NAME")]
         [StringLength(32)]
         public string mName;
-        
+
         /// <summary>
         /// Max String Length: 10
         /// </summary>
         [TdfMember("OP")]
         [StringLength(10)]
         public string mOperator;
-        
+
         /// <summary>
         /// Max String Length: 256
         /// </summary>
         [TdfMember("VALU")]
         [StringLength(256)]
         public string mValue;
-        
     }
 }

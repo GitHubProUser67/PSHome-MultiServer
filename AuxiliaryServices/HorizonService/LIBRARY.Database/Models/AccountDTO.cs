@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace Horizon.LIBRARY.Database.Models
 {
     public class AccountDTO
@@ -32,7 +29,6 @@ namespace Horizon.LIBRARY.Database.Models
         /// </summary>
         public AccountRelationDTO[] Ignored { get; set; }
 
-
         /// <summary>
         /// Collection of ladder stats.
         /// </summary>
@@ -49,7 +45,7 @@ namespace Horizon.LIBRARY.Database.Models
         public int[] AccountCustomWideStats { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int? ClanId { get; set; }
 
@@ -75,12 +71,12 @@ namespace Horizon.LIBRARY.Database.Models
         public bool IsBanned { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int? AppId { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string Metadata { get; set; }
 
@@ -216,5 +212,4 @@ namespace Horizon.LIBRARY.Database.Models
         /// </summary>
         public int? WorldId { get; set; }
     }
-
 }

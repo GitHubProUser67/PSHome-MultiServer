@@ -1,14 +1,11 @@
 using CustomLogger;
 using DotNetty.Transport.Channels;
-using Horizon.LIBRARY.Pipeline.Attribute;
-using System;
 
 namespace Horizon.LIBRARY.Pipeline.Udp
 {
     public class ScertDatagramHandler : SimpleChannelInboundHandler<ScertDatagramPacket>
     {
         public override bool IsSharable => true;
-
 
         public Action<IChannel> OnChannelActive;
         public Action<IChannel> OnChannelInactive;
@@ -17,11 +14,13 @@ namespace Horizon.LIBRARY.Pipeline.Udp
         public override void ChannelActive(IChannelHandlerContext ctx)
         {
             // Detect when client disconnects
-            ctx.Channel.CloseCompletion.ContinueWith((x) =>
-            {
-                LoggerAccessor.LogWarn("[ScertDatagramHandler] - Udp: Channel Closed");
-                OnChannelInactive?.Invoke(ctx.Channel);
-            });
+            ctx.Channel.CloseCompletion.ContinueWith(
+                (x) =>
+                {
+                    LoggerAccessor.LogWarn("[ScertDatagramHandler] - Udp: Channel Closed");
+                    OnChannelInactive?.Invoke(ctx.Channel);
+                }
+            );
 
             // Send event upstream
             OnChannelActive?.Invoke(ctx.Channel);
@@ -36,12 +35,18 @@ namespace Horizon.LIBRARY.Pipeline.Udp
             OnChannelInactive?.Invoke(ctx.Channel);
         }
 
-
-        protected override void ChannelRead0(IChannelHandlerContext ctx, ScertDatagramPacket message)
+        protected override void ChannelRead0(
+            IChannelHandlerContext ctx,
+            ScertDatagramPacket message
+        )
         {
             // Handle medius version
-            ScertClientAttribute scertClient = ctx.GetAttribute(Constants.SCERT_CLIENT).Get();
-            if (message.Message != null && scertClient != null && scertClient.OnMessage(message.Message))
+            var scertClient = ctx.GetAttribute(Constants.SCERT_CLIENT).Get();
+            if (
+                message.Message != null
+                && scertClient != null
+                && scertClient.OnMessage(message.Message)
+            )
                 ctx.GetAttribute(Constants.SCERT_CLIENT).Set(scertClient);
 
             // Send upstream
@@ -52,7 +57,9 @@ namespace Horizon.LIBRARY.Pipeline.Udp
 
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            LoggerAccessor.LogError($"[ScertDatagramHandler] - Udp: An assertion was caught. (Exception:{exception})");
+            LoggerAccessor.LogError(
+                $"[ScertDatagramHandler] - Udp: An assertion was caught. (Exception:{exception})"
+            );
         }
     }
 }

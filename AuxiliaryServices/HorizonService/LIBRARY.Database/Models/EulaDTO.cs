@@ -1,5 +1,3 @@
-using System;
-
 namespace Horizon.LIBRARY.Database.Models
 {
     public class AddEulaDTO
@@ -21,7 +19,6 @@ namespace Horizon.LIBRARY.Database.Models
         public DateTime? FromDt { get; set; }
         public DateTime? ToDt { get; set; }
         public int AppId { get; set; }
-
     }
 
     #region Policy Type

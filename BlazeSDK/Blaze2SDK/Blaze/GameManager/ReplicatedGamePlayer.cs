@@ -1,5 +1,5 @@
-using Blaze2SDK.Blaze.Util;
 using System.ComponentModel.DataAnnotations;
+using Blaze2SDK.Blaze.Util;
 using Tdf;
 
 namespace Blaze2SDK.Blaze.GameManager
@@ -7,7 +7,6 @@ namespace Blaze2SDK.Blaze.GameManager
     [TdfStruct]
     public struct ReplicatedGamePlayer
     {
-
         [TdfMember("BLOB")]
         public byte[] mCustomData;
 
@@ -63,6 +62,5 @@ namespace Blaze2SDK.Blaze.GameManager
 
         [TdfMember("UID")]
         public uint mPlayerSessionId;
-
     }
 }

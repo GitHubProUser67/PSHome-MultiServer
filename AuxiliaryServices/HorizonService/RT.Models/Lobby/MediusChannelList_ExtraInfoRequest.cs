@@ -1,9 +1,12 @@
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.ChannelList_ExtraInfo)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.ChannelList_ExtraInfo
+    )]
     public class MediusChannelList_ExtraInfoRequest : BaseLobbyExtMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.ChannelList_ExtraInfo;
@@ -35,13 +38,13 @@ namespace Horizon.RT.Models
             writer.Write(PageSize);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                 $"MessageID: {MessageID} " +
-                 $"PageID: {PageID} " +
-                 $"PageSize: {PageSize}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"PageID: {PageID} "
+                + $"PageSize: {PageSize}";
         }
     }
 }

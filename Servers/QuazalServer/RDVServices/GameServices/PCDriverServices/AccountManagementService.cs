@@ -7,7 +7,12 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
     public class AccountManagementService : RMCServiceBase
     {
         [RMCMethod(1)]
-        public RMCResult CreateAccount(string strPrincipalName, string strKey, uint uiGroups, string strEmail)
+        public RMCResult CreateAccount(
+            string strPrincipalName,
+            string strKey,
+            uint uiGroups,
+            string strEmail
+        )
         {
             UNIMPLEMENTED();
             return Error(0);

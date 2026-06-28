@@ -1,10 +1,7 @@
-using System;
-using MultiServerLibrary.HTTP;
+using System.Collections.Concurrent;
 using CustomLogger;
 using HttpMultipartParser;
-using System.IO;
-using System.Collections.Concurrent;
-using WebAPIService.GameServices.PSHOME.VEEMEE;
+using MultiServerLibrary.HTTP;
 
 namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
 {
@@ -12,42 +9,25 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
     {
         public static string GetObjectSpace(byte[] PostData, string ContentType)
         {
-            string scene_id = string.Empty;
-            string region = string.Empty;
-            string instance_id = string.Empty;
-            string psn_id = string.Empty;
-            string object_id = string.Empty;
-            string session_key = string.Empty;
-            string space_name = string.Empty;
-            string hex = string.Empty;
-            string __salt = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
-                    scene_id = data.GetParameterValue("scene_id");
+                    var scene_id = data.GetParameterValue("scene_id");
 
                     scene_id = data.GetParameterValue("scene_id");
-
-                    region = data.GetParameterValue("region");
-
-                    instance_id = data.GetParameterValue("instance_id");
-
-                    psn_id = data.GetParameterValue("psn_id");
-
-                    object_id = data.GetParameterValue("object_id");
-
-                    session_key = data.GetParameterValue("session_key");
-
-                    space_name = data.GetParameterValue("space_name");
-
-                    hex = data.GetParameterValue("hex");
-
-                    __salt = data.GetParameterValue("__salt");
+                    var region = data.GetParameterValue("region");
+                    var instance_id = data.GetParameterValue("instance_id");
+                    var psn_id = data.GetParameterValue("psn_id");
+                    var object_id = data.GetParameterValue("object_id");
+                    var session_key = data.GetParameterValue("session_key");
+                    var space_name = data.GetParameterValue("space_name");
+                    var hex = data.GetParameterValue("hex");
+                    var __salt = data.GetParameterValue("__salt");
 
                     ms.Flush();
                 }
@@ -60,31 +40,23 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
 
         public static string GetObjectSlot(byte[] PostData, string ContentType)
         {
-            int max_slot = 0;
-            string slot_name = string.Empty;
-            string session_key = string.Empty;
-            string scene_id = string.Empty;
-            string region = string.Empty;
-            string object_id = string.Empty;
-            string psn_id = string.Empty;
-            string instance_id = string.Empty;
-            string hex = string.Empty;
-            string __salt = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var max_slot = 0;
+            var slot_name = string.Empty;
+            var psn_id = string.Empty;
+            var instance_id = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
                     slot_name = data.GetParameterValue("slot_name");
 
-                    session_key = data.GetParameterValue("session_key");
-
-                    scene_id = data.GetParameterValue("scene_id");
-
-                    region = data.GetParameterValue("region");
+                    var session_key = data.GetParameterValue("session_key");
+                    var scene_id = data.GetParameterValue("scene_id");
+                    var region = data.GetParameterValue("region");
 
                     try
                     {
@@ -95,20 +67,21 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
                         // Not Important
                     }
 
-                    object_id = data.GetParameterValue("object_id");
+                    var object_id = data.GetParameterValue("object_id");
 
                     psn_id = data.GetParameterValue("psn_id");
 
                     instance_id = data.GetParameterValue("instance_id");
 
-                    hex = data.GetParameterValue("hex");
-
-                    __salt = data.GetParameterValue("__salt");
+                    var hex = data.GetParameterValue("hex");
+                    var __salt = data.GetParameterValue("__salt");
 
                     ms.Flush();
                 }
 
-                return Processor.Sign($"{{\"slot\":{SlotManager.UpdateSlot($"{instance_id}_{slot_name}", 0, psn_id, false, max_slot)}}}");
+                return Processor.Sign(
+                    $"{{\"slot\":{SlotManager.UpdateSlot($"{instance_id}_{slot_name}", 0, psn_id, false, max_slot)}}}"
+                );
             }
 
             return null;
@@ -116,47 +89,38 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
 
         public static string RemoveSlot(byte[] PostData, string ContentType)
         {
-            int slot_num = 0;
-            string slot_name = string.Empty;
-            string session_key = string.Empty;
-            string scene_id = string.Empty;
-            string region = string.Empty;
-            string object_id = string.Empty;
-            string psn_id = string.Empty;
-            string instance_id = string.Empty;
-            string hex = string.Empty;
-            string __salt = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var slot_num = 0;
+            var slot_name = string.Empty;
+            var psn_id = string.Empty;
+            var instance_id = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
                     slot_name = data.GetParameterValue("slot_name");
 
-                    session_key = data.GetParameterValue("session_key");
-
-                    scene_id = data.GetParameterValue("scene_id");
-
-                    region = data.GetParameterValue("region");
-
-                    object_id = data.GetParameterValue("object_id");
+                    var session_key = data.GetParameterValue("session_key");
+                    var scene_id = data.GetParameterValue("scene_id");
+                    var region = data.GetParameterValue("region");
+                    var object_id = data.GetParameterValue("object_id");
 
                     psn_id = data.GetParameterValue("psn_id");
 
                     instance_id = data.GetParameterValue("instance_id");
 
-                    hex = data.GetParameterValue("hex");
-
-                    __salt = data.GetParameterValue("__salt");
+                    var hex = data.GetParameterValue("hex");
+                    var __salt = data.GetParameterValue("__salt");
 
                     ms.Flush();
                 }
 
-                return Processor.Sign($"{{\"success\":{SlotManager.UpdateSlot($"{instance_id}_{slot_name}", slot_num, psn_id, true)}}}");
+                return Processor.Sign(
+                    $"{{\"success\":{SlotManager.UpdateSlot($"{instance_id}_{slot_name}", slot_num, psn_id, true)}}}"
+                );
             }
 
             return null;
@@ -164,40 +128,23 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
 
         public static string HeartBeat(byte[] PostData, string ContentType)
         {
-            string session_key = string.Empty;
-            string scene_id = string.Empty;
-            string region = string.Empty;
-            string slot_name = string.Empty;
-            string object_id = string.Empty;
-            string psn_id = string.Empty;
-            string instance_id = string.Empty;
-            string hex = string.Empty;
-            string __salt = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
+                    var slot_name = data.GetParameterValue("slot_name");
 
-                    slot_name = data.GetParameterValue("slot_name");
-
-                    session_key = data.GetParameterValue("session_key");
-
-                    scene_id = data.GetParameterValue("scene_id");
-
-                    region = data.GetParameterValue("region");
-
-                    object_id = data.GetParameterValue("object_id");
-
-                    psn_id = data.GetParameterValue("psn_id");
-
-                    instance_id = data.GetParameterValue("instance_id");
-
-                    hex = data.GetParameterValue("hex");
-
-                    __salt = data.GetParameterValue("__salt");
+                    var session_key = data.GetParameterValue("session_key");
+                    var scene_id = data.GetParameterValue("scene_id");
+                    var region = data.GetParameterValue("region");
+                    var object_id = data.GetParameterValue("object_id");
+                    var psn_id = data.GetParameterValue("psn_id");
+                    var instance_id = data.GetParameterValue("instance_id");
+                    var hex = data.GetParameterValue("hex");
+                    var __salt = data.GetParameterValue("__salt");
 
                     ms.Flush();
                 }
@@ -213,24 +160,32 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
     {
         private const string EMPTY_SLOT = "<EMPTY/>";
 
-        private static readonly ConcurrentDictionary<string, ConcurrentDictionary<int, string>> _instanceData = new ConcurrentDictionary<string, ConcurrentDictionary<int, string>>();
+        private static readonly ConcurrentDictionary<
+            string,
+            ConcurrentDictionary<int, string>
+        > _instanceData = new();
 
-        public static string UpdateSlot(string instance_id, int slot_num, string psn_id, bool removemode, int max_slot = 0)
+        public static string UpdateSlot(
+            string instance_id,
+            int slot_num,
+            string psn_id,
+            bool removemode,
+            int max_slot = 0
+        )
         {
-            bool found = false;
+            var found = false;
 
             try
             {
-                if (!_instanceData.ContainsKey(instance_id))
+                if (!_instanceData.TryGetValue(instance_id, out var data))
                 {
-                    _instanceData[instance_id] = new ConcurrentDictionary<int, string>();
+                    data = new ConcurrentDictionary<int, string>();
+                    _instanceData[instance_id] = data;
 
                     // Initialize the dictionary with max_slot number of slots.
-                    for (int i = 1; i <= max_slot; i++)
+                    for (var i = 1; i <= max_slot; i++)
                         _instanceData[instance_id][i] = EMPTY_SLOT;
                 }
-
-                var data = _instanceData[instance_id];
 
                 if (slot_num != 0 && removemode)
                 {
@@ -272,20 +227,18 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogWarn($"[VEEMEESlotManager] - Failed to update or remove slot - {ex}");
+                LoggerAccessor.LogWarn(
+                    $"[VEEMEESlotManager] - Failed to update or remove slot - {ex}"
+                );
 
                 found = false;
             }
 
-            if (!found)
-            {
-                if (!removemode)
-                    return "0";
-                else
-                    return "false";
-            }
-            else
-                return "true";
+            return !found
+                ? !removemode
+                    ? "0"
+                    : "false"
+                : "true";
         }
     }
 }

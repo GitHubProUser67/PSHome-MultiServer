@@ -6,10 +6,9 @@ namespace SSFWServer.Services
     {
         public static bool UpdateKeepAliveForClient(string absolutePath)
         {
-            string resultSessionId = absolutePath.Split("/")[3];
-            if (GUIDValidator.RegexSessionValidator.IsMatch(resultSessionId))
-                return SSFWUserSessionManager.UpdateKeepAliveTime(resultSessionId);
-            return false;
+            var resultSessionId = absolutePath.Split("/")[3];
+            return GUIDValidator.RegexSessionValidator.IsMatch(resultSessionId)
+                && SSFWUserSessionManager.UpdateKeepAliveTime(resultSessionId);
         }
     }
 }

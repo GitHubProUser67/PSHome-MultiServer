@@ -1,12 +1,11 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     public class MediusPlayerOnlineState : IStreamSerializer
     {
-        public static readonly MediusPlayerOnlineState Empty = new MediusPlayerOnlineState();
+        public static readonly MediusPlayerOnlineState Empty = new();
 
         public MediusPlayerStatus ConnectStatus;
         public int MediusLobbyWorldID;
@@ -34,12 +33,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"ConnectStatus: {ConnectStatus} " +
-                $"MediusLobbyWorldID: {MediusLobbyWorldID} " +
-                $"MediusGameWorldID: {MediusGameWorldID} " +
-                $"LobbyName: {LobbyName} " +
-                $"GameName: {GameName}";
+            return base.ToString()
+                + " "
+                + $"ConnectStatus: {ConnectStatus} "
+                + $"MediusLobbyWorldID: {MediusLobbyWorldID} "
+                + $"MediusGameWorldID: {MediusGameWorldID} "
+                + $"LobbyName: {LobbyName} "
+                + $"GameName: {GameName}";
         }
     }
 }

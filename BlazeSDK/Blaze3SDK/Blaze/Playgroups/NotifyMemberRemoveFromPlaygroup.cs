@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Playgroups
 {
-	[TdfStruct]
-	public struct NotifyMemberRemoveFromPlaygroup
-	{
+    [TdfStruct]
+    public struct NotifyMemberRemoveFromPlaygroup
+    {
+        [TdfMember("MLST")]
+        public long mBlazeId;
 
-		[TdfMember("MLST")]
-		public long mBlazeId;
+        [TdfMember("PGID")]
+        public uint mPlaygroupId;
 
-		[TdfMember("PGID")]
-		public uint mPlaygroupId;
-
-		[TdfMember("REAS")]
-		public PlaygroupMemberRemoveReason mReason;
-
-	}
+        [TdfMember("REAS")]
+        public PlaygroupMemberRemoveReason mReason;
+    }
 }

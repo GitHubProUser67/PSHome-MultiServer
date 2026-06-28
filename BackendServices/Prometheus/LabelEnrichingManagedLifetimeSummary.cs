@@ -2,20 +2,20 @@
 
 namespace Prometheus;
 
-internal sealed class LabelEnrichingManagedLifetimeSummary : IManagedLifetimeMetricHandle<ISummary>
+internal sealed class LabelEnrichingManagedLifetimeSummary(
+    IManagedLifetimeMetricHandle<ISummary> inner,
+    string[] enrichWithLabelValues
+) : IManagedLifetimeMetricHandle<ISummary>
 {
-    public LabelEnrichingManagedLifetimeSummary(IManagedLifetimeMetricHandle<ISummary> inner, string[] enrichWithLabelValues)
-    {
-        _inner = inner;
-        _enrichWithLabelValues = enrichWithLabelValues;
-    }
-
-    private readonly IManagedLifetimeMetricHandle<ISummary> _inner;
-    private readonly string[] _enrichWithLabelValues;
+    private readonly IManagedLifetimeMetricHandle<ISummary> _inner = inner;
+    private readonly string[] _enrichWithLabelValues = enrichWithLabelValues;
 
     public ICollector<ISummary> WithExtendLifetimeOnUse()
     {
-        return new LabelEnrichingAutoLeasingMetric<ISummary>(_inner.WithExtendLifetimeOnUse(), _enrichWithLabelValues);
+        return new LabelEnrichingAutoLeasingMetric<ISummary>(
+            _inner.WithExtendLifetimeOnUse(),
+            _enrichWithLabelValues
+        );
     }
 
     #region Lease(string[])
@@ -34,7 +34,11 @@ internal sealed class LabelEnrichingManagedLifetimeSummary : IManagedLifetimeMet
         _inner.WithLease(action, WithEnrichedLabelValues(labelValues));
     }
 
-    public void WithLease<TArg>(Action<TArg, ISummary> action, TArg arg, params string[] labelValues)
+    public void WithLease<TArg>(
+        Action<TArg, ISummary> action,
+        TArg arg,
+        params string[] labelValues
+    )
     {
         _inner.WithLease(action, arg, WithEnrichedLabelValues(labelValues));
     }
@@ -49,7 +53,10 @@ internal sealed class LabelEnrichingManagedLifetimeSummary : IManagedLifetimeMet
         return _inner.WithLeaseAsync(func, WithEnrichedLabelValues(labelValues));
     }
 
-    public Task<TResult> WithLeaseAsync<TResult>(Func<ISummary, Task<TResult>> action, params string[] labelValues)
+    public Task<TResult> WithLeaseAsync<TResult>(
+        Func<ISummary, Task<TResult>> action,
+        params string[] labelValues
+    )
     {
         return _inner.WithLeaseAsync(action, WithEnrichedLabelValues(labelValues));
     }
@@ -71,12 +78,19 @@ internal sealed class LabelEnrichingManagedLifetimeSummary : IManagedLifetimeMet
         _inner.WithLease(action, WithEnrichedLabelValues(labelValues));
     }
 
-    public void WithLease<TArg>(Action<TArg, ISummary> action, TArg arg, ReadOnlyMemory<string> labelValues)
+    public void WithLease<TArg>(
+        Action<TArg, ISummary> action,
+        TArg arg,
+        ReadOnlyMemory<string> labelValues
+    )
     {
         _inner.WithLease(action, arg, WithEnrichedLabelValues(labelValues));
     }
 
-    public TResult WithLease<TResult>(Func<ISummary, TResult> func, ReadOnlyMemory<string> labelValues)
+    public TResult WithLease<TResult>(
+        Func<ISummary, TResult> func,
+        ReadOnlyMemory<string> labelValues
+    )
     {
         return _inner.WithLease(func, WithEnrichedLabelValues(labelValues));
     }
@@ -86,7 +100,10 @@ internal sealed class LabelEnrichingManagedLifetimeSummary : IManagedLifetimeMet
         return _inner.WithLeaseAsync(func, WithEnrichedLabelValues(labelValues));
     }
 
-    public Task<TResult> WithLeaseAsync<TResult>(Func<ISummary, Task<TResult>> action, ReadOnlyMemory<string> labelValues)
+    public Task<TResult> WithLeaseAsync<TResult>(
+        Func<ISummary, Task<TResult>> action,
+        ReadOnlyMemory<string> labelValues
+    )
     {
         return _inner.WithLeaseAsync(action, WithEnrichedLabelValues(labelValues));
     }
@@ -156,7 +173,11 @@ internal sealed class LabelEnrichingManagedLifetimeSummary : IManagedLifetimeMet
         }
     }
 
-    public void WithLease<TArg>(Action<TArg, ISummary> action, TArg arg, ReadOnlySpan<string> labelValues)
+    public void WithLease<TArg>(
+        Action<TArg, ISummary> action,
+        TArg arg,
+        ReadOnlySpan<string> labelValues
+    )
     {
         var buffer = RentBufferForEnrichedLabelValues(labelValues);
 
@@ -171,7 +192,10 @@ internal sealed class LabelEnrichingManagedLifetimeSummary : IManagedLifetimeMet
         }
     }
 
-    public TResult WithLease<TResult>(Func<ISummary, TResult> func, ReadOnlySpan<string> labelValues)
+    public TResult WithLease<TResult>(
+        Func<ISummary, TResult> func,
+        ReadOnlySpan<string> labelValues
+    )
     {
         var buffer = RentBufferForEnrichedLabelValues(labelValues);
 
@@ -187,10 +211,13 @@ internal sealed class LabelEnrichingManagedLifetimeSummary : IManagedLifetimeMet
     }
     #endregion
 
-    private string[] RentBufferForEnrichedLabelValues(ReadOnlySpan<string> instanceLabelValues)
-        => ArrayPool<string>.Shared.Rent(instanceLabelValues.Length + _enrichWithLabelValues.Length);
+    private string[] RentBufferForEnrichedLabelValues(ReadOnlySpan<string> instanceLabelValues) =>
+        ArrayPool<string>.Shared.Rent(instanceLabelValues.Length + _enrichWithLabelValues.Length);
 
-    private ReadOnlySpan<string> AssembleEnrichedLabelValues(ReadOnlySpan<string> instanceLabelValues, string[] buffer)
+    private ReadOnlySpan<string> AssembleEnrichedLabelValues(
+        ReadOnlySpan<string> instanceLabelValues,
+        string[] buffer
+    )
     {
         _enrichWithLabelValues.CopyTo(buffer, 0);
         instanceLabelValues.CopyTo(buffer.AsSpan(_enrichWithLabelValues.Length));

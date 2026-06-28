@@ -1,9 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-	<IsPublishable>false</IsPublishable>
-	<IsTrimmable Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net6.0'))">true</IsTrimmable>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- "latest" works on local PC but not in build pipeline; Visual Studio version difference? Whatever, preview it is. -->
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPublishable>false</IsPublishable>
+    <IsTrimmable
+      Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))"
+      >true</IsTrimmable
+    >
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,5 +20,4 @@
   <ItemGroup>
     <ProjectReference Include="..\WebAPIService\WebAPIService.csproj" />
   </ItemGroup>
-
 </Project>

@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.League
 {
-	[TdfStruct]
-	public struct LeagueUser
-	{
+    [TdfStruct]
+    public struct LeagueUser
+    {
+        [TdfMember("BLID")]
+        public long mBlazeId;
 
-		[TdfMember("BLID")]
-		public long mBlazeId;
-
-		[TdfMember("PERS")]
-		public string mPersona;
-
-	}
+        [TdfMember("PERS")]
+        public string mPersona;
+    }
 }

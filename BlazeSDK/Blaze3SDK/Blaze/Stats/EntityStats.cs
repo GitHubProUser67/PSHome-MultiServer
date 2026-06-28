@@ -2,21 +2,19 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Stats
 {
-	[TdfStruct]
-	public struct EntityStats
-	{
+    [TdfStruct]
+    public struct EntityStats
+    {
+        [TdfMember("EID")]
+        public long mEntityId;
 
-		[TdfMember("EID")]
-		public long mEntityId;
+        [TdfMember("ETYP")]
+        public BlazeObjectType mEntityType;
 
-		[TdfMember("ETYP")]
-		public BlazeObjectType mEntityType;
+        [TdfMember("POFF")]
+        public int mPeriodOffset;
 
-		[TdfMember("POFF")]
-		public int mPeriodOffset;
-
-		[TdfMember("STAT")]
-		public List<string> mStatValues;
-
-	}
+        [TdfMember("STAT")]
+        public List<string> mStatValues;
+    }
 }

@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Messaging
 {
-	[TdfStruct]
-	public struct SendMessageResponse
-	{
+    [TdfStruct]
+    public struct SendMessageResponse
+    {
+        [TdfMember("MGID")]
+        public uint mMessageId;
 
-		[TdfMember("MGID")]
-		public uint mMessageId;
-
-		[TdfMember("MIDS")]
-		public List<uint> mMessageIds;
-
-	}
+        [TdfMember("MIDS")]
+        public List<uint> mMessageIds;
+    }
 }

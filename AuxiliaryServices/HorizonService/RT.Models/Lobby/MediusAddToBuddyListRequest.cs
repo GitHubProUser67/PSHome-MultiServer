@@ -1,13 +1,11 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.AddToBuddyList)]
     public class MediusAddToBuddyListRequest : BaseLobbyMessage, IMediusRequest
     {
-
         public override byte PacketType => (byte)MediusLobbyMessageIds.AddToBuddyList;
 
         public MessageId MessageID { get; set; }
@@ -37,13 +35,13 @@ namespace Horizon.RT.Models
             writer.Write(AccountID);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"AccountID: {AccountID}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"AccountID: {AccountID}";
         }
     }
 }

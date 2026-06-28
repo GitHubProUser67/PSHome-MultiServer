@@ -1,20 +1,24 @@
 ﻿using HttpMultipartParser;
-using System.IO;
 
 namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Tycoon
 {
     internal class PostCards
     {
-        public static string HandleUpload(byte[] PostData, string boundary, string UserID, string WorkPath)
+        public static string HandleUpload(
+            byte[] PostData,
+            string boundary,
+            string UserID,
+            string WorkPath
+        )
         {
             const string screenShotFileName = "screenshot.jpg";
 
             byte[] jpgBuffer = null;
-            string TownID = string.Empty;
+            var TownID = string.Empty;
 
             if (PostData != null && !string.IsNullOrEmpty(boundary))
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
                     try
@@ -27,15 +31,15 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Tycoon
                     }
                     foreach (var file in data.Files)
                     {
-                        using (Stream filedata = file.Data)
+                        using (var filedata = file.Data)
                         {
                             filedata.Position = 0;
 
                             // Find the number of bytes in the stream
-                            int contentLength = (int)filedata.Length;
+                            var contentLength = (int)filedata.Length;
 
                             // Create a byte array
-                            byte[] buffer = new byte[contentLength];
+                            var buffer = new byte[contentLength];
 
                             // Read the contents of the memory stream into the byte array
                             filedata.Read(buffer, 0, contentLength);
@@ -53,19 +57,25 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Tycoon
                 {
                     if (!string.IsNullOrEmpty(TownID))
                     {
-                        string townsDirPath = $"{WorkPath}/HomeTycoon/TownsData/{UserID}";
+                        var townsDirPath = $"{WorkPath}/HomeTycoon/TownsData/{UserID}";
 
                         Directory.CreateDirectory(townsDirPath);
 
-                        _ = File.WriteAllBytesAsync(townsDirPath + $"/{TownID}{screenShotFileName.Substring(screenShotFileName.Length - 4)}", jpgBuffer);
+                        _ = File.WriteAllBytesAsync(
+                            townsDirPath + $"/{TownID}{screenShotFileName[^4..]}",
+                            jpgBuffer
+                        );
                     }
                     else
                     {
-                        string townsDirPath = $"{WorkPath}/HomeTycoon/User_Data/{UserID}";
+                        var townsDirPath = $"{WorkPath}/HomeTycoon/User_Data/{UserID}";
 
                         Directory.CreateDirectory(townsDirPath);
 
-                        _ = File.WriteAllBytesAsync(townsDirPath + $"/{screenShotFileName}", jpgBuffer);
+                        _ = File.WriteAllBytesAsync(
+                            townsDirPath + $"/{screenShotFileName}",
+                            jpgBuffer
+                        );
                     }
                 }
             }
@@ -76,17 +86,15 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Tycoon
         private static bool IsValidJpeg(byte[] data)
         {
             // JPEG magic numbers
-            byte[] jpegHeader = { 0xFF, 0xD8 };
-            byte[] jpegFooter = { 0xFF, 0xD9 };
+            byte[] jpegHeader = [0xFF, 0xD8];
+            byte[] jpegFooter = [0xFF, 0xD9];
 
-            if (data == null || data.Length < 4)
-                return false;
-
-            return data[0] == jpegHeader[0] &&
-                   data[1] == jpegHeader[1] &&
-                   data[data.Length - 2] == jpegFooter[0] &&
-                   data[data.Length - 1] == jpegFooter[1];
+            return data != null
+                && data.Length >= 4
+                && data[0] == jpegHeader[0]
+                && data[1] == jpegHeader[1]
+                && data[^2] == jpegFooter[0]
+                && data[^1] == jpegFooter[1];
         }
-
     }
 }

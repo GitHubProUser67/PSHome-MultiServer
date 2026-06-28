@@ -3,9 +3,9 @@
     public class SparkStats
     {
         // Fields based on a2 offsets seen in C++
-        public int id { get; set; }         // a2 + 4
-        public string name { get; set; }        // a2 + 8
-        public int unk { get; set; }      // a2 + 0xC
+        public int id { get; set; } // a2 + 4
+        public string name { get; set; } // a2 + 8
+        public int unk { get; set; } // a2 + 0xC
 
         // Three float arrays (dynamic vectors)
         public List<float> vec1 { get; set; } // a2 + 0x10

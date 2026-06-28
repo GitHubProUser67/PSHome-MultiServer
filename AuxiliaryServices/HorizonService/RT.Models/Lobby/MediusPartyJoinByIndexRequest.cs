@@ -1,10 +1,12 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.PartyJoinByIndexRequest)] // Set GameState
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.PartyJoinByIndexRequest
+    )] // Set GameState
     public class MediusPartyJoinByIndexRequest : BaseLobbyExtMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.PartyJoinByIndexRequest; // Set GameState
@@ -13,30 +15,37 @@ namespace Horizon.RT.Models
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Session Key
         /// </summary>
         public string SessionKey; // SESSIONKEY_MAXLEN
+
         /// <summary>
         /// MediusWorldID
         /// </summary>
         public int MediusWorldID;
+
         /// <summary>
         /// Party Password
         /// </summary>
         public string PartyPassword; //PASSWORD_MAXLEN
+
         /// <summary>
         /// PartyHostType
         /// </summary>
         public MGCL_GAME_HOST_TYPE PartyHostType;
+
         /// <summary>
         /// Security Key of this session
         /// </summary>
         public RSA_KEY pubKey;
+
         /// <summary>
         /// AddressList of this player
         /// </summary>
         public NetAddressList addressList;
+
         /// <summary>
         /// AddressList of this player
         /// </summary>
@@ -44,15 +53,12 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
-            MessageID = reader.Read<MessageId>(); 
+            MessageID = reader.Read<MessageId>();
             SessionKey = reader.ReadString(Constants.SESSIONKEY_MAXLEN);
             reader.ReadBytes(2);
 
-            //
             MediusWorldID = reader.ReadInt32();
             PartyPassword = reader.ReadString(Constants.PARTYPASSWORD_MAXLEN);
             PartyHostType = reader.Read<MGCL_GAME_HOST_TYPE>();
@@ -64,15 +70,12 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
             writer.Write(SessionKey, Constants.SESSIONKEY_MAXLEN);
             writer.Write(new byte[2]);
 
-            // 
             writer.Write(MediusWorldID);
             writer.Write(PartyPassword);
             writer.Write(PartyHostType);
@@ -84,15 +87,16 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"MediusWorldID: {MediusWorldID} " +
-                $"PartyPassword: {PartyPassword} " +
-                $"PartyHostType: {PartyHostType} " +
-                $"pubKey: {pubKey} " +
-                $"addressList: {addressList} " +
-                $"partyIndex: {partyIndex}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"MediusWorldID: {MediusWorldID} "
+                + $"PartyPassword: {PartyPassword} "
+                + $"PartyHostType: {PartyHostType} "
+                + $"pubKey: {pubKey} "
+                + $"addressList: {addressList} "
+                + $"partyIndex: {partyIndex}";
             //$"GameState: {MatchGameState}";
         }
     }

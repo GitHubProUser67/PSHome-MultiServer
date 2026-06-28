@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct GameBrowserTeamInfo
-	{
+    [TdfStruct]
+    public struct GameBrowserTeamInfo
+    {
+        [TdfMember("TID")]
+        public ushort mTeamId;
 
-		[TdfMember("TID")]
-		public ushort mTeamId;
-
-		[TdfMember("TSZE")]
-		public ushort mTeamSize;
-
-	}
+        [TdfMember("TSZE")]
+        public ushort mTeamSize;
+    }
 }

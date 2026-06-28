@@ -19,12 +19,7 @@ namespace System
 
         internal static string Format(string resourceFormat, params object[] args)
         {
-            if (args != null)
-            {
-                return string.Format(resourceFormat, args);
-            }
-
-            return resourceFormat;
+            return args != null ? string.Format(resourceFormat, args) : resourceFormat;
         }
 
         internal static string Format(IFormatProvider provider, string resourceFormat, object p1)
@@ -32,27 +27,35 @@ namespace System
             return string.Format(provider, resourceFormat, p1);
         }
 
-        internal static string Format(IFormatProvider provider, string resourceFormat, object p1, object p2)
+        internal static string Format(
+            IFormatProvider provider,
+            string resourceFormat,
+            object p1,
+            object p2
+        )
         {
             return string.Format(provider, resourceFormat, p1, p2);
         }
 
-        internal static string Format(IFormatProvider provider, string resourceFormat, object p1, object p2,
-            object p3)
+        internal static string Format(
+            IFormatProvider provider,
+            string resourceFormat,
+            object p1,
+            object p2,
+            object p3
+        )
         {
             return string.Format(provider, resourceFormat, p1, p2, p3);
         }
 
-        internal static string Format(IFormatProvider provider, string resourceFormat, params object[] args)
+        internal static string Format(
+            IFormatProvider provider,
+            string resourceFormat,
+            params object[] args
+        )
         {
-            if (args != null)
-            {
-                return string.Format(provider, resourceFormat, args);
-            }
-
-            return resourceFormat;
+            return args != null ? string.Format(provider, resourceFormat, args) : resourceFormat;
         }
-
 
         public const string net_log_listener_delegate_exception =
             "Sending 500 response, AuthenticationSchemeSelectorDelegate threw an exception: {0}.";
@@ -66,16 +69,21 @@ namespace System
         public const string net_io_invalidasyncresult =
             "The IAsyncResult object was not returned from the corresponding asynchronous method on this class.";
 
-        public const string net_io_invalidendcall = "{0} can only be called once for each asynchronous operation.";
-        public const string net_listener_cannot_set_custom_cbt = "Custom channel bindings are not supported.";
-        public const string net_listener_detach_error = "Can't detach Url group from request queue. Status code: {0}.";
+        public const string net_io_invalidendcall =
+            "{0} can only be called once for each asynchronous operation.";
+        public const string net_listener_cannot_set_custom_cbt =
+            "Custom channel bindings are not supported.";
+        public const string net_listener_detach_error =
+            "Can't detach Url group from request queue. Status code: {0}.";
 
         public const string net_listener_scheme =
             "Only Uri prefixes starting with 'http://' or 'https://' are supported.";
 
-        public const string net_listener_host = "Only Uri prefixes with a valid hostname are supported.";
+        public const string net_listener_host =
+            "Only Uri prefixes with a valid hostname are supported.";
         public const string net_listener_not_supported = "The request is not supported.";
-        public const string net_listener_mustcall = "Please call the {0} method before calling this method.";
+        public const string net_listener_mustcall =
+            "Please call the {0} method before calling this method.";
         public const string net_listener_slash = "Only Uri prefixes ending in '/' are allowed.";
 
         public const string net_listener_already =
@@ -114,12 +122,17 @@ namespace System
         public const string net_log_listener_spn_failed_always =
             "Service name check failed because the client did not provide a service name and the server was configured for PolicyEnforcement.Always.";
 
-        public const string net_log_listener_spn_failed_empty = "No acceptable service names were configured!";
+        public const string net_log_listener_spn_failed_empty =
+            "No acceptable service names were configured!";
         public const string net_log_listener_spn_failed_dump = "Dumping acceptable service names:";
-        public const string net_log_listener_spn_add = "Adding default service name '{0}' from prefix '{1}'.";
-        public const string net_log_listener_spn_not_add = "No default service name added for prefix '{0}'.";
-        public const string net_log_listener_spn_remove = "Removing default service name '{0}' from prefix '{1}'.";
-        public const string net_log_listener_spn_not_remove = "No default service name removed for prefix '{0}'.";
+        public const string net_log_listener_spn_add =
+            "Adding default service name '{0}' from prefix '{1}'.";
+        public const string net_log_listener_spn_not_add =
+            "No default service name added for prefix '{0}'.";
+        public const string net_log_listener_spn_remove =
+            "Removing default service name '{0}' from prefix '{1}'.";
+        public const string net_log_listener_spn_not_remove =
+            "No default service name removed for prefix '{0}'.";
 
         public const string net_listener_no_spns =
             "No service names could be determined from the registered prefixes. Either add prefixes from which default service names can be derived or specify an ExtendedProtectionPolicy object which contains an explicit list of service names.";
@@ -127,27 +140,34 @@ namespace System
         public const string net_ssp_dont_support_cbt =
             "The Security Service Providers don't support extended protection. Please install the latest Security Service Providers update.";
 
-        public const string net_PropertyNotImplementedException = "This property is not implemented by this class.";
+        public const string net_PropertyNotImplementedException =
+            "This property is not implemented by this class.";
         public const string net_array_too_small = "The target array is too small.";
-        public const string net_listener_mustcompletecall = "The in-progress method {0} must be completed first.";
-        public const string net_listener_invalid_cbt_type = "Querying the {0} Channel Binding is not supported.";
+        public const string net_listener_mustcompletecall =
+            "The in-progress method {0} must be completed first.";
+        public const string net_listener_invalid_cbt_type =
+            "Querying the {0} Channel Binding is not supported.";
 
         public const string net_listener_callinprogress =
             "Cannot re-call {0} while a previous call is still in progress.";
 
-        public const string net_log_listener_cant_create_uri = "Can't create Uri from string '{0}://{1}{2}{3}'.";
+        public const string net_log_listener_cant_create_uri =
+            "Can't create Uri from string '{0}://{1}{2}{3}'.";
 
         public const string net_log_listener_cant_convert_raw_path =
             "Can't convert Uri path '{0}' using encoding '{1}'.";
 
-        public const string net_log_listener_cant_convert_percent_value = "Can't convert percent encoded value '{0}'.";
-        public const string net_log_listener_cant_convert_to_utf8 = "Can't convert string '{0}' into UTF-8 bytes: {1}";
+        public const string net_log_listener_cant_convert_percent_value =
+            "Can't convert percent encoded value '{0}'.";
+        public const string net_log_listener_cant_convert_to_utf8 =
+            "Can't convert string '{0}' into UTF-8 bytes: {1}";
 
         public const string net_log_listener_cant_convert_bytes =
             "Can't convert bytes '{0}' into UTF-16 characters: {1}";
 
         public const string net_invalidstatus = "The status code must be exactly three digits.";
-        public const string net_WebHeaderInvalidControlChars = "Specified value has invalid Control characters.";
+        public const string net_WebHeaderInvalidControlChars =
+            "Specified value has invalid Control characters.";
 
         public const string net_rspsubmitted =
             "This operation cannot be performed after the response has been submitted.";
@@ -156,16 +176,20 @@ namespace System
             "Chunked encoding upload is not supported on the HTTP/1.0 protocol.";
 
         public const string net_cookie_exists = "Cookie already exists.";
-        public const string net_clsmall = "The Content-Length value must be greater than or equal to zero.";
-        public const string net_wrongversion = "Only HTTP/1.0 and HTTP/1.1 version requests are currently supported.";
+        public const string net_clsmall =
+            "The Content-Length value must be greater than or equal to zero.";
+        public const string net_wrongversion =
+            "Only HTTP/1.0 and HTTP/1.1 version requests are currently supported.";
         public const string net_noseek = "This stream does not support seek operations.";
         public const string net_writeonlystream = "The stream does not support reading.";
 
         public const string net_entitytoobig =
             "Bytes to be written to the stream exceed the Content-Length bytes size specified.";
 
-        public const string net_io_notenoughbyteswritten = "Cannot close stream until all bytes are written.";
-        public const string net_listener_close_urlgroup_error = "Can't close Url group. Status code: {0}.";
+        public const string net_io_notenoughbyteswritten =
+            "Cannot close stream until all bytes are written.";
+        public const string net_listener_close_urlgroup_error =
+            "Can't close Url group. Status code: {0}.";
 
         public const string net_WebSockets_NativeSendResponseHeaders =
             "An error occurred when sending the WebSocket HTTP upgrade response during the {0} operation. The HRESULT returned is '{1}'";
@@ -232,11 +256,14 @@ namespace System
         public const string net_WebSockets_Argument_InvalidMessageType =
             "The message type '{0}' is not allowed for the '{1}' operation. Valid message types are: '{2}, {3}'. To close the WebSocket, use the '{4}' operation instead. ";
 
-        public const string net_securitypackagesupport = "The requested security package is not supported.";
+        public const string net_securitypackagesupport =
+            "The requested security package is not supported.";
         public const string net_log_operation_failed_with_error = "{0} failed with error {1}.";
-        public const string net_MethodNotImplementedException = "This method is not implemented by this class.";
+        public const string net_MethodNotImplementedException =
+            "This method is not implemented by this class.";
         public const string event_OperationReturnedSomething = "{0} returned {1}.";
-        public const string net_invalid_enum = "The specified value is not valid in the '{0}' enumeration.";
+        public const string net_invalid_enum =
+            "The specified value is not valid in the '{0}' enumeration.";
 
         public const string net_auth_message_not_encrypted =
             "Protocol error: A received message contains a valid signature but it was not encrypted as required by the effective Protection Level.";

@@ -1,11 +1,14 @@
-﻿using System.Linq;
-using System.Xml.Linq;
+﻿using System.Xml.Linq;
 
 namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Entities.HomeTycoon
 {
     internal class TycoonFileList
     {
-        public static string[] BuildingsFilenames = XDocument.Parse(@"<BuildingList>
+        public static string[] BuildingsFilenames =
+        [
+            .. XDocument
+                .Parse(
+                    @"<BuildingList>
                                       <Building>
                                         <Filename>Grass.xml</Filename>
                                       </Building>
@@ -325,12 +328,18 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Entities.HomeTycoon
                                       <Building>
                                         <Filename>COM_NE_Pharmacy.xml</Filename>
                                       </Building>
-                                    </BuildingList>").Descendants("Building")
-                                    .Select(b => b.Element("Filename")?.Value)
-                                    .Where(f => !string.IsNullOrEmpty(f))
-                                    .ToArray();
+                                    </BuildingList>"
+                )
+                .Descendants("Building")
+                .Select(b => b.Element("Filename")?.Value)
+                .Where(f => !string.IsNullOrEmpty(f)),
+        ];
 
-        public static string[] VehiclesFilenames = XDocument.Parse(@"<VehicleList>
+        public static string[] VehiclesFilenames =
+        [
+            .. XDocument
+                .Parse(
+                    @"<VehicleList>
                                       <Vehicle>
                                         <Filename>CriminalCar.xml</Filename>
                                       </Vehicle>
@@ -526,12 +535,28 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Entities.HomeTycoon
                                       <Vehicle>
                                         <Filename>ChaseBear2.xml</Filename>
                                       </Vehicle>
-                                    </VehicleList>").Descendants("Vehicle")
-                                    .Select(b => b.Element("Filename")?.Value)
-                                    .Where(f => !string.IsNullOrEmpty(f))
-                                    .ToArray();
+                                    </VehicleList>"
+                )
+                .Descendants("Vehicle")
+                .Select(b => b.Element("Filename")?.Value)
+                .Where(f => !string.IsNullOrEmpty(f)),
+        ];
 
-        public static string[] ExpensionFilenames = new string[] { "Zoo", "TransUtopia", "StuntPack", "Racing", "NuclearPower", "Helicopters",
-            "GloboSyn", "CrimeAndPunishment", "AmusementPark", "BuildingPack_Winter", "BuildingPack_OceanBreeze", "BuildingPack_Halloween", "BuildingPack_Gold" };
+        public static string[] ExpensionFilenames =
+        [
+            "Zoo",
+            "TransUtopia",
+            "StuntPack",
+            "Racing",
+            "NuclearPower",
+            "Helicopters",
+            "GloboSyn",
+            "CrimeAndPunishment",
+            "AmusementPark",
+            "BuildingPack_Winter",
+            "BuildingPack_OceanBreeze",
+            "BuildingPack_Halloween",
+            "BuildingPack_Gold",
+        ];
     }
 }

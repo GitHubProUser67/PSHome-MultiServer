@@ -1,19 +1,20 @@
-﻿using MultiServerLibrary.HTTP;
-using System.IO;
-using System.Linq;
-using System.Xml;
-using System.Xml.Linq;
+﻿using System.Xml.Linq;
+using MultiServerLibrary.HTTP;
 
 namespace WebAPIService.GameServices.PSHOME.VEEMEE.meta
 {
     internal static class Trophy
     {
-        public static string SetUserTrophyDataPOST(byte[] PostData, string ContentType, string apiPath)
+        public static string SetUserTrophyDataPOST(
+            byte[] PostData,
+            string ContentType,
+            string apiPath
+        )
         {
-            string key = string.Empty;
-            string psnid = string.Empty;
-            string gameid = string.Empty;
-            string trophyid = string.Empty;
+            var key = string.Empty;
+            var psnid = string.Empty;
+            var gameid = string.Empty;
+            var trophyid = string.Empty;
 
             if (ContentType == "application/x-www-form-urlencoded" && PostData != null)
             {
@@ -21,15 +22,17 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.meta
                 key = data["key"].First();
                 if (key != "01e2Qexh5G6iBriq")
                 {
-                    CustomLogger.LoggerAccessor.LogError("[VEEMEE] - meta_trophies - Client tried to push invalid key! Invalidating request.");
+                    CustomLogger.LoggerAccessor.LogError(
+                        "[VEEMEE] - meta_trophies - Client tried to push invalid key! Invalidating request."
+                    );
                     return null;
                 }
                 psnid = data["psnid"].First();
                 gameid = data["gameid"].First();
                 trophyid = data["trophyid"].First();
 
-                string directoryPath = $"{apiPath}/VEEMEE/meta_trophies/{gameid}/User_Data";
-                string filePath = $"{directoryPath}/{psnid}.xml";
+                var directoryPath = $"{apiPath}/VEEMEE/meta_trophies/{gameid}/User_Data";
+                var filePath = $"{directoryPath}/{psnid}.xml";
 
                 Directory.CreateDirectory(directoryPath);
 
@@ -38,10 +41,10 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.meta
                 if (File.Exists(filePath))
                 {
                     // Load XML into XDocument
-                    XDocument xmlDoc = XDocument.Parse(File.ReadAllText(filePath));
+                    var xmlDoc = XDocument.Parse(File.ReadAllText(filePath));
 
                     // Find the <trophy> element
-                    XElement trophyElement = xmlDoc.Descendants("trophy").FirstOrDefault();
+                    var trophyElement = xmlDoc.Descendants("trophy").FirstOrDefault();
 
                     if (trophyElement != null)
                     {
@@ -66,26 +69,28 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.meta
             return null;
         }
 
-        public static string GetUserTrophyDataPOST(byte[] PostData, string ContentType, string apiPath)
+        public static string GetUserTrophyDataPOST(
+            byte[] PostData,
+            string ContentType,
+            string apiPath
+        )
         {
-            string key = string.Empty;
-            string psnid = string.Empty;
-            string gameid = string.Empty;
-
             if (ContentType == "application/x-www-form-urlencoded" && PostData != null)
             {
                 var data = HTTPProcessor.ExtractAndSortUrlEncodedPOSTData(PostData);
-                key = data["key"].First();
+                var key = data["key"].First();
                 if (key != "01e2Qexh5G6iBriq")
                 {
-                    CustomLogger.LoggerAccessor.LogError("[VEEMEE] - meta_trophies - Client tried to push invalid key! Invalidating request.");
+                    CustomLogger.LoggerAccessor.LogError(
+                        "[VEEMEE] - meta_trophies - Client tried to push invalid key! Invalidating request."
+                    );
                     return null;
                 }
-                psnid = data["psnid"].First();
-                gameid = data["gameid"].First();
 
-                string directoryPath = $"{apiPath}/VEEMEE/meta_trophies/{gameid}/User_Data";
-                string filePath = $"{directoryPath}/{psnid}.xml";
+                var psnid = data["psnid"].First();
+                var gameid = data["gameid"].First();
+                var directoryPath = $"{apiPath}/VEEMEE/meta_trophies/{gameid}/User_Data";
+                var filePath = $"{directoryPath}/{psnid}.xml";
 
                 if (File.Exists(filePath))
                     return File.ReadAllText(filePath);

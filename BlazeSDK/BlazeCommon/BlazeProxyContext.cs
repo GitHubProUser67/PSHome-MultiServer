@@ -1,11 +1,14 @@
 namespace BlazeCommon
 {
-    public class BlazeProxyContext : BlazeRpcContext
+    public class BlazeProxyContext(
+        BlazeServerConnection serverConnection,
+        BlazeClientConnection clientConnection,
+        int errorCode,
+        uint msgNum,
+        byte userIndex,
+        ulong context
+    ) : BlazeRpcContext(serverConnection, errorCode, msgNum, userIndex, context)
     {
-        public BlazeClientConnection ClientConnection { get; }
-        public BlazeProxyContext(BlazeServerConnection serverConnection, BlazeClientConnection clientConnection, int errorCode, uint msgNum, byte userIndex, ulong context) : base(serverConnection, errorCode, msgNum, userIndex, context)
-        {
-            ClientConnection = clientConnection;
-        }
+        public BlazeClientConnection ClientConnection { get; } = clientConnection;
     }
 }

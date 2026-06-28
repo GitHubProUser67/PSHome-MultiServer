@@ -1,18 +1,24 @@
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
 using QuazalServer.RDVServices.DDL.Models;
-using QuazalServer.RDVServices.RMC;
 
 namespace QuazalServer.RDVServices.GameServices.v2Services
 {
     /// <summary>
-	/// Challenge store service
-	/// </summary>
-	[RMCService((ushort)RMCProtocolId.ChallengeStoreProtocol)]
+    /// Challenge store service
+    /// </summary>
+    [RMCService((ushort)RMCProtocolId.ChallengeStoreProtocol)]
     public class ChallengeStoreProtocol : RMCServiceBase
     {
         [RMCMethod(1)]
-        public RMCResult UNK1(uint unk1, string unk2, string unk3, string unk4, uint unk5, QNetZ.DDL.Buffer unk6)
+        public RMCResult UNK1(
+            uint unk1,
+            string unk2,
+            string unk3,
+            string unk4,
+            uint unk5,
+            QNetZ.DDL.Buffer unk6
+        )
         {
             UNIMPLEMENTED();
 

@@ -59,7 +59,9 @@ public static class GaugeExtensions
         public void Update(IGauge gauge)
         {
             if (_gauge != null)
-                throw new InvalidOperationException($"{nameof(InProgressTracker)} was reused before being disposed.");
+                throw new InvalidOperationException(
+                    $"{nameof(InProgressTracker)} was reused before being disposed."
+                );
 
             _gauge = gauge;
         }
@@ -71,12 +73,13 @@ public static class GaugeExtensions
             return instance;
         }
 
-        private static readonly ObjectPool<InProgressTracker> Pool = ObjectPool.Create<InProgressTracker>();
+        private static readonly ObjectPool<InProgressTracker> Pool =
+            ObjectPool.Create<InProgressTracker>();
     }
 
     /// <summary>
     /// Tracks the number of in-progress operations taking place.
-    /// 
+    ///
     /// Calling this increments the gauge. Disposing of the returned instance decrements it again.
     /// </summary>
     /// <remarks>
@@ -84,8 +87,7 @@ public static class GaugeExtensions
     /// </remarks>
     public static IDisposable TrackInProgress(this IGauge gauge)
     {
-        if (gauge == null)
-            throw new ArgumentNullException(nameof(gauge));
+        ArgumentNullException.ThrowIfNull(gauge);
 
         gauge.Inc();
 

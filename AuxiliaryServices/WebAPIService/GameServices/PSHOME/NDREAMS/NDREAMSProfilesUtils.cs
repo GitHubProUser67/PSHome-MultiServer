@@ -9,7 +9,7 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS
         {
             if (profile.ContainsKey("XP"))
             {
-                int? currentXP = profile["XP"]?.Value<int>();
+                var currentXP = profile["XP"]?.Value<int>();
 
                 if (currentXP == null)
                     profile["XP"] = xpToAdd;
@@ -28,11 +28,11 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS
         // Function to update level
         public static (int, int) UpdateLevel(JObject profile, int levelToAdd)
         {
-            int PreviousLevel = 1;
+            var PreviousLevel = 1;
 
             if (profile.ContainsKey("level"))
             {
-                int? ExtractedPreviousLevel = profile["level"]?.Value<int>();
+                var ExtractedPreviousLevel = profile["level"]?.Value<int>();
 
                 if (ExtractedPreviousLevel != null)
                     PreviousLevel = ExtractedPreviousLevel.Value;
@@ -47,14 +47,14 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS
 
         public static (int, int) ExtractProfileProperties(string json)
         {
-            int xp = 0;
-            int level = 1;
+            var xp = 0;
+            var level = 1;
 
-            JObject profile = JObject.Parse(json);
+            var profile = JObject.Parse(json);
 
             if (profile.ContainsKey("XP"))
             {
-                int? currentXP = profile["XP"]?.Value<int>();
+                var currentXP = profile["XP"]?.Value<int>();
 
                 if (currentXP != null)
                     xp = currentXP.Value;
@@ -62,7 +62,7 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS
 
             if (profile.ContainsKey("level"))
             {
-                int? currentLevel = profile["level"]?.Value<int>();
+                var currentLevel = profile["level"]?.Value<int>();
 
                 if (currentLevel != null)
                     level = currentLevel.Value;

@@ -1,18 +1,13 @@
-﻿using CustomLogger;
-using MultiServerLibrary.Extension;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
+using CustomLogger;
+using MultiServerLibrary.Extension;
 
 namespace MultiServerLibrary.CustomServers
 {
     public class TCPServer
     {
-        private readonly object _Lock = new object();
+        private readonly Lock _Lock = new();
 
         public bool FireClientAsTask { get; set; } = true;
 
@@ -28,14 +23,14 @@ namespace MultiServerLibrary.CustomServers
             Action<ushort, TcpListener> onInitalizedListener = null,
             Action<ushort> onUpdate = null,
             Action<ushort, TcpClient, IPEndPoint> onPacketReceived = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default
+        )
         {
             if (ports == null || !ports.Any())
                 return Task.CompletedTask;
 
             lock (_Lock)
             {
-                
                 if (_cts != null)
                 {
                     LoggerAccessor.LogWarn("[TCP Server] - Server already active.");
@@ -44,12 +39,21 @@ namespace MultiServerLibrary.CustomServers
 
                 _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-                foreach (ushort port in ports)
+                foreach (var port in ports)
                 {
-                    if (Extension.TcpUdpUtils.IsTCPPortAvailable(port))
-                        StartListener(port, maxConcurrentListeners, onPrepareListener, onInitalizedListener, onUpdate, onPacketReceived);
+                    if (TcpUdpUtils.IsTCPPortAvailable(port))
+                        StartListener(
+                            port,
+                            maxConcurrentListeners,
+                            onPrepareListener,
+                            onInitalizedListener,
+                            onUpdate,
+                            onPacketReceived
+                        );
                     else
-                        LoggerAccessor.LogError($"[TCP Server] - Port:{port} is not available, skipping...");
+                        LoggerAccessor.LogError(
+                            $"[TCP Server] - Port:{port} is not available, skipping..."
+                        );
                 }
             }
 
@@ -67,7 +71,11 @@ namespace MultiServerLibrary.CustomServers
 
                 foreach (var listener in _listeners)
                 {
-                    try { listener.Stop(); } catch { }
+                    try
+                    {
+                        listener.Stop();
+                    }
+                    catch { }
                 }
 
                 _listeners.Clear();
@@ -81,27 +89,41 @@ namespace MultiServerLibrary.CustomServers
 
         public static bool IsIPBanned(ushort port, string ipAddress, int? clientport)
         {
-            if (MultiServerLibraryConfiguration.BannedIPs != null && MultiServerLibraryConfiguration.BannedIPs.Contains(ipAddress))
+            if (
+                MultiServerLibraryConfiguration.BannedIPs != null
+                && MultiServerLibraryConfiguration.BannedIPs.Contains(ipAddress)
+            )
             {
-                LoggerAccessor.LogError($"[SECURITY] - {ipAddress}:{clientport} Requested the TCP Server on port {port} while being banned!");
+                LoggerAccessor.LogError(
+                    $"[SECURITY] - {ipAddress}:{clientport} Requested the TCP Server on port {port} while being banned!"
+                );
                 return true;
             }
 
             return false;
         }
 
-        private void StartListener(ushort port, int maxConcurrentListeners, Action<ushort> onPrepareListener, Action<ushort, TcpListener> onInitalizedListener, Action<ushort> onUpdate, Action<ushort, TcpClient, IPEndPoint> onPacketReceived)
+        private void StartListener(
+            ushort port,
+            int maxConcurrentListeners,
+            Action<ushort> onPrepareListener,
+            Action<ushort, TcpListener> onInitalizedListener,
+            Action<ushort> onUpdate,
+            Action<ushort, TcpClient, IPEndPoint> onPacketReceived
+        )
         {
             onPrepareListener?.Invoke(port);
 
-            TcpListener listener = new TcpListener(IPAddress.Any, port);
+            var listener = new TcpListener(IPAddress.Any, port);
             try
             {
                 listener.Start();
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[TCP Server] - Failed to bind TCP port {port}. (Exception:" + ex + ")");
+                LoggerAccessor.LogError(
+                    $"[TCP Server] - Failed to bind TCP port {port}. (Exception:" + ex + ")"
+                );
                 return;
             }
 
@@ -110,7 +132,20 @@ namespace MultiServerLibrary.CustomServers
             _listeners.Add(listener);
             LoggerAccessor.LogInfo($"[TCP Server] - Listening on port {port}...");
 
-            _AcceptConnections.Add(Task.Factory.StartNew(() => AcceptConnections(port, maxConcurrentListeners, listener, onUpdate, onPacketReceived, _cts.Token), TaskCreationOptions.LongRunning));
+            _AcceptConnections.Add(
+                Task.Factory.StartNew(
+                    () =>
+                        AcceptConnections(
+                            port,
+                            maxConcurrentListeners,
+                            listener,
+                            onUpdate,
+                            onPacketReceived,
+                            _cts.Token
+                        ),
+                    TaskCreationOptions.LongRunning
+                )
+            );
         }
 
         private Task AcceptConnections(
@@ -119,7 +154,8 @@ namespace MultiServerLibrary.CustomServers
             TcpListener listener,
             Action<ushort> onUpdate,
             Action<ushort, TcpClient, IPEndPoint> onPacketReceived,
-            CancellationToken token)
+            CancellationToken token
+        )
         {
             List<Task> ClientTasks = new();
 
@@ -130,58 +166,93 @@ namespace MultiServerLibrary.CustomServers
                     onUpdate?.Invoke(port);
 
                     while (ClientTasks.Count < maxConcurrentListeners) // Maximum number of concurrent listeners
-                        ClientTasks.Add(Task.Run(async () =>
-                        {
-                            TcpClient client = null;
-                            try
-                            {
-                                client = await listener.AcceptTcpClientAsync(token).ConfigureAwait(false);
-                            }
-                            catch (OperationCanceledException)
-                            {
-
-                            }
-                            catch (Exception ex)
-                            {
-#if DEBUG
-                                LoggerAccessor.LogWarn($"[TCP Server] - Exception while accepting client on {port}: (Exception:" + ex + ")");
-#endif
-                            }
-                            if (client != null)
-                            {
-                                void clientHandler()
+                        ClientTasks.Add(
+                            Task.Run(
+                                async () =>
                                 {
-                                    IPEndPoint remoteEndPoint = null;
+                                    TcpClient client = null;
                                     try
                                     {
-                                        remoteEndPoint = (IPEndPoint)client.Client.RemoteEndPoint;
+                                        client = await listener
+                                            .AcceptTcpClientAsync(token)
+                                            .ConfigureAwait(false);
                                     }
-                                    catch { }
-#if DEBUG
-                                    LoggerAccessor.LogInfo($"[TCP Server] - Connection received on port {port} (Thread {Environment.CurrentManagedThreadId})");
-#endif
-                                    string clientip = null;
-                                    try
+                                    catch (OperationCanceledException) { }
+                                    catch (Exception ex)
                                     {
-                                        clientip = remoteEndPoint?.Address.ToString();
-                                    }
-                                    catch { }
-                                    int? clientport = remoteEndPoint?.Port;
-                                    bool isEndpointMissing = !clientport.HasValue || string.IsNullOrEmpty(clientip);
 #if DEBUG
-                                    LoggerAccessor.LogInfo($"[TCP Server] - endpoint = {!isEndpointMissing}");
+                                        LoggerAccessor.LogWarn(
+                                            $"[TCP Server] - Exception while accepting client on {port}: (Exception:"
+                                                + ex
+                                                + ")"
+                                        );
 #endif
-                                    if (!(isEndpointMissing || IsIPBanned(port, clientip, clientport) || (MultiServerLibraryConfiguration.VpnCheck != null && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(clientip))))
-                                        onPacketReceived?.Invoke(port, client, remoteEndPoint);
-                                }
-                                if (FireClientAsTask)
-                                    _ = Task.Run(clientHandler);
-                                else
-                                    clientHandler();
-                            }
-                        }, token));
+                                    }
+                                    if (client != null)
+                                    {
+                                        void clientHandler()
+                                        {
+                                            IPEndPoint remoteEndPoint = null;
+                                            try
+                                            {
+                                                remoteEndPoint = (IPEndPoint)
+                                                    client.Client.RemoteEndPoint;
+                                            }
+                                            catch { }
+#if DEBUG
+                                            LoggerAccessor.LogInfo(
+                                                $"[TCP Server] - Connection received on port {port} (Thread {Environment.CurrentManagedThreadId})"
+                                            );
+#endif
+                                            string clientip = null;
+                                            try
+                                            {
+                                                clientip = remoteEndPoint?.Address.ToString();
+                                            }
+                                            catch { }
+                                            var clientport = remoteEndPoint?.Port;
+                                            var isEndpointMissing =
+                                                !clientport.HasValue
+                                                || string.IsNullOrEmpty(clientip);
+#if DEBUG
+                                            LoggerAccessor.LogInfo(
+                                                $"[TCP Server] - endpoint = {!isEndpointMissing}"
+                                            );
+#endif
+                                            if (
+                                                !(
+                                                    isEndpointMissing
+                                                    || IsIPBanned(port, clientip, clientport)
+                                                    || (
+                                                        MultiServerLibraryConfiguration.VpnCheck
+                                                            != null
+                                                        && MultiServerLibraryConfiguration.VpnCheck.IsVpnOrProxy(
+                                                            clientip
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                                onPacketReceived?.Invoke(
+                                                    port,
+                                                    client,
+                                                    remoteEndPoint
+                                                );
+                                        }
+                                        if (FireClientAsTask)
+                                            _ = Task.Run(clientHandler);
+                                        else
+                                            clientHandler();
+                                    }
+                                },
+                                token
+                            )
+                        );
 
-                    int RemoveAtIndex = Task.WaitAny(ClientTasks.ToArray(), ProcessUtils.CustomServersLoopWaitTimeMs, token); // Synchronously Waits up for any Task completion
+                    var RemoveAtIndex = Task.WaitAny(
+                        ClientTasks.ToArray(),
+                        ProcessUtils.CustomServersLoopWaitTimeMs,
+                        token
+                    ); // Synchronously Waits up for any Task completion
                     if (RemoveAtIndex != -1) // Remove the completed task from the list and burn a very few cycles to not burn our CPU.
                     {
                         ClientTasks.RemoveAt(RemoveAtIndex);
@@ -190,17 +261,13 @@ namespace MultiServerLibrary.CustomServers
                     }
                 }
             }
-            catch (TaskCanceledException)
-            {
-
-            }
-            catch (OperationCanceledException)
-            {
-
-            }
+            catch (TaskCanceledException) { }
+            catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[TCP Server] - Exception on port {port}. (Exception:" + ex + ")");
+                LoggerAccessor.LogError(
+                    $"[TCP Server] - Exception on port {port}. (Exception:" + ex + ")"
+                );
             }
 
             return Task.CompletedTask;

@@ -9,13 +9,9 @@
 
 using System.Collections;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Tracing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-#if NET46
-using System.Security;
-#endif
 
 #pragma warning disable CA1823 // not all IDs are used by all partial providers
 
@@ -39,13 +35,10 @@ namespace System.Net
     //   method that takes an object and optionally provides a string representation of it, in case a particular library wants to customize further.
 
     /// <summary>Provides logging facilities for System.Net libraries.</summary>
-#if NET46
-    [SecuritySafeCritical]
-#endif
     internal sealed partial class NetEventSource : EventSource
     {
         /// <summary>The single event source instance to use for all logging.</summary>
-        public static readonly NetEventSource Log = new NetEventSource();
+        public static readonly NetEventSource Log = new();
 
         #region Metadata
         public class Keywords
@@ -94,11 +87,20 @@ namespace System.Net
         /// <param name="formattableString">The message to be logged.</param>
         /// <param name="memberName">The calling member.</param>
         [NonEvent]
-        public static void Info(object thisOrContextObject, FormattableString formattableString = null, [CallerMemberName] string memberName = null)
+        public static void Info(
+            object thisOrContextObject,
+            FormattableString formattableString = null,
+            [CallerMemberName] string memberName = null
+        )
         {
             DebugValidateArg(thisOrContextObject);
             DebugValidateArg(formattableString);
-            if (IsEnabled) Log.Info(IdOf(thisOrContextObject), memberName, formattableString != null ? Format(formattableString) : NoParameters);
+            if (IsEnabled)
+                Log.Info(
+                    IdOf(thisOrContextObject),
+                    memberName,
+                    formattableString != null ? Format(formattableString) : NoParameters
+                );
         }
 
         /// <summary>Logs an information message.</summary>
@@ -106,11 +108,16 @@ namespace System.Net
         /// <param name="message">The message to be logged.</param>
         /// <param name="memberName">The calling member.</param>
         [NonEvent]
-        public static void Info(object thisOrContextObject, object message, [CallerMemberName] string memberName = null)
+        public static void Info(
+            object thisOrContextObject,
+            object message,
+            [CallerMemberName] string memberName = null
+        )
         {
             DebugValidateArg(thisOrContextObject);
             DebugValidateArg(message);
-            if (IsEnabled) Log.Info(IdOf(thisOrContextObject), memberName, Format(message).ToString());
+            if (IsEnabled)
+                Log.Info(IdOf(thisOrContextObject), memberName, Format(message).ToString());
         }
 
         [Event(InfoEventId, Level = EventLevel.Informational, Keywords = Keywords.Default)]
@@ -124,11 +131,16 @@ namespace System.Net
         /// <param name="formattableString">The message to be logged.</param>
         /// <param name="memberName">The calling member.</param>
         [NonEvent]
-        public static void Error(object thisOrContextObject, FormattableString formattableString, [CallerMemberName] string memberName = null)
+        public static void Error(
+            object thisOrContextObject,
+            FormattableString formattableString,
+            [CallerMemberName] string memberName = null
+        )
         {
             DebugValidateArg(thisOrContextObject);
             DebugValidateArg(formattableString);
-            if (IsEnabled) Log.ErrorMessage(IdOf(thisOrContextObject), memberName, Format(formattableString));
+            if (IsEnabled)
+                Log.ErrorMessage(IdOf(thisOrContextObject), memberName, Format(formattableString));
         }
 
         /// <summary>Logs an error message.</summary>
@@ -136,11 +148,16 @@ namespace System.Net
         /// <param name="message">The message to be logged.</param>
         /// <param name="memberName">The calling member.</param>
         [NonEvent]
-        public static void Error(object thisOrContextObject, object message, [CallerMemberName] string memberName = null)
+        public static void Error(
+            object thisOrContextObject,
+            object message,
+            [CallerMemberName] string memberName = null
+        )
         {
             DebugValidateArg(thisOrContextObject);
             DebugValidateArg(message);
-            if (IsEnabled) Log.ErrorMessage(IdOf(thisOrContextObject), memberName, Format(message).ToString());
+            if (IsEnabled)
+                Log.ErrorMessage(IdOf(thisOrContextObject), memberName, Format(message).ToString());
         }
 
         [Event(ErrorEventId, Level = EventLevel.Error, Keywords = Keywords.Default)]
@@ -154,11 +171,16 @@ namespace System.Net
         /// <param name="formattableString">The message to be logged.</param>
         /// <param name="memberName">The calling member.</param>
         [NonEvent]
-        public static void Verbose(object thisOrContextObject, FormattableString formattableString, [CallerMemberName] string memberName = null)
+        public static void Verbose(
+            object thisOrContextObject,
+            FormattableString formattableString,
+            [CallerMemberName] string memberName = null
+        )
         {
             DebugValidateArg(thisOrContextObject);
             DebugValidateArg(formattableString);
-            if (IsEnabled) Log.ErrorMessage(IdOf(thisOrContextObject), memberName, Format(formattableString));
+            if (IsEnabled)
+                Log.ErrorMessage(IdOf(thisOrContextObject), memberName, Format(formattableString));
         }
 
         /// <summary>Logs an info at verbose mode.</summary>
@@ -166,16 +188,28 @@ namespace System.Net
         /// <param name="message">The message to be logged.</param>
         /// <param name="memberName">The calling member.</param>
         [NonEvent]
-        public static void Verbose(object thisOrContextObject, object message, [CallerMemberName] string memberName = null)
+        public static void Verbose(
+            object thisOrContextObject,
+            object message,
+            [CallerMemberName] string memberName = null
+        )
         {
             DebugValidateArg(thisOrContextObject);
             DebugValidateArg(message);
-            if (IsEnabled) Log.VerboseMessage(IdOf(thisOrContextObject), memberName, Format(message).ToString());
+            if (IsEnabled)
+                Log.VerboseMessage(
+                    IdOf(thisOrContextObject),
+                    memberName,
+                    Format(message).ToString()
+                );
         }
 
         [Event(ErrorEventId, Level = EventLevel.Verbose, Keywords = Keywords.Default)]
-        private void VerboseMessage(string thisOrContextObject, string memberName, string message) =>
-            WriteEvent(ErrorEventId, thisOrContextObject, memberName ?? MissingMember, message);
+        private void VerboseMessage(
+            string thisOrContextObject,
+            string memberName,
+            string message
+        ) => WriteEvent(ErrorEventId, thisOrContextObject, memberName ?? MissingMember, message);
         #endregion
 
         #region DumpBuffer
@@ -184,7 +218,11 @@ namespace System.Net
         /// <param name="buffer">The buffer to be logged.</param>
         /// <param name="memberName">The calling member.</param>
         [NonEvent]
-        public static void DumpBuffer(object thisOrContextObject, byte[] buffer, [CallerMemberName] string memberName = null)
+        public static void DumpBuffer(
+            object thisOrContextObject,
+            byte[] buffer,
+            [CallerMemberName] string memberName = null
+        )
         {
             DumpBuffer(thisOrContextObject, buffer, 0, buffer.Length, memberName);
         }
@@ -196,13 +234,19 @@ namespace System.Net
         /// <param name="count">The number of bytes to log.</param>
         /// <param name="memberName">The calling member.</param>
         [NonEvent]
-        public static void DumpBuffer(object thisOrContextObject, byte[] buffer, int offset, int count, [CallerMemberName] string memberName = null)
+        public static void DumpBuffer(
+            object thisOrContextObject,
+            byte[] buffer,
+            int offset,
+            int count,
+            [CallerMemberName] string memberName = null
+        )
         {
             if (IsEnabled && offset >= 0 && offset <= buffer.Length - count)
             {
                 count = Math.Min(count, MaxDumpSize);
 
-                byte[] slice = buffer;
+                var slice = buffer;
                 if (offset != 0 || count != buffer.Length)
                 {
                     slice = new byte[count];
@@ -219,7 +263,12 @@ namespace System.Net
         /// <param name="count">The number of bytes to log.</param>
         /// <param name="memberName">The calling member.</param>
         [NonEvent]
-        public static unsafe void DumpBuffer(object thisOrContextObject, IntPtr bufferPtr, int count, [CallerMemberName] string memberName = null)
+        public static unsafe void DumpBuffer(
+            object thisOrContextObject,
+            IntPtr bufferPtr,
+            int count,
+            [CallerMemberName] string memberName = null
+        )
         {
             Debug.Assert(bufferPtr != IntPtr.Zero);
             Debug.Assert(count >= 0);
@@ -246,11 +295,16 @@ namespace System.Net
         /// <param name="second">The second object.</param>
         /// <param name="memberName">The calling member.</param>
         [NonEvent]
-        public static void Associate(object first, object second, [CallerMemberName] string memberName = null)
+        public static void Associate(
+            object first,
+            object second,
+            [CallerMemberName] string memberName = null
+        )
         {
             DebugValidateArg(first);
             DebugValidateArg(second);
-            if (IsEnabled) Log.Associate(IdOf(first), memberName, IdOf(first), IdOf(second));
+            if (IsEnabled)
+                Log.Associate(IdOf(first), memberName, IdOf(first), IdOf(second));
         }
 
         /// <summary>Logs a relationship between two objects.</summary>
@@ -259,17 +313,39 @@ namespace System.Net
         /// <param name="second">The second object.</param>
         /// <param name="memberName">The calling member.</param>
         [NonEvent]
-        public static void Associate(object thisOrContextObject, object first, object second, [CallerMemberName] string memberName = null)
+        public static void Associate(
+            object thisOrContextObject,
+            object first,
+            object second,
+            [CallerMemberName] string memberName = null
+        )
         {
             DebugValidateArg(thisOrContextObject);
             DebugValidateArg(first);
             DebugValidateArg(second);
-            if (IsEnabled) Log.Associate(IdOf(thisOrContextObject), memberName, IdOf(first), IdOf(second));
+            if (IsEnabled)
+                Log.Associate(IdOf(thisOrContextObject), memberName, IdOf(first), IdOf(second));
         }
 
-        [Event(AssociateEventId, Level = EventLevel.Informational, Keywords = Keywords.Default, Message = "[{2}]<-->[{3}]")]
-        private void Associate(string thisOrContextObject, string memberName, string first, string second) =>
-            WriteEvent(AssociateEventId, thisOrContextObject, memberName ?? MissingMember, first, second);
+        [Event(
+            AssociateEventId,
+            Level = EventLevel.Informational,
+            Keywords = Keywords.Default,
+            Message = "[{2}]<-->[{3}]"
+        )]
+        private void Associate(
+            string thisOrContextObject,
+            string memberName,
+            string first,
+            string second
+        ) =>
+            WriteEvent(
+                AssociateEventId,
+                thisOrContextObject,
+                memberName ?? MissingMember,
+                first,
+                second
+            );
         #endregion
         #endregion
 
@@ -279,22 +355,31 @@ namespace System.Net
         {
             if (!IsEnabled)
             {
-                Debug.Assert(!(arg is ValueType), $"Should not be passing value type {arg?.GetType()} to logging without IsEnabled check");
-                Debug.Assert(!(arg is FormattableString), $"Should not be formatting FormattableString \"{arg}\" if tracing isn't enabled");
+                Debug.Assert(
+                    !(arg is ValueType),
+                    $"Should not be passing value type {arg?.GetType()} to logging without IsEnabled check"
+                );
+                Debug.Assert(
+                    !(arg is FormattableString),
+                    $"Should not be formatting FormattableString \"{arg}\" if tracing isn't enabled"
+                );
             }
         }
 
         [Conditional("DEBUG_NETEVENTSOURCE_MISUSE")]
         private static void DebugValidateArg(FormattableString arg)
         {
-            Debug.Assert(IsEnabled || arg == null, $"Should not be formatting FormattableString \"{arg}\" if tracing isn't enabled");
+            Debug.Assert(
+                IsEnabled || arg == null,
+                $"Should not be formatting FormattableString \"{arg}\" if tracing isn't enabled"
+            );
         }
 
-        public static new bool IsEnabled =>
-            Log.IsEnabled();
+        public static new bool IsEnabled => Log.IsEnabled();
 
         [NonEvent]
-        public static string IdOf(object value) => value != null ? value.GetType().Name + "#" + GetHashCode(value) : NullInstance;
+        public static string IdOf(object value) =>
+            value != null ? value.GetType().Name + "#" + GetHashCode(value) : NullInstance;
 
         [NonEvent]
         public static int GetHashCode(object value) => value?.GetHashCode() ?? 0;
@@ -342,7 +427,7 @@ namespace System.Net
 
             // If the string representation of the instance would just be its type name,
             // use its id instead.
-            string toString = value.ToString();
+            var toString = value.ToString();
             if (toString == null || toString == value.GetType().FullName)
             {
                 return IdOf(value);
@@ -357,14 +442,27 @@ namespace System.Net
         {
             switch (s.ArgumentCount)
             {
-                case 0: return s.Format;
-                case 1: return string.Format(s.Format, Format(s.GetArgument(0)));
-                case 2: return string.Format(s.Format, Format(s.GetArgument(0)), Format(s.GetArgument(1)));
-                case 3: return string.Format(s.Format, Format(s.GetArgument(0)), Format(s.GetArgument(1)), Format(s.GetArgument(2)));
+                case 0:
+                    return s.Format;
+                case 1:
+                    return string.Format(s.Format, Format(s.GetArgument(0)));
+                case 2:
+                    return string.Format(
+                        s.Format,
+                        Format(s.GetArgument(0)),
+                        Format(s.GetArgument(1))
+                    );
+                case 3:
+                    return string.Format(
+                        s.Format,
+                        Format(s.GetArgument(0)),
+                        Format(s.GetArgument(1)),
+                        Format(s.GetArgument(2))
+                    );
                 default:
-                    object[] args = s.GetArguments();
-                    object[] formattedArgs = new object[args.Length];
-                    for (int i = 0; i < args.Length; i++)
+                    var args = s.GetArguments();
+                    var formattedArgs = new object[args.Length];
+                    for (var i = 0; i < args.Length; i++)
                     {
                         formattedArgs[i] = Format(args[i]);
                     }
@@ -378,14 +476,20 @@ namespace System.Net
         #region Custom WriteEvent overloads
 
         [NonEvent]
-        private unsafe void WriteEvent(int eventId, string arg1, string arg2, string arg3, string arg4)
+        private unsafe void WriteEvent(
+            int eventId,
+            string arg1,
+            string arg2,
+            string arg3,
+            string arg4
+        )
         {
             if (IsEnabled())
             {
-                if (arg1 == null) arg1 = "";
-                if (arg2 == null) arg2 = "";
-                if (arg3 == null) arg3 = "";
-                if (arg4 == null) arg4 = "";
+                arg1 ??= "";
+                arg2 ??= "";
+                arg3 ??= "";
+                arg4 ??= "";
 
                 fixed (char* string1Bytes = arg1)
                 fixed (char* string2Bytes = arg2)
@@ -398,22 +502,22 @@ namespace System.Net
                     descrs[0] = new EventData
                     {
                         DataPointer = (IntPtr)string1Bytes,
-                        Size = ((arg1.Length + 1) * 2)
+                        Size = (arg1.Length + 1) * 2,
                     };
                     descrs[1] = new EventData
                     {
                         DataPointer = (IntPtr)string2Bytes,
-                        Size = ((arg2.Length + 1) * 2)
+                        Size = (arg2.Length + 1) * 2,
                     };
                     descrs[2] = new EventData
                     {
                         DataPointer = (IntPtr)string3Bytes,
-                        Size = ((arg3.Length + 1) * 2)
+                        Size = (arg3.Length + 1) * 2,
                     };
                     descrs[3] = new EventData
                     {
                         DataPointer = (IntPtr)string4Bytes,
-                        Size = ((arg4.Length + 1) * 2)
+                        Size = (arg4.Length + 1) * 2,
                     };
 
                     WriteEventCore(eventId, NumEventDatas, descrs);
@@ -426,37 +530,33 @@ namespace System.Net
         {
             if (IsEnabled())
             {
-                if (arg1 == null) arg1 = "";
-                if (arg2 == null) arg2 = "";
-                if (arg3 == null) arg3 = Array.Empty<byte>();
+                arg1 ??= "";
+                arg2 ??= "";
+                arg3 ??= Array.Empty<byte>();
 
                 fixed (char* arg1Ptr = arg1)
                 fixed (char* arg2Ptr = arg2)
                 fixed (byte* arg3Ptr = arg3)
                 {
-                    int bufferLength = arg3.Length;
+                    var bufferLength = arg3.Length;
                     const int NumEventDatas = 4;
                     var descrs = stackalloc EventData[NumEventDatas];
 
                     descrs[0] = new EventData
                     {
                         DataPointer = (IntPtr)arg1Ptr,
-                        Size = (arg1.Length + 1) * sizeof(char)
+                        Size = (arg1.Length + 1) * sizeof(char),
                     };
                     descrs[1] = new EventData
                     {
                         DataPointer = (IntPtr)arg2Ptr,
-                        Size = (arg2.Length + 1) * sizeof(char)
+                        Size = (arg2.Length + 1) * sizeof(char),
                     };
-                    descrs[2] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&bufferLength),
-                        Size = 4
-                    };
+                    descrs[2] = new EventData { DataPointer = (IntPtr)(&bufferLength), Size = 4 };
                     descrs[3] = new EventData
                     {
                         DataPointer = (IntPtr)arg3Ptr,
-                        Size = bufferLength
+                        Size = bufferLength,
                     };
 
                     WriteEventCore(eventId, NumEventDatas, descrs);
@@ -469,7 +569,7 @@ namespace System.Net
         {
             if (IsEnabled())
             {
-                if (arg1 == null) arg1 = "";
+                arg1 ??= "";
 
                 fixed (char* arg1Ptr = arg1)
                 {
@@ -478,24 +578,12 @@ namespace System.Net
 
                     descrs[0] = new EventData
                     {
-                        DataPointer = (IntPtr)(arg1Ptr),
-                        Size = (arg1.Length + 1) * sizeof(char)
+                        DataPointer = (IntPtr)arg1Ptr,
+                        Size = (arg1.Length + 1) * sizeof(char),
                     };
-                    descrs[1] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&arg2),
-                        Size = sizeof(int)
-                    };
-                    descrs[2] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&arg3),
-                        Size = sizeof(int)
-                    };
-                    descrs[3] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&arg4),
-                        Size = sizeof(int)
-                    };
+                    descrs[1] = new EventData { DataPointer = (IntPtr)(&arg2), Size = sizeof(int) };
+                    descrs[2] = new EventData { DataPointer = (IntPtr)(&arg3), Size = sizeof(int) };
+                    descrs[3] = new EventData { DataPointer = (IntPtr)(&arg4), Size = sizeof(int) };
 
                     WriteEventCore(eventId, NumEventDatas, descrs);
                 }
@@ -507,8 +595,8 @@ namespace System.Net
         {
             if (IsEnabled())
             {
-                if (arg1 == null) arg1 = "";
-                if (arg3 == null) arg3 = "";
+                arg1 ??= "";
+                arg3 ??= "";
 
                 fixed (char* arg1Ptr = arg1)
                 fixed (char* arg3Ptr = arg3)
@@ -518,18 +606,14 @@ namespace System.Net
 
                     descrs[0] = new EventData
                     {
-                        DataPointer = (IntPtr)(arg1Ptr),
-                        Size = (arg1.Length + 1) * sizeof(char)
+                        DataPointer = (IntPtr)arg1Ptr,
+                        Size = (arg1.Length + 1) * sizeof(char),
                     };
-                    descrs[1] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&arg2),
-                        Size = sizeof(int)
-                    };
+                    descrs[1] = new EventData { DataPointer = (IntPtr)(&arg2), Size = sizeof(int) };
                     descrs[2] = new EventData
                     {
-                        DataPointer = (IntPtr)(arg3Ptr),
-                        Size = (arg3.Length + 1) * sizeof(char)
+                        DataPointer = (IntPtr)arg3Ptr,
+                        Size = (arg3.Length + 1) * sizeof(char),
                     };
 
                     WriteEventCore(eventId, NumEventDatas, descrs);
@@ -542,8 +626,8 @@ namespace System.Net
         {
             if (IsEnabled())
             {
-                if (arg1 == null) arg1 = "";
-                if (arg2 == null) arg2 = "";
+                arg1 ??= "";
+                arg2 ??= "";
 
                 fixed (char* arg1Ptr = arg1)
                 fixed (char* arg2Ptr = arg2)
@@ -553,19 +637,15 @@ namespace System.Net
 
                     descrs[0] = new EventData
                     {
-                        DataPointer = (IntPtr)(arg1Ptr),
-                        Size = (arg1.Length + 1) * sizeof(char)
+                        DataPointer = (IntPtr)arg1Ptr,
+                        Size = (arg1.Length + 1) * sizeof(char),
                     };
                     descrs[1] = new EventData
                     {
-                        DataPointer = (IntPtr)(arg2Ptr),
-                        Size = (arg2.Length + 1) * sizeof(char)
+                        DataPointer = (IntPtr)arg2Ptr,
+                        Size = (arg2.Length + 1) * sizeof(char),
                     };
-                    descrs[2] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&arg3),
-                        Size = sizeof(int)
-                    };
+                    descrs[2] = new EventData { DataPointer = (IntPtr)(&arg3), Size = sizeof(int) };
 
                     WriteEventCore(eventId, NumEventDatas, descrs);
                 }
@@ -577,9 +657,9 @@ namespace System.Net
         {
             if (IsEnabled())
             {
-                if (arg1 == null) arg1 = "";
-                if (arg2 == null) arg2 = "";
-                if (arg3 == null) arg3 = "";
+                arg1 ??= "";
+                arg2 ??= "";
+                arg3 ??= "";
 
                 fixed (char* arg1Ptr = arg1)
                 fixed (char* arg2Ptr = arg2)
@@ -590,24 +670,20 @@ namespace System.Net
 
                     descrs[0] = new EventData
                     {
-                        DataPointer = (IntPtr)(arg1Ptr),
-                        Size = (arg1.Length + 1) * sizeof(char)
+                        DataPointer = (IntPtr)arg1Ptr,
+                        Size = (arg1.Length + 1) * sizeof(char),
                     };
                     descrs[1] = new EventData
                     {
-                        DataPointer = (IntPtr)(arg2Ptr),
-                        Size = (arg2.Length + 1) * sizeof(char)
+                        DataPointer = (IntPtr)arg2Ptr,
+                        Size = (arg2.Length + 1) * sizeof(char),
                     };
                     descrs[2] = new EventData
                     {
-                        DataPointer = (IntPtr)(arg3Ptr),
-                        Size = (arg3.Length + 1) * sizeof(char)
+                        DataPointer = (IntPtr)arg3Ptr,
+                        Size = (arg3.Length + 1) * sizeof(char),
                     };
-                    descrs[3] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&arg4),
-                        Size = sizeof(int)
-                    };
+                    descrs[3] = new EventData { DataPointer = (IntPtr)(&arg4), Size = sizeof(int) };
 
                     WriteEventCore(eventId, NumEventDatas, descrs);
                 }
@@ -615,11 +691,21 @@ namespace System.Net
         }
 
         [NonEvent]
-        private unsafe void WriteEvent(int eventId, string arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7, int arg8)
+        private unsafe void WriteEvent(
+            int eventId,
+            string arg1,
+            int arg2,
+            int arg3,
+            int arg4,
+            int arg5,
+            int arg6,
+            int arg7,
+            int arg8
+        )
         {
             if (IsEnabled())
             {
-                if (arg1 == null) arg1 = "";
+                arg1 ??= "";
 
                 fixed (char* arg1Ptr = arg1)
                 {
@@ -628,44 +714,16 @@ namespace System.Net
 
                     descrs[0] = new EventData
                     {
-                        DataPointer = (IntPtr)(arg1Ptr),
-                        Size = (arg1.Length + 1) * sizeof(char)
+                        DataPointer = (IntPtr)arg1Ptr,
+                        Size = (arg1.Length + 1) * sizeof(char),
                     };
-                    descrs[1] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&arg2),
-                        Size = sizeof(int)
-                    };
-                    descrs[2] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&arg3),
-                        Size = sizeof(int)
-                    };
-                    descrs[3] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&arg4),
-                        Size = sizeof(int)
-                    };
-                    descrs[4] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&arg5),
-                        Size = sizeof(int)
-                    };
-                    descrs[5] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&arg6),
-                        Size = sizeof(int)
-                    };
-                    descrs[6] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&arg7),
-                        Size = sizeof(int)
-                    };
-                    descrs[7] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&arg8),
-                        Size = sizeof(int)
-                    };
+                    descrs[1] = new EventData { DataPointer = (IntPtr)(&arg2), Size = sizeof(int) };
+                    descrs[2] = new EventData { DataPointer = (IntPtr)(&arg3), Size = sizeof(int) };
+                    descrs[3] = new EventData { DataPointer = (IntPtr)(&arg4), Size = sizeof(int) };
+                    descrs[4] = new EventData { DataPointer = (IntPtr)(&arg5), Size = sizeof(int) };
+                    descrs[5] = new EventData { DataPointer = (IntPtr)(&arg6), Size = sizeof(int) };
+                    descrs[6] = new EventData { DataPointer = (IntPtr)(&arg7), Size = sizeof(int) };
+                    descrs[7] = new EventData { DataPointer = (IntPtr)(&arg8), Size = sizeof(int) };
 
                     WriteEventCore(eventId, NumEventDatas, descrs);
                 }
@@ -673,12 +731,19 @@ namespace System.Net
         }
 
         [NonEvent]
-        private unsafe void WriteEvent(int eventId, string arg1, string arg2, int arg3, int arg4, int arg5)
+        private unsafe void WriteEvent(
+            int eventId,
+            string arg1,
+            string arg2,
+            int arg3,
+            int arg4,
+            int arg5
+        )
         {
             if (IsEnabled())
             {
-                if (arg1 == null) arg1 = "";
-                if (arg2 == null) arg2 = "";
+                arg1 ??= "";
+                arg2 ??= "";
 
                 fixed (char* arg1Ptr = arg1)
                 fixed (char* arg2Ptr = arg2)
@@ -688,29 +753,17 @@ namespace System.Net
 
                     descrs[0] = new EventData
                     {
-                        DataPointer = (IntPtr)(arg1Ptr),
-                        Size = (arg1.Length + 1) * sizeof(char)
+                        DataPointer = (IntPtr)arg1Ptr,
+                        Size = (arg1.Length + 1) * sizeof(char),
                     };
                     descrs[1] = new EventData
                     {
-                        DataPointer = (IntPtr)(arg2Ptr),
-                        Size = (arg2.Length + 1) * sizeof(char)
+                        DataPointer = (IntPtr)arg2Ptr,
+                        Size = (arg2.Length + 1) * sizeof(char),
                     };
-                    descrs[2] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&arg3),
-                        Size = sizeof(int)
-                    };
-                    descrs[3] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&arg4),
-                        Size = sizeof(int)
-                    };
-                    descrs[4] = new EventData
-                    {
-                        DataPointer = (IntPtr)(&arg5),
-                        Size = sizeof(int)
-                    };
+                    descrs[2] = new EventData { DataPointer = (IntPtr)(&arg3), Size = sizeof(int) };
+                    descrs[3] = new EventData { DataPointer = (IntPtr)(&arg4), Size = sizeof(int) };
+                    descrs[4] = new EventData { DataPointer = (IntPtr)(&arg5), Size = sizeof(int) };
 
                     WriteEventCore(eventId, NumEventDatas, descrs);
                 }

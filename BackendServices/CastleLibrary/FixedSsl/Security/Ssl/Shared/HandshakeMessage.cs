@@ -1,6 +1,6 @@
 /*
  *   Mentalis.org Security Library
- * 
+ *
  *     Copyright � 2002-2005, The Mentalis.org Team
  *     All rights reserved.
  *     http://www.mentalis.org/
@@ -11,11 +11,11 @@
  *   are met:
  *
  *     - Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer. 
+ *        notice, this list of conditions and the following disclaimer.
  *
  *     - Neither the name of the Mentalis.org Team, nor the names of its contributors
  *        may be used to endorse or promote products derived from this
- *        software without specific prior written permission. 
+ *        software without specific prior written permission.
  *
  *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -31,26 +31,29 @@
  *   OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-using System;
-
-namespace Org.Mentalis.Security.Ssl.Shared
+namespace CastleLibrary.FixedSsl.Security.Ssl.Shared
 {
-    internal class HandshakeMessage {
-		public HandshakeMessage(HandshakeType type, byte[] bytes) {
-			this.type = type;
-			this.fragment = bytes;
-		}
-		public byte[] ToBytes() {
-			int length = fragment.Length;
-			byte[] ret = new byte[length + 4];
-			ret[0] = (byte)type;
-			ret[1] = (byte)(length / 65536);
-			ret[2] = (byte)((length % 65536) / 256);
-			ret[3] = (byte)(length % 256);
-			Array.Copy(fragment, 0, ret, 4, length);
-			return ret;
-		}
-		public HandshakeType type;
-		public byte[] fragment;
-	}
+    internal class HandshakeMessage
+    {
+        public HandshakeMessage(HandshakeType type, byte[] bytes)
+        {
+            this.type = type;
+            fragment = bytes;
+        }
+
+        public byte[] ToBytes()
+        {
+            var length = fragment.Length;
+            var ret = new byte[length + 4];
+            ret[0] = (byte)type;
+            ret[1] = (byte)(length / 65536);
+            ret[2] = (byte)(length % 65536 / 256);
+            ret[3] = (byte)(length % 256);
+            Array.Copy(fragment, 0, ret, 4, length);
+            return ret;
+        }
+
+        public HandshakeType type;
+        public byte[] fragment;
+    }
 }

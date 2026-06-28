@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -13,7 +12,10 @@ namespace Horizon.RT.Models
     /// zero. If the brutal flag is True, then the world should be destroyed <Br></Br>
     /// immediately, and all of the clients forcefully disconnected.
     /// </summary>
-    [MediusMessage(NetMessageClass.MessageClassLobbyReport, MediusMGCLMessageIds.ServerEndGameRequest)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyReport,
+        MediusMGCLMessageIds.ServerEndGameRequest
+    )]
     public class MediusServerEndGameRequest : BaseMGCLMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusMGCLMessageIds.ServerEndGameRequest;
@@ -22,10 +24,12 @@ namespace Horizon.RT.Models
         /// Message ID used for asynchronous request processing.
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// World ID of the game to kill.
         /// </summary>
         public int MediusWorldID;
+
         /// <summary>
         /// Boolean, to either Kill now, or allow the game to finish and then destroy the game world.
         /// </summary>
@@ -55,10 +59,11 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"MediusWorldID: {MediusWorldID} " +
-                $"BrutalFlag: {BrutalFlag}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"MediusWorldID: {MediusWorldID} "
+                + $"BrutalFlag: {BrutalFlag}";
         }
     }
 }

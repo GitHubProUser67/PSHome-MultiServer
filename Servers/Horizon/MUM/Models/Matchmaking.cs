@@ -1,9 +1,6 @@
 namespace Horizon.MUM.Models
 {
-    public class Matchmaking
-    {
-
-    }
+    public class Matchmaking { }
 
     public class MediusMatchRosterInfo
     {

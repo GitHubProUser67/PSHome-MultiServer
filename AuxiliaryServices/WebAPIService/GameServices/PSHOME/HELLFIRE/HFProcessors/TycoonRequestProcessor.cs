@@ -1,11 +1,7 @@
-﻿using CustomLogger;
+﻿using System.Text;
+using CustomLogger;
 using HttpMultipartParser;
 using MultiServerLibrary.HTTP;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using System.Threading;
 using WebAPIService.GameServices.PSHOME.HELLFIRE.Entities.HomeTycoon;
 using WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers;
 using WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.Tycoon;
@@ -16,7 +12,8 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
     {
         public static int DefaultGiftNumber { get; set; } = 5;
 
-        public static readonly string DefaultBuildings = @"<COM_GD_HighRiseBusiness_B>COM_GD_HighRiseBusiness_B</COM_GD_HighRiseBusiness_B>
+        public static readonly string DefaultBuildings =
+            @"<COM_GD_HighRiseBusiness_B>COM_GD_HighRiseBusiness_B</COM_GD_HighRiseBusiness_B>
                                       <COM_NE_BusinessTower_A>COM_NE_BusinessTower_A</COM_NE_BusinessTower_A>
                                       <COM_NE_HighRiseBusiness_A>COM_NE_HighRiseBusiness_A</COM_NE_HighRiseBusiness_A>
                                       <COM_NE_HighRiseBusiness_B>COM_NE_HighRiseBusiness_B</COM_NE_HighRiseBusiness_B>
@@ -37,39 +34,46 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                                       <Park2>Park2</Park2>
                                       <RES_GD_LgApartment_A>RES_GD_LgApartment_A</RES_GD_LgApartment_A>";
 
-        public static readonly Dictionary<int, (int Amount, int Cost, int Sale)> WorkerPackages = new Dictionary<int, (int Amount, int Cost, int Sale)>
-        {
-            {1, (10, 2, 2)},
-            {2, (22, 4, 4)},
-            {3, (36, 6, 6)},
-            {4, (50, 8, 8)},
-            {5, (70, 10, 10)}
-        };
+        public static readonly Dictionary<int, (int Amount, int Cost, int Sale)> WorkerPackages =
+            new()
+            {
+                { 1, (10, 2, 2) },
+                { 2, (22, 4, 4) },
+                { 3, (36, 6, 6) },
+                { 4, (50, 8, 8) },
+                { 5, (70, 10, 10) },
+            };
 
-        public static readonly Dictionary<string, (int Cost, int Sale)> ServiceCosts = new Dictionary<string, (int Cost, int Sale)>
+        public static readonly Dictionary<string, (int Cost, int Sale)> ServiceCosts = new()
         {
             { "ChangeTimeOfDay", (2, 1) },
             { "CollectAllRevenue", (1, 1) },
-            { "BuySuburb", (175, 150) }
+            { "BuySuburb", (175, 150) },
         };
 
-        public static string ProcessMainPHP(byte[] PostData, string ContentType, string PHPSessionID, string WorkPath, bool https)
+        public static string ProcessMainPHP(
+            byte[] PostData,
+            string ContentType,
+            string PHPSessionID,
+            string WorkPath,
+            bool https
+        )
         {
             if (PostData == null || string.IsNullOrEmpty(ContentType))
                 return null;
 
-            string Command = string.Empty;
-            string UserID = string.Empty;
-            string DisplayName = string.Empty;
-            string TownID = string.Empty;
-            string InstanceID = string.Empty;
-            string Region = string.Empty;
-            string NumPlayers = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var Command = string.Empty;
+            var UserID = string.Empty;
+            var DisplayName = string.Empty;
+            var TownID = string.Empty;
+            var InstanceID = string.Empty;
+            var Region = string.Empty;
+            var NumPlayers = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (boundary != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
                     Command = data.GetParameterValue("Command");
@@ -125,12 +129,14 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
 
                 if (!string.IsNullOrEmpty(Command))
                 {
-                    int i = 0;
-                    string ServerFilesPath = $"{WorkPath}/HomeTycoon/Server_Data";
-                    string userDataPath = $"{WorkPath}/HomeTycoon/User_Data/{UserID}";
-                    string userConfigFilePath = userDataPath + $"/Profile.xml";
+                    var i = 0;
+                    var ServerFilesPath = $"{WorkPath}/HomeTycoon/Server_Data";
+                    var userDataPath = $"{WorkPath}/HomeTycoon/User_Data/{UserID}";
+                    var userConfigFilePath = userDataPath + $"/Profile.xml";
 #if DEBUG
-                    LoggerAccessor.LogInfo($"[TycoonRequestProcessor] - Client issued command:{Command}.");
+                    LoggerAccessor.LogInfo(
+                        $"[TycoonRequestProcessor] - Client issued command:{Command}."
+                    );
 #endif
 
                     // Ensure the town Instance lookup is initialized before doing anything.
@@ -145,40 +151,52 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                         case "RequestDefaultTownInstance":
                             return TownInstance.RequestDefaultTownInstance();
                         case "RequestTownInstance":
-                            return TownInstance.RequestTownInstance(UserID, DisplayName, TownID, WorkPath);
+                            return TownInstance.RequestTownInstance(
+                                UserID,
+                                DisplayName,
+                                TownID,
+                                WorkPath
+                            );
                         case "RequestTown":
                             Thread.Sleep(3000); // Why is that in here? Because the game is so bugged that responding too fast makes it crash (busy loading building ressources).
                             return TownInstance.RequestTown(InstanceID, WorkPath);
                         case "HasUser":
                         case "RequestUser":
                         case "RequestVisitingUser":
-                            if (File.Exists(userConfigFilePath))
-                                return $"<Response>{File.ReadAllText(userConfigFilePath)}</Response>";
-                            else
-                                return $"<Response>{User.DefaultHomeTycoonProfile}</Response>";
+                            return File.Exists(userConfigFilePath)
+                                ? $"<Response>{File.ReadAllText(userConfigFilePath)}</Response>"
+                                : $"<Response>{User.DefaultHomeTycoonProfile}</Response>";
                         case "RequestUserTowns":
+                        {
+                            var townsNameBuilder = new StringBuilder("<Response>");
+
+                            foreach (
+                                var cityName in TownInstance.RequestTownsName(UserID, WorkPath)
+                            )
                             {
-                                StringBuilder townsNameBuilder = new StringBuilder("<Response>");
-
-                                foreach (string cityName in TownInstance.RequestTownsName(UserID, WorkPath))
-                                {
-                                    townsNameBuilder.Append($"<{cityName}><TownID>{TownInstance.TownNameToID(cityName)}</TownID></{cityName}>");
-                                }
-
-                                townsNameBuilder.Append("</Response>");
-
-                                return townsNameBuilder.ToString();
+                                townsNameBuilder.Append(
+                                    $"<{cityName}><TownID>{TownInstance.TownNameToID(cityName)}</TownID></{cityName}>"
+                                );
                             }
-                        case "RequestTowns":
-                            return TownInstance.RequestTowns(PostData, boundary, UserID, DisplayName, WorkPath);
-                        case "QueryMotd":
-                            string motdFilePath = ServerFilesPath + "/MOTD.xml";
 
-                            if (File.Exists(motdFilePath))
-                                return $"<Response>{File.ReadAllText(motdFilePath)}</Response>";
-                            else
-                            {
-                                return @"<Response>
+                            townsNameBuilder.Append("</Response>");
+
+                            return townsNameBuilder.ToString();
+                        }
+                        case "RequestTowns":
+                            return TownInstance.RequestTowns(
+                                PostData,
+                                boundary,
+                                UserID,
+                                DisplayName,
+                                WorkPath
+                            );
+                        case "QueryMotd":
+                            var motdFilePath = ServerFilesPath + "/MOTD.xml";
+
+                            return File.Exists(motdFilePath)
+                                ? $"<Response>{File.ReadAllText(motdFilePath)}</Response>"
+                                : @"<Response>
                                             <Motd>
 
                                                 <en>
@@ -303,7 +321,7 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
 
                                             </Motd>
                                         </Response>";
-                            };
+                            ;
                         case "QueryServerGlobals":
 #if DEBUG
                             return "<Response><GlobalHard>1</GlobalHard><GlobalWrinkles>1</GlobalWrinkles></Response>";
@@ -311,77 +329,87 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                             return "<Response><GlobalHard>0</GlobalHard><GlobalWrinkles>0</GlobalWrinkles></Response>";
 #endif
                         case "QueryPrices":
+                        {
+                            // Make everything free for now.
+                            const int Cost = 0;
+                            const int Sale = 0;
+
+                            var pricesBuilder = new StringBuilder("<Response><Buildings>");
+
+                            foreach (var building in TycoonFileList.BuildingsFilenames)
                             {
-                                // Make everything free for now.
-                                const int Cost = 0;
-                                const int Sale = 0;
-
-                                StringBuilder pricesBuilder = new StringBuilder("<Response><Buildings>");
-
-                                foreach (string building in TycoonFileList.BuildingsFilenames)
-                                {
-                                    string buildingWithoutXml = building.Replace(".xml", string.Empty);
-                                    pricesBuilder.Append($"<{buildingWithoutXml}><Cost>{Cost}</Cost><Sale>{Sale}</Sale></{buildingWithoutXml}>");
-                                }
-
-                                pricesBuilder.Append("</Buildings><Vehicles>");
-
-                                foreach (string vehicle in TycoonFileList.VehiclesFilenames)
-                                {
-                                    string vehicleWithoutXml = vehicle.Replace(".xml", string.Empty);
-                                    pricesBuilder.Append($"<{vehicleWithoutXml}><Cost>{Cost}</Cost><Sale>{Sale}</Sale></{vehicleWithoutXml}>");
-                                }
-
-                                pricesBuilder.Append("</Vehicles><Expansions>");
-
-                                foreach (string expension in TycoonFileList.ExpensionFilenames)
-                                {
-                                    pricesBuilder.Append($"<{expension}><Cost>{Cost}</Cost><Sale>{Sale}</Sale></{expension}>");
-                                }
-
-                                pricesBuilder.Append("</Expansions><WorkerPackages>");
-
-                                lock (WorkerPackages)
-                                {
-                                    for (i = 1; i <= WorkerPackages.Count; i++)
-                                    {
-                                        var pkg = WorkerPackages[i];
-                                        pricesBuilder.Append($"<{i}><Amount>{pkg.Amount}</Amount><Cost>{pkg.Cost}</Cost><Sale>{pkg.Sale}</Sale></{i}>");
-                                    }
-                                }
-
-                                pricesBuilder.Append("</WorkerPackages><Services>");
-
-                                lock (ServiceCosts)
-                                {
-                                    foreach (var service in ServiceCosts)
-                                    {
-                                        pricesBuilder.Append(
-                                            $"<{service.Key}><Cost>{service.Value.Cost}</Cost><Sale>{service.Value.Sale}</Sale></{service.Key}>");
-                                    }
-                                }
-
-                                pricesBuilder.Append("</Services></Response>");
-
-                                return pricesBuilder.ToString();
+                                var buildingWithoutXml = building.Replace(".xml", string.Empty);
+                                pricesBuilder.Append(
+                                    $"<{buildingWithoutXml}><Cost>{Cost}</Cost><Sale>{Sale}</Sale></{buildingWithoutXml}>"
+                                );
                             }
+
+                            pricesBuilder.Append("</Buildings><Vehicles>");
+
+                            foreach (var vehicle in TycoonFileList.VehiclesFilenames)
+                            {
+                                var vehicleWithoutXml = vehicle.Replace(".xml", string.Empty);
+                                pricesBuilder.Append(
+                                    $"<{vehicleWithoutXml}><Cost>{Cost}</Cost><Sale>{Sale}</Sale></{vehicleWithoutXml}>"
+                                );
+                            }
+
+                            pricesBuilder.Append("</Vehicles><Expansions>");
+
+                            foreach (var expension in TycoonFileList.ExpensionFilenames)
+                            {
+                                pricesBuilder.Append(
+                                    $"<{expension}><Cost>{Cost}</Cost><Sale>{Sale}</Sale></{expension}>"
+                                );
+                            }
+
+                            pricesBuilder.Append("</Expansions><WorkerPackages>");
+
+                            lock (WorkerPackages)
+                            {
+                                for (i = 1; i <= WorkerPackages.Count; i++)
+                                {
+                                    var pkg = WorkerPackages[i];
+                                    pricesBuilder.Append(
+                                        $"<{i}><Amount>{pkg.Amount}</Amount><Cost>{pkg.Cost}</Cost><Sale>{pkg.Sale}</Sale></{i}>"
+                                    );
+                                }
+                            }
+
+                            pricesBuilder.Append("</WorkerPackages><Services>");
+
+                            lock (ServiceCosts)
+                            {
+                                foreach (var service in ServiceCosts)
+                                {
+                                    pricesBuilder.Append(
+                                        $"<{service.Key}><Cost>{service.Value.Cost}</Cost><Sale>{service.Value.Sale}</Sale></{service.Key}>"
+                                    );
+                                }
+                            }
+
+                            pricesBuilder.Append("</Services></Response>");
+
+                            return pricesBuilder.ToString();
+                        }
                         case "QueryBoosters":
-                            return "<Response>" +
-                                "<Booster>" +
-                                "<Type>1</Type><Value>1</Value><Param>1</Param>" +
-                                "<UUID>7A8BC3DB-399F4457-8117F099-D9F5D132</UUID><Reward>true</Reward>" +
-                                "</Booster>" +
-                                "</Response>";
+                            return "<Response>"
+                                + "<Booster>"
+                                + "<Type>1</Type><Value>1</Value><Param>1</Param>"
+                                + "<UUID>7A8BC3DB-399F4457-8117F099-D9F5D132</UUID><Reward>true</Reward>"
+                                + "</Booster>"
+                                + "</Response>";
                         case "QueryHoldbacks":
 
                             // DateTime unused in the script (only for logging).
-                            DateTime now = DateTime.UtcNow;
-                            StringBuilder holdbacksBuilder = new StringBuilder("<Response>");
+                            var now = DateTime.UtcNow;
+                            var holdbacksBuilder = new StringBuilder("<Response>");
 
                             foreach (var building in TycoonHoldbacks.Buildings)
                             {
                                 holdbacksBuilder.Append(
-                                    $"<{i}><Type>Building</Type><Name>{building}</Name><Date>{now}</Date></{i}>");
+                                    $"<{i}><Type>Building</Type><Name>{building}</Name><Date>{now}</Date></{i}>"
+                                );
 
                                 i++;
                             }
@@ -389,7 +417,8 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                             foreach (var building in TycoonHoldbacks.ExpansionPacks)
                             {
                                 holdbacksBuilder.Append(
-                                    $"<{i}><Type>ExpansionPack</Type><Name>{building}</Name><Date>{now}</Date></{i}>");
+                                    $"<{i}><Type>ExpansionPack</Type><Name>{building}</Name><Date>{now}</Date></{i}>"
+                                );
 
                                 i++;
                             }
@@ -397,7 +426,8 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                             foreach (var building in TycoonHoldbacks.Vehicles)
                             {
                                 holdbacksBuilder.Append(
-                                    $"<{i}><Type>Vehicle</Type><Name>{building}</Name><Date>{now}</Date></{i}>");
+                                    $"<{i}><Type>Vehicle</Type><Name>{building}</Name><Date>{now}</Date></{i}>"
+                                );
 
                                 i++;
                             }
@@ -406,12 +436,11 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
 
                             return holdbacksBuilder.ToString();
                         case "QueryRewards":
-                            string serverRewardsFilePath = ServerFilesPath + $"/Server_Rewards.xml";
+                            var serverRewardsFilePath = ServerFilesPath + $"/Server_Rewards.xml";
 
-                            if (File.Exists(serverRewardsFilePath))
-                                return $"<Response>{File.ReadAllText(serverRewardsFilePath)}</Response>";
-                            else
-                                return @"<Response>
+                            return File.Exists(serverRewardsFilePath)
+                                ? $"<Response>{File.ReadAllText(serverRewardsFilePath)}</Response>"
+                                : @"<Response>
                                 <Reward>
                                     <Name>HT_T_Shirt</Name>
                                     <SCEA type=""table"">
@@ -891,25 +920,47 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
 
                                 </Response>";
                         case "QueryGifts":
-                            string giftOverrideFile = userDataPath + $"/Gifts.xml";
+                            var giftOverrideFile = userDataPath + $"/Gifts.xml";
 
-                            if (File.Exists(giftOverrideFile))
-                                return $"<Response>{File.ReadAllText(giftOverrideFile)}</Response>";
-                            else
-                                return $"<Response><Gift>{DefaultGiftNumber}</Gift></Response>";
+                            return File.Exists(giftOverrideFile)
+                                ? $"<Response>{File.ReadAllText(giftOverrideFile)}</Response>"
+                                : $"<Response><Gift>{DefaultGiftNumber}</Gift></Response>";
                         case "UpdateTownTime":
                             return TownProcessor.UpdateTownTime(UserID, TownID, WorkPath);
                         case "UpdateTownPlayers":
-                            return TownProcessor.UpdateTownPlayers(UserID, TownID, NumPlayers, WorkPath);
+                            return TownProcessor.UpdateTownPlayers(
+                                UserID,
+                                TownID,
+                                NumPlayers,
+                                WorkPath
+                            );
                         case "UpdateInstance":
                             // Seems to do nothing, no idea what this is for, only send parameter: InstanceID
                             return "<Response></Response>";
                         case "AddVisitor":
-                            return TownProcessor.HandleVisitors(PostData, boundary, UserID, WorkPath, Command);
+                            return TownProcessor.HandleVisitors(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath,
+                                Command
+                            );
                         case "GetVisitors":
-                            return TownProcessor.HandleVisitors(PostData, boundary, UserID, WorkPath, Command);
+                            return TownProcessor.HandleVisitors(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath,
+                                Command
+                            );
                         case "ClearVisitors":
-                            return TownProcessor.HandleVisitors(PostData, boundary, UserID, WorkPath, Command);
+                            return TownProcessor.HandleVisitors(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath,
+                                Command
+                            );
                         case "CreateSuburb":
                             return TownInstance.CreateSuburp(UserID, WorkPath);
                         case "SavePostcard":
@@ -932,19 +983,50 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                         case "RemoveMissionFromJournal":
                         case "AddDialog":
                         case "CompleteDialog":
-                            return User.UpdateUserHomeTycoon(PostData, boundary, UserID, WorkPath, Command);
+                            return User.UpdateUserHomeTycoon(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath,
+                                Command
+                            );
                         case "UnlockDefault":
                             return $"<Response>{DefaultBuildings}</Response>";
                         case "CreateBuilding":
-                            return TownProcessor.CreateBuilding(PostData, boundary, UserID, WorkPath);
+                            return TownProcessor.CreateBuilding(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath
+                            );
                         case "UpdateBuildings":
-                            return TownProcessor.UpdateBuildings(PostData, boundary, UserID, WorkPath);
+                            return TownProcessor.UpdateBuildings(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath
+                            );
                         case "RemoveBuilding":
-                            return TownProcessor.RemoveBuilding(PostData, boundary, UserID, WorkPath);
+                            return TownProcessor.RemoveBuilding(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath
+                            );
                         case "GlobalPopulationLeaderboard":
-                            return Leaderboards.GetGlobalPopulationLeaderboard(PostData, boundary, UserID, WorkPath);
+                            return Leaderboards.GetGlobalPopulationLeaderboard(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath
+                            );
                         case "GlobalRevenueCollectedLeaderboard":
-                            return Leaderboards.GetGlobalRevenueCollectedLeaderboard(PostData, boundary, UserID, WorkPath);
+                            return Leaderboards.GetGlobalRevenueCollectedLeaderboard(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath
+                            );
                         //Debug functions in lua commented out
                         case "DeleteCity":
                             return "<Response></Response>";
@@ -953,7 +1035,9 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                         case "ClearMissionRevenueCollected":
                             return "<Response></Response>";
                         default:
-                            LoggerAccessor.LogWarn($"[TycoonRequestProcessor] - Client Requested an unknown Home Tycoon Command, please report as issue on GITHUB : {Command}");
+                            LoggerAccessor.LogWarn(
+                                $"[TycoonRequestProcessor] - Client Requested an unknown Home Tycoon Command, please report as issue on GITHUB : {Command}"
+                            );
                             return "<Response></Response>";
                     }
                 }

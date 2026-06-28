@@ -13,7 +13,10 @@ namespace SpaceWizards.HttpListener
             lock (_internalLock)
             {
                 // Actually load the certificate
-                if (_certificateCache != null && _certificateCache.TryGetValue((addr, port), out X509Certificate2 certificate))
+                if (
+                    _certificateCache != null
+                    && _certificateCache.TryGetValue((addr, port), out var certificate)
+                )
                     return certificate;
             }
 

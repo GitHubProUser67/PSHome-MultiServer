@@ -1,29 +1,20 @@
-﻿using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
-using Horizon.RT.Models;
 
-namespace HorizonService.RT.Models.ServerPlugins.MAPS
+namespace Horizon.RT.Models.ServerPlugins.MAPS
 {
     [MediusMessage(NetMessageClass.MessageClassApplication, NetMessageTypeIds.NetMessageTypeHello)]
-    public class NetMessageHello : BaseApplicationMessage
+    public class NetMessageHello : BaseMediusPluginMessage
     {
         public override NetMessageTypeIds PacketType => NetMessageTypeIds.NetMessageTypeHello;
 
-        public override byte IncomingMessage => 0;
         public override int Size => 0;
+        public override ushort ClientBufferSize => 0;
+        public override byte PluginId => (byte)NetPluginType.kNetPluginMAPS;
 
-        public override byte PluginId => 0;
+        public override void DeserializePlugin(MessageReader reader) { }
 
-        public override void DeserializePlugin(MessageReader reader)
-        {
-
-        }
-
-        public override void SerializePlugin(MessageWriter writer)
-        {
-
-        }
+        public override void SerializePlugin(MessageWriter writer) { }
 
         public override string ToString()
         {

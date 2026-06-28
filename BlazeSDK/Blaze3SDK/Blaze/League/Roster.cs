@@ -2,24 +2,22 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.League
 {
-	[TdfStruct]
-	public struct Roster
-	{
+    [TdfStruct]
+    public struct Roster
+    {
+        [TdfMember("CONT")]
+        public uint mCount;
 
-		[TdfMember("CONT")]
-		public uint mCount;
+        [TdfMember("CRC")]
+        public uint mCrc;
 
-		[TdfMember("CRC")]
-		public uint mCrc;
+        [TdfMember("LGID")]
+        public uint mLeagueId;
 
-		[TdfMember("LGID")]
-		public uint mLeagueId;
+        [TdfMember("MMBR")]
+        public LeagueUser mMember;
 
-		[TdfMember("MMBR")]
-		public LeagueUser mMember;
-
-		[TdfMember("PLYR")]
-		public List<Player> mPlayers;
-
-	}
+        [TdfMember("PLYR")]
+        public List<Player> mPlayers;
+    }
 }

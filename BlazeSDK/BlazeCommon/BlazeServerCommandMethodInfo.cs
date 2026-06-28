@@ -4,7 +4,13 @@ namespace BlazeCommon
 {
     public class BlazeServerCommandMethodInfo
     {
-        public BlazeServerCommandMethodInfo(IBlazeServerComponent component, ushort commandId, Type requestType, Type responseType, MethodInfo commandMethod)
+        public BlazeServerCommandMethodInfo(
+            IBlazeServerComponent component,
+            ushort commandId,
+            Type requestType,
+            Type responseType,
+            MethodInfo commandMethod
+        )
         {
             Component = component;
             Id = commandId;
@@ -23,8 +29,8 @@ namespace BlazeCommon
 
         public async Task<object> InvokeAsync(object request, BlazeRpcContext context)
         {
-            var task = (Task)Method.Invoke(Component, new object?[] { request, context })!;
-            await task;
+            var task = (Task)Method.Invoke(Component, [request, context])!;
+            await task.ConfigureAwait(false);
             return ((dynamic)task).Result;
         }
     }

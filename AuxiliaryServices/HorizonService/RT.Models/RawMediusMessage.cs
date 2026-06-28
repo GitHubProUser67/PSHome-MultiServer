@@ -1,12 +1,10 @@
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
-using System;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     public class RawMediusMessage : BaseMediusMessage
     {
-
         protected NetMessageClass _class;
         public override NetMessageClass PacketClass => _class;
 
@@ -15,10 +13,7 @@ namespace Horizon.RT.Models
 
         public byte[] Contents { get; set; }
 
-        public RawMediusMessage()
-        {
-
-        }
+        public RawMediusMessage() { }
 
         public RawMediusMessage(NetMessageClass msgClass, byte messageType)
         {
@@ -39,30 +34,25 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + $" MsgClass:{PacketClass} MsgType:{PacketType} Contents:{BitConverter.ToString(Contents)}";
+            return base.ToString()
+                + $" MsgClass:{PacketClass} MsgType:{PacketType} Contents:{BitConverter.ToString(Contents)}";
         }
     }
-
 
     public class RawMediusClientMessage : BaseMediusPluginMessage
     {
         protected int _size;
         public override int Size => _size;
-
+        public override ushort ClientBufferSize => throw new NotImplementedException();
 
         protected NetMessageTypeIds _messageType;
         public override NetMessageTypeIds PacketType => _messageType;
 
         public byte[] Contents { get; set; }
 
-        public override byte IncomingMessage => throw new NotImplementedException();
-
         public override byte PluginId => throw new NotImplementedException();
 
-        public RawMediusClientMessage()
-        {
-
-        }
+        public RawMediusClientMessage() { }
 
         public RawMediusClientMessage(int size, NetMessageTypeIds messageType)
         {
@@ -83,37 +73,39 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + $" MsgType: {PacketType} Contents: {BitConverter.ToString(Contents)}";
+            return base.ToString()
+                + $" MsgType: {PacketType} Contents: {BitConverter.ToString(Contents)}";
         }
     }
 
     public class RawMediusServerMessage : BaseMediusPluginMessage
     {
-        protected byte _incomingMessage;
-        public override byte IncomingMessage => _incomingMessage;
-
-        protected ushort _size;
+        protected int _size;
         public override int Size => _size;
+
+        protected ushort _clientBuffSize;
+        public override ushort ClientBufferSize => _clientBuffSize;
 
         protected byte _pluginId;
         public override byte PluginId => _pluginId;
-
 
         protected NetMessageTypeIds _messageType;
         public override NetMessageTypeIds PacketType => _messageType;
 
         public byte[] Contents { get; set; }
 
-        public RawMediusServerMessage()
-        {
+        public RawMediusServerMessage() { }
 
-        }
-
-        public RawMediusServerMessage(byte incomingMesg, ushort size, byte PluginId, NetMessageTypeIds messageType)
+        public RawMediusServerMessage(
+            int size,
+            ushort clientBuffSize,
+            byte PluginId,
+            NetMessageTypeIds messageType
+        )
         {
             _pluginId = PluginId;
-            _incomingMessage = incomingMesg;
             _size = size;
+            _clientBuffSize = clientBuffSize;
             _messageType = messageType;
         }
 
@@ -130,7 +122,8 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + $" MsgType: {PacketType} Contents: {BitConverter.ToString(Contents)}";
+            return base.ToString()
+                + $" MsgType: {PacketType} Contents: {BitConverter.ToString(Contents)}";
         }
     }
 }

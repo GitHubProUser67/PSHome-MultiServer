@@ -23,12 +23,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-using System;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Threading;
 
 namespace DNSLibrary
 {
@@ -39,9 +36,9 @@ namespace DNSLibrary
 
         private int _currentDnsIndex = 0;
 
-        private readonly Random _random = new Random();
+        private readonly Random _random = new();
 
-        private readonly object _dnsLock = new object(); // lock for rotating providers
+        private readonly Lock _dnsLock = new(); // lock for rotating providers
 
         private readonly string[] DNSServers = GetAvailableDNSServers();
 
@@ -54,22 +51,26 @@ namespace DNSLibrary
             }
         }
 
-        private readonly ConcurrentQueue<UdpClient> UdpClientQueue = new ConcurrentQueue<UdpClient>();
+        private readonly ConcurrentQueue<UdpClient> UdpClientQueue = new();
 
-        public UdpClientService(int SendTimeoutMs, int ReceiveTimeoutMs, int MaxConcurrentListeners = 10)
+        public UdpClientService(
+            int SendTimeoutMs,
+            int ReceiveTimeoutMs,
+            int MaxConcurrentListeners = 10
+        )
         {
             this.SendTimeoutMs = SendTimeoutMs;
             this.ReceiveTimeoutMs = ReceiveTimeoutMs;
             AddToClientQueue(MaxConcurrentListeners);
         }
 
-        public (bool, UdpClient) Dequeue(int maxRetries = 20)
+        public (bool, UdpClient) TryDequeue(int maxRetries = 5)
         {
-            for (int attempt = 0; attempt <= maxRetries; attempt++)
+            for (var attempt = 0; attempt <= maxRetries; attempt++)
             {
-                if (UdpClientQueue.TryDequeue(out UdpClient selectedClient))
+                if (UdpClientQueue.TryDequeue(out var selectedClient))
                     return (true, selectedClient);
-                Thread.Sleep(1); // sleep for a milisecond
+                Thread.Sleep(2000); // sleep for 2 seconds
             }
 
             return (false, null);
@@ -100,7 +101,7 @@ namespace DNSLibrary
             lock (_dnsLock)
             {
                 int nextIndex;
-                int sizeOfDNSServers = DNSServers.Length;
+                var sizeOfDNSServers = DNSServers.Length;
                 do
                 {
                     nextIndex = _random.Next(sizeOfDNSServers);
@@ -108,44 +109,54 @@ namespace DNSLibrary
 
                 _currentDnsIndex = nextIndex;
 
-                CustomLogger.LoggerAccessor.LogWarn($"[UdpClientService] - Rotating DNS provider to {DNSServers[_currentDnsIndex]}.");
+                CustomLogger.LoggerAccessor.LogWarn(
+                    $"[UdpClientService] - Rotating DNS provider to {DNSServers[_currentDnsIndex]}."
+                );
             }
         }
 
         // Returns available system DNS entries or defaults to google.
         private static string[] GetAvailableDNSServers()
         {
-            string[] dnsServers = NetworkInterface.GetAllNetworkInterfaces()
+            string[] dnsServers = [];
+
+            try
+            {
+                dnsServers = [.. NetworkInterface
+                .GetAllNetworkInterfaces()
                 .Where(i => i.OperationalStatus == OperationalStatus.Up)
-                .SelectMany(i => i.GetIPProperties()?.DnsAddresses ?? Enumerable.Empty<System.Net.IPAddress>())
+                .SelectMany(i =>
+                    i.GetIPProperties()?.DnsAddresses ?? Enumerable.Empty<System.Net.IPAddress>()
+                )
                 .Select(ip => ip.ToString())
-                .Distinct() // remove duplicates
-                .ToArray();
+                .Distinct()];
+            }
+            catch
+            {
+                // Not Important.
+            }
 
             if (dnsServers.Length == 0)
             {
                 // Fallback to public DNS servers
-                dnsServers = new string[]
-                {
+                dnsServers =
+                [
                     "8.8.8.8", // Google
                     "8.8.4.4", // Google secondary
                     "1.1.1.1", // Cloudflare
                     "1.0.0.1", // Cloudflare secondary
                     "9.9.9.9", // Quad9
-                    "208.67.222.222" // OpenDNS
-                };
+                    "208.67.222.222", // OpenDNS
+                ];
             }
 
             return dnsServers;
         }
 
-
         private void AddToClientQueue(int MaxConcurrentListeners)
         {
             for (byte i = 0; i < MaxConcurrentListeners; i++)
-            {
                 UdpClientQueue.Enqueue(CreateNewUdpClient());
-            }
         }
 
         private UdpClient CreateNewUdpClient()
@@ -161,7 +172,9 @@ namespace DNSLibrary
             }
             catch (SocketException ex)
             {
-                CustomLogger.LoggerAccessor.LogError($"[UdpClientService] - A Socket Exception was thrown while creating UDP client, returning null state. (Exception:{ex})");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"[UdpClientService] - A Socket Exception was thrown while creating UDP client, returning null state. (Exception:{ex})"
+                );
             }
 
             return client;

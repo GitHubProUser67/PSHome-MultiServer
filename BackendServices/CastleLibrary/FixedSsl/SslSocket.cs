@@ -1,48 +1,68 @@
-using EndianTools;
-using FixedSsl.Crypto;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+using System.Collections.Immutable;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
+using CastleLibrary.FixedSsl.Security.Ssl;
+using EndianTools;
 
-namespace FixedSsl
+namespace CastleLibrary.FixedSsl
 {
     public static class SslSocket
     {
         static SslSocket()
         {
+#pragma warning disable
             // Enables wildcards certificate support in WebClient.
             ServicePointManager.ServerCertificateValidationCallback += ValidateRemoteCertificate;
 
             // TLS1.3 is only compatible with Windows 10 and Windows server 2019, for now I simply allow TLS1.2 to maintain compatibility, enable yourself if there is a need for 1.3 .
-            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12 /*| SecurityProtocolType.Tls13*/;
+            ServicePointManager.SecurityProtocol |=
+                SecurityProtocolType.Tls12 /*| SecurityProtocolType.Tls13*/
+            ;
+#pragma warning restore
         }
 
         // Some domains are not valid anymore, but we need them, and know they aren't trapped websites...
-        private static readonly string[] _invalidCNBypassList = new string[]
+        private static readonly string[] _invalidCNBypassList = ["s3.amazonaws.com"];
+
+        private static readonly int SSLv3 = Org.BouncyCastle.Tls.ProtocolVersion.SSLv3.FullVersion; // SSL 3.0
+        private static readonly int TLSv1 = Org.BouncyCastle.Tls.ProtocolVersion.TLSv10.FullVersion; // TLS 1.0
+        private static readonly int TLSv11 = Org.BouncyCastle
+            .Tls
+            .ProtocolVersion
+            .TLSv11
+            .FullVersion; // TLS 1.1
+        private static readonly int TLSv12 = Org.BouncyCastle
+            .Tls
+            .ProtocolVersion
+            .TLSv12
+            .FullVersion; // TLS 1.2
+
+        private static readonly SecureProtocol legacyProtocols =
+            SecureProtocol.Ssl3 | SecureProtocol.Tls1;
+
+        private static readonly ImmutableHashSet<int> SupportedBCCipherSet =
+            GetTheadSafeSupportedBCCipherSet();
+
+        // Not thread safe, only use as soon as the program starts before any SSL/TLS operations.
+        public static bool BypassRemoteCertificateChecks { get; set; } = false;
+
+        public static List<string> ClientCertificateCNBypassList = []; // Add server CN in which we don't want to validate client certificates.
+
+        private static ImmutableHashSet<int> GetTheadSafeSupportedBCCipherSet()
         {
-            "s3.amazonaws.com"
-        };
+            return [.. ProtoSSL.GetCipherSuites(Ssl3TlsServer.SupportedProtocols)];
+        }
 
-        private const int SSLv2 = 0x0002;  // SSL 2.0
-        private const int SSLv3 = 0x0300;  // SSL 3.0
-        private const int TLSv1 = 0x0301;  // TLS 1.0
-        private const int TLSv11 = 0x0302;  // TLS 1.1
-
-        private static readonly Org.Mentalis.Security.Ssl.SecureProtocol legacyProtocols = Org.Mentalis.Security.Ssl.SecureProtocol.Ssl3 | Org.Mentalis.Security.Ssl.SecureProtocol.Tls1;
-
-        public static List<string> ClientCertificateCNBypassList = new List<string>()
-        {
-            // Add server CN in which we don't want to validate client certificates.
-        };
-
-        public static async Task<Stream> AuthenticateAsServerAsync(SslProtocols protocols, Socket socket, X509Certificate2 certificate, bool forceSsl, bool ownSocket)
+        public static async Task<Stream> AuthenticateAsServerAsync(
+            SslProtocols protocols,
+            Socket socket,
+            X509Certificate2 certificate,
+            bool forceSsl,
+            bool ownSocket
+        )
         {
             // no certificate, no ssl
             if (certificate == null)
@@ -54,12 +74,10 @@ namespace FixedSsl
 
             // total 5 bytes
 
-            byte[] header = new byte[TlsParser.TLS_HEADER_LEN];
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
-            int received = await socket.ReceiveAsync(header, SocketFlags.Peek).ConfigureAwait(false);
-#else
-            int received = socket.Receive(header, SocketFlags.Peek);
-#endif
+            var header = new byte[TlsParser.TLS_HEADER_LEN];
+            var received = await socket
+                .ReceiveAsync(header, SocketFlags.Peek)
+                .ConfigureAwait(false);
             if (received != TlsParser.TLS_HEADER_LEN)
             {
 #if DEBUG
@@ -68,8 +86,8 @@ namespace FixedSsl
                 return null;
             }
 
-            bool ssl = header[0] == 0x16; // content type needs to be handshake (0x16)
-            bool sslV2 = (header[0] & 0x80) != 0 || header[0] == 0x80; // SSLv2 Client Hello indicator
+            var ssl = header[0] == 0x16; // content type needs to be handshake (0x16)
+            var sslV2 = (header[0] & 0x80) != 0 || header[0] == 0x80; // SSLv2 Client Hello indicator
 
             if (!ssl && !sslV2)
             {
@@ -83,7 +101,7 @@ namespace FixedSsl
                 return new NetworkStream(socket, ownSocket);
             }
 
-            int totalLength = 0;
+            var totalLength = 0;
             byte[] clientHello = null;
 
             if (ssl)
@@ -92,13 +110,20 @@ namespace FixedSsl
 
                 int r;
 
-                totalLength = TlsParser.TLS_HEADER_LEN + EndianAwareConverter.ToUInt16(header, Endianness.BigEndian, 3);
+                totalLength =
+                    TlsParser.TLS_HEADER_LEN
+                    + EndianAwareConverter.ToUInt16(header, Endianness.BigEndian, 3);
 
                 clientHello = new byte[totalLength];
 
                 while (received < totalLength)
                 {
-                    r = socket.Receive(clientHello, received, totalLength - received, SocketFlags.Peek);
+                    r = socket.Receive(
+                        clientHello,
+                        received,
+                        totalLength - received,
+                        SocketFlags.Peek
+                    );
                     if (r == 0)
                         break;
                     received += r;
@@ -113,7 +138,9 @@ namespace FixedSsl
                     if (forceSsl)
                     {
 #if DEBUG
-                        CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid clientHello data.");
+                        CustomLogger.LoggerAccessor.LogError(
+                            "[SslSocket] - Invalid clientHello data."
+                        );
 #endif
                         return null;
                     }
@@ -133,7 +160,12 @@ namespace FixedSsl
 
                 while (received < totalLength)
                 {
-                    r = socket.Receive(clientHello, received, totalLength - received, SocketFlags.Peek);
+                    r = socket.Receive(
+                        clientHello,
+                        received,
+                        totalLength - received,
+                        SocketFlags.Peek
+                    );
                     if (r == 0)
                         break;
                     received += r;
@@ -142,7 +174,9 @@ namespace FixedSsl
                 if (received < totalLength)
                 {
 #if DEBUG
-                    CustomLogger.LoggerAccessor.LogError($"[SslSocket] - Socket error while picking clientHello data (Excpected:{totalLength} Received:{received}).");
+                    CustomLogger.LoggerAccessor.LogError(
+                        $"[SslSocket] - Socket error while picking clientHello data (Excpected:{totalLength} Received:{received})."
+                    );
 #endif
                     return null;
                 }
@@ -153,7 +187,9 @@ namespace FixedSsl
                     if (forceSsl)
                     {
 #if DEBUG
-                        CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid clientHello data.");
+                        CustomLogger.LoggerAccessor.LogError(
+                            "[SslSocket] - Invalid clientHello data."
+                        );
 #endif
                         return null;
                     }
@@ -172,71 +208,80 @@ namespace FixedSsl
                 return new NetworkStream(socket, ownSocket);
             }
 
-            int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out bool isSslV2, out int maxSslVersion, out List<int> versions, out List<int> cipherSuites);
+            var parseResult = TlsParser.ParseTlsHeader(
+                clientHello,
+                out var hostname,
+                out var isSslV2,
+                out var maxSslVersion,
+                out var versions,
+                out var cipherSuites
+            );
 #if DEBUG
-            CustomLogger.LoggerAccessor.LogInfo($"[SslSocket] - ClientHello (status:{parseResult}) params: Hostname:{hostname} IsSSLV2:{isSslV2} MaxSSLVersion:{maxSslVersion} Versions:{(versions.Count > 0 ? string.Join(", ", versions.Select(v => $"0x{v:X4}")) : "none")} CipherSuites:{(cipherSuites.Count > 0 ? string.Join(", ", cipherSuites.Select(cs => $"0x{cs:X4}")) : "none")}");
+            CustomLogger.LoggerAccessor.LogInfo(
+                $"[SslSocket] - ClientHello (status:{parseResult}) params: Hostname:{hostname} IsSSLV2:{isSslV2} MaxSSLVersion:{maxSslVersion} Versions:{(versions.Count > 0 ? string.Join(", ", versions.Select(v => $"0x{v:X4}")) : "none")} CipherSuites:{(cipherSuites.Count > 0 ? string.Join(", ", cipherSuites.Select(cs => $"0x{cs:X4}")) : "none")}"
+            );
 #endif
             var allowedProtocols = protocols.GetEnabledProtocols();
-#pragma warning disable            // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
+#pragma warning disable            // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis or BC if that's the case.
             if (
-                    (allowedProtocols.Contains(SslProtocols.Ssl3) || allowedProtocols.Contains(SslProtocols.Tls) || allowedProtocols.Contains(SslProtocols.Tls11)) &&
-                    (
-                        maxSslVersion == SSLv3 ||
-                        maxSslVersion == TLSv1 ||
-                        maxSslVersion == TLSv11 ||
-                        (!certificate.Verify() && versions.Any(v => v == SSLv3 || v == TLSv1 || v == TLSv11))
+                (
+                    allowedProtocols.Contains(SslProtocols.Ssl3)
+                    || allowedProtocols.Contains(SslProtocols.Tls)
+                    || allowedProtocols.Contains(SslProtocols.Tls11)
+                    || allowedProtocols.Contains(SslProtocols.Tls12)
+                )
+                && (
+                    maxSslVersion == SSLv3
+                    || maxSslVersion == TLSv1
+                    || maxSslVersion == TLSv11
+                    || maxSslVersion == TLSv12
+                    || (
+                        !certificate.Verify()
+                        && versions.Any(v => v == SSLv3 || v == TLSv1 || v == TLSv11 || v == TLSv12)
                     )
                 )
+            )
             {
-                if (!isSslV2 && (cipherSuites.Exists(c => Ssl3TlsServer.AESCipherSuites.Contains(c)) || cipherSuites.Exists(c => Ssl3TlsServer.RC4CipherSuites.Contains(c))))
-                {
-                    BCSSLCertificate bcCertificate = null;
+                Stream managedSsl = await GetBouncyStreamAsync(
+                        isSslV2,
+                        cipherSuites,
+                        certificate,
+                        socket,
+                        ownSocket
+                    )
+                    .ConfigureAwait(false);
 
-                    try
-                    {
-                        bcCertificate = certificate;
-                    }
-                    catch (ArgumentException)
-                    {
-                        // Fallback to Mentalis.
-                    }
+                if (
+                    managedSsl == null
+                    && (
+                        maxSslVersion != TLSv12
+                        || versions.Contains(SSLv3)
+                        || versions.Contains(TLSv1)
+                        || versions.Contains(TLSv11)
+                    )
+                ) // Downgrading is fine on these old protocols.
+                    managedSsl = await GetMentalisStreamAsync(socket, certificate, ownSocket)
+                        .ConfigureAwait(false);
 
-                    if (bcCertificate != null)
-                    {
-                        Ssl3TlsServer connTls = new(
-#if DEBUG
-                        new Rc4TlsCrypto(true)
-#else
-                        new Rc4TlsCrypto(false)
-#endif
-                        , bcCertificate.Certificate, bcCertificate.PrivateKey);
-                        Org.BouncyCastle.Tls.TlsServerProtocol serverProtocol = new(new NetworkStream(socket, ownSocket));
-
-                        serverProtocol.Accept(connTls);
-
-                        return serverProtocol.Stream;
-                    }
-                }
-
-                if (maxSslVersion != TLSv11 || versions.Contains(SSLv3) || versions.Contains(TLSv1)) // Downgrading is fine on these old protocols.
-                    return new Org.Mentalis.Security.Ssl.SecureNetworkStream(new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server)), ownSocket);
+                if (managedSsl != null)
+                    return managedSsl;
             }
 #pragma warning restore
 
-            SslStream sslStream = new SslStream(new NetworkStream(socket, ownSocket), false);
+            var sslStream = new SslStream(new NetworkStream(socket, ownSocket), false);
 
             await sslStream.AuthenticateAsServerAsync(certificate).ConfigureAwait(false);
             return sslStream;
         }
 
         public static Stream AuthenticateAsServer(
-             Socket socket,
-             SslServerAuthenticationOptions authOptions,
-             bool forceSsl,
-             bool ownSocket,
-             out X509Certificate2 clientCertificate,
-             out int[] clientCertificateErrors
-             )
+            Socket socket,
+            SslServerAuthenticationOptions authOptions,
+            bool forceSsl,
+            bool ownSocket,
+            out X509Certificate2 clientCertificate,
+            out int[] clientCertificateErrors
+        )
         {
             clientCertificate = null;
             clientCertificateErrors = null;
@@ -251,8 +296,8 @@ namespace FixedSsl
 
             // total 5 bytes
 
-            byte[] header = new byte[TlsParser.TLS_HEADER_LEN];
-            int received = socket.Receive(header, SocketFlags.Peek);
+            var header = new byte[TlsParser.TLS_HEADER_LEN];
+            var received = socket.Receive(header, SocketFlags.Peek);
             if (received != TlsParser.TLS_HEADER_LEN)
             {
 #if DEBUG
@@ -261,8 +306,8 @@ namespace FixedSsl
                 return null;
             }
 
-            bool ssl = header[0] == 0x16; // content type needs to be handshake (0x16)
-            bool sslV2 = (header[0] & 0x80) != 0 || header[0] == 0x80; // SSLv2 Client Hello indicator
+            var ssl = header[0] == 0x16; // content type needs to be handshake (0x16)
+            var sslV2 = (header[0] & 0x80) != 0 || header[0] == 0x80; // SSLv2 Client Hello indicator
 
             if (!ssl && !sslV2)
             {
@@ -276,7 +321,7 @@ namespace FixedSsl
                 return new NetworkStream(socket, ownSocket);
             }
 
-            int totalLength = 0;
+            var totalLength = 0;
             byte[] clientHello = null;
 
             if (ssl)
@@ -285,13 +330,21 @@ namespace FixedSsl
 
                 int r;
 
-                totalLength = TlsParser.TLS_HEADER_LEN + EndianAwareConverter.ToUInt16(header, Endianness.BigEndian, 3); ;
+                totalLength =
+                    TlsParser.TLS_HEADER_LEN
+                    + EndianAwareConverter.ToUInt16(header, Endianness.BigEndian, 3);
+                ;
 
                 clientHello = new byte[totalLength];
 
                 while (received < totalLength)
                 {
-                    r = socket.Receive(clientHello, received, totalLength - received, SocketFlags.Peek);
+                    r = socket.Receive(
+                        clientHello,
+                        received,
+                        totalLength - received,
+                        SocketFlags.Peek
+                    );
                     if (r == 0)
                         break;
                     received += r;
@@ -306,7 +359,9 @@ namespace FixedSsl
                     if (forceSsl)
                     {
 #if DEBUG
-                        CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid clientHello data.");
+                        CustomLogger.LoggerAccessor.LogError(
+                            "[SslSocket] - Invalid clientHello data."
+                        );
 #endif
                         return null;
                     }
@@ -326,7 +381,12 @@ namespace FixedSsl
 
                 while (received < totalLength)
                 {
-                    r = socket.Receive(clientHello, received, totalLength - received, SocketFlags.Peek);
+                    r = socket.Receive(
+                        clientHello,
+                        received,
+                        totalLength - received,
+                        SocketFlags.Peek
+                    );
                     if (r == 0)
                         break;
                     received += r;
@@ -335,7 +395,9 @@ namespace FixedSsl
                 if (received < totalLength)
                 {
 #if DEBUG
-                    CustomLogger.LoggerAccessor.LogError($"[SslSocket] - Socket error while picking clientHello data (Excpected:{totalLength} Received:{received}).");
+                    CustomLogger.LoggerAccessor.LogError(
+                        $"[SslSocket] - Socket error while picking clientHello data (Excpected:{totalLength} Received:{received})."
+                    );
 #endif
                     return null;
                 }
@@ -346,7 +408,9 @@ namespace FixedSsl
                     if (forceSsl)
                     {
 #if DEBUG
-                        CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid clientHello data.");
+                        CustomLogger.LoggerAccessor.LogError(
+                            "[SslSocket] - Invalid clientHello data."
+                        );
 #endif
                         return null;
                     }
@@ -365,17 +429,29 @@ namespace FixedSsl
                 return new NetworkStream(socket, ownSocket);
             }
 
-            int parseResult = TlsParser.ParseTlsHeader(clientHello, out string hostname, out bool isSslV2, out int maxSslVersion, out List<int> versions, out List<int> cipherSuites);
+            var parseResult = TlsParser.ParseTlsHeader(
+                clientHello,
+                out var hostname,
+                out var isSslV2,
+                out var maxSslVersion,
+                out var versions,
+                out var cipherSuites
+            );
 #if DEBUG
-            CustomLogger.LoggerAccessor.LogInfo($"[SslSocket] - ClientHello (status:{parseResult}) params: Hostname:{hostname} IsSSLV2:{isSslV2} MaxSSLVersion:{maxSslVersion} Versions:{(versions.Count > 0 ? string.Join(", ", versions.Select(v => $"0x{v:X4}")) : "none")} CipherSuites:{(cipherSuites.Count > 0 ? string.Join(", ", cipherSuites.Select(cs => $"0x{cs:X4}")) : "none")}");
+            CustomLogger.LoggerAccessor.LogInfo(
+                $"[SslSocket] - ClientHello (status:{parseResult}) params: Hostname:{hostname} IsSSLV2:{isSslV2} MaxSSLVersion:{maxSslVersion} Versions:{(versions.Count > 0 ? string.Join(", ", versions.Select(v => $"0x{v:X4}")) : "none")} CipherSuites:{(cipherSuites.Count > 0 ? string.Join(", ", cipherSuites.Select(cs => $"0x{cs:X4}")) : "none")}"
+            );
 #endif
-            X509Certificate2 certificate = (X509Certificate2)authOptions.ServerCertificateSelectionCallback?.Invoke(socket, hostname);
+            var certificate = (X509Certificate2)
+                authOptions.ServerCertificateSelectionCallback?.Invoke(socket, hostname);
             if (certificate == null)
             {
                 if (forceSsl)
                 {
 #if DEBUG
-                    CustomLogger.LoggerAccessor.LogError("[SslSocket] - Invalid certificate from callback.");
+                    CustomLogger.LoggerAccessor.LogError(
+                        "[SslSocket] - Invalid certificate from callback."
+                    );
 #endif
                     return null;
                 }
@@ -384,64 +460,65 @@ namespace FixedSsl
 
             var allowedProtocols = authOptions.EnabledSslProtocols.GetEnabledProtocols();
 #pragma warning disable
-            // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis if that's the case.
+            // Microsoft doesn't like our FESL exploit, so we fallback to a older crypto supported by Mentalis or BC if that's the case.
             if (
-                    (allowedProtocols.Contains(SslProtocols.Ssl3) || allowedProtocols.Contains(SslProtocols.Tls) || allowedProtocols.Contains(SslProtocols.Tls11)) &&
-                    (
-                        maxSslVersion == SSLv3 ||
-                        maxSslVersion == TLSv1 ||
-                        maxSslVersion == TLSv11 ||
-                        (!certificate.Verify() && versions.Any(v => v == SSLv3 || v == TLSv1 || v == TLSv11))
+                (
+                    allowedProtocols.Contains(SslProtocols.Ssl3)
+                    || allowedProtocols.Contains(SslProtocols.Tls)
+                    || allowedProtocols.Contains(SslProtocols.Tls11)
+                    || allowedProtocols.Contains(SslProtocols.Tls12)
+                )
+                && (
+                    maxSslVersion == SSLv3
+                    || maxSslVersion == TLSv1
+                    || maxSslVersion == TLSv11
+                    || maxSslVersion == TLSv12
+                    || (
+                        !certificate.Verify()
+                        && versions.Any(v => v == SSLv3 || v == TLSv1 || v == TLSv11 || v == TLSv12)
                     )
                 )
+            )
             {
-                if (!isSslV2 && (cipherSuites.Exists(c => Ssl3TlsServer.AESCipherSuites.Contains(c)) || cipherSuites.Exists(c => Ssl3TlsServer.RC4CipherSuites.Contains(c))))
-                {
-                    BCSSLCertificate bcCertificate = null;
+                Stream managedSsl = GetBouncyStreamAsync(
+                    isSslV2,
+                    cipherSuites,
+                    certificate,
+                    socket,
+                    ownSocket
+                ).Result;
 
-                    try
-                    {
-                        bcCertificate = certificate;
-                    }
-                    catch (ArgumentException)
-                    {
-                        // Fallback to Mentalis.
-                    }
+                if (
+                    managedSsl == null
+                    && (
+                        maxSslVersion != TLSv12
+                        || versions.Contains(SSLv3)
+                        || versions.Contains(TLSv1)
+                        || versions.Contains(TLSv11)
+                    )
+                ) // Downgrading is fine on these old protocols.
+                    managedSsl = GetMentalisStreamAsync(socket, certificate, ownSocket).Result;
 
-                    if (bcCertificate != null)
-                    {
-                        Ssl3TlsServer connTls = new(
-#if DEBUG
-                        new Rc4TlsCrypto(true)
-#else
-                        new Rc4TlsCrypto(false)
-#endif
-                        , bcCertificate.Certificate, bcCertificate.PrivateKey);
-                        Org.BouncyCastle.Tls.TlsServerProtocol serverProtocol = new(new NetworkStream(socket, ownSocket));
-
-                        serverProtocol.Accept(connTls);
-
-                        return serverProtocol.Stream;
-                    }
-                }
-
-                if (maxSslVersion != TLSv11 || versions.Contains(SSLv3) || versions.Contains(TLSv1)) // Downgrading is fine on these old protocols.
-                    return new Org.Mentalis.Security.Ssl.SecureNetworkStream(new Org.Mentalis.Security.Ssl.SecureSocket(socket, new Org.Mentalis.Security.Ssl.SecurityOptions(legacyProtocols, new Org.Mentalis.Security.Certificates.Certificate(certificate), Org.Mentalis.Security.Ssl.ConnectionEnd.Server)), ownSocket);
+                if (managedSsl != null)
+                    return managedSsl;
             }
 #pragma warning restore
 
             int[] clientCertErr = null;
             X509Certificate2 clientCert = null;
-            bool bypassClientCertValidation = ClientCertificateCNBypassList.Contains(hostname);
+            var bypassClientCertValidation = ClientCertificateCNBypassList.Contains(hostname);
 
-            if (bypassClientCertValidation || authOptions.RemoteCertificateValidationCallback == null)
+            if (
+                bypassClientCertValidation
+                || authOptions.RemoteCertificateValidationCallback == null
+            )
             {
                 authOptions.RemoteCertificateValidationCallback = (t, c, ch, e) =>
                 {
                     if (c == null)
                         return true;
 
-                    X509Certificate2 c2 = c as X509Certificate2;
+                    var c2 = c as X509Certificate2;
                     c2 ??= new X509Certificate2(c.GetRawCertData());
 
                     clientCert = c2;
@@ -450,7 +527,7 @@ namespace FixedSsl
                 };
             }
 
-            SslStream sslStream = new SslStream(new NetworkStream(socket, ownSocket), false);
+            var sslStream = new SslStream(new NetworkStream(socket, ownSocket), false);
 
             // Shortcut if status-code is at least -3 or upper
             if (parseResult > -4)
@@ -467,9 +544,121 @@ namespace FixedSsl
             return sslStream;
         }
 
-        public static IAsyncResult BeginAuthenticateAsServer(SslProtocols protocols, Socket socket, X509Certificate2 certificate, bool forceSsl, bool ownSocket, AsyncCallback callback, object state)
+        private static Task<Stream?> GetMentalisStreamAsync(
+            Socket socket,
+            X509Certificate2 certificate,
+            bool ownSocket
+        )
         {
-            return AuthenticateAsServerAsync(protocols, socket, certificate, forceSsl, ownSocket).AsApm(callback, state);
+            TaskCompletionSource<Stream?> tcs = new(
+                TaskCreationOptions.RunContinuationsAsynchronously
+            );
+            var timeoutCts = new CancellationTokenSource(15000); // 15 seconds timeout
+
+            timeoutCts.Token.Register(() =>
+            {
+                tcs.TrySetResult(null);
+            });
+
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    var secureStream = new SecureNetworkStream(
+                        new SecureSocket(
+                            socket,
+                            new SecurityOptions(
+                                legacyProtocols,
+                                new Security.Certificates.Certificate(certificate),
+                                ConnectionEnd.Server,
+                                CredentialVerification.Auto,
+                                null,
+                                null,
+                                SecurityFlags.Default,
+                                SslAlgorithms.SECURE_CIPHERS,
+                                null
+                            )
+                        ),
+                        ownSocket
+                    );
+
+                    tcs.TrySetResult(secureStream);
+                }
+                catch
+                {
+                    tcs.TrySetResult(null);
+                }
+                finally
+                {
+                    timeoutCts.Dispose();
+                }
+            });
+
+            return tcs.Task;
+        }
+
+        private static Task<Stream?> GetBouncyStreamAsync(
+            bool isSslV2,
+            List<int> cipherSuites,
+            X509Certificate2 certificate,
+            Socket socket,
+            bool ownSocket
+        )
+        {
+            TaskCompletionSource<Stream?> tcs = new(
+                TaskCreationOptions.RunContinuationsAsynchronously
+            );
+            var timeoutCts = new CancellationTokenSource(15000); // 15 seconds timeout
+
+            timeoutCts.Token.Register(() =>
+            {
+                tcs.TrySetResult(null);
+            });
+
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    // Make sure BC can handle our request.
+                    if (!isSslV2 && cipherSuites.Any(c => SupportedBCCipherSet.Contains(c)))
+                    {
+                        Ssl3TlsServerProtocol serverProtocol = new(
+                            certificate,
+                            new NetworkStream(socket, ownSocket)
+                        );
+
+                        tcs.TrySetResult(serverProtocol.Stream);
+
+                        return;
+                    }
+
+                    throw new Exception();
+                }
+                catch
+                {
+                    tcs.TrySetResult(null);
+                }
+                finally
+                {
+                    timeoutCts.Dispose();
+                }
+            });
+
+            return tcs.Task;
+        }
+
+        public static IAsyncResult BeginAuthenticateAsServer(
+            SslProtocols protocols,
+            Socket socket,
+            X509Certificate2 certificate,
+            bool forceSsl,
+            bool ownSocket,
+            AsyncCallback callback,
+            object state
+        )
+        {
+            return AuthenticateAsServerAsync(protocols, socket, certificate, forceSsl, ownSocket)
+                .AsApm(callback, state);
         }
 
         public static IAsyncResult BeginAuthenticateAsServer(
@@ -480,7 +669,8 @@ namespace FixedSsl
             AsyncCallback callback,
             object state,
             out X509Certificate2 clientCertificate,
-            out int[] clientCertificateErrors)
+            out int[] clientCertificateErrors
+        )
         {
             X509Certificate2 localClientCert = null;
             int[] localCertErrors = null;
@@ -493,7 +683,8 @@ namespace FixedSsl
                     forceSsl,
                     ownSocket,
                     out localClientCert,
-                    out localCertErrors);
+                    out localCertErrors
+                );
             });
 
             clientCertificate = localClientCert;
@@ -511,19 +702,21 @@ namespace FixedSsl
         /// Certificate validation callback, fixes the ndreams objs endpoint in ApacheNet (usage of wildcard amazon certs).
         /// </summary>
         private static bool ValidateRemoteCertificate(
-           object sender,
-           X509Certificate cert,
-           X509Chain chain,
-           SslPolicyErrors errors)
+            object sender,
+            X509Certificate cert,
+            X509Chain chain,
+            SslPolicyErrors errors
+        )
         {
-            if (errors == SslPolicyErrors.None)
+            if (BypassRemoteCertificateChecks || errors == SslPolicyErrors.None)
                 return true;
 
             // Extract CN or SAN hostnames
-            var certName = cert?.Subject?.Split(',')
+            var certName = cert
+                ?.Subject?.Split(',')
                 .Select(s => s.Trim())
                 .FirstOrDefault(s => s.StartsWith("CN=", StringComparison.OrdinalIgnoreCase))
-                ?.Substring(3);
+                ?[3..];
 
             if (string.IsNullOrEmpty(certName))
                 return false;
@@ -532,7 +725,10 @@ namespace FixedSsl
             string requestHost = null;
             if (sender is HttpWebRequest req)
                 requestHost = req.RequestUri.Host;
-            else if (sender is SslStream sslStream && !string.IsNullOrEmpty(sslStream.TargetHostName))
+            else if (
+                sender is SslStream sslStream
+                && !string.IsNullOrEmpty(sslStream.TargetHostName)
+            )
                 requestHost = sslStream.TargetHostName;
 
             if (string.IsNullOrEmpty(requestHost))
@@ -544,9 +740,11 @@ namespace FixedSsl
             else if (_invalidCNBypassList.Contains(certName))
                 return true;
 
-            CustomLogger.LoggerAccessor.LogError("[SslSocket] - ValidateRemoteCertificate: X509Certificate [{0}] Policy Error: '{1}'",
+            CustomLogger.LoggerAccessor.LogError(
+                "[SslSocket] - ValidateRemoteCertificate: X509Certificate [{0}] Policy Error: '{1}'",
                 cert.Subject,
-                errors.ToString());
+                errors.ToString()
+            );
 
             return false;
         }
@@ -565,26 +763,30 @@ namespace FixedSsl
         }
 
         #region Helpers
-        private static IAsyncResult AsApm<T>(this Task<T> task,
-                                    AsyncCallback callback,
-                                    object state)
+        private static IAsyncResult AsApm<T>(
+            this Task<T> task,
+            AsyncCallback callback,
+            object state
+        )
         {
-            if (task == null)
-                throw new ArgumentNullException(nameof(task));
+            ArgumentNullException.ThrowIfNull(task);
 
             var tcs = new TaskCompletionSource<T>(state);
-            task.ContinueWith(t =>
-            {
-                if (t.IsFaulted && t.Exception != null && t.Exception.InnerExceptions != null)
-                    tcs.TrySetException(t.Exception.InnerExceptions);
-                else if (t.IsCanceled)
-                    tcs.TrySetCanceled();
-                else
-                    tcs.TrySetResult(t.Result);
+            task.ContinueWith(
+                t =>
+                {
+                    if (t.IsFaulted && t.Exception != null && t.Exception.InnerExceptions != null)
+                        tcs.TrySetException(t.Exception.InnerExceptions);
+                    else if (t.IsCanceled)
+                        tcs.TrySetCanceled();
+                    else
+                        tcs.TrySetResult(t.Result);
 
-                if (callback != null)
-                    callback(tcs.Task);
-            }, TaskScheduler.Default);
+                    if (callback != null)
+                        callback(tcs.Task);
+                },
+                TaskScheduler.Default
+            );
             return tcs.Task;
         }
 

@@ -1,49 +1,62 @@
-﻿using System;
-using DNS.Protocol.Utils;
+﻿using DNSLibrary.Utils;
 
-namespace DNS.Protocol.ResourceRecords {
-    public abstract class BaseResourceRecord : IResourceRecord {
-        private IResourceRecord record;
+namespace DNSLibrary.ResourceRecords
+{
+    public abstract class BaseResourceRecord(IResourceRecord record) : IResourceRecord
+    {
+        private readonly IResourceRecord record = record;
 
-        public BaseResourceRecord(IResourceRecord record) {
-            this.record = record;
-        }
-
-        public Domain Name {
+        public Domain Name
+        {
             get { return record.Name; }
         }
 
-        public RecordType Type {
+        public RecordType Type
+        {
             get { return record.Type; }
         }
 
-        public RecordClass Class {
+        public RecordClass Class
+        {
             get { return record.Class; }
         }
 
-        public TimeSpan TimeToLive {
+        public TimeSpan TimeToLive
+        {
             get { return record.TimeToLive; }
         }
 
-        public int DataLength {
+        public int DataLength
+        {
             get { return record.DataLength; }
         }
 
-        public byte[] Data {
+        public byte[] Data
+        {
             get { return record.Data; }
         }
 
-        public int Size {
+        public int Size
+        {
             get { return record.Size; }
         }
 
-        public byte[] ToArray() {
+        public byte[] ToArray()
+        {
             return record.ToArray();
         }
 
-        internal ObjectStringifier Stringify() {
-            return ObjectStringifier.New(this)
-                .Add(nameof(Name), nameof(Type), nameof(Class), nameof(TimeToLive), nameof(DataLength));
+        internal ObjectStringifier Stringify()
+        {
+            return ObjectStringifier
+                .New(this)
+                .Add(
+                    nameof(Name),
+                    nameof(Type),
+                    nameof(Class),
+                    nameof(TimeToLive),
+                    nameof(DataLength)
+                );
         }
     }
 }

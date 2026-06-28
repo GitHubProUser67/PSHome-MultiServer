@@ -1,30 +1,33 @@
-using QuazalServer.QNetZ.DDL;
 using System.Linq.Expressions;
+using QuazalServer.QNetZ.DDL;
 
 namespace QuazalServer.QNetZ
 {
-	public class PlayerInfo
-	{
-		public PlayerInfo()
-		{
-			DataStore = new Dictionary<Type, IPlayerDataStore>();
-		}
+    public class PlayerInfo
+    {
+        public PlayerInfo()
+        {
+            DataStore = new Dictionary<Type, IPlayerDataStore>();
+        }
 
-		public void OnDropped()
-		{
-			if (CurrentSparkGameId != 0)
-			{
-				RDVServices.GameServices.PS3SparkServices.SparkProtocolService.RefreshGames(true, this);
+        public void OnDropped()
+        {
+            if (CurrentSparkGameId != 0)
+            {
+                RDVServices.GameServices.PS3SparkServices.SparkProtocolService.RefreshGames(
+                    true,
+                    this
+                );
             }
 
-			foreach (var ds in DataStore.Values)
-				ds.OnDropped();
-		}
+            foreach (var ds in DataStore.Values)
+                ds.OnDropped();
+        }
 
-		public QClient? Client;	// connection info
-		public uint PID { get; set; } // printcipal ID
-		public uint RVCID { get; set; } // rendez-vous connection ID
-		public uint CurrentSparkGameId { get; set; } = 0; // current spark game lobby id
+        public QClient? Client; // connection info
+        public uint PID { get; set; } // printcipal ID
+        public uint RVCID { get; set; } // rendez-vous connection ID
+        public uint CurrentSparkGameId { get; set; } = 0; // current spark game lobby id
         public uint StationID { get; set; }
         public string AccessKey { get; set; } = string.Empty;
         public string? AccountId { get; set; }
@@ -39,42 +42,49 @@ namespace QuazalServer.QNetZ
         {
             get
             {
-                if (Client == null)
-                    return null;
-
-                return new StationURL(
-                    "prudp",
-                    Client.Endpoint.Address.ToString(),
-                    new Dictionary<string, int>() {
-                        { "port", Client.Endpoint.Port },
-                        { "RVCID", (int)RVCID },
-						//{ "type", 3 }	// TODO: IsPublic and Behind NAT flags
-					});
+                return Client == null
+                    ? null
+                    : new StationURL(
+                        "prudp",
+                        Client.Endpoint.Address.ToString(),
+                        new Dictionary<string, int>()
+                        {
+                            { "port", Client.Endpoint.Port },
+                            { "RVCID", (int)RVCID },
+                            //{ "type", 3 }	// TODO: IsPublic and Behind NAT flags
+                        }
+                    );
             }
         }
 
         // game - specific stuff comes here
-        public T GetData<T>() where T: class
-		{
-			IPlayerDataStore? value;
+        public T GetData<T>()
+            where T : class
+        {
+            IPlayerDataStore? value;
 
-			if (DataStore.TryGetValue(typeof(T), out value))
-				return (T)value;
+            if (DataStore.TryGetValue(typeof(T), out value))
+                return (T)value;
 
-			var createFunc = Expression.Lambda<Func<T>>(
-				Expression.New(typeof(T).GetConstructor(new[] { typeof(PlayerInfo) }), new [] { Expression.Constant(this) })
-			).Compile();
+            var createFunc = Expression
+                .Lambda<Func<T>>(
+                    Expression.New(
+                        typeof(T).GetConstructor(new[] { typeof(PlayerInfo) }),
+                        new[] { Expression.Constant(this) }
+                    )
+                )
+                .Compile();
 
-			DataStore[typeof(T)] = value = (IPlayerDataStore)createFunc();
+            DataStore[typeof(T)] = value = (IPlayerDataStore)createFunc();
 
-			return (T)value;
-		}
+            return (T)value;
+        }
 
-		private Dictionary<Type, IPlayerDataStore> DataStore;
-	}
+        private readonly Dictionary<Type, IPlayerDataStore> DataStore;
+    }
 
-	public interface IPlayerDataStore
-	{
-		void OnDropped();
-	}
+    public interface IPlayerDataStore
+    {
+        void OnDropped();
+    }
 }

@@ -1,5 +1,3 @@
-using System;
-
 namespace Horizon.RT.Common
 {
     #region RT_MSG
@@ -64,6 +62,7 @@ namespace Horizon.RT.Common
         RT_MSG_CLIENT_LEAVE_GROUP,
         RT_MSG_CLIENT_JOIN_GROUP_LIST,
         RT_MSG_CLIENT_LEAVE_GROUP_LIST,
+
         //RT_MSG_CLIENT_APP_FILTER,
         //RT_MSG_CLIENT_APP_FILTER_QOS,
         RT_MSG_CLIENT_MULTI_APP_TOSERVER = 59,
@@ -73,8 +72,7 @@ namespace Horizon.RT.Common
         RT_MSG_CLIENT_AGGREGATE_MESSAGE,
         RT_MSG_SERVER_AGGREGATE_MESSAGE,
         RT_MSG_CLIENT_MAX_MSGLEN,
-        RT_MSG_SERVER_MAX_MSGLEN
-
+        RT_MSG_SERVER_MAX_MSGLEN,
     }
 
     public enum RT_MSG_CONNECT_REJECT_REASON : byte
@@ -85,7 +83,7 @@ namespace Horizon.RT.Common
         RT_MSG_REJECT_APP_SIGNATURE,
         RT_MSG_REJECT_ENCRYPTION,
         RT_MSG_REJECT_ACCESS_KEY,
-        RT_MSG_REJECT_AUX_UDP_FAILURE
+        RT_MSG_REJECT_AUX_UDP_FAILURE,
     }
 
     public enum RT_MSG_CLIENT_DISCONNECT_REASON : byte
@@ -98,7 +96,7 @@ namespace Horizon.RT.Common
         RT_MSG_CLIENT_DISCONNECT_INACTIVITY,
         RT_MSG_CLIENT_DISCONNECT_SHUTDOWN,
         RT_MSG_CLIENT_DISCONNECT_LENGTH_MISMATCH,
-        MAX_RT_MSG_CLIENT_DISCONNECT_REASON
+        MAX_RT_MSG_CLIENT_DISCONNECT_REASON,
     }
 
     public enum RT_MSG_FORCED_DISCONNECT_REASON : int
@@ -110,7 +108,7 @@ namespace Horizon.RT.Common
         RT_MSG_FORCED_DISCONNECT_END_GAME,
         RT_MSG_FORCED_DISCONNECT_INACTIVITY,
         RT_MSG_FORCED_DISCONNECT_BAD_PERF,
-        RT_MSG_FORCED_DISCONNECT_BANNED
+        RT_MSG_FORCED_DISCONNECT_BANNED,
     }
 
     public enum RT_MSG_SERVER_CONNECTION_EVENT : int
@@ -151,16 +149,29 @@ namespace Horizon.RT.Common
         RT_TOKEN_SERVER_LIST_GRANTED = 0xC,
         RT_TOKEN_SERVER_LIST_FREED = 0xD,
         RT_TOKEN_SERVER_LIST_RELEASED = 0xE,
-        RT_TOKEN_SERVER_OWNER_REMOVED = 0xF
+        RT_TOKEN_SERVER_OWNER_REMOVED = 0xF,
     }
 
     #endregion
+
+    public enum NetDisconnectReason : short
+    {
+            None                  = 0,   // default / unknown              joiner r8 = 0
+            Normal                = 1,   // clean / graceful (host left)   joiner r8 = 1
+            ConnectFail           = 2,   // initial connect failed         joiner r8 = 0xA
+            Inactivity            = 3,   // keepalive / timeout            joiner r8 = 0xB
+            MessageLengthMismatch = 4,   // malformed/corrupt wire         joiner r8 = 0xC
+            Shutdown              = 5,   // server/process shutdown        joiner r8 = 0xD
+            StreamMediaFail       = 6,   // streaming media failure        joiner r8 = 0xE
+            UpdateFail            = 7,   // required online update failed  joiner r8 = 0xF
+            AppDefinedStart       = 8,   // first app-defined value
+    }
 
     public enum SECURITY_MODE : int
     {
         MODE_UNKNOWN,
         MODE_SECURED,
-        MODE_UNSECURED
+        MODE_UNSECURED,
     }
 
     public enum MediusAssignedGameType : int
@@ -176,284 +187,354 @@ namespace Horizon.RT.Common
         /// Session begin failed
         /// </summary>
         MediusBeginSessionFailed = -1000,
+
         /// <summary>
         /// Account already exists, can not register with the same account name.
         /// </summary>
         MediusAccountAlreadyExists = -999,
+
         /// <summary>
         /// Account name was not found.
         /// </summary>
         MediusAccountNotFound = -998,
+
         /// <summary>
-        /// The account is marked as already being logged in to the system. 
+        /// The account is marked as already being logged in to the system.
         /// </summary>
         MediusAccountLoggedIn = -997,
+
         /// <summary>
         /// Unable to properly end the session.
         /// </summary>
         MediusEndSessionFailed = -996,
+
         /// <summary>
         /// Login failed.
         /// </summary>
         MediusLoginFailed = -995,
+
         /// <summary>
         /// Registration failed.
         /// </summary>
         MediusRegistrationFailed = -994,
+
         /// <summary>
         /// The login step was incorrect.  For example, login without having a session.
         /// </summary>
         MediusIncorrectLoginStep = -993,
+
         /// <summary>
         /// The user is already the leader of a clan, and can not be the leader of multiple clans.
         /// </summary>
         MediusAlreadyLeaderOfClan = -992,
+
         /// <summary>
         /// World Manager error.
         /// </summary>
         MediusWMError = -991,
+
         /// <summary>
         /// The player attempted some request that requires being the leader of the clan.
         /// </summary>
         MediusNotClanLeader = -990,
+
         /// <summary>
-        /// The player is not privileged to make the request. <Br></Br> 
+        /// The player is not privileged to make the request. <Br></Br>
         /// Typically, the user’s session has been destroyed, but is still connected to the server.
         /// </summary>
         MediusPlayerNotPrivileged = -989,
+
         /// <summary>
         /// An internal database error occurred.
         /// </summary>
         MediusDBError = -988,
+
         /// <summary>
         /// A DME layer error.
         /// </summary>
         MediusDMEError = -987,
+
         /// <summary>
         /// The maximum number of worlds has been exceeded.
         /// </summary>
         MediusExceedsMaxWorlds = -986,
+
         /// <summary>
         /// The request has been denied.
         /// </summary>
         MediusRequestDenied = -985,
+
         /// <summary>
         /// Setting the game list filter failed.
         /// </summary>
         MediusSetGameListFilterFailed = -984,
+
         /// <summary>
         /// Clearing the game list filter failed.
         /// </summary>
         MediusClearGameListFilterFailed = -983,
+
         /// <summary>
         /// Getting the game list filter failed.
         /// </summary>
         MediusGetGameListFilterFailed = -982,
+
         /// <summary>
         /// The number of filters is at the maximum.
         /// </summary>
         MediusNumFiltersAtMax = -981,
+
         /// <summary>
         /// The filter being referenced does not exist.
         /// </summary>
         MediusFilterNotFound = -980,
+
         /// <summary>
         /// The request message was invalid.
         /// </summary>
         MediusInvalidRequestMsg = -979,
+
         /// <summary>
         /// The specified password was invalid.
         /// </summary>
         MediusInvalidPassword = -978,
+
         /// <summary>
         /// The game was not found.
         /// </summary>
         MediusGameNotFound = -977,
+
         /// <summary>
         /// The channel was not found.
         /// </summary>
         MediusChannelNotFound = -976,
+
         /// <summary>
         /// The game name already exists.
         /// </summary>
         MediusGameNameExists = -975,
+
         /// <summary>
         /// The channel name already exists.
         /// </summary>
         MediusChannelNameExists = -974,
+
         /// <summary>
         /// The game name was not found.
         /// </summary>
         MediusGameNameNotFound = -973,
+
         /// <summary>
         /// The player has been banned.
         /// </summary>
         MediusPlayerBanned = -972,
+
         /// <summary>
         /// The clan was not found.
         /// </summary>
         MediusClanNotFound = -971,
+
         /// <summary>
         /// The clan name already exists.
         /// </summary>
         MediusClanNameInUse = -970,
+
         /// <summary>
         /// Session key is invalid.
         /// </summary>
         MediusSessionKeyInvalid = -969,
+
         /// <summary>
         /// The text string is invalid.
         /// </summary>
         MediusTextStringInvalid = -968,
+
         /// <summary>
         /// The filtering failed.
         /// </summary>
         MediusFilterFailed = -967,
+
         /// <summary>
         /// General fail message.
         /// </summary>
         MediusFail = -966,
+
         /// <summary>
         /// Medius File Services (MFS) Internal error.
         /// </summary>
         MediusFileInternalAccessError = -965,
+
         /// <summary>
         /// Insufficient permissions for the MFS request.
         /// </summary>
         MediusFileNoPermissions = -964,
+
         /// <summary>
         /// The file requested in MFS does not exist.
         /// </summary>
         MediusFileDoesNotExist = -963,
+
         /// <summary>
         /// The file requested in MFS already exists.
         /// </summary>
         MediusFileAlreadyExists = -962,
+
         /// <summary>
         /// The filename is not valid in MFS.
         /// </summary>
         MediusFileInvalidFilename = -961,
+
         /// <summary>
         /// The user’s quota has been exceeded.
         /// </summary>
         MediusFileQuotaExceeded = -960,
+
         /// <summary>
         /// The cache system had an internal failure.
         /// </summary>
         MediusCacheFailure = -959,
+
         /// <summary>
         /// The data already exists.
         /// </summary>
         MediusDataAlreadyExists = -958,
+
         /// <summary>
         /// The data does not exist.
         /// </summary>
         MediusDataDoesNotExist = -957,
+
         /// <summary>
         /// A maximum count has been exceeded.
         /// </summary>
         MediusMaxExceeded = -956,
+
         /// <summary>
         /// The key used is incorrect.
         /// </summary>
         MediusKeyError = -955,
+
         /// <summary>
         /// The application ID is not compatible.
         /// </summary>
         MediusIncompatibleAppID = -954,
+
         /// <summary>
         /// The account has been banned.
         /// </summary>
         MediusAccountBanned = -953,
+
         /// <summary>
         /// The machine has been banned.
         /// </summary>
         MediusMachineBanned = -952,
+
         /// <summary>
         /// The leader of the clan can not leave. <br></br> Must disband instead.
         /// </summary>
         MediusLeaderCannotLeaveClan = -951,
+
         /// <summary>
         /// The feature requested is not enabled.
         /// </summary>
         MediusFeatureNotEnabled = -950,
+
         /// <summary>
         /// The same DNAS signature is already logged in.
         /// </summary>
         MediusDNASSignatureLoggedIn = -949,
+
         /// <summary>
         /// The world is full.  Unable to join.
         /// </summary>
         MediusWorldIsFull = -948,
+
         /// <summary>
         /// The user is not a member of the clan.
         /// </summary>
         MediusNotClanMember = -947,
+
         /// <summary>
         /// The server is busy.  Try again later.
         /// </summary>
         MediusServerBusy = -946,
+
         /// <summary>
         /// The maximum number of game worlds per lobby world has been exceeded.
         /// </summary>
         MediusNumGameWorldsPerLobbyWorldExceeded = -945,
+
         /// <summary>
         /// The account name is not UC compliant.
         /// </summary>
         MediusAccountNotUCCompliant = -944,
+
         /// <summary>
         /// The password is not UC compliant.
         /// </summary>
         MediusPasswordNotUCCompliant = -943,
+
         /// <summary>
         /// There is an internal gateway error.
         /// </summary>
         MediusGatewayError = -942,
+
         /// <summary>
         /// The transaction has been cancelled.
         /// </summary>
         MediusTransactionCanceled = -941,
+
         /// <summary>
         /// The session has failed.
         /// </summary>
         MediusSessionFail = -940,
+
         /// <summary>
         /// The token is already in use.
         /// </summary>
         MediusTokenAlreadyTaken = -939,
+
         /// <summary>
         /// The token being referenced does not exist.
         /// </summary>
         MediusTokenDoesNotExist = -938,
+
         /// <summary>
         /// The subscription has been aborted.
         /// </summary>
         MediusSubscriptionAborted = -937,
+
         /// <summary>
         /// The subscription is invalid.
         /// </summary>
         MediusSubscriptionInvalid = -936,
+
         /// <summary>
         /// The user is not a member of an list.
         /// </summary>
         MediusNotAMember = -935,
         MediusBillingVerificationRequired = -934,
+
         /// <summary>
         /// The user's access level is insufficient
         /// </summary>
         MediusAccessLevelInsufficient = -933,
+
         /// <summary>
         /// The game world is closed
         /// </summary>
         MediusWorldClosed = -932,
         MediusTransactionTimedOut = -931,
+
         // MediusCASError = -931 //Zipper Interactive
         MediusStepSendFailed = -930,
         MediusMatchTypeNoMatch_DEPRECATED = -929,
+
         /// <summary>
         /// Medius Matchmaking Server not found
         /// </summary>
         MediusMatchServerNotFound = -928,
+
         /// <summary>
         /// Matchmake Create Game Failed
         /// </summary>
@@ -463,51 +544,63 @@ namespace Horizon.RT.Common
         MediusSortCriteriaNotFound = -924,
         MediusEntitlementCheckFailed = -923,
         ExtraMediusCallbackStatus = -1,
+
         /// <summary>
         /// Success
         /// </summary>
         MediusSuccess = 0,
+
         /// <summary>
         /// No results.  This is a valid state.
         /// </summary>
         MediusNoResult = 1,
+
         /// <summary>
         /// The request has been accepted.
         /// </summary>
         MediusRequestAccepted = 2,
+
         /// <summary>
         /// The world has been created with reduced size.
         /// </summary>
         MediusWorldCreatedSizeReduced = 3,
+
         /// <summary>
         /// The criteria has been met.
         /// </summary>
         MediusPass = 4,
+
         /// <summary>
         /// Join Queue for PS3 TicketLogin
         /// </summary>
         MediusInQueue = 5,
+
         /// <summary>
         /// Join Assigned Game pre-determined by server
         /// </summary>
         MediusJoinAssignedGame = 6,
+
         /// <summary>
         /// If no games exist for matchmaking host one pre-determined by database/server
         /// </summary>
         MediusMatchTypeHostGame = 7,
+
         /// <summary>
-        /// Referral to Medius Matchmaking Service <br></br> 
-        /// 3rd possible response from MediusMatchPartyResponse 
+        /// Referral to Medius Matchmaking Service <br></br>
+        /// 3rd possible response from MediusMatchPartyResponse
         /// </summary>
         MediusMatchTypeReferral = 8,
+
         /// <summary>
         /// MediusJoinLeastPopulatedChannel return MediusAlreadyInLeastPopulatedChannel
         /// </summary>
         MediusAlreadyInLeastPopulatedChannel = 9,
+
         /// <summary>
-        /// 
+        ///
         /// </summary>
         MediusVulgarityFound = 10,
+
         /// <summary>
         /// Matchmaking in progress
         /// </summary>
@@ -570,7 +663,7 @@ namespace Horizon.RT.Common
     #region MediusBuddyAddType
     /// <summary>
     /// Introduced in Medius Library version (v1.50)
-    /// There is a new enumeration type called MediusBuddyAddType.  When set to 
+    /// There is a new enumeration type called MediusBuddyAddType.  When set to
     /// AddSymmetric, then when a player accepts your buddy invitation, you will
     /// automatically be updated in their buddy list as well.Default behaviour of
     /// Medius is to require both users to invite each other, AddSymmetric requires
@@ -583,10 +676,11 @@ namespace Horizon.RT.Common
         /// but without the requirement that the buddy see you on their list
         /// </summary>
         AddSingle,
+
         /// <summary>
         /// Request that each person appears on the other's buddy list.
         /// </summary>
-        AddSymmetric
+        AddSymmetric,
     }
     #endregion
 
@@ -606,22 +700,27 @@ namespace Horizon.RT.Common
         /// Player is currently not connected.
         /// </summary>
         MediusPlayerDisconnected,
+
         /// <summary>
         /// Player is currently on an authentication world.
         /// </summary>
         MediusPlayerInAuthWorld,
+
         /// <summary>
         /// Player is currently in a chat channel.
         /// </summary>
         MediusPlayerInChatWorld,
+
         /// <summary>
         /// Player is currently in a game world.
         /// </summary>
         MediusPlayerInGameWorld,
+
         /// <summary>
         /// Player is online in some other universe
         /// </summary>
         MediusPlayerInOtherUniverse,
+
         /// <summary>
         /// Reserved for internal use
         /// </summary>
@@ -636,18 +735,21 @@ namespace Horizon.RT.Common
         /// No change to current encoding.
         /// </summary>
         MediusCharacterEncoding_NoUpdate,
+
         /// <summary>
         /// ISO-8859-1 single byte encoding 0x00 - 0xFF.
         /// </summary>
         MediusCharacterEncoding_ISO8859_1,
+
         /// <summary>
         /// UTF-8 Multibyte Encoding.
         /// </summary>
         MediusCharacterEncoding_UTF8,
+
         /// <summary>
         /// Placeholder to normalize the field size on different compilers
         /// </summary>
-        ExtraMediusCharacterEncodingType = 0xffffff
+        ExtraMediusCharacterEncodingType = 0xffffff,
     }
     #endregion
 
@@ -682,8 +784,9 @@ namespace Horizon.RT.Common
         MediusChatChallengeResponseJoin = 1,
         MediusChatChallengeResponseAccept = 2,
         MediusChatChallengeResponseDenied = 3,
-        MediusChatChallengeResponseBusy = 4
+        MediusChatChallengeResponseBusy = 4,
     }
+
     public enum MediusChatStatus : int
     {
         MediusChatStatusNoResponse = 0,
@@ -695,7 +798,7 @@ namespace Horizon.RT.Common
         MediusChatStatusLoading = 6,
         MediusChatStatusInGame = 7,
         MediusChatStatusChatHost = 8,
-        MediusChatStatusChatClient = 9
+        MediusChatStatusChatClient = 9,
     }
 
     #region MediusClanStatus
@@ -708,6 +811,7 @@ namespace Horizon.RT.Common
         /// The clan is active
         /// </summary>
         ClanActive,
+
         /// <summary>
         /// The chan has been disbanded
         /// </summary>
@@ -734,10 +838,12 @@ namespace Horizon.RT.Common
         /// The connection is on a modem.
         /// </summary>
         Modem = 0,
+
         /// <summary>
         /// The connection is on Ethernet.
         /// </summary>
         Ethernet = 1,
+
         /// <summary>
         /// The connection is wireless
         /// </summary>
@@ -756,10 +862,12 @@ namespace Horizon.RT.Common
         /// DNAS Console ID
         /// </summary>
         DnasConsoleID,
+
         /// <summary>
         /// DNAS title ID
         /// </summary>
         DnasTitleID,
+
         /// <summary>
         /// DNAS disk ID
         /// </summary>
@@ -777,18 +885,21 @@ namespace Horizon.RT.Common
         /// Use a Memory Card as the target
         /// </summary>
         MEDIUS_MEMCARD,
+
         /// <summary>
         /// Use the HDD as the target
         /// </summary>
         MEDIUS_HDD,
+
         /// <summary>
         /// Use Host0 as the target
         /// </summary>
         MEDIUS_HOST0,
+
         /// <summary>
         /// Placeholder to normalize the field size on different compilers
         /// </summary>
-        ExtraMediusDeviceType = 0xffffff
+        ExtraMediusDeviceType = 0xffffff,
     }
     #endregion
 
@@ -804,30 +915,36 @@ namespace Horizon.RT.Common
         /// Sony Computer Entertainment, America
         /// </summary>
         SCEA,
+
         /// <summary>
         /// Sony Computer Entertainment, Europe
         /// </summary>
         SCEE,
+
         /// <summary>
         /// Sony Computer Entertainment, Japan
         /// </summary>
         SCEI,
+
         /// <summary>
         /// Third Party SCEA
         /// </summary>
         SCEA_THIRDPARTY,
+
         /// <summary>
         /// Third Party SCEE
         /// </summary>
         SCEE_THIRDPARTY,
+
         /// <summary>
         /// Third Party SCEI
         /// </summary>
         SCEI_THIRDPARTY,
+
         /// <summary>
         /// Placeholder to normalize the field size on different compilers
         /// </summary>
-        ExtraSCETerritoryType = 0xffffff
+        ExtraSCETerritoryType = 0xffffff,
     }
     #endregion
 
@@ -841,26 +958,31 @@ namespace Horizon.RT.Common
         /// Stored Successfully
         /// </summary>
         MediusStoredSuccess,
+
         /// <summary>
         /// File not found
         /// </summary>
         MediusStoredFileNotFound = -1,
+
         /// <summary>
         /// Device not found
         /// </summary>
         MediusStoredDeviceNotFound = -2,
+
         /// <summary>
         /// Directory Not Found
         /// </summary>
         MediusStoredDirectoryNotFound = -3,
+
         /// <summary>
         /// File already exists
         /// </summary>
         MediusStoredItemAlreadyExists = -4,
+
         /// <summary>
         /// Placeholder to normalize the field size on different compilers
         /// </summary>
-        ExtraMediusStoredConfirmationType = 0xffffff
+        ExtraMediusStoredConfirmationType = 0xffffff,
     }
     #endregion
 
@@ -881,7 +1003,7 @@ namespace Horizon.RT.Common
         ChatAcceptJoin,
         ChatUnavailable,
         BinarySignal,
-        MaxMsgType
+        MaxMsgType,
     }
 
     public enum MediusBinaryMessageType : int
@@ -891,7 +1013,7 @@ namespace Horizon.RT.Common
         BroadcastBinaryMsgAcrossEntireUniverse,
         BroadcastBinaryMsgDeprecated0,
         TargetBinaryMsgDeprecated0,
-        BroadcastBinaryMsgAcrossEntireUniverseDeprecated0
+        BroadcastBinaryMsgAcrossEntireUniverseDeprecated0,
     }
 
     public enum MediusMessageType : int
@@ -906,22 +1028,22 @@ namespace Horizon.RT.Common
     public enum MediusWorldGenericFieldLevelType : int
     {
         MediusWorldGenericFieldLevel0 = 0,
-        MediusWorldGenericFieldLevel1 = (1 << 0),
-        MediusWorldGenericFieldLevel2 = (1 << 1),
-        MediusWorldGenericFieldLevel3 = (1 << 2),
-        MediusWorldGenericFieldLevel4 = (1 << 3),
-        MediusWorldGenericFieldLevel12 = (1 << 4),
-        MediusWorldGenericFieldLevel123 = (1 << 5),
-        MediusWorldGenericFieldLevel1234 = (1 << 6),
-        MediusWorldGenericFieldLevel23 = (1 << 7),
-        MediusWorldGenericFieldLevel234 = (1 << 8),
-        MediusWorldGenericFieldLevel34 = (1 << 9),
+        MediusWorldGenericFieldLevel1 = 1 << 0,
+        MediusWorldGenericFieldLevel2 = 1 << 1,
+        MediusWorldGenericFieldLevel3 = 1 << 2,
+        MediusWorldGenericFieldLevel4 = 1 << 3,
+        MediusWorldGenericFieldLevel12 = 1 << 4,
+        MediusWorldGenericFieldLevel123 = 1 << 5,
+        MediusWorldGenericFieldLevel1234 = 1 << 6,
+        MediusWorldGenericFieldLevel23 = 1 << 7,
+        MediusWorldGenericFieldLevel234 = 1 << 8,
+        MediusWorldGenericFieldLevel34 = 1 << 9,
     }
 
     public enum MediusUtilTypeWorldPersistence : int
     {
         MediusUtilWorldPersistent,
-        MediusUtilWorldNotPersistent
+        MediusUtilWorldNotPersistent,
     }
 
     #region MediusApplicationType
@@ -934,6 +1056,7 @@ namespace Horizon.RT.Common
         /// Game type.
         /// </summary>
         MediusAppTypeGame,
+
         /// <summary>
         /// Lobby chat channel type.
         /// </summary>
@@ -951,14 +1074,16 @@ namespace Horizon.RT.Common
         /// Type of Filtering: Pass or fail.
         /// </summary>
         MediusTextFilterPassFail = 0,
+
         /// <summary>
         /// Type of filtering: replace text with strike-out characters.
         /// </summary>
         MediusTextFilterReplace = 1,
+
         /// <summary>
         /// Placeholder to normalize the field size on different compilers
         /// </summary>
-        ExtraMediusTextFilter = 0xffffff
+        ExtraMediusTextFilter = 0xffffff,
     }
     #endregion
 
@@ -997,18 +1122,21 @@ namespace Horizon.RT.Common
         /// Used to denote that the player is still online
         /// </summary>
         KeepAlive,
+
         /// <summary>
         /// Sent when a player joins a chat world.
         /// </summary>
         JoinedChatWorld,
+
         /// <summary>
         /// Sent when a player leaves a game world.
         /// </summary>
         LeftGameWorld,
+
         /// <summary>
         /// Sent when a player leaves a party world.
         /// </summary>
-        LeftPartyWorld
+        LeftPartyWorld,
     }
     #endregion
 
@@ -1022,10 +1150,12 @@ namespace Horizon.RT.Common
         /// Join a game as a normal player.
         /// </summary>
         MediusJoinAsPlayer = 0,
+
         /// <summary>
         /// Join a game as a spectator.
         /// </summary>
         MediusJoinAsSpectator = 1,
+
         /// <summary>
         /// Join a game as a large scale spectator.
         /// </summary>
@@ -1035,7 +1165,7 @@ namespace Horizon.RT.Common
 
     #region MediusMatchGameState
     /// <summary>
-    /// Medius Match Options 
+    /// Medius Match Options
     /// Introduced in Medius Client/Server library 3.03
     /// </summary>
     public enum MediusMatchGameState : int
@@ -1044,10 +1174,12 @@ namespace Horizon.RT.Common
         /// Suspend MatchGame
         /// </summary>
         MatchGameStateSuspend,
+
         /// <summary>
         /// Resume MatchGame
         /// </summary>
         MatchGameStateResume,
+
         /// <summary>
         /// Stop MatchGame
         /// </summary>
@@ -1057,7 +1189,7 @@ namespace Horizon.RT.Common
 
     #region MediusMatchOptions
     /// <summary>
-    /// Medius Match Options 
+    /// Medius Match Options
     /// Introduced in Medius Client/Server library 3.03
     /// </summary>
     public enum MediusMatchOptions : int
@@ -1066,14 +1198,16 @@ namespace Horizon.RT.Common
         /// No Match Options
         /// </summary>
         MatchOptionsNone,
+
         /// <summary>
         /// Join match late
         /// </summary>
         MatchLateJoin,
+
         /// <summary>
         /// Custom Match Game
         /// </summary>
-        MatchCustomGame
+        MatchCustomGame,
     }
     #endregion
 
@@ -1086,28 +1220,34 @@ namespace Horizon.RT.Common
         /// [GMT-12] IDLW International Date Line - West
         /// </summary>
         MediusTimeZone_IDLW = -1200,
+
         /// <summary>
         /// [GMT-10] Hawaiian Standard Time
         /// </summary>
         MediusTimeZone_HST = -1000,
         MediusTimeZone_AKST = -900,
         MediusTimeZone_AKDT = -800,
+
         /// <summary>
         /// [GMT-8] Pacific Standard Time
         /// </summary>
         MediusTimeZone_PST = -801,
+
         /// <summary>
         /// [GMT-7] Pacific Daylight Time
         /// </summary>
         MediusTimeZone_PDT = -700,
+
         /// <summary>
         /// [GMT-7] Mountain Standard Time
         /// </summary>
         MediusTimeZone_MST = -701,
+
         /// <summary>
         /// [GMT-6] Mountain Daylight Time
         /// </summary>
         MediusTimeZone_MDT = -600,
+
         /// <summary>
         /// [GMT-6] Central Standard Time
         /// </summary>
@@ -1172,10 +1312,12 @@ namespace Horizon.RT.Common
         /// Search for a game world with these parameters
         /// </summary>
         FindGameWorld,
+
         /// <summary>
         /// Search for a lobby chat world with these parameters
         /// </summary>
         FindLobbyWorld,
+
         /// <summary>
         /// Search for either a game or lobby world with these parameters
         /// </summary>
@@ -1185,7 +1327,7 @@ namespace Horizon.RT.Common
 
     #region MediusBanReasonType
     /// <summary>
-    /// 
+    ///
     /// </summary>
     public enum MediusBanReasonType : int
     {
@@ -1212,7 +1354,7 @@ namespace Horizon.RT.Common
         /// <summary>
         /// Placeholder to normalize the field size on different compilers
         /// </summary>
-        ExtraMediusBanReasonType = 0xffffff
+        ExtraMediusBanReasonType = 0xffffff,
     }
     #endregion
 
@@ -1226,10 +1368,12 @@ namespace Horizon.RT.Common
         /// Invalid Vote Action
         /// </summary>
         MediusInvalidVoteAction,
+
         /// <summary>
         /// Add a vote to ban a player
         /// </summary>
         MediusAddVote,
+
         /// <summary>
         /// Remove a vote to ban a player
         /// </summary>
@@ -1245,23 +1389,27 @@ namespace Horizon.RT.Common
         /// Default game world attributes. Nothing special.
         /// </summary>
         GAME_WORLD_NONE = 0,
+
         /// <summary>
         /// Supports connected spectator worlds
         /// </summary>
         GAME_WORLD_ALLOW_REBROADCAST = 1,
+
         /// <summary>
         /// Indicates that this world is a spectator world
         /// </summary>
         GAME_WORLD_ALLOW_SPECTATOR = 2,
+
         /// <summary>
         /// Indicates this world was generated internally <Br></Br>
         /// Not by a client request
         /// </summary>
         GAME_WORLD_INTERNAL = 4,
+
         /// <summary>
         /// Unknown
         /// </summary>
-        GAME_WORLD_RECORD = 8
+        GAME_WORLD_RECORD = 8,
     }
     #endregion
 
@@ -1276,28 +1424,32 @@ namespace Horizon.RT.Common
         /// Sends to all in given chat channel
         /// </summary>
         Broadcast,
+
         /// <summary>
         /// Sends directly to another player
         /// </summary>
         Whisper,
+
         /// <summary>
         /// Sends to all given chat channels
         /// </summary>
         BroadcastAcrossEntireUniverse,
+
         /// <summary>
         /// Sends to all members of a clan
         /// </summary>
         Clan,
+
         /// <summary>
         /// Sends chat to all members in your buddy list
         /// </summary>
-        Buddy
+        Buddy,
     }
     #endregion
 
     #region MediusWorldStatus
     /// <summary>
-    /// Used to set a game world to a certain state. <br></br> 
+    /// Used to set a game world to a certain state. <br></br>
     /// This affects whether the game can be joined or not and is displayed in GameInfo and GameList information.
     /// </summary>
     public enum MediusWorldStatus : int
@@ -1306,24 +1458,29 @@ namespace Horizon.RT.Common
         /// Game world is not active
         /// </summary>
         WorldInactive,
+
         /// <summary>
         /// Players are staging in the game, but not yet playing.
         /// </summary>
         WorldStaging,
+
         /// <summary>
         /// Players are to join and play in the game world.
         /// </summary>
         WorldActive,
+
         /// <summary>
         /// Players are not allowed to join this game world.
         /// </summary>
         WorldClosed,
+
         /// <summary>
         /// Set by server while creation is in progress.
         /// </summary>
         WorldPendingCreation,
+
         /// <summary>
-        /// Set by server for spectator worlds only after creation while <br></br> 
+        /// Set by server for spectator worlds only after creation while <br></br>
         /// connection to the game world is in progress.
         /// </summary>
         WorldPendingConnectToGame,
@@ -1367,14 +1524,16 @@ namespace Horizon.RT.Common
         /// Do Not generate a random name on login.
         /// </summary>
         NotGenerate = 0,
+
         /// <summary>
         /// Generate a random name for login.
         /// </summary>
         GenerateRandom = 100,
+
         /// <summary>
         /// Placeholder to normalize the field size on different compilers
         /// </summary>
-        ExtraMediusGenerateRandomSelection
+        ExtraMediusGenerateRandomSelection,
     }
     #endregion
 
@@ -1389,22 +1548,26 @@ namespace Horizon.RT.Common
         /// No security on world
         /// </summary>
         WORLD_SECURITY_NONE = 0,
+
         /// <summary>
         /// Password required to join as a player
         /// </summary>
-        WORLD_SECURITY_PLAYER_PASSWORD = (1 << 0),
+        WORLD_SECURITY_PLAYER_PASSWORD = 1 << 0,
+
         /// <summary>
         /// World is closed to new players
         /// </summary>
-        WORLD_SECURITY_CLOSED = (1 << 1),
+        WORLD_SECURITY_CLOSED = 1 << 1,
+
         /// <summary>
         /// Password is required to join as a spectator
         /// </summary>
-        WORLD_SECURITY_SPECTATOR_PASSWORD = (1 << 2),
+        WORLD_SECURITY_SPECTATOR_PASSWORD = 1 << 2,
+
         /// <summary>
         /// Placeholder to normalize the field size on different compilers
         /// </summary>
-        WORLD_SECURITY_EXTRA = 0xFFFFFF
+        WORLD_SECURITY_EXTRA = 0xFFFFFF,
     }
     #endregion
 
@@ -1419,14 +1582,16 @@ namespace Horizon.RT.Common
         /// Lobby filtering rules. Lobby&Filter = Lobby.
         /// </summary>
         MediusLobbyFilterEqualsLobby,
+
         /// <summary>
         /// Lobby filtering rules. Lobby&Filter = Filter.
         /// </summary>
         MediusLobbyFilterEqualsFilter,
+
         /// <summary>
         ///  Lobby filtering rules. Lobby&Filter = FILTER_EQUALS.
         /// </summary>
-        FILTER_EQUALS
+        FILTER_EQUALS,
     }
     #endregion
 
@@ -1441,46 +1606,56 @@ namespace Horizon.RT.Common
         /// not using filter mask
         /// </summary>
         MediusLobbyFilterMaskLevel0 = 0,
+
         /// <summary>
         /// use only filter mask 1
         /// </summary>
         MediusLobbyFilterMaskLevel1 = 1 << 0,
+
         /// <summary>
         /// use only filter mask 2
         /// </summary>
         MediusLobbyFilterMaskLevel2 = 1 << 1,
+
         /// <summary>
         /// use only filter mask 3
         /// </summary>
         MediusLobbyFilterMaskLevel3 = 1 << 2,
+
         /// <summary>
         /// use only filter mask 4
         /// </summary>
-        MediusLobbyFilterMaskLevel4 = (1 << 3),
+        MediusLobbyFilterMaskLevel4 = 1 << 3,
+
         /// <summary>
         /// use 1 and 2
         /// </summary>
-        MediusLobbyFilterMaskLevel12 = (1 << 4),
+        MediusLobbyFilterMaskLevel12 = 1 << 4,
+
         /// <summary>
         /// use 1, 2, and 3
         /// </summary>
-        MediusLobbyFilterMaskLevel123 = (1 << 5),
+        MediusLobbyFilterMaskLevel123 = 1 << 5,
+
         /// <summary>
         /// use 1, 2, 3, and 4
         /// </summary>
-        MediusLobbyFilterMaskLevel1234 = (1 << 6),
+        MediusLobbyFilterMaskLevel1234 = 1 << 6,
+
         /// <summary>
         ///use 2 and 3
         /// </summary>
-        MediusLobbyFilterMaskLevel23 = (1 << 7),
+        MediusLobbyFilterMaskLevel23 = 1 << 7,
+
         /// <summary>
         ///  use 2, 3, and 4
         /// </summary>
-        MediusLobbyFilterMaskLevel234 = (1 << 8),
+        MediusLobbyFilterMaskLevel234 = 1 << 8,
+
         /// <summary>
         /// use 3 and 4
         /// </summary>
-        MediusLobbyFilterMaskLevel34 = (1 << 9),
+        MediusLobbyFilterMaskLevel34 = 1 << 9,
     }
     #endregion
 
@@ -1494,22 +1669,27 @@ namespace Horizon.RT.Common
         /// Less than comparison operator
         /// </summary>
         LESS_THAN,
+
         /// <summary>
         /// Less than or equal to comparison operator
         /// </summary>
         LESS_THAN_OR_EQUAL_TO,
+
         /// <summary>
         /// Equal to comparison operator
         /// </summary>
         EQUAL_TO,
+
         /// <summary>
         /// Greater than or equal to comparison operator
         /// </summary>
         GREATER_THAN_OR_EQUAL_TO,
+
         /// <summary>
         /// Great than comparison operator
         /// </summary>
         GREATER_THAN,
+
         /// <summary>
         /// Not equals comparison operator
         /// </summary>
@@ -1526,14 +1706,14 @@ namespace Horizon.RT.Common
         MFSortByGroupID,
         MFSortByPopularity,
         MFSortByMetaValue,
-        MFSortByMetaString
+        MFSortByMetaString,
     }
 
     public enum MediusQueueState : int
     {
         MQ_UNKNOWN,
         MQ_UPDATE,
-        MQ_LOGINCOMPLETE
+        MQ_LOGINCOMPLETE,
     }
 
     #region NetConnectionType
@@ -1555,7 +1735,7 @@ namespace Horizon.RT.Common
         NetConnectionTypePeerToPeerUDP = 2,
 
         /// <summary>
-        /// This specifies a connection to a Server via TCP and UDP.  The UDP connection is normal UDP: 
+        /// This specifies a connection to a Server via TCP and UDP.  The UDP connection is normal UDP:
         /// there is no reliability or in-order guarantee.
         /// </summary>
         NetConnectionTypeClientServerTCPAuxUDP = 3,
@@ -1591,7 +1771,7 @@ namespace Horizon.RT.Common
         SERVER_FORCED_DISCONNECT_END_GAME = 4,
         SERVER_FORCED_DISCONNECT_TIME0UT = 5,
         SERVER_FORCED_DISCONNECT_BAD_PERF = 6,
-        SERVER_FORCED_DISCONNECT_BANNED = 7
+        SERVER_FORCED_DISCONNECT_BANNED = 7,
     }
 
     [Flags]
@@ -1601,13 +1781,10 @@ namespace Horizon.RT.Common
         RECV_BROADCAST = 1,
         RECV_LIST = 2,
         RECV_SINGLE = 4,
-        RECV_NOTIFICATION = 8
+        RECV_NOTIFICATION = 8,
     }
 
-    public enum NetConnectFailureReason : uint
-    {
-
-    }
+    public enum NetConnectFailureReason : uint { }
 
     /// <summary>
     /// The values in this enumeration are used for determining the<br></br>
@@ -1619,51 +1796,61 @@ namespace Horizon.RT.Common
         /// This value is used to specify "Not in use"
         /// </summary>
         NetAddressNone,
+
         /// <summary>
         /// ASCII string representation of a client's public IPv4 address.
         /// </summary>
         NetAddressTypeExternal,
+
         /// <summary>
         /// ASCII string representation of a client's private IPv4 address.
         /// </summary>
         NetAddressTypeInternal,
+
         /// <summary>
         /// ASCII string representiation of a NAT resolution server's IPv4 address.
         /// </summary>
         NetAddressTypeNATService,
+
         /// <summary>
         ///4-byte binary representation of a client's public IPv4 address.
         /// </summary>
         NetAddressTypeBinaryExternal,
+
         /// <summary>
         /// 4-byte binary representation of a client's private IPv4 address.
         /// </summary>
         NetAddressTypeBinaryInternal,
+
         /// <summary>
         /// 4-byte binary representation of a client's public IPv4 address.<br></br>
         /// The Port parameter contains a 2-byte virtual port in 2 high bytes and<br></br>
         /// the actual network port in the 2 low bytes.
         /// </summary>
         NetAddressTypeBinaryExternalVport,
+
         /// <summary>
         /// 4-byte binary representation of a client's public IPv4 address.<br></br>
         /// The Port parameter contains a 2-byte virtual port in 2 high bytes and<br></br>
         /// the actual network port in the 2 low bytes.
         /// </summary>
         NetAddressTypeBinaryInternalVport,
+
         /// <summary>
         /// Contains two 4-byte binary representations of NAT resolution servers<br></br>
         /// IPv4 addresses stored back to back.
         /// </summary>
         NetAddressTypeBinaryNATServices,
+
         /// <summary>
-        /// 
+        ///
         /// </summary>
         NetAddressTypeSignalAddress,
+
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        NetAddressTypeSignalBlob
+        NetAddressTypeSignalBlob,
     }
 
     #region NetMessageClass
@@ -1676,43 +1863,52 @@ namespace Horizon.RT.Common
         /// Identifies messages used internally by the DME.
         /// </summary>
         MessageClassDME,
+
         /// <summary>
         /// Identifies messages used by the Medius Lobby.
         /// </summary>
         MessageClassLobby,
+
         /// <summary>
         /// Identifies messages used by your game.
         /// </summary>
         MessageClassApplication,
+
         /// <summary>
         /// Identifies messages used by the Medius Game Communications Library (MGCL).
         /// </summary>
         MessageClassLobbyReport,
+
         /// <summary>
         /// Identifies additional external messages used by the Medius Lobby.
         /// </summary>
         MessageClassLobbyExt,
+
         /// <summary>
         /// Identifies messages used during authentication.
         /// (Deprecated)
         /// </summary>
         MessageClassLobbyAuthentication,
+
         /// <summary>
         /// Zipper Interactive MAG/Socom 4 only!
         /// </summary>
         MessageClassDMELocalPlugin,
+
         /// <summary>
         /// NOT OFFICIAL
         /// </summary>
         MessageClassGHS,
+
         /// <summary>
         /// Used as an array allocation size. Must always be the <i>last</i> valid value before ExtraNetMessageClass, not after.
         /// </summary>
         MaxMessageClasses,
+
         /// <summary>
         /// Ensures that all values are stored as 32-bit integers on all compilers.
         /// </summary>
-        ExtraNetMessageClass = 0xff
+        ExtraNetMessageClass = 0xff,
     }
     #endregion
 
@@ -1722,30 +1918,36 @@ namespace Horizon.RT.Common
         /// No ClientStatus is available.
         /// </summary>
         ClientStatusNone,
+
         /// <summary>
         /// Client is not connected.
         /// </summary>
         ClientStatusNotConnected,
+
         /// <summary>
         /// Client is connected, but has not called NetJoin().
         /// </summary>
         ClientStatusConnected,
+
         /// <summary>
         /// Client is in the process of joining, and is now receiving its first batch of object and field updates.
         /// </summary>
         ClientStatusJoining,
+
         /// <summary>
         /// The client is now fully synchronized with the game, and has received all initial object creation callbacks, etc.
         /// </summary>
         ClientStatusJoined,
+
         /// <summary>
         /// The client is fully joined and is <i>also</i> the Session Master.
         /// </summary>
         ClientStatusJoinedSessionMaster,
+
         /// <summary>
         /// Ensures that all values are stored as 32-bit integers on all compilers.
         /// </summary>
-        ExtraNetClientStatus = 0xffffff
+        ExtraNetClientStatus = 0xffffff,
     }
 
     /// <summary>
@@ -1757,26 +1959,31 @@ namespace Horizon.RT.Common
         /// RAW Unencoded audio data
         /// </summary>
         NetStreamMediaAudioTypeRAW = 0,
+
         /// <summary>
         /// Custom application audio data
         /// </summary>
         NetStreamMediaAudioTypeCUSTOM = 1,
+
         /// <summary>
         /// DME encoded GSM audio data
         /// </summary>
         NetStreamMediaAudioTypeGSM = 2,
+
         /// <summary>
         /// DME encoded LPC audio data
         /// </summary>
         NetStreamMediaAudioTypeLPC = 3,
+
         /// <summary>
         /// DME encoded LPC10 audio data
         /// </summary>
         NetStreamMediaAudioTypeLPC10 = 4,
+
         /// <summary>
         /// Ensures that all values are stored as 32-bit integers on all compilers.
         /// </summary>
-        ExtraNetStreamMediaAudioType = 0xffffff
+        ExtraNetStreamMediaAudioType = 0xffffff,
     }
 
     #region MediusDmeMessageIds
@@ -1860,7 +2067,7 @@ namespace Horizon.RT.Common
         ServerSessionBeginRequest1 = 0x21,
         ServerSessionBeginResponse1 = 0x22,
         ServerCreateGameWithAttributesRequest2 = 0x23, //TEST
-        ServerSessionBeginRequest2 = 0x24
+        ServerSessionBeginRequest2 = 0x24,
     }
     #endregion
 
@@ -2282,7 +2489,7 @@ namespace Horizon.RT.Common
     }
     #endregion
 
-    #region DME 
+    #region DME
 
     public enum DME_SERVER_WORLD_TYPE : int
     {
@@ -2290,7 +2497,7 @@ namespace Horizon.RT.Common
         DME_SERVER_VIRTUAL_PRIVATE_WORLD,
         DME_SERVER_REBROADCASTER_WORLD,
         DME_SERVER_SPECTATOR_WORLD,
-        DME_SERVER_WORLD_TYPE_MAX
+        DME_SERVER_WORLD_TYPE_MAX,
     }
 
     public enum DME_SERVER_RESULT : uint
@@ -2332,14 +2539,14 @@ namespace Horizon.RT.Common
         DME_SERVER_BUFF_OVERFLOW_ERROR = 22,
         DME_SERVER_CONFIG_ERROR = 23,
         DME_SERVER_PARTIAL_RW_ERROR = 24,
-        DME_SERVER_CLIENT_ALREADY_DISCONNECTED = 25
+        DME_SERVER_CLIENT_ALREADY_DISCONNECTED = 25,
     }
 
     #endregion
 
     #region MGCL
     /// <summary>
-    /// This structure should always populate the TrustLevel field as MGCL_NOT_TRUSTED for all peer-to-peer titles. 
+    /// This structure should always populate the TrustLevel field as MGCL_NOT_TRUSTED for all peer-to-peer titles.
     /// </summary>
     public enum MGCL_TRUST_LEVEL : int
     {
@@ -2347,6 +2554,7 @@ namespace Horizon.RT.Common
         /// This server is a trusted game server.
         /// </summary>
         MGCL_TRUSTED,
+
         /// <summary>
         /// This server is NOT a trusted game server.
         /// </summary>
@@ -2363,14 +2571,17 @@ namespace Horizon.RT.Common
         /// Default, no alert occurs. Allow normal use.
         /// </summary>
         MGCL_ALERT_NONE,
+
         /// <summary>
         /// Low load. No new clients may join.
         /// </summary>
         MGCL_ALERT_LOW,
+
         /// <summary>
         /// Moderate load. No new clients may join.
         /// </summary>
         MGCL_ALERT_MID,
+
         /// <summary>
         /// High load. No new clients may join.
         /// </summary>
@@ -2406,30 +2617,37 @@ namespace Horizon.RT.Common
         /// Successful Response
         /// </summary>
         MGCL_SUCCESS = 0,
+
         /// <summary>
         /// Connection Terminated
         /// </summary>
         MGCL_CONNECTION_ERROR = -1,
+
         /// <summary>
         /// Unable to connect to target host
         /// </summary>
         MGCL_CONNECTION_FAILED = -2,
+
         /// <summary>
         /// Unable to disconnect from target host
         /// </summary>
         MGCL_DISCONNECT_FAILED = -3,
+
         /// <summary>
         /// Attempt to use an API call that requires a connection - without a connection
         /// </summary>
         MGCL_NOT_CONNECTED = -4,
+
         /// <summary>
         /// Sending of data failed
         /// </summary>
         MGCL_SEND_FAILED = -5,
+
         /// <summary>
         /// initializtion of MGCL Library failed
         /// </summary>
         MGCL_INITIALIZATION_FAILED = -6,
+
         /// <summary>
         /// Shutdown of MGCL Library failed
         /// </summary>
@@ -2461,6 +2679,7 @@ namespace Horizon.RT.Common
         /// A client disconnected from this game server/
         /// </summary>
         MGCL_EVENT_CLIENT_DISCONNECT,
+
         /// <summary>
         /// A client connected to this game server.
         /// </summary>
@@ -2479,19 +2698,23 @@ namespace Horizon.RT.Common
         /// This server has no special attributes
         /// </summary>
         MGCL_SERVER_NONE,
+
         /// <summary>
         /// This server allows for the rebroadcasting of game data.
         /// </summary>
         MGCL_SERVER_ALLOW_REBROADCAST,
+
         /// <summary>
         /// This server supports specatators to receive data.
         /// </summary>
         MGCL_SERVER_ALLOW_SPECTATOR,
+
         /// <summary>
         /// This server can be used as a informer type of server. <br></br>
         /// The description is ambiguous on purpose.
         /// </summary>
         MGCL_SERVER_ALLOW_INFORMER,
+
         /// <summary>
         /// This server can be used to monitor game traffic.
         /// </summary>
@@ -2539,7 +2762,7 @@ namespace Horizon.RT.Common
         DME_SERVER_CHEAT_QUERY_IOP_MOD_TEXT_SIZE = 25,
         DME_SERVER_CHEAT_QUERY_IOP_THREAD_CNT = 26,
         DME_SERVER_CHEAT_QUERY_IOP_MEM_FREE = 27,
-        DME_SERVER_CHEAT_QUERY_IOP_MEM_USED = 28
+        DME_SERVER_CHEAT_QUERY_IOP_MEM_USED = 28,
     }
 
     public enum AnticheatEventCode : int
@@ -2590,7 +2813,7 @@ namespace Horizon.RT.Common
         LM_ERROR,
         LM_CRITICAL,
         LM_NONE,
-        LM_DEBUG
+        LM_DEBUG,
     }
 
     #endregion
@@ -2603,18 +2826,18 @@ namespace Horizon.RT.Common
         MEDIUS_BILLING_SCEK,
         MEDIUS_BILLING_SCEA,
         MEDIUS_BILLING_SCEJ,
-        MEDIUS_BILLING_SCEE
+        MEDIUS_BILLING_SCEE,
     }
 
     #endregion
 
-    #region Notification Manager 
+    #region Notification Manager
 
     public enum NMMessageTypeCode : int
     {
         NM_MESSAGE_TYPE_SINGLE = 0,
         NM_MESSAGE_TYPE_BROADCAST = 1,
-        NM_MESSAGE_TYPE_GROUP = 2
+        NM_MESSAGE_TYPE_GROUP = 2,
     }
 
     #endregion
@@ -2636,7 +2859,7 @@ namespace Horizon.RT.Common
         MEDIUS_DLEVEL_ALL_EVENTS = 2,
         MEDIUS_DLEVEL_REFRESHED = 3,
         MEDIUS_DLEVEL_RESERVED1 = 4,
-        MEDIUS_DLEVEL_LAST = 5
+        MEDIUS_DLEVEL_LAST = 5,
     }
 
     public enum MediusDListRequestID : int
@@ -2646,7 +2869,7 @@ namespace Horizon.RT.Common
         MEDIUS_DREQUEST_UNSUBSCRIBE = 2,
         MEDIUS_DREQUEST_REFRESH = 3,
         MEDIUS_SET_LEVEL = 4,
-        MEDIUS_DREQUEST_LAST = 5
+        MEDIUS_DREQUEST_LAST = 5,
     }
 
     public enum MediusDInterestID : int
@@ -2664,7 +2887,7 @@ namespace Horizon.RT.Common
         MEDIUS_DACTION_ADD = 4,
         MEDIUS_DACTION_DELETE = 5,
         MEDIUS_DACTION_REFRESH = 6,
-        MEDIUS_DACTION_LAST = 7
+        MEDIUS_DACTION_LAST = 7,
     }
 
     public enum MEDIUS_DTYPE : int
@@ -2681,7 +2904,7 @@ namespace Horizon.RT.Common
         MEDIUS_DTYPE_FLOAT = 9,
         MEDIUS_DTYPE_DOUBLE = 10,
         MEDIUS_DTYPE_CSTRING = 11,
-        MEDIUS_DTYPE_LAST = 12
+        MEDIUS_DTYPE_LAST = 12,
     }
 
     #endregion
@@ -2690,16 +2913,16 @@ namespace Horizon.RT.Common
     [Flags]
     public enum MediusUniverseVariableInformationInfoFilter : uint
     {
-        INFO_UNIVERSES = (1 << 0),
-        INFO_NEWS = (1 << 1),
-        INFO_ID = (1 << 2),
-        INFO_NAME = (1 << 3),
-        INFO_DNS = (1 << 4),
-        INFO_DESCRIPTION = (1 << 5),
-        INFO_STATUS = (1 << 6),
-        INFO_BILLING = (1 << 7),
-        INFO_EXTRAINFO = (1 << 8),
-        INFO_SVO_URL = (1 << 9),
+        INFO_UNIVERSES = 1 << 0,
+        INFO_NEWS = 1 << 1,
+        INFO_ID = 1 << 2,
+        INFO_NAME = 1 << 3,
+        INFO_DNS = 1 << 4,
+        INFO_DESCRIPTION = 1 << 5,
+        INFO_STATUS = 1 << 6,
+        INFO_BILLING = 1 << 7,
+        INFO_EXTRAINFO = 1 << 8,
+        INFO_SVO_URL = 1 << 9,
     }
     #endregion
 
@@ -2712,24 +2935,27 @@ namespace Horizon.RT.Common
         /// This is a request to challenge a clan.
         /// </summary>
         ClanChallengeRequest,
+
         /// <summary>
         /// Accept a clan challenge.
         /// </summary>
         ClanChallengeAccepted,
+
         /// <summary>
         /// Revoke an outstanding challenge to a clan.
         /// </summary>
         ClanChallengeRevoked,
+
         /// <summary>
         /// Refuse a request to be challenged.
         /// </summary>
         ClanChallengeRefused,
+
         /// <summary>
         /// Accept and confirm a challenge.
         /// </summary>
         ClanChallengeConfirmed,
     }
-
 
     #region MediusClanInvitationsResponseStatus
     /// <summary>
@@ -2741,14 +2967,17 @@ namespace Horizon.RT.Common
         /// Status to join a clan is undecided.
         /// </summary>
         ClanInvitationUndecided,
+
         /// <summary>
         /// Accept the invitation to the clan.
         /// </summary>
         ClanInvitationAccept,
+
         /// <summary>
         /// Decline the invitation to the clan.
         /// </summary>
         ClanInvitationDecline,
+
         /// <summary>
         /// Revoke an outstanding invitation to a potential candidate.
         /// </summary>
@@ -2766,14 +2995,17 @@ namespace Horizon.RT.Common
         /// The clan message is marked as unread.
         /// </summary>
         ClanMessageUnread,
+
         /// <summary>
         /// The clan message has been modified.
         /// </summary>
         ClanMessageModified,
+
         /// <summary>
         /// The clan message has been deleted.
         /// </summary>
         ClanMessageDeleted,
+
         /// <summary>
         /// The clan message is marked as read.
         /// </summary>
@@ -2788,10 +3020,12 @@ namespace Horizon.RT.Common
         /// A player has not yet accepted the invitation.
         /// </summary>
         NotYetAccepted,
+
         /// <summary>
         /// The player is an active member in the clan.
         /// </summary>
         PlayerActiveInClan,
+
         /// <summary>
         /// The player has been removed from the clan.
         /// </summary>
@@ -2817,30 +3051,36 @@ namespace Horizon.RT.Common
         /// Invalid token category
         /// </summary>
         MediusInvalidToken = 0,
+
         /// <summary>
         /// Generic token category 1
         /// </summary>
         MediusGenericToken1 = 1,
+
         /// <summary>
         /// Generic token category 2
         /// </summary>
         MediusGenericToken2 = 2,
+
         /// <summary>
         /// Generic token category 3
         /// </summary>
         MediusGenericToken3 = 3,
+
         /// <summary>
         /// Token Assosciated with the account
         /// </summary>
         MediusAccountToken = 4,
+
         /// <summary>
         /// Token associated with a clan
         /// </summary>
         MediusClanToken = 5,
+
         /// <summary>
         /// Placeholder to normalize the field size on different compilers
         /// </summary>
-        ExtraMediusTokenCategoryType = 0xffffff
+        ExtraMediusTokenCategoryType = 0xffffff,
     }
     #endregion
 
@@ -2856,10 +3096,10 @@ namespace Horizon.RT.Common
         IN_GAME,
         CHAT_HOST,
         CHAT_CLIENT,
-        MAX_ONLINE_STATUS_TYPE
+        MAX_ONLINE_STATUS_TYPE,
     }
 
-    #region DME 
+    #region DME
 
     public enum DME_SERVER_LANGUAGE_TYPE : byte
     {
@@ -2882,7 +3122,7 @@ namespace Horizon.RT.Common
     {
         DME_SERVER_ENCODING_NONE,
         DME_SERVER_ENCODING_ISO_8859_1,
-        DME_SERVER_ENCODING_UTF8
+        DME_SERVER_ENCODING_UTF8,
     }
 
     #endregion
@@ -2893,7 +3133,7 @@ namespace Horizon.RT.Common
         Error = 0,
         Initial = 1,
         Mid = 2,
-        End = 3
+        End = 3,
     }
 
     public enum MFS_TransferResult : int
@@ -2901,7 +3141,7 @@ namespace Horizon.RT.Common
         mfsUPLOAD_SUCCESS,
         mfsDOWNLOAD_SUCCESS,
         mfsUPLOAD_FAILURE,
-        mfsDOWNLOAD_FAILURE
+        mfsDOWNLOAD_FAILURE,
     }
     #endregion
 
@@ -2910,7 +3150,7 @@ namespace Horizon.RT.Common
     public enum MUMCacheNextGameRetrieveType : int
     {
         MC_EXHAUSTIVE_SEARCH,
-        MC_USING_LOBBY_ASSOC
+        MC_USING_LOBBY_ASSOC,
     }
 
     public enum MC_MUM_CACHE_CONFIG_OPTION_TYPE : int
@@ -2920,13 +3160,13 @@ namespace Horizon.RT.Common
         MC_MUM_CACHE_CONFIG_OPTION_ACCOUNT_STATS_AS_STRING,
         MC_MUM_CACHE_CONFIG_OPTION_DELTA_HASH_FAILURE_ACTION,
         MC_MUM_CACHE_CONFIG_OPTION_IN_GAME_NOTIFIER,
-        MC_MUM_CACHE_CONFIG_OPTION_MAX
+        MC_MUM_CACHE_CONFIG_OPTION_MAX,
     }
 
     public enum MUM_RESULT : int
     {
         MUM_RESULT_OK,
-        MUM_RESULT_FAILURE
+        MUM_RESULT_FAILURE,
     }
 
     #endregion
@@ -2945,7 +3185,8 @@ namespace Horizon.RT.Common
         MUCG_MsgAccountRemove = 8,
         MUCG_MsgReqBuddyListPresence = 9,
         MUCG_MsgReqAccountPresence = 10,
-        MUCG_MsgC, at = 11,
+        MUCG_MsgC,
+        at = 11,
         MUCG_MsgPresence = 12,
         MUCG_MsgBuddyAdd = 13,
         MUCG_MsgBuddyRemove = 14,
@@ -2991,7 +3232,7 @@ namespace Horizon.RT.Common
         MUCG_RESULT_DATA_PERSIST_FAILED = 10,
         MUCG_RESULT_DATA_NOT_READY = 11,
         MUCG_RESULT_GATEWAY_ERROR = 12,
-        MAX_MUCG_RESULT = 13
+        MAX_MUCG_RESULT = 13,
     }
 
     public enum MUCG_STATE : int
@@ -3003,7 +3244,7 @@ namespace Horizon.RT.Common
         MUCG_STATE_INITIALIZED,
         MUCG_STATE_PENDING_DISCONNECT,
         MUCG_STATE_IN_RECOVERY,
-        MAX_MUCG_STATE
+        MAX_MUCG_STATE,
     }
 
     #endregion
@@ -3022,7 +3263,7 @@ namespace Horizon.RT.Common
         FactionTypeSIRSAT = 2,
         FactionTypeMax,
         FactionTypeNone = 0xFFFFFFF,
-        FactionTypeAll = 0xFFFFFFF
+        FactionTypeAll = 0xFFFFFFF,
     }
 
     public enum GameType : int
@@ -3035,7 +3276,7 @@ namespace Horizon.RT.Common
         GameTypeMaxQueueable,
         GameTypeTraining = 4,
         NumGameTypes,
-        GameTypeNone = 0xFFFFFFF
+        GameTypeNone = 0xFFFFFFF,
     }
 
     public enum NetMessageTypeIds : int
@@ -3128,7 +3369,6 @@ namespace Horizon.RT.Common
         NetMessageNewsEulaResponse = 575,
         NetMessageServerStatusRequest = 587,
         NetMessageServerStatusResponse = 588, //Needs Debug Check
-
 
         // SOCOM 4
         /*
@@ -3228,7 +3468,6 @@ namespace Horizon.RT.Common
         NetMessageTypeShutdownGameServer = 0x7D9,
         kNetPluginMessageTypeEnd = 0x7DA,
         */
-
     }
     #endregion
 
@@ -3239,14 +3478,14 @@ namespace Horizon.RT.Common
         kRespawnNone,
         kRespawnCancel,
         kRespawnConfirm,
-        kRespawnRequestSent
+        kRespawnRequestSent,
     }
 
     public enum MicrophoneState : int
     {
         kMicOff,
         kMicRequesting,
-        kMicRecording
+        kMicRecording,
     }
 
     #endregion
@@ -3257,7 +3496,7 @@ namespace Horizon.RT.Common
         kCharacterRequestNone,
         kCharacterRequestCreate,
         kCharacterRequestDelete,
-        kCharacterRequestFactionReSpec
+        kCharacterRequestFactionReSpec,
     }
 
     #endregion
@@ -3278,7 +3517,7 @@ namespace Horizon.RT.Common
         kNetNPConnectFailed = 0xA,
         kNetNPNoAccount = 0xB,
         kNetProtocolError = 0xC,
-        kNetNotImplemented = 0xD
+        kNetNotImplemented = 0xD,
     }
 
     public enum NetPluginType : int
@@ -3296,7 +3535,7 @@ namespace Horizon.RT.Common
     {
         kQueryTypeNone,
         kQueryByName,
-        kQueryByID
+        kQueryByID,
     }
 
     #region zNetwork
@@ -3305,20 +3544,20 @@ namespace Horizon.RT.Common
     {
         kAutoTestNone,
         kAutoTestGrenadeThrow,
-        kAutoTestFirePrimary
+        kAutoTestFirePrimary,
     }
 
     public enum NetMessageNewsEulaResponseContentType : byte
     {
         News,
-        Eula
+        Eula,
     }
 
     public enum NetAccountLoginResponse : int
     {
         eResultFail,
         eResultSuccess,
-        eResultQueue
+        eResultQueue,
     }
 
     public enum NetMessageUserNote : int
@@ -3327,13 +3566,13 @@ namespace Horizon.RT.Common
         kGeneralComplaint,
         kTerrain_0,
         kSpawnCamping,
-        kEnd
+        kEnd,
     }
 
     public enum NetClientType : int
     {
         kNetClientPlayer,
-        kNetClientObserver
+        kNetClientObserver,
     }
 
     public enum JoinGamePreferenceType : int
@@ -3343,7 +3582,7 @@ namespace Horizon.RT.Common
         JoinGamePreferenceSpecificGame,
         JoinGamePreferenceLocation,
         JoinGamePreferenceTraining,
-        JoinGamePreferenceDirective
+        JoinGamePreferenceDirective,
     }
 
     public enum PartyInviteResponse : int
@@ -3352,7 +3591,7 @@ namespace Horizon.RT.Common
         kPartyInviteDecline,
         kPartyInviteError,
         kPartyInviteInParty,
-        kPartyInviteTimeout
+        kPartyInviteTimeout,
     }
 
     public enum PartyStatus : int
@@ -3366,7 +3605,7 @@ namespace Horizon.RT.Common
         VictoryTypeMinor = 0,
         VictoryTypeMajor,
         VictoryTypeMax,
-        VictoryTypeNone = 0xFFFFFFF
+        VictoryTypeNone = 0xFFFFFFF,
     }
 
     #endregion
@@ -3386,7 +3625,7 @@ namespace Horizon.RT.Common
     public enum GhsMgrResult : int
     {
         ghsmgrOK,
-        ghsmgrERROR = -1
+        ghsmgrERROR = -1,
     }
 
     public enum GhsMgrNextStep : int
@@ -3416,6 +3655,7 @@ namespace Horizon.RT.Common
         GhsClient_VERSION_XCHNG,
         GhsClient_IN_ERROR,
     }
+
     public enum GhsOpcode : ushort
     {
         ghs_ClientProtocolChoice = 1,
@@ -3445,7 +3685,7 @@ namespace Horizon.RT.Common
         kOtgTimeResult_UnknownError = 0xCC0006,
         kOtgTimeResult_InvalidTime = 0xCC0016,
         kOtgTimeResult_SystemError = 0xCC0026,
-        kOtgTimeResult_Overflow = 0xCC0036
+        kOtgTimeResult_Overflow = 0xCC0036,
     }
 
     public enum eSceotTelemetryProtocolMsgType : int
@@ -3467,7 +3707,7 @@ namespace Horizon.RT.Common
         kSceotTelemetryProtocolMsgType_StartServiceRequestWithSampling = 0xF,
         kSceotTelemetryProtocolMsgType_BeginFrameRequestWithSampling = 0xE,
         kSceotTelemetryProtocolMsgType_Bounds = 0x10,
-        kSceotTelemetryProtocolMsgType_ForceLong = -1
+        kSceotTelemetryProtocolMsgType_ForceLong = -1,
     }
 
     public enum eOtgTelemetryClientResultCode : int
@@ -3509,7 +3749,7 @@ namespace Horizon.RT.Common
         kOtgTelemetryClientResultCode_ClientNotSampled = 0x22,
         kOtgTelemetryClientResultCode_FrameNotSampled = 0x23,
         kOtgTelemetryClientResultCode_Bounds = 0x24,
-        kOtgTelemetryClientResultCode_ForceLong = -1
+        kOtgTelemetryClientResultCode_ForceLong = -1,
     }
 
     public enum kOtgSpecificResultCodes : int
@@ -3526,7 +3766,7 @@ namespace Horizon.RT.Common
         kOtgSpecificResultCodes_UnexpectedNull = 0x10023,
         kOtgSpecificResultCodes_NumerialOutOfRange = 0x10033,
         kOtgSpecificResultCodes_ConnectReject = 0x10045,
-        kOtgSpecificResultCodes_SpecificExtra = -1
+        kOtgSpecificResultCodes_SpecificExtra = -1,
     }
 
     public enum kOtgGenericResultCodes : int
@@ -3555,7 +3795,7 @@ namespace Horizon.RT.Common
         kOtgResultCategory_MemoryFailed = 9,
         kOtgResultCategory_Assertion = 0xA,
         kOtgResultCategory_Count = 0xB,
-        kOtgResultCategory_ResultExtra = -1
+        kOtgResultCategory_ResultExtra = -1,
     }
 
     #endregion
@@ -3570,7 +3810,7 @@ namespace Horizon.RT.Common
         kLostConnection_0 = 4,
         kGamePlayError_0 = 5,
         kHostPlayerKicked_0 = 6,
-        kLocalPlayerKicked_0 = 7
+        kLocalPlayerKicked_0 = 7,
     }
 
     public enum SVOBinaryStatsStarhawk : int
@@ -3594,8 +3834,7 @@ namespace Horizon.RT.Common
         kAwardDetailsPost = 9,
         kBaseWeaponDetailsData = 0x64,
         kBaseVehicleDetailsData = 0x12C,
-        kBaseBnBPartDetailsData = 0x1F4
-
+        kBaseBnBPartDetailsData = 0x1F4,
     }
 
     #endregion

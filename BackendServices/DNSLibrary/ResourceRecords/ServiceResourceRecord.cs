@@ -1,34 +1,59 @@
-using System;
 using System.Runtime.InteropServices;
 using EndianTools;
+using EndianTools.Marshalling;
 
-namespace DNS.Protocol.ResourceRecords {
-    public class ServiceResourceRecord : BaseResourceRecord {
-        private static IResourceRecord Create(Domain domain, ushort priority, ushort weight, ushort port, Domain target, TimeSpan ttl) {
-            byte[] trg = target.ToArray();
-            byte[] data = new byte[Head.SIZE + trg.Length];
+namespace DNSLibrary.ResourceRecords
+{
+    public class ServiceResourceRecord : BaseResourceRecord
+    {
+        private static ResourceRecord Create(
+            Domain domain,
+            ushort priority,
+            ushort weight,
+            ushort port,
+            Domain target,
+            TimeSpan ttl
+        )
+        {
+            var trg = target.ToArray();
+            var data = new byte[Head.SIZE + trg.Length];
 
-            Head head = new Head() {
+            var head = new Head()
+            {
                 Priority = priority,
                 Weight = weight,
-                Port = port
+                Port = port,
             };
 
-            Marshalling.Struct.GetBytes(head).CopyTo(data, 0);
+            Struct.GetBytes(head).CopyTo(data, 0);
             trg.CopyTo(data, Head.SIZE);
 
             return new ResourceRecord(domain, data, RecordType.SRV, RecordClass.IN, ttl);
         }
 
-        public ServiceResourceRecord(IResourceRecord record, byte[] message, int dataOffset) : base(record) {
+        public ServiceResourceRecord(IResourceRecord record, byte[] message, int dataOffset)
+            : base(record)
+        {
             if (dataOffset + Head.SIZE > message.Length)
                 throw new ArgumentException("Message too short for ResourceRecord Head");
 
-            Head head = new Head()
+            var head = new Head()
             {
-                Priority = EndianAwareConverter.ToUInt16(message, Endianness.BigEndian, (uint)dataOffset),
-                Weight = EndianAwareConverter.ToUInt16(message, Endianness.BigEndian, (uint)(dataOffset + 2)),
-                Port = EndianAwareConverter.ToUInt16(message, Endianness.BigEndian, (uint)(dataOffset + 4)),
+                Priority = EndianAwareConverter.ToUInt16(
+                    message,
+                    Endianness.BigEndian,
+                    (uint)dataOffset
+                ),
+                Weight = EndianAwareConverter.ToUInt16(
+                    message,
+                    Endianness.BigEndian,
+                    (uint)(dataOffset + 2)
+                ),
+                Port = EndianAwareConverter.ToUInt16(
+                    message,
+                    Endianness.BigEndian,
+                    (uint)(dataOffset + 4)
+                ),
             };
 
             Priority = head.Priority;
@@ -37,8 +62,16 @@ namespace DNS.Protocol.ResourceRecords {
             Target = Domain.FromArray(message, dataOffset + Head.SIZE);
         }
 
-        public ServiceResourceRecord(Domain domain, ushort priority, ushort weight, ushort port, Domain target, TimeSpan ttl = default(TimeSpan)) :
-                base(Create(domain, priority, weight, port, target, ttl)) {
+        public ServiceResourceRecord(
+            Domain domain,
+            ushort priority,
+            ushort weight,
+            ushort port,
+            Domain target,
+            TimeSpan ttl = default(TimeSpan)
+        )
+            : base(Create(domain, priority, weight, port, target, ttl))
+        {
             Priority = priority;
             Weight = weight;
             Port = port;
@@ -50,30 +83,35 @@ namespace DNS.Protocol.ResourceRecords {
         public ushort Port { get; }
         public Domain Target { get; }
 
-        public override string ToString() {
+        public override string ToString()
+        {
             return Stringify().Add("Priority", "Weight", "Port", "Target").ToString();
         }
 
-        [Marshalling.Endian(Marshalling.Endianness.Big)]
+        [Endian(Endianness.BigEndian)]
         [StructLayout(LayoutKind.Sequential, Pack = 4)]
-        private struct Head {
+        private struct Head
+        {
             public const int SIZE = 6;
 
             private ushort priority;
             private ushort weight;
             private ushort port;
 
-            public ushort Priority {
+            public ushort Priority
+            {
                 get { return priority; }
                 set { priority = value; }
             }
 
-            public ushort Weight {
+            public ushort Weight
+            {
                 get { return weight; }
                 set { weight = value; }
             }
 
-            public ushort Port {
+            public ushort Port
+            {
                 get { return port; }
                 set { port = value; }
             }

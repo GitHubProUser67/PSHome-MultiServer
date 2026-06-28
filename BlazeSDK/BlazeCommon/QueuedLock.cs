@@ -4,7 +4,7 @@ namespace BlazeCommon
     //https://stackoverflow.com/questions/961869/is-there-a-synchronization-class-that-guarantee-fifo-order-in-c/961904#961904
     public sealed class QueuedLock
     {
-        private SemaphoreSlim slim;
+        private readonly SemaphoreSlim slim;
         private volatile int ticketsCount = 0;
         private volatile int ticketToRide = 1;
 
@@ -15,11 +15,10 @@ namespace BlazeCommon
 
         public void Enter()
         {
-            int myTicket = Interlocked.Increment(ref ticketsCount);
+            var myTicket = Interlocked.Increment(ref ticketsCount);
             slim.Wait();
             while (true)
             {
-
                 if (myTicket == ticketToRide)
                 {
                     return;
@@ -34,11 +33,10 @@ namespace BlazeCommon
 
         public async Task EnterAsync()
         {
-            int myTicket = Interlocked.Increment(ref ticketsCount);
+            var myTicket = Interlocked.Increment(ref ticketsCount);
             await slim.WaitAsync().ConfigureAwait(false);
             while (true)
             {
-
                 if (myTicket == ticketToRide)
                 {
                     return;
@@ -50,7 +48,6 @@ namespace BlazeCommon
                 }
             }
         }
-
 
         public void Exit()
         {

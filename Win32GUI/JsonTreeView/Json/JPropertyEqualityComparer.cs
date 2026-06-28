@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 
 namespace ZTn.Json.JsonTreeView.Json
 {
@@ -17,11 +16,7 @@ namespace ZTn.Json.JsonTreeView.Json
         /// <inheritdoc />
         public int GetHashCode(JProperty obj)
         {
-            if (obj == null)
-            {
-                return 0;
-            }
-            return obj.Name.GetHashCode();
+            return obj == null ? 0 : obj.Name.GetHashCode();
         }
     }
 }

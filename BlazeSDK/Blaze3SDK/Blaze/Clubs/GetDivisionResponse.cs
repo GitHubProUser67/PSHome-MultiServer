@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Clubs
 {
-	[TdfStruct]
-	public struct GetDivisionResponse
-	{
+    [TdfStruct]
+    public struct GetDivisionResponse
+    {
+        [TdfMember("DIVN")]
+        public uint mDivision;
 
-		[TdfMember("DIVN")]
-		public uint mDivision;
-
-		[TdfMember("SRNK")]
-		public uint mStartingRank;
-
-	}
+        [TdfMember("SRNK")]
+        public uint mStartingRank;
+    }
 }

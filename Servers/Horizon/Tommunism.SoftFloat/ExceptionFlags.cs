@@ -40,16 +40,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using System;
 
-namespace Tommunism.SoftFloat
+namespace Tommunism.SoftFloat;
+
+[Flags]
+public enum ExceptionFlags : uint
 {
-    [Flags]
-    public enum ExceptionFlags : uint
-    {
-        None = 0,
-        Inexact = 1,
-        Underflow = 2,
-        Overflow = 4,
-        Infinite = 8,
-        Invalid = 16
-    }
+    None = 0,
+    Inexact = 1,
+    Underflow = 2,
+    Overflow = 4,
+    Infinite = 8,
+    Invalid = 16,
 }

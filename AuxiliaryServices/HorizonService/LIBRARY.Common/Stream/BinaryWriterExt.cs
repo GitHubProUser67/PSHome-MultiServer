@@ -1,8 +1,6 @@
-using CustomLogger;
-using System;
-using System.IO;
 using System.Net;
 using System.Text;
+using CustomLogger;
 
 namespace Horizon.LIBRARY.Common.Stream
 {
@@ -21,7 +19,9 @@ namespace Horizon.LIBRARY.Common.Stream
             if (str == null)
                 writer.Write(new byte[length]);
             else if (str.Length >= length)
-                writer.Write(Encoding.UTF8.GetBytes(str.Substring(0, length - 1) + "\0"));
+                writer.Write(
+                    Encoding.UTF8.GetBytes(string.Concat(str.AsSpan(0, length - 1), "\0"))
+                );
             else
                 writer.Write(Encoding.UTF8.GetBytes(str.PadRight(length, '\0')));
         }
@@ -31,7 +31,9 @@ namespace Horizon.LIBRARY.Common.Stream
             if (str == null)
                 writer.Write(new byte[length]);
             else if (str.Length >= length)
-                writer.Write(Encoding.UTF8.GetBytes(str.Substring(0, length - 1) + "\0"));
+                writer.Write(
+                    Encoding.UTF8.GetBytes(string.Concat(str.AsSpan(0, length - 1), "\0"))
+                );
             else
                 writer.Write(Encoding.UTF8.GetBytes(str.PadRight(length, '\0')));
         }

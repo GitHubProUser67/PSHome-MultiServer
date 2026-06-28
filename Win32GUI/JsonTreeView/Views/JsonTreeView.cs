@@ -1,8 +1,4 @@
-﻿using System;
-using System.Drawing;
-using System.Linq;
-using System.Windows.Forms;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using ZTn.Json.JsonTreeView.Extensions;
 
 namespace ZTn.Json.JsonTreeView.Views
@@ -14,7 +10,7 @@ namespace ZTn.Json.JsonTreeView.Views
         JTokenTreeNode lastDragDropTarget;
         DateTime lastDragOverDateTime;
         Color lastDragDropTargetBackColor;
-        readonly TimeSpan dragDropExpandDelay = new TimeSpan(5000000);
+        readonly TimeSpan dragDropExpandDelay = new(5000000);
 
         #endregion
 
@@ -46,7 +42,7 @@ namespace ZTn.Json.JsonTreeView.Views
             get
             {
                 var cp = base.CreateParams;
-                cp.Style |= 0x80;    // Turn on TVS_NOTOOLTIPS
+                cp.Style |= 0x80; // Turn on TVS_NOTOOLTIPS
                 return cp;
             }
         }
@@ -60,9 +56,7 @@ namespace ZTn.Json.JsonTreeView.Views
         /// <param name="e"></param>
         private void ItemDragHandler(object sender, ItemDragEventArgs e)
         {
-            var sourceNode = e.Item as JTokenTreeNode;
-
-            if (sourceNode == null)
+            if (e.Item is not JTokenTreeNode sourceNode)
             {
                 return;
             }
@@ -112,7 +106,7 @@ namespace ZTn.Json.JsonTreeView.Views
         /// </summary>
         /// <param name="sourceNode"></param>
         /// <param name="targetNode"></param>
-        private void DoDragDropCopy(JTokenTreeNode sourceNode, JTokenTreeNode targetNode)
+        private static void DoDragDropCopy(JTokenTreeNode sourceNode, JTokenTreeNode targetNode)
         {
             MessageBox.Show(@"Drag & Drop: Unmanaged Copy");
         }
@@ -122,7 +116,7 @@ namespace ZTn.Json.JsonTreeView.Views
         /// </summary>
         /// <param name="sourceNode"></param>
         /// <param name="targetNode"></param>
-        private void DoDragDropCopy(JPropertyTreeNode sourceNode, JObjectTreeNode targetNode)
+        private static void DoDragDropCopy(JPropertyTreeNode sourceNode, JObjectTreeNode targetNode)
         {
             sourceNode.ClipboardCopy();
             targetNode.ClipboardPasteInto();
@@ -133,7 +127,7 @@ namespace ZTn.Json.JsonTreeView.Views
         /// </summary>
         /// <param name="sourceNode"></param>
         /// <param name="targetNode"></param>
-        private void DoDragDropCopy(JValueTreeNode sourceNode, JArrayTreeNode targetNode)
+        private static void DoDragDropCopy(JValueTreeNode sourceNode, JArrayTreeNode targetNode)
         {
             sourceNode.ClipboardCopy();
             targetNode.ClipboardPasteInto();
@@ -144,7 +138,7 @@ namespace ZTn.Json.JsonTreeView.Views
         /// </summary>
         /// <param name="sourceNode"></param>
         /// <param name="targetNode"></param>
-        private void DoDragDropCopy(JObjectTreeNode sourceNode, JArrayTreeNode targetNode)
+        private static void DoDragDropCopy(JObjectTreeNode sourceNode, JArrayTreeNode targetNode)
         {
             sourceNode.ClipboardCopy();
             targetNode.ClipboardPasteInto();
@@ -155,7 +149,7 @@ namespace ZTn.Json.JsonTreeView.Views
         /// </summary>
         /// <param name="sourceNode"></param>
         /// <param name="targetNode"></param>
-        private void DoDragDropCopy(JArrayTreeNode sourceNode, JArrayTreeNode targetNode)
+        private static void DoDragDropCopy(JArrayTreeNode sourceNode, JArrayTreeNode targetNode)
         {
             sourceNode.ClipboardCopy();
             targetNode.ClipboardPasteInto();
@@ -165,7 +159,7 @@ namespace ZTn.Json.JsonTreeView.Views
 
         #region >> DoDragDropMove
 
-        private void DoDragDropMove(JTokenTreeNode sourceNode, JTokenTreeNode targetNode)
+        private static void DoDragDropMove(JTokenTreeNode sourceNode, JTokenTreeNode targetNode)
         {
             // TODO: Move sourceNode to target
             MessageBox.Show(@"Drag & Drop: Unmanaged Move");
@@ -176,7 +170,7 @@ namespace ZTn.Json.JsonTreeView.Views
         /// </summary>
         /// <param name="sourceNode"></param>
         /// <param name="targetNode"></param>
-        private void DoDragDropMove(JPropertyTreeNode sourceNode, JObjectTreeNode targetNode)
+        private static void DoDragDropMove(JPropertyTreeNode sourceNode, JObjectTreeNode targetNode)
         {
             sourceNode.ClipboardCut();
             targetNode.ClipboardPasteInto();
@@ -187,7 +181,7 @@ namespace ZTn.Json.JsonTreeView.Views
         /// </summary>
         /// <param name="sourceNode"></param>
         /// <param name="targetNode"></param>
-        private void DoDragDropMove(JObjectTreeNode sourceNode, JArrayTreeNode targetNode)
+        private static void DoDragDropMove(JObjectTreeNode sourceNode, JArrayTreeNode targetNode)
         {
             sourceNode.ClipboardCut();
             targetNode.ClipboardPasteInto();
@@ -200,12 +194,10 @@ namespace ZTn.Json.JsonTreeView.Views
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void DragEnterHandler(object sender, DragEventArgs e)
-        {
-        }
+        private void DragEnterHandler(object sender, DragEventArgs e) { }
 
         /// <summary>
-        /// Occurs when an object is dragged over the control's bounds. 
+        /// Occurs when an object is dragged over the control's bounds.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -217,10 +209,7 @@ namespace ZTn.Json.JsonTreeView.Views
             {
                 e.Effect = DragDropEffects.None;
 
-                if (lastDragDropTarget != null)
-                {
-                    lastDragDropTarget.BackColor = lastDragDropTargetBackColor;
-                }
+                lastDragDropTarget?.BackColor = lastDragDropTargetBackColor;
 
                 lastDragDropTarget = null;
 
@@ -228,28 +217,20 @@ namespace ZTn.Json.JsonTreeView.Views
             }
 
             var keyState = (KeyStates)e.KeyState;
-            if (keyState.HasFlag(KeyStates.Control | KeyStates.Shift))
-            {
-                e.Effect = DragDropEffects.None;
-            }
-            else if (keyState.HasFlag(KeyStates.Control))
-            {
-                e.Effect = DragDropEffects.Copy;
-            }
-            else if (keyState.HasFlag(KeyStates.Shift))
-            {
-                e.Effect = DragDropEffects.Move;
-            }
-            else
-            {
-                e.Effect = DragDropEffects.Move;
-            }
+            e.Effect =
+                keyState.HasFlag(KeyStates.Control | KeyStates.Shift) ? DragDropEffects.None
+                : keyState.HasFlag(KeyStates.Control) ? DragDropEffects.Copy
+                : keyState.HasFlag(KeyStates.Shift) ? DragDropEffects.Move
+                : DragDropEffects.Move;
 
             var sourceNode = GetDragDropSourceNode(e);
 
             if (targetNode == lastDragDropTarget)
             {
-                if (!targetNode.IsExpanded && DateTime.Now - lastDragOverDateTime >= dragDropExpandDelay)
+                if (
+                    !targetNode.IsExpanded
+                    && DateTime.Now - lastDragOverDateTime >= dragDropExpandDelay
+                )
                 {
                     targetNode.Expand();
                 }
@@ -282,10 +263,7 @@ namespace ZTn.Json.JsonTreeView.Views
                 }
             }
 
-            if (lastDragDropTarget != null)
-            {
-                lastDragDropTarget.BackColor = lastDragDropTargetBackColor;
-            }
+            lastDragDropTarget?.BackColor = lastDragDropTargetBackColor;
         }
 
         private static JTokenTreeNode GetDragDropSourceNode(DragEventArgs e)
@@ -301,7 +279,11 @@ namespace ZTn.Json.JsonTreeView.Views
             return targetNode;
         }
 
-        private bool IsDragDropValid(JTokenTreeNode sourceNode, JTokenTreeNode targetNode, DragDropEffects effect)
+        private static bool IsDragDropValid(
+            JTokenTreeNode sourceNode,
+            JTokenTreeNode targetNode,
+            DragDropEffects effect
+        )
         {
             if (sourceNode == null || targetNode == null)
             {
@@ -320,8 +302,8 @@ namespace ZTn.Json.JsonTreeView.Views
                     case DragDropEffects.Copy:
                         return targetNode.JTokenTag is JArray;
                     case DragDropEffects.Move:
-                        return !(targetNode.JTokenTag.Parent is JProperty)
-                               && targetNode.JTokenTag is JArray;
+                        return targetNode.JTokenTag.Parent is not JProperty
+                            && targetNode.JTokenTag is JArray;
                 }
             }
 
@@ -332,8 +314,8 @@ namespace ZTn.Json.JsonTreeView.Views
                     case DragDropEffects.Copy:
                         return targetNode.JTokenTag is JArray;
                     case DragDropEffects.Move:
-                        return !(targetNode.JTokenTag.Parent is JProperty)
-                               && targetNode.JTokenTag is JArray;
+                        return targetNode.JTokenTag.Parent is not JProperty
+                            && targetNode.JTokenTag is JArray;
                 }
             }
 
@@ -344,8 +326,8 @@ namespace ZTn.Json.JsonTreeView.Views
                     case DragDropEffects.Copy:
                         return targetNode.JTokenTag is JArray;
                     case DragDropEffects.Move:
-                        return !(targetNode.JTokenTag.Parent is JProperty)
-                               && targetNode.JTokenTag is JArray;
+                        return targetNode.JTokenTag.Parent is not JProperty
+                            && targetNode.JTokenTag is JArray;
                 }
             }
 

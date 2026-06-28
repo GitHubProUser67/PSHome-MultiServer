@@ -2,48 +2,46 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Locker
 {
-	[TdfStruct]
-	public struct CategorySummary
-	{
+    [TdfStruct]
+    public struct CategorySummary
+    {
+        [TdfMember("AMSA")]
+        public uint mAssociatedMaxSizeAllowed;
 
-		[TdfMember("AMSA")]
-		public uint mAssociatedMaxSizeAllowed;
+        [TdfMember("COTY")]
+        public string mContextType;
 
-		[TdfMember("COTY")]
-		public string mContextType;
+        [TdfMember("DAFO")]
+        public string mDataFormat;
 
-		[TdfMember("DAFO")]
-		public string mDataFormat;
+        [TdfMember("ENTY")]
+        public string mEntityType;
 
-		[TdfMember("ENTY")]
-		public string mEntityType;
+        [TdfMember("ID")]
+        public ushort mId;
 
-		[TdfMember("ID")]
-		public ushort mId;
+        [TdfMember("MAXA")]
+        public ushort mMaxAllowed;
 
-		[TdfMember("MAXA")]
-		public ushort mMaxAllowed;
+        [TdfMember("MBMA")]
+        public ushort mMaxBookmarksAllowed;
 
-		[TdfMember("MBMA")]
-		public ushort mMaxBookmarksAllowed;
+        [TdfMember("MASA")]
+        public uint mMaxSizeAllowed;
 
-		[TdfMember("MASA")]
-		public uint mMaxSizeAllowed;
+        [TdfMember("NAME")]
+        public string mName;
 
-		[TdfMember("NAME")]
-		public string mName;
+        [TdfMember("RATE")]
+        public bool mRatings;
 
-		[TdfMember("RATE")]
-		public bool mRatings;
+        [TdfMember("SECU")]
+        public bool mSecurePut;
 
-		[TdfMember("SECU")]
-		public bool mSecurePut;
+        [TdfMember("TAGS")]
+        public bool mTags;
 
-		[TdfMember("TAGS")]
-		public bool mTags;
-
-		[TdfMember("USAG")]
-		public bool mUsage;
-
-	}
+        [TdfMember("USAG")]
+        public bool mUsage;
+    }
 }

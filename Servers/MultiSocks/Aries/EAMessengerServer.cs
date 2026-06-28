@@ -1,6 +1,6 @@
 using MultiSocks.Aries.DataStore;
-using MultiSocks.Aries.Messages;
-using MultiSocks.Aries.Messages.AccountService.ErrorCodes;
+using MultiSocks.Aries.Components;
+using MultiSocks.Aries.Components.AccountService.ErrorCodes;
 using MultiSocks.Aries.Model;
 using MultiSocks.Utils;
 
@@ -20,11 +20,17 @@ namespace MultiSocks.Aries
 
         private readonly Thread PingThread;
 
-        public EAMessengerServer(ushort port, string listenIP, string? Project = null, string? SKU = null, bool secure = false, string CN = "", bool WeakChainSignedRSAKey = false) : base(port, listenIP, Project, SKU, secure, CN, WeakChainSignedRSAKey)
+        public EAMessengerServer(
+            ushort port,
+            string listenIP,
+            string? Project = null,
+            string? SKU = null,
+            bool secure = false,
+            string CN = "",
+            bool WeakChainSignedRSAKey = false
+        )
+            : base(port, listenIP, Project, SKU, secure, CN, WeakChainSignedRSAKey)
         {
-            lock (Users)
-                Users.AddUser(new AriesUser() { ID = 1 }); // Admin player.
-
             PingThread = new Thread(PingLoop);
             PingThread.Start();
         }
@@ -44,29 +50,34 @@ namespace MultiSocks.Aries
 
             //clean up this user's state.
             //are they logged in?
-            AriesUser? user = client.User;
+            var user = client.User;
             if (user != null)
             {
                 Users.RemoveUser(user);
             }
         }
 
-        public void TryEAMLogin(DbAccount user, AriesClient client, string? PASS, string LOC, string? MAC, string? TOKEN)
+        public void TryEAMLogin(
+            DbAccount user,
+            AriesClient client,
+            string? PASS,
+            string LOC,
+            string? MAC,
+            string? TOKEN
+        )
         {
             //is someone else already logged in as this user?
-            AriesUser? oldUser = Users.GetUserByName(user.Username);
+            var oldUser = Users.GetUserByName(user.Username);
             if (oldUser != null)
             {
                 client.SendMessage(new AuthLogn());
                 return;
             }
 
-            string? DecryptedPass = PasswordUtils.Ssc2Decode(PASS, client.SKEY);
+            var DecryptedPass = PasswordUtils.Ssc2Decode(PASS, client.SKEY);
 
             if (DecryptedPass == string.Empty) // EA assumed that Consoles protect the login so they crypt an empty password, extremly bad, but can't do anything.
-            {
-
-            }
+            { }
             else if (user.Password != DecryptedPass)
             {
                 client.SendMessage(new AuthPass());
@@ -75,8 +86,8 @@ namespace MultiSocks.Aries
 
             CustomLogger.LoggerAccessor.LogInfo("EA Messenger Logged in: " + user.Username);
 
-            string[] personas = new string[4];
-            for (int i = 0; i < user.Personas.Count; i++)
+            var personas = new string[4];
+            for (var i = 0; i < user.Personas.Count; i++)
             {
                 personas[i] = user.Personas[i];
             }
@@ -93,7 +104,7 @@ namespace MultiSocks.Aries
                 Username = user.Username,
                 ADDR = client.ADDR,
                 LADDR = client.LADDR,
-                LOC = LOC
+                LOC = LOC,
             };
 
             Users.AddUser(user2);
@@ -101,18 +112,20 @@ namespace MultiSocks.Aries
 
             // Ideally all the infos comes from User profile and not hardcodded.
 
-            client.SendMessage(new EAMAuth()
-            {
-                BORN = "19800325",
-                GEND = "M",
-                FROM = "US",
-                LANG = "en",
-                LAST = DateTime.Now.ToString("yyyy.M.d HH:mm:ss"),
-                TOS = user.TOS,
-                NAME = user.Username,
-                MAIL = user.MAIL,
-                PERSONAS = string.Join(',', user.Personas)
-            });
+            client.SendMessage(
+                new EAMAuth()
+                {
+                    BORN = "19800325",
+                    GEND = "M",
+                    FROM = "US",
+                    LANG = "en",
+                    LAST = DateTime.Now.ToString("yyyy.M.d HH:mm:ss"),
+                    TOS = user.TOS,
+                    NAME = user.Username,
+                    MAIL = user.MAIL,
+                    PERSONAS = string.Join(',', user.Personas),
+                }
+            );
         }
     }
 }

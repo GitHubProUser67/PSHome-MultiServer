@@ -1,6 +1,6 @@
 /*
  *   Mentalis.org Security Library
- * 
+ *
  *     Copyright � 2002-2005, The Mentalis.org Team
  *     All rights reserved.
  *     http://www.mentalis.org/
@@ -11,11 +11,11 @@
  *   are met:
  *
  *     - Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer. 
+ *        notice, this list of conditions and the following disclaimer.
  *
  *     - Neither the name of the Mentalis.org Team, nor the names of its contributors
  *        may be used to endorse or promote products derived from this
- *        software without specific prior written permission. 
+ *        software without specific prior written permission.
  *
  *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -31,91 +31,97 @@
  *   OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-using System;
-using System.Threading;
-
-namespace Org.Mentalis.Security.Ssl
+namespace CastleLibrary.FixedSsl.Security.Ssl
 {
-    internal class AsyncResult : IAsyncResult {
-		internal AsyncResult(AsyncCallback callback, object stateObject, object owner) {
-			m_StateObject = stateObject;
-			m_Completed = false;
-			m_Owner = owner;
-			if (callback != null)
-				this.Callback += callback;
-		}
-		// Thanks go out to John Doty for notifying us about a bug in this method
-		public void Notify(Exception e) {
-			if (!m_Completed) {
-				m_AsyncException = e;
-				m_Completed = true;
-				if (Callback != null) {
-					if (m_Owner != null) // exit the synchronization lock, if necessary
-						Monitor.Exit(m_Owner);
-					try {
-						Callback(this);
-					} finally {
-						if (m_Owner != null) // acquire the synchronization lock, if necessary
-							Monitor.Enter(m_Owner);
-					}
-				}
-				if (m_WaitHandle != null)
-					m_WaitHandle.Set();
-			}
-		}
-		public void Notify() {
-			Notify(this.AsyncException);
-		}
-		public Exception AsyncException {
-			get {
-				return m_AsyncException;
-			}
-			set {
-				m_AsyncException = value;
-			}
-		}
-		public bool IsCompleted {
-			get {
-				return m_Completed;
-			}
-		}
-		public bool CompletedSynchronously {
-			get {
-				return false;
-			}
-		}
-		public object AsyncState {
-			get {
-				return m_StateObject;
-			}
-		}
-		// Thanks go out to Kevin Knoop for notifying us about a bug in this method
-		public WaitHandle AsyncWaitHandle {
-			get {
-				if (m_WaitHandle == null)
-					m_WaitHandle = new ManualResetEvent(m_Completed);
-				if (m_Completed)
-					m_WaitHandle.Set();
-				return m_WaitHandle;
-			}
-		}
-		private bool m_Completed;
-		private object m_StateObject;
-		private object m_Owner;
-		private ManualResetEvent m_WaitHandle;
-		private Exception m_AsyncException = null;
-		public event AsyncCallback Callback;
-	}
-	internal class AsyncAcceptResult : AsyncResult {
-		internal AsyncAcceptResult(AsyncCallback callback, object stateObject, object owner) : base(callback, stateObject, owner) {}
-		public SecureSocket AcceptedSocket {
-			get {
-				return m_AcceptedSocket;
-			}
-			set {
-				m_AcceptedSocket = value;
-			}
-		}
-		private SecureSocket m_AcceptedSocket;
-	}
+    internal class AsyncResult : IAsyncResult
+    {
+        internal AsyncResult(AsyncCallback callback, object stateObject, object owner)
+        {
+            m_StateObject = stateObject;
+            m_Completed = false;
+            m_Owner = owner;
+            if (callback != null)
+                Callback += callback;
+        }
+
+        // Thanks go out to John Doty for notifying us about a bug in this method
+        public void Notify(Exception e)
+        {
+            if (!m_Completed)
+            {
+                m_AsyncException = e;
+                m_Completed = true;
+                if (Callback != null)
+                {
+                    if (m_Owner != null) // exit the synchronization lock, if necessary
+                        Monitor.Exit(m_Owner);
+                    try
+                    {
+                        Callback(this);
+                    }
+                    finally
+                    {
+                        if (m_Owner != null) // acquire the synchronization lock, if necessary
+                            Monitor.Enter(m_Owner);
+                    }
+                }
+                if (m_WaitHandle != null)
+                    m_WaitHandle.Set();
+            }
+        }
+
+        public void Notify()
+        {
+            Notify(this.AsyncException);
+        }
+
+        public Exception AsyncException
+        {
+            get { return m_AsyncException; }
+            set { m_AsyncException = value; }
+        }
+        public bool IsCompleted
+        {
+            get { return m_Completed; }
+        }
+        public bool CompletedSynchronously
+        {
+            get { return false; }
+        }
+        public object AsyncState
+        {
+            get { return m_StateObject; }
+        }
+
+        // Thanks go out to Kevin Knoop for notifying us about a bug in this method
+        public WaitHandle AsyncWaitHandle
+        {
+            get
+            {
+                m_WaitHandle ??= new ManualResetEvent(m_Completed);
+                if (m_Completed)
+                    m_WaitHandle.Set();
+                return m_WaitHandle;
+            }
+        }
+        private bool m_Completed;
+        private readonly object m_StateObject;
+        private readonly object m_Owner;
+        private ManualResetEvent m_WaitHandle;
+        private Exception m_AsyncException = null;
+        public event AsyncCallback Callback;
+    }
+
+    internal class AsyncAcceptResult : AsyncResult
+    {
+        internal AsyncAcceptResult(AsyncCallback callback, object stateObject, object owner)
+            : base(callback, stateObject, owner) { }
+
+        public SecureSocket AcceptedSocket
+        {
+            get { return m_AcceptedSocket; }
+            set { m_AcceptedSocket = value; }
+        }
+        private SecureSocket m_AcceptedSocket;
+    }
 }

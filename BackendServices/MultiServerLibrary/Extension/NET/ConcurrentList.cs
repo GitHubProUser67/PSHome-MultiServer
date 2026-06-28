@@ -1,12 +1,11 @@
-using System.Linq;
-using System.Threading;
+using System.Collections;
 
-namespace System.Collections.Generic
+namespace MultiServerLibrary.Extension.NET
 {
     // https://gist.github.com/ronnieoverby/11c8b6b067872db719d7
     public class ConcurrentList<T> : IList<T>, IDisposable
     {
-        private ReaderWriterLockSlim _lock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+        private readonly ReaderWriterLockSlim _lock = new(LockRecursionPolicy.SupportsRecursion);
         private int _size = 0;
 
         public int Count
@@ -48,8 +47,8 @@ namespace System.Collections.Generic
             _items = new T[initialCapacity];
         }
 
-        public ConcurrentList() : this(4)
-        { }
+        public ConcurrentList()
+            : this(4) { }
 
         public ConcurrentList(IEnumerable<T> items)
         {
@@ -62,7 +61,7 @@ namespace System.Collections.Generic
             _lock.EnterWriteLock();
             try
             {
-                int newCount = _size + 1;
+                var newCount = _size + 1;
                 EnsureCapacity(newCount);
                 _items[_size] = item;
                 _size = newCount;
@@ -75,14 +74,13 @@ namespace System.Collections.Generic
 
         public void AddRange(IEnumerable<T> items)
         {
-            if (items == null)
-                throw new ArgumentNullException("items");
+            ArgumentNullException.ThrowIfNull(items);
 
             _lock.EnterWriteLock();
             try
             {
-                T[] arr = items as T[] ?? items.ToArray();
-                int newCount = _size + arr.Length;
+                var arr = items as T[] ?? items.ToArray();
+                var newCount = _size + arr.Length;
                 EnsureCapacity(newCount);
                 Array.Copy(arr, 0, _items, _size, arr.Length);
                 _size = newCount;
@@ -111,7 +109,7 @@ namespace System.Collections.Generic
                 }
             }
 
-            int newLength = Math.Max(doubled, capacity);
+            var newLength = Math.Max(doubled, capacity);
             Array.Resize(ref _items, newLength);
         }
 
@@ -120,7 +118,7 @@ namespace System.Collections.Generic
             _lock.EnterUpgradeableReadLock();
             try
             {
-                int i = IndexOfInternal(item);
+                var i = IndexOfInternal(item);
 
                 if (i == -1)
                     return false;
@@ -147,7 +145,7 @@ namespace System.Collections.Generic
             _lock.EnterReadLock();
             try
             {
-                for (int i = 0; i < _size; i++)
+                for (var i = 0; i < _size; i++)
                     // deadlocking potential mitigated by lock recursion enforcement
                     yield return _items[i];
             }
@@ -185,13 +183,12 @@ namespace System.Collections.Generic
             _lock.EnterUpgradeableReadLock();
             try
             {
-                if (index > _size)
-                    throw new ArgumentOutOfRangeException("index");
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(index, _size);
 
                 _lock.EnterWriteLock();
                 try
                 {
-                    int newCount = _size + 1;
+                    var newCount = _size + 1;
                     EnsureCapacity(newCount);
 
                     // shift everything right by one, starting at index
@@ -210,14 +207,11 @@ namespace System.Collections.Generic
             {
                 _lock.ExitUpgradeableReadLock();
             }
-
-
         }
 
         public int RemoveAll(Predicate<T> match)
         {
-            if (match == null)
-                throw new ArgumentNullException("match");
+            ArgumentNullException.ThrowIfNull(match);
 
             _lock.EnterUpgradeableReadLock();
             try
@@ -225,17 +219,20 @@ namespace System.Collections.Generic
                 _lock.EnterWriteLock();
                 try
                 {
-                    int freeIndex = 0;   // the first free slot in items array
+                    var freeIndex = 0; // the first free slot in items array
 
                     // Find the first item which needs to be removed.
-                    while (freeIndex < _size && !match(_items[freeIndex])) freeIndex++;
-                    if (freeIndex >= _size) return 0;
+                    while (freeIndex < _size && !match(_items[freeIndex]))
+                        freeIndex++;
+                    if (freeIndex >= _size)
+                        return 0;
 
-                    int current = freeIndex + 1;
+                    var current = freeIndex + 1;
                     while (current < _size)
                     {
                         // Find the first item which needs to be kept.
-                        while (current < _size && match(_items[current])) current++;
+                        while (current < _size && match(_items[current]))
+                            current++;
 
                         if (current < _size)
                         {
@@ -245,7 +242,7 @@ namespace System.Collections.Generic
                     }
 
                     Array.Clear(_items, freeIndex, _size - freeIndex);
-                    int result = _size - freeIndex;
+                    var result = _size - freeIndex;
                     _size = freeIndex;
                     return result;
                 }
@@ -265,8 +262,7 @@ namespace System.Collections.Generic
             _lock.EnterUpgradeableReadLock();
             try
             {
-                if (index >= _size)
-                    throw new ArgumentOutOfRangeException("index");
+                ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, _size);
 
                 _lock.EnterWriteLock();
                 try
@@ -309,13 +305,12 @@ namespace System.Collections.Generic
 
         public T Find(Predicate<T> match)
         {
-            if (match == null)
-                throw new ArgumentNullException("match");
+            ArgumentNullException.ThrowIfNull(match);
 
             _lock.EnterUpgradeableReadLock();
             try
             {
-                for (int i = 0; i < _size; i++)
+                for (var i = 0; i < _size; i++)
                 {
                     if (match(_items[i]))
                         return _items[i];
@@ -369,8 +364,7 @@ namespace System.Collections.Generic
                 _lock.EnterReadLock();
                 try
                 {
-                    if (index >= _size)
-                        throw new ArgumentOutOfRangeException("index");
+                    ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, _size);
 
                     return _items[index];
                 }
@@ -384,9 +378,7 @@ namespace System.Collections.Generic
                 _lock.EnterUpgradeableReadLock();
                 try
                 {
-
-                    if (index >= _size)
-                        throw new ArgumentOutOfRangeException("index");
+                    ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, _size);
 
                     _lock.EnterWriteLock();
                     try
@@ -402,7 +394,6 @@ namespace System.Collections.Generic
                 {
                     _lock.ExitUpgradeableReadLock();
                 }
-
             }
         }
 

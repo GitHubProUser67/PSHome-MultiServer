@@ -12,6 +12,9 @@ namespace Tdf
         public T? Value;
 
         public FieldInfo ValueFieldInfo { get; }
-        object? ITdfValueContainer.Value { get => Value; }
+        object? ITdfValueContainer.Value
+        {
+            get => Value;
+        }
     }
 }

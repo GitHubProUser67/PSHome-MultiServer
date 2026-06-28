@@ -1,4 +1,3 @@
-using System;
 using System.Runtime.InteropServices;
 
 namespace EndianTools.BitConverterExtension
@@ -11,7 +10,7 @@ namespace EndianTools.BitConverterExtension
         /// </summary>
         /// <remarks>
         /// Different computer architectures store data using different byte orders. "Big-endian"
-        /// means the most significant byte is on the left end of a word. "Little-endian" means the 
+        /// means the most significant byte is on the left end of a word. "Little-endian" means the
         /// most significant byte is on the right end of a word.
         /// </remarks>
         /// <returns>true if this converter is little-endian, false otherwise.</returns>
@@ -24,7 +23,8 @@ namespace EndianTools.BitConverterExtension
         #endregion
 
         #region Factory properties
-        static LittleEndianBitConverter little = new LittleEndianBitConverter();
+        static readonly LittleEndianBitConverter little = new();
+
         /// <summary>
         /// Returns a little-endian bit converter instance. The same instance is
         /// always returned.
@@ -34,7 +34,8 @@ namespace EndianTools.BitConverterExtension
             get { return little; }
         }
 
-        static BigEndianBitConverter big = new BigEndianBitConverter();
+        static readonly BigEndianBitConverter big = new();
+
         /// <summary>
         /// Returns a big-endian bit converter instance. The same instance is
         /// always returned.
@@ -47,49 +48,49 @@ namespace EndianTools.BitConverterExtension
 
         #region Double/primitive conversions
         /// <summary>
-        /// Converts the specified double-precision floating point number to a 
+        /// Converts the specified double-precision floating point number to a
         /// 64-bit signed integer. Note: the endianness of this converter does not
         /// affect the returned value.
         /// </summary>
         /// <param name="value">The number to convert. </param>
         /// <returns>A 64-bit signed integer whose value is equivalent to value.</returns>
-        public long DoubleToInt64Bits(double value)
+        public static long DoubleToInt64Bits(double value)
         {
             return BitConverter.DoubleToInt64Bits(value);
         }
 
         /// <summary>
-        /// Converts the specified 64-bit signed integer to a double-precision 
+        /// Converts the specified 64-bit signed integer to a double-precision
         /// floating point number. Note: the endianness of this converter does not
         /// affect the returned value.
         /// </summary>
         /// <param name="value">The number to convert. </param>
         /// <returns>A double-precision floating point number whose value is equivalent to value.</returns>
-        public double Int64BitsToDouble(long value)
+        public static double Int64BitsToDouble(long value)
         {
             return BitConverter.Int64BitsToDouble(value);
         }
 
         /// <summary>
-        /// Converts the specified single-precision floating point number to a 
+        /// Converts the specified single-precision floating point number to a
         /// 32-bit signed integer. Note: the endianness of this converter does not
         /// affect the returned value.
         /// </summary>
         /// <param name="value">The number to convert. </param>
         /// <returns>A 32-bit signed integer whose value is equivalent to value.</returns>
-        public int SingleToInt32Bits(float value)
+        public static int SingleToInt32Bits(float value)
         {
             return new Int32SingleUnion(value).AsInt32;
         }
 
         /// <summary>
-        /// Converts the specified 32-bit signed integer to a single-precision floating point 
+        /// Converts the specified 32-bit signed integer to a single-precision floating point
         /// number. Note: the endianness of this converter does not
         /// affect the returned value.
         /// </summary>
         /// <param name="value">The number to convert. </param>
         /// <returns>A single-precision floating point number whose value is equivalent to value.</returns>
-        public float Int32BitsToSingle(int value)
+        public static float Int32BitsToSingle(int value)
         {
             return new Int32SingleUnion(value).AsSingle;
         }
@@ -102,7 +103,7 @@ namespace EndianTools.BitConverterExtension
         /// <param name="value">An array of bytes.</param>
         /// <param name="startIndex">The starting position within value.</param>
         /// <returns>true if the byte at startIndex in value is nonzero; otherwise, false.</returns>
-        public bool ToBoolean(byte[] value, int startIndex)
+        public static bool ToBoolean(byte[] value, int startIndex)
         {
             CheckByteArgument(value, startIndex, 1);
             return BitConverter.ToBoolean(value, startIndex);
@@ -116,7 +117,7 @@ namespace EndianTools.BitConverterExtension
         /// <returns>A character formed by two bytes beginning at startIndex.</returns>
         public char ToChar(byte[] value, int startIndex)
         {
-            return unchecked((char)(CheckedFromBytes(value, startIndex, 2)));
+            return unchecked((char)CheckedFromBytes(value, startIndex, 2));
         }
 
         /// <summary>
@@ -131,13 +132,10 @@ namespace EndianTools.BitConverterExtension
         /// </exception>
         static void CheckByteArgument(byte[] value, int startIndex, int bytesRequired)
         {
-            if (value == null)
-            {
-                throw new ArgumentNullException("value");
-            }
+            ArgumentNullException.ThrowIfNull(value);
             if (startIndex < 0 || startIndex > value.Length - bytesRequired)
             {
-                throw new ArgumentOutOfRangeException("startIndex");
+                throw new ArgumentOutOfRangeException(nameof(startIndex));
             }
         }
 
@@ -174,7 +172,7 @@ namespace EndianTools.BitConverterExtension
         /// <param name="value">An array of bytes.</param>
         /// <remarks>All the elements of value are converted.</remarks>
         /// <returns>
-        /// A String of hexadecimal pairs separated by hyphens, where each pair 
+        /// A String of hexadecimal pairs separated by hyphens, where each pair
         /// represents the corresponding element in value; for example, "7F-2C-4A".
         /// </returns>
         public static string ToString(byte[] value)
@@ -189,7 +187,7 @@ namespace EndianTools.BitConverterExtension
         /// <param name="startIndex">The starting position within value.</param>
         /// <remarks>The elements from array position startIndex to the end of the array are converted.</remarks>
         /// <returns>
-        /// A String of hexadecimal pairs separated by hyphens, where each pair 
+        /// A String of hexadecimal pairs separated by hyphens, where each pair
         /// represents the corresponding element in value; for example, "7F-2C-4A".
         /// </returns>
         public static string ToString(byte[] value, int startIndex)
@@ -205,7 +203,7 @@ namespace EndianTools.BitConverterExtension
         /// <param name="length">The number of bytes to convert.</param>
         /// <remarks>The length elements from array position startIndex are converted.</remarks>
         /// <returns>
-        /// A String of hexadecimal pairs separated by hyphens, where each pair 
+        /// A String of hexadecimal pairs separated by hyphens, where each pair
         /// represents the corresponding element in value; for example, "7F-2C-4A".
         /// </returns>
         public static string ToString(byte[] value, int startIndex, int length)
@@ -216,7 +214,7 @@ namespace EndianTools.BitConverterExtension
 
         #region	Decimal conversions
         /// <summary>
-        /// Returns a decimal value converted from sixteen bytes 
+        /// Returns a decimal value converted from sixteen bytes
         /// at a specified position in a byte array.
         /// </summary>
         /// <param name="value">An array of bytes.</param>
@@ -231,9 +229,9 @@ namespace EndianTools.BitConverterExtension
         /// <returns>An array of bytes with length 16.</returns>
         public byte[] GetBytes(decimal value)
         {
-            byte[] bytes = new byte[16];
-            int[] parts = decimal.GetBits(value);
-            for (int i = 0; i < 4; i++)
+            var bytes = new byte[16];
+            var parts = decimal.GetBits(value);
+            for (var i = 0; i < 4; i++)
             {
                 CopyBytesImpl(parts[i], 4, bytes, i * 4);
             }
@@ -249,10 +247,10 @@ namespace EndianTools.BitConverterExtension
         /// <param name="index">The first index into the array to copy the bytes into</param>
         public void CopyBytes(decimal value, byte[] buffer, int index)
         {
-            int[] parts = decimal.GetBits(value);
-            for (int i = 0; i < 4; i++)
+            var parts = decimal.GetBits(value);
+            for (var i = 0; i < 4; i++)
             {
-                CopyBytesImpl(parts[i], 4, buffer, i * 4 + index);
+                CopyBytesImpl(parts[i], 4, buffer, (i * 4) + index);
             }
         }
         #endregion
@@ -267,7 +265,7 @@ namespace EndianTools.BitConverterExtension
         /// <param name="bytes">The number of significant bytes to return</param>
         byte[] GetBytes(long value, int bytes)
         {
-            byte[] buffer = new byte[bytes];
+            var buffer = new byte[bytes];
             CopyBytes(value, bytes, buffer, 0);
             return buffer;
         }
@@ -277,7 +275,7 @@ namespace EndianTools.BitConverterExtension
         /// </summary>
         /// <param name="value">A Boolean value.</param>
         /// <returns>An array of bytes with length 1.</returns>
-        public byte[] GetBytes(bool value)
+        public static byte[] GetBytes(bool value)
         {
             return BitConverter.GetBytes(value);
         }
@@ -389,7 +387,7 @@ namespace EndianTools.BitConverterExtension
         {
             if (buffer == null)
             {
-                throw new ArgumentNullException("buffer", "Byte array must not be null");
+                throw new ArgumentNullException(nameof(buffer), "Byte array must not be null");
             }
             if (buffer.Length < index + bytes)
             {
@@ -544,12 +542,13 @@ namespace EndianTools.BitConverterExtension
             /// Int32 version of the value.
             /// </summary>
             [FieldOffset(0)]
-            int i;
+            readonly int i;
+
             /// <summary>
             /// Single version of the value.
             /// </summary>
             [FieldOffset(0)]
-            float f;
+            readonly float f;
 
             /// <summary>
             /// Creates an instance representing the given integer.
@@ -574,7 +573,7 @@ namespace EndianTools.BitConverterExtension
             /// <summary>
             /// Returns the value of the instance as an integer.
             /// </summary>
-            internal int AsInt32
+            internal readonly int AsInt32
             {
                 get { return i; }
             }
@@ -582,7 +581,7 @@ namespace EndianTools.BitConverterExtension
             /// <summary>
             /// Returns the value of the instance as a floating point number.
             /// </summary>
-            internal float AsSingle
+            internal readonly float AsSingle
             {
                 get { return f; }
             }

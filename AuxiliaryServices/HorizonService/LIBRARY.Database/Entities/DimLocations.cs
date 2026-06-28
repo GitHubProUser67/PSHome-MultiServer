@@ -1,5 +1,4 @@
 using Horizon.RT.Common;
-using System;
 
 namespace Horizon.LIBRARY.Database.Entities
 {

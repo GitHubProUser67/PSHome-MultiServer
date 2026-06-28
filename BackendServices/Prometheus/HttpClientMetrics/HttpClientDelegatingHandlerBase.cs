@@ -3,7 +3,7 @@ namespace Prometheus.HttpClientMetrics;
 /// <summary>
 /// This base class performs the data management necessary to associate the correct labels and values
 /// with HttpClient metrics, depending on the options the user has provided for the HttpClient metric handler.
-/// 
+///
 /// The following labels are supported:
 /// 'method' (HTTP request method)
 /// 'host' (The host name of  HTTP request)
@@ -34,7 +34,11 @@ internal abstract class HttpClientDelegatingHandlerBase<TCollector, TChild> : De
     // Internal only for tests.
     internal readonly TCollector _metric;
 
-    protected HttpClientDelegatingHandlerBase(HttpClientMetricsOptionsBase? options, TCollector? customMetric, HttpClientIdentity identity)
+    protected HttpClientDelegatingHandlerBase(
+        HttpClientMetricsOptionsBase? options,
+        TCollector? customMetric,
+        HttpClientIdentity identity
+    )
     {
         _identity = identity;
 
@@ -62,31 +66,25 @@ internal abstract class HttpClientDelegatingHandlerBase<TCollector, TChild> : De
     /// </remarks>
     protected internal TChild CreateChild(HttpRequestMessage request, HttpResponseMessage? response)
     {
-        if (!_metric.LabelNames.Any())
+        if (_metric.LabelNames.Length == 0)
             return _metric.Unlabelled;
 
         var labelValues = new string[_metric.LabelNames.Length];
 
         for (var i = 0; i < labelValues.Length; i++)
         {
-            switch (_metric.LabelNames[i])
+            labelValues[i] = _metric.LabelNames[i] switch
             {
-                case HttpClientRequestLabelNames.Method:
-                    labelValues[i] = request.Method.Method;
-                    break;
-                case HttpClientRequestLabelNames.Host:
-                    labelValues[i] = request.RequestUri?.Host ?? "";
-                    break;
-                case HttpClientRequestLabelNames.Client:
-                    labelValues[i] = _identity.Name;
-                    break;
-                case HttpClientRequestLabelNames.Code:
-                    labelValues[i] = response != null ? ((int)response.StatusCode).ToString() : "";
-                    break;
-                default:
-                    // We validate the label set on initialization, so this is impossible.
-                    throw new NotSupportedException($"Found unsupported label on metric: {_metric.LabelNames[i]}");
-            }
+                HttpClientRequestLabelNames.Method => request.Method.Method,
+                HttpClientRequestLabelNames.Host => request.RequestUri?.Host ?? "",
+                HttpClientRequestLabelNames.Client => _identity.Name,
+                HttpClientRequestLabelNames.Code => response != null
+                    ? ((int)response.StatusCode).ToString()
+                    : "",
+                _ => throw new NotSupportedException(
+                    $"Found unsupported label on metric: {_metric.LabelNames[i]}"
+                ), // We validate the label set on initialization, so this is impossible.
+            };
         }
 
         return _metric.WithLabels(labelValues);
@@ -101,6 +99,8 @@ internal abstract class HttpClientDelegatingHandlerBase<TCollector, TChild> : De
         var unexpected = _metric.LabelNames.Except(allowedLabels);
 
         if (unexpected.Any())
-            throw new ArgumentException($"Provided custom HttpClient metric instance for {GetType().Name} has some unexpected labels: {string.Join(", ", unexpected)}.");
+            throw new ArgumentException(
+                $"Provided custom HttpClient metric instance for {GetType().Name} has some unexpected labels: {string.Join(", ", unexpected)}."
+            );
     }
 }

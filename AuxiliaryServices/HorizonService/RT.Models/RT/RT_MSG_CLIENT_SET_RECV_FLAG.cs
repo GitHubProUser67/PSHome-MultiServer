@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -16,7 +15,10 @@ namespace Horizon.RT.Models
             if (reader.MediusVersion <= 108)
             {
                 var bytes = reader.ReadBytes(2);
-                Flag = RT_RECV_FLAG.RECV_LIST | RT_RECV_FLAG.RECV_SINGLE | RT_RECV_FLAG.RECV_NOTIFICATION;
+                Flag =
+                    RT_RECV_FLAG.RECV_LIST
+                    | RT_RECV_FLAG.RECV_SINGLE
+                    | RT_RECV_FLAG.RECV_NOTIFICATION;
                 if (bytes[1] == 1)
                     Flag |= RT_RECV_FLAG.RECV_BROADCAST;
             }
@@ -37,8 +39,7 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"Flag: {Flag}";
+            return base.ToString() + " " + $"Flag: {Flag}";
         }
     }
 }

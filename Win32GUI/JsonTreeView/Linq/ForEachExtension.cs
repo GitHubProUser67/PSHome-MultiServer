@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace ZTn.Json.JsonTreeView.Linq
+﻿namespace ZTn.Json.JsonTreeView.Linq
 {
     public static class ForEachExtension
     {
@@ -11,7 +8,10 @@ namespace ZTn.Json.JsonTreeView.Linq
         /// <typeparam name="TSource"></typeparam>
         /// <param name="source"></param>
         /// <param name="action"></param>
-        public static void ForEach<TSource>(this IEnumerable<TSource> source, Action<TSource> action)
+        public static void ForEach<TSource>(
+            this IEnumerable<TSource> source,
+            Action<TSource> action
+        )
         {
             foreach (var element in source)
             {

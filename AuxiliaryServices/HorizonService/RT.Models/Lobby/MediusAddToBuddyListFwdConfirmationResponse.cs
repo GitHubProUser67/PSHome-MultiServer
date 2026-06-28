@@ -1,14 +1,19 @@
-using System.IO;
+using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
 using Horizon.RT.Models.Misc;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.AddToBuddyListFwdConfirmationResponse)]
-    public class MediusAddToBuddyListFwdConfirmationResponse : BaseLobbyMessage, IMediusAddToBuddyListConfirmationResponse
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.AddToBuddyListFwdConfirmationResponse
+    )]
+    public class MediusAddToBuddyListFwdConfirmationResponse
+        : BaseLobbyMessage,
+            IMediusAddToBuddyListConfirmationResponse
     {
-        public override byte PacketType => (byte)MediusLobbyExtMessageIds.AddToBuddyListFwdConfirmationResponse;
+        public override byte PacketType =>
+            (byte)MediusLobbyExtMessageIds.AddToBuddyListFwdConfirmationResponse;
 
         public bool IsSuccess => StatusCode >= 0;
 
@@ -50,12 +55,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " + 
-                $"SessionKey: {SessionKey} " +
-                $"OriginatorAccountID: {OriginatorAccountID} " +
-                $"AddType: {AddType} ";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"SessionKey: {SessionKey} "
+                + $"OriginatorAccountID: {OriginatorAccountID} "
+                + $"AddType: {AddType} ";
         }
     }
 }

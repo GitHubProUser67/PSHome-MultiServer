@@ -4,21 +4,19 @@
 /// This class implements two sets of functionality:
 /// 1. A lifetime-managed metric handle that can be used to take leases on the metric.
 /// 2. An automatically-lifetime-extending-on-use metric that creates leases automatically.
-/// 
+///
 /// While conceptually separate, we merge the two sets into one class to avoid allocating a bunch of small objects
 /// every time you want to obtain a lifetime-extending-on-use metric (which tends to be on a relatively hot path).
-/// 
+///
 /// The lifetime-extending feature only supports write operations because we cannot guarantee that the metric is still alive when reading.
 /// </summary>
-internal sealed class ManagedLifetimeSummary : ManagedLifetimeMetricHandle<Summary.Child, ISummary>, ICollector<ISummary>
+internal sealed class ManagedLifetimeSummary(Collector<Summary.Child> metric, TimeSpan expiresAfter)
+    : ManagedLifetimeMetricHandle<Summary.Child, ISummary>(metric, expiresAfter),
+        ICollector<ISummary>
 {
     static ManagedLifetimeSummary()
     {
         _assignUnlabelledFunc = AssignUnlabelled;
-    }
-
-    public ManagedLifetimeSummary(Collector<Summary.Child> metric, TimeSpan expiresAfter) : base(metric, expiresAfter)
-    {
     }
 
     public override ICollector<ISummary> WithExtendLifetimeOnUse() => this;
@@ -28,10 +26,13 @@ internal sealed class ManagedLifetimeSummary : ManagedLifetimeMetricHandle<Summa
     public string Help => _metric.Help;
     public string[] LabelNames => _metric.LabelNames;
 
-    public ISummary Unlabelled => NonCapturingLazyInitializer.EnsureInitialized(ref _unlabelled, this, _assignUnlabelledFunc);
+    public ISummary Unlabelled =>
+        NonCapturingLazyInitializer.EnsureInitialized(ref _unlabelled, this, _assignUnlabelledFunc);
     private AutoLeasingInstance? _unlabelled;
     private static readonly Action<ManagedLifetimeSummary> _assignUnlabelledFunc;
-    private static void AssignUnlabelled(ManagedLifetimeSummary instance) => instance._unlabelled = new AutoLeasingInstance(instance, Array.Empty<string>());
+
+    private static void AssignUnlabelled(ManagedLifetimeSummary instance) =>
+        instance._unlabelled = new AutoLeasingInstance(instance, Array.Empty<string>());
 
     // These do not get cached, so are potentially expensive - user code should try avoiding re-allocating these when possible,
     // though admittedly this may not be so easy as often these are on the hot path and the very reason that lifetime-managed
@@ -51,16 +52,13 @@ internal sealed class ManagedLifetimeSummary : ManagedLifetimeMetricHandle<Summa
     }
     #endregion
 
-    private sealed class AutoLeasingInstance : ISummary
+    private sealed class AutoLeasingInstance(
+        IManagedLifetimeMetricHandle<ISummary> inner,
+        ReadOnlyMemory<string> labelValues
+    ) : ISummary
     {
-        public AutoLeasingInstance(IManagedLifetimeMetricHandle<ISummary> inner, ReadOnlyMemory<string> labelValues)
-        {
-            _inner = inner;
-            _labelValues = labelValues;
-        }
-
-        private readonly IManagedLifetimeMetricHandle<ISummary> _inner;
-        private readonly ReadOnlyMemory<string> _labelValues;
+        private readonly IManagedLifetimeMetricHandle<ISummary> _inner = inner;
+        private readonly ReadOnlyMemory<string> _labelValues = labelValues;
 
         public void Observe(double val)
         {
@@ -75,7 +73,9 @@ internal sealed class ManagedLifetimeSummary : ManagedLifetimeMetricHandle<Summa
             public readonly double Val = val;
         }
 
-        private static void ObserveCore(ObserveArgs args, ISummary summary) => summary.Observe(args.Val);
+        private static void ObserveCore(ObserveArgs args, ISummary summary) =>
+            summary.Observe(args.Val);
+
         private static readonly Action<ObserveArgs, ISummary> _observeCoreFunc = ObserveCore;
     }
 }

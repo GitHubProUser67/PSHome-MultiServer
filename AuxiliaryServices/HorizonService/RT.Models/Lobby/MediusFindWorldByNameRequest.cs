@@ -1,6 +1,5 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
@@ -16,14 +15,17 @@ namespace Horizon.RT.Models
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Session Key
         /// </summary>
         public string SessionKey; // SESSIONKEY_MAXLEN
+
         /// <summary>
         /// Name of the world to look for
         /// </summary>
         public string Name;
+
         /// <summary>
         /// Type of world to loof for (game or chat channel)
         /// </summary>
@@ -31,10 +33,8 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
             SessionKey = reader.ReadString(Constants.SESSIONKEY_MAXLEN);
@@ -45,10 +45,8 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
             writer.Write(SessionKey);
@@ -59,11 +57,12 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"Name: {Name} " +
-                $"WorldType: {WorldType}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"Name: {Name} "
+                + $"WorldType: {WorldType}";
         }
     }
 }

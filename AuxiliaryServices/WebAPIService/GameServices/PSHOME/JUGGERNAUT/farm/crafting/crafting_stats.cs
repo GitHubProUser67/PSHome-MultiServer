@@ -1,14 +1,12 @@
-using System.IO;
 namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.farm.crafting
 {
     public class crafting_stats
     {
         public static string ProcessGetStats(string apiPath)
         {
-            if (File.Exists($"{apiPath}/juggernaut/farm/crafting_stats.xml"))
-                return File.ReadAllText($"{apiPath}/juggernaut/farm/crafting_stats.xml");
-
-            return @"<xml>
+            return File.Exists($"{apiPath}/juggernaut/farm/crafting_stats.xml")
+                ? File.ReadAllText($"{apiPath}/juggernaut/farm/crafting_stats.xml")
+                : @"<xml>
                 <element>
                     <value>1</value>
                     <value>100</value>

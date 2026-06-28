@@ -1,5 +1,5 @@
-using BlazeCommon.PacketDisplayAttributes;
 using System.ComponentModel.DataAnnotations;
+using BlazeCommon.PacketDisplayAttributes;
 using Tdf;
 
 namespace Blaze2SDK.Blaze
@@ -7,7 +7,6 @@ namespace Blaze2SDK.Blaze
     [TdfStruct]
     public struct ClientInfo
     {
-
         /// <summary>
         /// Max String Length: 64
         /// </summary>
@@ -74,6 +73,5 @@ namespace Blaze2SDK.Blaze
         [TdfMember("PLAT")]
         [StringLength(16)]
         public string mPlatform;
-
     }
 }

@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct NotifyPresenceModeChanged
-	{
+    [TdfStruct]
+    public struct NotifyPresenceModeChanged
+    {
+        [TdfMember("GID")]
+        public uint mGameId;
 
-		[TdfMember("GID")]
-		public uint mGameId;
-
-		[TdfMember("PRES")]
-		public PresenceMode mNewPresenceMode;
-
-	}
+        [TdfMember("PRES")]
+        public PresenceMode mNewPresenceMode;
+    }
 }

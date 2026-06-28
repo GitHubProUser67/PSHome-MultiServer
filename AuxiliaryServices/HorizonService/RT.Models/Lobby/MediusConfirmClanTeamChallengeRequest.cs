@@ -1,15 +1,15 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.ConfirmClanTeamChallenge)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.ConfirmClanTeamChallenge
+    )]
     public class MediusConfirmClanTeamChallengeRequest : BaseLobbyMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusLobbyMessageIds.ConfirmClanTeamChallenge;
-
-
 
         public MessageId MessageID { get; set; }
         public string SessionKey; // SESSIONKEY_MAXLEN
@@ -37,10 +37,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{MessageID}" + " " +
-                $"SessionKey:{SessionKey}" + " " +
-                $"ClanChallengeID:{ClanChallengeID}";
+            return base.ToString()
+                + " "
+                + $"MessageID:{MessageID}"
+                + " "
+                + $"SessionKey:{SessionKey}"
+                + " "
+                + $"ClanChallengeID:{ClanChallengeID}";
         }
     }
 }

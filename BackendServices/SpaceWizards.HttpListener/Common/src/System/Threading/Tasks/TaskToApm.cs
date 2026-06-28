@@ -2,19 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 // Helper methods for using Tasks to implement the APM pattern.
-//
 // Example usage, wrapping a Task<int>-returning FooAsync method with Begin/EndFoo methods:
-//
 //     public IAsyncResult BeginFoo(..., AsyncCallback? callback, object? state) =>
 //         TaskToApm.Begin(FooAsync(...), callback, state);
-//
 //     public int EndFoo(IAsyncResult asyncResult) =>
 //         TaskToApm.End<int>(asyncResult);
 
 using System.Diagnostics;
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
-#endif
 
 namespace System.Threading.Tasks
 {
@@ -61,16 +56,17 @@ namespace System.Threading.Tasks
         }
 
         /// <summary>Gets the task represented by the IAsyncResult.</summary>
-        public static Task GetTask(IAsyncResult asyncResult) => (asyncResult as TaskAsyncResult)?._task;
+        public static Task GetTask(IAsyncResult asyncResult) =>
+            (asyncResult as TaskAsyncResult)?._task;
 
         /// <summary>Throws an argument exception for the invalid <paramref name="asyncResult"/>.</summary>
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
         [DoesNotReturn]
-#endif
         private static void ThrowArgumentException(IAsyncResult asyncResult) =>
-            throw (asyncResult is null ?
-                new ArgumentNullException(nameof(asyncResult)) :
-                new ArgumentException(null, nameof(asyncResult)));
+            throw (
+                asyncResult is null
+                    ? new ArgumentNullException(nameof(asyncResult))
+                    : new ArgumentException(null, nameof(asyncResult))
+            );
 
         /// <summary>Provides a simple IAsyncResult that wraps a Task.</summary>
         /// <remarks>
@@ -82,6 +78,7 @@ namespace System.Threading.Tasks
         {
             /// <summary>The wrapped Task.</summary>
             internal readonly Task _task;
+
             /// <summary>Callback to invoke when the wrapped task completes.</summary>
             private readonly AsyncCallback _callback;
 
@@ -107,9 +104,10 @@ namespace System.Threading.Tasks
                     // order to avoid running synchronously if the task has already completed by the time we get here but still run
                     // synchronously as part of the task's completion if the task completes after (the more common case).
                     _callback = callback;
-                    _task.ConfigureAwait(continueOnCapturedContext: false)
-                         .GetAwaiter()
-                         .OnCompleted(InvokeCallback); // allocates a delegate, but avoids a closure
+                    _task
+                        .ConfigureAwait(continueOnCapturedContext: false)
+                        .GetAwaiter()
+                        .OnCompleted(InvokeCallback); // allocates a delegate, but avoids a closure
                 }
             }
 
@@ -123,11 +121,14 @@ namespace System.Threading.Tasks
 
             /// <summary>Gets a user-defined object that qualifies or contains information about an asynchronous operation.</summary>
             public object AsyncState { get; }
+
             /// <summary>Gets a value that indicates whether the asynchronous operation completed synchronously.</summary>
             /// <remarks>This is set lazily based on whether the <see cref="_task"/> has completed by the time this object is created.</remarks>
             public bool CompletedSynchronously { get; }
+
             /// <summary>Gets a value that indicates whether the asynchronous operation has completed.</summary>
             public bool IsCompleted => _task.IsCompleted;
+
             /// <summary>Gets a <see cref="WaitHandle"/> that is used to wait for an asynchronous operation to complete.</summary>
             public WaitHandle AsyncWaitHandle => ((IAsyncResult)_task).AsyncWaitHandle;
         }

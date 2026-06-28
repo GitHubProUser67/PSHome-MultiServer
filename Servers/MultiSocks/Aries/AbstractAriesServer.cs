@@ -1,9 +1,9 @@
-using CustomLogger;
-using MultiSocks.Aries.Messages;
-using MultiSocks.ProtoSSL;
 using System.Net.Sockets;
 using System.Text;
+using CustomLogger;
 using MultiServerLibrary.CustomServers;
+using MultiSocks.Aries.Components;
+using MultiSocks.ProtoSSL;
 #if DEBUG
 using CastleLibrary.Utils;
 #endif
@@ -27,7 +27,15 @@ namespace MultiSocks.Aries
         private readonly string CN = string.Empty;
         private readonly TCPServer? Server;
 
-        public AbstractAriesServer(ushort port, string listenIP, string? Project = null, string? SKU = null, bool secure = false, string CN = "", bool WeakChainSignedRSAKey = false)
+        public AbstractAriesServer(
+            ushort port,
+            string listenIP,
+            string? Project = null,
+            string? SKU = null,
+            bool secure = false,
+            string CN = "",
+            bool WeakChainSignedRSAKey = false
+        )
         {
             listenPort = port;
             this.listenIP = listenIP;
@@ -40,8 +48,7 @@ namespace MultiSocks.Aries
             if (secure)
                 SSLCache = new();
 
-            if (Server == null)
-                Server = new TCPServer();
+            Server ??= new TCPServer();
             Server.StartAsync(
                 new List<ushort> { port },
                 MaxConcurrentListeners,
@@ -51,20 +58,36 @@ namespace MultiSocks.Aries
                 (serverPort, client, remoteEP) =>
                 {
                     if (remoteEP.AddressFamily == AddressFamily.InterNetworkV6)
-                        AddClient(new AriesClient(this, client, this.secure, this.CN, this.WeakChainSignedRSAKey)
-                        {
-                            ADDR = remoteEP.Address.MapToIPv4().ToString(),
-                            SessionID = SessionID++
-                        });
+                        AddClient(
+                            new AriesClient(
+                                this,
+                                client,
+                                this.secure,
+                                this.CN,
+                                this.WeakChainSignedRSAKey
+                            )
+                            {
+                                ADDR = remoteEP.Address.MapToIPv4().ToString(),
+                                SessionID = SessionID++,
+                            }
+                        );
                     else
-                        AddClient(new AriesClient(this, client, this.secure, this.CN, this.WeakChainSignedRSAKey)
-                        {
-                            ADDR = remoteEP.Address.ToString(),
-                            SessionID = SessionID++
-                        });
+                        AddClient(
+                            new AriesClient(
+                                this,
+                                client,
+                                this.secure,
+                                this.CN,
+                                this.WeakChainSignedRSAKey
+                            )
+                            {
+                                ADDR = remoteEP.Address.ToString(),
+                                SessionID = SessionID++,
+                            }
+                        );
                 },
                 new CancellationTokenSource().Token
-                );
+            );
         }
 
         public virtual void AddClient(AriesClient client)
@@ -83,7 +106,7 @@ namespace MultiSocks.Aries
         {
             lock (DirtySocksClients)
             {
-                foreach (AriesClient user in DirtySocksClients)
+                foreach (var user in DirtySocksClients)
                 {
                     user.PingSendTick = DateTime.Now.Ticks;
                     user.SendMessage(msg);
@@ -91,19 +114,30 @@ namespace MultiSocks.Aries
             }
         }
 
-        public virtual void HandleMessage(string name, uint errorCode, byte[] data, AriesClient client)
+        public virtual void HandleMessage(
+            string name,
+            uint errorCode,
+            byte[] data,
+            AriesClient client
+        )
         {
             try
             {
-                string body = Encoding.ASCII.GetString(data);
+                var body = Encoding.ASCII.GetString(data);
 #if DEBUG
-                LoggerAccessor.LogInfo($"[AbstractDirtySockServer] - {client.ADDR} Requested Type {name} : {{{data.BytesToHexStr().Replace("\n", string.Empty)}}}");
+                LoggerAccessor.LogInfo(
+                    $"[AbstractDirtySockServer] - {client.ADDR} Requested Type {name} : {{{data.BytesToHexStr().Replace("\n", string.Empty)}}}"
+                );
 #else
-                LoggerAccessor.LogInfo($"[AbstractDirtySockServer] - {client.ADDR} Requested Type {name}");
+                LoggerAccessor.LogInfo(
+                    $"[AbstractDirtySockServer] - {client.ADDR} Requested Type {name}"
+                );
 #endif
-                if (!NameToClass.TryGetValue(name, out Type? c))
+                if (!NameToClass.TryGetValue(name, out var c))
                 {
-                    LoggerAccessor.LogError($"[AbstractDirtySockServer] - {client.ADDR} Requested an unexpected message Type {name} : {body.Replace("\n", string.Empty)}");
+                    LoggerAccessor.LogError(
+                        $"[AbstractDirtySockServer] - {client.ADDR} Requested an unexpected message Type {name} : {body.Replace("\n", string.Empty)}"
+                    );
                     return;
                 }
 
@@ -114,9 +148,7 @@ namespace MultiSocks.Aries
                     if (c != null)
                         msg = (AbstractMessage?)Activator.CreateInstance(c);
                 }
-                catch
-                {
-                }
+                catch { }
 
                 if (msg != null)
                 {
@@ -126,7 +158,9 @@ namespace MultiSocks.Aries
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[AbstractDirtySockServer] - HandleMessage thrown an exception : {ex}");
+                LoggerAccessor.LogError(
+                    $"[AbstractDirtySockServer] - HandleMessage thrown an exception : {ex}"
+                );
             }
         }
 

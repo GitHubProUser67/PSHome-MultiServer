@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Clubs
 {
-	[TdfStruct]
-	public struct SetMetadataRequest
-	{
+    [TdfStruct]
+    public struct SetMetadataRequest
+    {
+        [TdfMember("CLID")]
+        public uint mClubId;
 
-		[TdfMember("CLID")]
-		public uint mClubId;
+        [TdfMember("METD")]
+        public string mMetaData;
 
-		[TdfMember("METD")]
-		public string mMetaData;
-
-		[TdfMember("MDTY")]
-		public MetaDataType mMetaDataType;
-
-	}
+        [TdfMember("MDTY")]
+        public MetaDataType mMetaDataType;
+    }
 }

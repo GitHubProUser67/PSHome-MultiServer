@@ -1,5 +1,3 @@
-﻿#if NET
-using System;
 using System.Buffers;
 using System.Globalization;
 using System.Runtime.CompilerServices;
@@ -19,23 +17,43 @@ internal sealed class TextSerializer : IMetricsSerializer
     internal static ReadOnlySpan<byte> LeftBrace => [(byte)'{'];
     internal static ReadOnlySpan<byte> RightBraceSpace => [(byte)'}', (byte)' '];
     internal static ReadOnlySpan<byte> Space => [(byte)' '];
-    internal static ReadOnlySpan<byte> SpaceHashSpaceLeftBrace => [(byte)' ', (byte)'#', (byte)' ', (byte)'{'];
-    internal static ReadOnlySpan<byte> PositiveInfinity => [(byte)'+', (byte)'I', (byte)'n', (byte)'f'];
-    internal static ReadOnlySpan<byte> NegativeInfinity => [(byte)'-', (byte)'I', (byte)'n', (byte)'f'];
+    internal static ReadOnlySpan<byte> SpaceHashSpaceLeftBrace =>
+        [(byte)' ', (byte)'#', (byte)' ', (byte)'{'];
+    internal static ReadOnlySpan<byte> PositiveInfinity =>
+        [(byte)'+', (byte)'I', (byte)'n', (byte)'f'];
+    internal static ReadOnlySpan<byte> NegativeInfinity =>
+        [(byte)'-', (byte)'I', (byte)'n', (byte)'f'];
     internal static ReadOnlySpan<byte> NotANumber => [(byte)'N', (byte)'a', (byte)'N'];
     internal static ReadOnlySpan<byte> DotZero => [(byte)'.', (byte)'0'];
     internal static ReadOnlySpan<byte> FloatPositiveOne => [(byte)'1', (byte)'.', (byte)'0'];
     internal static ReadOnlySpan<byte> FloatZero => [(byte)'0', (byte)'.', (byte)'0'];
-    internal static ReadOnlySpan<byte> FloatNegativeOne => [(byte)'-', (byte)'1', (byte)'.', (byte)'0'];
+    internal static ReadOnlySpan<byte> FloatNegativeOne =>
+        [(byte)'-', (byte)'1', (byte)'.', (byte)'0'];
     internal static ReadOnlySpan<byte> IntPositiveOne => [(byte)'1'];
     internal static ReadOnlySpan<byte> IntZero => [(byte)'0'];
     internal static ReadOnlySpan<byte> IntNegativeOne => [(byte)'-', (byte)'1'];
-    internal static ReadOnlySpan<byte> HashHelpSpace => [(byte)'#', (byte)' ', (byte)'H', (byte)'E', (byte)'L', (byte)'P', (byte)' '];
-    internal static ReadOnlySpan<byte> NewlineHashTypeSpace => [(byte)'\n', (byte)'#', (byte)' ', (byte)'T', (byte)'Y', (byte)'P', (byte)'E', (byte)' '];
+    internal static ReadOnlySpan<byte> HashHelpSpace =>
+        [(byte)'#', (byte)' ', (byte)'H', (byte)'E', (byte)'L', (byte)'P', (byte)' '];
+    internal static ReadOnlySpan<byte> NewlineHashTypeSpace =>
+        [(byte)'\n', (byte)'#', (byte)' ', (byte)'T', (byte)'Y', (byte)'P', (byte)'E', (byte)' '];
 
     internal static readonly byte[] UnknownBytes = "unknown"u8.ToArray();
-    internal static readonly byte[] EofNewLineBytes = [(byte)'#', (byte)' ', (byte)'E', (byte)'O', (byte)'F', (byte)'\n'];
-    internal static readonly byte[] PositiveInfinityBytes = [(byte)'+', (byte)'I', (byte)'n', (byte)'f'];
+    internal static readonly byte[] EofNewLineBytes =
+    [
+        (byte)'#',
+        (byte)' ',
+        (byte)'E',
+        (byte)'O',
+        (byte)'F',
+        (byte)'\n',
+    ];
+    internal static readonly byte[] PositiveInfinityBytes =
+    [
+        (byte)'+',
+        (byte)'I',
+        (byte)'n',
+        (byte)'f',
+    ];
 
     internal static readonly Dictionary<MetricType, byte[]> MetricTypeToBytes = new()
     {
@@ -54,8 +72,10 @@ internal sealed class TextSerializer : IMetricsSerializer
     }
 
     // Enables delay-loading of the stream, because touching stream in HTTP handler triggers some behavior.
-    public TextSerializer(Func<Stream> streamFactory,
-        ExpositionFormat fmt = ExpositionFormat.PrometheusText)
+    public TextSerializer(
+        Func<Stream> streamFactory,
+        ExpositionFormat fmt = ExpositionFormat.PrometheusText
+    )
     {
         _expositionFormat = fmt;
         _stream = new Lazy<Stream>(() => AddStreamBuffering(streamFactory()));
@@ -78,16 +98,28 @@ internal sealed class TextSerializer : IMetricsSerializer
         if (!_stream.IsValueCreated)
             return;
 
-        await _stream.Value.FlushAsync(cancel);
+        await _stream.Value.FlushAsync(cancel).ConfigureAwait(false);
     }
 
     private readonly Lazy<Stream> _stream;
 
     [AsyncMethodBuilder(typeof(PoolingAsyncValueTaskMethodBuilder))]
-    public async ValueTask WriteFamilyDeclarationAsync(string name, byte[] nameBytes, byte[] helpBytes, MetricType type,
-        byte[] typeBytes, CancellationToken cancel)
+    public async ValueTask WriteFamilyDeclarationAsync(
+        string name,
+        byte[] nameBytes,
+        byte[] helpBytes,
+        MetricType type,
+        byte[] typeBytes,
+        CancellationToken cancel
+    )
     {
-        var bufferLength = MeasureFamilyDeclarationLength(name, nameBytes, helpBytes, type, typeBytes);
+        var bufferLength = MeasureFamilyDeclarationLength(
+            name,
+            nameBytes,
+            helpBytes,
+            type,
+            typeBytes
+        );
         var buffer = ArrayPool<byte>.Shared.Rent(bufferLength);
 
         try
@@ -120,7 +152,9 @@ internal sealed class TextSerializer : IMetricsSerializer
             AppendToBufferAndIncrementPosition(typeBytes, buffer, ref position);
             AppendToBufferAndIncrementPosition(NewLine, buffer, ref position);
 
-            await _stream.Value.WriteAsync(buffer.AsMemory(0, position), cancel);
+            await _stream
+                .Value.WriteAsync(buffer.AsMemory(0, position), cancel)
+                .ConfigureAwait(false);
         }
         finally
         {
@@ -128,7 +162,13 @@ internal sealed class TextSerializer : IMetricsSerializer
         }
     }
 
-    public int MeasureFamilyDeclarationLength(string name, byte[] nameBytes, byte[] helpBytes, MetricType type, byte[] typeBytes)
+    public int MeasureFamilyDeclarationLength(
+        string name,
+        byte[] nameBytes,
+        byte[] helpBytes,
+        MetricType type,
+        byte[] typeBytes
+    )
     {
         // We mirror the logic in the Write() call but just measure how many bytes of buffer we need.
         var length = 0;
@@ -164,15 +204,25 @@ internal sealed class TextSerializer : IMetricsSerializer
     public async ValueTask WriteEnd(CancellationToken cancel)
     {
         if (_expositionFormat == ExpositionFormat.OpenMetricsText)
-            await _stream.Value.WriteAsync(EofNewLineBytes, cancel);
+            await _stream.Value.WriteAsync(EofNewLineBytes, cancel).ConfigureAwait(false);
     }
 
     [AsyncMethodBuilder(typeof(PoolingAsyncValueTaskMethodBuilder))]
-    public async ValueTask WriteMetricPointAsync(byte[] name, byte[] flattenedLabels, CanonicalLabel canonicalLabel,
-        double value, ObservedExemplar exemplar, byte[]? suffix, CancellationToken cancel)
+    public async ValueTask WriteMetricPointAsync(
+        byte[] name,
+        byte[] flattenedLabels,
+        CanonicalLabel canonicalLabel,
+        double value,
+        ObservedExemplar exemplar,
+        byte[]? suffix,
+        CancellationToken cancel
+    )
     {
         // This is a max length because we do not know ahead of time how many bytes the actual value will consume.
-        var bufferMaxLength = MeasureIdentifierPartLength(name, flattenedLabels, canonicalLabel, suffix) + MeasureValueMaxLength(value) + NewLine.Length;
+        var bufferMaxLength =
+            MeasureIdentifierPartLength(name, flattenedLabels, canonicalLabel, suffix)
+            + MeasureValueMaxLength(value)
+            + NewLine.Length;
 
         if (_expositionFormat == ExpositionFormat.OpenMetricsText && exemplar.IsValid)
             bufferMaxLength += MeasureExemplarMaxLength(exemplar);
@@ -181,7 +231,13 @@ internal sealed class TextSerializer : IMetricsSerializer
 
         try
         {
-            var position = WriteIdentifierPart(buffer, name, flattenedLabels, canonicalLabel, suffix);
+            var position = WriteIdentifierPart(
+                buffer,
+                name,
+                flattenedLabels,
+                canonicalLabel,
+                suffix
+            );
 
             position += WriteValue(buffer.AsSpan(position..), value);
 
@@ -194,7 +250,9 @@ internal sealed class TextSerializer : IMetricsSerializer
 
             ValidateBufferMaxLengthAndPosition(bufferMaxLength, position);
 
-            await _stream.Value.WriteAsync(buffer.AsMemory(0, position), cancel);
+            await _stream
+                .Value.WriteAsync(buffer.AsMemory(0, position), cancel)
+                .ConfigureAwait(false);
         }
         finally
         {
@@ -203,11 +261,21 @@ internal sealed class TextSerializer : IMetricsSerializer
     }
 
     [AsyncMethodBuilder(typeof(PoolingAsyncValueTaskMethodBuilder))]
-    public async ValueTask WriteMetricPointAsync(byte[] name, byte[] flattenedLabels, CanonicalLabel canonicalLabel,
-        long value, ObservedExemplar exemplar, byte[]? suffix, CancellationToken cancel)
+    public async ValueTask WriteMetricPointAsync(
+        byte[] name,
+        byte[] flattenedLabels,
+        CanonicalLabel canonicalLabel,
+        long value,
+        ObservedExemplar exemplar,
+        byte[]? suffix,
+        CancellationToken cancel
+    )
     {
         // This is a max length because we do not know ahead of time how many bytes the actual value will consume.
-        var bufferMaxLength = MeasureIdentifierPartLength(name, flattenedLabels, canonicalLabel, suffix) + MeasureValueMaxLength(value) + NewLine.Length;
+        var bufferMaxLength =
+            MeasureIdentifierPartLength(name, flattenedLabels, canonicalLabel, suffix)
+            + MeasureValueMaxLength(value)
+            + NewLine.Length;
 
         if (_expositionFormat == ExpositionFormat.OpenMetricsText && exemplar.IsValid)
             bufferMaxLength += MeasureExemplarMaxLength(exemplar);
@@ -216,7 +284,13 @@ internal sealed class TextSerializer : IMetricsSerializer
 
         try
         {
-            var position = WriteIdentifierPart(buffer, name, flattenedLabels, canonicalLabel, suffix);
+            var position = WriteIdentifierPart(
+                buffer,
+                name,
+                flattenedLabels,
+                canonicalLabel,
+                suffix
+            );
 
             position += WriteValue(buffer.AsSpan(position..), value);
 
@@ -229,7 +303,9 @@ internal sealed class TextSerializer : IMetricsSerializer
 
             ValidateBufferMaxLengthAndPosition(bufferMaxLength, position);
 
-            await _stream.Value.WriteAsync(buffer.AsMemory(0, position), cancel);
+            await _stream
+                .Value.WriteAsync(buffer.AsMemory(0, position), cancel)
+                .ConfigureAwait(false);
         }
         finally
         {
@@ -291,7 +367,10 @@ internal sealed class TextSerializer : IMetricsSerializer
         AppendToBufferAndIncrementPosition(label, buffer, ref position);
         AppendToBufferAndIncrementPosition(Equal, buffer, ref position);
         AppendToBufferAndIncrementPosition(Quote, buffer, ref position);
-        position += PrometheusConstants.ExemplarEncoding.GetBytes(value.AsSpan(), buffer[position..]);
+        position += PrometheusConstants.ExemplarEncoding.GetBytes(
+            value.AsSpan(),
+            buffer[position..]
+        );
         AppendToBufferAndIncrementPosition(Quote, buffer, ref position);
 
         return position;
@@ -341,14 +420,34 @@ internal sealed class TextSerializer : IMetricsSerializer
         }
 
         // Size limit guided by https://stackoverflow.com/questions/21146544/what-is-the-maximum-length-of-double-tostringd
-        if (!value.TryFormat(_stringCharsBuffer, out var charsWritten, "g", CultureInfo.InvariantCulture))
+        if (
+            !value.TryFormat(
+                _stringCharsBuffer,
+                out var charsWritten,
+                "g",
+                CultureInfo.InvariantCulture
+            )
+        )
             throw new Exception("Failed to encode floating point value as string.");
 
-        var encodedBytes = PrometheusConstants.ExportEncoding.GetBytes(_stringCharsBuffer, 0, charsWritten, _stringBytesBuffer, 0);
-        AppendToBufferAndIncrementPosition(_stringBytesBuffer.AsSpan(0, encodedBytes), buffer, ref position);
+        var encodedBytes = PrometheusConstants.ExportEncoding.GetBytes(
+            _stringCharsBuffer,
+            0,
+            charsWritten,
+            _stringBytesBuffer,
+            0
+        );
+        AppendToBufferAndIncrementPosition(
+            _stringBytesBuffer.AsSpan(0, encodedBytes),
+            buffer,
+            ref position
+        );
 
         // In certain places (e.g. "le" label) we need floating point values to actually have the decimal point in them for OpenMetrics.
-        if (_expositionFormat == ExpositionFormat.OpenMetricsText && RequiresOpenMetricsDotZero(_stringCharsBuffer, charsWritten))
+        if (
+            _expositionFormat == ExpositionFormat.OpenMetricsText
+            && RequiresOpenMetricsDotZero(_stringCharsBuffer, charsWritten)
+        )
             AppendToBufferAndIncrementPosition(DotZero, buffer, ref position);
 
         return position;
@@ -406,11 +505,28 @@ internal sealed class TextSerializer : IMetricsSerializer
             }
         }
 
-        if (!value.TryFormat(_stringCharsBuffer, out var charsWritten, "D", CultureInfo.InvariantCulture))
+        if (
+            !value.TryFormat(
+                _stringCharsBuffer,
+                out var charsWritten,
+                "D",
+                CultureInfo.InvariantCulture
+            )
+        )
             throw new Exception("Failed to encode integer value as string.");
 
-        var encodedBytes = PrometheusConstants.ExportEncoding.GetBytes(_stringCharsBuffer, 0, charsWritten, _stringBytesBuffer, 0);
-        AppendToBufferAndIncrementPosition(_stringBytesBuffer.AsSpan(0, encodedBytes), buffer, ref position);
+        var encodedBytes = PrometheusConstants.ExportEncoding.GetBytes(
+            _stringCharsBuffer,
+            0,
+            charsWritten,
+            _stringBytesBuffer,
+            0
+        );
+        AppendToBufferAndIncrementPosition(
+            _stringBytesBuffer.AsSpan(0, encodedBytes),
+            buffer,
+            ref position
+        );
 
         return position;
     }
@@ -443,22 +559,30 @@ internal sealed class TextSerializer : IMetricsSerializer
 
     private readonly ExpositionFormat _expositionFormat;
 
-    private static void AppendToBufferAndIncrementPosition(ReadOnlySpan<byte> from, Span<byte> to, ref int position)
+    private static void AppendToBufferAndIncrementPosition(
+        ReadOnlySpan<byte> from,
+        Span<byte> to,
+        ref int position
+    )
     {
         from.CopyTo(to[position..]);
         position += from.Length;
     }
-    
+
     private static void ValidateBufferLengthAndPosition(int bufferLength, int position)
     {
         if (position != bufferLength)
-            throw new Exception("Internal error: counting the same bytes twice got us a different value.");
+            throw new Exception(
+                "Internal error: counting the same bytes twice got us a different value."
+            );
     }
 
     private static void ValidateBufferMaxLengthAndPosition(int bufferMaxLength, int position)
     {
         if (position > bufferMaxLength)
-            throw new Exception("Internal error: counting the same bytes twice got us a different value.");
+            throw new Exception(
+                "Internal error: counting the same bytes twice got us a different value."
+            );
     }
 
     /// <summary>
@@ -466,7 +590,13 @@ internal sealed class TextSerializer : IMetricsSerializer
     /// familyname_postfix{labelkey1="labelvalue1",labelkey2="labelvalue2"}
     /// Note: Terminates with a SPACE
     /// </summary>
-    private int WriteIdentifierPart(Span<byte> buffer, byte[] name, byte[] flattenedLabels, CanonicalLabel extraLabel, byte[]? suffix = null)
+    private int WriteIdentifierPart(
+        Span<byte> buffer,
+        byte[] name,
+        byte[] flattenedLabels,
+        CanonicalLabel extraLabel,
+        byte[]? suffix = null
+    )
     {
         var position = 0;
 
@@ -499,7 +629,11 @@ internal sealed class TextSerializer : IMetricsSerializer
                 AppendToBufferAndIncrementPosition(Quote, buffer, ref position);
 
                 if (_expositionFormat == ExpositionFormat.OpenMetricsText)
-                    AppendToBufferAndIncrementPosition(extraLabel.OpenMetrics, buffer, ref position);
+                    AppendToBufferAndIncrementPosition(
+                        extraLabel.OpenMetrics,
+                        buffer,
+                        ref position
+                    );
                 else
                     AppendToBufferAndIncrementPosition(extraLabel.Prometheus, buffer, ref position);
 
@@ -516,7 +650,12 @@ internal sealed class TextSerializer : IMetricsSerializer
         return position;
     }
 
-    private int MeasureIdentifierPartLength(byte[] name, byte[] flattenedLabels, CanonicalLabel extraLabel, byte[]? suffix = null)
+    private int MeasureIdentifierPartLength(
+        byte[] name,
+        byte[] flattenedLabels,
+        CanonicalLabel extraLabel,
+        byte[]? suffix = null
+    )
     {
         // We mirror the logic in the Write() call but just measure how many bytes of buffer we need.
         var length = 0;
@@ -588,8 +727,13 @@ internal sealed class TextSerializer : IMetricsSerializer
         var prometheusByteCount = PrometheusConstants.ExportEncoding.GetByteCount(prometheusChars);
         var prometheusBytes = new byte[prometheusByteCount];
 
-        if (PrometheusConstants.ExportEncoding.GetBytes(prometheusChars, prometheusBytes) != prometheusByteCount)
-            throw new Exception("Internal error: counting the same bytes twice got us a different value.");
+        if (
+            PrometheusConstants.ExportEncoding.GetBytes(prometheusChars, prometheusBytes)
+            != prometheusByteCount
+        )
+            throw new Exception(
+                "Internal error: counting the same bytes twice got us a different value."
+            );
 
         var openMetricsByteCount = prometheusByteCount;
         byte[] openMetricsBytes;
@@ -616,4 +760,3 @@ internal sealed class TextSerializer : IMetricsSerializer
         return new CanonicalLabel(name, prometheusBytes, openMetricsBytes);
     }
 }
-#endif

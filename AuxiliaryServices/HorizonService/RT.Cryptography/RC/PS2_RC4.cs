@@ -1,6 +1,4 @@
 using MultiServerLibrary.Extension;
-using System;
-using System.Linq;
 
 namespace Horizon.RT.Cryptography.RC
 {
@@ -8,14 +6,18 @@ namespace Horizon.RT.Cryptography.RC
     /// PS2's custom RC4 implementation,
     /// based off https://github.com/bcgit/bc-csharp/blob/f18a2dbbc2c1b4277e24a2e51f09cac02eedf1f5/crypto/src/crypto/engines/RC4Engine.cs
     /// </summary>
-    public class PS2_RC4 : ICipher
+    /// <remarks>
+    /// Initialize with key.
+    /// UYA wants a 512 bit key.
+    /// </remarks>
+    public class PS2_RC4(byte[] key, CipherContext context) : ICipher
     {
-        private readonly static int STATE_LENGTH = 256;
+        private static readonly int STATE_LENGTH = 256;
 
         /// <summary>
         /// Cipher context.
         /// </summary>
-        public CipherContext Context { get; protected set; } = CipherContext.ID_00;
+        public CipherContext Context { get; protected set; } = context;
 
         private class RC4State
         {
@@ -28,17 +30,7 @@ namespace Horizon.RT.Cryptography.RC
             public int y;
         }
 
-        private readonly byte[] workingKey;
-
-        /// <summary>
-        /// Initialize with key.
-        /// UYA wants a 512 bit key.
-        /// </summary>
-        public PS2_RC4(byte[] key, CipherContext context)
-        {
-            Context = context;
-            workingKey = key;
-        }
+        private readonly byte[] workingKey = key;
 
         #region Initialization
 
@@ -47,19 +39,18 @@ namespace Horizon.RT.Cryptography.RC
             state.x = 0;
             state.y = 0;
 
-            int keyIndex = 0;
-            int li = 0;
-            int cipherIndex = 0;
-            int idIndex = 0;
+            var keyIndex = 0;
+            var li = 0;
+            var cipherIndex = 0;
+            var idIndex = 0;
 
             // Initialize engine state
-            if (state.engineState == null)
-                state.engineState = new byte[STATE_LENGTH];
+            state.engineState ??= new byte[STATE_LENGTH];
 
             // reset the state of the engine
             // Normally this initializes values 0,1..254,255 but UYA does this in reverse.
-            for (int i = 0; i < STATE_LENGTH; i++)
-                state.engineState[i] = (byte)((STATE_LENGTH - 1) - i);
+            for (var i = 0; i < STATE_LENGTH; i++)
+                state.engineState[i] = (byte)(STATE_LENGTH - 1 - i);
 
             if (hash != null && hash.Length == 4)
             {
@@ -69,7 +60,7 @@ namespace Horizon.RT.Cryptography.RC
                     int v1 = hash[idIndex];
                     idIndex = (idIndex + 1) & 3;
 
-                    byte temp = state.engineState[cipherIndex];
+                    var temp = state.engineState[cipherIndex];
                     v1 += li;
                     li = (temp + v1) & 0xFF;
 
@@ -77,7 +68,6 @@ namespace Horizon.RT.Cryptography.RC
                     state.engineState[li] = temp;
 
                     cipherIndex = (cipherIndex + 5) & 0xFF;
-
                 } while (cipherIndex != 0);
 
                 // Reset
@@ -96,7 +86,7 @@ namespace Horizon.RT.Cryptography.RC
                 keyIndex &= 0x3F;
 
                 int cipherByte = state.engineState[cipherIndex];
-                byte cipherValue = (byte)(cipherByte & 0xFF);
+                var cipherValue = (byte)(cipherByte & 0xFF);
 
                 cipherByte += keyByte;
                 li = cipherByte & 0xFF;
@@ -114,19 +104,20 @@ namespace Horizon.RT.Cryptography.RC
         #region Decrypt
 
         private static void Decrypt(
-                RC4State state,
-                byte[] input,
-                int inOff,
-                int length,
-                byte[] output,
-                int outOff)
+            RC4State state,
+            byte[] input,
+            int inOff,
+            int length,
+            byte[] output,
+            int outOff
+        )
         {
-            for (int i = 0; i < length; ++i)
+            for (var i = 0; i < length; ++i)
             {
                 state.y = (state.y + 5) & 0xFF;
 
                 int v0 = state.engineState[state.y];
-                byte a2 = (byte)(v0 & 0xFF);
+                var a2 = (byte)(v0 & 0xFF);
                 v0 += state.x;
                 state.x = (byte)(v0 & 0xFF);
 
@@ -134,7 +125,7 @@ namespace Horizon.RT.Cryptography.RC
                 state.engineState[state.y] = (byte)(v0 & 0xFF);
                 state.engineState[state.x] = a2;
 
-                byte a0 = input[i + inOff];
+                var a0 = input[i + inOff];
 
                 v0 += a2;
                 v0 &= 0xFF;
@@ -142,7 +133,6 @@ namespace Horizon.RT.Cryptography.RC
 
                 a0 ^= (byte)v1;
                 output[i + outOff] = a0;
-
 
                 v1 = state.engineState[a0] + state.x;
                 state.x = v1 & 0xFF;
@@ -174,31 +164,32 @@ namespace Horizon.RT.Cryptography.RC
 
         #region Encrypt
 
-        private void Encrypt(
-                RC4State state,
-                byte[] input,
-                int inOff,
-                int length,
-                byte[] output,
-                int outOff)
+        private static void Encrypt(
+            RC4State state,
+            byte[] input,
+            int inOff,
+            int length,
+            byte[] output,
+            int outOff
+        )
         {
-
-            for (int i = 0; i < length; ++i)
+            for (var i = 0; i < length; ++i)
             {
                 state.x = (state.x + 5) & 0xFF;
                 state.y = (state.y + state.engineState[state.x]) & 0xFF;
 
                 // Swap
-                byte temp = state.engineState[state.x];
+                var temp = state.engineState[state.x];
                 state.engineState[state.x] = state.engineState[state.y];
                 state.engineState[state.y] = temp;
 
                 // Xor
                 output[i + outOff] = (byte)(
                     input[i + inOff]
-                    ^
-                    state.engineState[(state.engineState[state.x] + state.engineState[state.y]) & 0xFF]
-                    );
+                    ^ state.engineState[
+                        (state.engineState[state.x] + state.engineState[state.y]) & 0xFF
+                    ]
+                );
 
                 state.y = (state.engineState[input[i + inOff]] + state.y) & 0xFF;
             }
@@ -228,10 +219,9 @@ namespace Horizon.RT.Cryptography.RC
 
         public virtual bool IsHashValid(byte[] hash)
         {
-            if (hash == null || hash.Length != 4)
-                return false;
-
-            return !(hash[0] == 0 && hash[1] == 0 && hash[2] == 0 && (hash[3] & 0x1F) == 0);
+            return hash != null
+                && hash.Length == 4
+                && !(hash[0] == 0 && hash[1] == 0 && hash[2] == 0 && (hash[3] & 0x1F) == 0);
         }
 
         #endregion
@@ -240,10 +230,7 @@ namespace Horizon.RT.Cryptography.RC
 
         public override bool Equals(object obj)
         {
-            if (obj is PS2_RC4 rc)
-                return rc.Equals(this);
-
-            return base.Equals(obj);
+            return obj is PS2_RC4 rc ? rc.Equals(this) : base.Equals(obj);
         }
 
         public bool Equals(PS2_RC4 b)
@@ -260,8 +247,12 @@ namespace Horizon.RT.Cryptography.RC
 
         public override string ToString()
         {
-            return $"PS2_RC4({Context}, {BitConverter.ToString(workingKey).Replace("-", string.Empty)})";
+            return $"PS2_RC4({Context}, {Convert.ToHexString(workingKey)})";
         }
 
+        public override int GetHashCode()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

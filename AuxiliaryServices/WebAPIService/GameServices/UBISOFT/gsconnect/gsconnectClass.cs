@@ -1,23 +1,16 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-
 namespace WebAPIService.GameServices.UBISOFT.gsconnect
 {
-    public class gsconnectClass
+    public class gsconnectClass(string method, string absolutepath, string apiStaticpath)
     {
-        private string absolutepath;
-        private string method;
-        private string apistaticpath;
+        private readonly string absolutepath = absolutepath;
+        private readonly string method = method;
+        private string apistaticpath = apiStaticpath;
 
-        public gsconnectClass(string method, string absolutepath, string apiStaticpath)
-        {
-            this.absolutepath = absolutepath;
-            this.method = method;
-            apistaticpath = apiStaticpath;
-        }
-
-        public (string, string, Dictionary<string, string>) ProcessRequest(IDictionary<string, string> QueryParameters, byte[] PostData = null, string ContentType = null)
+        public (string, string, Dictionary<string, string>) ProcessRequest(
+            IDictionary<string, string> QueryParameters,
+            byte[] PostData = null,
+            string ContentType = null
+        )
         {
             if (string.IsNullOrEmpty(absolutepath))
                 return (null, null, null);
@@ -30,11 +23,14 @@ namespace WebAPIService.GameServices.UBISOFT.gsconnect
                     switch (absolutepath)
                     {
                         case "/gsinit.php":
-                            if (QueryParameters != null && QueryParameters.ContainsKey("dp") && QueryParameters.ContainsKey("user"))
+                            if (
+                                QueryParameters != null
+                                && QueryParameters.TryGetValue("dp", out var dp)
+                                && QueryParameters.ContainsKey("user")
+                            )
                             {
                                 string ini_file = null;
-                                string dp = QueryParameters["dp"];
-                                string user = QueryParameters["user"];
+                                var user = QueryParameters["user"];
 
                                 switch (dp)
                                 {
@@ -51,21 +47,37 @@ namespace WebAPIService.GameServices.UBISOFT.gsconnect
                                         ini_file = "sp3/GS.ini";
                                         break;
                                     default:
-                                        CustomLogger.LoggerAccessor.LogWarn($"[gsconnectClass] - Unknown game in gsinit.php: {dp}");
+                                        CustomLogger.LoggerAccessor.LogWarn(
+                                            $"[gsconnectClass] - Unknown game in gsinit.php: {dp}"
+                                        );
                                         break;
                                 }
 
                                 if (!string.IsNullOrEmpty(ini_file))
                                 {
-                                    string filePath = apistaticpath + ini_file;
+                                    var filePath = apistaticpath + ini_file;
                                     if (File.Exists(filePath))
-                                        return (File.ReadAllText(filePath), "application/octet-stream", new Dictionary<string, string> { { "Content-Disposition", $"attachment; filename={Path.GetFileName(filePath)}" } });
+                                        return (
+                                            File.ReadAllText(filePath),
+                                            "application/octet-stream",
+                                            new Dictionary<string, string>
+                                            {
+                                                {
+                                                    "Content-Disposition",
+                                                    $"attachment; filename={Path.GetFileName(filePath)}"
+                                                },
+                                            }
+                                        );
                                     else
-                                        CustomLogger.LoggerAccessor.LogWarn($"[gsconnectClass] - game: {dp} requested a non-existant file, path: {filePath}");
+                                        CustomLogger.LoggerAccessor.LogWarn(
+                                            $"[gsconnectClass] - game: {dp} requested a non-existant file, path: {filePath}"
+                                        );
                                 }
                             }
                             else
-                                CustomLogger.LoggerAccessor.LogWarn($"[gsconnectClass] - gsinit.php was requested with wrong parameters!");
+                                CustomLogger.LoggerAccessor.LogWarn(
+                                    $"[gsconnectClass] - gsinit.php was requested with wrong parameters!"
+                                );
                             break;
                         default:
                             break;

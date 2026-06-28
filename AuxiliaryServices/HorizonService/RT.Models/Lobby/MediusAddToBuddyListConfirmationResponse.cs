@@ -1,13 +1,16 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.AddToBuddyListConfirmationResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.AddToBuddyListConfirmationResponse
+    )]
     public class MediusAddToBuddyListConfirmationResponse : BaseLobbyMessage, IMediusResponse
     {
-        public override byte PacketType => (byte)MediusLobbyExtMessageIds.AddToBuddyListConfirmationResponse;
+        public override byte PacketType =>
+            (byte)MediusLobbyExtMessageIds.AddToBuddyListConfirmationResponse;
 
         public bool IsSuccess => StatusCode >= 0;
 
@@ -41,14 +44,14 @@ namespace Horizon.RT.Models
             writer.Write(TargetAccountName, Constants.ACCOUNTNAME_MAXLEN);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"TargetAccountID: {TargetAccountID} " +
-                $"TargetAccountName: {TargetAccountName}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"TargetAccountID: {TargetAccountID} "
+                + $"TargetAccountName: {TargetAccountName}";
         }
     }
 }

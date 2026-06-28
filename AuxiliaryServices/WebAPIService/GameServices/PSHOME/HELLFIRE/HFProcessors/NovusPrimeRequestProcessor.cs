@@ -1,55 +1,57 @@
-﻿using CustomLogger;
-using HttpMultipartParser;
-using Microsoft.EntityFrameworkCore;
-using MultiServerLibrary.HTTP;
-using System;
-using System.IO;
-using System.Text;
-using WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.NovusPrime;
-using WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers;
-using WebAPIService.LeaderboardService;
+﻿using System.Text;
 using CastleLibrary.S0ny.XI5;
+using CustomLogger;
+using HttpMultipartParser;
+using MultiServerLibrary.HTTP;
+using WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers;
+using WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.NovusPrime;
+using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
 {
     public class NovusPrimeRequestProcessor
     {
-        public static string ProcessMainPHP(byte[] PostData, string ContentType, string PHPSessionID, string WorkPath)
+        public static string ProcessMainPHP(
+            byte[] PostData,
+            string ContentType,
+            string PHPSessionID,
+            string WorkPath
+        )
         {
             if (PostData == null || string.IsNullOrEmpty(ContentType))
                 return null;
 
-            string Command = string.Empty;
-            string UserID = string.Empty;
-            string DisplayName = string.Empty;
-            string InstanceID = string.Empty;
-            string Region = string.Empty;
-            string Achievements = string.Empty;
-            string Type = string.Empty;
-            string Str = string.Empty;
-            string Amount = string.Empty;
+            var Command = string.Empty;
+            var UserID = string.Empty;
+            var DisplayName = string.Empty;
+            var InstanceID = string.Empty;
+            var Region = string.Empty;
+            var Achievements = string.Empty;
+            var Type = string.Empty;
+            var Str = string.Empty;
+            var Amount = string.Empty;
 
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (boundary != null)
             {
                 byte[] ticketData = null;
 
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
                     foreach (var file in data.Files)
                     {
-                        using (Stream filedata = file.Data)
+                        using (var filedata = file.Data)
                         {
                             filedata.Position = 0;
 
                             // Find the number of bytes in the stream
-                            int contentLength = (int)filedata.Length;
+                            var contentLength = (int)filedata.Length;
 
                             // Create a byte array
-                            byte[] buffer = new byte[contentLength];
+                            var buffer = new byte[contentLength];
 
                             // Read the contents of the memory stream into the byte array
                             filedata.Read(buffer, 0, contentLength);
@@ -64,31 +66,39 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                     if (ticketData != null && ticketData.Length > 188)
                     {
                         // get ticket
-                        XI5Ticket ticket = XI5Ticket.ReadFromBytes(ticketData);
+                        var ticket = XI5Ticket.ReadFromBytes(ticketData);
 
                         // setup username
-                        string username = ticket.Username;
+                        var username = ticket.Username;
 
                         // invalid ticket
                         if (!ticket.Valid)
                         {
                             // log to console
-                            LoggerAccessor.LogWarn($"[HFGames] - NovusPrime : User {username} tried to alter their ticket data");
+                            LoggerAccessor.LogWarn(
+                                $"[HFGames] - NovusPrime : User {username} tried to alter their ticket data"
+                            );
 
                             return null;
                         }
 
                         // RPCN
                         if (ticket.IsSignedByRPCN)
-                            LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on RPCN");
+                            LoggerAccessor.LogInfo(
+                                $"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on RPCN"
+                            );
                         else if (username.EndsWith($"@{XI5Ticket.RPCNSigner}"))
                         {
-                            LoggerAccessor.LogError($"[HFGames] - NovusPrime : User {username} was caught using a RPCN suffix while not on it!");
+                            LoggerAccessor.LogError(
+                                $"[HFGames] - NovusPrime : User {username} was caught using a RPCN suffix while not on it!"
+                            );
 
                             return null;
                         }
                         else
-                            LoggerAccessor.LogInfo($"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on PSN");
+                            LoggerAccessor.LogInfo(
+                                $"[HFGames] - NovusPrime : User {username} connected at: {DateTime.Now} and is on PSN"
+                            );
                     }
 
                     Command = data.GetParameterValue("Command");
@@ -154,85 +164,143 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                         case "RequestNPTicket":
                             return NPTicket.RequestNPTicket(PostData, boundary);
                         case "RequestInitialData":
-                            return User.RequestInitialDataNovusPrime(PostData, boundary, UserID, WorkPath);
+                            return User.RequestInitialDataNovusPrime(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath
+                            );
                         case "UpdateUser":
                             return User.UpdateUserSlimJim(PostData, boundary, UserID, WorkPath);
                         case "RequestScoreLeaderboard":
-                            return Leaderboards.GetLeaderboardsNovusPrime(PostData, boundary, UserID, WorkPath);
+                            return Leaderboards.GetLeaderboardsNovusPrime(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath
+                            );
                         case "RequestSpecificLeaderboard":
-                            DateTime refdate = DateTime.Now; // We avoid race conditions by calculating it one time.
+                            var refdate = DateTime.Now; // We avoid race conditions by calculating it one time.
 
-                            if (Leaderboards.NovusLeaderboard == null)
-                                Leaderboards.NovusLeaderboard = new InterGalacticScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+                            Leaderboards.NovusLeaderboard ??= new InterGalacticScoreBoardData(
+                                LeaderboardDbContext.BuildOptions(
+                                    0,
+                                    $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}"
+                                )
+                            );
 
                             switch (Type)
                             {
                                 case "Day":
                                     if (Leaderboards.NovusLeaderboard != null)
-                                        return Leaderboards.NovusLeaderboard.SerializeToDailyString("Response", 100).Result;
+                                        return Leaderboards
+                                            .NovusLeaderboard.SerializeToDailyString(
+                                                "Response",
+                                                100
+                                            )
+                                            .Result;
                                     break;
                                 case "Week":
                                     if (Leaderboards.NovusLeaderboard != null)
-                                        return Leaderboards.NovusLeaderboard.SerializeToWeeklyString("Response", 100).Result;
+                                        return Leaderboards
+                                            .NovusLeaderboard.SerializeToWeeklyString(
+                                                "Response",
+                                                100
+                                            )
+                                            .Result;
                                     break;
                                 case "Month":
                                     if (Leaderboards.NovusLeaderboard != null)
-                                        return Leaderboards.NovusLeaderboard.SerializeToMonthlyString("Response", 100).Result;
+                                        return Leaderboards
+                                            .NovusLeaderboard.SerializeToMonthlyString(
+                                                "Response",
+                                                100
+                                            )
+                                            .Result;
                                     break;
                             }
                             return "<Response></Response>";
                         case "CompleteMission":
                             return User.NovusCompleteMission(PostData, boundary, UserID, WorkPath);
                         case "RequestCharacter":
-                            return User.UpdateNovusPrimeCharacter(PostData, boundary, UserID, WorkPath, Command);
+                            return User.UpdateNovusPrimeCharacter(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath,
+                                Command
+                            );
                         case "UpdateCharacter":
-                            return User.UpdateNovusPrimeCharacter(PostData, boundary, UserID, WorkPath, Command);
+                            return User.UpdateNovusPrimeCharacter(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath,
+                                Command
+                            );
                         case "ReadShipConfigData":
                             return "<Response></Response>";
                         case "ConfigureShip":
-                            return User.UpdateNovusPrimeCharacter(PostData, boundary, UserID, WorkPath, Command);
+                            return User.UpdateNovusPrimeCharacter(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath,
+                                Command
+                            );
                         case "QueryServerGlobals":
                         case "RequestStore":
                             return "<Response></Response>";
                         case "QueryBoosterItems":
-                            return "<Response><Booster><BoostedStat>2</BoostedStat><ObjectID>BCAA547B-5908430F-AF823FFA-74247EE3</ObjectID><Percent>10</Percent></Booster>" +
-                                "<Booster><BoostedStat>2</BoostedStat><ObjectID>E81B2444-121A49D3-8D9CC3F0-37222CCE</ObjectID><Percent>10</Percent></Booster>" +
-                                "<Booster><BoostedStat>2</BoostedStat><ObjectID>32AA025A-AB73423C-A08821E3-FB2D6064</ObjectID><Percent>5</Percent></Booster>" +
-                                "<Booster><BoostedStat>2</BoostedStat><ObjectID>A6A6D7DB-FE7D45E0-8136A766-69AC32E7</ObjectID><Percent>5</Percent></Booster>" +
-                                "<Booster><BoostedStat>2</BoostedStat><ObjectID>1DAAF0AB-76AA44F9-A99D220F-F905C4FB</ObjectID><Percent>5</Percent></Booster>" +
-                                "<Booster><BoostedStat>2</BoostedStat><ObjectID>3D670654-672A4186-B9C6293D-DEEFD0DD</ObjectID><Percent>5</Percent></Booster>" +
-                                "<Booster><BoostedStat>2</BoostedStat><ObjectID>61D5310E-6A5F41EE-850E3AAC-E7F18903</ObjectID><Percent>5</Percent></Booster>" +
-                                "<Booster><BoostedStat>2</BoostedStat><ObjectID>6368E019-07544E1D-9F1355C3-D89C965A</ObjectID><Percent>5</Percent></Booster>" +
-                                "<Booster><BoostedStat>2</BoostedStat><ObjectID>7A1B6AFE-17E0415C-AC55E187-6D4D2009</ObjectID><Percent>5</Percent></Booster>" +
-                                "<Booster><BoostedStat>2</BoostedStat><ObjectID>8213F77B-83E744D8-951A452F-67A4C4D0</ObjectID><Percent>5</Percent></Booster>" +
-                                "<Booster><BoostedStat>2</BoostedStat><ObjectID>860D2539-CAB44560-8A98ECA4-4EA4B183</ObjectID><Percent>5</Percent></Booster>" +
-                                "<Booster><BoostedStat>2</BoostedStat><ObjectID>AF9ACCEF-D41042B7-8582771C-D89AD2D5</ObjectID><Percent>5</Percent></Booster>" +
-                                "<Booster><BoostedStat>2</BoostedStat><ObjectID>D715417B-EBD04C14-9064B5FD-C5642AF8</ObjectID><Percent>5</Percent></Booster>" +
-                                "<Booster><BoostedStat>2</BoostedStat><ObjectID>D7387B09-B1FB41E6-A0FDF8CB-151C2B15</ObjectID><Percent>5</Percent></Booster>" +
-                                "<Booster><BoostedStat>1</BoostedStat><ObjectID>21AA481D-571F46DF-A55A4B0D-CDFB1BB9</ObjectID><Percent>5</Percent></Booster>" +
-                                "<Booster><BoostedStat>1</BoostedStat><ObjectID>A05D2C30-E7E74C1C-BFB7D1B5-4876EB94</ObjectID><Percent>5</Percent></Booster>" +
-                                "<Booster><BoostedStat>1</BoostedStat><ObjectID>4054DC7E-14654310-8D312A09-7A18619A</ObjectID><Percent>5</Percent></Booster>" +
-                                "<Booster><BoostedStat>1</BoostedStat><ObjectID>C8107A83-437F4DA7-81B5C459-865A4259</ObjectID><Percent>5</Percent></Booster>" +
-                                "<Booster><BoostedStat>1</BoostedStat><ObjectID>6E6143AB-C89A4B50-8BC9B3A1-CC601F90</ObjectID><Percent>5</Percent></Booster>" +
-                                "</Response>";
+                            return "<Response><Booster><BoostedStat>2</BoostedStat><ObjectID>BCAA547B-5908430F-AF823FFA-74247EE3</ObjectID><Percent>10</Percent></Booster>"
+                                + "<Booster><BoostedStat>2</BoostedStat><ObjectID>E81B2444-121A49D3-8D9CC3F0-37222CCE</ObjectID><Percent>10</Percent></Booster>"
+                                + "<Booster><BoostedStat>2</BoostedStat><ObjectID>32AA025A-AB73423C-A08821E3-FB2D6064</ObjectID><Percent>5</Percent></Booster>"
+                                + "<Booster><BoostedStat>2</BoostedStat><ObjectID>A6A6D7DB-FE7D45E0-8136A766-69AC32E7</ObjectID><Percent>5</Percent></Booster>"
+                                + "<Booster><BoostedStat>2</BoostedStat><ObjectID>1DAAF0AB-76AA44F9-A99D220F-F905C4FB</ObjectID><Percent>5</Percent></Booster>"
+                                + "<Booster><BoostedStat>2</BoostedStat><ObjectID>3D670654-672A4186-B9C6293D-DEEFD0DD</ObjectID><Percent>5</Percent></Booster>"
+                                + "<Booster><BoostedStat>2</BoostedStat><ObjectID>61D5310E-6A5F41EE-850E3AAC-E7F18903</ObjectID><Percent>5</Percent></Booster>"
+                                + "<Booster><BoostedStat>2</BoostedStat><ObjectID>6368E019-07544E1D-9F1355C3-D89C965A</ObjectID><Percent>5</Percent></Booster>"
+                                + "<Booster><BoostedStat>2</BoostedStat><ObjectID>7A1B6AFE-17E0415C-AC55E187-6D4D2009</ObjectID><Percent>5</Percent></Booster>"
+                                + "<Booster><BoostedStat>2</BoostedStat><ObjectID>8213F77B-83E744D8-951A452F-67A4C4D0</ObjectID><Percent>5</Percent></Booster>"
+                                + "<Booster><BoostedStat>2</BoostedStat><ObjectID>860D2539-CAB44560-8A98ECA4-4EA4B183</ObjectID><Percent>5</Percent></Booster>"
+                                + "<Booster><BoostedStat>2</BoostedStat><ObjectID>AF9ACCEF-D41042B7-8582771C-D89AD2D5</ObjectID><Percent>5</Percent></Booster>"
+                                + "<Booster><BoostedStat>2</BoostedStat><ObjectID>D715417B-EBD04C14-9064B5FD-C5642AF8</ObjectID><Percent>5</Percent></Booster>"
+                                + "<Booster><BoostedStat>2</BoostedStat><ObjectID>D7387B09-B1FB41E6-A0FDF8CB-151C2B15</ObjectID><Percent>5</Percent></Booster>"
+                                + "<Booster><BoostedStat>1</BoostedStat><ObjectID>21AA481D-571F46DF-A55A4B0D-CDFB1BB9</ObjectID><Percent>5</Percent></Booster>"
+                                + "<Booster><BoostedStat>1</BoostedStat><ObjectID>A05D2C30-E7E74C1C-BFB7D1B5-4876EB94</ObjectID><Percent>5</Percent></Booster>"
+                                + "<Booster><BoostedStat>1</BoostedStat><ObjectID>4054DC7E-14654310-8D312A09-7A18619A</ObjectID><Percent>5</Percent></Booster>"
+                                + "<Booster><BoostedStat>1</BoostedStat><ObjectID>C8107A83-437F4DA7-81B5C459-865A4259</ObjectID><Percent>5</Percent></Booster>"
+                                + "<Booster><BoostedStat>1</BoostedStat><ObjectID>6E6143AB-C89A4B50-8BC9B3A1-CC601F90</ObjectID><Percent>5</Percent></Booster>"
+                                + "</Response>";
                         case "QueryAchievements":
-                            if (File.Exists($"{WorkPath}/NovusPrime/User_Data/{UserID}_Achievements.xml"))
+                            if (
+                                File.Exists(
+                                    $"{WorkPath}/NovusPrime/User_Data/{UserID}_Achievements.xml"
+                                )
+                            )
                                 return $"<Response>{File.ReadAllText($"{WorkPath}/NovusPrime/User_Data/{UserID}_Achievements.xml")}</Response>";
                             return "<Response></Response>";
                         case "CompleteAchievements":
-                            StringBuilder achievementsSt = new StringBuilder();
-                            foreach (string achievement in Achievements.Split(','))
+                            var achievementsSt = new StringBuilder();
+                            foreach (var achievement in Achievements.Split(','))
                             {
                                 if (!string.IsNullOrEmpty(achievement))
-                                    achievementsSt.Append($"<Achievement><AchievementID>{achievement}</AchievementID></Achievement>");
+                                    achievementsSt.Append(
+                                        $"<Achievement><AchievementID>{achievement}</AchievementID></Achievement>"
+                                    );
                             }
-                            File.WriteAllText($"{WorkPath}/NovusPrime/User_Data/{UserID}_Achievements.xml", achievementsSt.ToString());
+                            File.WriteAllText(
+                                $"{WorkPath}/NovusPrime/User_Data/{UserID}_Achievements.xml",
+                                achievementsSt.ToString()
+                            );
                             return "<Response></Response>";
                         case "QueryAchievementData":
-                            StringBuilder achievementDataSt = new StringBuilder("<Response>");
+                            var achievementDataSt = new StringBuilder("<Response>");
                             for (byte missionId = 0; missionId < 25; missionId++)
                             {
-                                achievementDataSt.Append($"<Achievement><TriggerType>1</TriggerType><IntParam>{missionId}</IntParam><AchievementID>MISSION_{missionId}_WON</AchievementID></Achievement>");
+                                achievementDataSt.Append(
+                                    $"<Achievement><TriggerType>1</TriggerType><IntParam>{missionId}</IntParam><AchievementID>MISSION_{missionId}_WON</AchievementID></Achievement>"
+                                );
                             }
                             achievementDataSt.Append("</Response>");
                             return achievementDataSt.ToString();
@@ -300,13 +368,33 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
                                       </Item>
                                     </Response>";
                         case "RequestInventory":
-                            return User.UpdateNovusPrimeCharacter(PostData, boundary, UserID, WorkPath, Command);
+                            return User.UpdateNovusPrimeCharacter(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath,
+                                Command
+                            );
                         case "AddInventory":
-                            return User.UpdateNovusPrimeCharacter(PostData, boundary, UserID, WorkPath, Command);
+                            return User.UpdateNovusPrimeCharacter(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath,
+                                Command
+                            );
                         case "UseDaily":
-                            return User.UpdateNovusPrimeCharacter(PostData, boundary, UserID, WorkPath, Command);
+                            return User.UpdateNovusPrimeCharacter(
+                                PostData,
+                                boundary,
+                                UserID,
+                                WorkPath,
+                                Command
+                            );
                         case "QueryDaily":
-                            if (File.Exists($"{WorkPath}/NovusPrime/User_Data/{UserID}_Rewards.xml"))
+                            if (
+                                File.Exists($"{WorkPath}/NovusPrime/User_Data/{UserID}_Rewards.xml")
+                            )
                                 return $"<Response>{File.ReadAllText($"{WorkPath}/NovusPrime/User_Data/{UserID}_Rewards.xml")}</Response>";
                             return "<Response></Response>";
                         case "Log":
@@ -315,7 +403,9 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.HFProcessors
 #endif
                             return "<Response></Response>";
                         default:
-                            LoggerAccessor.LogWarn($"[HFGAMES] - Client Request a Command I don't know about, please post the message on GITHUB : {Command}");
+                            LoggerAccessor.LogWarn(
+                                $"[HFGAMES] - Client Request a Command I don't know about, please post the message on GITHUB : {Command}"
+                            );
                             return "<Response></Response>";
                     }
                 }

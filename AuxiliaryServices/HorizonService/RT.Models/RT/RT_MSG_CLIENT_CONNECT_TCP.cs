@@ -1,6 +1,5 @@
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
-using System;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -59,14 +58,15 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"TargetWorldId: {TargetWorldId} " +
-                $"UNK1: {(UNK1 != null ? BitConverter.ToString(UNK1) : string.Empty)} " +
-                $"UNK0: {UNK0:X2} " +
-                $"AppId: {AppId} " +
-                $"Key: {Key} " +
-                $"SessionKey: {SessionKey} " +
-                $"AccessToken: {AccessToken}";
+            return base.ToString()
+                + " "
+                + $"TargetWorldId: {TargetWorldId} "
+                + $"UNK1: {(UNK1 != null ? BitConverter.ToString(UNK1) : string.Empty)} "
+                + $"UNK0: {UNK0:X2} "
+                + $"AppId: {AppId} "
+                + $"Key: {Key} "
+                + $"SessionKey: {SessionKey} "
+                + $"AccessToken: {AccessToken}";
         }
     }
 }

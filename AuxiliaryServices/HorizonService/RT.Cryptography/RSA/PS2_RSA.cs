@@ -1,28 +1,20 @@
+using EndianTools;
 using MultiServerLibrary.Extension;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Org.BouncyCastle.Math;
-using System;
-using System.Linq;
 
 namespace Horizon.RT.Cryptography.RSA
 {
     [JsonConverter(typeof(RSAConverter))]
-    public class PS2_RSA : ICipher
+    public class PS2_RSA(BigInteger n, BigInteger e, BigInteger d) : ICipher
     {
         public CipherContext Context { get; protected set; } = CipherContext.RSA_AUTH;
 
         public string Comment = string.Empty;
-        public BigInteger N { get; protected set; }
-        public BigInteger E { get; protected set; }
-        public BigInteger D { get; protected set; }
-
-        public PS2_RSA(BigInteger n, BigInteger e, BigInteger d)
-        {
-            N = n;
-            E = e;
-            D = d;
-        }
+        public BigInteger N { get; protected set; } = n;
+        public BigInteger E { get; protected set; } = e;
+        public BigInteger D { get; protected set; } = d;
 
         private BigInteger Encrypt(BigInteger m)
         {
@@ -38,7 +30,9 @@ namespace Horizon.RT.Cryptography.RSA
         {
             plain = new byte[input.Length];
             if (input.Length > N.BitLength / 8)
-                throw new NotImplementedException($"Unable to decrypt RSA cipher with length greater than key ({input.Length}).");
+                throw new NotImplementedException(
+                    $"[PS2_RSA] - Unable to decrypt RSA cipher with length greater than key ({input.Length})."
+                );
 
             // Check if empty hash
             // If hash is 0, the data is already in plaintext
@@ -76,33 +70,29 @@ namespace Horizon.RT.Cryptography.RSA
 
         public virtual void Hash(byte[] input, out byte[] hash)
         {
-            hash = RT.Cryptography.Hash.SHA1.Hash(input, Context);
+            hash = Cryptography.Hash.SHA1.Hash(input, Context);
         }
 
         public virtual bool IsHashValid(byte[] hash)
         {
-            if (hash == null || hash.Length != 4)
-                return false;
-
-            return !(hash[0] == 0 && hash[1] == 0 && hash[2] == 0 && (hash[3] & 0x1F) == 0);
+            return hash != null
+                && hash.Length == 4
+                && !(hash[0] == 0 && hash[1] == 0 && hash[2] == 0 && (hash[3] & 0x1F) == 0);
         }
 
         #region Comparison
 
         public override bool Equals(object obj)
         {
-            if (obj is PS2_RSA rsa)
-                return rsa.Equals(this);
-
-            return base.Equals(obj);
+            return obj is PS2_RSA rsa ? rsa.Equals(this) : base.Equals(obj);
         }
 
         public bool Equals(PS2_RSA b)
         {
-            return b.Context == Context &&
-                b.N.CompareTo(N) == 0 &&
-                b.E.CompareTo(E) == 0 &&
-                b.D.CompareTo(D) == 0;
+            return b.Context == Context
+                && b.N.CompareTo(N) == 0
+                && b.E.CompareTo(E) == 0
+                && b.D.CompareTo(D) == 0;
         }
 
         #endregion
@@ -116,13 +106,18 @@ namespace Horizon.RT.Cryptography.RSA
         {
             return $"PS2_RSA({Context}, {N}, {E}, {D})";
         }
+
+        public override int GetHashCode()
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class RSAConverter : JsonConverter
     {
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
-            PS2_RSA rsa = (PS2_RSA)value;
+            var rsa = (PS2_RSA)value;
 
             writer.WriteStartObject();
             writer.WritePropertyName("comment");
@@ -136,14 +131,26 @@ namespace Horizon.RT.Cryptography.RSA
             writer.WriteEndObject();
         }
 
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        public override object ReadJson(
+            JsonReader reader,
+            Type objectType,
+            object existingValue,
+            JsonSerializer serializer
+        )
         {
-            JObject jsonObject = JObject.Load(reader);
+            var jsonObject = JObject.Load(reader);
 
             var sN = (string)jsonObject["n"];
             var sE = (string)jsonObject["e"];
             var sD = (string)jsonObject["d"];
-            return new PS2_RSA(new BigInteger(sN, 10), new BigInteger(sE, 10), new BigInteger(sD, 10)) { Comment = (string)jsonObject["comment"] };
+            return new PS2_RSA(
+                new BigInteger(sN, 10),
+                new BigInteger(sE, 10),
+                new BigInteger(sD, 10)
+            )
+            {
+                Comment = (string)jsonObject["comment"],
+            };
         }
 
         public override bool CanConvert(Type objectType)
@@ -156,12 +163,12 @@ namespace Horizon.RT.Cryptography.RSA
     {
         public static byte[] ToBA(this BigInteger b)
         {
-            return b.ToByteArrayUnsigned().Reverse().ToArray();
+            return b.ToByteArrayUnsigned().ReverseArray();
         }
 
         public static byte[] ToBA(this BigInteger b, int minLen)
         {
-            var bytes = b.ToByteArrayUnsigned().Reverse().ToArray();
+            var bytes = b.ToByteArrayUnsigned().ReverseArray();
             if (bytes.Length < minLen)
                 Array.Resize(ref bytes, minLen);
             return bytes;
@@ -169,7 +176,7 @@ namespace Horizon.RT.Cryptography.RSA
 
         public static BigInteger ToBigInteger(this byte[] ba)
         {
-            return new BigInteger(1, ba.Reverse().ToArray());
+            return new BigInteger(1, ba.ReverseArray());
         }
 
         public static BigInteger ToBigInteger(this byte[] ba, int startIndex, int length)

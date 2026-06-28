@@ -24,6 +24,6 @@ namespace Blaze3SDK.Blaze.GameManager
         DisconnectReservation = 0x20000,
         DynamicReputationRequirement = 0x40000,
         FriendsBypassClosedToJoinByPlayer = 0x80000,
-        AllowMemberGameAttributeEdit = 0x100000
+        AllowMemberGameAttributeEdit = 0x100000,
     }
 }

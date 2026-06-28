@@ -1,6 +1,6 @@
-using QuazalServer.RDVServices.DDL.Models;
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
+using QuazalServer.RDVServices.DDL.Models;
 
 namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 {
@@ -33,7 +33,10 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         {
             StorageFile reply = new();
 
-            string path = Path.Combine(QuazalServerConfiguration.QuazalStaticFolder + "/StaticFiles/DriverPC", strTag);
+            var path = Path.Combine(
+                QuazalServerConfiguration.QuazalStaticFolder + "/StaticFiles/DriverPC",
+                strTag
+            );
 
             if (File.Exists(path))
             {
@@ -61,6 +64,5 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         {
             UNIMPLEMENTED();
         }
-
     }
 }

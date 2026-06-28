@@ -12,13 +12,17 @@ internal static class NonCapturingLazyInitializer
     public static TValue EnsureInitialized<TParam, TValue>(
         ref TValue? target,
         TParam param,
-        Func<TParam, TValue> valueFactory)
+        Func<TParam, TValue> valueFactory
+    )
         where TValue : class
     {
         var tmp = Volatile.Read(ref target);
         if (tmp != null)
         {
-            DebugAssert(target != null, $"target was null in {nameof(EnsureInitialized)} after check");
+            DebugAssert(
+                target != null,
+                $"target was null in {nameof(EnsureInitialized)} after check"
+            );
             return tmp;
         }
 
@@ -31,13 +35,17 @@ internal static class NonCapturingLazyInitializer
         ref TValue? target,
         TParam1 param1,
         TParam2 param2,
-        Func<TParam1, TParam2, TValue> valueFactory)
+        Func<TParam1, TParam2, TValue> valueFactory
+    )
         where TValue : class
     {
         var tmp = Volatile.Read(ref target);
         if (tmp != null)
         {
-            DebugAssert(target != null, $"target was null in {nameof(EnsureInitialized)} after check");
+            DebugAssert(
+                target != null,
+                $"target was null in {nameof(EnsureInitialized)} after check"
+            );
             return tmp;
         }
 
@@ -51,13 +59,17 @@ internal static class NonCapturingLazyInitializer
         TParam1 param1,
         TParam2 param2,
         TParam3 param3,
-        Func<TParam1, TParam2, TParam3, TValue> valueFactory)
+        Func<TParam1, TParam2, TParam3, TValue> valueFactory
+    )
         where TValue : class
     {
         var tmp = Volatile.Read(ref target);
         if (tmp != null)
         {
-            DebugAssert(target != null, $"target was null in {nameof(EnsureInitialized)} after check");
+            DebugAssert(
+                target != null,
+                $"target was null in {nameof(EnsureInitialized)} after check"
+            );
             return tmp;
         }
 
@@ -70,15 +82,22 @@ internal static class NonCapturingLazyInitializer
         ref TValue target,
         ref bool initialized,
         TParam param,
-        Func<TParam, TValue> valueFactory)
+        Func<TParam, TValue> valueFactory
+    )
         where TValue : class?
     {
         var alreadyInitialized = Volatile.Read(ref initialized);
         if (alreadyInitialized)
         {
             var value = Volatile.Read(ref target);
-            DebugAssert(target != null, $"target was null in {nameof(EnsureInitialized)} after check");
-            DebugAssert(value != null, $"value was null in {nameof(EnsureInitialized)} after check");
+            DebugAssert(
+                target != null,
+                $"target was null in {nameof(EnsureInitialized)} after check"
+            );
+            DebugAssert(
+                value != null,
+                $"value was null in {nameof(EnsureInitialized)} after check"
+            );
             return value;
         }
 
@@ -88,15 +107,16 @@ internal static class NonCapturingLazyInitializer
         return target;
     }
 
-    public static TValue EnsureInitialized<TValue>(
-        ref TValue? target,
-        TValue value)
+    public static TValue EnsureInitialized<TValue>(ref TValue? target, TValue value)
         where TValue : class
     {
         var tmp = Volatile.Read(ref target);
         if (tmp != null)
         {
-            DebugAssert(target != null, $"target was null in {nameof(EnsureInitialized)} after check");
+            DebugAssert(
+                target != null,
+                $"target was null in {nameof(EnsureInitialized)} after check"
+            );
             return tmp;
         }
 
@@ -108,13 +128,17 @@ internal static class NonCapturingLazyInitializer
     public static TValue EnsureInitialized<TParam, TValue>(
         ref TValue? target,
         TParam param,
-        Action<TParam> valueFactory)
+        Action<TParam> valueFactory
+    )
         where TValue : class
     {
         var tmp = Volatile.Read(ref target);
         if (tmp != null)
         {
-            DebugAssert(target != null, $"target was null in {nameof(EnsureInitialized)} after check");
+            DebugAssert(
+                target != null,
+                $"target was null in {nameof(EnsureInitialized)} after check"
+            );
             return tmp;
         }
 
@@ -123,7 +147,8 @@ internal static class NonCapturingLazyInitializer
         var tmp2 = Volatile.Read(ref target);
         DebugAssert(
             target != null && tmp2 != null,
-            $"{nameof(valueFactory)} did not initialize {nameof(target)} in {nameof(EnsureInitialized)}");
+            $"{nameof(valueFactory)} did not initialize {nameof(target)} in {nameof(EnsureInitialized)}"
+        );
 #pragma warning disable CS8603 // Possible null reference return.
         return tmp2;
 #pragma warning restore CS8603 // Possible null reference return.

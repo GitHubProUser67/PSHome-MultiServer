@@ -1,6 +1,6 @@
-#if DEBUG
-using CastleLibrary.Utils;
-#endif
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 using CustomLogger;
 using EdenServer.ClientChallengeService;
 using EdenServer.EdNet.ProxyMessages;
@@ -13,9 +13,10 @@ using EdNetService.CRC;
 using EdNetService.Models;
 using EndianTools;
 using MultiServerLibrary.Extension;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
+#if DEBUG
+using CastleLibrary.Utils;
+#endif
+
 
 namespace EdenServer.EdNet.Messages
 {
@@ -24,25 +25,31 @@ namespace EdenServer.EdNet.Messages
         const string Url = "http://github.com/GitHubProUser67/PSHome-MultiServer/";
 
         // true value means we force LittleEndian cryptography.
-        private static readonly Dictionary<string, bool> allowedVersions = new Dictionary<string, bool>() { { "MC 1.45 A", true }, { "MC 1.66 A", true }, { "[VED]TDU2", false } };
-
-        private static Dictionary<ushort, Type?> ORBCrcToClass { get; } = new Dictionary<ushort, Type?>() {
-
-            // Core
-            { edStoreBank.COREREQUESTS_R_LOG, typeof(Log) },
-            { edStoreBank.CRC_COREREQUESTS_R_GET_REQUEST_HANDLERS_EX, typeof(GetRequestHandlersEx) },
-
-            // Login
-            { edStoreBank.COREREQUESTS_R_LOGIN_PC, typeof(LoginPC) },
-
-            // ORB File
-            { edStoreBank.CRC_R_ORB_OPENFILE, typeof(OpenFile) },
-            { edStoreBank.CRC_R_ORB_GETFILE, typeof(GetFile) },
-
-            // Events
-            { edStoreBank.COREREQUESTS_E_UPDATE_USER0, typeof(UpdateTDUUser) },
-            { edStoreBank.CRC_E_STATS_USER_STATISTICS_UPDATE_V2, typeof(UpdateTDUUserStats) },
+        private static readonly Dictionary<string, bool> allowedVersions = new()
+        {
+            { "MC 1.45 A", true },
+            { "MC 1.66 A", true },
+            { "[VED]TDU2", false },
         };
+
+        private static Dictionary<ushort, Type?> ORBCrcToClass { get; } =
+            new Dictionary<ushort, Type?>()
+            {
+                // Core
+                { edStoreBank.COREREQUESTS_R_LOG, typeof(Log) },
+                {
+                    edStoreBank.CRC_COREREQUESTS_R_GET_REQUEST_HANDLERS_EX,
+                    typeof(GetRequestHandlersEx)
+                },
+                // Login
+                { edStoreBank.COREREQUESTS_R_LOGIN_PC, typeof(LoginPC) },
+                // ORB File
+                { edStoreBank.CRC_R_ORB_OPENFILE, typeof(OpenFile) },
+                { edStoreBank.CRC_R_ORB_GETFILE, typeof(GetFile) },
+                // Events
+                { edStoreBank.COREREQUESTS_E_UPDATE_USER0, typeof(UpdateTDUUser) },
+                { edStoreBank.CRC_E_STATS_USER_STATISTICS_UPDATE_V2, typeof(UpdateTDUUserStats) },
+            };
 
         private byte[]? UrlBytes;
 
@@ -64,20 +71,26 @@ namespace EdenServer.EdNet.Messages
         private ushort PayloadSize;
         private byte[]? Payload;
 
-        public override bool Process(UdpClient listener, AbstractEdenServer server, IPEndPoint endpoint, EdStore store)
+        public override bool Process(
+            UdpClient listener,
+            AbstractEdenServer server,
+            IPEndPoint endpoint,
+            EdStore store
+        )
         {
-            if (server is not ProxyServer) return false;
+            if (server is not ProxyServer)
+                return false;
 
             ClientObject? client = null;
             byte[]? ResultBuffer = null;
-            byte Command = store.ExtractUInt8();
+            var Command = store.ExtractUInt8();
             store.ExtractUInt8();
 
             switch (Command)
             {
                 case 0: // Client to Host - Initialize
                     UrlBytes = new byte[512];
-                    EdStore initResponse = new EdStore(null, 616);
+                    var initResponse = new EdStore(null, 616);
 
                     Array.Copy(Encoding.ASCII.GetBytes(Url), UrlBytes, Url.Length);
 
@@ -87,15 +100,23 @@ namespace EdenServer.EdNet.Messages
                     Username = store.ExtractRawBytes(22);
                     store.ExtractUInt8();
 
-                    (uint, uint, uint) Questions = ChallengeHandler.GenerateClientQuestions(Encoding.ASCII.GetString(Version.Trim()));
+                    var Questions = ChallengeHandler.GenerateClientQuestions(
+                        Encoding.ASCII.GetString(Version.Trim())
+                    );
 
                     initResponse.InsertStart((ushort)ProxyCrcList.FROM_PROXY_HEADER);
                     initResponse.InsertUInt8(1); // Host to Client - Initialize
                     initResponse.InsertUInt8(0);
-                    initResponse.InsertUInt32(InternetProtocolUtils.GetIPAddressAsUInt(endpoint.Address.MapToIPv4()));
+                    initResponse.InsertUInt32(
+                        InternetProtocolUtils.GetIPAddressAsUInt(endpoint.Address.MapToIPv4())
+                    );
                     initResponse.InsertUInt16((ushort)endpoint.Port);
                     initResponse.InsertUInt16(0);
-                    initResponse.InsertUInt32(InternetProtocolUtils.GetIPAddressAsUInt(EdenServerConfiguration.ProxyServerAddress));
+                    initResponse.InsertUInt32(
+                        InternetProtocolUtils.GetIPAddressAsUInt(
+                            EdenServerConfiguration.ProxyServerAddress
+                        )
+                    );
                     initResponse.InsertUInt16(EdenServerConfiguration.ProxyServerPort);
                     initResponse.InsertUInt16(0);
                     initResponse.InsertUInt32(ProductId);
@@ -114,19 +135,18 @@ namespace EdenServer.EdNet.Messages
                     {
                         return listener?.Send(ResultBuffer, ResultBuffer.Length, endpoint) != -1;
                     }
-                    catch
-                    {
-                    }
+                    catch { }
                     break;
                 case 2: // Client to Host - Init Answer
                     UrlBytes = new byte[512];
-                    EdStore init2Response = new EdStore(null, 1400);
+                    var init2Response = new EdStore(null, 1400);
 
                     Array.Copy(Encoding.ASCII.GetBytes(Url), UrlBytes, Url.Length);
 
                     ProductId = store.ExtractUInt32();
                     Version = store.ExtractRawBytes(65);
-                    string VersionStr = Version == null ? string.Empty : Encoding.ASCII.GetString(Version.Trim());
+                    var VersionStr =
+                        Version == null ? string.Empty : Encoding.ASCII.GetString(Version.Trim());
                     store.ExtractUInt8();
                     store.ExtractUInt8();
                     store.ExtractUInt8();
@@ -138,14 +158,19 @@ namespace EdenServer.EdNet.Messages
                     Answer3 = store.ExtractUInt32();
                     Key = store.ExtractRawBytes(20);
                     Username = store.ExtractRawBytes(22);
-                    string UsernameStr = Username == null ? string.Empty : Encoding.ASCII.GetString(Username.Trim());
+                    var UsernameStr =
+                        Username == null ? string.Empty : Encoding.ASCII.GetString(Username.Trim());
                     store.ExtractUInt8(); // Unk
                     store.ExtractUInt8(); // Unk
 
                     client = new ClientObject(listener, EdenServerConfiguration.EnableEncryption)
                     {
-                        Question1 = Question1, Question2 = Question2, Question3 = Question3,
-                        Answer1 = Answer1, Answer2 = Answer2, Answer3 = Answer3,
+                        Question1 = Question1,
+                        Question2 = Question2,
+                        Question3 = Question3,
+                        Answer1 = Answer1,
+                        Answer2 = Answer2,
+                        Answer3 = Answer3,
                         Key = Key,
                         Username = UsernameStr,
                         Url = UrlBytes,
@@ -158,23 +183,36 @@ namespace EdenServer.EdNet.Messages
                     init2Response.InsertUInt8(3); // Host to Client - Init Answer
                     init2Response.InsertUInt8(0);
                     init2Response.InsertUInt32(client.Id);
-                    init2Response.InsertUInt32(InternetProtocolUtils.GetIPAddressAsUInt(EdenServerConfiguration.ORBServerAddress));
+                    init2Response.InsertUInt32(
+                        InternetProtocolUtils.GetIPAddressAsUInt(
+                            EdenServerConfiguration.ORBServerAddress
+                        )
+                    );
 
                     if (ChallengeHandler.GenerateClientChallenge(VersionStr, client))
                     {
-                        bool IsProxyBusy = false;
+                        var IsProxyBusy = false;
 
                         if (server.ClientStore == null || !server.ClientStore.AddClient(client))
                         {
-                            LoggerAccessor.LogWarn($"[EDEN_PROXY_SERVER] - ToProxy - Failure adding ClientObject on IpEndPoint:{endpoint}.");
+                            LoggerAccessor.LogWarn(
+                                $"[EDEN_PROXY_SERVER] - ToProxy - Failure adding ClientObject on IpEndPoint:{endpoint}."
+                            );
                             IsProxyBusy = true;
                         }
                         else
-                            LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - Adding ClientObject for User:{client.Username} on IpEndPoint:{endpoint}.");
+                            LoggerAccessor.LogInfo(
+                                $"[EDEN_PROXY_SERVER] - ToProxy - Adding ClientObject for User:{client.Username} on IpEndPoint:{endpoint}."
+                            );
 
-                        if (string.IsNullOrEmpty(VersionStr) || !allowedVersions.ContainsKey(VersionStr))
+                        if (
+                            string.IsNullOrEmpty(VersionStr)
+                            || !allowedVersions.ContainsKey(VersionStr)
+                        )
                         {
-                            LoggerAccessor.LogWarn($"[EDEN_PROXY_SERVER] - ToProxy - TDU Version:{VersionStr} is not supported yet, please report to GITHUB!");
+                            LoggerAccessor.LogWarn(
+                                $"[EDEN_PROXY_SERVER] - ToProxy - TDU Version:{VersionStr} is not supported yet, please report to GITHUB!"
+                            );
 
                             init2Response.InsertUInt16(0);
                             init2Response.InsertUInt8(0);
@@ -182,7 +220,8 @@ namespace EdenServer.EdNet.Messages
                         }
                         else
                         {
-                            uint fishKey = client.Answer1 ^ client.Answer2 ^ client.Answer3 ^ client.Question1;
+                            var fishKey =
+                                client.Answer1 ^ client.Answer2 ^ client.Answer3 ^ client.Question1;
 
                             // Check config for PS3/360 Consoles encryption mode (CELL and XENON are big endian).
                             if (allowedVersions[VersionStr])
@@ -190,13 +229,20 @@ namespace EdenServer.EdNet.Messages
                             else if (EdenServerConfiguration.BigEndianEncryption)
                                 client.CPUEndianness = Endianness.BigEndian;
 #if DEBUG
-                            LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} has blowfish Key:0x{fishKey:X8} set.");
+                            LoggerAccessor.LogInfo(
+                                $"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} has blowfish Key:0x{fishKey:X8} set."
+                            );
 #endif
-                            client.fish.SetKey(Encoding.ASCII.GetBytes(fishKey.ToString("X8")), client.CPUEndianness);
+                            client.fish.SetKey(
+                                Encoding.ASCII.GetBytes(fishKey.ToString("X8")),
+                                client.CPUEndianness
+                            );
 
                             init2Response.InsertUInt16(EdenServerConfiguration.ORBServerPort);
                             init2Response.InsertUInt8((byte)(client.BCipher ? 0x1 : 0x0));
-                            init2Response.InsertUInt8((byte)(IsProxyBusy ? ProxyErrorCodes.PROXY_BUSY : 0x0));
+                            init2Response.InsertUInt8(
+                                (byte)(IsProxyBusy ? ProxyErrorCodes.PROXY_BUSY : 0x0)
+                            );
                         }
                     }
                     else
@@ -213,9 +259,7 @@ namespace EdenServer.EdNet.Messages
                     {
                         return listener?.Send(ResultBuffer, ResultBuffer.Length, endpoint) != -1;
                     }
-                    catch
-                    {
-                    }
+                    catch { }
                     break;
                 case 4: // Client To ORB
                     TargetIp = store.ExtractUInt32();
@@ -229,17 +273,21 @@ namespace EdenServer.EdNet.Messages
                     client = server.ClientStore?.GetClientById(ClientId);
 
                     if (client == null)
-                        LoggerAccessor.LogWarn($"[EDEN_PROXY_SERVER] - ToProxy - IpEndPoint:{endpoint} requested non-existant ClientObject with Id:{ClientId}, aborting request...");
+                        LoggerAccessor.LogWarn(
+                            $"[EDEN_PROXY_SERVER] - ToProxy - IpEndPoint:{endpoint} requested non-existant ClientObject with Id:{ClientId}, aborting request..."
+                        );
                     else
                     {
 #if DEBUG
-                        LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} requested Client To ORB method at:{DateTime.Now}.");
+                        LoggerAccessor.LogInfo(
+                            $"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} requested Client To ORB method at:{DateTime.Now}."
+                        );
 #endif
                         client.lastRequestTime = DateTimeUtils.GetHighPrecisionUtcTime();
 
                         if (Payload == null)
                         {
-                            EdStore validateResponse = new EdStore(null, 1400);
+                            var validateResponse = new EdStore(null, 1400);
 
                             validateResponse.InsertStart((ushort)ProxyCrcList.FROM_PROXY_HEADER);
                             validateResponse.InsertUInt8(5); // ORB To Client
@@ -256,7 +304,7 @@ namespace EdenServer.EdNet.Messages
                         }
                         else if (double.TryParse(Encoding.UTF8.GetString(Payload), out _))
                         {
-                            EdStore validateResponse = new EdStore(null, 1400);
+                            var validateResponse = new EdStore(null, 1400);
 
                             validateResponse.InsertStart((ushort)ProxyCrcList.FROM_PROXY_HEADER);
                             validateResponse.InsertUInt8(5); // ORB To Client
@@ -277,10 +325,12 @@ namespace EdenServer.EdNet.Messages
                             if (client.BCipher)
                                 client.DecipherData(Payload);
 #if DEBUG
-                            LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Client To ORB Payload : {{{Payload.BytesToHexStr().Replace("\n", string.Empty)}}}");
+                            LoggerAccessor.LogInfo(
+                                $"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Client To ORB Payload : {{{Payload.BytesToHexStr().Replace("\n", string.Empty)}}}"
+                            );
 #endif
-                            EdStore orbRequest = new EdStore(Payload, Payload.Length);
-                            ushort orbcrc = orbRequest.ExtractStart();
+                            var orbRequest = new EdStore(Payload, Payload.Length);
+                            var orbcrc = orbRequest.ExtractStart();
 
                             ushort orbMagicCrc;
                             ushort orbReqPayloadSize;
@@ -298,15 +348,25 @@ namespace EdenServer.EdNet.Messages
                                     orbTask.RetryCount = ClientObject.DefaultRetryCount;
                                     orbReqPayloadSize = orbRequest.ExtractUInt16();
                                     orbPayload = orbRequest.ExtractRawBytes(orbReqPayloadSize);
-                                    orbMagicCrc = EndianAwareConverter.ToUInt16(orbPayload, Endianness.BigEndian, 0);
+                                    orbMagicCrc = EndianAwareConverter.ToUInt16(
+                                        orbPayload,
+                                        Endianness.BigEndian,
+                                        0
+                                    );
 #if DEBUG
-                                    LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested ORB Magic {orbMagicCrc:X4} : {{{orbPayload.BytesToHexStr().Replace("\n", string.Empty)}}}");
+                                    LoggerAccessor.LogInfo(
+                                        $"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested ORB Magic {orbMagicCrc:X4} : {{{orbPayload.BytesToHexStr().Replace("\n", string.Empty)}}}"
+                                    );
 #else
-                                    LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested ORB Magic {orbMagicCrc:X4}");
+                                    LoggerAccessor.LogInfo(
+                                        $"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested ORB Magic {orbMagicCrc:X4}"
+                                    );
 #endif
-                                    if (!ORBCrcToClass.TryGetValue(orbMagicCrc, out Type? c))
+                                    if (!ORBCrcToClass.TryGetValue(orbMagicCrc, out var c))
                                     {
-                                        LoggerAccessor.LogError($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested an unexpected ORB message Type {orbMagicCrc:X4} : SizeOfPacket:{orbPayload.Length}");
+                                        LoggerAccessor.LogError(
+                                            $"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested an unexpected ORB message Type {orbMagicCrc:X4} : SizeOfPacket:{orbPayload.Length}"
+                                        );
                                         return false;
                                     }
 
@@ -317,13 +377,17 @@ namespace EdenServer.EdNet.Messages
                                     try
                                     {
                                         if (c != null)
-                                            msg = (AbstractProxyMessage?)Activator.CreateInstance(c);
+                                            msg = (AbstractProxyMessage?)
+                                                Activator.CreateInstance(c);
                                     }
-                                    catch
-                                    {
-                                    }
+                                    catch { }
 
-                                    ResultBuffer = msg?.Process(endpoint, new IPEndPoint(TargetIp, TargetPort), orbTask, orbTask.Request.ExtractUInt16());
+                                    ResultBuffer = msg?.Process(
+                                        endpoint,
+                                        new IPEndPoint(TargetIp, TargetPort),
+                                        orbTask,
+                                        orbTask.Request.ExtractUInt16()
+                                    );
 
                                     break;
                                 case (ushort)ProxyCrcList.COREREQUEST_CONTAINER:
@@ -334,15 +398,30 @@ namespace EdenServer.EdNet.Messages
                                     orbTask.RetryCount = ClientObject.DefaultRetryCount;
                                     orbReqPayloadSize = orbRequest.ExtractUInt16();
                                     orbPayload = orbRequest.ExtractRawBytes(orbReqPayloadSize);
-                                    orbMagicCrc = EndianAwareConverter.ToUInt16(orbPayload, Endianness.BigEndian, 0);
+                                    orbMagicCrc = EndianAwareConverter.ToUInt16(
+                                        orbPayload,
+                                        Endianness.BigEndian,
+                                        0
+                                    );
 #if DEBUG
-                                    LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested ORB Magic {orbMagicCrc:X4} : {{{orbPayload.BytesToHexStr().Replace("\n", string.Empty)}}}");
+                                    LoggerAccessor.LogInfo(
+                                        $"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested ORB Magic {orbMagicCrc:X4} : {{{orbPayload.BytesToHexStr().Replace("\n", string.Empty)}}}"
+                                    );
 #else
-                                    LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested ORB Magic {orbMagicCrc:X4}");
+                                    LoggerAccessor.LogInfo(
+                                        $"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested ORB Magic {orbMagicCrc:X4}"
+                                    );
 #endif
-                                    if (!ORBCrcToClass.TryGetValue(orbMagicCrc, out Type? unreliable_c))
+                                    if (
+                                        !ORBCrcToClass.TryGetValue(
+                                            orbMagicCrc,
+                                            out var unreliable_c
+                                        )
+                                    )
                                     {
-                                        LoggerAccessor.LogError($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested an unexpected ORB message Type {orbMagicCrc:X4} : SizeOfPacket:{orbPayload.Length}");
+                                        LoggerAccessor.LogError(
+                                            $"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested an unexpected ORB message Type {orbMagicCrc:X4} : SizeOfPacket:{orbPayload.Length}"
+                                        );
                                         return false;
                                     }
 
@@ -353,13 +432,17 @@ namespace EdenServer.EdNet.Messages
                                     try
                                     {
                                         if (unreliable_c != null)
-                                            unreliable_msg = (AbstractProxyMessage?)Activator.CreateInstance(unreliable_c);
+                                            unreliable_msg = (AbstractProxyMessage?)
+                                                Activator.CreateInstance(unreliable_c);
                                     }
-                                    catch
-                                    {
-                                    }
+                                    catch { }
 
-                                    ResultBuffer = unreliable_msg?.Process(endpoint, new IPEndPoint(TargetIp, TargetPort), orbTask, orbTask.Request.ExtractUInt16());
+                                    ResultBuffer = unreliable_msg?.Process(
+                                        endpoint,
+                                        new IPEndPoint(TargetIp, TargetPort),
+                                        orbTask,
+                                        orbTask.Request.ExtractUInt16()
+                                    );
 
                                     break;
                                 case (ushort)ProxyCrcList.CLIENT_ORB_KEEP_ALIVE:
@@ -371,7 +454,12 @@ namespace EdenServer.EdNet.Messages
 
                                     orbTask.Request = orbRequest;
 
-                                    ResultBuffer = new OrbKeepAlive().Process(endpoint, new IPEndPoint(TargetIp, TargetPort), orbTask, orbcrc);
+                                    ResultBuffer = new OrbKeepAlive().Process(
+                                        endpoint,
+                                        new IPEndPoint(TargetIp, TargetPort),
+                                        orbTask,
+                                        orbcrc
+                                    );
 
                                     break;
                                 case edStoreBank.CRC_R_GET_EDNETBUFFER:
@@ -383,14 +471,23 @@ namespace EdenServer.EdNet.Messages
 
                                     orbTask.Request = orbRequest;
 
-                                    ResultBuffer = new GetEdnetBuffer().Process(endpoint, new IPEndPoint(TargetIp, TargetPort), orbTask, orbcrc);
+                                    ResultBuffer = new GetEdnetBuffer().Process(
+                                        endpoint,
+                                        new IPEndPoint(TargetIp, TargetPort),
+                                        orbTask,
+                                        orbcrc
+                                    );
 
                                     break;
                                 case edStoreBank.CRC_E_GET_EDNETBUFFER_ACK:
-                                    LoggerAccessor.LogInfo($"[EDEN_PROXY_SERVER] - ToProxy - EdNetBuffer with id:{orbRequest.ExtractUInt32()} Acknowledged");
+                                    LoggerAccessor.LogInfo(
+                                        $"[EDEN_PROXY_SERVER] - ToProxy - EdNetBuffer with id:{orbRequest.ExtractUInt32()} Acknowledged"
+                                    );
                                     break;
                                 default:
-                                    LoggerAccessor.LogError($"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested an unexpected ORB CRC {orbcrc:X4}");
+                                    LoggerAccessor.LogError(
+                                        $"[EDEN_PROXY_SERVER] - ToProxy - User:{client.Username} Requested an unexpected ORB CRC {orbcrc:X4}"
+                                    );
                                     break;
                             }
                         }
@@ -399,16 +496,17 @@ namespace EdenServer.EdNet.Messages
                         {
                             try
                             {
-                                return listener?.Send(ResultBuffer, ResultBuffer.Length, endpoint) != -1;
+                                return listener?.Send(ResultBuffer, ResultBuffer.Length, endpoint)
+                                    != -1;
                             }
-                            catch
-                            {
-                            }
+                            catch { }
                         }
                     }
                     break;
                 default:
-                    LoggerAccessor.LogWarn($"[ToProxy] - Unknown Command:{Command} Requested, aborting request...");
+                    LoggerAccessor.LogWarn(
+                        $"[ToProxy] - Unknown Command:{Command} Requested, aborting request..."
+                    );
                     break;
             }
 

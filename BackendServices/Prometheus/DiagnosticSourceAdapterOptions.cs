@@ -1,4 +1,3 @@
-﻿#if NET
 using System.Diagnostics;
 
 namespace Prometheus;
@@ -14,4 +13,3 @@ public sealed class DiagnosticSourceAdapterOptions
 
     public CollectorRegistry Registry = Metrics.DefaultRegistry;
 }
-#endif

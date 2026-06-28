@@ -1,10 +1,12 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.GetGameListFilterResponse0)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.GetGameListFilterResponse0
+    )]
     public class MediusGetGameListFilterResponse0 : BaseLobbyMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusLobbyMessageIds.GetGameListFilterResponse0;
@@ -21,13 +23,10 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             reader.ReadBytes(3);
             StatusCode = reader.Read<MediusCallbackStatus>();
             FilterField = reader.Read<MediusGameListFilterField>();
@@ -39,13 +38,10 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(new byte[3]);
             writer.Write(StatusCode);
             writer.Write(FilterField);
@@ -57,13 +53,14 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"FilterField: {FilterField} " +
-                $"ComparisonOperator: {ComparisonOperator} " +
-                $"BaselineValue: {BaselineValue} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"FilterField: {FilterField} "
+                + $"ComparisonOperator: {ComparisonOperator} "
+                + $"BaselineValue: {BaselineValue} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

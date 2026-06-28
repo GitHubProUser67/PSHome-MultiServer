@@ -2,24 +2,22 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Stats
 {
-	[TdfStruct]
-	public struct StatRowUpdate
-	{
+    [TdfStruct]
+    public struct StatRowUpdate
+    {
+        [TdfMember("CAT")]
+        public string mCategory;
 
-		[TdfMember("CAT")]
-		public string mCategory;
+        [TdfMember("EID")]
+        public long mEntityId;
 
-		[TdfMember("EID")]
-		public long mEntityId;
+        [TdfMember("KSUM")]
+        public SortedDictionary<string, long> mKeyScopeNameValueMap;
 
-		[TdfMember("KSUM")]
-		public SortedDictionary<string, long> mKeyScopeNameValueMap;
+        [TdfMember("PTYP")]
+        public List<int> mPeriodTypes;
 
-		[TdfMember("PTYP")]
-		public List<int> mPeriodTypes;
-
-		[TdfMember("UPDT")]
-		public List<StatUpdate> mUpdates;
-
-	}
+        [TdfMember("UPDT")]
+        public List<StatUpdate> mUpdates;
+    }
 }

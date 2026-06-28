@@ -1,15 +1,15 @@
-using BlazeCommon;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using BlazeCommon;
 using Tdf;
 
 namespace Blaze2SDK
 {
     public static class Blaze2
     {
-        static TdfFactory factory;
-        static TdfLegacyEncoder encoder;
-        static TdfLegacyDecoder decoder;
+        static readonly TdfFactory factory;
+        static readonly TdfLegacyEncoder encoder;
+        static readonly TdfLegacyDecoder decoder;
 
         static Blaze2()
         {
@@ -18,9 +18,18 @@ namespace Blaze2SDK
             decoder = factory.CreateLegacyDecoder();
         }
 
-        public static BlazeServer CreateBlazeServer(string name, IPEndPoint endPoint, X509Certificate2? certificate = null, bool forceSsl = true, ConnectionDelegate? onNewConnection = null, ConnectionDelegate? onDisconnected = null, ConnectionOnRequestDelegate? onRequest = null, ConnectionOnErrorDelegate? onError = null)
+        public static BlazeServer CreateBlazeServer(
+            string name,
+            IPEndPoint endPoint,
+            X509Certificate2? certificate = null,
+            bool forceSsl = true,
+            ConnectionDelegate? onNewConnection = null,
+            ConnectionDelegate? onDisconnected = null,
+            ConnectionOnRequestDelegate? onRequest = null,
+            ConnectionOnErrorDelegate? onError = null
+        )
         {
-            BlazeServerConfiguration blaze2Settings = new BlazeServerConfiguration(name, endPoint, encoder, decoder)
+            var blaze2Settings = new BlazeServerConfiguration(name, endPoint, encoder, decoder)
             {
                 Certificate = certificate,
                 ForceSsl = forceSsl,
@@ -30,15 +39,17 @@ namespace Blaze2SDK
                 OnNewConnection = onNewConnection,
                 OnDisconnected = onDisconnected,
                 OnRequest = onRequest,
-                OnError = onError
+                OnError = onError,
             };
 
             return new BlazeServer(blaze2Settings);
         }
 
-        public static BlazeClientConnection CreateBlazeClientConnection(ProtoFireConnection connection)
+        public static BlazeClientConnection CreateBlazeClientConnection(
+            ProtoFireConnection connection
+        )
         {
-            BlazeClientConfiguration config = new BlazeClientConfiguration(encoder, decoder);
+            var config = new BlazeClientConfiguration(encoder, decoder);
             return new BlazeClientConnection(connection, config);
         }
     }

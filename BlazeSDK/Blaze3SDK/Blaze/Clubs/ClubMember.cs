@@ -2,27 +2,25 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Clubs
 {
-	[TdfStruct]
-	public struct ClubMember
-	{
+    [TdfStruct]
+    public struct ClubMember
+    {
+        [TdfMember("BLID")]
+        public long mBlazeId;
 
-		[TdfMember("BLID")]
-		public long mBlazeId;
+        [TdfMember("MSTM")]
+        public uint mMembershipSinceTime;
 
-		[TdfMember("MSTM")]
-		public uint mMembershipSinceTime;
+        [TdfMember("CMTP")]
+        public MembershipStatus mMembershipStatus;
 
-		[TdfMember("CMTP")]
-		public MembershipStatus mMembershipStatus;
+        [TdfMember("META")]
+        public SortedDictionary<string, string> mMetaData;
 
-		[TdfMember("META")]
-		public SortedDictionary<string, string> mMetaData;
+        [TdfMember("MBOS")]
+        public MemberOnlineStatus mOnlineStatus;
 
-		[TdfMember("MBOS")]
-		public MemberOnlineStatus mOnlineStatus;
-
-		[TdfMember("PERS")]
-		public string mPersona;
-
-	}
+        [TdfMember("PERS")]
+        public string mPersona;
+    }
 }

@@ -1,8 +1,6 @@
-using System.IO;
-using System;
-using MultiServerLibrary.HTTP;
 using CustomLogger;
 using HttpMultipartParser;
+using MultiServerLibrary.HTTP;
 
 namespace WebAPIService.GameServices.PSHOME.OUWF
 {
@@ -10,23 +8,25 @@ namespace WebAPIService.GameServices.PSHOME.OUWF
     {
         public static string Execute(byte[] PostData, string ContentType)
         {
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
-            using (MemoryStream ms = new MemoryStream(PostData))
+            using (var ms = new MemoryStream(PostData))
             {
                 var multipartData = MultipartFormDataParser.Parse(ms, boundary);
 
-                int instanceId = Convert.ToInt32(multipartData.GetParameterValue("instanceId"));
-                string vers = multipartData.GetParameterValue("version");
-                string path = multipartData.GetParameterValue("path");
-                string data = multipartData.GetParameterValue("data");
+                var instanceId = Convert.ToInt32(multipartData.GetParameterValue("instanceId"));
+                var vers = multipartData.GetParameterValue("version");
+                var path = multipartData.GetParameterValue("path");
+                var data = multipartData.GetParameterValue("data");
 
-                LoggerAccessor.LogInfo($"[OuWF] - Requested Execute with instanceId {instanceId} | version {vers} | path {path} | data {data}");
+                LoggerAccessor.LogInfo(
+                    $"[OuWF] - Requested Execute with instanceId {instanceId} | version {vers} | path {path} | data {data}"
+                );
 
                 try
                 {
                     //string toTrim = "lua|";
-                    string fileContent = ReadFile(data.Substring(4));
+                    var fileContent = ReadFile(data[4..]);
                     LoggerAccessor.LogInfo($"[OuWF] - File content: {fileContent}");
                     return fileContent;
                 }
@@ -48,7 +48,7 @@ namespace WebAPIService.GameServices.PSHOME.OUWF
                 throw new FileNotFoundException($"File not found: {filePath}");
 
             // Read the content of the file
-            using (StreamReader reader = new StreamReader(filePath))
+            using (var reader = new StreamReader(filePath))
                 return reader.ReadToEnd();
         }
     }

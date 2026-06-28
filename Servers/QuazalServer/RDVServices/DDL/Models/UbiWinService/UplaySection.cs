@@ -30,6 +30,5 @@ namespace QuazalServer.RDVServices.DDL.Models
         public ICollection<UplaySectionContent>? m_content_list { get; set; }
         public string? m_game_code { get; set; }
         public string? m_platform_code { get; set; }
-
     }
 }

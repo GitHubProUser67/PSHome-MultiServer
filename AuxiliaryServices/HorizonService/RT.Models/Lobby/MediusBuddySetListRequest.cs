@@ -1,10 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.BuddySetListRequest)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.BuddySetListRequest
+    )]
     public class MediusBuddySetListRequest : BaseLobbyMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.BuddySetListRequest;
@@ -27,15 +29,14 @@ namespace Horizon.RT.Models
             //reader.ReadBytes(2);
 
             NumEntries = reader.ReadInt32();
-            
+
             List = new string[NumEntries];
-            
-            for (int i = 0; i < NumEntries; i++)
+
+            for (var i = 0; i < NumEntries; i++)
             {
                 NAME_LEN = reader.ReadByte();
                 List[i] = reader.ReadString(NAME_LEN);
             }
-            
         }
 
         public override void Serialize(MessageWriter writer)
@@ -48,22 +49,22 @@ namespace Horizon.RT.Models
             //writer.Write(new byte[2]);
 
             writer.Write(NumEntries);
-            
-            for (int i = 0; i < NumEntries; i++)
+
+            for (var i = 0; i < NumEntries; i++)
             {
                 writer.Write(NAME_LEN);
                 writer.Write(List[i]);
             }
-            
         }
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"NumEntries: {NumEntries} " +
-                $"List: {string.Join(" ", List)}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"NumEntries: {NumEntries} "
+                + $"List: {string.Join(" ", List)}";
         }
     }
 }

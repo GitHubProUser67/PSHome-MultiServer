@@ -25,10 +25,12 @@ internal sealed class SampleBuffer
     {
         get
         {
-            if (index > Position)
-                throw new ArgumentOutOfRangeException(nameof(index), "Index is greater than position");
-
-            return _buffer[index];
+            return index > Position
+                ? throw new ArgumentOutOfRangeException(
+                    nameof(index),
+                    "Index is greater than position"
+                )
+                : _buffer[index];
         }
     }
 

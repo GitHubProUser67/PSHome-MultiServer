@@ -2,36 +2,34 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Clubs
 {
-	[TdfStruct]
-	public struct ClubsComponentSettings
-	{
+    [TdfStruct]
+    public struct ClubsComponentSettings
+    {
+        [TdfMember("AWST")]
+        public List<AwardSettings> mAwardSettings;
 
-		[TdfMember("AWST")]
-		public List<AwardSettings> mAwardSettings;
+        [TdfMember("CLDS")]
+        public ushort mClubDivisionSize;
 
-		[TdfMember("CLDS")]
-		public ushort mClubDivisionSize;
+        [TdfMember("DMNS")]
+        public List<ClubDomain> mDomainList;
 
-		[TdfMember("DMNS")]
-		public List<ClubDomain> mDomainList;
+        [TdfMember("MXEV")]
+        public ushort mMaxEvents;
 
-		[TdfMember("MXEV")]
-		public ushort mMaxEvents;
+        [TdfMember("MXRV")]
+        public ushort mMaxRivalsPerClub;
 
-		[TdfMember("MXRV")]
-		public ushort mMaxRivalsPerClub;
+        [TdfMember("PUHR")]
+        public ushort mPurgeHour;
 
-		[TdfMember("PUHR")]
-		public ushort mPurgeHour;
+        [TdfMember("REST")]
+        public List<RecordSettings> mRecordSettings;
 
-		[TdfMember("REST")]
-		public List<RecordSettings> mRecordSettings;
+        [TdfMember("SOVR")]
+        public int mSeasonRolloverTime;
 
-		[TdfMember("SOVR")]
-		public int mSeasonRolloverTime;
-
-		[TdfMember("STRT")]
-		public int mSeasonStartTime;
-
-	}
+        [TdfMember("STRT")]
+        public int mSeasonStartTime;
+    }
 }

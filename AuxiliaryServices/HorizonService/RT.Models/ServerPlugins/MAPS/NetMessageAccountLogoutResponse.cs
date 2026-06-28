@@ -1,19 +1,20 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
-using Horizon.RT.Models;
+using Horizon.RT.Common;
 
-namespace HorizonService.RT.Models.ServerPlugins.MAPS
+namespace Horizon.RT.Models.ServerPlugins.MAPS
 {
-    [MediusMessage(NetMessageClass.MessageClassApplication, NetMessageTypeIds.NetMessageTypeAccountLogoutResponse)]
-    public class NetMessageAccountLogoutResponse : BaseApplicationMessage
+    [MediusMessage(
+        NetMessageClass.MessageClassApplication,
+        NetMessageTypeIds.NetMessageTypeAccountLogoutResponse
+    )]
+    public class NetMessageAccountLogoutResponse : BaseMediusPluginMessage
     {
-        public override NetMessageTypeIds PacketType => NetMessageTypeIds.NetMessageTypeAccountLogoutResponse;
+        public override NetMessageTypeIds PacketType =>
+            NetMessageTypeIds.NetMessageTypeAccountLogoutResponse;
 
-        public override byte IncomingMessage => 0;
         public override int Size => 4;
-
-        public override byte PluginId => 0;
+        public override ushort ClientBufferSize => 8;
+        public override byte PluginId => (byte)NetPluginType.kNetPluginMAPS;
 
         public bool m_success;
 
@@ -31,9 +32,7 @@ namespace HorizonService.RT.Models.ServerPlugins.MAPS
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"m_success: {m_success}";
+            return base.ToString() + " " + $"m_success: {m_success}";
         }
-
     }
 }

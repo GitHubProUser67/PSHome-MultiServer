@@ -1,6 +1,5 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
@@ -19,6 +18,7 @@ namespace Horizon.RT.Models
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Server version string, including null termination
         /// </summary>
@@ -26,33 +26,28 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             VersionServer = reader.ReadString(Constants.VERSIONSERVER_MAXLEN);
         }
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(VersionServer, Constants.VERSIONSERVER_MAXLEN);
         }
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"Returning: {VersionServer}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"Returning: {VersionServer}";
         }
     }
 }

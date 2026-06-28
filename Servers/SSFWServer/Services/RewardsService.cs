@@ -1,79 +1,150 @@
+using System.Text;
+using System.Text.Json;
 using CustomLogger;
 using MultiServerLibrary.Extension;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SSFWServer.Helpers.FileHelper;
 using SSFWServer.Helpers.RegexHelper;
-using System.Text;
-using System.Text.Json;
 
 namespace SSFWServer.Services
 {
-    public class RewardsService
+    public class RewardsService(string? key)
     {
-        private readonly string? key;
+        private readonly string? key = key;
 
-        public RewardsService(string? key)
-        {
-            this.key = key;
-        }
-
-        public byte[] HandleRewardServicePOST(byte[] buffer, string directorypath, string filepath, string absolutepath)
+        public byte[] HandleRewardServicePOST(
+            byte[] buffer,
+            string directorypath,
+            string filepath,
+            string absolutepath
+        )
         {
             Directory.CreateDirectory(directorypath);
 
-            File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.json", buffer);
+            File.WriteAllBytes(
+                $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.json",
+                buffer
+            );
 
             SSFWUpdateMini(filepath + "/mini.json", Encoding.UTF8.GetString(buffer), false);
 
             return buffer;
         }
 
-        public byte[] HandleRewardServiceInvPOST(byte[] buffer, string directorypath, string filepath, string absolutepath)
+        public static byte[] HandleRewardServiceInvPOST(
+            byte[] buffer,
+            string directorypath,
+            string filepath,
+            string absolutepath
+        )
         {
             Directory.CreateDirectory(directorypath);
 
-            return RewardServiceInventory(buffer, directorypath, filepath, absolutepath, false, false);
+            return RewardServiceInventory(
+                buffer,
+                directorypath,
+                filepath,
+                absolutepath,
+                false,
+                false
+            );
         }
 
-        public byte[]? HandleRewardServiceInvCardTrackingDataDELETE(string directorypath, string filepath, string absolutepath, string userAgent, string sessionId)
+        public byte[]? HandleRewardServiceInvCardTrackingDataDELETE(
+            string directorypath,
+            string filepath,
+            string absolutepath,
+            string userAgent,
+            string sessionId
+        )
         {
             AdminObjectService adminObjectService = new(sessionId, key);
             if (adminObjectService.IsAdminVerified(userAgent))
             {
-                return RewardServiceInventory(Array.Empty<byte>(), directorypath, filepath, absolutepath, false, true);
-            } else {
-                LoggerAccessor.LogWarn($"[SSFW] - HandleRewardServiceInvCardTrackingDataDELETE : {SSFWUserSessionManager.GetIdBySessionId(sessionId)} Unauthorized to delete Card Tracking data!");
+                return RewardServiceInventory(
+                    [],
+                    directorypath,
+                    filepath,
+                    absolutepath,
+                    false,
+                    true
+                );
+            }
+            else
+            {
+                LoggerAccessor.LogWarn(
+                    $"[SSFW] - HandleRewardServiceInvCardTrackingDataDELETE : {SSFWUserSessionManager.GetIdBySessionId(sessionId)} Unauthorized to delete Card Tracking data!"
+                );
                 return null;
             }
         }
 
-        public byte[]? HandleRewardServiceWipeInvDELETE(string directorypath, string filepath, string absolutepath, string userAgent, string sessionId)
+        public byte[]? HandleRewardServiceWipeInvDELETE(
+            string directorypath,
+            string filepath,
+            string absolutepath,
+            string userAgent,
+            string sessionId
+        )
         {
             AdminObjectService adminObjectService = new(sessionId, key);
-            if(adminObjectService.IsAdminVerified(userAgent))
+            if (adminObjectService.IsAdminVerified(userAgent))
             {
-                return RewardServiceInventory(Array.Empty<byte>(), directorypath, filepath, absolutepath, true, false);
-            } else {
-                LoggerAccessor.LogWarn($"[SSFW] - HandleRewardServiceWipeInvDELETE : {SSFWUserSessionManager.GetIdBySessionId(sessionId)} Unauthorized to wipe inventory data!");
+                return RewardServiceInventory(
+                    [],
+                    directorypath,
+                    filepath,
+                    absolutepath,
+                    true,
+                    false
+                );
+            }
+            else
+            {
+                LoggerAccessor.LogWarn(
+                    $"[SSFW] - HandleRewardServiceWipeInvDELETE : {SSFWUserSessionManager.GetIdBySessionId(sessionId)} Unauthorized to wipe inventory data!"
+                );
                 return null;
             }
         }
 
-        public void HandleRewardServiceTrunksPOST(byte[] buffer, string directorypath, string filepath, string absolutepath, string env, string? userId)
+        public void HandleRewardServiceTrunksPOST(
+            byte[] buffer,
+            string directorypath,
+            string filepath,
+            string absolutepath,
+            string env,
+            string? userId
+        )
         {
             Directory.CreateDirectory(directorypath);
 
-            File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.json", buffer);
+            File.WriteAllBytes(
+                $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.json",
+                buffer
+            );
 
-            TrunkServiceProcess(filepath.Replace("/setpartial", string.Empty) + ".json", Encoding.UTF8.GetString(buffer), env, userId);
+            TrunkServiceProcess(
+                filepath.Replace("/setpartial", string.Empty) + ".json",
+                Encoding.UTF8.GetString(buffer),
+                env,
+                userId
+            );
         }
 
-        public void HandleRewardServiceTrunksEmergencyPOST(byte[] buffer, string directorypath, string absolutepath)
+        public static void HandleRewardServiceTrunksEmergencyPOST(
+            byte[] buffer,
+            string directorypath,
+            string absolutepath
+        )
         {
             Directory.CreateDirectory(directorypath);
 
-            File.WriteAllBytes($"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.json", buffer);
+            File.WriteAllBytes(
+                $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutepath}.json",
+                buffer
+            );
         }
 
         public void SSFWUpdateMini(string filePath, string postData, bool delete)
@@ -82,31 +153,29 @@ namespace SSFWServer.Services
             {
                 if (File.Exists(filePath))
                 {
-                    string? json = FileHelper.ReadAllText(filePath, key);
+                    var json = FileHelper.ReadAllText(filePath, key);
 
                     // Parse the JSON string as a JArray
-                    JArray? jsonArray;
-                    if (string.IsNullOrEmpty(json))
-                        jsonArray = new JArray();
-                    else
-                        jsonArray = JArray.Parse(json);
+                    var jsonArray = string.IsNullOrEmpty(json) ? [] : JArray.Parse(json);
 
                     // Extract the rewards object from the POST data
-                    JObject postDataObject = JObject.Parse(postData);
-                    JObject? rewardsObject = (JObject?)postDataObject["rewards"];
+                    var postDataObject = JObject.Parse(postData);
+                    var rewardsObject = (JObject?)postDataObject["rewards"];
 
                     if (rewardsObject != null)
                     {
                         // Iterate over each reward in the POST data
                         foreach (var reward in rewardsObject)
                         {
-                            string rewardKey = reward.Key;
-                            JToken? rewardValue = reward.Value;
+                            var rewardKey = reward.Key;
+                            var rewardValue = reward.Value;
                             if (string.IsNullOrEmpty(rewardKey) || rewardValue == null)
                                 continue;
 
                             // Check if the reward exists in the JSON array
-                            JToken? existingReward = jsonArray.FirstOrDefault(r => r[rewardKey] != null);
+                            var existingReward = jsonArray.FirstOrDefault(r =>
+                                r[rewardKey] != null
+                            );
                             if (delete)
                             {
                                 // If delete is true, remove the existing reward
@@ -121,10 +190,9 @@ namespace SSFWServer.Services
                                 else
                                 {
                                     // Add the new reward to the JSON array
-                                    jsonArray.Add(new JObject
-                                    {
-                                        { rewardKey, DateTime.UtcNow.ToUnixTime() }
-                                    });
+                                    jsonArray.Add(
+                                        new JObject { { rewardKey, DateTime.UtcNow.ToUnixTime() } }
+                                    );
                                 }
                             }
                         }
@@ -135,7 +203,9 @@ namespace SSFWServer.Services
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[SSFW] - SSFWUpdateMini errored out with this exception - {ex}");
+                LoggerAccessor.LogError(
+                    $"[SSFW] - SSFWUpdateMini errored out with this exception - {ex}"
+                );
             }
         }
 
@@ -145,83 +215,135 @@ namespace SSFWServer.Services
             {
                 if (File.Exists(filePath))
                 {
-                    string? json = FileHelper.ReadAllText(filePath, key);
+                    var json = FileHelper.ReadAllText(filePath, key);
 
                     if (!string.IsNullOrEmpty(json))
                     {
                         // Parse the request
-                        JObject? requestObject = JsonConvert.DeserializeObject<JObject>(request);
+                        var requestObject = JsonConvert.DeserializeObject<JObject>(request);
 
                         if (requestObject != null)
                         {
-                            JObject mainFile = JObject.Parse(json);
+                            var mainFile = JObject.Parse(json);
 
                             // Check if 'add' operation is requested
-                            if (requestObject.ContainsKey("add") && requestObject["add"]?["objects"] is JArray addArray)
+                            if (
+                                requestObject.ContainsKey("add")
+                                && requestObject["add"]?["objects"] is JArray addArray
+                            )
                             {
-                                JArray? mainArray = (JArray?)mainFile["objects"];
+                                var mainArray = (JArray?)mainFile["objects"];
                                 if (mainArray != null)
                                 {
-                                    Dictionary<string, string> entriesToAddInMini = new();
+                                    Dictionary<string, string> entriesToAddInMini = [];
 
-                                    foreach (JObject addObject in addArray)
+                                    foreach (var addObject in addArray.Cast<JObject>())
                                     {
                                         mainArray.Add(addObject);
-                                        if (addObject.TryGetValue("objectId", out JToken? objectIdToken) && objectIdToken != null
-                                            && addObject.TryGetValue("type", out JToken? typeToken) && typeToken != null && int.TryParse(typeToken.ToString(), out int typeTokenInt) && typeTokenInt != 0)
-                                            entriesToAddInMini.TryAdd(objectIdToken.ToString(), typeToken.ToString());
+                                        if (
+                                            addObject.TryGetValue("objectId", out var objectIdToken)
+                                            && objectIdToken != null
+                                            && addObject.TryGetValue("type", out var typeToken)
+                                            && typeToken != null
+                                            && int.TryParse(
+                                                typeToken.ToString(),
+                                                out var typeTokenInt
+                                            )
+                                            && typeTokenInt != 0
+                                        )
+                                            entriesToAddInMini.TryAdd(
+                                                objectIdToken.ToString(),
+                                                typeToken.ToString()
+                                            );
                                     }
 
                                     // Update the mini file accordingly.
                                     if (!string.IsNullOrEmpty(env) && !string.IsNullOrEmpty(userId))
                                     {
-                                        string miniPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{userId}/mini.json";
+                                        var miniPath =
+                                            $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{userId}/mini.json";
 
                                         if (!File.Exists(miniPath))
                                             File.WriteAllText(miniPath, "[]");
 
                                         foreach (var entry in entriesToAddInMini)
                                         {
-                                            SSFWUpdateMini(miniPath, $"{{ \"rewards\": {{ \"{entry.Key}\": {entry.Value} }} }}", false);
+                                            SSFWUpdateMini(
+                                                miniPath,
+                                                $"{{ \"rewards\": {{ \"{entry.Key}\": {entry.Value} }} }}",
+                                                false
+                                            );
                                         }
                                     }
                                 }
                             }
 
                             // Check if 'update' operation is requested
-                            if (requestObject.ContainsKey("update") && requestObject["update"]?["objects"] is JArray updateArray)
+                            if (
+                                requestObject.ContainsKey("update")
+                                && requestObject["update"]?["objects"] is JArray updateArray
+                            )
                             {
-                                JArray? mainArray = (JArray?)mainFile["objects"];
+                                var mainArray = (JArray?)mainFile["objects"];
                                 if (mainArray != null)
                                 {
-                                    foreach (JObject updateObj in updateArray)
+                                    foreach (var updateObj in updateArray.Cast<JObject>())
                                     {
-                                        if (updateObj.TryGetValue("objectId", out var objectIdToken) && objectIdToken is JValue objectIdValue)
+                                        if (
+                                            updateObj.TryGetValue("objectId", out var objectIdToken)
+                                            && objectIdToken is JValue objectIdValue
+                                        )
                                         {
-                                            string objectId = objectIdValue.ToString();
-                                            JObject? existingObj = mainArray.FirstOrDefault(obj => obj["objectId"]?.ToString() == objectId) as JObject;
-                                            existingObj?.Merge(updateObj, new JsonMergeSettings { MergeArrayHandling = MergeArrayHandling.Replace });
+                                            var objectId = objectIdValue.ToString();
+                                            var existingObj =
+                                                mainArray.FirstOrDefault(obj =>
+                                                    obj["objectId"]?.ToString() == objectId
+                                                ) as JObject;
+                                            existingObj?.Merge(
+                                                updateObj,
+                                                new JsonMergeSettings
+                                                {
+                                                    MergeArrayHandling = MergeArrayHandling.Replace,
+                                                }
+                                            );
                                         }
                                     }
                                 }
                             }
 
                             // Check if 'delete' operation is requested
-                            if (requestObject.ContainsKey("delete") && requestObject["delete"]?["objects"] is JArray deleteArray)
+                            if (
+                                requestObject.ContainsKey("delete")
+                                && requestObject["delete"]?["objects"] is JArray deleteArray
+                            )
                             {
-                                JArray? mainArray = (JArray?)mainFile["objects"];
+                                var mainArray = (JArray?)mainFile["objects"];
                                 if (mainArray != null)
                                 {
-                                    List<string> entriesToRemoveInMini = new();
+                                    List<string> entriesToRemoveInMini = [];
 
-                                    foreach (JObject deleteObj in deleteArray)
+                                    foreach (var deleteObj in deleteArray.Cast<JObject>())
                                     {
-                                        if (deleteObj.TryGetValue("objectId", out var objectIdToken) && objectIdToken is JValue objectIdValue)
+                                        if (
+                                            deleteObj.TryGetValue("objectId", out var objectIdToken)
+                                            && objectIdToken is JValue objectIdValue
+                                        )
                                         {
-                                            string objectId = objectIdValue.ToString();
-                                            JObject? existingObj = mainArray.FirstOrDefault(obj => obj["objectId"]?.ToString() == objectId) as JObject;
+                                            var objectId = objectIdValue.ToString();
+                                            var existingObj =
+                                                mainArray.FirstOrDefault(obj =>
+                                                    obj["objectId"]?.ToString() == objectId
+                                                ) as JObject;
                                             existingObj?.Remove();
-                                            if (deleteObj.TryGetValue("type", out JToken? typeToken) && typeToken != null && int.TryParse(typeToken.ToString(), out int typeTokenInt) && typeTokenInt != 0)
+                                            if (
+                                                deleteObj.TryGetValue("type", out var typeToken)
+                                                && typeToken != null
+                                                && int.TryParse(
+                                                    typeToken.ToString(),
+                                                    out var typeTokenInt
+                                                )
+                                                && typeTokenInt != 0
+                                            )
                                                 entriesToRemoveInMini.Add(objectId);
                                         }
                                     }
@@ -229,13 +351,18 @@ namespace SSFWServer.Services
                                     // Update the mini file accordingly.
                                     if (!string.IsNullOrEmpty(env) && !string.IsNullOrEmpty(userId))
                                     {
-                                        string miniPath = $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{userId}/mini.json";
+                                        var miniPath =
+                                            $"{SSFWServerConfiguration.SSFWStaticFolder}/RewardsService/{env}/rewards/{userId}/mini.json";
 
                                         if (File.Exists(miniPath))
                                         {
-                                            foreach (string entry in entriesToRemoveInMini)
+                                            foreach (var entry in entriesToRemoveInMini)
                                             {
-                                                SSFWUpdateMini(miniPath, $"{{ \"rewards\": {{ \"{entry}\": -1 }} }}", true);
+                                                SSFWUpdateMini(
+                                                    miniPath,
+                                                    $"{{ \"rewards\": {{ \"{entry}\": -1 }} }}",
+                                                    true
+                                                );
                                             }
                                         }
                                     }
@@ -249,11 +376,20 @@ namespace SSFWServer.Services
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[SSFW] - TrunkServiceProcess errored out with this exception - {ex}");
+                LoggerAccessor.LogError(
+                    $"[SSFW] - TrunkServiceProcess errored out with this exception - {ex}"
+                );
             }
         }
 
-        public static byte[] RewardServiceInventory(byte[] buffer, string directorypath, string filepath, string absolutePath, bool deleteInv, bool deleteOnlyTracking)
+        public static byte[] RewardServiceInventory(
+            byte[] buffer,
+            string directorypath,
+            string filepath,
+            string absolutePath,
+            bool deleteInv,
+            bool deleteOnlyTracking
+        )
         {
             //Tracking Inventory GUID
             const string trackingGuid = "00000000-00000000-00000000-00000001"; // fallback/hardcoded tracking GUID
@@ -262,60 +398,77 @@ namespace SSFWServer.Services
             var errorPayload = Encoding.UTF8.GetBytes($"{{\"idList\": [\"{trackingGuid}\"] }}");
 
             // File paths based on the provided format
-            string countsStoreDir = $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutePath}";
-            string countsStore = $"{countsStoreDir}/counts.json";
+            var countsStoreDir = $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutePath}";
+            var countsStore = $"{countsStoreDir}/counts.json";
 
-            string trackingFileDir = $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutePath}/object";
-            string trackingFile = $"{trackingFileDir}/{trackingGuid}.json";
+            var trackingFileDir =
+                $"{SSFWServerConfiguration.SSFWStaticFolder}/{absolutePath}/object";
+            var trackingFile = $"{trackingFileDir}/{trackingGuid}.json";
 
-            if (!string.IsNullOrEmpty(countsStoreDir) && !string.IsNullOrEmpty(trackingFileDir)) {
+            if (!string.IsNullOrEmpty(countsStoreDir) && !string.IsNullOrEmpty(trackingFileDir))
+            {
                 Directory.CreateDirectory(Path.GetDirectoryName(countsStoreDir));
                 Directory.CreateDirectory(Path.GetDirectoryName(trackingFileDir));
             }
             else
             {
-                LoggerAccessor.LogError("[SSFW] - RewardServiceInventoryPOST: Fatal error in RewardService Inventory System! CountsStoreDir or TrackingFileDir should NOT be null!");
+                LoggerAccessor.LogError(
+                    "[SSFW] - RewardServiceInventoryPOST: Fatal error in RewardService Inventory System! CountsStoreDir or TrackingFileDir should NOT be null!"
+                );
                 return errorPayload;
             }
 
             //Parse Buffer
-            string fixedJsonPayload = GUIDValidator.FixJsonValues(Encoding.UTF8.GetString(buffer));
+            var fixedJsonPayload = GUIDValidator.FixJsonValues(Encoding.UTF8.GetString(buffer));
             try
             {
-                using JsonDocument document = JsonDocument.Parse(fixedJsonPayload);
-                JsonElement root = document.RootElement;
+                using var document = JsonDocument.Parse(fixedJsonPayload);
+                var root = document.RootElement;
 
-                if (!root.TryGetProperty("rewards", out JsonElement rewardsElement) || rewardsElement.ValueKind != JsonValueKind.Array)
+                if (
+                    !root.TryGetProperty("rewards", out var rewardsElement)
+                    || rewardsElement.ValueKind != JsonValueKind.Array
+                )
                 {
-                    LoggerAccessor.LogError("[SSFW] - RewardServiceInventoryPOST: Invalid payload - 'rewards' must be an array.");
+                    LoggerAccessor.LogError(
+                        "[SSFW] - RewardServiceInventoryPOST: Invalid payload - 'rewards' must be an array."
+                    );
                     return errorPayload;
                 }
 
                 var rewards = rewardsElement.EnumerateArray();
                 if (!rewards.MoveNext())
                 {
-                    LoggerAccessor.LogError("[SSFW] - RewardServiceInventoryPOST: Invalid payload - 'rewards' array is empty.");
+                    LoggerAccessor.LogError(
+                        "[SSFW] - RewardServiceInventoryPOST: Invalid payload - 'rewards' array is empty."
+                    );
                     return errorPayload;
                 }
 
-                Dictionary<string, int> counts = new();
+                Dictionary<string, int> counts = [];
                 if (File.Exists(countsStore))
                 {
-                    if(deleteInv)
+                    if (deleteInv)
                     {
                         File.Delete(countsStore);
 #if DEBUG
-                        LoggerAccessor.LogInfo($"[SSFW] - RewardServiceInventory: Successfully deleted Inventory counts at {countsStore}");
+                        LoggerAccessor.LogInfo(
+                            $"[SSFW] - RewardServiceInventory: Successfully deleted Inventory counts at {countsStore}"
+                        );
 #endif
-                    } else
+                    }
+                    else
                     {
-                        string countsJson = File.ReadAllText(countsStore);
-                        counts = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, int>>(countsJson) ?? new Dictionary<string, int>();
+                        var countsJson = File.ReadAllText(countsStore);
+                        counts =
+                            System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, int>>(
+                                countsJson
+                            ) ?? [];
                     }
                 }
                 else
                 {
-                    counts = new Dictionary<string, int>();
+                    counts = [];
                 }
 
                 Dictionary<string, Dictionary<string, object>>? existingTrackingData = null;
@@ -325,82 +478,81 @@ namespace SSFWServer.Services
                     {
                         File.Delete(trackingFile);
 #if DEBUG
-                        LoggerAccessor.LogInfo($"[SSFW] - RewardServiceInventory: Deleting Tracking file at {trackingFile}");
+                        LoggerAccessor.LogInfo(
+                            $"[SSFW] - RewardServiceInventory: Deleting Tracking file at {trackingFile}"
+                        );
 #endif
                         return Encoding.UTF8.GetBytes("");
                     }
                     else
                     {
-                        string existingTrackingJson = File.ReadAllText(trackingFile);
-                        using JsonDocument trackingDoc = JsonDocument.Parse(existingTrackingJson);
-                        JsonElement trackingRoot = trackingDoc.RootElement;
-                        if (trackingRoot.TryGetProperty("rewards", out JsonElement trackingRewardsElement) &&
-                            trackingRewardsElement.ValueKind == JsonValueKind.Object)
+                        var existingTrackingJson = File.ReadAllText(trackingFile);
+                        using var trackingDoc = JsonDocument.Parse(existingTrackingJson);
+                        var trackingRoot = trackingDoc.RootElement;
+                        if (
+                            trackingRoot.TryGetProperty("rewards", out var trackingRewardsElement)
+                            && trackingRewardsElement.ValueKind == JsonValueKind.Object
+                        )
                         {
-                            existingTrackingData = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, object>>>(
-                                trackingRewardsElement.GetRawText());
+                            existingTrackingData = System.Text.Json.JsonSerializer.Deserialize<
+                                Dictionary<string, Dictionary<string, object>>
+                            >(trackingRewardsElement.GetRawText());
                         }
 
-                        foreach (JsonElement reward in rewards)
+                        foreach (var reward in rewards)
                         {
-                            if (!reward.TryGetProperty("objectId", out JsonElement objectIdElement) ||
-                                objectIdElement.ValueKind != JsonValueKind.String)
+                            if (
+                                !reward.TryGetProperty("objectId", out var objectIdElement)
+                                || objectIdElement.ValueKind != JsonValueKind.String
+                            )
                             {
-                                LoggerAccessor.LogError("[SSFW] - RewardServiceInventoryPOST: Invalid reward - 'objectId' missing or not a string.");
+                                LoggerAccessor.LogError(
+                                    "[SSFW] - RewardServiceInventoryPOST: Invalid reward - 'objectId' missing or not a string."
+                                );
                                 continue;
                             }
 
                             if (objectIdElement.ValueKind != JsonValueKind.String)
                             {
-                                LoggerAccessor.LogError($"[SSFW] - RewardServiceInventoryPOST: 'objectId' must be a string, got {objectIdElement.ValueKind}.");
+                                LoggerAccessor.LogError(
+                                    $"[SSFW] - RewardServiceInventoryPOST: 'objectId' must be a string, got {objectIdElement.ValueKind}."
+                                );
                                 continue;
                             }
 
-                            string? objectId = objectIdElement.GetString();
+                            var objectId = objectIdElement.GetString();
                             if (!string.IsNullOrEmpty(objectId))
                             {
                                 // Update counts
-                                if (counts.ContainsKey(objectId))
-                                {
-                                    counts[objectId]++;
-                                }
-                                else
-                                {
-                                    counts[objectId] = 1;
-                                }
+                                counts[objectId] = counts.TryGetValue(objectId, out var value)
+                                    ? ++value
+                                    : 1;
                             }
 
                             // Check if this is a tracking object (has metadata or matches tracking GUID)
-                            bool hasMetadata = reward.TryGetProperty("_id", out _) ||
-                                              reward.TryGetProperty("scene", out _) ||
-                                              reward.TryGetProperty("boost", out _) ||
-                                              reward.TryGetProperty("game", out _) ||
-                                              reward.TryGetProperty("migrated", out _);
+                            var hasMetadata =
+                                reward.TryGetProperty("_id", out _)
+                                || reward.TryGetProperty("scene", out _)
+                                || reward.TryGetProperty("boost", out _)
+                                || reward.TryGetProperty("game", out _)
+                                || reward.TryGetProperty("migrated", out _);
                             if (hasMetadata || objectId == trackingGuid || objectId != string.Empty)
                             {
-                                var trackingRewards = existingTrackingData ?? new Dictionary<string, Dictionary<string, object>>();
+                                var trackingRewards = existingTrackingData ?? [];
                                 var metadata = new Dictionary<string, object>();
 
-                                foreach (JsonProperty prop in reward.EnumerateObject())
+                                foreach (var prop in reward.EnumerateObject())
                                 {
                                     if (prop.Name != "objectId")
                                     {
-                                        switch (prop.Value.ValueKind)
+                                        metadata[prop.Name] = prop.Value.ValueKind switch
                                         {
-                                            case JsonValueKind.String:
-                                                metadata[prop.Name] = prop.Value.GetString() ?? "";
-                                                break;
-                                            case JsonValueKind.Number:
-                                                metadata[prop.Name] = prop.Value.GetInt32();
-                                                break;
-                                            case JsonValueKind.True:
-                                            case JsonValueKind.False:
-                                                metadata[prop.Name] = prop.Value.GetBoolean();
-                                                break;
-                                            default:
-                                                metadata[prop.Name] = prop.Value.ToString();
-                                                break;
-                                        }
+                                            JsonValueKind.String => prop.Value.GetString() ?? "",
+                                            JsonValueKind.Number => prop.Value.GetInt32(),
+                                            JsonValueKind.True or JsonValueKind.False =>
+                                                prop.Value.GetBoolean(),
+                                            _ => prop.Value.ToString(),
+                                        };
                                     }
                                 }
 
@@ -409,66 +561,119 @@ namespace SSFWServer.Services
                                     trackingRewards[objectId] = metadata;
                                 }
 
-                                 // Write tracking data
+                                // Write tracking data
                                 var trackingData = new Dictionary<string, object>
                                 {
                                     { "result", 0 },
-                                    { "rewards", trackingRewards }
+                                    { "rewards", trackingRewards },
                                 };
-                                string trackingJson = System.Text.Json.JsonSerializer.Serialize(trackingData, new JsonSerializerOptions { WriteIndented = true });
+                                var trackingJson = System.Text.Json.JsonSerializer.Serialize(
+                                    trackingData,
+                                    new JsonSerializerOptions { WriteIndented = true }
+                                );
                                 File.WriteAllText(trackingFile, trackingJson);
 #if DEBUG
-                                LoggerAccessor.LogInfo($"[SSFW] - RewardServiceInventoryPOST: Updated tracking file: {trackingFile}");
+                                LoggerAccessor.LogInfo(
+                                    $"[SSFW] - RewardServiceInventoryPOST: Updated tracking file: {trackingFile}"
+                                );
 #endif
                             }
                         }
 
-                        string updatedCountsJson = System.Text.Json.JsonSerializer.Serialize(counts, new JsonSerializerOptions { WriteIndented = true });
+                        var updatedCountsJson = System.Text.Json.JsonSerializer.Serialize(
+                            counts,
+                            new JsonSerializerOptions { WriteIndented = true }
+                        );
                         File.WriteAllText(countsStore, updatedCountsJson);
 #if DEBUG
-                        LoggerAccessor.LogInfo($"[SSFW] - RewardServiceInventoryPOST: Updated counts file: {countsStore}");
+                        LoggerAccessor.LogInfo(
+                            $"[SSFW] - RewardServiceInventoryPOST: Updated counts file: {countsStore}"
+                        );
 #endif
                     }
-
                 }
-
-                
             }
             catch (System.Text.Json.JsonException ex)
             {
-                LoggerAccessor.LogError($"[SSFW] - RewardServiceInventoryPOST: Error parsing JSON payload: {ex.Message}");
+                LoggerAccessor.LogError(
+                    $"[SSFW] - RewardServiceInventoryPOST: Error parsing JSON payload: {ex.Message}"
+                );
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[SSFW] - RewardServiceInventoryPOST: Error processing POST request: {ex.Message}");
+                LoggerAccessor.LogError(
+                    $"[SSFW] - RewardServiceInventoryPOST: Error processing POST request: {ex.Message}"
+                );
             }
 
-            return Encoding.UTF8.GetBytes(@"{ ""idList"": [""00000000-00000000-00000000-00000001""]}");
+            return Encoding.UTF8.GetBytes(
+                @"{ ""idList"": [""00000000-00000000-00000000-00000001""]}"
+            );
         }
 
-        public void AddMiniEntry(string uuid, byte invtype, string trunkFilePath, string env, string? userId)
+        public void AddMiniEntry(
+            string uuid,
+            byte invtype,
+            string trunkFilePath,
+            string env,
+            string? userId
+        )
         {
-            ProcessTrunkObjectUpdate(trunkFilePath, new Dictionary<string, byte> { { uuid, invtype } }, env, userId, true);
+            ProcessTrunkObjectUpdate(
+                trunkFilePath,
+                new Dictionary<string, byte> { { uuid, invtype } },
+                env,
+                userId,
+                true
+            );
         }
 
-        public void RemoveMiniEntry(string uuid, byte invtype, string trunkFilePath, string env, string? userId)
+        public void RemoveMiniEntry(
+            string uuid,
+            byte invtype,
+            string trunkFilePath,
+            string env,
+            string? userId
+        )
         {
-            ProcessTrunkObjectUpdate(trunkFilePath, new Dictionary<string, byte> { { uuid, invtype } }, env, userId, false);
+            ProcessTrunkObjectUpdate(
+                trunkFilePath,
+                new Dictionary<string, byte> { { uuid, invtype } },
+                env,
+                userId,
+                false
+            );
         }
 
-        public void AddMiniEntries(Dictionary<string, byte> entriesToAdd, string trunkFilePath, string env, string? userId)
+        public void AddMiniEntries(
+            Dictionary<string, byte> entriesToAdd,
+            string trunkFilePath,
+            string env,
+            string? userId
+        )
         {
             ProcessTrunkObjectUpdate(trunkFilePath, entriesToAdd, env, userId, true);
         }
 
-        public void RemoveMiniEntries(Dictionary<string, byte> entriesToRemove, string trunkFilePath, string env, string? userId)
+        public void RemoveMiniEntries(
+            Dictionary<string, byte> entriesToRemove,
+            string trunkFilePath,
+            string env,
+            string? userId
+        )
         {
             ProcessTrunkObjectUpdate(trunkFilePath, entriesToRemove, env, userId, false);
         }
 
-        private void ProcessTrunkObjectUpdate(string trunkFilePath, Dictionary<string, byte> entries, string env, string? userId, bool add)
+        private void ProcessTrunkObjectUpdate(
+            string trunkFilePath,
+            Dictionary<string, byte> entries,
+            string env,
+            string? userId,
+            bool add
+        )
         {
-            string? trunkJsonData = FileHelper.ReadAllText(trunkFilePath, key);
+            var trunkJsonData = FileHelper.ReadAllText(trunkFilePath, key);
 
             if (!string.IsNullOrEmpty(trunkJsonData))
             {
@@ -476,33 +681,39 @@ namespace SSFWServer.Services
 
                 try
                 {
-                    string setPartialDirectory = trunkFilePath.Substring(0, trunkFilePath.Length - 5);
-                    using JsonDocument doc = JsonDocument.Parse(trunkJsonData);
+                    var setPartialDirectory = trunkFilePath[..^5];
+                    using var doc = JsonDocument.Parse(trunkJsonData);
 
-                    List<int> indexList = new();
-                    Dictionary<int, (string, byte)> indexToItem = new();
+                    List<int> indexList = [];
+                    Dictionary<int, (string, byte)> indexToItem = [];
 
                     foreach (var obj in doc.RootElement.GetProperty("objects").EnumerateArray())
                     {
-                        if (obj.TryGetProperty("index", out var indexProp) &&
-                            obj.TryGetProperty("objectId", out var idProp) &&
-                            obj.TryGetProperty("type", out var idType) &&
-                            int.TryParse(indexProp.GetString(), out int index))
+                        if (
+                            obj.TryGetProperty("index", out var indexProp)
+                            && obj.TryGetProperty("objectId", out var idProp)
+                            && obj.TryGetProperty("type", out var idType)
+                            && int.TryParse(indexProp.GetString(), out var index)
+                        )
                         {
                             indexList.Add(index);
-                            string? idPropStr = idProp.GetString();
-                            string? idTypeStr = idType.GetString();
-                            if (!string.IsNullOrEmpty(idTypeStr) && !string.IsNullOrEmpty(idPropStr) && byte.TryParse(idTypeStr, out byte typeOfEntry))
+                            var idPropStr = idProp.GetString();
+                            var idTypeStr = idType.GetString();
+                            if (
+                                !string.IsNullOrEmpty(idTypeStr)
+                                && !string.IsNullOrEmpty(idPropStr)
+                                && byte.TryParse(idTypeStr, out var typeOfEntry)
+                            )
                                 indexToItem[index] = (idPropStr, typeOfEntry);
                         }
                     }
 
-                    int lastIndex = indexList.Count > 0 ? indexList.Max() + 1 : 0;
+                    var lastIndex = indexList.Count > 0 ? indexList.Max() + 1 : 0;
 
                     if (add)
                     {
                         // Make sure we don't add a given uuid twice (causes inventory errors at boot)
-                        foreach (string key in entries.Keys.Where(key => trunkJsonData.Contains(key)))
+                        foreach (var key in entries.Keys.Where(key => trunkJsonData.Contains(key)))
                         {
                             entries.Remove(key);
                         }
@@ -519,32 +730,33 @@ namespace SSFWServer.Services
                 }
                 catch (Exception ex)
                 {
-                    LoggerAccessor.LogError($"[SSFW] - ProcessTrunkObjectUpdate: setpartial update errored out with this exception - {ex}");
+                    LoggerAccessor.LogError(
+                        $"[SSFW] - ProcessTrunkObjectUpdate: setpartial update errored out with this exception - {ex}"
+                    );
                 }
             }
         }
 
-        private static string BuildAddSetPartialJson(Dictionary<string, byte> entries, int startIndex)
+        private static string BuildAddSetPartialJson(
+            Dictionary<string, byte> entries,
+            int startIndex
+        )
         {
             // Create the object to build the JSON structure
-            var jsonObject = new
-            {
-                add = new
-                {
-                    objects = new List<object>()
-                }
-            };
+            var jsonObject = new { add = new { objects = new List<object>() } };
 
             // Loop through the dictionary and add each item to the objects list
             foreach (var item in entries)
             {
-                jsonObject.add.objects.Add(new
-                {
-                    objectId = item.Key,
-                    type = item.Value.ToString(),
-                    trunk = "0",
-                    index = startIndex.ToString()
-                });
+                jsonObject.add.objects.Add(
+                    new
+                    {
+                        objectId = item.Key,
+                        type = item.Value.ToString(),
+                        trunk = "0",
+                        index = startIndex.ToString(),
+                    }
+                );
 
                 startIndex++;
             }
@@ -553,27 +765,29 @@ namespace SSFWServer.Services
             return JsonConvert.SerializeObject(jsonObject);
         }
 
-        private static string BuildDeleteSetPartialJson(Dictionary<string, byte> entries, Dictionary<int, (string, byte)> indexToItem)
+        private static string BuildDeleteSetPartialJson(
+            Dictionary<string, byte> entries,
+            Dictionary<int, (string, byte)> indexToItem
+        )
         {
             // Create the object to build the JSON structure
-            var jsonObject = new
-            {
-                delete = new
-                {
-                    objects = new List<object>()
-                }
-            };
+            var jsonObject = new { delete = new { objects = new List<object>() } };
 
             // Loop through the dictionary and add each item to the objects list
             foreach (var item in entries)
             {
-                jsonObject.delete.objects.Add(new
-                {
-                    objectId = item.Key,
-                    type = item.Value.ToString(),
-                    trunk = "0",
-                    index = indexToItem.Where(x => x.Value.Item2 == item.Value && x.Value.Item1 == item.Key).FirstOrDefault().Key.ToString(),
-                });
+                jsonObject.delete.objects.Add(
+                    new
+                    {
+                        objectId = item.Key,
+                        type = item.Value.ToString(),
+                        trunk = "0",
+                        index = indexToItem
+                            .Where(x => x.Value.Item2 == item.Value && x.Value.Item1 == item.Key)
+                            .FirstOrDefault()
+                            .Key.ToString(),
+                    }
+                );
             }
 
             // Serialize the object to JSON string

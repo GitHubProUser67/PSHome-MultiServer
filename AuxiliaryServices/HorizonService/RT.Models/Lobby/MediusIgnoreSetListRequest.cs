@@ -1,10 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.IgnoreSetListRequest)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.IgnoreSetListRequest
+    )]
     public class MediusIgnoreSetListRequest : BaseLobbyMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.IgnoreSetListRequest;
@@ -27,7 +29,7 @@ namespace Horizon.RT.Models
             NumEntries = reader.ReadInt32();
 
             List = new string[NumEntries];
-            for (int i = 0; i < NumEntries; i++)
+            for (var i = 0; i < NumEntries; i++)
             {
                 NAME_LEN = reader.ReadByte();
                 List[i] = reader.ReadString(NAME_LEN);
@@ -42,7 +44,7 @@ namespace Horizon.RT.Models
 
             writer.Write(SessionKey, Constants.SESSIONKEY_MAXLEN);
             writer.Write(NumEntries);
-            for (int i = 0; i < NumEntries; i++)
+            for (var i = 0; i < NumEntries; i++)
             {
                 writer.Write(NAME_LEN);
                 writer.Write(List[i]);
@@ -51,11 +53,12 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"NumEntries: {NumEntries} " +
-                $"List: {string.Join(" ", List)}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"NumEntries: {NumEntries} "
+                + $"List: {string.Join(" ", List)}";
         }
     }
 }

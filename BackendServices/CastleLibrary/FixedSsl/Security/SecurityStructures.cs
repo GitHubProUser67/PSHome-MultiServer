@@ -1,6 +1,6 @@
 /*
  *   Mentalis.org Security Library
- * 
+ *
  *     Copyright � 2002-2005, The Mentalis.org Team
  *     All rights reserved.
  *     http://www.mentalis.org/
@@ -11,11 +11,11 @@
  *   are met:
  *
  *     - Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer. 
+ *        notice, this list of conditions and the following disclaimer.
  *
  *     - Neither the name of the Mentalis.org Team, nor the names of its contributors
  *        may be used to endorse or promote products derived from this
- *        software without specific prior written permission. 
+ *        software without specific prior written permission.
  *
  *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -31,13 +31,12 @@
  *   OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-using System;
 using System.Runtime.InteropServices;
 
-namespace Org.Mentalis.Security
+namespace CastleLibrary.FixedSsl.Security
 {
     /// <summary>
-    /// The DataBlob structure contains an array of bytes. 
+    /// The DataBlob structure contains an array of bytes.
     /// </summary>
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
     internal struct DataBlob
@@ -45,6 +44,7 @@ namespace Org.Mentalis.Security
         public int cbData;
         public IntPtr pbData;
     }
+
     /// <summary>
     /// The CertificateInfo structure contains a certificate's information.
     /// </summary>
@@ -78,28 +78,31 @@ namespace Org.Mentalis.Security
         public int cExtension;
         public IntPtr rgExtension; // /PCERT_EXTENSION/
     }
-    /// <summary>
-    /// The CERT_PUBLIC_KEY_INFO structure contains a public key and its algorithm.
-    /// </summary>
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
-    internal struct CERT_PUBLIC_KEY_INFO
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct CRYPT_ALGORITHM_IDENTIFIER
     {
-        public CERT_PUBLIC_KEY_INFO(CertificateInfo info)
-        {
-            pszObjId = info.SubjectPublicKeyInfoAlgorithmpszObjId;
-            agcbData = info.SubjectPublicKeyInfoAlgorithmParameterscbData;
-            agpbData = info.SubjectPublicKeyInfoAlgorithmParameterspbData;
-            pkcbData = info.SubjectPublicKeyInfoPublicKeycbData;
-            pkpbData = info.SubjectPublicKeyInfoPublicKeypbData;
-            pkcUnusedBits = info.SubjectPublicKeyInfoPublicKeycUnusedBits;
-        }
-        public IntPtr pszObjId;
-        public int agcbData;
-        public IntPtr agpbData;
-        public int pkcbData;
-        public IntPtr pkpbData;
-        public int pkcUnusedBits;
+        [MarshalAs(UnmanagedType.LPStr)]
+        public string pszObjId;
+        public int cbData;
+        public IntPtr pbData;
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct CRYPT_BIT_BLOB
+    {
+        public uint cbData;
+        public IntPtr pbData;
+        public uint cUnusedBits;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct CERT_PUBLIC_KEY_INFO
+    {
+        public CRYPT_ALGORITHM_IDENTIFIER Algorithm;
+        public CRYPT_BIT_BLOB PublicKey;
+    }
+
     /// <summary>
     /// The CertificateContext structure contains both the encoded and decoded representations of a certificate.
     /// </summary>
@@ -112,6 +115,7 @@ namespace Org.Mentalis.Security
         public IntPtr pCertInfo; // PCERT_INFO
         public IntPtr hCertStore; // HCERTSTORE
     }
+
     /// <summary>
     /// The TrustListUsage structure contains an array of Object Identifiers (OIDs) for Certificate Trust List (CTL) extensions. CTL_USAGE structures are used in functions that search for CTLs for specific uses.
     /// </summary>
@@ -121,6 +125,7 @@ namespace Org.Mentalis.Security
         public int cUsageIdentifier;
         public IntPtr rgpszUsageIdentifier;
     }
+
     /// <summary>
     /// The CertificateExtension structure contains the extension information for a certificate, Certificate Revocation List (CRL) or Certificate Trust List (CTL).
     /// </summary>
@@ -132,6 +137,7 @@ namespace Org.Mentalis.Security
         public int cbData;
         public IntPtr pbData;
     }
+
     /// <summary>
     /// The CertificateNameValue structure contains a relative distinguished name (RDN) attribute value. It is like the CERT_RDN_ATTR structure, except that it does not include the object identifier member that is a member of CERT_RDN_ATTR. As in CERT_RDN_ATTR, the interpretation of the Value member depends on dwValueType.
     /// </summary>
@@ -142,6 +148,7 @@ namespace Org.Mentalis.Security
         public int cbData;
         public IntPtr pbData;
     }
+
     /// <summary>
     /// The CertificateNameInfo structure contains subject or issuer names. The information is represented as an array of CERT_RDN structures.
     /// </summary>
@@ -151,6 +158,7 @@ namespace Org.Mentalis.Security
         public int cRDN;
         public IntPtr rgRDN; //PCERT_RDN
     }
+
     /// <summary>
     /// The RelativeDistinguishedName structure contains a relative distinguished name (RDN) consisting of an array of CERT_RDN_ATTR structures.
     /// </summary>
@@ -160,6 +168,7 @@ namespace Org.Mentalis.Security
         public int cRDNAttr;
         public IntPtr rgRDNAttr;
     }
+
     /// <summary>
     /// The RdnAttribute structure contains a single attribute of a relative distinguished name (RDN). A whole RDN is expressed in a CERT_RDN structure that contains an array of CERT_RDN_ATTR structures.
     /// </summary>
@@ -171,6 +180,7 @@ namespace Org.Mentalis.Security
         public int cbData;
         public IntPtr pbData;
     }
+
     /// <summary>
     /// The ChainParameters structure establishing the searching and matching criteria to be used in building a certificate chain.
     /// </summary>
@@ -188,6 +198,7 @@ namespace Org.Mentalis.Security
         //public int fCheckRevocationFreshnessTime;
         //public int dwRevocationFreshnessTime;
     }
+
     /// <summary>
     /// The ChainPolicyStatus structure holds certificate chain status information returned by CertVerifyCertificateChainPolicy from the verification of certificate chains.
     /// </summary>
@@ -200,27 +211,30 @@ namespace Org.Mentalis.Security
         public int lElementIndex;
         public IntPtr pvExtraPolicyStatus;
     }
+
     /// <summary>
     /// The ChainPolicyParameters structure contains information used in CertVerifyCertificateChainPolicy to establish policy criteria for the verification of certificate chains.
     /// </summary>
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
     internal struct ChainPolicyParameters
     { //CERT_CHAIN_POLICY_PARA
-        public int cbSize;         // sizeof(CERT_CHAIN_POLICY_PARA);
+        public int cbSize; // sizeof(CERT_CHAIN_POLICY_PARA);
         public int dwFlags;
         public IntPtr pvExtraPolicyPara;
     }
+
     /// <summary>
     /// The SslPolicyParameters structure contains extra policy options.
     /// </summary>
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
     internal struct SslPolicyParameters
-    { //HTTPSPolicyCallbackData or SSL_EXTRA_CERT_CHAIN_POLICY_PARA 
-        public int cbSize;         // sizeof(HTTPSPolicyCallbackData);
+    { //HTTPSPolicyCallbackData or SSL_EXTRA_CERT_CHAIN_POLICY_PARA
+        public int cbSize; // sizeof(HTTPSPolicyCallbackData);
         public int dwAuthType;
         public int fdwChecks;
         public IntPtr pwszServerName; // pointer to a Unicode string // used to check against CN=xxxx
     }
+
     /// <summary>
     /// The CRYPT_KEY_PROV_INFO structure contains fields that are passed as the arguments to CryptAcquireContext to acquire a handle to a particular key container within a particular cryptographic service provider (CSP), or to create or destroy a key container.
     /// </summary>
@@ -229,6 +243,7 @@ namespace Org.Mentalis.Security
     {
         [MarshalAs(UnmanagedType.LPWStr)]
         public string pwszContainerName;
+
         [MarshalAs(UnmanagedType.LPWStr)]
         public string pwszProvName;
         public int dwProvType;
@@ -237,8 +252,9 @@ namespace Org.Mentalis.Security
         public IntPtr rgProvParam;
         public int dwKeySpec;
     }
+
     /// <summary>
-    /// Union of the PUBLICKEYSTRUC [=BLOBHEADER] and RSAPUBKEY structures 
+    /// Union of the PUBLICKEYSTRUC [=BLOBHEADER] and RSAPUBKEY structures
     /// </summary>
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     struct PUBLIC_KEY_BLOB
@@ -251,6 +267,7 @@ namespace Org.Mentalis.Security
         public int bitlen;
         public int pubexp;
     }
+
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
     struct PROV_ENUMALGS_EX
     {
@@ -260,12 +277,15 @@ namespace Org.Mentalis.Security
         public int dwMaxLen;
         public int dwProtocols;
         public int dwNameLen;
+
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 20)]
         public string szName;
         public int dwLongNameLen;
+
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 40)]
         public string szLongName;
     }
+
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
     struct CERT_EXTENSION
     {

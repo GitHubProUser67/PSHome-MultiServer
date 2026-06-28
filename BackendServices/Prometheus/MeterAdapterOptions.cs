@@ -1,4 +1,3 @@
-﻿#if NET6_0_OR_GREATER
 using System.Diagnostics.Metrics;
 
 namespace Prometheus;
@@ -8,7 +7,11 @@ public sealed record MeterAdapterOptions
     public static MeterAdapterOptions Default => new();
 
     // This is unlikely to be suitable for all cases, so you will want to customize it per-instrument.
-    public static readonly double[] DefaultHistogramBuckets = Histogram.ExponentialBuckets(0.01, 2, 25);
+    public static readonly double[] DefaultHistogramBuckets = Histogram.ExponentialBuckets(
+        0.01,
+        2,
+        25
+    );
 
     /// <summary>
     /// By default we publish all instruments from all meters but this allows you to filter by instrument.
@@ -35,6 +38,6 @@ public sealed record MeterAdapterOptions
     /// <summary>
     /// Enables you to define custom buckets for histogram-typed metrics.
     /// </summary>
-    public Func<Instrument, double[]> ResolveHistogramBuckets { get; set; } = _ => DefaultHistogramBuckets;
+    public Func<Instrument, double[]> ResolveHistogramBuckets { get; set; } =
+        _ => DefaultHistogramBuckets;
 }
-#endif

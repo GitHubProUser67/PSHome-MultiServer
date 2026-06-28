@@ -1,82 +1,106 @@
 namespace QuazalServer.QNetZ.DDL
 {
-	public class StationURL : IAnyData
-	{
-		public string? _urlString;	// cached string
-	
-		public string _urlScheme;
-		public string _address;
-		private Dictionary<string, int> _parameters;
-		private bool _dirty;
+    public class StationURL : IAnyData
+    {
+        public string? _urlString; // cached string
 
-		public StationURL()
-		{
-			_urlScheme = string.Empty;
-			_address = string.Empty;
-			_parameters = new Dictionary<string, int>();
-			_dirty = false;
+        public string _urlScheme;
+        public string _address;
+        private Dictionary<string, int> _parameters;
+        private bool _dirty;
 
-			Valid = false;
-		}
+        public StationURL()
+        {
+            _urlScheme = string.Empty;
+            _address = string.Empty;
+            _parameters = new Dictionary<string, int>();
+            _dirty = false;
 
-		public StationURL(string? urlStringText) : this()
-		{
-			ParseStationUrl(urlStringText);
-		}
+            Valid = false;
+        }
 
-		public StationURL(string scheme, string address, IDictionary<string, int> parameters) : this()
-		{
-			_urlScheme = scheme;
-			_address = address;
+        public StationURL(string? urlStringText)
+            : this()
+        {
+            ParseStationUrl(urlStringText);
+        }
 
-			if (parameters != null)
-			{
-				foreach(var key in parameters.Keys)
-				{
-					_parameters.TryAdd(key, parameters[key]);
-				}
-			}
-			_dirty = true;
-		}
+        public StationURL(string scheme, string address, IDictionary<string, int> parameters)
+            : this()
+        {
+            _urlScheme = scheme;
+            _address = address;
 
-		public string? urlString {
-			get
-			{
-				BuildUrlString();
-				return _urlString;
-			} 
-			set
-			{
+            if (parameters != null)
+            {
+                foreach (var key in parameters.Keys)
+                {
+                    _parameters.TryAdd(key, parameters[key]);
+                }
+            }
+            _dirty = true;
+        }
 
-				ParseStationUrl(value);
-			}
-		}
+        public string? urlString
+        {
+            get
+            {
+                BuildUrlString();
+                return _urlString;
+            }
+            set
+            {
 
-		public bool Valid { get; private set; }
+                ParseStationUrl(value);
+            }
+        }
 
-		public int this[string key]
-		{
-			get
-			{
-				return _parameters[key];
-			}
-			set
-			{
-				_parameters[key] = value;
-				_dirty = true;
-			}
-		}
+        public bool Valid { get; private set; }
 
-		public string UrlScheme { get => _urlScheme; set{ _urlScheme = value; _dirty = true; } }  // "prudp" or "prudps"
+        public int this[string key]
+        {
+            get { return _parameters[key]; }
+            set
+            {
+                _parameters[key] = value;
+                _dirty = true;
+            }
+        }
 
-		public string Address { get => _address; set { _address = value; _dirty = true; } }
-		public Dictionary<string, int> Parameters { get => _parameters; set { _parameters = value; _dirty = true; } }
+        public string UrlScheme
+        {
+            get => _urlScheme;
+            set
+            {
+                _urlScheme = value;
+                _dirty = true;
+            }
+        } // "prudp" or "prudps"
+
+        public string Address
+        {
+            get => _address;
+            set
+            {
+                _address = value;
+                _dirty = true;
+            }
+        }
+        public Dictionary<string, int> Parameters
+        {
+            get => _parameters;
+            set
+            {
+                _parameters = value;
+                _dirty = true;
+            }
+        }
 
         public bool IsPublic
         {
             get
             {
-                int type = 0;
+                var type = 0;
                 _parameters.TryGetValue("type", out type);
                 return (type & 2) != 0;
             }
@@ -85,41 +109,47 @@ namespace QuazalServer.QNetZ.DDL
         {
             get
             {
-                int type = 0;
+                var type = 0;
                 _parameters.TryGetValue("type", out type);
                 return (type & 1) != 0;
             }
         }
-        public bool IsGlobal { get => IsPublic && IsBehindNAT; }
+        public bool IsGlobal
+        {
+            get => IsPublic && IsBehindNAT;
+        }
 
         void BuildUrlString()
-		{
-			if (!_dirty)
-				return;
+        {
+            if (!_dirty)
+                return;
 
-			_dirty = false;
-			Valid = false;
+            _dirty = false;
+            Valid = false;
 
-			// check the data
-			if (string.IsNullOrWhiteSpace(_urlScheme))
-			{
-				_urlString = string.Empty;
-				return;
-			}
+            // check the data
+            if (string.IsNullOrWhiteSpace(_urlScheme))
+            {
+                _urlString = string.Empty;
+                return;
+            }
 
-			if (string.IsNullOrWhiteSpace(_address))
-			{
-				_urlString = $"{ _urlScheme }:/";
-				return;
-			}
+            if (string.IsNullOrWhiteSpace(_address))
+            {
+                _urlString = $"{_urlScheme}:/";
+                return;
+            }
 
-			string paramsString = string.Join(";", _parameters.Keys.Select(x => $"{x}={_parameters[x]}"));
+            var paramsString = string.Join(
+                ";",
+                _parameters.Keys.Select(x => $"{x}={_parameters[x]}")
+            );
 
-			string strSep = paramsString.Length > 0 ? ";" : string.Empty;
+            var strSep = paramsString.Length > 0 ? ";" : string.Empty;
 
-			_urlString = $"{ _urlScheme }:/address={ _address }{strSep}{ paramsString }";
-			Valid = true;
-		}
+            _urlString = $"{_urlScheme}:/address={_address}{strSep}{paramsString}";
+            Valid = true;
+        }
 
         public bool Compare(StationURL otherUrl, IEnumerable<string> compareParameters = null)
         {
@@ -137,9 +167,12 @@ namespace QuazalServer.QNetZ.DDL
 
             foreach (var paramName in compareParameters)
             {
-                int param = 0;
-                int otherParam = 0;
-                if (_parameters.TryGetValue(paramName, out param) && otherUrl._parameters.TryGetValue(paramName, out otherParam))
+                var param = 0;
+                var otherParam = 0;
+                if (
+                    _parameters.TryGetValue(paramName, out param)
+                    && otherUrl._parameters.TryGetValue(paramName, out otherParam)
+                )
                 {
                     if (param != otherParam)
                         return false;
@@ -149,9 +182,9 @@ namespace QuazalServer.QNetZ.DDL
         }
 
         public void ParseStationUrl(string? newUrlValue)
-		{
-			if (!string.IsNullOrEmpty(newUrlValue))
-			{
+        {
+            if (!string.IsNullOrEmpty(newUrlValue))
+            {
                 _dirty = false;
                 Valid = false;
 
@@ -177,22 +210,22 @@ namespace QuazalServer.QNetZ.DDL
                 _urlString = newUrlValue;
                 Valid = true;
             }
-		}
+        }
 
-		public override string? ToString()
-		{
-			return urlString;
-		}
+        public override string? ToString()
+        {
+            return urlString;
+        }
 
-		public void Read(Stream s)
-		{
-			string value = Helper.ReadString(s);
-			ParseStationUrl(value);
-		}
+        public void Read(Stream s)
+        {
+            var value = Helper.ReadString(s);
+            ParseStationUrl(value);
+        }
 
-		public void Write(Stream s)
-		{
-			Helper.WriteString(s, urlString);
-		}
-	}
+        public void Write(Stream s)
+        {
+            Helper.WriteString(s, urlString);
+        }
+    }
 }

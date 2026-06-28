@@ -38,12 +38,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 =============================================================================*/
 #endregion
 
-namespace Tommunism.SoftFloat
+namespace Tommunism.SoftFloat;
+
+public enum MulAddOperation
 {
-    internal enum MulAddOperation
-    {
-        None = 0,
-        SubtractC = 1,
-        SubtractProduct = 2
-    }
+    /// <summary>
+    /// Performs a normal fused multiply-and-add operation.
+    /// </summary>
+    None = 0,
+
+    /// <summary>
+    /// Performs a fused multiply-and-subtract operation.
+    /// </summary>
+    SubtractC = 1,
+
+    /// <summary>
+    /// Performs a fused negated-multiply-and-add operation.
+    /// </summary>
+    SubtractProduct = 2,
 }

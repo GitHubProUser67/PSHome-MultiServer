@@ -1,15 +1,11 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-//
 // System.Net.HttpEndPointListener
-//
 // Author:
 //  Gonzalo Paniagua Javier (gonzalo.mono@gmail.com)
-//
 // Copyright (c) 2005 Novell, Inc. (http://www.novell.com)
 // Copyright (c) 2012 Xamarin, Inc. (http://xamarin.com)
-//
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
 // "Software"), to deal in the Software without restriction, including
@@ -17,10 +13,8 @@
 // distribute, sublicense, and/or sell copies of the Software, and to
 // permit persons to whom the Software is furnished to do so, subject to
 // the following conditions:
-//
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 // MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -28,14 +22,10 @@
 // LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-//
 
-using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 
 namespace SpaceWizards.HttpListener
 {
@@ -47,9 +37,9 @@ namespace SpaceWizards.HttpListener
         private readonly Dictionary<HttpConnection, HttpConnection> _unregisteredConnections;
         private Dictionary<ListenerPrefix, HttpListener> _prefixes;
         private List<ListenerPrefix> _unhandledPrefixes; // host = '*'
-        private List<ListenerPrefix> _allPrefixes;       // host = '+'
-        private X509Certificate2 _cert;
-        private bool _secure;
+        private List<ListenerPrefix> _allPrefixes; // host = '+'
+        private readonly X509Certificate2 _cert;
+        private readonly bool _secure;
 
         public HttpEndPointListener(HttpListener listener, IPAddress addr, int port, bool secure)
         {
@@ -69,7 +59,7 @@ namespace SpaceWizards.HttpListener
             _socket.Bind(_endpoint);
             _socket.Listen(500);
 
-            SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+            var args = new SocketAsyncEventArgs();
             args.UserToken = this;
             args.Completed += OnAccept;
             Accept(args);
@@ -105,9 +95,9 @@ namespace SpaceWizards.HttpListener
 
         private static void ProcessAccept(SocketAsyncEventArgs args)
         {
-            HttpEndPointListener epl = (HttpEndPointListener)args.UserToken;
+            var epl = (HttpEndPointListener)args.UserToken;
 
-            Socket accepted = args.SocketError == SocketError.Success ? args.AcceptSocket : null;
+            var accepted = args.SocketError == SocketError.Success ? args.AcceptSocket : null;
             epl.Accept(args);
 
             if (accepted == null)
@@ -127,7 +117,9 @@ namespace SpaceWizards.HttpListener
             catch (Exception ex)
             {
 #if DEBUG
-                CustomLogger.LoggerAccessor.LogError($"[HttpEndPointListener] - ProcessAccept: thrown an assertion while accepting client. (Exception:{ex})");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"[HttpEndPointListener] - ProcessAccept: thrown an assertion while accepting client. (Exception:{ex})"
+                );
 #endif
             }
 
@@ -159,9 +151,9 @@ namespace SpaceWizards.HttpListener
 
         public bool BindContext(HttpListenerContext context)
         {
-            HttpListenerRequest req = context.Request;
+            var req = context.Request;
             ListenerPrefix prefix;
-            HttpListener listener = SearchListener(req.Url, out prefix);
+            var listener = SearchListener(req.Url, out prefix);
             if (listener == null)
                 return false;
 
@@ -170,7 +162,7 @@ namespace SpaceWizards.HttpListener
             return true;
         }
 
-        public void UnbindContext(HttpListenerContext context)
+        public static void UnbindContext(HttpListenerContext context)
         {
             if (context == null || context.Request == null)
                 return;
@@ -184,27 +176,30 @@ namespace SpaceWizards.HttpListener
             if (uri == null)
                 return null;
 
-            string host = uri.Host;
-            int port = uri.Port;
-            string path = WebUtility.UrlDecode(uri.AbsolutePath);
-            string pathSlash = path[path.Length - 1] == '/' ? path : path + "/";
+            var host = uri.Host;
+            var port = uri.Port;
+            var path = WebUtility.UrlDecode(uri.AbsolutePath);
+            var pathSlash = path[path.Length - 1] == '/' ? path : path + "/";
 
             HttpListener bestMatch = null;
-            int bestLength = -1;
+            var bestLength = -1;
 
             if (host != null && host != "")
             {
-                Dictionary<ListenerPrefix, HttpListener> localPrefixes = _prefixes;
-                foreach (ListenerPrefix p in localPrefixes.Keys)
+                var localPrefixes = _prefixes;
+                foreach (var p in localPrefixes.Keys)
                 {
-                    string ppath = p.Path;
+                    var ppath = p.Path;
                     if (ppath.Length < bestLength)
                         continue;
 
                     if (p.Host != host || p.Port != port)
                         continue;
 
-                    if (path.StartsWith(ppath, StringComparison.Ordinal) || pathSlash.StartsWith(ppath, StringComparison.Ordinal))
+                    if (
+                        path.StartsWith(ppath, StringComparison.Ordinal)
+                        || pathSlash.StartsWith(ppath, StringComparison.Ordinal)
+                    )
                     {
                         bestLength = ppath.Length;
                         bestMatch = localPrefixes[p];
@@ -215,7 +210,7 @@ namespace SpaceWizards.HttpListener
                     return bestMatch;
             }
 
-            List<ListenerPrefix> list = _unhandledPrefixes;
+            var list = _unhandledPrefixes;
             bestMatch = MatchFromList(host, path, list, out prefix);
 
             if (path != pathSlash && bestMatch == null)
@@ -230,24 +225,26 @@ namespace SpaceWizards.HttpListener
             if (path != pathSlash && bestMatch == null)
                 bestMatch = MatchFromList(host, pathSlash, list, out prefix);
 
-            if (bestMatch != null)
-                return bestMatch;
-
-            return null;
+            return bestMatch ?? null;
         }
 
-        private HttpListener MatchFromList(string host, string path, List<ListenerPrefix> list, out ListenerPrefix prefix)
+        private static HttpListener MatchFromList(
+            string host,
+            string path,
+            List<ListenerPrefix> list,
+            out ListenerPrefix prefix
+        )
         {
             prefix = null;
             if (list == null)
                 return null;
 
             HttpListener bestMatch = null;
-            int bestLength = -1;
+            var bestLength = -1;
 
-            foreach (ListenerPrefix p in list)
+            foreach (var p in list)
             {
-                string ppath = p.Path;
+                var ppath = p.Path;
                 if (ppath.Length < bestLength)
                     continue;
 
@@ -262,28 +259,31 @@ namespace SpaceWizards.HttpListener
             return bestMatch;
         }
 
-        private void AddSpecial(List<ListenerPrefix> list, ListenerPrefix prefix)
+        private static void AddSpecial(List<ListenerPrefix> list, ListenerPrefix prefix)
         {
             if (list == null)
                 return;
 
-            foreach (ListenerPrefix p in list)
+            foreach (var p in list)
             {
                 if (p.Path == prefix.Path)
-                    throw new HttpListenerException((int)HttpStatusCode.BadRequest, SR.Format(SR.net_listener_already, prefix));
+                    throw new HttpListenerException(
+                        (int)HttpStatusCode.BadRequest,
+                        SR.Format(SR.net_listener_already, prefix)
+                    );
             }
             list.Add(prefix);
         }
 
-        private bool RemoveSpecial(List<ListenerPrefix> list, ListenerPrefix prefix)
+        private static bool RemoveSpecial(List<ListenerPrefix> list, ListenerPrefix prefix)
         {
             if (list == null)
                 return false;
 
-            int c = list.Count;
-            for (int i = 0; i < c; i++)
+            var c = list.Count;
+            for (var i = 0; i < c; i++)
             {
-                ListenerPrefix p = list[i];
+                var p = list[i];
                 if (p.Path == prefix.Path)
                 {
                     list.RemoveAt(i);
@@ -298,7 +298,7 @@ namespace SpaceWizards.HttpListener
             if (_prefixes.Count > 0)
                 return;
 
-            List<ListenerPrefix> list = _unhandledPrefixes;
+            var list = _unhandledPrefixes;
             if (list != null && list.Count > 0)
                 return;
 
@@ -317,7 +317,7 @@ namespace SpaceWizards.HttpListener
                 // Clone the list because RemoveConnection can be called from Close
                 var connections = new List<HttpConnection>(_unregisteredConnections.Keys);
 
-                foreach (HttpConnection c in connections)
+                foreach (var c in connections)
                     c.Close(true);
                 _unregisteredConnections.Clear();
             }
@@ -332,10 +332,15 @@ namespace SpaceWizards.HttpListener
                 do
                 {
                     current = _unhandledPrefixes;
-                    future = current != null ? new List<ListenerPrefix>(current) : new List<ListenerPrefix>();
+                    future =
+                        current != null
+                            ? new List<ListenerPrefix>(current)
+                            : new List<ListenerPrefix>();
                     prefix._listener = listener;
                     AddSpecial(future, prefix);
-                } while (Interlocked.CompareExchange(ref _unhandledPrefixes, future, current) != current);
+                } while (
+                    Interlocked.CompareExchange(ref _unhandledPrefixes, future, current) != current
+                );
                 return;
             }
 
@@ -344,20 +349,27 @@ namespace SpaceWizards.HttpListener
                 do
                 {
                     current = _allPrefixes;
-                    future = current != null ? new List<ListenerPrefix>(current) : new List<ListenerPrefix>();
+                    future =
+                        current != null
+                            ? new List<ListenerPrefix>(current)
+                            : new List<ListenerPrefix>();
                     prefix._listener = listener;
                     AddSpecial(future, prefix);
                 } while (Interlocked.CompareExchange(ref _allPrefixes, future, current) != current);
                 return;
             }
 
-            Dictionary<ListenerPrefix, HttpListener> prefs, p2;
+            Dictionary<ListenerPrefix, HttpListener> prefs,
+                p2;
             do
             {
                 prefs = _prefixes;
                 if (prefs.ContainsKey(prefix))
                 {
-                    throw new HttpListenerException((int)HttpStatusCode.BadRequest, SR.Format(SR.net_listener_already, prefix));
+                    throw new HttpListenerException(
+                        (int)HttpStatusCode.BadRequest,
+                        SR.Format(SR.net_listener_already, prefix)
+                    );
                 }
                 p2 = new Dictionary<ListenerPrefix, HttpListener>(prefs);
                 p2[prefix] = listener;
@@ -373,10 +385,15 @@ namespace SpaceWizards.HttpListener
                 do
                 {
                     current = _unhandledPrefixes;
-                    future = current != null ? new List<ListenerPrefix>(current) : new List<ListenerPrefix>();
+                    future =
+                        current != null
+                            ? new List<ListenerPrefix>(current)
+                            : new List<ListenerPrefix>();
                     if (!RemoveSpecial(future, prefix))
                         break; // Prefix not found
-                } while (Interlocked.CompareExchange(ref _unhandledPrefixes, future, current) != current);
+                } while (
+                    Interlocked.CompareExchange(ref _unhandledPrefixes, future, current) != current
+                );
 
                 CheckIfRemove();
                 return;
@@ -387,7 +404,10 @@ namespace SpaceWizards.HttpListener
                 do
                 {
                     current = _allPrefixes;
-                    future = current != null ? new List<ListenerPrefix>(current) : new List<ListenerPrefix>();
+                    future =
+                        current != null
+                            ? new List<ListenerPrefix>(current)
+                            : new List<ListenerPrefix>();
                     if (!RemoveSpecial(future, prefix))
                         break; // Prefix not found
                 } while (Interlocked.CompareExchange(ref _allPrefixes, future, current) != current);
@@ -395,7 +415,8 @@ namespace SpaceWizards.HttpListener
                 return;
             }
 
-            Dictionary<ListenerPrefix, HttpListener> prefs, p2;
+            Dictionary<ListenerPrefix, HttpListener> prefs,
+                p2;
             do
             {
                 prefs = _prefixes;

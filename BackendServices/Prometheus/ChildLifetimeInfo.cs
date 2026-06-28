@@ -33,7 +33,10 @@ internal sealed class ChildLifetimeInfo
         var keepaliveTimestamp = Volatile.Read(ref KeepaliveTimestamp);
         var ended = Volatile.Read(ref Ended);
 
-        var age = PlatformCompatibilityHelpers.StopwatchGetElapsedTime(keepaliveTimestamp, Stopwatch.GetTimestamp());
+        var age = PlatformCompatibilityHelpers.StopwatchGetElapsedTime(
+            keepaliveTimestamp,
+            Stopwatch.GetTimestamp()
+        );
 
         return $"LeaseCount: {leaseCount}, KeepaliveTimestamp: {keepaliveTimestamp}, Ended: {ended}, Age: {age.TotalSeconds:F3} seconds";
     }

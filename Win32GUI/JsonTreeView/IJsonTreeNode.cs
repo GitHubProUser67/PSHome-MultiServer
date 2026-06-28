@@ -1,6 +1,4 @@
-﻿using System.Windows.Forms;
-
-namespace ZTn.Json.JsonTreeView
+﻿namespace ZTn.Json.JsonTreeView
 {
     /// <summary>
     /// Interface to be implemented by TreeNode representing Json data.

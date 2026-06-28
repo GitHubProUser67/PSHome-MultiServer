@@ -1,17 +1,22 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
+namespace DNSLibrary.Utils
+{
+    public static class TaskExtensions
+    {
+        public static async Task<T> WithCancellation<T>(this Task<T> task, CancellationToken token)
+        {
+            var tcs = new TaskCompletionSource<bool>();
+            var registration = token.Register(
+                src =>
+                {
+                    ((TaskCompletionSource<bool>)src).TrySetResult(true);
+                },
+                tcs
+            );
 
-namespace DNS.Protocol.Utils {
-    public static class TaskExtensions {
-        public static async Task<T> WithCancellation<T>(this Task<T> task, CancellationToken token) {
-            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
-            CancellationTokenRegistration registration = token.Register(src => {
-                ((TaskCompletionSource<bool>) src).TrySetResult(true);
-            }, tcs);
-
-            using (registration) {
-                if (await Task.WhenAny(task, tcs.Task).ConfigureAwait(false) != task) {
+            using (registration)
+            {
+                if (await Task.WhenAny(task, tcs.Task).ConfigureAwait(false) != task)
+                {
                     throw new OperationCanceledException(token);
                 }
             }
@@ -19,9 +24,20 @@ namespace DNS.Protocol.Utils {
             return await task.ConfigureAwait(false);
         }
 
-        public static async Task<T> WithCancellationTimeout<T>(this Task<T> task, TimeSpan timeout, CancellationToken cancellationToken = default(CancellationToken)) {
-            using (CancellationTokenSource timeoutSource = new CancellationTokenSource(timeout))
-            using (CancellationTokenSource linkSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutSource.Token, cancellationToken)) {
+        public static async Task<T> WithCancellationTimeout<T>(
+            this Task<T> task,
+            TimeSpan timeout,
+            CancellationToken cancellationToken = default(CancellationToken)
+        )
+        {
+            using (var timeoutSource = new CancellationTokenSource(timeout))
+            using (
+                var linkSource = CancellationTokenSource.CreateLinkedTokenSource(
+                    timeoutSource.Token,
+                    cancellationToken
+                )
+            )
+            {
                 return await task.WithCancellation(linkSource.Token).ConfigureAwait(false);
             }
         }

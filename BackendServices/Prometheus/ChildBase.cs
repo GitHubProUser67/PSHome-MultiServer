@@ -5,7 +5,13 @@ namespace Prometheus;
 /// </summary>
 public abstract class ChildBase : ICollectorChild, IDisposable
 {
-    internal ChildBase(Collector parent, LabelSequence instanceLabels, LabelSequence flattenedLabels, bool publish, ExemplarBehavior exemplarBehavior)
+    internal ChildBase(
+        Collector parent,
+        LabelSequence instanceLabels,
+        LabelSequence flattenedLabels,
+        bool publish,
+        ExemplarBehavior exemplarBehavior
+    )
     {
         Parent = parent;
         InstanceLabels = instanceLabels;
@@ -18,7 +24,7 @@ public abstract class ChildBase : ICollectorChild, IDisposable
 
     /// <summary>
     /// Marks the metric as one to be published, even if it might otherwise be suppressed.
-    /// 
+    ///
     /// This is useful for publishing zero-valued metrics once you have loaded data on startup and determined
     /// that there is no need to increment the value of the metric.
     /// </summary>
@@ -32,7 +38,7 @@ public abstract class ChildBase : ICollectorChild, IDisposable
 
     /// <summary>
     /// Marks the metric as one to not be published.
-    /// 
+    ///
     /// The metric will be published when Publish() is called or the value is updated.
     /// </summary>
     public void Unpublish()
@@ -63,10 +69,18 @@ public abstract class ChildBase : ICollectorChild, IDisposable
     /// </summary>
     internal LabelSequence FlattenedLabels { get; }
 
-    internal byte[] FlattenedLabelsBytes => NonCapturingLazyInitializer.EnsureInitialized(ref _flattenedLabelsBytes, this, _assignFlattenedLabelsBytesFunc)!;
+    internal byte[] FlattenedLabelsBytes =>
+        NonCapturingLazyInitializer.EnsureInitialized(
+            ref _flattenedLabelsBytes,
+            this,
+            _assignFlattenedLabelsBytesFunc
+        )!;
     private byte[]? _flattenedLabelsBytes;
-    private static readonly Action<ChildBase> _assignFlattenedLabelsBytesFunc = AssignFlattenedLabelsBytes;
-    private static void AssignFlattenedLabelsBytes(ChildBase instance) => instance._flattenedLabelsBytes = instance.FlattenedLabels.Serialize();
+    private static readonly Action<ChildBase> _assignFlattenedLabelsBytesFunc =
+        AssignFlattenedLabelsBytes;
+
+    private static void AssignFlattenedLabelsBytes(ChildBase instance) =>
+        instance._flattenedLabelsBytes = instance.FlattenedLabels.Serialize();
 
     internal readonly Collector Parent;
 
@@ -78,16 +92,21 @@ public abstract class ChildBase : ICollectorChild, IDisposable
     /// <remarks>
     /// Subclass must check _publish and suppress output if it is false.
     /// </remarks>
-    internal ValueTask CollectAndSerializeAsync(IMetricsSerializer serializer, CancellationToken cancel)
+    internal ValueTask CollectAndSerializeAsync(
+        IMetricsSerializer serializer,
+        CancellationToken cancel
+    )
     {
-        if (!Volatile.Read(ref _publish))
-            return default;
-
-        return CollectAndSerializeImplAsync(serializer, cancel);
+        return !Volatile.Read(ref _publish)
+            ? default
+            : CollectAndSerializeImplAsync(serializer, cancel);
     }
 
     // Same as above, just only called if we really need to serialize this metric (if publish is true).
-    private protected abstract ValueTask CollectAndSerializeImplAsync(IMetricsSerializer serializer, CancellationToken cancel);
+    private protected abstract ValueTask CollectAndSerializeImplAsync(
+        IMetricsSerializer serializer,
+        CancellationToken cancel
+    );
 
     /// <summary>
     /// Borrows an exemplar temporarily, to be later returned via ReturnBorrowedExemplar.
@@ -102,13 +121,20 @@ public abstract class ChildBase : ICollectorChild, IDisposable
     /// <summary>
     /// Returns a borrowed exemplar to storage or the object pool, with correct handling for cases where it is Empty.
     /// </summary>
-    internal static void ReturnBorrowedExemplar(ref ObservedExemplar storage, ObservedExemplar borrowed)
+    internal static void ReturnBorrowedExemplar(
+        ref ObservedExemplar storage,
+        ObservedExemplar borrowed
+    )
     {
         if (borrowed == ObservedExemplar.Empty)
             return;
 
         // Return the exemplar unless a new one has arrived, in which case we discard the old one we were holding.
-        var foundExemplar = Interlocked.CompareExchange(ref storage, borrowed, ObservedExemplar.Empty);
+        var foundExemplar = Interlocked.CompareExchange(
+            ref storage,
+            borrowed,
+            ObservedExemplar.Empty
+        );
 
         if (foundExemplar != ObservedExemplar.Empty)
         {
@@ -117,7 +143,11 @@ public abstract class ChildBase : ICollectorChild, IDisposable
         }
     }
 
-    internal void RecordExemplar(Exemplar exemplar, ref ObservedExemplar storage, double observedValue)
+    internal void RecordExemplar(
+        Exemplar exemplar,
+        ref ObservedExemplar storage,
+        double observedValue
+    )
     {
         exemplar.MarkAsConsumed();
 
@@ -133,7 +163,9 @@ public abstract class ChildBase : ICollectorChild, IDisposable
 
         // ObservedExemplar takes ownership of the Exemplar and will return its resources to the pool when the time is right.
         var observedExemplar = ObservedExemplar.CreatePooled(exemplar, observedValue);
-        ObservedExemplar.ReturnPooledIfNotEmpty(Interlocked.Exchange(ref storage, observedExemplar));
+        ObservedExemplar.ReturnPooledIfNotEmpty(
+            Interlocked.Exchange(ref storage, observedExemplar)
+        );
         MarkNewExemplarHasBeenRecorded();
 
         // We cannot record an exemplar every time we record an exemplar!
@@ -142,15 +174,17 @@ public abstract class ChildBase : ICollectorChild, IDisposable
 
     protected Exemplar GetDefaultExemplar(double value)
     {
-        if (_exemplarBehavior.DefaultExemplarProvider == null)
-            return Exemplar.None;
-
-        return _exemplarBehavior.DefaultExemplarProvider(Parent, value);
+        return _exemplarBehavior.DefaultExemplarProvider == null
+            ? Exemplar.None
+            : _exemplarBehavior.DefaultExemplarProvider(Parent, value);
     }
 
     // May be replaced in test code.
-    internal static Func<double> ExemplarRecordingTimestampProvider = DefaultExemplarRecordingTimestampProvider;
-    internal static double DefaultExemplarRecordingTimestampProvider() => LowGranularityTimeSource.GetSecondsFromUnixEpoch();
+    internal static Func<double> ExemplarRecordingTimestampProvider =
+        DefaultExemplarRecordingTimestampProvider;
+
+    internal static double DefaultExemplarRecordingTimestampProvider() =>
+        LowGranularityTimeSource.GetSecondsFromUnixEpoch();
 
     // Timetamp of when we last recorded an exemplar. We do not use ObservedExemplar.Timestamp because we do not want to
     // read from an existing ObservedExemplar when we are writing to our metrics (to avoid the synchronization overhead).
@@ -162,7 +196,8 @@ public abstract class ChildBase : ICollectorChild, IDisposable
         if (_exemplarBehavior.NewExemplarMinInterval <= TimeSpan.Zero)
             return true;
 
-        var elapsedSeconds = ExemplarRecordingTimestampProvider() - _exemplarLastRecordedTimestamp.Value;
+        var elapsedSeconds =
+            ExemplarRecordingTimestampProvider() - _exemplarLastRecordedTimestamp.Value;
 
         return elapsedSeconds >= _exemplarBehavior.NewExemplarMinInterval.TotalSeconds;
     }
@@ -175,16 +210,23 @@ public abstract class ChildBase : ICollectorChild, IDisposable
         _exemplarLastRecordedTimestamp.Value = ExemplarRecordingTimestampProvider();
     }
 
-
     // This is only set if and when debug metrics are enabled in the default registry.
     private static Counter? ExemplarsRecorded;
 
     static ChildBase()
     {
-        Metrics.DefaultRegistry.OnStartCollectingRegistryMetrics(delegate
-        {
-            Volatile.Write(ref ExemplarsRecorded, Metrics.CreateCounter("prometheus_net_exemplars_recorded_total", "Number of exemplars that were accepted into in-memory storage in the prometheus-net SDK."));
-        });
+        Metrics.DefaultRegistry.OnStartCollectingRegistryMetrics(
+            delegate
+            {
+                Volatile.Write(
+                    ref ExemplarsRecorded,
+                    Metrics.CreateCounter(
+                        "prometheus_net_exemplars_recorded_total",
+                        "Number of exemplars that were accepted into in-memory storage in the prometheus-net SDK."
+                    )
+                );
+            }
+        );
     }
 
     public override string ToString()

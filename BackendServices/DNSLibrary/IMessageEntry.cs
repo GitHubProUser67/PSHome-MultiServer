@@ -1,5 +1,7 @@
-﻿namespace DNS.Protocol {
-    public interface IMessageEntry {
+﻿namespace DNSLibrary
+{
+    public interface IMessageEntry
+    {
         Domain Name { get; }
         RecordType Type { get; }
         RecordClass Class { get; }

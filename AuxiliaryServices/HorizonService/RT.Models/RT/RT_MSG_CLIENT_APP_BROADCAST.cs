@@ -1,7 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
-using System.Linq;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -24,15 +22,15 @@ namespace Horizon.RT.Models
 
         public bool Equals(RT_MSG_CLIENT_APP_BROADCAST broadcast)
         {
-            return Payload == broadcast.Payload || (Payload?.SequenceEqual(broadcast.Payload) ?? false);
+            return Payload == broadcast.Payload
+                || (Payload?.SequenceEqual(broadcast.Payload) ?? false);
         }
 
         public override bool Equals(object obj)
         {
-            if (obj is RT_MSG_CLIENT_APP_BROADCAST broadcast)
-                return Equals(broadcast);
-
-            return base.Equals(obj);
+            return obj is RT_MSG_CLIENT_APP_BROADCAST broadcast
+                ? Equals(broadcast)
+                : base.Equals(obj);
         }
 
         public override int GetHashCode()
@@ -42,8 +40,7 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"Contents: {System.BitConverter.ToString(Payload)}";
+            return base.ToString() + " " + $"Contents: {System.BitConverter.ToString(Payload)}";
         }
     }
 }

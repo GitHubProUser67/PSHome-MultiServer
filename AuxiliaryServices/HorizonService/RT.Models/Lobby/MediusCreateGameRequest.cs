@@ -1,13 +1,11 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.CreateGame)]
     public class MediusCreateGameRequest : BaseLobbyExtMessage, IMediusRequest
     {
-
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.CreateGame;
 
         public MessageId MessageID { get; set; }
@@ -91,31 +89,31 @@ namespace Horizon.RT.Models
             writer.Write(Attributes);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{MessageID} " +
-                $"SessionKey:{SessionKey} " +
-                $"ApplicationID:{ApplicationID} " +
-                $"MinPlayers:{MinPlayers} " +
-                $"MaxPlayers:{MaxPlayers} " +
-                $"GameLevel:{GameLevel} " +
-                $"GameName:{GameName} " +
-                $"GamePassword:{GamePassword} " +
-                $"SpectatorPassword:{SpectatorPassword} " +
-                $"PlayerSkillLevel:{PlayerSkillLevel} " +
-                $"RulesSet:{RulesSet} " +
-                $"GenericField1:{GenericField1:X8} " +
-                $"GenericField2:{GenericField2:X8} " +
-                $"GenericField3:{GenericField3:X8} " +
-                $"GenericField4:{GenericField4:X8} " +
-                $"GenericField5:{GenericField5:X8} " +
-                $"GenericField6:{GenericField6:X8} " +
-                $"GenericField7:{GenericField7:X8} " +
-                $"GenericField8:{GenericField8:X8} " +
-                $"GameHostType:{GameHostType} " +
-                $"Attributes:{Attributes}";
+            return base.ToString()
+                + " "
+                + $"MessageID:{MessageID} "
+                + $"SessionKey:{SessionKey} "
+                + $"ApplicationID:{ApplicationID} "
+                + $"MinPlayers:{MinPlayers} "
+                + $"MaxPlayers:{MaxPlayers} "
+                + $"GameLevel:{GameLevel} "
+                + $"GameName:{GameName} "
+                + $"GamePassword:{GamePassword} "
+                + $"SpectatorPassword:{SpectatorPassword} "
+                + $"PlayerSkillLevel:{PlayerSkillLevel} "
+                + $"RulesSet:{RulesSet} "
+                + $"GenericField1:{GenericField1:X8} "
+                + $"GenericField2:{GenericField2:X8} "
+                + $"GenericField3:{GenericField3:X8} "
+                + $"GenericField4:{GenericField4:X8} "
+                + $"GenericField5:{GenericField5:X8} "
+                + $"GenericField6:{GenericField6:X8} "
+                + $"GenericField7:{GenericField7:X8} "
+                + $"GenericField8:{GenericField8:X8} "
+                + $"GameHostType:{GameHostType} "
+                + $"Attributes:{Attributes}";
         }
     }
 }

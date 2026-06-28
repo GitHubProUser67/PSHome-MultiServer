@@ -1,5 +1,5 @@
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -25,9 +25,10 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"RT_TOKEN_MESSAGE_TYPE: {RT_TOKEN_MESSAGE_TYPE} " +
-                $"targetToken: {targetToken}";
+            return base.ToString()
+                + " "
+                + $"RT_TOKEN_MESSAGE_TYPE: {RT_TOKEN_MESSAGE_TYPE} "
+                + $"targetToken: {targetToken}";
         }
     }
 }

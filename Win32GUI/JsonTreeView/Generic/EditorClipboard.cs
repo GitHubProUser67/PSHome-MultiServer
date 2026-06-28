@@ -1,13 +1,13 @@
-﻿
-namespace ZTn.Json.JsonTreeView.Generic
+﻿namespace ZTn.Json.JsonTreeView.Generic
 {
     /// <summary>
     /// Generic clipboard for <typeparamref name="T"/> based instance.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    class EditorClipboard<T> where T : class
+    class EditorClipboard<T>
+        where T : class
     {
-        static readonly EditorClipboard<T> Clipboard = new EditorClipboard<T>();
+        static readonly EditorClipboard<T> Clipboard = new();
 
         #region >> Fields
 
@@ -37,7 +37,7 @@ namespace ZTn.Json.JsonTreeView.Generic
                 return Clipboard.storedData;
             }
 
-            T source = Clipboard.storedData;
+            var source = Clipboard.storedData;
             Clear();
             return source;
         }

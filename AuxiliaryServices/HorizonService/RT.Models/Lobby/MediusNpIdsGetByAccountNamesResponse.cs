@@ -1,13 +1,16 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.MediusNpIdsGetByAccountNamesResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.MediusNpIdsGetByAccountNamesResponse
+    )]
     public class MediusNpIdsGetByAccountNamesResponse : BaseLobbyMessage, IMediusRequest
     {
-        public override byte PacketType => (byte)MediusLobbyExtMessageIds.MediusNpIdsGetByAccountNamesResponse;
+        public override byte PacketType =>
+            (byte)MediusLobbyExtMessageIds.MediusNpIdsGetByAccountNamesResponse;
 
         public MessageId MessageID { get; set; }
 
@@ -26,23 +29,18 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
             StatusCode = reader.Read<MediusCallbackStatus>();
 
-            // 
             AccountName = reader.ReadString(Constants.ACCOUNTNAME_MAXLEN);
-            //SceNpId = reader.ReadString(Constants.SCE_NPID_MAXLEN);
 
             data = reader.ReadBytes(16);
             term = reader.ReadByte();
             dummy = reader.ReadBytes(3);
 
-            //
             opt = reader.ReadBytes(8);
             reserved = reader.ReadBytes(8);
 
@@ -51,37 +49,32 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(StatusCode);
             writer.Write(AccountName);
-            //writer.Write(SceNpId);
 
             writer.Write(data);
             writer.Write(term);
             writer.Write(dummy);
 
-            //
             writer.Write(opt);
             writer.Write(reserved);
 
             writer.Write(EndOfList);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"AccountName: {AccountName} " +
-                $"SceNpId: {SceNpId} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"AccountName: {AccountName} "
+                + $"SceNpId: {SceNpId} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

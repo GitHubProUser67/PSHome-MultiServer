@@ -1,14 +1,12 @@
 using CustomLogger;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
-using System;
 
 namespace Horizon.LIBRARY.Pipeline.Udp
 {
     public class SimpleDatagramHandler : SimpleChannelInboundHandler<DatagramPacket>
     {
         public override bool IsSharable => true;
-
 
         public Action<IChannel> OnChannelActive;
         public Action<IChannel> OnChannelInactive;
@@ -17,11 +15,13 @@ namespace Horizon.LIBRARY.Pipeline.Udp
         public override void ChannelActive(IChannelHandlerContext ctx)
         {
             // Detect when client disconnects
-            ctx.Channel.CloseCompletion.ContinueWith((x) =>
-            {
-                LoggerAccessor.LogWarn("[SimpleDatagramHandler] - Udp: Channel Closed");
-                OnChannelInactive?.Invoke(ctx.Channel);
-            });
+            ctx.Channel.CloseCompletion.ContinueWith(
+                (x) =>
+                {
+                    LoggerAccessor.LogWarn("[SimpleDatagramHandler] - Udp: Channel Closed");
+                    OnChannelInactive?.Invoke(ctx.Channel);
+                }
+            );
 
             // Send event upstream
             OnChannelActive?.Invoke(ctx.Channel);
@@ -46,7 +46,9 @@ namespace Horizon.LIBRARY.Pipeline.Udp
 
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            LoggerAccessor.LogError($"[SimpleDatagramHandler] - Udp: An assertion was caught. (Exception:{exception})");
+            LoggerAccessor.LogError(
+                $"[SimpleDatagramHandler] - Udp: An assertion was caught. (Exception:{exception})"
+            );
         }
     }
 }

@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameReporting
 {
-	[TdfStruct]
-	public struct GetGameReportViewRequest
-	{
+    [TdfStruct]
+    public struct GetGameReportViewRequest
+    {
+        [TdfMember("MAXR")]
+        public uint mMaxRows;
 
-		[TdfMember("MAXR")]
-		public uint mMaxRows;
+        [TdfMember("NAME")]
+        public string mName;
 
-		[TdfMember("NAME")]
-		public string mName;
-
-		[TdfMember("QVAR")]
-		public List<string> mQueryVarValues;
-
-	}
+        [TdfMember("QVAR")]
+        public List<string> mQueryVarValues;
+    }
 }

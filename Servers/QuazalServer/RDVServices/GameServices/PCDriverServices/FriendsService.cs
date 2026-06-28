@@ -1,10 +1,10 @@
-using QuazalServer.RDVServices.DDL.Models;
+using Alcatraz.Context.Entities;
+using Microsoft.EntityFrameworkCore;
 using QuazalServer.QNetZ;
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
-using Alcatraz.Context.Entities;
+using QuazalServer.RDVServices.DDL.Models;
 using RDVServices;
-using Microsoft.EntityFrameworkCore;
 
 namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 {
@@ -23,22 +23,23 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         [RMCMethod(2)]
         public RMCResult AddFriendByName(string strPlayerName, uint uiDetails, string strMessage)
         {
-            bool result = false;
+            var result = false;
             var plInfo = Context.Client.PlayerInfo;
             var myUserPid = plInfo.PID;
 
             using (var db = DBHelper.GetDbContext(Context.Handler.Factory.Item1))
             {
-                var foundUser = db.Users
-                    .AsNoTracking()
+                var foundUser = db
+                    .Users.AsNoTracking()
                     .Where(x => x.Id != myUserPid)
                     .FirstOrDefault(x => x.PlayerNickName == strPlayerName);
 
                 if (foundUser != null)
                 {
-                    var existringRequest = db.UserRelationships
-                        .FirstOrDefault(x => x.User1Id == myUserPid && x.User2Id == foundUser.Id ||
-                                             x.User1Id == foundUser.Id && x.User2Id == myUserPid);
+                    var existringRequest = db.UserRelationships.FirstOrDefault(x =>
+                        (x.User1Id == myUserPid && x.User2Id == foundUser.Id)
+                        || (x.User1Id == foundUser.Id && x.User2Id == myUserPid)
+                    );
 
                     if (existringRequest != null)
                     {
@@ -46,13 +47,15 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                     }
 
                     // add new relationship with ID 3
-                    db.UserRelationships.Add(new UserRelationship
-                    {
-                        Details = uiDetails,
-                        User1Id = myUserPid,
-                        User2Id = foundUser.Id,
-                        ByRelationShip = 3
-                    });
+                    db.UserRelationships.Add(
+                        new UserRelationship
+                        {
+                            Details = uiDetails,
+                            User1Id = myUserPid,
+                            User2Id = foundUser.Id,
+                            ByRelationShip = 3,
+                        }
+                    );
                     db.SaveChanges();
 
                     result = true;
@@ -61,9 +64,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                     var notification = new NotificationEvent(NotificationEventsType.FriendEvent, 0)
                     {
                         m_pidSource = myUserPid,
-                        m_uiParam1 = myUserPid,       // i'm just guessing
+                        m_uiParam1 = myUserPid, // i'm just guessing
                         m_uiParam2 = 2,
-                        m_strParam = strMessage
+                        m_strParam = strMessage,
                     };
 
                     // send to proper client
@@ -92,21 +95,20 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         [RMCMethod(5)]
         public RMCResult AcceptFriendship(uint uiPlayer)
         {
-            bool result = false;
+            var result = false;
             var plInfo = Context.Client.PlayerInfo;
             var myUserPid = plInfo.PID;
 
             using (var db = DBHelper.GetDbContext(Context.Handler.Factory.Item1))
             {
-                var foundUser = db.Users
-                    .AsNoTracking()
-                    .FirstOrDefault(x => x.Id == uiPlayer);
+                var foundUser = db.Users.AsNoTracking().FirstOrDefault(x => x.Id == uiPlayer);
 
                 if (foundUser != null)
                 {
-                    var existringRequest = db.UserRelationships
-                        .FirstOrDefault(x => x.User1Id == myUserPid && x.User2Id == foundUser.Id ||
-                                             x.User1Id == foundUser.Id && x.User2Id == myUserPid);
+                    var existringRequest = db.UserRelationships.FirstOrDefault(x =>
+                        (x.User1Id == myUserPid && x.User2Id == foundUser.Id)
+                        || (x.User1Id == foundUser.Id && x.User2Id == myUserPid)
+                    );
 
                     if (existringRequest != null)
                     {
@@ -125,12 +127,16 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                     var notification = new NotificationEvent(NotificationEventsType.FriendEvent, 0)
                     {
                         m_pidSource = myUserPid,
-                        m_uiParam1 = foundUser.Id,      // i'm just guessing
-                        m_uiParam2 = 1
+                        m_uiParam1 = foundUser.Id, // i'm just guessing
+                        m_uiParam2 = 1,
                     };
 
                     // should be that sent to friend too?
-                    NotificationQueue.SendNotification(Context.Handler, Context.Client, notification);
+                    NotificationQueue.SendNotification(
+                        Context.Handler,
+                        Context.Client,
+                        notification
+                    );
                 }
             }
 
@@ -146,9 +152,10 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
             // remove relationship from database
             using (var db = DBHelper.GetDbContext(Context.Handler.Factory.Item1))
             {
-                var existringRequest = db.UserRelationships
-                    .FirstOrDefault(x => x.User1Id == myUserPid && x.User2Id == uiPlayer ||
-                                         x.User1Id == uiPlayer && x.User2Id == myUserPid);
+                var existringRequest = db.UserRelationships.FirstOrDefault(x =>
+                    (x.User1Id == myUserPid && x.User2Id == uiPlayer)
+                    || (x.User1Id == uiPlayer && x.User2Id == myUserPid)
+                );
                 if (existringRequest != null)
                 {
                     db.UserRelationships.Remove(existringRequest);
@@ -160,8 +167,8 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
             var notification = new NotificationEvent(NotificationEventsType.FriendEvent, 0)
             {
                 m_pidSource = myUserPid,
-                m_uiParam1 = myUserPid,       // i'm just guessing
-                m_uiParam2 = 3
+                m_uiParam1 = myUserPid, // i'm just guessing
+                m_uiParam2 = 3,
             };
 
             // send to proper client
@@ -190,15 +197,16 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         [RMCMethod(9)]
         public RMCResult ClearRelationship(uint uiPlayer)
         {
-            bool result = false;
+            var result = false;
             var plInfo = Context.Client.PlayerInfo;
             var myUserPid = plInfo.PID;
 
             using (var db = DBHelper.GetDbContext(Context.Handler.Factory.Item1))
             {
-                var existringRequest = db.UserRelationships
-                    .FirstOrDefault(x => x.User1Id == myUserPid && x.User2Id == uiPlayer ||
-                                         x.User1Id == uiPlayer && x.User2Id == myUserPid);
+                var existringRequest = db.UserRelationships.FirstOrDefault(x =>
+                    (x.User1Id == myUserPid && x.User2Id == uiPlayer)
+                    || (x.User1Id == uiPlayer && x.User2Id == myUserPid)
+                );
 
                 if (existringRequest != null)
                 {
@@ -281,8 +289,8 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
             var myUserPid = Context.Client.PlayerInfo.PID;
             using (var db = DBHelper.GetDbContext(Context.Handler.Factory.Item1))
             {
-                var relations = db.UserRelationships
-                    .Include(x => x.User1)
+                var relations = db
+                    .UserRelationships.Include(x => x.User1)
                     .Include(x => x.User2)
                     .AsNoTracking()
                     .Where(x => x.User1Id == myUserPid || x.User2Id == myUserPid);
@@ -291,7 +299,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                 result.uiTotalCount = (uint)relations.Count();
 
                 // do not show sent pending relationships
-                relations = relations.Where(x => !(x.ByRelationShip == 3 && x.User1Id == myUserPid));
+                relations = relations.Where(x =>
+                    !(x.ByRelationShip == 3 && x.User1Id == myUserPid)
+                );
 
                 //var relationsPage = relations.Skip(offset).Take(size).ToList();   // DO NOT apply pagination, it doesn't even work
 
@@ -299,27 +309,29 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                 // TODO: make a preference in Web UI
                 if (result.uiTotalCount > 16)
                 {
-                    relations = relations.Where(x => onlinePlayerIds.Contains(x.User1Id == myUserPid ? x.User2Id : x.User1Id));
+                    relations = relations.Where(x =>
+                        onlinePlayerIds.Contains(x.User1Id == myUserPid ? x.User2Id : x.User1Id)
+                    );
                     if (relations.Count() == 0)
                     {
                         result.lstRelationshipsList = new List<RelationshipData>()
                         {
-                            new RelationshipData()
+                            new()
                             {
                                 m_pid = 1,
                                 m_strName = $"{result.uiTotalCount} friends",
                                 m_byRelationship = 1,
                                 m_byStatus = 0,
-                                m_uiDetails = 0
+                                m_uiDetails = 0,
                             },
-                            new RelationshipData()
+                            new()
                             {
                                 m_pid = 0,
                                 m_strName = "Everyone is",
                                 m_byRelationship = 1,
                                 m_byStatus = 0,
-                                m_uiDetails = 0
-                            }
+                                m_uiDetails = 0,
+                            },
                         };
                         return Result(result);
                     }
@@ -334,13 +346,14 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                     {
                         m_pid = swap ? x.User2Id : x.User1Id,
                         m_strName = swap ? x.User2.PlayerNickName : x.User1.PlayerNickName,
-                        m_byStatus = (byte)(onlinePlayerIds.Contains(swap ? x.User2Id : x.User1Id) ? 1 : 0),
+                        m_byStatus = (byte)(
+                            onlinePlayerIds.Contains(swap ? x.User2Id : x.User1Id) ? 1 : 0
+                        ),
                         m_uiDetails = x.Details,
-                        m_byRelationship = (byte)x.ByRelationShip
+                        m_byRelationship = (byte)x.ByRelationShip,
                     };
                     return res;
                 });
-
             }
 
             return Result(result);

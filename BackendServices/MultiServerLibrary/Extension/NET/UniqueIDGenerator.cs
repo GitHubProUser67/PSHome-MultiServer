@@ -1,93 +1,94 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-
-namespace System
+﻿namespace MultiServerLibrary.Extension.NET
 {
     public sealed class UniqueIDGenerator
-	{
-		private readonly object _lock = new object();
+    {
+        private readonly Lock _lock = new();
 
-		private readonly uint _minId;
-		private uint _nextId;
+        private readonly uint _minId;
+        private readonly uint _maxId;
 
-		private readonly HashSet<uint> _activeIds = new HashSet<uint>();
-		private readonly HashSet<uint> _freedIds = new HashSet<uint>();
+        private uint _nextId;
 
-		public UniqueIDGenerator(uint startingValue = 1)
-		{
-			if (startingValue == 0)
-				throw new ArgumentException("[UniqueIDGenerator] - Starting value cannot be 0.");
+        private readonly HashSet<uint> _activeIds = new();
+        private readonly Queue<uint> _freedIds = new();
 
-			_minId = startingValue;
-			_nextId = startingValue - 1;
-		}
+        public UniqueIDGenerator(uint startingValue = 1, uint maxValue = uint.MaxValue)
+        {
+            if (startingValue == 0)
+                throw new ArgumentException(
+                    "[UniqueIDGenerator] - Starting value cannot be 0.",
+                    nameof(startingValue)
+                );
 
-		public uint CreateUniqueID()
-		{
-			lock (_lock)
-			{
-				uint limit = uint.MaxValue - _minId + 1;
+            if (startingValue > maxValue)
+                throw new ArgumentException(
+                    "[UniqueIDGenerator] - Starting value must be <= max value."
+                );
 
-				// ✅ HARD STOP: prevent endless scan
-				if (_activeIds.Count < limit)
-				{
-					while (_freedIds.Count > 0)
-					{
-						uint reused = _freedIds.First();
-						_freedIds.Remove(reused);
-						if (_activeIds.Add(reused))
-							return reused;
-					}
+            _minId = startingValue;
+            _maxId = maxValue;
+            _nextId = startingValue - 1;
+        }
 
-					for (uint i = 0; i < limit; i++)
-					{
-						_nextId++;
+        public uint CreateUniqueID()
+        {
+            lock (_lock)
+            {
+                if (_freedIds.Count > 0)
+                {
+                    var reused = _freedIds.Dequeue();
+                    _activeIds.Add(reused);
+                    return reused;
+                }
 
-						if (_nextId == 0 || _nextId < _minId)
-							_nextId = _minId;
+                var nextId = _nextId + 1;
 
-						if (_activeIds.Add(_nextId))
-							return _nextId;
-					}
-				}
-			}
+                if (nextId > _maxId || nextId < _minId)
+                    throw new InvalidOperationException(
+                        "[UniqueIDGenerator] - No available unique IDs."
+                    );
 
-			throw new InvalidOperationException("[UniqueIDGenerator] - No available unique IDs.");
-		}
+                ++_nextId;
 
-		public uint CreateSequentialID()
-		{
-			lock (_lock)
-				return ++_nextId;
-		}
+                _activeIds.Add(nextId);
+                return nextId;
+            }
+        }
 
-		public bool ReleaseID(uint id)
-		{
-			if (id < _minId)
-				return false;
+        // Provided for backward compatibility only, do not use it.
+        public uint CreateSequentialID()
+        {
+            lock (_lock)
+                return ++_nextId;
+        }
 
-			lock (_lock)
-			{
-				if (_activeIds.Remove(id))
-					return _freedIds.Add(id);
-			}
+        public bool ReleaseID(uint id)
+        {
+            lock (_lock)
+            {
+                if (_activeIds.Remove(id))
+                {
+                    _freedIds.Enqueue(id);
+                    return true;
+                }
+            }
 
-			return false;
-		}
+            return false;
+        }
 
-		public bool IsInUse(uint id)
-		{
-			lock (_lock)
-				return _activeIds.Contains(id);
-		}
+        public bool IsInUse(uint id)
+        {
+            lock (_lock)
+                return _activeIds.Contains(id);
+        }
 
-		public int ActiveCount
-		{
-			get
-			{
-				lock (_lock)
-					return _activeIds.Count;
-			}
-		}
-	}
+        public int ActiveCount
+        {
+            get
+            {
+                lock (_lock)
+                    return _activeIds.Count;
+            }
+        }
+    }
 }

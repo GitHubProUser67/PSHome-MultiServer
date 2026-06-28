@@ -7,13 +7,17 @@ public sealed record EventCounterAdapterOptions
     /// <summary>
     /// By default we subscribe to a predefined set of generally useful event counters but this allows you to specify a custom filter by event source name.
     /// </summary>
-    public Func<string, bool> EventSourceFilterPredicate { get; set; } = EventCounterAdapter.DefaultEventSourceFilterPredicate;
+    public Func<string, bool> EventSourceFilterPredicate { get; set; } =
+        EventCounterAdapter.DefaultEventSourceFilterPredicate;
 
     /// <summary>
     /// By default, we subscribe to event counters at Informational level from every event source.
     /// You can customize these settings via this callback (with the event source name as the string given as input).
     /// </summary>
-    public Func<string, EventCounterAdapterEventSourceSettings> EventSourceSettingsProvider { get; set; } = _ => new();
+    public Func<
+        string,
+        EventCounterAdapterEventSourceSettings
+    > EventSourceSettingsProvider { get; set; } = _ => new();
 
     /// <summary>
     /// How often we update event counter data.

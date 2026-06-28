@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Playgroups
 {
-	[TdfStruct]
-	public struct ResetPlaygroupSessionRequest
-	{
+    [TdfStruct]
+    public struct ResetPlaygroupSessionRequest
+    {
+        [TdfMember("PGID")]
+        public uint mId;
 
-		[TdfMember("PGID")]
-		public uint mId;
-
-		[TdfMember("PRES")]
-		public bool mUsesPresence;
-
-	}
+        [TdfMember("PRES")]
+        public bool mUsesPresence;
+    }
 }

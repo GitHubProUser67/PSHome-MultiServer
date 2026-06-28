@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Stats
 {
-	[TdfStruct]
-	public struct StatUpdate
-	{
+    [TdfStruct]
+    public struct StatUpdate
+    {
+        [TdfMember("NAME")]
+        public string mName;
 
-		[TdfMember("NAME")]
-		public string mName;
+        [TdfMember("TYPE")]
+        public int mUpdateType;
 
-		[TdfMember("TYPE")]
-		public int mUpdateType;
-
-		[TdfMember("VALU")]
-		public string mValue;
-
-	}
+        [TdfMember("VALU")]
+        public string mValue;
+    }
 }

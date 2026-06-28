@@ -4,21 +4,19 @@
 /// This class implements two sets of functionality:
 /// 1. A lifetime-managed metric handle that can be used to take leases on the metric.
 /// 2. An automatically-lifetime-extending-on-use metric that creates leases automatically.
-/// 
+///
 /// While conceptually separate, we merge the two sets into one class to avoid allocating a bunch of small objects
 /// every time you want to obtain a lifetime-extending-on-use metric (which tends to be on a relatively hot path).
-/// 
+///
 /// The lifetime-extending feature only supports write operations because we cannot guarantee that the metric is still alive when reading.
 /// </summary>
-internal sealed class ManagedLifetimeGauge : ManagedLifetimeMetricHandle<Gauge.Child, IGauge>, ICollector<IGauge>
+internal sealed class ManagedLifetimeGauge(Collector<Gauge.Child> metric, TimeSpan expiresAfter)
+    : ManagedLifetimeMetricHandle<Gauge.Child, IGauge>(metric, expiresAfter),
+        ICollector<IGauge>
 {
     static ManagedLifetimeGauge()
     {
         _assignUnlabelledFunc = AssignUnlabelled;
-    }
-
-    public ManagedLifetimeGauge(Collector<Gauge.Child> metric, TimeSpan expiresAfter) : base(metric, expiresAfter)
-    {
     }
 
     public override ICollector<IGauge> WithExtendLifetimeOnUse() => this;
@@ -28,10 +26,13 @@ internal sealed class ManagedLifetimeGauge : ManagedLifetimeMetricHandle<Gauge.C
     public string Help => _metric.Help;
     public string[] LabelNames => _metric.LabelNames;
 
-    public IGauge Unlabelled => NonCapturingLazyInitializer.EnsureInitialized(ref _unlabelled, this, _assignUnlabelledFunc);
+    public IGauge Unlabelled =>
+        NonCapturingLazyInitializer.EnsureInitialized(ref _unlabelled, this, _assignUnlabelledFunc);
     private AutoLeasingInstance? _unlabelled;
     private static readonly Action<ManagedLifetimeGauge> _assignUnlabelledFunc;
-    private static void AssignUnlabelled(ManagedLifetimeGauge instance) => instance._unlabelled = new AutoLeasingInstance(instance, Array.Empty<string>());
+
+    private static void AssignUnlabelled(ManagedLifetimeGauge instance) =>
+        instance._unlabelled = new AutoLeasingInstance(instance, Array.Empty<string>());
 
     // These do not get cached, so are potentially expensive - user code should try avoiding re-allocating these when possible,
     // though admittedly this may not be so easy as often these are on the hot path and the very reason that lifetime-managed
@@ -51,18 +52,18 @@ internal sealed class ManagedLifetimeGauge : ManagedLifetimeMetricHandle<Gauge.C
     }
     #endregion
 
-    private sealed class AutoLeasingInstance : IGauge
+    private sealed class AutoLeasingInstance(
+        IManagedLifetimeMetricHandle<IGauge> inner,
+        ReadOnlyMemory<string> labelValues
+    ) : IGauge
     {
-        public AutoLeasingInstance(IManagedLifetimeMetricHandle<IGauge> inner, ReadOnlyMemory<string> labelValues)
-        {
-            _inner = inner;
-            _labelValues = labelValues;
-        }
+        private readonly IManagedLifetimeMetricHandle<IGauge> _inner = inner;
+        private readonly ReadOnlyMemory<string> _labelValues = labelValues;
 
-        private readonly IManagedLifetimeMetricHandle<IGauge> _inner;
-        private readonly ReadOnlyMemory<string> _labelValues;
-
-        public double Value => throw new NotSupportedException("Read operations on a lifetime-extending-on-use expiring metric are not supported.");
+        public double Value =>
+            throw new NotSupportedException(
+                "Read operations on a lifetime-extending-on-use expiring metric are not supported."
+            );
 
         public void Inc(double increment = 1)
         {
@@ -78,6 +79,7 @@ internal sealed class ManagedLifetimeGauge : ManagedLifetimeMetricHandle<Gauge.C
         }
 
         private static void IncCore(IncArgs args, IGauge gauge) => gauge.Inc(args.Increment);
+
         private static readonly Action<IncArgs, IGauge> _incCoreFunc = IncCore;
 
         public void Set(double val)
@@ -94,6 +96,7 @@ internal sealed class ManagedLifetimeGauge : ManagedLifetimeMetricHandle<Gauge.C
         }
 
         private static void SetCore(SetArgs args, IGauge gauge) => gauge.Set(args.Val);
+
         private static readonly Action<SetArgs, IGauge> _setCoreFunc = SetCore;
 
         public void Dec(double decrement = 1)
@@ -110,6 +113,7 @@ internal sealed class ManagedLifetimeGauge : ManagedLifetimeMetricHandle<Gauge.C
         }
 
         private static void DecCore(DecArgs args, IGauge gauge) => gauge.Dec(args.Decrement);
+
         private static readonly Action<DecArgs, IGauge> _decCoreFunc = DecCore;
 
         public void IncTo(double targetValue)
@@ -125,7 +129,9 @@ internal sealed class ManagedLifetimeGauge : ManagedLifetimeMetricHandle<Gauge.C
             public readonly double TargetValue = targetValue;
         }
 
-        private static void IncToCore(IncToArgs args, IGauge gauge) => gauge.IncTo(args.TargetValue);
+        private static void IncToCore(IncToArgs args, IGauge gauge) =>
+            gauge.IncTo(args.TargetValue);
+
         private static readonly Action<IncToArgs, IGauge> _incToCoreFunc = IncToCore;
 
         public void DecTo(double targetValue)
@@ -141,7 +147,9 @@ internal sealed class ManagedLifetimeGauge : ManagedLifetimeMetricHandle<Gauge.C
             public readonly double TargetValue = targetValue;
         }
 
-        private static void DecToCore(DecToArgs args, IGauge gauge) => gauge.DecTo(args.TargetValue);
+        private static void DecToCore(DecToArgs args, IGauge gauge) =>
+            gauge.DecTo(args.TargetValue);
+
         private static readonly Action<DecToArgs, IGauge> _decToCoreFunc = DecToCore;
     }
 }

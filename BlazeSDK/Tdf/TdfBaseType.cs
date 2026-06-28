@@ -18,7 +18,6 @@ namespace Tdf
         TDF_TYPE_MAX = 0xC,
     };
 
-
     /*
         ### TDF_BASE_TYPE <-> C# TYPE ###
     

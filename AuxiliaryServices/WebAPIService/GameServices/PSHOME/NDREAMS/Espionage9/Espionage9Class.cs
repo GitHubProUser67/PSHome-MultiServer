@@ -1,9 +1,6 @@
-﻿using HttpMultipartParser;
-using Microsoft.EntityFrameworkCore;
+﻿using System.Xml.Serialization;
+using HttpMultipartParser;
 using MultiServerLibrary.HTTP;
-using System;
-using System.IO;
-using System.Xml.Serialization;
 using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.PSHOME.NDREAMS.Espionage9
@@ -12,71 +9,87 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Espionage9
     {
         private static Espionage9ScoreBoardData _leaderboard = null;
 
-        public static string ProcessPhpRequest(DateTime CurrentDate, byte[] PostData, string ContentType, string apipath)
+        public static string ProcessPhpRequest(
+            DateTime CurrentDate,
+            byte[] PostData,
+            string ContentType,
+            string apipath
+        )
         {
-            string func = null;
-            string key = null;
-            string ExpectedHash = null;
-            string name = null;
-            string finger = null;
-            string score = null;
-            string win = null;
-            string flag1 = null;
-            string flag2 = null;
-
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
-                    func = data.GetParameterValue("func");
-                    key = data.GetParameterValue("key");
-                    name = data.GetParameterValue("name");
+                    var func = data.GetParameterValue("func");
+                    var key = data.GetParameterValue("key");
+                    var name = data.GetParameterValue("name");
 
                     if (!string.IsNullOrEmpty(func))
                     {
-                        string directoryPath = apipath + $"/NDREAMS/Espionage9/PlayersInventory/{name}";
-                        string profilePath = directoryPath + "/SecretAgentData.xml";
-
+                        var directoryPath =
+                            apipath + $"/NDREAMS/Espionage9/PlayersInventory/{name}";
+                        var profilePath = directoryPath + "/SecretAgentData.xml";
+                        string ExpectedHash;
+                        string finger;
                         switch (func)
                         {
                             case "get":
-                                ExpectedHash = NDREAMSServerUtils.Server_GetSignature(string.Empty, "espionage", func, CurrentDate);
+                                ExpectedHash = NDREAMSServerUtils.Server_GetSignature(
+                                    string.Empty,
+                                    "espionage",
+                                    func,
+                                    CurrentDate
+                                );
 
                                 if (ExpectedHash.Equals(key))
                                 {
                                     Espionage9ProfileData profileData;
 
                                     if (File.Exists(profilePath))
-                                        profileData = Espionage9ProfileData.DeserializeProfileData(profilePath);
+                                        profileData = Espionage9ProfileData.DeserializeProfileData(
+                                            profilePath
+                                        );
                                     else
                                     {
-                                        profileData = new Espionage9ProfileData() { score = 0, plays = 0, wins = 0, flag1 = false, flag2 = false };
+                                        profileData = new Espionage9ProfileData()
+                                        {
+                                            score = 0,
+                                            plays = 0,
+                                            wins = 0,
+                                            flag1 = false,
+                                            flag2 = false,
+                                        };
 
                                         Directory.CreateDirectory(directoryPath);
                                         profileData.SerializeProfileData(profilePath);
                                     }
 
-                                    return $"<xml><success>true</success><score>{profileData.score}</score><plays>{profileData.plays}</plays><wins>{profileData.wins}</wins><flag1>{profileData.flag1}</flag1>" +
-                                        $"<flag2>{profileData.flag2}</flag2><confirm>{NDREAMSServerUtils.Server_GetSignature(string.Empty, name, $"{profileData.score}{profileData.plays}{profileData.wins}", CurrentDate)}</confirm></xml>";
+                                    return $"<xml><success>true</success><score>{profileData.score}</score><plays>{profileData.plays}</plays><wins>{profileData.wins}</wins><flag1>{profileData.flag1}</flag1>"
+                                        + $"<flag2>{profileData.flag2}</flag2><confirm>{NDREAMSServerUtils.Server_GetSignature(string.Empty, name, $"{profileData.score}{profileData.plays}{profileData.wins}", CurrentDate)}</confirm></xml>";
                                 }
                                 else
                                 {
-                                    string errMsg = $"[Espionage9] - PhpRequest: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                                    var errMsg =
+                                        $"[Espionage9] - PhpRequest: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessPhpRequest</function></xml>";
                                 }
                             case "set":
                                 finger = data.GetParameterValue("finger");
-                                score = data.GetParameterValue("score");
-                                win = data.GetParameterValue("win");
-                                flag1 = data.GetParameterValue("flag1");
-                                flag2 = data.GetParameterValue("flag2");
-
-                                ExpectedHash = NDREAMSServerUtils.Server_GetSignature(string.Empty, "espionage", func, CurrentDate);
+                                var score = data.GetParameterValue("score");
+                                var win = data.GetParameterValue("win");
+                                var flag1 = data.GetParameterValue("flag1");
+                                var flag2 = data.GetParameterValue("flag2");
+                                ExpectedHash = NDREAMSServerUtils.Server_GetSignature(
+                                    string.Empty,
+                                    "espionage",
+                                    func,
+                                    CurrentDate
+                                );
 
                                 if (ExpectedHash.Equals(key))
                                 {
@@ -84,19 +97,27 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Espionage9
 
                                     if (File.Exists(profilePath))
                                     {
-                                        if (!int.TryParse(score, out int scoreInt))
+                                        if (!int.TryParse(score, out var scoreInt))
                                         {
-                                            errMsg = $"[Espionage9] - PhpRequest: invalid score argument!";
+                                            errMsg =
+                                                $"[Espionage9] - PhpRequest: invalid score argument!";
                                             CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                             return $"<xml><success>false</success><error>Invalid score argument format</error><extra>{errMsg}</extra><function>ProcessPhpRequest</function></xml>";
                                         }
 
-                                        Espionage9ProfileData profileData = Espionage9ProfileData.DeserializeProfileData(profilePath);
+                                        var profileData =
+                                            Espionage9ProfileData.DeserializeProfileData(
+                                                profilePath
+                                            );
                                         profileData.score = scoreInt;
                                         if ("1".Equals(win))
                                         {
-                                            if (_leaderboard == null)
-                                                _leaderboard = new Espionage9ScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+                                            _leaderboard ??= new Espionage9ScoreBoardData(
+                                                LeaderboardDbContext.BuildOptions(
+                                                    0,
+                                                    $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}"
+                                                )
+                                            );
 
                                             _ = _leaderboard.UpdateScoreAsync(name, scoreInt);
 
@@ -116,20 +137,29 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Espionage9
                                 }
                                 else
                                 {
-                                    string errMsg = $"[Espionage9] - PhpRequest: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                                    var errMsg =
+                                        $"[Espionage9] - PhpRequest: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessPhpRequest</function></xml>";
                                 }
                             case "start":
                                 finger = data.GetParameterValue("finger");
 
-                                ExpectedHash = NDREAMSServerUtils.Server_GetSignature(string.Empty, "espionage", func, CurrentDate);
+                                ExpectedHash = NDREAMSServerUtils.Server_GetSignature(
+                                    string.Empty,
+                                    "espionage",
+                                    func,
+                                    CurrentDate
+                                );
 
                                 if (ExpectedHash.Equals(key))
                                 {
                                     if (File.Exists(profilePath))
                                     {
-                                        Espionage9ProfileData profileData = Espionage9ProfileData.DeserializeProfileData(profilePath);
+                                        var profileData =
+                                            Espionage9ProfileData.DeserializeProfileData(
+                                                profilePath
+                                            );
                                         profileData.plays++;
 
                                         profileData.SerializeProfileData(profilePath);
@@ -137,19 +167,25 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Espionage9
                                         return $"<xml><success>true</success></xml>";
                                     }
 
-                                    string errMsg = $"[Espionage9] - PhpRequest: Profile doesn't exist!";
+                                    var errMsg =
+                                        $"[Espionage9] - PhpRequest: Profile doesn't exist!";
                                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                     return $"<xml><success>false</success><error>No Profile available</error><extra>{errMsg}</extra><function>ProcessPhpRequest</function></xml>";
                                 }
                                 else
                                 {
-                                    string errMsg = $"[Espionage9] - PhpRequest: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                                    var errMsg =
+                                        $"[Espionage9] - PhpRequest: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessPhpRequest</function></xml>";
                                 }
                             case "high":
-                                if (_leaderboard == null)
-                                    _leaderboard = new Espionage9ScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+                                _leaderboard ??= new Espionage9ScoreBoardData(
+                                    LeaderboardDbContext.BuildOptions(
+                                        0,
+                                        $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}"
+                                    )
+                                );
 
                                 return _leaderboard.SerializeToString(null, 10).Result;
                         }
@@ -182,8 +218,8 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Espionage9
 
         public void SerializeProfileData(string filePath)
         {
-            XmlSerializer serializer = new XmlSerializer(typeof(Espionage9ProfileData));
-            using (StreamWriter writer = new StreamWriter(filePath))
+            var serializer = new XmlSerializer(typeof(Espionage9ProfileData));
+            using (var writer = new StreamWriter(filePath))
             {
                 serializer.Serialize(writer, this);
             }
@@ -191,8 +227,8 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Espionage9
 
         public static Espionage9ProfileData DeserializeProfileData(string filePath)
         {
-            XmlSerializer serializer = new XmlSerializer(typeof(Espionage9ProfileData));
-            using (StreamReader reader = new StreamReader(filePath))
+            var serializer = new XmlSerializer(typeof(Espionage9ProfileData));
+            using (var reader = new StreamReader(filePath))
             {
                 return (Espionage9ProfileData)serializer.Deserialize(reader);
             }

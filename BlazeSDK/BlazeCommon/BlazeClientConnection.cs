@@ -2,16 +2,13 @@ using CustomLogger;
 
 namespace BlazeCommon
 {
-    public class BlazeClientConnection : ProtoFireClient
+    public class BlazeClientConnection(
+        ProtoFireConnection connection,
+        BlazeClientConfiguration clientConfiguration
+    ) : ProtoFireClient(connection)
     {
-        public BlazeClientConfiguration Config { get; }
-        public object State { get; set; }
-
-        public BlazeClientConnection(ProtoFireConnection connection, BlazeClientConfiguration clientConfiguration) : base(connection)
-        {
-            State = new object();
-            Config = clientConfiguration;
-        }
+        public BlazeClientConfiguration Config { get; } = clientConfiguration;
+        public object State { get; set; } = new object();
 
         public override void OnClientDisconnected()
         {
@@ -23,21 +20,25 @@ namespace BlazeCommon
             if (packet.Frame.MsgType != FireFrame.MessageType.NOTIFICATION)
                 return;
 
-            IBlazeClientComponent? component = Config.GetComponent(packet.Frame.Component);
+            var component = Config.GetComponent(packet.Frame.Component);
             if (component == null)
             {
-                LoggerAccessor.LogWarn($"[BlazeClientConnection] - Unable to handle notification - component {packet.Frame.Component} handler not found");
+                LoggerAccessor.LogWarn(
+                    $"[BlazeClientConnection] - Unable to handle notification - component {packet.Frame.Component} handler not found"
+                );
                 return;
             }
 
-            Type notificationType = component.GetNotificationType(packet.Frame.Command);
-            IBlazePacket blazePacket = packet.Decode(notificationType, Config.Decoder);
+            var notificationType = component.GetNotificationType(packet.Frame.Command);
+            var blazePacket = packet.Decode(notificationType, Config.Decoder);
             BlazeUtils.LogPacket(component, blazePacket, true);
 
-            BlazeClientNotificationMethodInfo? methodInfo = component.GetBlazeNotificationInfo(packet.Frame.Command);
+            var methodInfo = component.GetBlazeNotificationInfo(packet.Frame.Command);
             if (methodInfo == null)
             {
-                LoggerAccessor.LogWarn($"[BlazeClientConnection] - Unable to handle notification for component {packet.Frame.Component} - notification {packet.Frame.Command} handler not found");
+                LoggerAccessor.LogWarn(
+                    $"[BlazeClientConnection] - Unable to handle notification for component {packet.Frame.Component} - notification {packet.Frame.Command} handler not found"
+                );
                 return;
             }
 
@@ -47,13 +48,22 @@ namespace BlazeCommon
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError($"[BlazeClientConnection] - Error while handling notification for component {packet.Frame.Component} - notification {packet.Frame.Command} (Exception: {e})");
+                LoggerAccessor.LogError(
+                    $"[BlazeClientConnection] - Error while handling notification for component {packet.Frame.Component} - notification {packet.Frame.Command} (Exception: {e})"
+                );
             }
         }
 
-        public TResponse SendRequest<TRequest, TResponse, TErrorResponse>(IBlazeComponent component, ushort commandId, TRequest request) where TRequest : notnull where TResponse : notnull where TErrorResponse : notnull
+        public TResponse SendRequest<TRequest, TResponse, TErrorResponse>(
+            IBlazeComponent component,
+            ushort commandId,
+            TRequest request
+        )
+            where TRequest : notnull
+            where TResponse : notnull
+            where TErrorResponse : notnull
         {
-            FireFrame frame = new FireFrame()
+            var frame = new FireFrame()
             {
                 MsgNum = GetNextMsgNum(),
                 Component = component.Id,
@@ -62,50 +72,67 @@ namespace BlazeCommon
                 MsgType = FireFrame.MessageType.MESSAGE,
             };
 
-            Type blazeRequestPacketType = typeof(BlazePacket<>).MakeGenericType(typeof(TRequest));
-            BlazePacket<TRequest> blazeRequestPacket = (BlazePacket<TRequest>)Activator.CreateInstance(blazeRequestPacketType, frame, request)!;
-            ProtoFirePacket requestPacket = blazeRequestPacket.ToProtoFirePacket(Config.Encoder);
+            var blazeRequestPacketType = typeof(BlazePacket<>).MakeGenericType(typeof(TRequest));
+            var blazeRequestPacket =
+                (BlazePacket<TRequest>)
+                    Activator.CreateInstance(blazeRequestPacketType, frame, request)!;
+            var requestPacket = blazeRequestPacket.ToProtoFirePacket(Config.Encoder);
 
             BlazeUtils.LogPacket(component, blazeRequestPacket, false);
-            ProtoFirePacket responsePacket = SendRequest(requestPacket);
+            var responsePacket = SendRequest(requestPacket);
 
-            Type responseType = responsePacket.Frame.MsgType == FireFrame.MessageType.REPLY ? typeof(TResponse) : typeof(TErrorResponse);
-            IBlazePacket responseBlazePacket = responsePacket.Decode(responseType, Config.Decoder);
+            var responseType =
+                responsePacket.Frame.MsgType == FireFrame.MessageType.REPLY
+                    ? typeof(TResponse)
+                    : typeof(TErrorResponse);
+            var responseBlazePacket = responsePacket.Decode(responseType, Config.Decoder);
             BlazeUtils.LogPacket(component, responseBlazePacket, true);
 
             if (responsePacket.Frame.MsgType == FireFrame.MessageType.REPLY)
                 return (TResponse)responseBlazePacket.DataObj;
 
-            TErrorResponse errorResponse = (TErrorResponse)responseBlazePacket.DataObj;
+            var errorResponse = (TErrorResponse)responseBlazePacket.DataObj;
             throw new BlazeRpcException(responsePacket.Frame.FullErrorCode, errorResponse);
         }
 
-        public async Task<TResponse> SendRequestAsync<TRequest, TResponse, TErrorResponse>(IBlazeComponent component, ushort commandId, TRequest request) where TRequest : notnull where TResponse : notnull where TErrorResponse : notnull
+        public async Task<TResponse> SendRequestAsync<TRequest, TResponse, TErrorResponse>(
+            IBlazeComponent component,
+            ushort commandId,
+            TRequest request
+        )
+            where TRequest : notnull
+            where TResponse : notnull
+            where TErrorResponse : notnull
         {
-            FireFrame frame = new FireFrame()
+            var frame = new FireFrame()
             {
                 MsgNum = GetNextMsgNum(),
                 Component = component.Id,
                 Command = commandId,
                 ErrorCode = 0,
-                MsgType = FireFrame.MessageType.MESSAGE
+                MsgType = FireFrame.MessageType.MESSAGE,
             };
 
-            Type blazeRequestPacketType = typeof(BlazePacket<>).MakeGenericType(typeof(TRequest));
-            BlazePacket<TRequest> blazeRequestPacket = (BlazePacket<TRequest>)Activator.CreateInstance(blazeRequestPacketType, frame, request)!;
-            ProtoFirePacket requestPacket = blazeRequestPacket.ToProtoFirePacket(Config.Encoder);
+            var blazeRequestPacketType = typeof(BlazePacket<>).MakeGenericType(typeof(TRequest));
+            var blazeRequestPacket =
+                (BlazePacket<TRequest>)
+                    Activator.CreateInstance(blazeRequestPacketType, frame, request)!;
+            var requestPacket = blazeRequestPacket.ToProtoFirePacket(Config.Encoder);
 
             BlazeUtils.LogPacket(component, blazeRequestPacket, false);
-            ProtoFirePacket responsePacket = await SendRequestAsync(requestPacket).ConfigureAwait(false);
+            var responsePacket = await SendRequestAsync(requestPacket).ConfigureAwait(false);
 
-            Type responseType = responsePacket.Frame.MsgType == FireFrame.MessageType.REPLY ? typeof(TResponse) : typeof(TErrorResponse);
-            IBlazePacket responseBlazePacket = responsePacket.Decode(responseType, Config.Decoder);
+            var responseType =
+                responsePacket.Frame.MsgType == FireFrame.MessageType.REPLY
+                    ? typeof(TResponse)
+                    : typeof(TErrorResponse);
+            var responseBlazePacket = responsePacket.Decode(responseType, Config.Decoder);
             BlazeUtils.LogPacket(component, responseBlazePacket, true);
 
             if (responsePacket.Frame.MsgType == FireFrame.MessageType.REPLY)
                 return (TResponse)responseBlazePacket.DataObj;
 
-            TErrorResponse errorResponse = (TErrorResponse)responseBlazePacket.DataObj;
+            var errorResponse = (TErrorResponse)responseBlazePacket.DataObj;
             throw new BlazeRpcException(responsePacket.Frame.FullErrorCode, errorResponse);
         }
     }

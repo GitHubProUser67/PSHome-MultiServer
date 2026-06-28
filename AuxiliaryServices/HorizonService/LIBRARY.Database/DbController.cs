@@ -1,204 +1,141 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Net;
+using System.Text;
+using System.Web;
 using CustomLogger;
-using MultiServerLibrary.Extension;
-using Newtonsoft.Json;
 using DotNetty.Transport.Channels;
-using Horizon.RT.Common;
-using Horizon.RT.Models;
 using Horizon.LIBRARY.Database.Config;
 using Horizon.LIBRARY.Database.Entities;
 using Horizon.LIBRARY.Database.Models;
-using HorizonService.LIBRARY.Database.Simulated;
-using System.Text;
-#if !NETFRAMEWORK
-using System.Web;
-#endif
-using System.Net;
-using System.IO;
-using System.Collections.Generic;
-using System;
-using System.Threading.Tasks;
-using System.Net.Http;
-using System.Linq;
+using Horizon.RT.Common;
+using Horizon.RT.Models;
+using MultiServerLibrary.Extension;
+using Newtonsoft.Json;
+using Org.BouncyCastle.Utilities.Encoders;
 using WebAPIService.WebServices.WebCrypto;
 
 namespace Horizon.LIBRARY.Database
 {
     public class DbController
     {
-        private string directoryPath = null;
-        public DbSettings _settings = new DbSettings();
+        private readonly string _simulatedDbFilepath;
+        private bool _saveSimulated = false;
+        private bool _loadSimulated = true;
+        private readonly DbSimulated _simulatedDb = new();
+        private static readonly FileSystemWatcher _simulatedDbWatcher = new();
 
-        private int _simulatedAccountIdCounter = 1;
-        private int _simulatedClanIdCounter = 1;
-        private int _simulatedClanMessageIdCounter = 1;
-        private int _simulatedClanInvitationIdCounter = 1;
-        private readonly int[] SimulatedAppIdList = new int[] {
-            0,
-            120,
-            10010,
-            10130,
-            10394,
-            10414,
-            10421,
-            10538,
-            10540,
-            10550,
-            10582,
-            10584,
-            10680,
-            10681,
-            10683,
-            10684,
-            10694,
-            10782,
-            10933,
-            10934,
-            10952,
-            10954,
-            10984,
-            11204,
-            11354,
-            20032,
-            20034,
-            20040,
-            20041,
-            20042,
-            20043,
-            20044,
-            20060,
-            20190,
-            20230,
-            20244,
-            20304,
-            20314,
-            20344,
-            20371,
-            20374,
-            20384,
-            20434,
-            20454,
-            20463,
-            20624, // Warhawk DME.
-            20764,
-            20804,
-            21064,
-            21094,
-            21244,
-            21354,
-            21513,
-            21564,
-            21574,
-            21584,
-            21594,
-            21614,
-            21624,
-            21731,
-            21784,
-            21834,
-            21874,
-            21914,
-            22204,
-            22274,
-            22284,
-            22294,
-            22304,
-            23014,
-            22500,
-            22720,
-            22920,
-            22923,
-            22924,
-            23360,
-            23624,
-            24000,
-            24180,
-            97134
-        };
+        private readonly DbSettings _settings = new();
+
         private string _dbAccessToken = null;
         private string _dbAccountName = null;
 
-        private readonly ConcurrentList<AccountDTO> _simulatedAccounts = new ConcurrentList<AccountDTO>();
-        private readonly ConcurrentList<AccountRelationInviteDTO> _simulatedBuddyInvitations = new ConcurrentList<AccountRelationInviteDTO>();
-        private readonly ConcurrentList<NpIdDTO> _simulatedNpIdAccounts = new ConcurrentList<NpIdDTO>();
-        private readonly ConcurrentList<ClanDTO> _simulatedClans = new ConcurrentList<ClanDTO>();
-        private readonly ConcurrentList<MatchmakingSupersetDTO> _simulatedMatchmakingSupersets = new ConcurrentList<MatchmakingSupersetDTO>();
-        private readonly ConcurrentList<FileDTO> _simulatedMediusFiles = new ConcurrentList<FileDTO>();
-        private readonly ConcurrentList<FileMetaDataDTO> _simulatedFileMetaData = new ConcurrentList<FileMetaDataDTO>();
-        private readonly ConcurrentList<FileAttributesDTO> _simulatedFileAttributes = new ConcurrentList<FileAttributesDTO>();
+        private static readonly char[] _trimChars = new char[] { ':', 'f', '{', '}' };
 
-        public DbController(string configFile)
+        public bool IsSimulated => _settings.SimulatedMode;
+
+        [RequiresUnreferencedCode("Uses reflection that may break when trimming.")]
+        public DbController(string configFilePath)
         {
-            /*Task t = new Task(() => {
-                SimulatedAppIdList = new int[65536];
-             
-                // Initialize the first element
-                SimulatedAppIdList[0] = 0;
-
-                // Initialize the first small chunk manually
-                for (int i = 1; i < 1024; i++)
-                {
-                    SimulatedAppIdList[i] = i;
-                }
-
-                int currentLength = 1024;
-
-                // Use Array.Copy to double the size of initialized chunks
-                while (currentLength < SimulatedAppIdList.Length)
-                {
-                    int copyLength = Math.Min(currentLength, SimulatedAppIdList.Length - currentLength);
-                    Array.Copy(SimulatedAppIdList, 0, SimulatedAppIdList, currentLength, copyLength);
-
-                    // Adjust the copied values
-                    for (int i = currentLength; i < currentLength + copyLength; i++)
-                    {
-                        SimulatedAppIdList[i] += currentLength;
-                    }
-
-                    currentLength += copyLength;
-                }
-            });*/
-
-            if (!string.IsNullOrEmpty(configFile))
+            if (!string.IsNullOrEmpty(configFilePath))
             {
-                directoryPath = Path.GetDirectoryName(configFile);
+                string directoryPath = Path.GetDirectoryName(configFilePath);
 
                 if (!string.IsNullOrEmpty(directoryPath))
                 {
                     Directory.CreateDirectory(directoryPath);
 
-                    if (File.Exists(configFile))
+                    if (File.Exists(configFilePath))
                     {
                         // Populate existing object
                         try
                         {
-                            JsonConvert.PopulateObject(File.ReadAllText(configFile), _settings);
-
-                            /*if (_settings.SimulatedMode)
-                                t.Start();*/
+                            JsonConvert.PopulateObject(File.ReadAllText(configFilePath), _settings);
                         }
-                        catch (Exception ex) { LoggerAccessor.LogError(ex); }
+                        catch (Exception e)
+                        {
+                            LoggerAccessor.LogError(
+                                $"[DbController] - Config initialization failed! (Exception:{e})"
+                            );
+                        }
                     }
                     else
                     {
-                        // Populate existing object
                         try
-                        { 
-                            File.WriteAllText(configFile, JsonConvert.SerializeObject(_settings)); 
-                            JsonConvert.PopulateObject(File.ReadAllText(configFile), _settings);
-
-                            /*if (_settings.SimulatedMode)
-                                t.Start();*/
+                        {
+                            File.WriteAllText(
+                                configFilePath,
+                                JsonConvert.SerializeObject(_settings)
+                            );
                         }
-                        catch (Exception ex) { LoggerAccessor.LogError(ex); }
+                        catch (Exception e)
+                        {
+                            LoggerAccessor.LogError(
+                                $"[DbController] - Config initialization failed! (Exception:{e})"
+                            );
+                        }
+                    }
+
+                    _simulatedDbFilepath = configFilePath;
+
+                    if (IsSimulated)
+                    {
+                        _simulatedDbWatcher.NotifyFilter = NotifyFilters.LastWrite;
+                        _simulatedDbWatcher.Changed += OnSimulatedDbChanged;
+                        _simulatedDbWatcher.Path = directoryPath;
+                        _simulatedDbWatcher.Filter = Path.GetFileName(configFilePath);
+                        _simulatedDbWatcher.EnableRaisingEvents = true;
                     }
                 }
             }
+        }
 
-            /*if (t.Status != TaskStatus.Created)
+        // Event handler for SimulatedDb change event
+        private void OnSimulatedDbChanged(object source, FileSystemEventArgs e)
+        {
+            try
             {
-                t.Wait();
-                t.Dispose();
-            }*/
+                _simulatedDbWatcher.EnableRaisingEvents = false;
+
+                LoggerAccessor.LogInfo(
+                    $"[DbController] - SimulatedDb File {e.FullPath} has been changed, Refresh at - {DateTime.Now}"
+                );
+
+                // Sleep a little to let file-system time to write the changes to the file.
+                Thread.Sleep(6000);
+
+                _loadSimulated = true;
+            }
+            finally
+            {
+                _simulatedDbWatcher.EnableRaisingEvents = true;
+            }
+        }
+
+        [RequiresUnreferencedCode("Uses reflection that may break when trimming.")]
+        public Task Tick()
+        {
+            if (_loadSimulated)
+            {
+                _loadSimulated = false;
+                if (_settings.SimulatedMode)
+                {
+                    if (!_simulatedDb.Load(_simulatedDbFilepath, _settings.SimulatedEncryptionKey))
+                        _loadSimulated = true; // try again next tick
+                }
+            }
+
+            if (_saveSimulated)
+            {
+                _simulatedDbWatcher.EnableRaisingEvents = false;
+
+                _saveSimulated = false;
+                if (!_simulatedDb.Save(_simulatedDbFilepath, _settings.SimulatedEncryptionKey))
+                    _saveSimulated = true; // try again next tick
+
+                _simulatedDbWatcher.EnableRaisingEvents = true;
+            }
+
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -210,7 +147,10 @@ namespace Horizon.LIBRARY.Database
             if (_settings.SimulatedMode)
                 return true;
 
-            var response = await Authenticate(_settings.DatabaseUsername, _settings.DatabasePassword);
+            var response = await Authenticate(
+                _settings.DatabaseUsername,
+                _settings.DatabasePassword
+            );
 
             // Validate
             if (response == null || response.Roles == null || !response.Roles.Contains("database"))
@@ -224,18 +164,30 @@ namespace Horizon.LIBRARY.Database
 
         public bool AmIAuthenticated()
         {
-            if (_settings.SimulatedMode)
-                return true;
+            return _settings.SimulatedMode || !string.IsNullOrEmpty(_dbAccessToken);
+        }
 
-            return !string.IsNullOrEmpty(_dbAccessToken);
+        public void ClearAuthToken()
+        {
+            _dbAccessToken = null;
         }
 
         public string GetUsername()
         {
-            if (_settings.SimulatedMode)
-                return _settings.DatabaseUsername;
+            return _settings.SimulatedMode ? _settings.DatabaseUsername : _dbAccountName;
+        }
 
-            return _dbAccountName;
+        public void LoadSimulated()
+        {
+            _loadSimulated = true;
+        }
+
+        private void SaveSimulated()
+        {
+            if (string.IsNullOrEmpty(_simulatedDbFilepath))
+                return;
+
+            _saveSimulated = true;
         }
 
         #region Account
@@ -250,14 +202,14 @@ namespace Horizon.LIBRARY.Database
                     return "[]";
                 else
                 {
-                    HttpResponseMessage Resp = await GetDbAsync($"Account/getOnlineAccounts");
+                    var Resp = await GetDbAsync($"Account/getOnlineAccounts");
                     if (Resp != null)
                         results = await Resp.Content.ReadAsStringAsync();
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return results;
@@ -268,83 +220,50 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="name">Case insensitive name of player.</param>
         /// <returns>Returns account.</returns>
-        public async Task<AccountDTO> GetAccountByName(string name, int appId, bool forceRpcnCheck = false)
+        public async Task<AccountDTO> GetAccountByName(
+            string name,
+            int appId,
+            bool forceRpcnCheck = false
+        )
         {
             AccountDTO result = null;
 
             try
             {
                 if (_settings.SimulatedMode)
-                {
-                    if (name != null)
-                    {
-                        if (name == "gameRecorder_r2_pubeta_master" && appId == 21731)
-                        {
-                            AccountDTO R2PuBeta;
-                            _simulatedAccounts.Add(R2PuBeta = new AccountDTO()
-                            {
-                                AccountId = 2,
-                                AccountName = "gameRecorder_r2_pubeta_master",
-                                AccountPassword = string.Empty,
-                                AccountWideStats = new int[Constants.LADDERSTATSWIDE_MAXLEN],
-                                AccountCustomWideStats = new int[1000],
-                                AppId = 21731,
-                                MachineId = string.Empty,
-                                MediusStats = string.Empty,
-                                Friends = Array.Empty<AccountRelationDTO>(),
-                                Ignored = Array.Empty<AccountRelationDTO>(),
-                                IsBanned = false
-                            });
-
-                            return R2PuBeta;
-                        }
-                        else if (name == "ftb3 Moderator_0" && appId == 21694)
-                        {
-                            AccountDTO ftb3Mod;
-                            _simulatedAccounts.Add(ftb3Mod = new AccountDTO()
-                            {
-                                AccountId = 2,
-                                AccountName = "ftb3 Moderator_0",
-                                AccountPassword = string.Empty,
-                                AccountWideStats = new int[Constants.LADDERSTATSWIDE_MAXLEN],
-                                AccountCustomWideStats = new int[1000],
-                                AppId = 21694,
-                                MachineId = string.Empty,
-                                MediusStats = string.Empty,
-                                Friends = Array.Empty<AccountRelationDTO>(),
-                                Ignored = Array.Empty<AccountRelationDTO>(),
-                                IsBanned = false
-                            });
-
-                            return ftb3Mod;
-                        }
-                        else
-                            result = _simulatedAccounts.FirstOrDefault(x =>
-                                x.AppId == appId &&
-                                x.AccountName != null &&
-                                (forceRpcnCheck
-                                    ? x.AccountName.ToLower() == name.ToLower()
-                                    : (x.AccountName.EndsWith("@RPCN", StringComparison.OrdinalIgnoreCase)
-                                        ? x.AccountName.Substring(0, x.AccountName.Length - "@RPCN".Length)
-                                        : x.AccountName).ToLower() == name.ToLower()
+                    result = _simulatedDb.Accounts.FirstOrDefault(x =>
+                        x.AppId == appId
+                        && x.AccountName != null
+                        && (
+                            forceRpcnCheck
+                                ? x.AccountName.Equals(
+                                    name,
+                                    StringComparison.CurrentCultureIgnoreCase
                                 )
-                            );
-                    }
-                }
+                                : (
+                                    x.AccountName.EndsWith(
+                                        "@RPCN",
+                                        StringComparison.OrdinalIgnoreCase
+                                    )
+                                        ? x.AccountName.Substring(
+                                            0,
+                                            x.AccountName.Length - "@RPCN".Length
+                                        )
+                                        : x.AccountName
+                                ).Equals(name, StringComparison.CurrentCultureIgnoreCase)
+                        )
+                    );
                 else
                 {
-#if NETFRAMEWORK
-                    name = Uri.EscapeDataString(name);
-#else
                     name = HttpUtility.UrlEncode(name);
-#endif
-                    string route = $"Account/searchAccountByName?AccountName={name}&AppId={appId}&ForceRpcnCheck={forceRpcnCheck}";
+                    var route =
+                        $"Account/searchAccountByName?AccountName={name}&AppId={appId}&ForceRpcnCheck={forceRpcnCheck}";
                     result = await GetDbAsync<AccountDTO>(route);
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -361,14 +280,13 @@ namespace Horizon.LIBRARY.Database
 
             try
             {
-                if (_settings.SimulatedMode)
-                    result = _simulatedAccounts.FirstOrDefault(x => x.AccountId == id);
-                else
-                    result = await GetDbAsync<AccountDTO>($"Account/getAccount?AccountId={id}");
+                result = _settings.SimulatedMode
+                    ? _simulatedDb.Accounts.FirstOrDefault(x => x.AccountId == id)
+                    : await GetDbAsync<AccountDTO>($"Account/getAccount?AccountId={id}");
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -385,14 +303,13 @@ namespace Horizon.LIBRARY.Database
 
             try
             {
-                if (_settings.SimulatedMode)
-                    result = _simulatedAccounts.FirstOrDefault(x => x.FirstClientIp == RequestedIp);
-                else
-                    result = await GetDbAsync<AccountDTO>($"Account/getAccount?RequestedIp={RequestedIp}");
+                result = _settings.SimulatedMode
+                    ? _simulatedDb.Accounts.FirstOrDefault(x => x.FirstClientIp == RequestedIp)
+                    : await GetDbAsync<AccountDTO>($"Account/getAccount?RequestedIp={RequestedIp}");
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -403,7 +320,11 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="createAccount">Account creation parameters.</param>
         /// <returns>Returns created account.</returns>
-        public async Task<AccountDTO> CreateAccount(CreateAccountDTO createAccount, IChannel clientChannel)
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
+        public async Task<AccountDTO> CreateAccount(
+            CreateAccountDTO createAccount,
+            IChannel clientChannel
+        )
         {
             AccountDTO result = null;
 
@@ -411,40 +332,57 @@ namespace Horizon.LIBRARY.Database
             {
                 if (_settings.SimulatedMode)
                 {
-                    var checkExisting = await GetAccountByName(createAccount.AccountName, createAccount.AppId, true);
+                    var checkExisting = await GetAccountByName(
+                        createAccount.AccountName,
+                        createAccount.AppId,
+                        true
+                    );
                     if (checkExisting == null)
                     {
-                        _simulatedAccounts.Add(result = new AccountDTO()
-                        {
-                            FirstClientIp = ((IPEndPoint)clientChannel.RemoteAddress).Address.ToString().Trim(new char[] { ':', 'f', '{', '}' }),
-                            AccountId = _simulatedAccountIdCounter++,
-                            AccountName = createAccount.AccountName,
-                            AccountPassword = createAccount.AccountPassword,
-                            AccountWideStats = new int[Constants.LADDERSTATSWIDE_MAXLEN],
-                            AccountCustomWideStats = new int[1000],
-                            AppId = createAccount.AppId,
-                            MachineId = createAccount.MachineId,
-                            MediusStats = createAccount.MediusStats,
-                            Friends = Array.Empty<AccountRelationDTO>(),
-                            Ignored = Array.Empty<AccountRelationDTO>(),
-                            IsBanned = false
-                        });
+                        _simulatedDb.Accounts.Add(
+                            result = new AccountDTO()
+                            {
+                                FirstClientIp = ((IPEndPoint)clientChannel.RemoteAddress)
+                                    .Address.ToString()
+                                    .Trim(_trimChars),
+                                AccountId = _simulatedDb.AccountIdCounter++,
+                                AccountName = createAccount.AccountName,
+                                AccountPassword = createAccount.AccountPassword,
+                                AccountWideStats = new int[Constants.LADDERSTATSWIDE_MAXLEN],
+                                AccountCustomWideStats = new int[1000],
+                                AppId = createAccount.AppId,
+                                MachineId = createAccount.MachineId,
+                                MediusStats = createAccount.MediusStats,
+                                Friends = Array.Empty<AccountRelationDTO>(),
+                                Ignored = Array.Empty<AccountRelationDTO>(),
+                                IsBanned = false,
+                            }
+                        );
+
+                        SaveSimulated();
                     }
                     else
-                        LoggerAccessor.LogError($"Account creation failed account name already exists!");
+                        LoggerAccessor.LogError(
+                            $"[DbController] - CreateAccount: Account creation failed account name already exists!"
+                        );
                 }
                 else
                 {
-                    var response = await PostDbAsync($"Account/createAccount", JsonConvert.SerializeObject(createAccount));
+                    var response = await PostDbAsync(
+                        $"Account/createAccount",
+                        JsonConvert.SerializeObject(createAccount)
+                    );
 
                     // Deserialize on success
                     if (response != null && response.IsSuccessStatusCode)
-                        result = JsonConvert.DeserializeObject<AccountDTO>(await response.Content.ReadAsStringAsync());
+                        result = JsonConvert.DeserializeObject<AccountDTO>(
+                            await response.Content.ReadAsStringAsync()
+                        );
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -457,36 +395,62 @@ namespace Horizon.LIBRARY.Database
         /// <returns>Success or failure.</returns>
         public async Task<bool> DeleteAccount(string accountName, int appId)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
                 if (_settings.SimulatedMode)
-                    result = _simulatedAccounts.RemoveAll(x => x.AccountName != null && x.AccountName.ToLower() == accountName.ToLower() && x.AppId == appId) > 0;
+                {
+                    result =
+                        _simulatedDb.Accounts.RemoveAll(x =>
+                            x.AccountName != null
+                            && x.AccountName.Equals(
+                                accountName,
+                                StringComparison.CurrentCultureIgnoreCase
+                            )
+                            && x.AppId == appId
+                        ) > 0;
+
+                    if (result)
+                        SaveSimulated();
+                }
                 else
-                    result = (await GetDbAsync($"Account/deleteAccount?AccountName={accountName}&AppId={appId}")).IsSuccessStatusCode;
+                {
+                    result = (
+                        await GetDbAsync(
+                            $"Account/deleteAccount?AccountName={accountName}&AppId={appId}"
+                        )
+                    ).IsSuccessStatusCode;
+                }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
             return result;
         }
 
-        public async Task<bool> PostAccountUpdatePassword(int accountId, string oldPassword, string newPassword)
+        public async Task<bool> PostAccountUpdatePassword(
+            int accountId,
+            string oldPassword,
+            string newPassword
+        )
         {
-            bool result = false;
+            var result = false;
 
             try
             {
-                if (_settings.SimulatedMode)
-                    result = true;
-                else
-                    result = (await GetDbAsync($"Account/updateAccountPassword?accountId={accountId}&oldPassowrd={oldPassword}&newPassword={newPassword}")).IsSuccessStatusCode;
+                result =
+                    _settings.SimulatedMode
+                    || (
+                        await GetDbAsync(
+                            $"Account/updateAccountPassword?accountId={accountId}&oldPassowrd={oldPassword}&newPassword={newPassword}"
+                        )
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -500,18 +464,22 @@ namespace Horizon.LIBRARY.Database
         /// <returns>Success or failure.</returns>
         public async Task<bool> PostAccountSignInDate(int accountId, DateTime time)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
-                if (_settings.SimulatedMode)
-                    result = true;
-                else
-                    result = (await PostDbAsync($"Account/postAccountSignInDate?AccountId={accountId}", $"\"{time.ToUniversalTime()}\"")).IsSuccessStatusCode;
+                result =
+                    _settings.SimulatedMode
+                    || (
+                        await PostDbAsync(
+                            $"Account/postAccountSignInDate?AccountId={accountId}",
+                            $"\"{time.ToUniversalTime()}\""
+                        )
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -529,11 +497,13 @@ namespace Horizon.LIBRARY.Database
             try
             {
                 if (!_settings.SimulatedMode)
-                    result = await GetDbAsync<AccountStatusDTO>($"Account/getAccountStatus?AccountId={accountId}");
+                    result = await GetDbAsync<AccountStatusDTO>(
+                        $"Account/getAccountStatus?AccountId={accountId}"
+                    );
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -544,18 +514,24 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="status">Account status.</param>
         /// <returns>Success or failure.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> PostAccountStatus(AccountStatusDTO status)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
                 if (!_settings.SimulatedMode)
-                    result = (await PostDbAsync($"Account/postAccountStatusUpdates", JsonConvert.SerializeObject(status))).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Account/postAccountStatusUpdates",
+                            JsonConvert.SerializeObject(status)
+                        )
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -563,18 +539,19 @@ namespace Horizon.LIBRARY.Database
 
         public async Task<bool> ClearAccountStatuses()
         {
-            bool result = false;
+            var result = false;
 
             try
             {
-                if (_settings.SimulatedMode)
-                    result = true;
-                else
-                    result = (await PostDbAsync($"Account/clearAccountStatuses", null)).IsSuccessStatusCode;
+                result =
+                    _settings.SimulatedMode
+                    || (
+                        await PostDbAsync($"Account/clearAccountStatuses", null)
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -593,15 +570,19 @@ namespace Horizon.LIBRARY.Database
             {
                 if (_settings.SimulatedMode)
                 {
-                    var account = _simulatedAccounts.FirstOrDefault(x => x.AccountId == accountId);
+                    var account = _simulatedDb.Accounts.FirstOrDefault(x =>
+                        x.AccountId == accountId
+                    );
                     result = account?.Metadata;
                 }
                 else
-                    result = await GetDbAsync<string>($"Account/getAccountMetadata?accountId={accountId}");
+                    result = await GetDbAsync<string>(
+                        $"Account/getAccountMetadata?accountId={accountId}"
+                    );
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -613,29 +594,39 @@ namespace Horizon.LIBRARY.Database
         /// <param name="accountId">Id of account.</param>
         /// <param name="metadata">Metadata to post.</param>
         /// <returns>True on success.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> PostAccountMetadata(int accountId, string metadata)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
                 if (_settings.SimulatedMode)
                 {
-                    var account = _simulatedAccounts.FirstOrDefault(x => x.AccountId == accountId);
+                    var account = _simulatedDb.Accounts.FirstOrDefault(x =>
+                        x.AccountId == accountId
+                    );
                     if (account != null)
                     {
                         account.Metadata = metadata;
                         result = true;
+
+                        SaveSimulated();
                     }
                     else
                         result = false;
                 }
                 else
-                    result = (await PostDbAsync($"Account/postAccountMetadata?accountId={accountId}", JsonConvert.SerializeObject(metadata))).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Account/postAccountMetadata?accountId={accountId}",
+                            JsonConvert.SerializeObject(metadata)
+                        )
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -646,18 +637,22 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         public async Task<bool> PostAccountIp(int accountId, string ip)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
-                if (_settings.SimulatedMode)
-                    result = true;
-                else
-                    result = (await PostDbAsync($"Account/postAccountIp?AccountId={accountId}", $"\"{ip}\"")).IsSuccessStatusCode;
+                result =
+                    _settings.SimulatedMode
+                    || (
+                        await PostDbAsync(
+                            $"Account/postAccountIp?AccountId={accountId}",
+                            $"\"{ip}\""
+                        )
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -675,19 +670,24 @@ namespace Horizon.LIBRARY.Database
             try
             {
                 if (_settings.SimulatedMode)
-                    result = _simulatedAccounts.Count;
+                    result = _simulatedDb.Accounts.Count;
                 else
                 {
-                    var response = await GetDbAsync($"Account/getActiveAccountCountByAppId?AppId={appId}");
+                    var response = await GetDbAsync(
+                        $"Account/getActiveAccountCountByAppId?AppId={appId}"
+                    );
 
                     // Deserialize on success
-                    if (response.IsSuccessStatusCode && int.TryParse(await response.Content.ReadAsStringAsync(), out int r))
+                    if (
+                        response.IsSuccessStatusCode
+                        && int.TryParse(await response.Content.ReadAsStringAsync(), out var r)
+                    )
                         result = r;
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -705,19 +705,24 @@ namespace Horizon.LIBRARY.Database
             try
             {
                 if (_settings.SimulatedMode)
-                    result = _simulatedClans.Count(x => !x.IsDisbanded);
+                    result = _simulatedDb.Clans.Count(x => !x.IsDisbanded);
                 else
                 {
-                    var response = await GetDbAsync($"Clan/getActiveClanCountByAppId?AppId={appId}");
+                    var response = await GetDbAsync(
+                        $"Clan/getActiveClanCountByAppId?AppId={appId}"
+                    );
 
                     // Deserialize on success
-                    if (response.IsSuccessStatusCode && int.TryParse(await response.Content.ReadAsStringAsync(), out int r))
+                    if (
+                        response.IsSuccessStatusCode
+                        && int.TryParse(await response.Content.ReadAsStringAsync(), out var r)
+                    )
                         result = r;
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -726,33 +731,33 @@ namespace Horizon.LIBRARY.Database
         /// <summary>
         /// Gets whether or not the ip is banned.
         /// </summary>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> GetIsIpBanned(IPAddress ip)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
                 if (_settings.SimulatedMode)
                 {
-                    if (ip != null && ip != IPAddress.None && ip != IPAddress.Any && ip != IPAddress.IPv6Any)
-                    {
-                        (string, bool) ResultItem = JsonDatabaseController.ReadFromJsonFile(directoryPath, "IPAddress", InternetProtocolUtils.GetIPAddressAsUInt(ip).ToString());
-
-                        switch (ResultItem.Item1)
-                        {
-                            case "OK":
-                                return ResultItem.Item2;
-                        }
-                    }
-
-                    return false;
+                    if (
+                        ip != null
+                        && ip != IPAddress.None
+                        && ip != IPAddress.Any
+                        && ip != IPAddress.IPv6Any
+                    )
+                        result = _simulatedDb.BannedIps.Contains(
+                            InternetProtocolUtils.GetIPAddressAsUInt(ip)
+                        );
                 }
                 else
-                    result = (await GetDbAsync($"Account/getIpIsBanned?ipAddress={ip}")).IsSuccessStatusCode;
+                    result = (
+                        await GetDbAsync($"Account/getIpIsBanned?ipAddress={ip}")
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -762,9 +767,10 @@ namespace Horizon.LIBRARY.Database
         /// Gets whether the mac address is banned.
         /// </summary>
         /// <param name="mac">MAC Address as a Base64 string</param>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> GetIsMacBanned(string mac)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -775,22 +781,20 @@ namespace Horizon.LIBRARY.Database
                     else if (mac.Contains('-'))
                         mac = mac.Replace("-", string.Empty);
 
-                    (string, bool) ResultItem = JsonDatabaseController.ReadFromJsonFile(directoryPath, "MacDatabase", mac);
-
-                    switch (ResultItem.Item1)
+                    foreach (var macEntry in _simulatedDb.BannedMacs)
                     {
-                        case "OK":
-                            return ResultItem.Item2;
-                        default:
-                            return false;
+                        if (macEntry.Item1.Equals(mac, StringComparison.OrdinalIgnoreCase))
+                            return macEntry.Item2;
                     }
                 }
                 else
-                    result = (await GetDbAsync($"Account/getMacIsBanned?macAddress={mac}")).IsSuccessStatusCode;
+                    result = (
+                        await GetDbAsync($"Account/getMacIsBanned?macAddress={mac}")
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -802,7 +806,7 @@ namespace Horizon.LIBRARY.Database
         /// <param name="accountName">Account name to query.</param>
         public async Task<bool> GetIsAccountNameMacBanned(string accountName, int appId)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -810,18 +814,15 @@ namespace Horizon.LIBRARY.Database
                     result = false;
                 else
                 {
-#if NETFRAMEWORK
-                    accountName = Uri.EscapeDataString(accountName);
-#else
                     accountName = HttpUtility.UrlEncode(accountName);
-#endif
-                    string route = $"Account/getAccountNameMacIsBanned?AccountName={accountName}&AppId={appId}";
+                    var route =
+                        $"Account/getAccountNameMacIsBanned?AccountName={accountName}&AppId={appId}";
                     result = await GetDbAsync<bool>(route);
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -835,7 +836,7 @@ namespace Horizon.LIBRARY.Database
         /// <returns>Returns account.</returns>
         public async Task<bool> GetAccountIsBanned(string accountName, int appId)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -845,18 +846,15 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
-#if NETFRAMEWORK
-                    accountName = Uri.EscapeDataString(accountName);
-#else
                     accountName = HttpUtility.UrlEncode(accountName);
-#endif
-                    string route = $"Account/checkAccountIsBanned?AccountName={accountName}&AppId={appId}";
+                    var route =
+                        $"Account/checkAccountIsBanned?AccountName={accountName}&AppId={appId}";
                     result = await GetDbAsync<bool>(route);
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -867,9 +865,10 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="accountId">Account id.</param>
         /// <param name="machineId">Machine id.</param>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> PostMachineId(int accountId, string machineId)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -880,16 +879,35 @@ namespace Horizon.LIBRARY.Database
                     else if (machineId.Contains('-'))
                         machineId = machineId.Replace("-", string.Empty);
 
-                    JsonDatabaseController.WriteToJsonFile(directoryPath, "MacDatabase", machineId);
+                    bool hasMacEntry = false;
 
-                    return true;
+                    foreach (var macEntry in _simulatedDb.BannedMacs)
+                    {
+                        if (macEntry.Item1.Equals(machineId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            hasMacEntry = true;
+                            break;
+                        }
+                    }
+
+                    hasMacEntry = !hasMacEntry;
+
+                    if (hasMacEntry)
+                        _simulatedDb.BannedMacs.Add((machineId, false)); // Add to simulated banned macs with false (not banned) so that it is tracked for future ban checks)
+
+                    return hasMacEntry;
                 }
                 else
-                    result = (await PostDbAsync($"Account/postMachineId?AccountId={accountId}", $"\"{machineId}\"")).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Account/postMachineId?AccountId={accountId}",
+                            $"\"{machineId}\""
+                        )
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -899,33 +917,45 @@ namespace Horizon.LIBRARY.Database
         /// Posts the given ip to ban to the database.
         /// </summary>
         /// <param name="ipToBan">client ip.</param>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> BanIp(IPAddress ipToBan)
         {
-            bool result = false;
+            var result = false;
 
-            if (ipToBan == null || ipToBan == IPAddress.None || ipToBan == IPAddress.Any || ipToBan == IPAddress.IPv6Any)
+            if (
+                ipToBan == null
+                || ipToBan == IPAddress.None
+                || ipToBan == IPAddress.Any
+                || ipToBan == IPAddress.IPv6Any
+            )
                 return result;
 
             try
             {
                 if (_settings.SimulatedMode)
                 {
-                    JsonDatabaseController.WriteToJsonFile(directoryPath, "IPAddress", InternetProtocolUtils.GetIPAddressAsUInt(ipToBan).ToString());
+                    uint ipAsUInt = InternetProtocolUtils.GetIPAddressAsUInt(ipToBan);
+                    bool hasNoEntry = !_simulatedDb.BannedIps.Contains(ipAsUInt);
 
-                    return true;
+                    if (hasNoEntry)
+                        _simulatedDb.BannedIps.Add(ipAsUInt);
+
+                    return hasNoEntry;
                 }
                 else
-                    result = (await PostDbAsync($"Account/BanIp", $"\"{ipToBan}\"")).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync($"Account/BanIp", $"\"{ipToBan}\"")
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
         }
 
-#endregion
+        #endregion
 
         #region Buddy / Ignored
 
@@ -934,24 +964,32 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="addBuddy">Add buddy parameters.</param>
         /// <returns>Success or failure.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> addBuddyInvitation(AccountRelationInviteDTO addBuddyInvite)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
                 if (_settings.SimulatedMode)
                 {
-                    _simulatedBuddyInvitations.Add(addBuddyInvite);
+                    _simulatedDb.BuddyInvitations.Add(addBuddyInvite);
+
+                    SaveSimulated();
 
                     result = true;
                 }
                 else
-                    result = (await PostDbAsync($"Buddy/addBuddyInvitation", JsonConvert.SerializeObject(addBuddyInvite))).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Buddy/addBuddyInvitation",
+                            JsonConvert.SerializeObject(addBuddyInvite)
+                        )
+                    ).IsSuccessStatusCode;
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -962,24 +1000,32 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="addBuddy">Add buddy parameters.</param>
         /// <returns>Success or failure.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> deleteBuddyInvitation(AccountRelationInviteDTO addBuddyInvite)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
                 if (_settings.SimulatedMode)
                 {
-                    _simulatedBuddyInvitations.Remove(addBuddyInvite);
+                    _simulatedDb.BuddyInvitations.Remove(addBuddyInvite);
+
+                    SaveSimulated();
 
                     result = true;
                 }
                 else
-                    result = (await PostDbAsync($"Buddy/deleteBuddyInvitation", JsonConvert.SerializeObject(addBuddyInvite))).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Buddy/deleteBuddyInvitation",
+                            JsonConvert.SerializeObject(addBuddyInvite)
+                        )
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -990,7 +1036,10 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="addBuddy">Add buddy parameters.</param>
         /// <returns>Success or failure.</returns>
-        public async Task<List<AccountRelationInviteDTO>> retrieveBuddyInvitations(int appId, int accountId)
+        public async Task<List<AccountRelationInviteDTO>> retrieveBuddyInvitations(
+            int appId,
+            int accountId
+        )
         {
             List<AccountRelationInviteDTO> result = null;
 
@@ -1000,16 +1049,18 @@ namespace Horizon.LIBRARY.Database
                 {
                     var account = await GetAccountById(accountId);
                     if (account != null)
-                    {
-                        result = _simulatedBuddyInvitations.Where(x => x.AppId == appId).ToList();
-                    }
+                        result = _simulatedDb
+                            .BuddyInvitations.Where(x => x.AppId == appId)
+                            .ToList();
                 }
                 else
-                    result = await GetDbAsync<List<AccountRelationInviteDTO>>($"Buddy/retrieveBuddyInvitations?appId={appId}&accountId={accountId}");
+                    result = await GetDbAsync<List<AccountRelationInviteDTO>>(
+                        $"Buddy/retrieveBuddyInvitations?appId={appId}&accountId={accountId}"
+                    );
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1020,9 +1071,10 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="addBuddy">Add buddy parameters.</param>
         /// <returns>Success or failure.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> AddBuddy(BuddyDTO addBuddy)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -1037,18 +1089,22 @@ namespace Horizon.LIBRARY.Database
                         friends[friends.Length - 1] = new AccountRelationDTO()
                         {
                             AccountId = buddyAccount.AccountId,
-                            AccountName = buddyAccount.AccountName
+                            AccountName = buddyAccount.AccountName,
                         };
                         account.Friends = friends;
                         result = true;
+
+                        SaveSimulated();
                     }
                 }
                 else
-                    result = (await PostDbAsync($"Buddy/addBuddy", JsonConvert.SerializeObject(addBuddy))).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync($"Buddy/addBuddy", JsonConvert.SerializeObject(addBuddy))
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1059,9 +1115,10 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="removeBuddy">Remove buddy parameters.</param>
         /// <returns>Success or failure.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> RemoveBuddy(BuddyDTO removeBuddy)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -1081,14 +1138,21 @@ namespace Horizon.LIBRARY.Database
                         }
                         account.Friends = newFriends.ToArray();
                         result = true;
+
+                        SaveSimulated();
                     }
                 }
                 else
-                    result = (await PostDbAsync($"Buddy/removeBuddy", JsonConvert.SerializeObject(removeBuddy))).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Buddy/removeBuddy",
+                            JsonConvert.SerializeObject(removeBuddy)
+                        )
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1099,9 +1163,10 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="addIgnored">Add ignored parameters.</param>
         /// <returns>Success or failure.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> AddIgnored(IgnoredDTO addIgnored)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -1116,18 +1181,25 @@ namespace Horizon.LIBRARY.Database
                         ignored[ignored.Length - 1] = new AccountRelationDTO()
                         {
                             AccountId = ignoreAccount.AccountId,
-                            AccountName = ignoreAccount.AccountName
+                            AccountName = ignoreAccount.AccountName,
                         };
                         account.Ignored = ignored;
                         result = true;
+
+                        SaveSimulated();
                     }
                 }
                 else
-                    result = (await PostDbAsync($"Buddy/addIgnored", JsonConvert.SerializeObject(addIgnored))).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Buddy/addIgnored",
+                            JsonConvert.SerializeObject(addIgnored)
+                        )
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1138,9 +1210,10 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="removeIgnored">Remove ignored parameters.</param>
         /// <returns>Success or failure.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> RemoveIgnored(IgnoredDTO removeIgnored)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -1160,14 +1233,21 @@ namespace Horizon.LIBRARY.Database
                         }
                         account.Ignored = newIgnored.ToArray();
                         result = true;
+
+                        SaveSimulated();
                     }
                 }
                 else
-                    result = (await PostDbAsync($"Buddy/removeIgnored", JsonConvert.SerializeObject(removeIgnored))).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Buddy/removeIgnored",
+                            JsonConvert.SerializeObject(removeIgnored)
+                        )
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1190,22 +1270,20 @@ namespace Horizon.LIBRARY.Database
             {
                 if (_settings.SimulatedMode)
                 {
-                    var stats = _simulatedAccounts.FirstOrDefault(x => x.AccountId == accountId)?.AccountWideStats;
+                    var stats = _simulatedDb
+                        .Accounts.FirstOrDefault(x => x.AccountId == accountId)
+                        ?.AccountWideStats;
                     if (stats != null)
                     {
-                        result = new StatPostDTO()
-                        {
-                            AccountId = accountId,
-                            Stats = stats
-                        };
+                        result = new StatPostDTO() { AccountId = accountId, Stats = stats };
                     }
                 }
                 else
                     result = await GetDbAsync<StatPostDTO>($"Stats/getStats?AccountId={accountId}");
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1224,22 +1302,22 @@ namespace Horizon.LIBRARY.Database
             {
                 if (_settings.SimulatedMode)
                 {
-                    var stats = _simulatedClans.FirstOrDefault(x => x.ClanId == clanId)?.ClanWideStats;
+                    var stats = _simulatedDb
+                        .Clans.FirstOrDefault(x => x.ClanId == clanId)
+                        ?.ClanWideStats;
                     if (stats != null)
                     {
-                        result = new ClanStatPostDTO()
-                        {
-                            ClanId = clanId,
-                            Stats = stats
-                        };
+                        result = new ClanStatPostDTO() { ClanId = clanId, Stats = stats };
                     }
                 }
                 else
-                    result = await GetDbAsync<ClanStatPostDTO>($"Stats/getClanStats?ClanId={clanId}");
+                    result = await GetDbAsync<ClanStatPostDTO>(
+                        $"Stats/getClanStats?ClanId={clanId}"
+                    );
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1260,24 +1338,25 @@ namespace Horizon.LIBRARY.Database
                 if (_settings.SimulatedMode)
                 {
                     var account = await GetAccountById(accountId);
-                    if (account == null)
-                        return null;
-
-                    return new LeaderboardDTO()
-                    {
-                        AccountId = accountId,
-                        AccountName = account.AccountName,
-                        Index = 1,
-                        MediusStats = account.MediusStats,
-                        TotalRankedAccounts = 1
-                    };
+                    return account == null
+                        ? null
+                        : new LeaderboardDTO()
+                        {
+                            AccountId = accountId,
+                            AccountName = account.AccountName,
+                            Index = 1,
+                            MediusStats = account.MediusStats,
+                            TotalRankedAccounts = 1,
+                        };
                 }
                 else
-                    result = await GetDbAsync<LeaderboardDTO>($"Stats/getPlayerLeaderboard?AccountId={accountId}");
+                    result = await GetDbAsync<LeaderboardDTO>(
+                        $"Stats/getPlayerLeaderboard?AccountId={accountId}"
+                    );
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1289,7 +1368,11 @@ namespace Horizon.LIBRARY.Database
         /// <param name="accountId">Account id of player.</param>
         /// <param name="statId">Index of stat. Starts at 1.</param>
         /// <returns>Leaderboard result for player.</returns>
-        public async Task<LeaderboardDTO> GetPlayerLeaderboardIndex(int accountId, int statId, int appId)
+        public async Task<LeaderboardDTO> GetPlayerLeaderboardIndex(
+            int accountId,
+            int statId,
+            int appId
+        )
         {
             LeaderboardDTO result = null;
 
@@ -1298,25 +1381,26 @@ namespace Horizon.LIBRARY.Database
                 if (_settings.SimulatedMode)
                 {
                     var account = await GetAccountById(accountId);
-                    if (account == null)
-                        return null;
-
-                    return new LeaderboardDTO()
-                    {
-                        AccountId = accountId,
-                        AccountName = account.AccountName,
-                        Index = 1,
-                        MediusStats = account.MediusStats,
-                        StatValue = account.AccountWideStats[statId - 1],
-                        TotalRankedAccounts = 1
-                    };
+                    return account == null
+                        ? null
+                        : new LeaderboardDTO()
+                        {
+                            AccountId = accountId,
+                            AccountName = account.AccountName,
+                            Index = 1,
+                            MediusStats = account.MediusStats,
+                            StatValue = account.AccountWideStats[statId - 1],
+                            TotalRankedAccounts = 1,
+                        };
                 }
                 else
-                    result = await GetDbAsync<LeaderboardDTO>($"Stats/getPlayerLeaderboardIndex?AccountId={accountId}&StatId={statId}&AppId={appId}");
+                    result = await GetDbAsync<LeaderboardDTO>(
+                        $"Stats/getPlayerLeaderboardIndex?AccountId={accountId}&StatId={statId}&AppId={appId}"
+                    );
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1328,7 +1412,11 @@ namespace Horizon.LIBRARY.Database
         /// <param name="clanId">Clan id of clan.</param>
         /// <param name="statId">Index of stat. Starts at 1.</param>
         /// <returns>Leaderboard result for clan.</returns>
-        public async Task<ClanLeaderboardDTO> GetClanLeaderboardIndex(int clanId, int statId, int appId)
+        public async Task<ClanLeaderboardDTO> GetClanLeaderboardIndex(
+            int clanId,
+            int statId,
+            int appId
+        )
         {
             ClanLeaderboardDTO result = null;
 
@@ -1340,7 +1428,10 @@ namespace Horizon.LIBRARY.Database
                     if (clan == null)
                         return null;
 
-                    var ordered = _simulatedClans.Where(x => !x.IsDisbanded).OrderByDescending(x => x.ClanWideStats[statId]).ToList();
+                    var ordered = _simulatedDb
+                        .Clans.Where(x => !x.IsDisbanded)
+                        .OrderByDescending(x => x.ClanWideStats[statId])
+                        .ToList();
                     return new ClanLeaderboardDTO()
                     {
                         ClanId = clan.ClanId,
@@ -1348,15 +1439,17 @@ namespace Horizon.LIBRARY.Database
                         Index = ordered.FindIndex(0, ordered.Count, x => x.ClanId == clanId),
                         MediusStats = clan.ClanMediusStats,
                         StatValue = clan.ClanWideStats[statId],
-                        TotalRankedClans = _simulatedClans.Count(x => !x.IsDisbanded)
+                        TotalRankedClans = _simulatedDb.Clans.Count(x => !x.IsDisbanded),
                     };
                 }
                 else
-                    result = await GetDbAsync<ClanLeaderboardDTO>($"Stats/getClanLeaderboardIndex?ClanId={clanId}&StatId={statId + 1}&AppId={appId}");
+                    result = await GetDbAsync<ClanLeaderboardDTO>(
+                        $"Stats/getClanLeaderboardIndex?ClanId={clanId}&StatId={statId + 1}&AppId={appId}"
+                    );
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1369,7 +1462,12 @@ namespace Horizon.LIBRARY.Database
         /// <param name="startIndex">Position to start gathering results from. Starts at 0.</param>
         /// <param name="size">Max number of items to retrieve.</param>
         /// <returns>Collection of leaderboard results for each player in page.</returns>
-        public async Task<ClanLeaderboardDTO[]> GetClanLeaderboard(int statId, int startIndex, int size, int appId)
+        public async Task<ClanLeaderboardDTO[]> GetClanLeaderboard(
+            int statId,
+            int startIndex,
+            int size,
+            int appId
+        )
         {
             ClanLeaderboardDTO[] result = null;
 
@@ -1377,23 +1475,33 @@ namespace Horizon.LIBRARY.Database
             {
                 if (_settings.SimulatedMode)
                 {
-                    var ordered = _simulatedClans.Where(x => x.AppId == appId).Where(x => !x.IsDisbanded).OrderByDescending(x => x.ClanWideStats[statId]).Skip(startIndex).Take(size).ToList();
-                    result = ordered.Select(x => new ClanLeaderboardDTO()
-                    {
-                        ClanId = x.ClanId,
-                        ClanName = x.ClanName,
-                        MediusStats = x.ClanMediusStats,
-                        StatValue = x.ClanWideStats[statId],
-                        TotalRankedClans = _simulatedClans.Count(y => !y.IsDisbanded),
-                        Index = startIndex + ordered.IndexOf(x)
-                    }).ToArray();
+                    var ordered = _simulatedDb
+                        .Clans.Where(x => x.AppId == appId)
+                        .Where(x => !x.IsDisbanded)
+                        .OrderByDescending(x => x.ClanWideStats[statId])
+                        .Skip(startIndex)
+                        .Take(size)
+                        .ToList();
+                    result = ordered
+                        .Select(x => new ClanLeaderboardDTO()
+                        {
+                            ClanId = x.ClanId,
+                            ClanName = x.ClanName,
+                            MediusStats = x.ClanMediusStats,
+                            StatValue = x.ClanWideStats[statId],
+                            TotalRankedClans = _simulatedDb.Clans.Count(y => !y.IsDisbanded),
+                            Index = startIndex + ordered.IndexOf(x),
+                        })
+                        .ToArray();
                 }
                 else
-                    result = await GetDbAsync<ClanLeaderboardDTO[]>($"Stats/getClanLeaderboard?StatId={statId + 1}&StartIndex={startIndex}&Size={size}&AppId={appId}");
+                    result = await GetDbAsync<ClanLeaderboardDTO[]>(
+                        $"Stats/getClanLeaderboard?StatId={statId + 1}&StartIndex={startIndex}&Size={size}&AppId={appId}"
+                    );
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1406,7 +1514,12 @@ namespace Horizon.LIBRARY.Database
         /// <param name="startIndex">Position to start gathering results from. Starts at 0.</param>
         /// <param name="size">Max number of items to retrieve.</param>
         /// <returns>Collection of leaderboard results for each player in page.</returns>
-        public async Task<LeaderboardDTO[]> GetLeaderboard(int statId, int startIndex, int size, int appId)
+        public async Task<LeaderboardDTO[]> GetLeaderboard(
+            int statId,
+            int startIndex,
+            int size,
+            int appId
+        )
         {
             LeaderboardDTO[] result = null;
 
@@ -1414,23 +1527,32 @@ namespace Horizon.LIBRARY.Database
             {
                 if (_settings.SimulatedMode)
                 {
-                    var ordered = _simulatedAccounts.Where(x => x.AppId == appId).OrderByDescending(x => x.AccountWideStats?[statId]).Skip(startIndex).Take(size).ToList();
-                    result = ordered.Select(x => new LeaderboardDTO()
-                    {
-                        AccountId = x.AccountId,
-                        AccountName = x.AccountName,
-                        MediusStats = x.MediusStats,
-                        StatValue = x.AccountWideStats[statId],
-                        TotalRankedAccounts = 0,
-                        Index = startIndex + ordered.IndexOf(x)
-                    }).ToArray();
+                    var ordered = _simulatedDb
+                        .Accounts.Where(x => x.AppId == appId)
+                        .OrderByDescending(x => x.AccountWideStats?[statId])
+                        .Skip(startIndex)
+                        .Take(size)
+                        .ToList();
+                    result = ordered
+                        .Select(x => new LeaderboardDTO()
+                        {
+                            AccountId = x.AccountId,
+                            AccountName = x.AccountName,
+                            MediusStats = x.MediusStats,
+                            StatValue = x.AccountWideStats[statId],
+                            TotalRankedAccounts = 0,
+                            Index = startIndex + ordered.IndexOf(x),
+                        })
+                        .ToArray();
                 }
                 else
-                    result = await GetDbAsync<LeaderboardDTO[]>($"Stats/getLeaderboard?StatId={statId}&StartIndex={startIndex}&Size={size}&AppId={appId}");
+                    result = await GetDbAsync<LeaderboardDTO[]>(
+                        $"Stats/getLeaderboard?StatId={statId}&StartIndex={startIndex}&Size={size}&AppId={appId}"
+                    );
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1450,22 +1572,31 @@ namespace Horizon.LIBRARY.Database
             {
                 if (_settings.SimulatedMode)
                 {
-                    var ordered = _simulatedAccounts.Where(x => x.AppId == appId).OrderByDescending(x => x.AccountWideStats?[0]).Skip(startIndex).Take(size).ToList();
-                    result = ordered.Select(x => new LeaderboardDTO()
-                    {
-                        AccountId = x.AccountId,
-                        AccountName = x.AccountName,
-                        MediusStats = x.MediusStats,
-                        TotalRankedAccounts = 0,
-                        Index = startIndex + ordered.IndexOf(x)
-                    }).ToArray();
+                    var ordered = _simulatedDb
+                        .Accounts.Where(x => x.AppId == appId)
+                        .OrderByDescending(x => x.AccountWideStats?[0])
+                        .Skip(startIndex)
+                        .Take(size)
+                        .ToList();
+                    result = ordered
+                        .Select(x => new LeaderboardDTO()
+                        {
+                            AccountId = x.AccountId,
+                            AccountName = x.AccountName,
+                            MediusStats = x.MediusStats,
+                            TotalRankedAccounts = 0,
+                            Index = startIndex + ordered.IndexOf(x),
+                        })
+                        .ToArray();
                 }
                 else
-                    result = await GetDbAsync<LeaderboardDTO[]>($"Stats/getLeaderboard?Size={size}&AppId={appId}");
+                    result = await GetDbAsync<LeaderboardDTO[]>(
+                        $"Stats/getLeaderboard?Size={size}&AppId={appId}"
+                    );
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1476,9 +1607,10 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="statPost">Model containing account id and ladder stats collection.</param>
         /// <returns>Success or failure.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> PostAccountLadderStats(StatPostDTO statPost)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -1490,13 +1622,17 @@ namespace Horizon.LIBRARY.Database
 
                     account.AccountWideStats = statPost.Stats;
                     result = true;
+
+                    SaveSimulated();
                 }
                 else
-                    result = (await PostDbAsync($"Stats/postStats", JsonConvert.SerializeObject(statPost))).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync($"Stats/postStats", JsonConvert.SerializeObject(statPost))
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1507,9 +1643,10 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="statPost">Model containing account id and ladder stats collection.</param>
         /// <returns>Success or failure.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> PostAccountLadderCustomStats(StatPostDTO statPost)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -1521,13 +1658,20 @@ namespace Horizon.LIBRARY.Database
 
                     account.AccountCustomWideStats = statPost.Stats;
                     result = true;
+
+                    SaveSimulated();
                 }
                 else
-                    result = (await PostDbAsync($"Stats/postStatsCustom", JsonConvert.SerializeObject(statPost))).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Stats/postStatsCustom",
+                            JsonConvert.SerializeObject(statPost)
+                        )
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1538,9 +1682,15 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="statPost">Model containing clan id and ladder stats collection.</param>
         /// <returns>Success or failure.</returns>
-        public async Task<bool> PostClanLadderStats(int accountId, int? clanId, int[] stats, int appId)
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
+        public async Task<bool> PostClanLadderStats(
+            int accountId,
+            int? clanId,
+            int[] stats,
+            int appId
+        )
         {
-            bool result = false;
+            var result = false;
             if (!clanId.HasValue)
                 return false;
 
@@ -1558,19 +1708,24 @@ namespace Horizon.LIBRARY.Database
 
                     clan.ClanWideStats = stats;
                     result = true;
+
+                    SaveSimulated();
                 }
                 else
                 {
-                    result = (await PostDbAsync($"Stats/postClanStats", JsonConvert.SerializeObject(new ClanStatPostDTO()
-                    {
-                        ClanId = clanId.Value,
-                        Stats = stats
-                    }))).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Stats/postClanStats",
+                            JsonConvert.SerializeObject(
+                                new ClanStatPostDTO() { ClanId = clanId.Value, Stats = stats }
+                            )
+                        )
+                    ).IsSuccessStatusCode;
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1580,9 +1735,15 @@ namespace Horizon.LIBRARY.Database
         /// Posts custom ladder stats to clan id.
         /// </summary>
         /// <returns>Success or failure.</returns>
-        public async Task<bool> PostClanLadderCustomStats(int accountId, int? clanId, int[] stats, int appId)
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
+        public async Task<bool> PostClanLadderCustomStats(
+            int accountId,
+            int? clanId,
+            int[] stats,
+            int appId
+        )
         {
-            bool result = false;
+            var result = false;
             if (!clanId.HasValue)
                 return false;
 
@@ -1600,19 +1761,24 @@ namespace Horizon.LIBRARY.Database
 
                     clan.ClanCustomWideStats = stats;
                     result = true;
+
+                    SaveSimulated();
                 }
                 else
                 {
-                    result = (await PostDbAsync($"Stats/postClanStatsCustom", JsonConvert.SerializeObject(new ClanStatPostDTO()
-                    {
-                        ClanId = clanId.Value,
-                        Stats = stats
-                    }))).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Stats/postClanStatsCustom",
+                            JsonConvert.SerializeObject(
+                                new ClanStatPostDTO() { ClanId = clanId.Value, Stats = stats }
+                            )
+                        )
+                    ).IsSuccessStatusCode;
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1626,7 +1792,7 @@ namespace Horizon.LIBRARY.Database
         /// <returns>Success or failure.</returns>
         public async Task<bool> PostMediusStats(int accountId, string stats)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -1638,13 +1804,22 @@ namespace Horizon.LIBRARY.Database
 
                     account.MediusStats = stats;
                     result = true;
+
+                    SaveSimulated();
                 }
                 else
-                    result = (await PostDbAsync($"Account/postMediusStats?AccountId={accountId}", $"\"{stats}\""))?.IsSuccessStatusCode ?? false;
+                    result =
+                        (
+                            await PostDbAsync(
+                                $"Account/postMediusStats?AccountId={accountId}",
+                                $"\"{stats}\""
+                            )
+                        )?.IsSuccessStatusCode
+                        ?? false;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1658,7 +1833,7 @@ namespace Horizon.LIBRARY.Database
         /// <returns>Success or failure.</returns>
         public async Task<bool> PostClanMediusStats(int clanId, string stats, int appId)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -1670,13 +1845,22 @@ namespace Horizon.LIBRARY.Database
 
                     clan.ClanMediusStats = stats;
                     result = true;
+
+                    SaveSimulated();
                 }
                 else
-                    result = (await PostDbAsync($"Clan/postClanMediusStats?ClanId={clanId}", $"\"{stats}\""))?.IsSuccessStatusCode ?? false;
+                    result =
+                        (
+                            await PostDbAsync(
+                                $"Clan/postClanMediusStats?ClanId={clanId}",
+                                $"\"{stats}\""
+                            )
+                        )?.IsSuccessStatusCode
+                        ?? false;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1697,14 +1881,19 @@ namespace Horizon.LIBRARY.Database
 
             try
             {
-                if (_settings.SimulatedMode)
-                    result = _simulatedClans.FirstOrDefault(x => x.AppId == appId && x.ClanName != null && x.ClanName.ToLower() == name.ToLower());
-                else
-                    result = await GetDbAsync<ClanDTO>($"Clan/searchClanByName?clanName={name}&appId={appId}");
+                result = _settings.SimulatedMode
+                    ? _simulatedDb.Clans.FirstOrDefault(x =>
+                        x.AppId == appId
+                        && x.ClanName != null
+                        && x.ClanName.Equals(name, StringComparison.CurrentCultureIgnoreCase)
+                    )
+                    : await GetDbAsync<ClanDTO>(
+                        $"Clan/searchClanByName?clanName={name}&appId={appId}"
+                    );
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1721,33 +1910,13 @@ namespace Horizon.LIBRARY.Database
 
             try
             {
-                if (_settings.SimulatedMode)
-                {
-                    result = _simulatedClans.FirstOrDefault(x => x.AppId == appId && x.ClanId == id);
-                    /*
-                    _simulatedClans.Add(result = new ClanDTO()
-                    {
-                        ClanId = _simulatedClanIdCounter++,
-                        ClanName = "RTIME GROUP",
-                        ClanLeaderAccount = creatorAccount,
-                        ClanMemberAccounts = new List<AccountDTO>(new AccountDTO[] { creatorAccount }),
-                        ClanMemberInvitations = new List<ClanInvitationDTO>(),
-                        ClanMessages = new List<ClanMessageDTO>(),
-                        ClanMediusStats = Convert.ToBase64String(new byte[Constants.CLANSTATS_MAXLEN]),
-                        ClanWideStats = new int[Constants.LADDERSTATSWIDE_MAXLEN],
-                        AppId = 1
-                    });
-                    result.ClanMediusStats = "1:2:3";
-                    creatorAccount.ClanId = result.ClanId;
-                    */
-
-                }
-                else
-                    result = await GetDbAsync<ClanDTO>($"Clan/getClan?clanId={id}");
+                result = _settings.SimulatedMode
+                    ? _simulatedDb.Clans.FirstOrDefault(x => x.AppId == appId && x.ClanId == id)
+                    : await GetDbAsync<ClanDTO>($"Clan/getClan?clanId={id}");
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1765,32 +1934,13 @@ namespace Horizon.LIBRARY.Database
             try
             {
                 if (_settings.SimulatedMode)
-                {
-                    result = _simulatedClans.Where(x => x.AppId == appId).ToList();
-                    /*
-                    _simulatedClans.Add(result = new ClanDTO()
-                    {
-                        ClanId = _simulatedClanIdCounter++,
-                        ClanName = "RTIME GROUP",
-                        ClanLeaderAccount = creatorAccount,
-                        ClanMemberAccounts = new List<AccountDTO>(new AccountDTO[] { creatorAccount }),
-                        ClanMemberInvitations = new List<ClanInvitationDTO>(),
-                        ClanMessages = new List<ClanMessageDTO>(),
-                        ClanMediusStats = Convert.ToBase64String(new byte[Constants.CLANSTATS_MAXLEN]),
-                        ClanWideStats = new int[Constants.LADDERSTATSWIDE_MAXLEN],
-                        AppId = 1
-                    });
-                    result.ClanMediusStats = "1:2:3";
-                    creatorAccount.ClanId = result.ClanId;
-                    */
-
-                }
+                    result = _simulatedDb.Clans.Where(x => x.AppId == appId).ToList();
                 else
                     result = await GetDbAsync<List<ClanDTO>>($"Clan/getClans?appId={appId}");
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1801,7 +1951,13 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="createClan">Clan creation parameters.</param>
         /// <returns>Returns created clan.</returns>
-        public async Task<ClanDTO> CreateClan(int creatorAccountId, string clanName, int appId, string mediusStats)
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
+        public async Task<ClanDTO> CreateClan(
+            int creatorAccountId,
+            string clanName,
+            int appId,
+            string mediusStats
+        )
         {
             ClanDTO result = null;
 
@@ -1813,37 +1969,52 @@ namespace Horizon.LIBRARY.Database
                     if (checkExisting == null)
                     {
                         var creatorAccount = await GetAccountById(creatorAccountId);
-                        _simulatedClans.Add(result = new ClanDTO()
-                        {
-                            ClanId = _simulatedClanIdCounter++,
-                            ClanName = clanName,
-                            ClanLeaderAccount = creatorAccount,
-                            ClanMember = new List<AccountDTO>(new AccountDTO[] { creatorAccount }),
-                            ClanInvitations = new List<ClanInvitationDTO>(),
-                            ClanMessages = new List<ClanMessageDTO>(),
-                            ClanMediusStats = Convert.ToBase64String(new byte[Constants.CLANSTATS_MAXLEN]),
-                            ClanStats = new int[Constants.LADDERSTATSWIDE_MAXLEN],
-                            ClanWideStats = new int[Constants.LADDERSTATSWIDE_MAXLEN],
-                            AppId = appId
-                        });
+                        _simulatedDb.Clans.Add(
+                            result = new ClanDTO()
+                            {
+                                ClanId = _simulatedDb.ClanIdCounter++,
+                                ClanName = clanName,
+                                ClanLeaderAccount = creatorAccount,
+                                ClanMember = new List<AccountDTO>(
+                                    new AccountDTO[] { creatorAccount }
+                                ),
+                                ClanInvitations = new List<ClanInvitationDTO>(),
+                                ClanMessages = new List<ClanMessageDTO>(),
+                                ClanMediusStats = Base64.ToBase64String(
+                                    new byte[Constants.CLANSTATS_MAXLEN]
+                                ),
+                                ClanStats = new int[Constants.LADDERSTATSWIDE_MAXLEN],
+                                ClanWideStats = new int[Constants.LADDERSTATSWIDE_MAXLEN],
+                                AppId = appId,
+                            }
+                        );
 
                         creatorAccount.ClanId = result.ClanId;
+
+                        SaveSimulated();
                     }
                     else
-                        LoggerAccessor.LogError($"Clan creation failed clan name already exists!");
+                        LoggerAccessor.LogError(
+                            $"[DbController] - Clan creation failed clan name already exists!"
+                        );
                 }
                 else
                 {
-                    var response = await PostDbAsync($"Clan/createClan?accountId={creatorAccountId}&clanName={clanName}&appId={appId}&mediusStats={mediusStats}", null);
+                    var response = await PostDbAsync(
+                        $"Clan/createClan?accountId={creatorAccountId}&clanName={clanName}&appId={appId}&mediusStats={mediusStats}",
+                        null
+                    );
 
                     // Deserialize on success
                     if (response.IsSuccessStatusCode)
-                        result = JsonConvert.DeserializeObject<ClanDTO>(await response.Content.ReadAsStringAsync());
+                        result = JsonConvert.DeserializeObject<ClanDTO>(
+                            await response.Content.ReadAsStringAsync()
+                        );
                 }
             }
-            catch (Exception ex)
-            { 
-                LoggerAccessor.LogError(ex);
+            catch (Exception e)
+            {
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1854,64 +2025,16 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="CreateClanSVO">Clan creation parameters.</param>
         /// <returns>Returns created clan.</returns>
-        public async Task<ClanDTO> CreateClanSVO(int creatorAccountId, string clanName, string clanTAG, string playerName, int appId)
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
+        public async Task<ClanDTO> CreateClanSVO(
+            int creatorAccountId,
+            string clanName,
+            string clanTAG,
+            string playerName,
+            int appId
+        )
         {
             ClanDTO result = null;
-
-            try
-            {
-                if (_settings.SimulatedMode)
-                {
-
-                    var checkExisting = await GetClanByName(clanName, 0);
-                    if (checkExisting == null)
-                    {
-                        var creatorAccount = await GetAccountById(creatorAccountId);
-                        _simulatedClans.Add(result = new ClanDTO()
-                        {
-                            ClanId = _simulatedClanIdCounter++,
-                            ClanName = clanName,
-                            ClanLeaderAccount = creatorAccount,
-                            ClanMember = new List<AccountDTO>(new AccountDTO[] { creatorAccount }),
-                            ClanInvitations = new List<ClanInvitationDTO>(),
-                            ClanMessages = new List<ClanMessageDTO>(),
-                            ClanMediusStats = Convert.ToBase64String(new byte[Constants.CLANSTATS_MAXLEN]),
-                            ClanStats = new int[Constants.LADDERSTATSWIDE_MAXLEN],
-                            ClanWideStats = new int[Constants.LADDERSTATSWIDE_MAXLEN],
-                        });
-
-                        creatorAccount.ClanId = result.ClanId;
-                    }
-                    else
-                    {
-                        throw new Exception($"Clan creation failed clan name already exists!");
-                    }
-                }
-                else
-                {
-                    var response = await PostDbAsync($"Clan/createClanSVO?accountId={creatorAccountId}&playerName={playerName}&clanName={clanName}&clanTAG={clanTAG}&appId={appId}", null);
-
-                    // Deserialize on success
-                    if (response.IsSuccessStatusCode)
-                        result = JsonConvert.DeserializeObject<ClanDTO>(await response.Content.ReadAsStringAsync());
-                }
-            }
-            catch (Exception e)
-            {
-                LoggerAccessor.LogError(e);
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// ClanUpdateMetaDataSVO
-        /// </summary>
-        /// <param name="ClanUpdateMetaDataSVO">Clan creation parameters.</param>
-        /// <returns>Returns created clan.</returns>
-        public async Task<bool> ClanUpdateMetaDataSVO(int clanId, string metaDataKey, string metaDataValue)
-        {
-            bool result = false;
 
             try
             {
@@ -1921,12 +2044,21 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
-                    result = (await PostDbAsync($"Clan/clanUpdateMetaDataSVO?&clanId={clanId}&metadatakey={metaDataKey}&metadatavalue={metaDataValue}", null)).IsSuccessStatusCode;
+                    var response = await PostDbAsync(
+                        $"Clan/createClanSVO?accountId={creatorAccountId}&playerName={playerName}&clanName={clanName}&clanTAG={clanTAG}&appId={appId}",
+                        null
+                    );
+
+                    // Deserialize on success
+                    if (response.IsSuccessStatusCode)
+                        result = JsonConvert.DeserializeObject<ClanDTO>(
+                            await response.Content.ReadAsStringAsync()
+                        );
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1937,6 +2069,44 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="ClanUpdateMetaDataSVO">Clan creation parameters.</param>
         /// <returns>Returns created clan.</returns>
+        public async Task<bool> ClanUpdateMetaDataSVO(
+            int clanId,
+            string metaDataKey,
+            string metaDataValue
+        )
+        {
+            var result = false;
+
+            try
+            {
+                if (_settings.SimulatedMode)
+                {
+                    //SVO unimplemented
+                }
+                else
+                {
+                    result = (
+                        await PostDbAsync(
+                            $"Clan/clanUpdateMetaDataSVO?&clanId={clanId}&metadatakey={metaDataKey}&metadatavalue={metaDataValue}",
+                            null
+                        )
+                    ).IsSuccessStatusCode;
+                }
+            }
+            catch (Exception e)
+            {
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// ClanUpdateMetaDataSVO
+        /// </summary>
+        /// <param name="ClanUpdateMetaDataSVO">Clan creation parameters.</param>
+        /// <returns>Returns created clan.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<List<ClanMetaDataDTO>> ClanGetMetaDataSVO(int clanId)
         {
             List<ClanMetaDataDTO> result = null;
@@ -1949,14 +2119,16 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
-                    var response = await GetDbAsync($"Clan/clan_GetMetaDataSVO?&clanId={clanId}");// Deserialize on success
+                    var response = await GetDbAsync($"Clan/clan_GetMetaDataSVO?&clanId={clanId}"); // Deserialize on success
                     if (response.IsSuccessStatusCode)
-                        result = JsonConvert.DeserializeObject<List<ClanMetaDataDTO>>(await response.Content.ReadAsStringAsync());
+                        result = JsonConvert.DeserializeObject<List<ClanMetaDataDTO>>(
+                            await response.Content.ReadAsStringAsync()
+                        );
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1967,6 +2139,7 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="Clan_GetClanInfoByIDSVO">Clan creation parameters.</param>
         /// <returns>Returns created clan.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<ClanDTO> Clan_GetClanInfoByIDSVO(int clanId, int appId)
         {
             ClanDTO result = null;
@@ -1979,16 +2152,20 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
-                    var response = await GetDbAsync($"Clan/Clan_GetClanInfoByIDSVO?clanId={clanId}&appId={appId}");
+                    var response = await GetDbAsync(
+                        $"Clan/Clan_GetClanInfoByIDSVO?clanId={clanId}&appId={appId}"
+                    );
 
                     // Deserialize on success
                     if (response.IsSuccessStatusCode)
-                        result = JsonConvert.DeserializeObject<ClanDTO>(await response.Content.ReadAsStringAsync());
+                        result = JsonConvert.DeserializeObject<ClanDTO>(
+                            await response.Content.ReadAsStringAsync()
+                        );
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -1999,6 +2176,7 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="Clan_GetClanInfoByIDSVO">Clan creation parameters.</param>
         /// <returns>Returns created clan.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<ClanDTO> Clan_GetClanInfoByAcctIDSVO(int acctId)
         {
             ClanDTO result = null;
@@ -2011,16 +2189,20 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
-                    var response = await GetDbAsync($"Clan/Clan_GetClanInfoByAcctIDSVO?acctId={acctId}");
+                    var response = await GetDbAsync(
+                        $"Clan/Clan_GetClanInfoByAcctIDSVO?acctId={acctId}"
+                    );
 
                     // Deserialize on success
                     if (response.IsSuccessStatusCode)
-                        result = JsonConvert.DeserializeObject<ClanDTO>(await response.Content.ReadAsStringAsync());
+                        result = JsonConvert.DeserializeObject<ClanDTO>(
+                            await response.Content.ReadAsStringAsync()
+                        );
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2031,6 +2213,7 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="Clan_GetClanPlayersSVO">Clan creation parameters.</param>
         /// <returns>Returns created clan.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<ClanPlayerDTO> Clan_GetClanPlayersSVO(int clanId, int start, int end)
         {
             ClanPlayerDTO result = null;
@@ -2043,16 +2226,20 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
-                    var response = await GetDbAsync($"Clan/Clan_GetClanPlayersSVO?clanId={clanId}&start={start}&end={end}");
+                    var response = await GetDbAsync(
+                        $"Clan/Clan_GetClanPlayersSVO?clanId={clanId}&start={start}&end={end}"
+                    );
 
                     // Deserialize on success
                     if (response.IsSuccessStatusCode)
-                        result = JsonConvert.DeserializeObject<ClanPlayerDTO>(await response.Content.ReadAsStringAsync());
+                        result = JsonConvert.DeserializeObject<ClanPlayerDTO>(
+                            await response.Content.ReadAsStringAsync()
+                        );
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2063,6 +2250,7 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="ClanCreateNews">Clan creation parameters.</param>
         /// <returns>Returns created clan.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<ClanNewsDTO> ClanCreateNews(int clanId, string news, int appId)
         {
             ClanNewsDTO result = null;
@@ -2075,14 +2263,18 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
-                    var response = await GetDbAsync($"Clan/clan_CreateNewsSVO?clanId={clanId}&newsBody={news}&appId={appId}");// Deserialize on success
+                    var response = await GetDbAsync(
+                        $"Clan/clan_CreateNewsSVO?clanId={clanId}&newsBody={news}&appId={appId}"
+                    ); // Deserialize on success
                     if (response.IsSuccessStatusCode)
-                        result = JsonConvert.DeserializeObject<ClanNewsDTO>(await response.Content.ReadAsStringAsync());
+                        result = JsonConvert.DeserializeObject<ClanNewsDTO>(
+                            await response.Content.ReadAsStringAsync()
+                        );
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2093,9 +2285,16 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="ClanModifyNews">Clan creation parameters.</param>
         /// <returns>Returns created clan.</returns>
-        public async Task<bool> ClanModifyNews(int clanId, int newsID, bool newsEdit, bool newsDelete, string newsBody, int appId)
+        public async Task<bool> ClanModifyNews(
+            int clanId,
+            int newsID,
+            bool newsEdit,
+            bool newsDelete,
+            string newsBody,
+            int appId
+        )
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -2105,13 +2304,16 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
-                    result = (await GetDbAsync($"Clan/clan_ModifyNewsSVO?clanId={clanId}&newsID={newsID}&newsEdit={newsEdit}&newsDelete={newsDelete}&newsBody={newsBody}&appId={appId}")).IsSuccessStatusCode;// Deserialize on success
-
+                    result = (
+                        await GetDbAsync(
+                            $"Clan/clan_ModifyNewsSVO?clanId={clanId}&newsID={newsID}&newsEdit={newsEdit}&newsDelete={newsDelete}&newsBody={newsBody}&appId={appId}"
+                        )
+                    ).IsSuccessStatusCode; // Deserialize on success
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2124,7 +2326,7 @@ namespace Horizon.LIBRARY.Database
         /// <returns>Returns created clan.</returns>
         public async Task<bool> ClanRevokeInvite(int acctId, int clanId)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -2134,13 +2336,16 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
-                    result = (await GetDbAsync($"Clan/clan_RevokeInviteSVO?acctId={acctId}&clanId={clanId}")).IsSuccessStatusCode;// Deserialize on success
-
+                    result = (
+                        await GetDbAsync(
+                            $"Clan/clan_RevokeInviteSVO?acctId={acctId}&clanId={clanId}"
+                        )
+                    ).IsSuccessStatusCode; // Deserialize on success
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2151,9 +2356,15 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="ClanRevokeInvite">Clan creation parameters.</param>
         /// <returns>Returns created clan.</returns>
-        public async Task<bool> ClanRespondInvite(int clanInviteID, string news, bool accept, bool reject, int acctId)
+        public async Task<bool> ClanRespondInvite(
+            int clanInviteID,
+            string news,
+            bool accept,
+            bool reject,
+            int acctId
+        )
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -2163,13 +2374,16 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
-                    result = (await GetDbAsync($"Clan/clan_RespondInviteSVO?clanInviteID={clanInviteID}&news={news}&accept={accept}&reject={reject}&acctId={acctId}")).IsSuccessStatusCode;// Deserialize on success
-
+                    result = (
+                        await GetDbAsync(
+                            $"Clan/clan_RespondInviteSVO?clanInviteID={clanInviteID}&news={news}&accept={accept}&reject={reject}&acctId={acctId}"
+                        )
+                    ).IsSuccessStatusCode; // Deserialize on success
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2182,7 +2396,7 @@ namespace Horizon.LIBRARY.Database
         /// <returns>Returns created clan.</returns>
         public async Task<bool> ClanDisband(int clanId, int appId)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -2192,13 +2406,14 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
-                    result = (await GetDbAsync($"Clan/clan_DisbandClanSVO?clanId={clanId}&appId={appId}")).IsSuccessStatusCode;// Deserialize on success
-
+                    result = (
+                        await GetDbAsync($"Clan/clan_DisbandClanSVO?clanId={clanId}&appId={appId}")
+                    ).IsSuccessStatusCode; // Deserialize on success
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2209,6 +2424,7 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="ClanUpdateMetaDataSVO">Clan creation parameters.</param>
         /// <returns>Returns created clan.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<List<ClanNewsDTO>> ClanReadNews(int clanId, int appId)
         {
             List<ClanNewsDTO> result = null;
@@ -2221,14 +2437,18 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
-                    var response = await GetDbAsync($"Clan/clan_ReadNewsSVO?clanId={clanId}&appId={appId}");// Deserialize on success
+                    var response = await GetDbAsync(
+                        $"Clan/clan_ReadNewsSVO?clanId={clanId}&appId={appId}"
+                    ); // Deserialize on success
                     if (response.IsSuccessStatusCode)
-                        result = JsonConvert.DeserializeObject<List<ClanNewsDTO>>(await response.Content.ReadAsStringAsync());
+                        result = JsonConvert.DeserializeObject<List<ClanNewsDTO>>(
+                            await response.Content.ReadAsStringAsync()
+                        );
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2241,7 +2461,7 @@ namespace Horizon.LIBRARY.Database
         /// <returns>Returns created clan.</returns>
         public async Task<bool> SVOCreateClanEvent(SVOEventDTO SVOEvent)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -2251,13 +2471,15 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
-                    var response = (await PostDbAsync($"SVO/Calendar_CreateClanEvent", SVOEvent)).IsSuccessStatusCode;// Deserialize on success
+                    var response = (
+                        await PostDbAsync($"SVO/Calendar_CreateClanEvent", SVOEvent)
+                    ).IsSuccessStatusCode; // Deserialize on success
                     result = response;
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2268,7 +2490,15 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="ClanUpdateMetaDataSVO">Clan creation parameters.</param>
         /// <returns>Returns created clan.</returns>
-        public async Task<List<SVOEventDTO>> SVOGetCalendarEvents(int appId, int acctId, int clanId, string startDate, string endDate, bool bTween)
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
+        public async Task<List<SVOEventDTO>> SVOGetCalendarEvents(
+            int appId,
+            int acctId,
+            int clanId,
+            string startDate,
+            string endDate,
+            bool bTween
+        )
         {
             List<SVOEventDTO> result = null;
 
@@ -2280,14 +2510,18 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
-                    var response = await GetDbAsync($"SVO/Calendar_GetEvents?&appId={appId}&acctId={acctId}&clanId={clanId}&startDate={startDate}&endDate={endDate}&bTween={bTween}");// Deserialize on success
+                    var response = await GetDbAsync(
+                        $"SVO/Calendar_GetEvents?&appId={appId}&acctId={acctId}&clanId={clanId}&startDate={startDate}&endDate={endDate}&bTween={bTween}"
+                    ); // Deserialize on success
                     if (response.IsSuccessStatusCode)
-                        result = JsonConvert.DeserializeObject<List<SVOEventDTO>>(await response.Content.ReadAsStringAsync());
+                        result = JsonConvert.DeserializeObject<List<SVOEventDTO>>(
+                            await response.Content.ReadAsStringAsync()
+                        );
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2298,9 +2532,14 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="ClanSendInviteNews">Clan creation parameters.</param>
         /// <returns>Returns created clan.</returns>
-        public async Task<bool> ClanSendInvite(int clanId, string playerName, string inviteMsg, int appId)
+        public async Task<bool> ClanSendInvite(
+            int clanId,
+            string playerName,
+            string inviteMsg,
+            int appId
+        )
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -2310,13 +2549,16 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
-                    result = (await GetDbAsync($"Clan/clan_SendInviteSVO?clanId={clanId}&playerName={playerName}&inviteMsg={inviteMsg}&appId={appId}")).IsSuccessStatusCode;// Deserialize on success
-
+                    result = (
+                        await GetDbAsync(
+                            $"Clan/clan_SendInviteSVO?clanId={clanId}&playerName={playerName}&inviteMsg={inviteMsg}&appId={appId}"
+                        )
+                    ).IsSuccessStatusCode; // Deserialize on success
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2327,6 +2569,7 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="Clan_GetClanInfoByIDSVO">Clan creation parameters.</param>
         /// <returns>Returns created clan.</returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<List<ClanInvitationDTO>> ClanViewInvites(int acctId)
         {
             List<ClanInvitationDTO> result = null;
@@ -2343,12 +2586,14 @@ namespace Horizon.LIBRARY.Database
 
                     // Deserialize on success
                     if (response.IsSuccessStatusCode)
-                        result = JsonConvert.DeserializeObject<List<ClanInvitationDTO>>(await response.Content.ReadAsStringAsync());
+                        result = JsonConvert.DeserializeObject<List<ClanInvitationDTO>>(
+                            await response.Content.ReadAsStringAsync()
+                        );
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2361,7 +2606,7 @@ namespace Horizon.LIBRARY.Database
         /// <returns>Success or failure.</returns>
         public async Task<bool> DeleteClan(int accountId, int clanId, int appId)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -2380,14 +2625,18 @@ namespace Horizon.LIBRARY.Database
                         inv.ResponseStatus = 3;
 
                     // remove
-                    return _simulatedClans.Remove(clan);
+                    result = _simulatedDb.Clans.Remove(clan);
+
+                    SaveSimulated();
                 }
                 else
-                    result = (await GetDbAsync($"Clan/deleteClan?accountId={accountId}&clanId={clanId}")).IsSuccessStatusCode;
+                    result = (
+                        await GetDbAsync($"Clan/deleteClan?accountId={accountId}&clanId={clanId}")
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2400,9 +2649,15 @@ namespace Horizon.LIBRARY.Database
         /// <param name="clanId">Id of clan.</param>
         /// <param name="newLeaderAccountId">Account id of new leader.</param>
         /// <returns>Returns created clan.</returns>
-        public async Task<bool> ClanTransferLeadership(int leaderAccountId, int clanId, int newLeaderAccountId, int appId)
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
+        public async Task<bool> ClanTransferLeadership(
+            int leaderAccountId,
+            int clanId,
+            int newLeaderAccountId,
+            int appId
+        )
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -2422,20 +2677,29 @@ namespace Horizon.LIBRARY.Database
 
                     clan.ClanLeaderAccount = newLeaderAccount;
                     result = true;
+
+                    SaveSimulated();
                 }
                 else
                 {
-                    result = (await PostDbAsync($"Clan/transferLeadership", JsonConvert.SerializeObject(new ClanTransferLeadershipDTO()
-                    {
-                        AccountId = leaderAccountId,
-                        ClanId = clanId,
-                        NewLeaderAccountId = newLeaderAccountId
-                    }))).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Clan/transferLeadership",
+                            JsonConvert.SerializeObject(
+                                new ClanTransferLeadershipDTO()
+                                {
+                                    AccountId = leaderAccountId,
+                                    ClanId = clanId,
+                                    NewLeaderAccountId = newLeaderAccountId,
+                                }
+                            )
+                        )
+                    ).IsSuccessStatusCode;
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2450,7 +2714,7 @@ namespace Horizon.LIBRARY.Database
         /// <returns>Returns created clan.</returns>
         public async Task<bool> ClanLeave(int fromAccountId, int clanId, int accountId, int appId)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -2461,7 +2725,10 @@ namespace Horizon.LIBRARY.Database
                         return false;
 
                     // only allow leader or player remove player
-                    if (fromAccountId != accountId && clan.ClanLeaderAccount?.AccountId != fromAccountId)
+                    if (
+                        fromAccountId != accountId
+                        && clan.ClanLeaderAccount?.AccountId != fromAccountId
+                    )
                         return false;
 
                     // prevent leader from leaving -- must transfer or disband
@@ -2476,13 +2743,22 @@ namespace Horizon.LIBRARY.Database
                     }
 
                     result = true;
+
+                    SaveSimulated();
                 }
                 else
-                    result = (await PostDbAsync($"Clan/leaveClan?fromAccountId={fromAccountId}&clanId={clanId}&accountId={accountId}", null))?.IsSuccessStatusCode ?? false;
+                    result =
+                        (
+                            await PostDbAsync(
+                                $"Clan/leaveClan?fromAccountId={fromAccountId}&clanId={clanId}&accountId={accountId}",
+                                null
+                            )
+                        )?.IsSuccessStatusCode
+                        ?? false;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2496,16 +2772,21 @@ namespace Horizon.LIBRARY.Database
         /// <param name="accountId">Id of target player.</param>
         /// <param name="message">Invite message.</param>
         /// <returns>Success or failure.</returns>
-        public async Task<bool> CreateClanInvitation(int fromAccountId, int clanId, int accountId, string message)
+        public async Task<bool> CreateClanInvitation(
+            int fromAccountId,
+            int clanId,
+            int accountId,
+            string message
+        )
         {
-            bool result = false;
+            var result = false;
 
             try
             {
                 if (_settings.SimulatedMode)
                 {
                     // get clan
-                    var clan = _simulatedClans.FirstOrDefault(x => x.ClanId == clanId);
+                    var clan = _simulatedDb.Clans.FirstOrDefault(x => x.ClanId == clanId);
                     if (clan == null)
                         return false;
 
@@ -2514,46 +2795,61 @@ namespace Horizon.LIBRARY.Database
                         return false;
 
                     // get target account
-                    var account = _simulatedAccounts.FirstOrDefault(x => x.AccountId == accountId);
+                    var account = _simulatedDb.Accounts.FirstOrDefault(x =>
+                        x.AccountId == accountId
+                    );
                     if (account == null)
                         return false;
 
                     // check if invitations already made
-                    if (clan.ClanInvitations != null && clan.ClanInvitations.Any(x => x.AccountId == accountId && x.ResponseStatus == 0))
+                    if (
+                        clan.ClanInvitations != null
+                        && clan.ClanInvitations.Any(x =>
+                            x.AccountId == accountId && x.ResponseStatus == 0
+                        )
+                    )
                         return false;
 
                     // add
-                    clan.ClanInvitations?.Add(new ClanInvitationDTO()
-                    {
-                        Id = _simulatedClanInvitationIdCounter++,
-                        AppId = clan.AppId,
-                        ClanId = clanId,
-                        ClanName = clan.ClanName,
-                        AccountId = accountId,
-                        AccountName = account.AccountName,
-                        InviteMsg = message
-                    });
+                    clan.ClanInvitations?.Add(
+                        new ClanInvitationDTO()
+                        {
+                            Id = _simulatedDb.ClanInvitationIdCounter++,
+                            AppId = clan.AppId,
+                            ClanId = clanId,
+                            ClanName = clan.ClanName,
+                            AccountId = accountId,
+                            AccountName = account.AccountName,
+                            InviteMsg = message,
+                        }
+                    );
+
+                    SaveSimulated();
 
                     return true;
                 }
                 else
                 {
-                    result = (await PostDbAsync($"Clan/createInvitation?accountId={fromAccountId}", new ClanInvitationDTO()
-                    {
-                        ClanId = clanId,
-                        AccountId = accountId,
-                        InviteMsg = message
-                    })).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Clan/createInvitation?accountId={fromAccountId}",
+                            new ClanInvitationDTO()
+                            {
+                                ClanId = clanId,
+                                AccountId = accountId,
+                                InviteMsg = message,
+                            }
+                        )
+                    ).IsSuccessStatusCode;
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
         }
-
 
         /// <summary>
         /// Returns all clan invitations for the given player.
@@ -2569,24 +2865,30 @@ namespace Horizon.LIBRARY.Database
                 if (_settings.SimulatedMode)
                 {
                     // get clans
-                    var clans = _simulatedClans.Where(x => x.ClanInvitations != null && x.ClanInvitations.Any(y => y.AccountId == accountId));
-
-                    result = clans
+                    result = _simulatedDb
+                        .Clans.Where(x =>
+                            x.ClanInvitations != null
+                            && x.ClanInvitations.Any(y => y.AccountId == accountId)
+                        )
                         .Select(x => new AccountClanInvitationDTO()
                         {
                             LeaderAccountId = x.ClanLeaderAccount.AccountId,
                             LeaderAccountName = x.ClanLeaderAccount.AccountName,
-                            Invitation = x.ClanInvitations?.FirstOrDefault(y => y.AccountId == accountId)
+                            Invitation = x.ClanInvitations?.FirstOrDefault(y =>
+                                y.AccountId == accountId
+                            ),
                         })
                         .Where(x => x.Invitation != null)
                         .ToList();
                 }
                 else
-                    result = (await GetDbAsync<List<AccountClanInvitationDTO>>($"Clan/invitations?accountId={accountId}"));
+                    result = await GetDbAsync<List<AccountClanInvitationDTO>>(
+                        $"Clan/invitations?accountId={accountId}"
+                    );
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2600,26 +2902,37 @@ namespace Horizon.LIBRARY.Database
         /// <param name="message">Response message to record.</param>
         /// <param name="responseStatus">Response to invitation.</param>
         /// <returns>Success or failure.</returns>
-        public async Task<bool> RespondToClanInvitation(int accountId, int inviteId, string message, int responseStatus)
+        public async Task<bool> RespondToClanInvitation(
+            int accountId,
+            int inviteId,
+            string message,
+            int responseStatus
+        )
         {
-            bool result = false;
+            var result = false;
 
             try
             {
                 if (_settings.SimulatedMode)
                 {
                     // find invitation
-                    var invite = _simulatedClans.Select(x => x.ClanInvitations?.FirstOrDefault(y => y.Id == inviteId)).FirstOrDefault(x => x != null);
+                    var invite = _simulatedDb
+                        .Clans.Select(x => x.ClanInvitations?.FirstOrDefault(y => y.Id == inviteId))
+                        .FirstOrDefault(x => x != null);
                     if (invite == null)
                         return false;
 
                     // get clan
-                    var clan = _simulatedClans.FirstOrDefault(x => x.ClanInvitations != null && x.ClanInvitations.Contains(invite));
+                    var clan = _simulatedDb.Clans.FirstOrDefault(x =>
+                        x.ClanInvitations != null && x.ClanInvitations.Contains(invite)
+                    );
                     if (clan == null)
                         return false;
 
                     // get account
-                    var account = _simulatedAccounts.FirstOrDefault(x => x.AccountId == accountId);
+                    var account = _simulatedDb.Accounts.FirstOrDefault(x =>
+                        x.AccountId == accountId
+                    );
                     if (account == null)
                         return false;
 
@@ -2643,22 +2956,29 @@ namespace Horizon.LIBRARY.Database
                     }
 
                     result = true;
+
+                    SaveSimulated();
                 }
                 else
                 {
-                    result = (await PostDbAsync($"Clan/respondInvitation", new ClanInvitationResponseDTO()
-                    {
-                        AccountId = accountId,
-                        InvitationId = inviteId,
-                        Response = responseStatus,
-                        ResponseMessage = message,
-                        ResponseTime = (int)DateTimeUtils.GetUnixTimeU32()
-                    })).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Clan/respondInvitation",
+                            new ClanInvitationResponseDTO()
+                            {
+                                AccountId = accountId,
+                                InvitationId = inviteId,
+                                Response = responseStatus,
+                                ResponseMessage = message,
+                                ResponseTime = (int)DateTimeUtils.GetUnixTimeU32(),
+                            }
+                        )
+                    ).IsSuccessStatusCode;
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2671,16 +2991,20 @@ namespace Horizon.LIBRARY.Database
         /// <param name="clanId">Id of clan.</param>
         /// <param name="targetAccountId">Target account to revoke invitation to.</param>
         /// <returns>Success or failure.</returns>
-        public async Task<bool> RevokeClanInvitation(int fromAccountId, int clanId, int targetAccountId)
+        public async Task<bool> RevokeClanInvitation(
+            int fromAccountId,
+            int clanId,
+            int targetAccountId
+        )
         {
-            bool result = false;
+            var result = false;
 
             try
             {
                 if (_settings.SimulatedMode)
                 {
                     // get clan
-                    var clan = _simulatedClans.FirstOrDefault(x => x.ClanId == clanId);
+                    var clan = _simulatedDb.Clans.FirstOrDefault(x => x.ClanId == clanId);
                     if (clan == null)
                         return false;
 
@@ -2689,7 +3013,9 @@ namespace Horizon.LIBRARY.Database
                         return false;
 
                     // find invitation
-                    var invite = clan.ClanInvitations?.FirstOrDefault(x => x.AccountId == targetAccountId);
+                    var invite = clan.ClanInvitations?.FirstOrDefault(x =>
+                        x.AccountId == targetAccountId
+                    );
                     if (invite == null)
                         return false;
 
@@ -2700,13 +3026,20 @@ namespace Horizon.LIBRARY.Database
                     invite.ResponseStatus = 3;
 
                     result = true;
+
+                    SaveSimulated();
                 }
                 else
-                    result = (await PostDbAsync($"Clan/revokeInvitation?fromAccountId={fromAccountId}&clanId={clanId}&targetAccountId={targetAccountId}", null)).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Clan/revokeInvitation?fromAccountId={fromAccountId}&clanId={clanId}&targetAccountId={targetAccountId}",
+                            null
+                        )
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2717,7 +3050,13 @@ namespace Horizon.LIBRARY.Database
         /// </summary>
         /// <param name="accountId">Id of target player.</param>
         /// <returns>Success or failure.</returns>
-        public async Task<List<ClanMessageDTO>> GetClanMessages(int accountId, int clanId, int startIndex, int pageSize, int appId)
+        public async Task<List<ClanMessageDTO>> GetClanMessages(
+            int accountId,
+            int clanId,
+            int startIndex,
+            int pageSize,
+            int appId
+        )
         {
             List<ClanMessageDTO> result = null;
 
@@ -2729,18 +3068,20 @@ namespace Horizon.LIBRARY.Database
                     var clan = await GetClanById(clanId, appId);
                     if (clan != null)
                     {
-                        result = clan.ClanMessages?
-                            .Skip(startIndex * pageSize)
+                        result = clan
+                            .ClanMessages?.Skip(startIndex * pageSize)
                             .Take(pageSize)
                             .ToList();
                     }
                 }
                 else
-                    result = await GetDbAsync<List<ClanMessageDTO>>($"Clan/messages?accountId={accountId}&clanId={clanId}&start={startIndex}&pageSize={pageSize}");
+                    result = await GetDbAsync<List<ClanMessageDTO>>(
+                        $"Clan/messages?accountId={accountId}&clanId={clanId}&start={startIndex}&pageSize={pageSize}"
+                    );
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2755,7 +3096,7 @@ namespace Horizon.LIBRARY.Database
         /// <returns>Success or failure.</returns>
         public async Task<bool> ClanAddMessage(int accountId, int clanId, string message, int appId)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -2770,25 +3111,31 @@ namespace Horizon.LIBRARY.Database
                     if (clan.ClanLeaderAccount?.AccountId != accountId)
                         return false;
 
-                    clan.ClanMessages?.Add(new ClanMessageDTO()
-                    {
-                        Id = _simulatedClanMessageIdCounter++,
-                        Message = message
-                    });
+                    clan.ClanMessages?.Add(
+                        new ClanMessageDTO()
+                        {
+                            Id = _simulatedDb.ClanMessageIdCounter++,
+                            Message = message,
+                        }
+                    );
 
                     result = true;
+
+                    SaveSimulated();
                 }
                 else
                 {
-                    result = (await PostDbAsync($"Clan/addMessage?accountId={accountId}&clanId={clanId}", new ClanMessageDTO()
-                    {
-                        Message = message
-                    })).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Clan/addMessage?accountId={accountId}&clanId={clanId}",
+                            new ClanMessageDTO() { Message = message }
+                        )
+                    ).IsSuccessStatusCode;
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2802,9 +3149,15 @@ namespace Horizon.LIBRARY.Database
         /// <param name="messageId">Id of clan message to edit.</param>
         /// <param name="message">Message to add.</param>
         /// <returns>Success or failure.</returns>
-        public async Task<bool> ClanEditMessage(int accountId, int clanId, int messageId, string message, int appId)
+        public async Task<bool> ClanEditMessage(
+            int accountId,
+            int clanId,
+            int messageId,
+            string message,
+            int appId
+        )
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -2827,19 +3180,22 @@ namespace Horizon.LIBRARY.Database
                     clanMessage.Message = message;
 
                     result = true;
+
+                    SaveSimulated();
                 }
                 else
                 {
-                    result = (await PutDbAsync($"Clan/editMessage?accountId={accountId}&clanId={clanId}", new ClanMessageDTO()
-                    {
-                        Id = messageId,
-                        Message = message
-                    })).IsSuccessStatusCode;
+                    result = (
+                        await PutDbAsync(
+                            $"Clan/editMessage?accountId={accountId}&clanId={clanId}",
+                            new ClanMessageDTO() { Id = messageId, Message = message }
+                        )
+                    ).IsSuccessStatusCode;
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2852,9 +3208,14 @@ namespace Horizon.LIBRARY.Database
         /// <param name="clanId">Id of clan.</param>
         /// <param name="messageId">Id of clan message to delete.</param>
         /// <returns>Success or failure.</returns>
-        public async Task<bool> ClanDeleteMessage(int accountId, int clanId, int messageId, int appId)
+        public async Task<bool> ClanDeleteMessage(
+            int accountId,
+            int clanId,
+            int messageId,
+            int appId
+        )
         {
-            bool result = false;
+            var result = false;
 
             try
             {
@@ -2880,15 +3241,17 @@ namespace Horizon.LIBRARY.Database
                 }
                 else
                 {
-                    result = (await PostDbAsync($"Clan/deleteMessage?accountId={accountId}&clanId={clanId}", new ClanMessageDTO()
-                    {
-                        Id = messageId
-                    })).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Clan/deleteMessage?accountId={accountId}&clanId={clanId}",
+                            new ClanMessageDTO() { Id = messageId }
+                        )
+                    ).IsSuccessStatusCode;
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -2902,114 +3265,121 @@ namespace Horizon.LIBRARY.Database
         /// <param name="appId">AppId of the game to filter by</param>
         /// <param name="message">Message by the game to send for requesting the clan team challenge</param>
         /// <returns>Returns clan.</returns>
-        public async Task<ClanTeamChallengeDTO> RequestClanTeamChallenge(int challengerClanId, int againstClanId, int accountId, string message, int appId)
+        public async Task<ClanTeamChallengeDTO> RequestClanTeamChallenge(
+            int challengerClanId,
+            int againstClanId,
+            int accountId,
+            string message,
+            int appId
+        )
         {
             ClanTeamChallengeDTO result = null;
 
             try
             {
                 if (_settings.SimulatedMode)
-                {
-                    // get clan
-                    var clan = await GetClanById((int)challengerClanId, appId);
-                    if (clan == null)
-                        return null;
-
-                    // validate leader
-                    if (clan.ClanLeaderAccount?.AccountId != accountId)
-                        return null;
-
-                    result = null; //_simulatedClans.FirstOrDefault(x => x.AppId == appId && x.ClanId == clanId);
-                }
+                    result = null;
                 else
                 {
-                    result = await PostDbAsync<ClanTeamChallengeDTO>($"Clan/requestClanTeamChallenge?challengerClanId={challengerClanId}&againstClanId={againstClanId}&accountId={accountId}&message={message}&appId={appId}", new ClanTeamChallengeDTO()
-                    {
-
-                    });
+                    result = await PostDbAsync<ClanTeamChallengeDTO>(
+                        $"Clan/requestClanTeamChallenge?challengerClanId={challengerClanId}&againstClanId={againstClanId}&accountId={accountId}&message={message}&appId={appId}",
+                        new ClanTeamChallengeDTO() { }
+                    );
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
         }
 
-        public async Task<List<ClanTeamChallengeDTO>> GetClanTeamChallenges(int clanId, int accountId, MediusClanChallengeStatus clanChallengeStatus, int startIdx, int pageSize, int appId)
+        public async Task<List<ClanTeamChallengeDTO>> GetClanTeamChallenges(
+            int clanId,
+            int accountId,
+            MediusClanChallengeStatus clanChallengeStatus,
+            int startIdx,
+            int pageSize,
+            int appId
+        )
         {
             List<ClanTeamChallengeDTO> result = null;
 
             try
             {
                 if (_settings.SimulatedMode)
-                {
-                    // get clan
-                    var clan = await GetClanById(clanId, appId);
-                    if (clan == null)
-                        return null;
-
-                    // validate leader
-                    if (clan.ClanLeaderAccount?.AccountId != accountId)
-                        return null;
-
-                    result = null; //_simulatedClans.FirstOrDefault(x => x.AppId == appId && x.ClanId == clanId);
-                }
+                    result = null;
                 else
-                    result = await GetDbAsync<List<ClanTeamChallengeDTO>>($"Clan/getClanTeamChallenges?clanId={clanId}&accountId={accountId}&clanChallengeStatus={(int)clanChallengeStatus}&appId={appId}&start={startIdx}&pageSize={pageSize}");
+                    result = await GetDbAsync<List<ClanTeamChallengeDTO>>(
+                        $"Clan/getClanTeamChallenges?clanId={clanId}&accountId={accountId}&clanChallengeStatus={(int)clanChallengeStatus}&appId={appId}&start={startIdx}&pageSize={pageSize}"
+                    );
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
         }
 
-        public async Task<bool> RespondClanTeamChallenge(int clanChallengeId, MediusClanChallengeStatus clanChallengeStatus, int accountId, string message, int appId)
+        public async Task<bool> RespondClanTeamChallenge(
+            int clanChallengeId,
+            MediusClanChallengeStatus clanChallengeStatus,
+            int accountId,
+            string message,
+            int appId
+        )
         {
-            bool result = false;
+            var result = false;
 
             try
             {
                 if (_settings.SimulatedMode)
-                    result = false; //_simulatedClans.FirstOrDefault(x => x.AppId == appId && x.ClanId == clanId);
+                    result = false;
                 else
                 {
-                    result = (await PostDbAsync($"Clan/respondClanTeamChallenge?clanChallengeId={clanChallengeId}&clanChallengeStatus={(int)clanChallengeStatus}&accountId={accountId}&message={message}&appId={appId}", new ClanTeamChallengeDTO()
-                    {
-
-                    })).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Clan/respondClanTeamChallenge?clanChallengeId={clanChallengeId}&clanChallengeStatus={(int)clanChallengeStatus}&accountId={accountId}&message={message}&appId={appId}",
+                            new ClanTeamChallengeDTO() { }
+                        )
+                    ).IsSuccessStatusCode;
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
         }
 
-        public async Task<bool> RevokeClanTeamChallenge(int clanChallengeId, int accountId, int appId)
+        public async Task<bool> RevokeClanTeamChallenge(
+            int clanChallengeId,
+            int accountId,
+            int appId
+        )
         {
-            bool result = false;
+            var result = false;
 
             try
             {
                 if (_settings.SimulatedMode)
-                    result = false; //_simulatedClans.FirstOrDefault(x => x.AppId == appId && x.ClanId == clanId);
+                    result = false;
                 else
                 {
-                    result = (await PostDbAsync($"Clan/revokeClanTeamChallenge?clanChallengeId={clanChallengeId}&accountId={accountId}&appId={appId}", new ClanTeamChallengeDTO()
-                    {
-
-                    })).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"Clan/revokeClanTeamChallenge?clanChallengeId={clanChallengeId}&accountId={accountId}&appId={appId}",
+                            new ClanTeamChallengeDTO() { }
+                        )
+                    ).IsSuccessStatusCode;
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3030,22 +3400,23 @@ namespace Horizon.LIBRARY.Database
             {
                 if (_settings.SimulatedMode)
                 {
-                    /*
-                        return new DimAnnouncements()
-                        {
-                            Id = 1,
-                            AnnouncementTitle = "Announcement Title",
-                            AnnouncementBody = "Announcement Body",
-                            CreateDt = DateTime.UtcNow,
-                        };
-                    }*/
+                    return new DimAnnouncements()
+                    {
+                        Id = 1,
+                        AnnouncementTitle = "MultiServer Medius Server! ",
+                        AnnouncementBody =
+                            "Source available on github (https://github.com/GitHubProUser67/PSHome-MultiServer)",
+                        CreateDt = DateTime.UtcNow,
+                    };
                 }
                 else
-                    result = await GetDbAsync<DimAnnouncements>($"api/Keys/getAnnouncements?fromDt={DateTime.UtcNow}&AppId={appId}");
+                    result = await GetDbAsync<DimAnnouncements>(
+                        $"api/Keys/getAnnouncements?fromDt={DateTime.UtcNow}&AppId={appId}"
+                    );
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3067,80 +3438,86 @@ namespace Horizon.LIBRARY.Database
                         case 24000:
                             return new DimAnnouncements[]
                             {
-                                new DimAnnouncements()
+                                new()
                                 {
                                     Id = 1,
                                     AnnouncementTitle = "MultiServer Announcement! ",
-                                    AnnouncementBody = "Welcome to the MultiServer Up Your Arsenal HD Server!",
+                                    AnnouncementBody =
+                                        "Welcome to the MultiServer Up Your Arsenal HD Server!",
                                     CreateDt = DateTime.UtcNow,
-                                }
+                                },
                             };
                         case 24180:
                             return new DimAnnouncements[]
                             {
-                                new DimAnnouncements()
+                                new()
                                 {
                                     Id = 1,
                                     AnnouncementTitle = "MultiServer Announcement! ",
-                                    AnnouncementBody = "Welcome to the MultiServer Deadlocked HD Server!",
+                                    AnnouncementBody =
+                                        "Welcome to the MultiServer Deadlocked HD Server!",
                                     CreateDt = DateTime.UtcNow,
-                                }
+                                },
                             };
                         case 10680:
                             return new DimAnnouncements[]
                             {
-                                new DimAnnouncements()
+                                new()
                                 {
                                     Id = 1,
                                     AnnouncementTitle = "MultiServer Announcement! ",
-                                    AnnouncementBody = "Welcome to the MultiServer Up Your Arsenal Beta Trial Code Server!",
+                                    AnnouncementBody =
+                                        "Welcome to the MultiServer Up Your Arsenal Beta Trial Code Server!",
                                     CreateDt = DateTime.UtcNow,
-                                }
+                                },
                             };
                         case 10681:
                             return new DimAnnouncements[]
                             {
-                                new DimAnnouncements()
+                                new()
                                 {
                                     Id = 1,
                                     AnnouncementTitle = "MultiServer Announcement! ",
-                                    AnnouncementBody = "Welcome to the MultiServer Up Your Arsenal Press Beta Server!",
+                                    AnnouncementBody =
+                                        "Welcome to the MultiServer Up Your Arsenal Press Beta Server!",
                                     CreateDt = DateTime.UtcNow,
-                                }
+                                },
                             };
                         case 10683:
                         case 10684:
                             return new DimAnnouncements[]
                             {
-                                new DimAnnouncements()
+                                new()
                                 {
                                     Id = 1,
                                     AnnouncementTitle = "MultiServer Announcement! ",
-                                    AnnouncementBody = "Welcome to the MultiServer Up Your Arsenal Server!",
+                                    AnnouncementBody =
+                                        "Welcome to the MultiServer Up Your Arsenal Server!",
                                     CreateDt = DateTime.UtcNow,
-                                }
+                                },
                             };
                         case 11354:
                             return new DimAnnouncements[]
                             {
-                                new DimAnnouncements()
+                                new()
                                 {
                                     Id = 1,
                                     AnnouncementTitle = "MultiServer Announcement! ",
-                                    AnnouncementBody = "Welcome to the MultiServer Deadlocked Server!",
+                                    AnnouncementBody =
+                                        "Welcome to the MultiServer Deadlocked Server!",
                                     CreateDt = DateTime.UtcNow,
-                                }
+                                },
                             };
                         case 11204:
                             return new DimAnnouncements[]
                             {
-                                new DimAnnouncements()
+                                new()
                                 {
                                     Id = 1,
                                     AnnouncementTitle = "MultiServer Announcement! ",
                                     AnnouncementBody = "Welcome to the MultiServer JakX Server!",
                                     CreateDt = DateTime.UtcNow,
-                                }
+                                },
                             };
                         case 21564:
                         case 21574:
@@ -3157,33 +3534,36 @@ namespace Horizon.LIBRARY.Database
                         case 20044:
                             return new DimAnnouncements[]
                             {
-                                new DimAnnouncements()
+                                new()
                                 {
                                     Id = 1,
                                     AnnouncementTitle = "MultiServer Announcement! ",
                                     AnnouncementBody = "Welcome to the MultiServer Warhawk Server!",
                                     CreateDt = DateTime.UtcNow,
-                                }
+                                },
                             };
                         default:
                             return new DimAnnouncements[]
                             {
-                                new DimAnnouncements()
+                                new()
                                 {
                                     Id = 1,
-                                    AnnouncementTitle = "Announcement Title",
-                                    AnnouncementBody = "Announcement Body",
+                                    AnnouncementTitle = "MultiServer Medius Server! ",
+                                    AnnouncementBody =
+                                        "Source available on github (https://github.com/GitHubProUser67/PSHome-MultiServer)",
                                     CreateDt = DateTime.UtcNow,
-                                }
+                                },
                             };
                     }
                 }
                 else
-                    result = await GetDbAsync<DimAnnouncements[]>($"api/Keys/getAnnouncementsList?Dt={DateTime.UtcNow}&TakeSize={size}&AppId={appId}");
+                    result = await GetDbAsync<DimAnnouncements[]>(
+                        $"api/Keys/getAnnouncementsList?Dt={DateTime.UtcNow}&TakeSize={size}&AppId={appId}"
+                    );
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3205,16 +3585,67 @@ namespace Horizon.LIBRARY.Database
                         Id = 1,
                         AppId = 0,
                         PolicyType = policyType,
-                        EulaTitle = "Simulated Policy Title.",
-                        EulaBody = "Simulated Policy Body.",
+                        EulaTitle = "EULA",
+                        EulaBody =
+                            @"END USER LICENSE AGREEMENT (EULA) FOR GPLv3-LICENSED SOFTWARE
+                            Last Updated: [12/04/26]
+
+                            IMPORTANT NOTICE:
+                            This End User License Agreement (""Agreement"") applies to your use of [PSHome-MultiServer] (the ""Software""). The Software is licensed under the GNU General Public License, Version 3 (""GPLv3""). This Agreement does not replace or override the GPLv3. In the event of any conflict, the GPLv3 shall prevail.
+
+                            By using, copying, modifying, or distributing the Software, you agree to comply with the terms of the GPLv3 and this Agreement.
+
+                            1. LICENSE
+                               The Software is licensed to you under the terms of the GNU General Public License, Version 3. You are granted the rights to run, study, modify, and share the Software as permitted by the GPLv3.
+
+                            You may obtain a copy of the GPLv3 license at: https://www.gnu.org/licenses/gpl-3.0.html
+
+                            2. SOURCE CODE AVAILABILITY
+                               You have the right to access the complete corresponding source code of the Software. If you received the Software in binary form, you are entitled to obtain the source code as required by the GPLv3.
+
+                            3. DISTRIBUTION AND MODIFICATIONS
+                               You may modify and distribute the Software under the terms of the GPLv3, provided that:
+
+                            * You license the entire work under GPLv3
+                            * You provide access to the corresponding source code
+                            * You include appropriate copyright notices and disclaimers
+                            * You state any changes made to the Software
+
+                            4. NO ADDITIONAL RESTRICTIONS
+                               You may not impose further restrictions on the rights granted under the GPLv3. Any attempt to do so is void.
+
+                            5. OWNERSHIP
+                               The Software is protected by copyright law. Ownership remains with the original authors and contributors. This Agreement does not grant ownership rights.
+
+                            6. DISCLAIMER OF WARRANTIES
+                               THE SOFTWARE IS PROVIDED ""AS IS,"" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, AS PER THE GPLv3.
+
+                            7. LIMITATION OF LIABILITY
+                               IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE USE OF THE SOFTWARE, AS PERMITTED BY THE GPLv3.
+
+                            8. TERMINATION
+                               Your rights under this Agreement automatically terminate if you fail to comply with the GPLv3. However, your rights may be reinstated as provided under the GPLv3.
+
+                            9. GOVERNING TERMS
+                               This Agreement is supplemental and intended to clarify your rights and obligations. The GNU General Public License, Version 3 governs your use of the Software.
+
+                            10. CONTACT INFORMATION
+                                For questions regarding this Software or its licensing, please contact:
+                                [https://github.com/GitHubProUser67/]
+
+                            By using the Software, you acknowledge that you have read and understood this Agreement and agree to be bound by its terms and the GPLv3.
+
+                            [PSHome-MultiServer]",
                     };
                 }
                 else
-                    result = await GetDbAsync<DimEula>($"api/Keys/getEULA?policyType={policyType}&appId={appId}&fromDt={DateTime.UtcNow}");
+                    result = await GetDbAsync<DimEula>(
+                        $"api/Keys/getEULA?policyType={policyType}&appId={appId}&fromDt={DateTime.UtcNow}"
+                    );
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3243,11 +3674,13 @@ namespace Horizon.LIBRARY.Database
                     };
                 }
                 else
-                    result = await GetDbAsync<DimLocations>($"api/keys/getLocations?LocationId={LocationId}&AppId={appId}&fromDt={DateTime.UtcNow}");
+                    result = await GetDbAsync<DimLocations>(
+                        $"api/keys/getLocations?LocationId={LocationId}&AppId={appId}&fromDt={DateTime.UtcNow}"
+                    );
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3258,61 +3691,83 @@ namespace Horizon.LIBRARY.Database
         #region Medius File Services
 
         #region createFile
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> createFile(FileDTO createFile)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
                 if (_settings.SimulatedMode)
                 {
-                    _simulatedMediusFiles.Add(createFile);
-                    _simulatedFileAttributes.Add(new FileAttributesDTO
-                    {
-                        AppId = createFile.AppId,
-                        FileID = createFile.FileID,
-                        LastChangedByUserID = createFile.fileAttributesDTO.LastChangedByUserID,
-                        LastChangedTimeStamp = createFile.fileAttributesDTO.LastChangedTimeStamp,
-                        Description = createFile.fileAttributesDTO.Description,
-                        StreamableFlag = createFile.fileAttributesDTO.StreamableFlag,
-                        StreamingDataRate = createFile.fileAttributesDTO.StreamingDataRate,
-                    });
+                    _simulatedDb.MediusFiles.Add(createFile);
+                    _simulatedDb.FileAttributes.Add(
+                        new FileAttributesDTO
+                        {
+                            AppId = createFile.AppId,
+                            FileID = createFile.FileID,
+                            LastChangedByUserID = createFile.fileAttributesDTO.LastChangedByUserID,
+                            LastChangedTimeStamp = createFile
+                                .fileAttributesDTO
+                                .LastChangedTimeStamp,
+                            Description = createFile.fileAttributesDTO.Description,
+                            StreamableFlag = createFile.fileAttributesDTO.StreamableFlag,
+                            StreamingDataRate = createFile.fileAttributesDTO.StreamingDataRate,
+                        }
+                    );
+
+                    SaveSimulated();
 
                     result = true;
                 }
                 else
                 {
-                    result = (await PostDbAsync($"FileServices/addFile?AppId={createFile.AppId}&File={createFile}", JsonConvert.SerializeObject(new FileDTO
-                    {
-                        AppId = createFile.AppId,
-                        FileName = createFile.FileName,
-                        ServerChecksum = createFile.ServerChecksum,
-                        FileID = createFile.FileID,
-                        FileSize = createFile.FileSize,
-                        CreationTimeStamp = createFile.CreationTimeStamp,
-                        OwnerID = createFile.OwnerID,
-                        GroupID = createFile.GroupID,
-                        OwnerPermissionRWX = createFile.OwnerPermissionRWX,
-                        GroupPermissionRWX = createFile.GroupPermissionRWX,
-                        GlobalPermissionRWX = createFile.GlobalPermissionRWX,
-                        ServerOperationID = createFile.ServerOperationID,
-                        fileAttributesDTO = new FileAttributesDTO()
-                        {
-                            AppId = createFile.AppId,
-                            FileID = createFile.FileID,
-                            FileName = createFile.FileName,
-                            LastChangedByUserID = createFile.fileAttributesDTO.LastChangedByUserID,
-                            LastChangedTimeStamp = createFile.fileAttributesDTO.LastChangedTimeStamp,
-                            Description = createFile.fileAttributesDTO.Description,
-                            StreamableFlag = createFile.fileAttributesDTO.StreamableFlag,
-                            StreamingDataRate = createFile.fileAttributesDTO.StreamingDataRate,
-                        }
-                    }))).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"FileServices/addFile?AppId={createFile.AppId}&File={createFile}",
+                            JsonConvert.SerializeObject(
+                                new FileDTO
+                                {
+                                    AppId = createFile.AppId,
+                                    FileName = createFile.FileName,
+                                    ServerChecksum = createFile.ServerChecksum,
+                                    FileID = createFile.FileID,
+                                    FileSize = createFile.FileSize,
+                                    CreationTimeStamp = createFile.CreationTimeStamp,
+                                    OwnerID = createFile.OwnerID,
+                                    GroupID = createFile.GroupID,
+                                    OwnerPermissionRWX = createFile.OwnerPermissionRWX,
+                                    GroupPermissionRWX = createFile.GroupPermissionRWX,
+                                    GlobalPermissionRWX = createFile.GlobalPermissionRWX,
+                                    ServerOperationID = createFile.ServerOperationID,
+                                    fileAttributesDTO = new FileAttributesDTO()
+                                    {
+                                        AppId = createFile.AppId,
+                                        FileID = createFile.FileID,
+                                        FileName = createFile.FileName,
+                                        LastChangedByUserID = createFile
+                                            .fileAttributesDTO
+                                            .LastChangedByUserID,
+                                        LastChangedTimeStamp = createFile
+                                            .fileAttributesDTO
+                                            .LastChangedTimeStamp,
+                                        Description = createFile.fileAttributesDTO.Description,
+                                        StreamableFlag = createFile
+                                            .fileAttributesDTO
+                                            .StreamableFlag,
+                                        StreamingDataRate = createFile
+                                            .fileAttributesDTO
+                                            .StreamingDataRate,
+                                    },
+                                }
+                            )
+                        )
+                    ).IsSuccessStatusCode;
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3322,22 +3777,26 @@ namespace Horizon.LIBRARY.Database
         #region deleteFile
         public async Task<bool> deleteFile(FileDTO file)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
                 if (_settings.SimulatedMode)
                 {
-                    _simulatedMediusFiles.Remove(file);
+                    _simulatedDb.MediusFiles.Remove(file);
+
+                    SaveSimulated();
 
                     result = true;
                 }
                 else
-                    result = (await PostDbAsync($"FileServices/deleteFile", file)).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync($"FileServices/deleteFile", file)
+                    ).IsSuccessStatusCode;
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3345,7 +3804,11 @@ namespace Horizon.LIBRARY.Database
         #endregion
 
         #region getFileList
-        public async Task<List<FileDTO>> getFileList(int appId, string FileNameBeginsWith, uint OwnerByID)
+        public async Task<List<FileDTO>> getFileList(
+            int appId,
+            string FileNameBeginsWith,
+            uint OwnerByID
+        )
         {
             List<FileDTO> result = null;
 
@@ -3353,33 +3816,30 @@ namespace Horizon.LIBRARY.Database
             {
                 if (_settings.SimulatedMode)
                 {
-                    if (FileNameBeginsWith == "*")
-                    {
-                        _simulatedMediusFiles.Find(x => x.AppId == appId && x.OwnerID == OwnerByID);
-
-                        result = _simulatedMediusFiles.ToList();
-                    }
-                    else
-                    {
-                        _simulatedMediusFiles.Find(x => x.AppId == appId && x.OwnerID == OwnerByID && x.FileName != null && x.FileName.StartsWith(FileNameBeginsWith));
-
-                        result = _simulatedMediusFiles.ToList();
-                    }
+                    result = _simulatedDb
+                        .MediusFiles.Where(x =>
+                            x.AppId == appId
+                            && x.OwnerID == OwnerByID
+                            && (
+                                FileNameBeginsWith == "*"
+                                || (x.FileName != null && x.FileName.StartsWith(FileNameBeginsWith))
+                            )
+                        )
+                        .ToList();
                 }
                 else
                 {
                     if (OwnerByID > 2147483647)
-                    {
                         OwnerByID = 2147483646;
 
-                        LoggerAccessor.LogWarn($"FileNameBeginsWith: {FileNameBeginsWith} OwnerByID: {OwnerByID}");
-                        result = await GetDbAsync<List<FileDTO>>($"FileServices/getFileList?AppId={appId}&FileNameBeginsWith={FileNameBeginsWith}&OwnerByID={OwnerByID}");
-                    }
+                    result = await GetDbAsync<List<FileDTO>>(
+                        $"FileServices/getFileList?AppId={appId}&FileNameBeginsWith={FileNameBeginsWith}&OwnerByID={OwnerByID}"
+                    );
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3387,7 +3847,12 @@ namespace Horizon.LIBRARY.Database
         #endregion
 
         #region getFileListExt
-        public async Task<List<FileDTO>> getFileListExt(int appId, string FileNameBeginsWith, int OwnerByID, MediusFileMetaData fileMetaData)
+        public async Task<List<FileDTO>> getFileListExt(
+            int appId,
+            string FileNameBeginsWith,
+            int OwnerByID,
+            MediusFileMetaData fileMetaData
+        )
         {
             List<FileDTO> result = null;
 
@@ -3395,40 +3860,30 @@ namespace Horizon.LIBRARY.Database
             {
                 if (_settings.SimulatedMode)
                 {
-                    if (FileNameBeginsWith == "*")
-                    {
-                        FileMetaDataDTO fileMetaDataDTO = new FileMetaDataDTO()
-                        {
-                            AppId = appId,
-                            Key = fileMetaData.Key,
-                            Value = fileMetaData.Value,
-                        };
-                        _simulatedMediusFiles.Find(x => x.AppId == appId && x.OwnerID == OwnerByID && x.fileMetaDataDTO == _simulatedFileMetaData.Find(y => y == fileMetaDataDTO));
-
-                        result = _simulatedMediusFiles.ToList();
-                    }
-                    else
-                    {
-                        FileMetaDataDTO fileMetaDataDTO = new FileMetaDataDTO()
-                        {
-                            AppId = appId,
-                            Key = fileMetaData.Key,
-                            Value = fileMetaData.Value,
-                        };
-                        _simulatedMediusFiles.Find(x => x.AppId == appId && x.OwnerID == OwnerByID && x.FileName != null && x.FileName.StartsWith(FileNameBeginsWith) && x.fileMetaDataDTO == _simulatedFileMetaData.Find(y => y == fileMetaDataDTO));
-
-                        result = _simulatedMediusFiles.ToList();
-                    }
+                    result = _simulatedDb
+                        .MediusFiles.Where(x =>
+                            x.AppId == appId
+                            && x.OwnerID == OwnerByID
+                            && x.fileMetaDataDTO != null
+                            && x.fileMetaDataDTO.Key == fileMetaData.Key
+                            && x.fileMetaDataDTO.Value == fileMetaData.Value
+                            && (
+                                FileNameBeginsWith == "*"
+                                || (x.FileName != null && x.FileName.StartsWith(FileNameBeginsWith))
+                            )
+                        )
+                        .ToList();
                 }
                 else
                 {
-                    LoggerAccessor.LogWarn($"FileNameBeginsWith: {FileNameBeginsWith} OwnerByID: {OwnerByID} metaKey: {fileMetaData.Key}");
-                    result = await GetDbAsync<List<FileDTO>>($"FileServices/getFileListExt?AppId={appId}&FileNameBeginsWith={FileNameBeginsWith}&OwnerByID={OwnerByID}&metaKey={fileMetaData.Key}&metaValue={fileMetaData.Value}");
+                    result = await GetDbAsync<List<FileDTO>>(
+                        $"FileServices/getFileListExt?AppId={appId}&FileNameBeginsWith={FileNameBeginsWith}&OwnerByID={OwnerByID}&metaKey={fileMetaData.Key}&metaValue={fileMetaData.Value}"
+                    );
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3450,31 +3905,37 @@ namespace Horizon.LIBRARY.Database
             {
                 if (_settings.SimulatedMode)
                 {
-                    if (_simulatedFileMetaData == null)
+                    if (_simulatedDb.FileMetaData == null)
                         return result;
 
-                    _simulatedMediusFiles.Add(file);
-                    _simulatedFileAttributes.Add(new FileAttributesDTO
-                    {
-                        AppId = file.AppId,
-                        FileID = file.FileID,
-                        FileName = file.FileName,
-                        LastChangedByUserID = file.fileAttributesDTO.LastChangedByUserID,
-                        LastChangedTimeStamp = file.fileAttributesDTO.LastChangedTimeStamp,
-                        Description = file.fileAttributesDTO.Description,
-                        StreamableFlag = file.fileAttributesDTO.StreamableFlag,
-                        StreamingDataRate = file.fileAttributesDTO.StreamingDataRate,
-                    });
+                    _simulatedDb.MediusFiles.Add(file);
+                    _simulatedDb.FileAttributes.Add(
+                        new FileAttributesDTO
+                        {
+                            AppId = file.AppId,
+                            FileID = file.FileID,
+                            FileName = file.FileName,
+                            LastChangedByUserID = file.fileAttributesDTO.LastChangedByUserID,
+                            LastChangedTimeStamp = file.fileAttributesDTO.LastChangedTimeStamp,
+                            Description = file.fileAttributesDTO.Description,
+                            StreamableFlag = file.fileAttributesDTO.StreamableFlag,
+                            StreamingDataRate = file.fileAttributesDTO.StreamingDataRate,
+                        }
+                    );
 
+                    result = _simulatedDb.FileAttributes.ToList();
 
-                    result = _simulatedFileAttributes.ToList();
+                    SaveSimulated();
                 }
                 else
-                    result = await PostDbAsync<List<FileAttributesDTO>>($"FileServices/updateFileAttributes?File={file}", file);
+                    result = await PostDbAsync<List<FileAttributesDTO>>(
+                        $"FileServices/updateFileAttributes?File={file}",
+                        file
+                    );
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3495,21 +3956,21 @@ namespace Horizon.LIBRARY.Database
             {
                 if (_settings.SimulatedMode)
                 {
-                    if (_simulatedFileMetaData == null)
+                    if (_simulatedDb.FileMetaData == null)
                         return result;
 
-                    _simulatedMediusFiles.Contains(mediusFile);
-                    _simulatedFileAttributes.Find(x => x.FileID == mediusFile.FileID);
-
-
-                    result = _simulatedFileAttributes.ToList();
+                    result = _simulatedDb
+                        .FileAttributes.Where(x => x.FileID == mediusFile.FileID)
+                        .ToList();
                 }
                 else
-                    result = await GetDbAsync<List<FileAttributesDTO>>($"FileServices/getFileAttributes?AppId={mediusFile.AppId}&File={mediusFile}");
+                    result = await GetDbAsync<List<FileAttributesDTO>>(
+                        $"FileServices/getFileAttributes?AppId={mediusFile.AppId}&File={mediusFile}"
+                    );
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3523,39 +3984,49 @@ namespace Horizon.LIBRARY.Database
         /// <param name="appId">appId for MFS</param>
         /// <param name="mediusFile">MediusFile specified by UpdateFileMetaRequest</param>
         /// <param name="mediusFileMetaData">MediusFileMetaData specified by Game Developer.</param>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> UpdateFileMetaData(FileDTO file)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
                 if (_settings.SimulatedMode)
                 {
-                    if (!_simulatedMediusFiles.Contains(file))
+                    if (!_simulatedDb.MediusFiles.Contains(file))
                     {
-                        _simulatedMediusFiles.Add(file);
+                        _simulatedDb.MediusFiles.Add(file);
                         if (file.fileMetaDataDTO != null)
-                            _simulatedFileMetaData.Add(file.fileMetaDataDTO);
+                            _simulatedDb.FileMetaData.Add(file.fileMetaDataDTO);
                     }
+
+                    SaveSimulated();
 
                     result = true;
                 }
                 else
                 {
-                    result = (await PostDbAsync($"FileServices/updateFileMetaData?AppId={file.AppId}", JsonConvert.SerializeObject(new FileMetaDataDTO
-                    {
-                        AppId = file.AppId,
-                        FileID = file.FileID,
-                        FileName = file.FileName,
-                        Key = file.fileMetaDataDTO.Key,
-                        Value = file.fileMetaDataDTO.Value,
-                        CreateDt = DateTime.Now,
-                    }))).IsSuccessStatusCode;
+                    result = (
+                        await PostDbAsync(
+                            $"FileServices/updateFileMetaData?AppId={file.AppId}",
+                            JsonConvert.SerializeObject(
+                                new FileMetaDataDTO
+                                {
+                                    AppId = file.AppId,
+                                    FileID = file.FileID,
+                                    FileName = file.FileName,
+                                    Key = file.fileMetaDataDTO.Key,
+                                    Value = file.fileMetaDataDTO.Value,
+                                    CreateDt = DateTime.Now,
+                                }
+                            )
+                        )
+                    ).IsSuccessStatusCode;
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3569,7 +4040,11 @@ namespace Horizon.LIBRARY.Database
         /// <param name="appId">appId for MFS</param>
         /// <param name="mediusFile">MediusFile specified by UpdateFileMetaRequest</param>
         /// <param name="mediusFileMetaData">MediusFileMetaData specified by Game Developer.</param>
-        public async Task<List<FileMetaDataDTO>> GetFileMetaData(int appId, string fileName, string Key)
+        public async Task<List<FileMetaDataDTO>> GetFileMetaData(
+            int appId,
+            string fileName,
+            string Key
+        )
         {
             List<FileMetaDataDTO> result = null;
 
@@ -3577,17 +4052,19 @@ namespace Horizon.LIBRARY.Database
             {
                 if (_settings.SimulatedMode)
                 {
-                    if (_simulatedFileMetaData == null)
+                    if (_simulatedDb.FileMetaData == null)
                         return result;
 
-                    result = _simulatedFileMetaData.ToList();
+                    result = _simulatedDb.FileMetaData.ToList();
                 }
                 else
-                    result = await GetDbAsync<List<FileMetaDataDTO>>($"FileServices/getFileMetaData?appId={appId}&FileName={fileName}&Key={Key}");
+                    result = await GetDbAsync<List<FileMetaDataDTO>>(
+                        $"FileServices/getFileMetaData?appId={appId}&FileName={fileName}&Key={Key}"
+                    );
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3600,46 +4077,58 @@ namespace Horizon.LIBRARY.Database
         /// <summary>
         /// Post the NpId to the database
         /// </summary>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> PostNpId(NpIdDTO NpId)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
                 if (_settings.SimulatedMode)
                 {
-                    _simulatedNpIdAccounts.Add(new NpIdDTO()
-                    {
-                        AppId = NpId.AppId,
-                        data = NpId.data,
-                        term = NpId.term,
-                        dummy = NpId.dummy,
+                    _simulatedDb.NpIdAccounts.Add(
+                        new NpIdDTO()
+                        {
+                            AppId = NpId.AppId,
+                            data = NpId.data,
+                            term = NpId.term,
+                            dummy = NpId.dummy,
 
-                        opt = NpId.opt,
-                        reserved = NpId.reserved,
-                        CreateDt = DateTime.UtcNow
-                    });
+                            opt = NpId.opt,
+                            reserved = NpId.reserved,
+                            CreateDt = DateTime.UtcNow,
+                        }
+                    );
+
+                    SaveSimulated();
 
                     return true;
                 }
                 else
                 {
-                    result = (await PostDbAsync($"Account/postNpId?&AppId={NpId.AppId}&SceNpId={NpId}&createDt={DateTime.UtcNow}", JsonConvert.SerializeObject(new NpIdDTO
-                    {
-                        AppId = NpId.AppId,
-                        data = NpId.data,
-                        term = NpId.term,
-                        dummy = NpId.dummy,
+                    result = (
+                        await PostDbAsync(
+                            $"Account/postNpId?&AppId={NpId.AppId}&SceNpId={NpId}&createDt={DateTime.UtcNow}",
+                            JsonConvert.SerializeObject(
+                                new NpIdDTO
+                                {
+                                    AppId = NpId.AppId,
+                                    data = NpId.data,
+                                    term = NpId.term,
+                                    dummy = NpId.dummy,
 
-                        opt = NpId.opt,
-                        reserved = NpId.reserved,
-                        CreateDt = DateTime.UtcNow
-                    }))).IsSuccessStatusCode;
+                                    opt = NpId.opt,
+                                    reserved = NpId.reserved,
+                                    CreateDt = DateTime.UtcNow,
+                                }
+                            )
+                        )
+                    ).IsSuccessStatusCode;
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3655,19 +4144,19 @@ namespace Horizon.LIBRARY.Database
             try
             {
                 if (_settings.SimulatedMode)
-                {
-                    _simulatedNpIdAccounts.FirstOrDefault(simulatedNpId => simulatedNpId == NpId && simulatedNpId.AppId == appId);
-
-                    result = _simulatedNpIdAccounts.ToList();
-
-                    return result;
-                }
+                    result = _simulatedDb
+                        .NpIdAccounts.Where(simulatedNpId =>
+                            simulatedNpId == NpId && simulatedNpId.AppId == appId
+                        )
+                        .ToList();
                 else
-                    result = await GetDbAsync<List<NpIdDTO>>($"Account/searchNpIdByAccountName?SceNpId={NpId}&AppId={appId}");
+                    result = await GetDbAsync<List<NpIdDTO>>(
+                        $"Account/searchNpIdByAccountName?SceNpId={NpId}&AppId={appId}"
+                    );
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3683,7 +4172,7 @@ namespace Horizon.LIBRARY.Database
             HttpResponseMessage Resp = null;
             try
             {
-                if (_settings.SimulatedMode) // Deprecated
+                if (_settings.SimulatedMode)
                     return "[]";
                 else
                 {
@@ -3692,79 +4181,91 @@ namespace Horizon.LIBRARY.Database
                         results = await Resp.Content.ReadAsStringAsync();
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return results;
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="game"></param>
         /// <returns></returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> CreateGame(GameDTO game)
         {
-            bool result = false;
+            var result = false;
             try
             {
-                if (_settings.SimulatedMode)
-                    result = true;
-                else
-                    result = (await PostDbAsync($"api/Game/create", JsonConvert.SerializeObject(game))).IsSuccessStatusCode;
+                result =
+                    _settings.SimulatedMode
+                    || (
+                        await PostDbAsync($"api/Game/create", JsonConvert.SerializeObject(game))
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="game"></param>
         /// <returns></returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> UpdateGame(GameDTO game)
         {
-            bool result = false;
+            var result = false;
             try
             {
-                if (_settings.SimulatedMode)
-                    result = true;
-                else
-                    result = (await PutDbAsync($"api/Game/update/{game.GameId}", JsonConvert.SerializeObject(game))).IsSuccessStatusCode;
+                result =
+                    _settings.SimulatedMode
+                    || (
+                        await PutDbAsync(
+                            $"api/Game/update/{game.GameId}",
+                            JsonConvert.SerializeObject(game)
+                        )
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="gameId"></param>
         /// <param name="metadata"></param>
         /// <returns></returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> UpdateGameMetadata(int gameId, string metadata)
         {
-            bool result = false;
+            var result = false;
             try
             {
-                if (_settings.SimulatedMode)
-                    result = true;
-                else
-                    result = (await PutDbAsync($"api/Game/updateMetaData/{gameId}", JsonConvert.SerializeObject(metadata))).IsSuccessStatusCode;
+                result =
+                    _settings.SimulatedMode
+                    || (
+                        await PutDbAsync(
+                            $"api/Game/updateMetaData/{gameId}",
+                            JsonConvert.SerializeObject(metadata)
+                        )
+                    ).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3777,18 +4278,17 @@ namespace Horizon.LIBRARY.Database
         /// <returns>Success or failure.</returns>
         public async Task<bool> DeleteGame(int gameId)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
-                if (_settings.SimulatedMode)
-                    result = true;
-                else
-                    result = (await DeleteDbAsync($"api/Game/delete/{gameId}")).IsSuccessStatusCode;
+                result =
+                    _settings.SimulatedMode
+                    || (await DeleteDbAsync($"api/Game/delete/{gameId}")).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3800,18 +4300,17 @@ namespace Horizon.LIBRARY.Database
         /// <returns></returns>
         public async Task<bool> ClearActiveGames()
         {
-            bool result = false;
+            var result = false;
 
             try
             {
-                if (_settings.SimulatedMode)
-                    result = true;
-                else
-                    result = (await DeleteDbAsync($"api/Game/clear")).IsSuccessStatusCode;
+                result =
+                    _settings.SimulatedMode
+                    || (await DeleteDbAsync($"api/Game/clear")).IsSuccessStatusCode;
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -3829,17 +4328,14 @@ namespace Horizon.LIBRARY.Database
             {
                 if (_settings.SimulatedMode)
                 {
-                    return new ChannelDTO[]
-                    {
-                        
-                    };
+                    return Array.Empty<ChannelDTO>();
                 }
                 else
                     results = await GetDbAsync<ChannelDTO[]>($"api/World/getChannels");
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return results;
@@ -3855,62 +4351,62 @@ namespace Horizon.LIBRARY.Database
                 {
                     return new LocationDTO[]
                     {
-                        new LocationDTO()
+                        new()
                         {
                             AppId = 0,
                             Id = 0,
-                            Name = "Location 1"
+                            Name = "Location 1",
                         },
-                        new LocationDTO()
+                        new()
                         {
                             AppId = 23044,
                             Id = 0,
-                            Name = "US"
+                            Name = "US",
                         },
-                        new LocationDTO()
+                        new()
                         {
                             AppId = 24000,
                             Id = 40,
-                            Name = "Aquatos"
+                            Name = "Aquatos",
                         },
-                        new LocationDTO()
+                        new()
                         {
                             AppId = 24180,
                             Id = 40,
-                            Name = "Aquatos"
+                            Name = "Aquatos",
                         },
-                        new LocationDTO()
+                        new()
                         {
                             AppId = 10680,
                             Id = 40,
-                            Name = "Aquatos"
+                            Name = "Aquatos",
                         },
-                        new LocationDTO()
+                        new()
                         {
                             AppId = 10681,
                             Id = 40,
-                            Name = "Aquatos"
+                            Name = "Aquatos",
                         },
-                        new LocationDTO()
+                        new()
                         {
                             AppId = 10683,
                             Id = 40,
-                            Name = "Aquatos"
+                            Name = "Aquatos",
                         },
-                        new LocationDTO()
+                        new()
                         {
                             AppId = 10684,
                             Id = 40,
-                            Name = "Aquatos"
-                        }
+                            Name = "Aquatos",
+                        },
                     };
                 }
                 else
                     results = await GetDbAsync<LocationDTO[]>($"api/World/getLocations");
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return results;
@@ -3934,69 +4430,69 @@ namespace Horizon.LIBRARY.Database
                         case 10684:
                             return new LocationDTO[]
                             {
-                                new LocationDTO()
+                                new()
                                 {
                                     AppId = appId,
                                     Id = 40,
-                                    Name = "Aquatos"
-                                }
+                                    Name = "Aquatos",
+                                },
                             };
                         case 23360:
                             return new LocationDTO[]
                             {
-                                new LocationDTO()
+                                new()
                                 {
                                     AppId = appId,
                                     Id = 1,
-                                    Name = "Europe"
+                                    Name = "Europe",
                                 },
-                                new LocationDTO()
+                                new()
                                 {
                                     AppId = appId,
                                     Id = 2,
-                                    Name = "United States"
+                                    Name = "United States",
                                 },
-                                new LocationDTO()
+                                new()
                                 {
                                     AppId = appId,
                                     Id = 3,
-                                    Name = "Mars City"
+                                    Name = "Mars City",
                                 },
-                                new LocationDTO()
+                                new()
                                 {
                                     AppId = appId,
                                     Id = 4,
-                                    Name = "Metro Polis"
-                                }
+                                    Name = "Metro Polis",
+                                },
                             };
                         case 23044:
                             return new LocationDTO[]
                             {
-                                new LocationDTO()
+                                new()
                                 {
                                     AppId = appId,
                                     Id = 40,
-                                    Name = "US"
-                                }
+                                    Name = "US",
+                                },
                             };
                         default:
                             return new LocationDTO[]
                             {
-                                new LocationDTO()
+                                new()
                                 {
                                     AppId = 0,
                                     Id = 0,
-                                    Name = "Location 1"
-                                }
+                                    Name = "Location 1",
+                                },
                             };
                     }
                 }
                 else
                     results = await GetDbAsync<LocationDTO[]>($"api/World/getLocations/{appId}");
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return results;
@@ -4004,7 +4500,7 @@ namespace Horizon.LIBRARY.Database
 
         #endregion
 
-        #region Matchmaking 
+        #region Matchmaking
 
         /// <summary>
         /// Returns all Matchmaking Supersets.
@@ -4020,23 +4516,27 @@ namespace Horizon.LIBRARY.Database
                 if (_settings.SimulatedMode)
                 {
                     // get matchmaking supersets
-                    var supersets = _simulatedMatchmakingSupersets.Where(x => x.AppId == appId);
+                    var supersets = _simulatedDb.MatchmakingSupersets.Where(x => x.AppId == appId);
 
-                    result = supersets.Select(x => new MatchmakingSupersetDTO()
-                    {
-                        SupersetID = 1,
-                        SupersetName = "Casual",
-                        SupersetDescription = "M:PR Matchmaking",
-                        AppId = 21624
-                    }).Where(x => x.SupersetID != 0).ToList();
+                    result = supersets
+                        .Select(x => new MatchmakingSupersetDTO()
+                        {
+                            SupersetID = 1,
+                            SupersetName = "Casual",
+                            SupersetDescription = "M:PR Matchmaking",
+                            AppId = 21624,
+                        })
+                        .Where(x => x.SupersetID != 0)
+                        .ToList();
                 }
                 else
-                    result = (await GetDbAsync<List<MatchmakingSupersetDTO>>($"Matchmaking/supersets?appId={appId}"));
-
+                    result = await GetDbAsync<List<MatchmakingSupersetDTO>>(
+                        $"Matchmaking/supersets?appId={appId}"
+                    );
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -4047,70 +4547,82 @@ namespace Horizon.LIBRARY.Database
         #region Party
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="party"></param>
         /// <returns></returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> CreateParty(PartyDTO party)
         {
-            bool result = false;
+            var result = false;
             try
             {
-                if (_settings.SimulatedMode)
-                    result = true;
-                else
-                    result = (await PostDbAsync($"api/Party/create", JsonConvert.SerializeObject(party))).IsSuccessStatusCode;
+                result =
+                    _settings.SimulatedMode
+                    || (
+                        await PostDbAsync($"api/Party/create", JsonConvert.SerializeObject(party))
+                    ).IsSuccessStatusCode;
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="party"></param>
         /// <returns></returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> UpdateParty(PartyDTO party)
         {
-            bool result = false;
+            var result = false;
             try
             {
-                if (_settings.SimulatedMode)
-                    result = true;
-                else
-                    result = (await PutDbAsync($"api/Game/update/{party.PartyId}", JsonConvert.SerializeObject(party))).IsSuccessStatusCode;
+                result =
+                    _settings.SimulatedMode
+                    || (
+                        await PutDbAsync(
+                            $"api/Game/update/{party.PartyId}",
+                            JsonConvert.SerializeObject(party)
+                        )
+                    ).IsSuccessStatusCode;
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="partyId"></param>
         /// <param name="metadata"></param>
         /// <returns></returns>
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public async Task<bool> UpdatePartyMetadata(int partyId, string metadata)
         {
-            bool result = false;
+            var result = false;
             try
             {
-                if (_settings.SimulatedMode)
-                    result = true;
-                else
-                    result = (await PutDbAsync($"api/Party/updateMetaData/{partyId}", JsonConvert.SerializeObject(metadata))).IsSuccessStatusCode;
+                result =
+                    _settings.SimulatedMode
+                    || (
+                        await PutDbAsync(
+                            $"api/Party/updateMetaData/{partyId}",
+                            JsonConvert.SerializeObject(metadata)
+                        )
+                    ).IsSuccessStatusCode;
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -4123,18 +4635,17 @@ namespace Horizon.LIBRARY.Database
         /// <returns>Success or failure.</returns>
         public async Task<bool> DeleteParty(int partyId)
         {
-            bool result = false;
+            var result = false;
 
             try
             {
-                if (_settings.SimulatedMode)
-                    result = true;
-                else
-                    result = (await DeleteDbAsync($"api/Party/delete/{partyId}")).IsSuccessStatusCode;
+                result =
+                    _settings.SimulatedMode
+                    || (await DeleteDbAsync($"api/Party/delete/{partyId}")).IsSuccessStatusCode;
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -4146,18 +4657,17 @@ namespace Horizon.LIBRARY.Database
         /// <returns></returns>
         public async Task<bool> ClearActiveParties()
         {
-            bool result = false;
+            var result = false;
 
             try
             {
-                if (_settings.SimulatedMode)
-                    result = true;
-                else
-                    result = (await DeleteDbAsync($"api/Party/clear")).IsSuccessStatusCode;
+                result =
+                    _settings.SimulatedMode
+                    || (await DeleteDbAsync($"api/Party/clear")).IsSuccessStatusCode;
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -4168,7 +4678,7 @@ namespace Horizon.LIBRARY.Database
         #region Universes
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="appId">appid of that universe to find</param>
         /// <returns></returns>
@@ -4177,21 +4687,20 @@ namespace Horizon.LIBRARY.Database
             List<UniverseDTO> result = null;
             try
             {
-                if (_settings.SimulatedMode)
-                    result = null;
-                else
-                    result = await GetDbAsync<List<UniverseDTO>>($"Universes/getUniverses?appId={appId}");
+                result = _settings.SimulatedMode
+                    ? null
+                    : await GetDbAsync<List<UniverseDTO>>($"Universes/getUniverses?appId={appId}");
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="appId">appid of that universe to find</param>
         /// <returns></returns>
@@ -4200,99 +4709,20 @@ namespace Horizon.LIBRARY.Database
             List<UniverseNewsDTO> result = null;
             try
             {
-                if (_settings.SimulatedMode)
-                    result = null;
-                else
-                    result = await GetDbAsync<List<UniverseNewsDTO>>($"Universes/getUniverseNews?appId={appId}");
-            }
-            catch (Exception ex)
-            {
-                LoggerAccessor.LogError(ex);
-            }
-
-            return result;
-        }
-
-        #endregion
-
-        #region SVO CUSTOM
-        /*
-        /// <summary>
-        /// Returns all clan invitations for the given player.
-        /// </summary>
-        /// <param name="accountId">Id of target player.</param>
-        /// <returns>Success or failure.</returns>
-        public async Task<List<MatchmakingSupersetDTO>> getStarhawkURIStore(string path)
-        {
-            List<MatchmakingSupersetDTO> result = null;
-
-            try
-            {
-                if (_settings.SimulatedMode)
-                {
-                    // get clans
-                    var supersets = _simulatedURIstores.Where(x => x.path == path);
-
-                    // 
-                    result = supersets.Select(x => new MatchmakingSupersetDTO()
-                    {
-                        SupersetID = 1,
-                        SupersetName = "Casual",
-                        SupersetDescription = "M:PR Matchmaking",
-                        AppId = 21624
-                    }).Where(x => x.SupersetID != 0).ToList();
-                }
-                else
-                {
-                    result = (await GetDbAsync<List<MatchmakingSupersetDTO>>($"SVO/uriStore?path={path}"));
-                }
+                result = _settings.SimulatedMode
+                    ? null
+                    : await GetDbAsync<List<UniverseNewsDTO>>(
+                        $"Universes/getUniverseNews?appId={appId}"
+                    );
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError(e);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
         }
-        */
 
-        /*
-        /// <summary>
-        /// Get player wide stats.
-        /// </summary>
-        /// <param name="accountId">Account id of player.</param>
-        /// <returns></returns>
-        public async Task<StatPostDTO> GetPlayerWideStats(int accountId, Dictionary<string, string> stats)
-        {
-            StatPostDTO result = null;
-
-            try
-            {
-                if (_settings.SimulatedMode)
-                {
-                    var stats = _simulatedAccounts.FirstOrDefault(x => x.AccountId == accountId)?.AccountWideStats;
-                    if (stats != null)
-                    {
-                        result = new StatPostDTO()
-                        {
-                            AccountId = accountId,
-                            Stats = stats
-                        };
-                    }
-                }
-                else
-                {
-                    result = await GetDbAsync<StatPostDTO>($"Stats/getStats?AccountId={accountId}");
-                }
-            }
-            catch (Exception e)
-            {
-                LoggerAccessor.LogError(e);
-            }
-
-            return result;
-        }
-        */
         #endregion
 
         #region Key
@@ -4307,19 +4737,15 @@ namespace Horizon.LIBRARY.Database
                 {
                     return new AppIdDTO[]
                     {
-                        new AppIdDTO()
-                        {
-                            Name = "All",
-                            AppIds = SimulatedAppIdList.ToList()
-                        }
+                        new() { Name = "All", AppIds = _simulatedDb.AppIds.ToList() },
                     };
                 }
                 else
                     results = await GetDbAsync<AppIdDTO[]>($"api/Keys/getAppIds");
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return results;
@@ -4332,13 +4758,19 @@ namespace Horizon.LIBRARY.Database
             try
             {
                 if (_settings.SimulatedMode)
+                {
+                    if (_simulatedDb.AppSettings.TryGetValue(appId, out var settings))
+                        return settings;
                     return new Dictionary<string, string>();
+                }
                 else
-                    result = await GetDbAsync<Dictionary<string, string>>($"api/Keys/getSettings?appId={appId}");
+                    result = await GetDbAsync<Dictionary<string, string>>(
+                        $"api/Keys/getSettings?appId={appId}"
+                    );
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -4350,14 +4782,15 @@ namespace Horizon.LIBRARY.Database
             {
                 if (_settings.SimulatedMode)
                 {
-
+                    _simulatedDb.AppSettings[appId] = settings;
+                    SaveSimulated();
                 }
                 else
                     await PostDbAsync($"api/Keys/setSettings?appId={appId}", settings);
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
         }
 
@@ -4375,16 +4808,16 @@ namespace Horizon.LIBRARY.Database
                         {
                             IsActive = false,
                             FromDt = DateTime.UtcNow - TimeSpan.FromSeconds(10),
-                            ToDt = DateTime.UtcNow + TimeSpan.FromSeconds(1)
-                        }
+                            ToDt = DateTime.UtcNow + TimeSpan.FromSeconds(1),
+                        },
                     };
                 }
                 else
                     result = await GetDbAsync<ServerFlagsDTO>($"api/Keys/getServerFlags");
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -4395,9 +4828,8 @@ namespace Horizon.LIBRARY.Database
         #region Auth
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        /// <param name="name"></param>
         /// <returns></returns>
         private async Task<AuthenticationResponse> Authenticate(string username, string password)
         {
@@ -4405,15 +4837,25 @@ namespace Horizon.LIBRARY.Database
 
             try
             {
-                result = await PostDbAsync<AuthenticationResponse>($"Account/authenticate", new AuthenticationRequest()
-                {
-                    AccountName = username,
-                    Password = (!string.IsNullOrEmpty(_settings.DatabaseAccessKey)) ? WebCryptoClass.EncryptCTR(password, _settings.DatabaseAccessKey, WebCryptoClass.AuthIV) : password
-                });
+                result = await PostDbAsync<AuthenticationResponse>(
+                    $"Account/authenticate",
+                    new AuthenticationRequest()
+                    {
+                        AccountName = username,
+                        Password =
+                            (!string.IsNullOrEmpty(_settings.DatabaseAccessKey))
+                                ? WebCryptoClass.EncryptCTR(
+                                    password,
+                                    _settings.DatabaseAccessKey,
+                                    WebCryptoClass.AuthIV
+                                )
+                                : password,
+                    }
+                );
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LoggerAccessor.LogError(ex);
+                LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
             }
 
             return result;
@@ -4430,25 +4872,38 @@ namespace Horizon.LIBRARY.Database
             using (var handler = new HttpClientHandler())
             {
                 handler.ClientCertificateOptions = ClientCertificateOption.Manual;
-                handler.ServerCertificateCustomValidationCallback =
-                    (httpRequestMessage, cert, cetChain, policyErrors) =>
-                    {
-                        return true;
-                    };
+                handler.ServerCertificateCustomValidationCallback = (
+                    httpRequestMessage,
+                    cert,
+                    cetChain,
+                    policyErrors
+                ) =>
+                {
+                    return true;
+                };
 
                 using (var client = new HttpClient(handler))
                 {
                     if (!string.IsNullOrEmpty(_dbAccessToken))
-                        client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", (!string.IsNullOrEmpty(_settings.DatabaseAccessKey)) ? WebCryptoClass.EncryptCTR(_dbAccessToken, _settings.DatabaseAccessKey, WebCryptoClass.AuthIV) : _dbAccessToken);
+                        client.DefaultRequestHeaders.TryAddWithoutValidation(
+                            "Authorization",
+                            (!string.IsNullOrEmpty(_settings.DatabaseAccessKey))
+                                ? WebCryptoClass.EncryptCTR(
+                                    _dbAccessToken,
+                                    _settings.DatabaseAccessKey,
+                                    WebCryptoClass.AuthIV
+                                )
+                                : _dbAccessToken
+                        );
                     client.DefaultRequestHeaders.Add("Accept", "application/json");
 
                     try
                     {
                         result = await client.DeleteAsync($"{_settings.DatabaseUrl}/{route}");
                     }
-                    catch (Exception ex)
+                    catch (Exception e)
                     {
-                        LoggerAccessor.LogError(ex);
+                        LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
                         result = null;
                     }
                 }
@@ -4464,25 +4919,38 @@ namespace Horizon.LIBRARY.Database
             using (var handler = new HttpClientHandler())
             {
                 handler.ClientCertificateOptions = ClientCertificateOption.Manual;
-                handler.ServerCertificateCustomValidationCallback =
-                    (httpRequestMessage, cert, cetChain, policyErrors) =>
-                    {
-                        return true;
-                    };
+                handler.ServerCertificateCustomValidationCallback = (
+                    httpRequestMessage,
+                    cert,
+                    cetChain,
+                    policyErrors
+                ) =>
+                {
+                    return true;
+                };
 
                 using (var client = new HttpClient(handler))
                 {
                     if (!string.IsNullOrEmpty(_dbAccessToken))
-                        client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", (!string.IsNullOrEmpty(_settings.DatabaseAccessKey)) ? WebCryptoClass.EncryptCTR(_dbAccessToken, _settings.DatabaseAccessKey, WebCryptoClass.AuthIV) : _dbAccessToken);
+                        client.DefaultRequestHeaders.TryAddWithoutValidation(
+                            "Authorization",
+                            (!string.IsNullOrEmpty(_settings.DatabaseAccessKey))
+                                ? WebCryptoClass.EncryptCTR(
+                                    _dbAccessToken,
+                                    _settings.DatabaseAccessKey,
+                                    WebCryptoClass.AuthIV
+                                )
+                                : _dbAccessToken
+                        );
                     client.DefaultRequestHeaders.Add("Accept", "application/json");
 
                     try
                     {
                         result = await client.GetAsync($"{_settings.DatabaseUrl}/{route}");
                     }
-                    catch (Exception ex)
+                    catch (Exception e)
                     {
-                        LoggerAccessor.LogError(ex);
+                        LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
                         result = null;
                     }
                 }
@@ -4491,6 +4959,7 @@ namespace Horizon.LIBRARY.Database
             return result;
         }
 
+        [RequiresUnreferencedCode("Calls Newtonsoft.Json.JsonConvert.DeserializeObject<T>(String)")]
         private async Task<T> GetDbAsync<T>(string route)
         {
             T result = default;
@@ -4498,11 +4967,15 @@ namespace Horizon.LIBRARY.Database
             using (var handler = new HttpClientHandler())
             {
                 handler.ClientCertificateOptions = ClientCertificateOption.Manual;
-                handler.ServerCertificateCustomValidationCallback =
-                    (httpRequestMessage, cert, cetChain, policyErrors) =>
-                    {
-                        return true;
-                    };
+                handler.ServerCertificateCustomValidationCallback = (
+                    httpRequestMessage,
+                    cert,
+                    cetChain,
+                    policyErrors
+                ) =>
+                {
+                    return true;
+                };
 
                 using (var client = new HttpClient(handler))
                 {
@@ -4511,16 +4984,33 @@ namespace Horizon.LIBRARY.Database
                     try
                     {
                         if (!string.IsNullOrEmpty(_dbAccessToken))
-                            client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", (!string.IsNullOrEmpty(_settings.DatabaseAccessKey)) ? WebCryptoClass.EncryptCTR(_dbAccessToken, _settings.DatabaseAccessKey, WebCryptoClass.AuthIV) : _dbAccessToken);
+                            client.DefaultRequestHeaders.TryAddWithoutValidation(
+                                "Authorization",
+                                (!string.IsNullOrEmpty(_settings.DatabaseAccessKey))
+                                    ? WebCryptoClass.EncryptCTR(
+                                        _dbAccessToken,
+                                        _settings.DatabaseAccessKey,
+                                        WebCryptoClass.AuthIV
+                                    )
+                                    : _dbAccessToken
+                            );
                         var response = await client.GetAsync($"{_settings.DatabaseUrl}/{route}");
 
                         // Deserialize on success
                         if (response.IsSuccessStatusCode)
-                            result = JsonConvert.DeserializeObject<T>((!string.IsNullOrEmpty(_settings.DatabaseAccessKey)) ? WebCryptoClass.DecryptCTR(await response.Content.ReadAsStringAsync(), _settings.DatabaseAccessKey, WebCryptoClass.AuthIV) : await response.Content.ReadAsStringAsync());
+                            result = JsonConvert.DeserializeObject<T>(
+                                (!string.IsNullOrEmpty(_settings.DatabaseAccessKey))
+                                    ? WebCryptoClass.DecryptCTR(
+                                        await response.Content.ReadAsStringAsync(),
+                                        _settings.DatabaseAccessKey,
+                                        WebCryptoClass.AuthIV
+                                    )
+                                    : await response.Content.ReadAsStringAsync()
+                            );
                     }
-                    catch (Exception ex)
+                    catch (Exception e)
                     {
-                        LoggerAccessor.LogError(ex);
+                        LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
                         result = default;
                     }
                 }
@@ -4536,25 +5026,43 @@ namespace Horizon.LIBRARY.Database
             using (var handler = new HttpClientHandler())
             {
                 handler.ClientCertificateOptions = ClientCertificateOption.Manual;
-                handler.ServerCertificateCustomValidationCallback =
-                    (httpRequestMessage, cert, cetChain, policyErrors) =>
-                    {
-                        return true;
-                    };
+                handler.ServerCertificateCustomValidationCallback = (
+                    httpRequestMessage,
+                    cert,
+                    cetChain,
+                    policyErrors
+                ) =>
+                {
+                    return true;
+                };
 
                 using (var client = new HttpClient(handler))
                 {
                     if (!string.IsNullOrEmpty(_dbAccessToken))
-                        client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", (!string.IsNullOrEmpty(_settings.DatabaseAccessKey)) ? WebCryptoClass.EncryptCTR(_dbAccessToken, _settings.DatabaseAccessKey, WebCryptoClass.AuthIV) : _dbAccessToken);
+                        client.DefaultRequestHeaders.TryAddWithoutValidation(
+                            "Authorization",
+                            (!string.IsNullOrEmpty(_settings.DatabaseAccessKey))
+                                ? WebCryptoClass.EncryptCTR(
+                                    _dbAccessToken,
+                                    _settings.DatabaseAccessKey,
+                                    WebCryptoClass.AuthIV
+                                )
+                                : _dbAccessToken
+                        );
                     client.DefaultRequestHeaders.Add("Accept", "application/json");
 
                     try
                     {
-                        result = await client.PostAsync($"{_settings.DatabaseUrl}/{route}", string.IsNullOrEmpty(body) ? null : new StringContent(body, Encoding.UTF8, "application/json"));
+                        result = await client.PostAsync(
+                            $"{_settings.DatabaseUrl}/{route}",
+                            string.IsNullOrEmpty(body)
+                                ? null
+                                : new StringContent(body, Encoding.UTF8, "application/json")
+                        );
                     }
-                    catch (Exception ex)
+                    catch (Exception e)
                     {
-                        LoggerAccessor.LogError(ex);
+                        LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
                         result = null;
                     }
                 }
@@ -4563,6 +5071,7 @@ namespace Horizon.LIBRARY.Database
             return result;
         }
 
+        [RequiresUnreferencedCode("Calls Newtonsoft.Json.JsonConvert.SerializeObject(Object)")]
         private async Task<HttpResponseMessage> PostDbAsync(string route, object body)
         {
             HttpResponseMessage result = null;
@@ -4570,25 +5079,45 @@ namespace Horizon.LIBRARY.Database
             using (var handler = new HttpClientHandler())
             {
                 handler.ClientCertificateOptions = ClientCertificateOption.Manual;
-                handler.ServerCertificateCustomValidationCallback =
-                    (httpRequestMessage, cert, cetChain, policyErrors) =>
-                    {
-                        return true;
-                    };
+                handler.ServerCertificateCustomValidationCallback = (
+                    httpRequestMessage,
+                    cert,
+                    cetChain,
+                    policyErrors
+                ) =>
+                {
+                    return true;
+                };
 
                 using (var client = new HttpClient(handler))
                 {
                     if (!string.IsNullOrEmpty(_dbAccessToken))
-                        client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", (!string.IsNullOrEmpty(_settings.DatabaseAccessKey)) ? WebCryptoClass.EncryptCTR(_dbAccessToken, _settings.DatabaseAccessKey, WebCryptoClass.AuthIV) : _dbAccessToken);
+                        client.DefaultRequestHeaders.TryAddWithoutValidation(
+                            "Authorization",
+                            (!string.IsNullOrEmpty(_settings.DatabaseAccessKey))
+                                ? WebCryptoClass.EncryptCTR(
+                                    _dbAccessToken,
+                                    _settings.DatabaseAccessKey,
+                                    WebCryptoClass.AuthIV
+                                )
+                                : _dbAccessToken
+                        );
                     client.DefaultRequestHeaders.Add("Accept", "application/json");
 
                     try
                     {
-                        result = await client.PostAsync($"{_settings.DatabaseUrl}/{route}", new StringContent(JsonConvert.SerializeObject(body), Encoding.UTF8, "application/json"));
+                        result = await client.PostAsync(
+                            $"{_settings.DatabaseUrl}/{route}",
+                            new StringContent(
+                                JsonConvert.SerializeObject(body),
+                                Encoding.UTF8,
+                                "application/json"
+                            )
+                        );
                     }
-                    catch (Exception ex)
+                    catch (Exception e)
                     {
-                        LoggerAccessor.LogError(ex);
+                        LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
                         result = null;
                     }
                 }
@@ -4597,6 +5126,7 @@ namespace Horizon.LIBRARY.Database
             return result;
         }
 
+        [RequiresUnreferencedCode("Calls Newtonsoft.Json.JsonConvert.SerializeObject(Object)")]
         private async Task<T> PostDbAsync<T>(string route, object body)
         {
             T result = default;
@@ -4604,29 +5134,57 @@ namespace Horizon.LIBRARY.Database
             using (var handler = new HttpClientHandler())
             {
                 handler.ClientCertificateOptions = ClientCertificateOption.Manual;
-                handler.ServerCertificateCustomValidationCallback =
-                    (httpRequestMessage, cert, cetChain, policyErrors) =>
-                    {
-                        return true;
-                    };
+                handler.ServerCertificateCustomValidationCallback = (
+                    httpRequestMessage,
+                    cert,
+                    cetChain,
+                    policyErrors
+                ) =>
+                {
+                    return true;
+                };
 
                 using (var client = new HttpClient(handler))
                 {
                     if (!string.IsNullOrEmpty(_dbAccessToken))
-                        client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", (!string.IsNullOrEmpty(_settings.DatabaseAccessKey)) ? WebCryptoClass.EncryptCTR(_dbAccessToken, _settings.DatabaseAccessKey, WebCryptoClass.AuthIV) : _dbAccessToken);
+                        client.DefaultRequestHeaders.TryAddWithoutValidation(
+                            "Authorization",
+                            (!string.IsNullOrEmpty(_settings.DatabaseAccessKey))
+                                ? WebCryptoClass.EncryptCTR(
+                                    _dbAccessToken,
+                                    _settings.DatabaseAccessKey,
+                                    WebCryptoClass.AuthIV
+                                )
+                                : _dbAccessToken
+                        );
                     client.DefaultRequestHeaders.Add("Accept", "application/json");
 
                     try
                     {
-                        var response = await client.PostAsync($"{_settings.DatabaseUrl}/{route}", new StringContent(JsonConvert.SerializeObject(body), Encoding.UTF8, "application/json"));
+                        var response = await client.PostAsync(
+                            $"{_settings.DatabaseUrl}/{route}",
+                            new StringContent(
+                                JsonConvert.SerializeObject(body),
+                                Encoding.UTF8,
+                                "application/json"
+                            )
+                        );
 
                         // Deserialize on success
                         if (response.IsSuccessStatusCode)
-                            result = JsonConvert.DeserializeObject<T>((!string.IsNullOrEmpty(_settings.DatabaseAccessKey)) ? WebCryptoClass.DecryptCTR(await response.Content.ReadAsStringAsync(), _settings.DatabaseAccessKey, WebCryptoClass.AuthIV) : await response.Content.ReadAsStringAsync());
+                            result = JsonConvert.DeserializeObject<T>(
+                                (!string.IsNullOrEmpty(_settings.DatabaseAccessKey))
+                                    ? WebCryptoClass.DecryptCTR(
+                                        await response.Content.ReadAsStringAsync(),
+                                        _settings.DatabaseAccessKey,
+                                        WebCryptoClass.AuthIV
+                                    )
+                                    : await response.Content.ReadAsStringAsync()
+                            );
                     }
-                    catch (Exception ex)
+                    catch (Exception e)
                     {
-                        LoggerAccessor.LogError(ex);
+                        LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
                         result = default;
                     }
                 }
@@ -4642,25 +5200,43 @@ namespace Horizon.LIBRARY.Database
             using (var handler = new HttpClientHandler())
             {
                 handler.ClientCertificateOptions = ClientCertificateOption.Manual;
-                handler.ServerCertificateCustomValidationCallback =
-                    (httpRequestMessage, cert, cetChain, policyErrors) =>
-                    {
-                        return true;
-                    };
+                handler.ServerCertificateCustomValidationCallback = (
+                    httpRequestMessage,
+                    cert,
+                    cetChain,
+                    policyErrors
+                ) =>
+                {
+                    return true;
+                };
 
                 using (var client = new HttpClient(handler))
                 {
                     if (!string.IsNullOrEmpty(_dbAccessToken))
-                        client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", (!string.IsNullOrEmpty(_settings.DatabaseAccessKey)) ? WebCryptoClass.EncryptCTR(_dbAccessToken, _settings.DatabaseAccessKey, WebCryptoClass.AuthIV) : _dbAccessToken);
+                        client.DefaultRequestHeaders.TryAddWithoutValidation(
+                            "Authorization",
+                            (!string.IsNullOrEmpty(_settings.DatabaseAccessKey))
+                                ? WebCryptoClass.EncryptCTR(
+                                    _dbAccessToken,
+                                    _settings.DatabaseAccessKey,
+                                    WebCryptoClass.AuthIV
+                                )
+                                : _dbAccessToken
+                        );
                     client.DefaultRequestHeaders.Add("Accept", "application/json");
 
                     try
                     {
-                        result = await client.PutAsync($"{_settings.DatabaseUrl}/{route}", string.IsNullOrEmpty(body) ? null : new StringContent(body, Encoding.UTF8, "application/json"));
+                        result = await client.PutAsync(
+                            $"{_settings.DatabaseUrl}/{route}",
+                            string.IsNullOrEmpty(body)
+                                ? null
+                                : new StringContent(body, Encoding.UTF8, "application/json")
+                        );
                     }
-                    catch (Exception ex)
+                    catch (Exception e)
                     {
-                        LoggerAccessor.LogError(ex);
+                        LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
                         result = null;
                     }
                 }
@@ -4669,6 +5245,7 @@ namespace Horizon.LIBRARY.Database
             return result;
         }
 
+        [RequiresUnreferencedCode("Calls Newtonsoft.Json.JsonConvert.SerializeObject(Object)")]
         private async Task<HttpResponseMessage> PutDbAsync(string route, object body)
         {
             HttpResponseMessage result = null;
@@ -4676,25 +5253,45 @@ namespace Horizon.LIBRARY.Database
             using (var handler = new HttpClientHandler())
             {
                 handler.ClientCertificateOptions = ClientCertificateOption.Manual;
-                handler.ServerCertificateCustomValidationCallback =
-                    (httpRequestMessage, cert, cetChain, policyErrors) =>
-                    {
-                        return true;
-                    };
+                handler.ServerCertificateCustomValidationCallback = (
+                    httpRequestMessage,
+                    cert,
+                    cetChain,
+                    policyErrors
+                ) =>
+                {
+                    return true;
+                };
 
                 using (var client = new HttpClient(handler))
                 {
                     if (!string.IsNullOrEmpty(_dbAccessToken))
-                        client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", (!string.IsNullOrEmpty(_settings.DatabaseAccessKey)) ? WebCryptoClass.EncryptCTR(_dbAccessToken, _settings.DatabaseAccessKey, WebCryptoClass.AuthIV) : _dbAccessToken);
+                        client.DefaultRequestHeaders.TryAddWithoutValidation(
+                            "Authorization",
+                            (!string.IsNullOrEmpty(_settings.DatabaseAccessKey))
+                                ? WebCryptoClass.EncryptCTR(
+                                    _dbAccessToken,
+                                    _settings.DatabaseAccessKey,
+                                    WebCryptoClass.AuthIV
+                                )
+                                : _dbAccessToken
+                        );
                     client.DefaultRequestHeaders.Add("Accept", "application/json");
 
                     try
                     {
-                        result = await client.PutAsync($"{_settings.DatabaseUrl}/{route}", new StringContent(JsonConvert.SerializeObject(body), Encoding.UTF8, "application/json"));
+                        result = await client.PutAsync(
+                            $"{_settings.DatabaseUrl}/{route}",
+                            new StringContent(
+                                JsonConvert.SerializeObject(body),
+                                Encoding.UTF8,
+                                "application/json"
+                            )
+                        );
                     }
-                    catch (Exception ex)
+                    catch (Exception e)
                     {
-                        LoggerAccessor.LogError(ex);
+                        LoggerAccessor.LogError($"[DbController] - DbError! (Exception:{e})");
                         result = null;
                     }
                 }
@@ -4702,45 +5299,6 @@ namespace Horizon.LIBRARY.Database
 
             return result;
         }
-
-        private async Task<T> PutDbAsync<T>(string route, object body)
-        {
-            T result = default;
-
-            using (var handler = new HttpClientHandler())
-            {
-                handler.ClientCertificateOptions = ClientCertificateOption.Manual;
-                handler.ServerCertificateCustomValidationCallback =
-                    (httpRequestMessage, cert, cetChain, policyErrors) =>
-                    {
-                        return true;
-                    };
-
-                using (var client = new HttpClient(handler))
-                {
-                    if (!string.IsNullOrEmpty(_dbAccessToken))
-                        client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", (!string.IsNullOrEmpty(_settings.DatabaseAccessKey)) ? WebCryptoClass.EncryptCTR(_dbAccessToken, _settings.DatabaseAccessKey, WebCryptoClass.AuthIV) : _dbAccessToken);
-                    client.DefaultRequestHeaders.Add("Accept", "application/json");
-
-                    try
-                    {
-                        var response = await client.PutAsync($"{_settings.DatabaseUrl}/{route}", new StringContent(JsonConvert.SerializeObject(body), Encoding.UTF8, "application/json"));
-
-                        // Deserialize on success
-                        if (response.IsSuccessStatusCode)
-                            result = JsonConvert.DeserializeObject<T>((!string.IsNullOrEmpty(_settings.DatabaseAccessKey)) ? WebCryptoClass.DecryptCTR(await response.Content.ReadAsStringAsync(), _settings.DatabaseAccessKey, WebCryptoClass.AuthIV) : await response.Content.ReadAsStringAsync());
-                    }
-                    catch (Exception ex)
-                    {
-                        LoggerAccessor.LogError(ex);
-                        result = default;
-                    }
-                }
-            }
-
-            return result;
-        }
-
 
         #endregion
     }

@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Clubs
 {
-	[TdfStruct]
-	public struct RemoveMemberRequest
-	{
+    [TdfStruct]
+    public struct RemoveMemberRequest
+    {
+        [TdfMember("CLID")]
+        public uint mClubId;
 
-		[TdfMember("CLID")]
-		public uint mClubId;
-
-		[TdfMember("BLID")]
-		public long mUserId;
-
-	}
+        [TdfMember("BLID")]
+        public long mUserId;
+    }
 }

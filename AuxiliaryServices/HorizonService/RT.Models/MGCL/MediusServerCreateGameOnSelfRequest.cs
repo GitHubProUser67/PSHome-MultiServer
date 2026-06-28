@@ -1,13 +1,14 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyReport, MediusMGCLMessageIds.ServerCreateGameOnSelfRequest)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyReport,
+        MediusMGCLMessageIds.ServerCreateGameOnSelfRequest
+    )]
     public class MediusServerCreateGameOnSelfRequest : BaseMGCLMessage, IMediusRequest
     {
-
         public override byte PacketType => (byte)MediusMGCLMessageIds.ServerCreateGameOnSelfRequest;
 
         public MessageId MessageID { get; set; }
@@ -79,24 +80,25 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"GameName: {GameName} " +
-                $"GameStats: {System.BitConverter.ToString(GameStats)} " +
-                $"GamePassword: {GamePassword} " +
-                $"ApplicationID: {ApplicationID} " +
-                $"MaxClients: {MaxPlayers} " +
-                $"MinClients: {MinPlayers} " +
-                $"GameLevel: {GameLevel} " +
-                $"PlayerSkillLevel: {PlayerSkillLevel} " +
-                $"RulesSet: {RulesSet} " +
-                $"GenericField1: {GenericField1:X8} " +
-                $"GenericField2: {GenericField2:X8} " +
-                $"GenericField3: {GenericField3:X8} " +
-                $"GameHostType: {GameHostType} " +
-                $"AddressList: {AddressList} " +
-                $"WorldID: {WorldID} " +
-                $"AccountID: {AccountID}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"GameName: {GameName} "
+                + $"GameStats: {System.BitConverter.ToString(GameStats)} "
+                + $"GamePassword: {GamePassword} "
+                + $"ApplicationID: {ApplicationID} "
+                + $"MaxClients: {MaxPlayers} "
+                + $"MinClients: {MinPlayers} "
+                + $"GameLevel: {GameLevel} "
+                + $"PlayerSkillLevel: {PlayerSkillLevel} "
+                + $"RulesSet: {RulesSet} "
+                + $"GenericField1: {GenericField1:X8} "
+                + $"GenericField2: {GenericField2:X8} "
+                + $"GenericField3: {GenericField3:X8} "
+                + $"GameHostType: {GameHostType} "
+                + $"AddressList: {AddressList} "
+                + $"WorldID: {WorldID} "
+                + $"AccountID: {AccountID}";
         }
     }
 }

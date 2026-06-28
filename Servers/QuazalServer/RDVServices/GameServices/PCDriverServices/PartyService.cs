@@ -1,7 +1,7 @@
-using QuazalServer.QNetZ.Attributes;
-using QuazalServer.RDVServices.DDL.Models;
-using QuazalServer.QNetZ.Interfaces;
 using QuazalServer.QNetZ;
+using QuazalServer.QNetZ.Attributes;
+using QuazalServer.QNetZ.Interfaces;
+using QuazalServer.RDVServices.DDL.Models;
 
 namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 {
@@ -15,7 +15,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         [RMCMethod(1)]
         public RMCResult SendGameIdToParty(uint id, uint toJoinId, byte gameType, string msgRequest)
         {
-            var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == id);
+            var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                x.Session.m_idMyself == id
+            );
 
             if (gathering != null)
             {
@@ -25,13 +27,16 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 
                     if (qclient != null)
                     {
-                        var notification = new NotificationEvent(NotificationEventsType.HermesPartySession, 0)
+                        var notification = new NotificationEvent(
+                            NotificationEventsType.HermesPartySession,
+                            0
+                        )
                         {
                             m_pidSource = Context.Client.PlayerInfo.PID,
                             m_uiParam1 = toJoinId,
                             m_uiParam2 = gameType,
                             m_strParam = $"NetZHost:{msgRequest}",
-                            m_uiParam3 = 0
+                            m_uiParam3 = 0,
                         };
 
                         NotificationQueue.SendNotification(Context.Handler, qclient, notification);
@@ -40,33 +45,48 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
             }
             else
             {
-                CustomLogger.LoggerAccessor.LogError($"PartyService.SendGameIdToParty - no gathering with gid={id}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"PartyService.SendGameIdToParty - no gathering with gid={id}"
+                );
             }
 
             return Error(0);
         }
 
         [RMCMethod(2)]
-        public void SendGameIdToPlayerByName(string playerName, uint toJoinId, byte gameType, string msgRequest)
+        public void SendGameIdToPlayerByName(
+            string playerName,
+            uint toJoinId,
+            byte gameType,
+            string msgRequest
+        )
         {
             UNIMPLEMENTED();
         }
 
         [RMCMethod(3)]
-        public RMCResult SendGameIdToPlayerByID(uint pid, uint toJoinId, byte gameType, string msgRequest)
+        public RMCResult SendGameIdToPlayerByID(
+            uint pid,
+            uint toJoinId,
+            byte gameType,
+            string msgRequest
+        )
         {
             // send to single client with PID only
             var qclient = Context.Handler.GetQClientByClientPID(pid);
 
             if (qclient != null)
             {
-                var notification = new NotificationEvent(NotificationEventsType.HermesPartySession, 1)
+                var notification = new NotificationEvent(
+                    NotificationEventsType.HermesPartySession,
+                    1
+                )
                 {
                     m_pidSource = Context.Client.PlayerInfo.PID,
                     m_uiParam1 = toJoinId,
                     m_uiParam2 = gameType,
                     m_strParam = $"NetZHost:{msgRequest}",
-                    m_uiParam3 = 0
+                    m_uiParam3 = 0,
                 };
 
                 NotificationQueue.SendNotification(Context.Handler, qclient, notification);
@@ -79,7 +99,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         public RMCResult NotifyPartyToLeaveGame(uint id)
         {
             // in party id send to all clients
-            var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == id);
+            var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                x.Session.m_idMyself == id
+            );
 
             if (gathering != null)
             {
@@ -89,13 +111,16 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 
                     if (qclient != null)
                     {
-                        var notification = new NotificationEvent(NotificationEventsType.HermesPartySession, 2)
+                        var notification = new NotificationEvent(
+                            NotificationEventsType.HermesPartySession,
+                            2
+                        )
                         {
                             m_pidSource = Context.Client.PlayerInfo.PID,
                             m_uiParam1 = 0,
                             m_uiParam2 = 0,
                             m_strParam = "NotifyPartyToLeaveGame",
-                            m_uiParam3 = 0
+                            m_uiParam3 = 0,
                         };
 
                         NotificationQueue.SendNotification(Context.Handler, qclient, notification);
@@ -104,7 +129,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
             }
             else
             {
-                CustomLogger.LoggerAccessor.LogError($"PartyService.NotifyPartyToLeaveGame - no gathering with gid={id}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"PartyService.NotifyPartyToLeaveGame - no gathering with gid={id}"
+                );
             }
 
             return Error(0);
@@ -141,7 +168,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         [RMCMethod(9)]
         public RMCResult PartyLeaderNetZIsValid(uint partyId, int param1, int param2)
         {
-            var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == partyId);
+            var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                x.Session.m_idMyself == partyId
+            );
 
             if (gathering != null)
             {
@@ -151,13 +180,16 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 
                     if (qclient != null)
                     {
-                        var notification = new NotificationEvent(NotificationEventsType.HermesPartySession, 4)
+                        var notification = new NotificationEvent(
+                            NotificationEventsType.HermesPartySession,
+                            4
+                        )
                         {
                             m_pidSource = Context.Client.PlayerInfo.PID,
                             m_uiParam1 = (uint)param1,
                             m_uiParam2 = (uint)param2,
                             m_strParam = "PartyLeaderNetZIsValid",
-                            m_uiParam3 = 0
+                            m_uiParam3 = 0,
                         };
 
                         NotificationQueue.SendNotification(Context.Handler, qclient, notification);
@@ -166,27 +198,34 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
             }
             else
             {
-                CustomLogger.LoggerAccessor.LogError($"PartyService.PartyLeaderNetZIsValid - no gathering with gid={partyId}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"PartyService.PartyLeaderNetZIsValid - no gathering with gid={partyId}"
+                );
             }
 
             return Error(0);
         }
 
         [RMCMethod(10)]
-        public RMCResult QueryMatchmaking(uint toMatchmaking, uint fromParty, int nbPlayers, int applyMask)
+        public RMCResult QueryMatchmaking(
+            uint toMatchmaking,
+            uint fromParty,
+            int nbPlayers,
+            int applyMask
+        )
         {
             // toMatchmaking - can be query ID?
 
             /*
-			"notification": {
-				"m_pidSource": 376135,		// pid
-				"m_uiType": 1004007,
-				"m_uiParam1": 39874,		// fromParty
-				"m_uiParam2": 1,			// nbPlayers
-				"m_strParam": "MM:22143|",  // toMatchmaking
-				"m_uiParam3": 0				// applyMask ???
-			}
-			*/
+            "notification": {
+                "m_pidSource": 376135,		// pid
+                "m_uiType": 1004007,
+                "m_uiParam1": 39874,		// fromParty
+                "m_uiParam2": 1,			// nbPlayers
+                "m_strParam": "MM:22143|",  // toMatchmaking
+                "m_uiParam3": 0				// applyMask ???
+            }
+            */
 
             var session = GameSessions.SessionList.FirstOrDefault(x => x.Id == toMatchmaking);
 
@@ -200,13 +239,16 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 
                     if (qclient != null)
                     {
-                        var notification = new NotificationEvent(NotificationEventsType.HermesPartySession, 7)
+                        var notification = new NotificationEvent(
+                            NotificationEventsType.HermesPartySession,
+                            7
+                        )
                         {
                             m_pidSource = Context.Client.PlayerInfo.PID,
                             m_uiParam1 = fromParty,
                             m_uiParam2 = (uint)nbPlayers,
                             m_strParam = $"MM:{toMatchmaking}|",
-                            m_uiParam3 = (uint)applyMask
+                            m_uiParam3 = (uint)applyMask,
                         };
 
                         NotificationQueue.SendNotification(Context.Handler, qclient, notification);
@@ -215,7 +257,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
             }
             else
             {
-                CustomLogger.LoggerAccessor.LogError($"PartyService.QueryMatchmaking - no session with id={toMatchmaking}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"PartyService.QueryMatchmaking - no session with id={toMatchmaking}"
+                );
             }
 
             return Error(0);
@@ -226,23 +270,25 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         {
             // what this method should do?
             /*
-			   "toParty": 39874,
-			  "fromMatchmaking": 22143,
-			  "approved": 1
-			 */
+               "toParty": 39874,
+              "fromMatchmaking": 22143,
+              "approved": 1
+             */
 
             /*
-			"notification": {
-				"m_pidSource": 376135,
-				"m_uiType": 1004008,
-				"m_uiParam1": 22148,
-				"m_uiParam2": 1,
-				"m_strParam": "ResponseMatchmaking",
-				"m_uiParam3": 0
-			  }
-			*/
+            "notification": {
+                "m_pidSource": 376135,
+                "m_uiType": 1004008,
+                "m_uiParam1": 22148,
+                "m_uiParam2": 1,
+                "m_strParam": "ResponseMatchmaking",
+                "m_uiParam3": 0
+              }
+            */
 
-            var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == toParty);
+            var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                x.Session.m_idMyself == toParty
+            );
 
             if (gathering != null)
             {
@@ -253,13 +299,16 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                     if (qclient != null)
                     {
                         NotificationEvent notification;
-                        notification = new NotificationEvent(NotificationEventsType.HermesPartySession, 8)
+                        notification = new NotificationEvent(
+                            NotificationEventsType.HermesPartySession,
+                            8
+                        )
                         {
                             m_pidSource = Context.Client.PlayerInfo.PID,
                             m_uiParam1 = fromMatchmaking,
                             m_uiParam2 = (uint)approved,
                             m_strParam = "ResponseMatchmaking",
-                            m_uiParam3 = 0
+                            m_uiParam3 = 0,
                         };
 
                         NotificationQueue.SendNotification(Context.Handler, qclient, notification);
@@ -268,7 +317,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
             }
             else
             {
-                CustomLogger.LoggerAccessor.LogError($"PartyService.ResponseMatchmaking - no gathering with gid={toParty}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"PartyService.ResponseMatchmaking - no gathering with gid={toParty}"
+                );
             }
 
             return Error(0);
@@ -277,7 +328,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         [RMCMethod(12)]
         public RMCResult PartyProbeSessions(uint gid, uint pid, string packedSessions)
         {
-            var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == gid);
+            var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                x.Session.m_idMyself == gid
+            );
 
             if (gathering != null)
             {
@@ -287,13 +340,16 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 
                     if (qclient != null)
                     {
-                        var notification = new NotificationEvent(NotificationEventsType.HermesPartySession, 3)
+                        var notification = new NotificationEvent(
+                            NotificationEventsType.HermesPartySession,
+                            3
+                        )
                         {
                             m_pidSource = Context.Client.PlayerInfo.PID,
                             m_uiParam1 = gid,
                             m_uiParam2 = pid,
                             m_strParam = packedSessions,
-                            m_uiParam3 = 0
+                            m_uiParam3 = 0,
                         };
 
                         NotificationQueue.SendNotification(Context.Handler, qclient, notification);
@@ -302,11 +358,12 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
             }
             else
             {
-                CustomLogger.LoggerAccessor.LogError($"PartyService.PartyProbeSessions - no gathering with gid={gid}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"PartyService.PartyProbeSessions - no gathering with gid={gid}"
+                );
             }
 
             return Error(0);
-
         }
 
         [RMCMethod(13)]
@@ -319,7 +376,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         public RMCResult SendMatchmakingStatus(uint gid, uint pid, uint gameType)
         {
             // Does pid == 0x30000 mean Search or Lobby?
-            var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == gid);
+            var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                x.Session.m_idMyself == gid
+            );
 
             if (gathering != null)
             {
@@ -329,13 +388,16 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 
                     if (qclient != null)
                     {
-                        var notification = new NotificationEvent(NotificationEventsType.HermesPartySession, 6)
+                        var notification = new NotificationEvent(
+                            NotificationEventsType.HermesPartySession,
+                            6
+                        )
                         {
                             m_pidSource = Context.Client.PlayerInfo.PID,
                             m_uiParam1 = pid,
                             m_uiParam2 = gameType,
                             m_strParam = "",
-                            m_uiParam3 = 0
+                            m_uiParam3 = 0,
                         };
 
                         NotificationQueue.SendNotification(Context.Handler, qclient, notification);
@@ -344,7 +406,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
             }
             else
             {
-                CustomLogger.LoggerAccessor.LogError($"PartyService.SendMatchmakingStatus - no gathering with gid={gid}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"PartyService.SendMatchmakingStatus - no gathering with gid={gid}"
+                );
             }
 
             return Result(new { result = true });
@@ -353,7 +417,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         [RMCMethod(15)]
         public RMCResult JoinMatchmakingStatus(uint gid, uint pid, bool joinSuccess)
         {
-            var gathering = PartySessions.GatheringList.FirstOrDefault(x => x.Session.m_idMyself == gid);
+            var gathering = PartySessions.GatheringList.FirstOrDefault(x =>
+                x.Session.m_idMyself == gid
+            );
 
             if (gathering != null)
             {
@@ -368,13 +434,16 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                     if (qclient != null)
                     {
                         NotificationEvent notification;
-                        notification = new NotificationEvent(NotificationEventsType.PartyJoinMatchmaking, 0)
+                        notification = new NotificationEvent(
+                            NotificationEventsType.PartyJoinMatchmaking,
+                            0
+                        )
                         {
                             m_pidSource = Context.Client.PlayerInfo.PID,
                             m_uiParam1 = pid,
                             m_uiParam2 = (uint)(joinSuccess ? 1 : 0),
                             m_strParam = "JoinMatchmakingStatus",
-                            m_uiParam3 = 0
+                            m_uiParam3 = 0,
                         };
 
                         NotificationQueue.SendNotification(Context.Handler, qclient, notification);
@@ -383,7 +452,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
             }
             else
             {
-                CustomLogger.LoggerAccessor.LogError($"PartyService.JoinMatchmakingStatus - no gathering with gid={gid}");
+                CustomLogger.LoggerAccessor.LogError(
+                    $"PartyService.JoinMatchmakingStatus - no gathering with gid={gid}"
+                );
             }
 
             return Result(new { result = true });
@@ -411,7 +482,9 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
             if (plInfo != null)
             {
                 if (plInfo.GameData().CurrentGatheringId != oldGathering)
-                    CustomLogger.LoggerAccessor.LogWarn($"PartyService.MigrateTo - player {pid} old gathering is {plInfo.GameData().CurrentGatheringId}, expected {oldGathering}");
+                    CustomLogger.LoggerAccessor.LogWarn(
+                        $"PartyService.MigrateTo - player {pid} old gathering is {plInfo.GameData().CurrentGatheringId}, expected {oldGathering}"
+                    );
 
                 PartySessions.UpdateGatheringParticipation(plInfo, newGathering);
             }

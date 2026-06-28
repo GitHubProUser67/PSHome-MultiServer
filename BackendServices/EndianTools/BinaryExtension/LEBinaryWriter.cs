@@ -1,13 +1,7 @@
-using System.IO;
-
 namespace EndianTools.BinaryExtension
 {
-    public class LEBinaryWriter : EndianAwareBinaryWriter
+    public class LEBinaryWriter(Stream output) : EndianAwareBinaryWriter(output)
     {
-        public LEBinaryWriter(Stream output) : base(output)
-        {
-        }
-
         public override void Write(byte[] bytes)
         {
             m_bw.Write(bytes);

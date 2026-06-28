@@ -1,15 +1,15 @@
-using QuazalServer.RDVServices.DDL.Models;
 using QuazalServer.QNetZ;
+using QuazalServer.RDVServices.DDL.Models;
 
 namespace QuazalServer.RDVServices
 {
-	public class DSFPlayerGameData : IPlayerDataStore
-	{
-		public DSFPlayerGameData(PlayerInfo owner)
-		{
-			Owner = owner;
+    public class DSFPlayerGameData : IPlayerDataStore
+    {
+        public DSFPlayerGameData(PlayerInfo owner)
+        {
+            Owner = owner;
 
-			CurrentGatheringId = uint.MaxValue;
+            CurrentGatheringId = uint.MaxValue;
             CurrentSession = null;
         }
 
@@ -20,7 +20,7 @@ namespace QuazalServer.RDVServices
         public PresenceElement CurrentPresence { get; set; }
 
         public void OnDropped()
-		{
+        {
             // when player dropped, game data will be destroyed
             // so we need to remove player from game session and gatherings
 
@@ -28,13 +28,13 @@ namespace QuazalServer.RDVServices
             PartySessions.UpdateGatheringParticipation(Owner, uint.MaxValue);
             GameSessions.UpdateSessionParticipation(Owner, null, false);
         }
-	}
+    }
 
-	public static class DSFPlayerInfoExtensions
-	{
-		public static DSFPlayerGameData GameData(this PlayerInfo plInfo)
-		{
-			return plInfo.GetData<DSFPlayerGameData>();
-		}
-	}
+    public static class DSFPlayerInfoExtensions
+    {
+        public static DSFPlayerGameData GameData(this PlayerInfo plInfo)
+        {
+            return plInfo.GetData<DSFPlayerGameData>();
+        }
+    }
 }

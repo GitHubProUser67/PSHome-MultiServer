@@ -4,7 +4,6 @@
 // http://www.gnu.org/licenses/gpl-2.0.txt
 
 using EndianTools;
-using System;
 
 namespace CastleLibrary.S0ny.PS3_Creator
 {
@@ -19,11 +18,17 @@ namespace CastleLibrary.S0ny.PS3_Creator
             }
         }
 
-        private static unsafe int DecodeBit(uint* range, uint* code, int* index, byte** src, byte* c)
+        private static unsafe int DecodeBit(
+            uint* range,
+            uint* code,
+            int* index,
+            byte** src,
+            byte* c
+        )
         {
             DecodeRange(range, code, src);
 
-            uint val = ((*range) >> 8) * (*c);
+            var val = ((*range) >> 8) * (*c);
 
             *c -= (byte)((*c) >> 3);
             if (index != null)
@@ -33,7 +38,7 @@ namespace CastleLibrary.S0ny.PS3_Creator
             {
                 *range = val;
                 *c += 31;
-                if (index != null) 
+                if (index != null)
                     (*index)++;
                 return 1;
             }
@@ -45,10 +50,16 @@ namespace CastleLibrary.S0ny.PS3_Creator
             }
         }
 
-        private static unsafe int DecodeNumber(byte* ptr, int index, int* bitFlag,
-                                               uint* range, uint* code, byte** src)
+        private static unsafe int DecodeNumber(
+            byte* ptr,
+            int index,
+            int* bitFlag,
+            uint* range,
+            uint* code,
+            byte** src
+        )
         {
-            int i = 1;
+            var i = 1;
 
             if (index >= 3)
             {
@@ -84,10 +95,16 @@ namespace CastleLibrary.S0ny.PS3_Creator
             return i;
         }
 
-        private static unsafe int DecodeWord(byte* ptr, int index, int* bitFlag,
-                                             uint* range, uint* code, byte** src)
+        private static unsafe int DecodeWord(
+            byte* ptr,
+            int index,
+            int* bitFlag,
+            uint* range,
+            uint* code,
+            byte** src
+        )
         {
-            int i = 1;
+            var i = 1;
             index /= 8;
 
             if (index >= 3)
@@ -131,13 +148,13 @@ namespace CastleLibrary.S0ny.PS3_Creator
             fixed (byte* @out = output)
             fixed (byte* @in = input)
             {
-                byte* start = @out;
-                byte* end = @out + size;
+                var start = @out;
+                var end = @out + size;
 
-                byte head = @in[0];
+                var head = @in[0];
 
-                uint range = uint.MaxValue;
-                uint code = EndianAwareConverter.ToUInt32(@in, Endianness.BigEndian, 1);
+                var range = uint.MaxValue;
+                var code = EndianAwareConverter.ToUInt32(@in, Endianness.BigEndian, 1);
 
                 if (head > 0x80)
                 {
@@ -151,11 +168,11 @@ namespace CastleLibrary.S0ny.PS3_Creator
                 else
                 {
                     byte prev = 0;
-                    int offset = 0;
-                    int bit_flag = 0;
-                    int data_length = 0;
-                    int data_offset = 0;
-                    byte[] tmpBytes = new byte[0xCC8];
+                    var offset = 0;
+                    var bit_flag = 0;
+                    var data_length = 0;
+                    var data_offset = 0;
+                    var tmpBytes = new byte[0xCC8];
 
                     byte* tmp_sect1;
                     byte* tmp_sect2;
@@ -181,22 +198,32 @@ namespace CastleLibrary.S0ny.PS3_Creator
                                 if (start == end)
                                     return (int)(start - @out);
 
-                                int index = 1;
+                                var index = 1;
 
                                 // Locate first section.
-                                tmp_sect1 = tmp + ((((((((int)(start - @out)) & 7) << 8) + prev) >> head) & 7) * ((int)byte.MaxValue) - 1);
+                                tmp_sect1 =
+                                    tmp
+                                    + (
+                                        (
+                                            (
+                                                (
+                                                    (((((int)(start - @out)) & 7) << 8) + prev)
+                                                    >> head
+                                                ) & 7
+                                            ) * ((int)byte.MaxValue)
+                                        ) - 1
+                                    );
 
                                 do
                                 {
                                     DecodeBit(&range, &code, &index, &@in, tmp_sect1 + index);
-                                } 
-                                while ((index >> 8) == 0);
+                                } while ((index >> 8) == 0);
 
                                 *start++ = (byte)index;
                             }
                             else // Compressed char stream.
                             {
-                                int index = -1;
+                                var index = -1;
 
                                 // Identify the data length bit field.
                                 do
@@ -204,19 +231,32 @@ namespace CastleLibrary.S0ny.PS3_Creator
                                     tmp_sect1 += 8;
                                     bit_flag = DecodeBit(&range, &code, null, &@in, tmp_sect1);
                                     index += bit_flag;
-                                }
-                                while ((bit_flag != 0) && (index < 6)) ;
+                                } while ((bit_flag != 0) && (index < 6));
 
-                                int b_size = 0x160;
+                                var b_size = 0x160;
 
                                 tmp_sect2 = tmp + index + 0x7F1;
 
                                 if ((index >= 0) || (bit_flag != 0))
                                 {
                                     // Locate next section.
-                                    tmp_sect1 = tmp + 0xBA8 + ((index << 5) | (((((int)(start - @out)) << index) & 3) << 3) | (offset & 7));
+                                    tmp_sect1 =
+                                        tmp
+                                        + 0xBA8
+                                        + (
+                                            (index << 5)
+                                            | (((((int)(start - @out)) << index) & 3) << 3)
+                                            | (offset & 7)
+                                        );
 
-                                    data_length = DecodeNumber(tmp_sect1, index, &bit_flag, &range, &code, &@in);
+                                    data_length = DecodeNumber(
+                                        tmp_sect1,
+                                        index,
+                                        &bit_flag,
+                                        &range,
+                                        &code,
+                                        &@in
+                                    );
                                     if (data_length == (int)byte.MaxValue)
                                         return (int)(start - @out);
                                 }
@@ -227,29 +267,42 @@ namespace CastleLibrary.S0ny.PS3_Creator
                                 if (data_length <= 2)
                                 {
                                     tmp_sect2 += 0xF8;
-                                    b_size = 0x40;  // Block size is now 0x40.
+                                    b_size = 0x40; // Block size is now 0x40.
                                 }
 
-                                int diff = 0;
-                                int shift = 1;
+                                var diff = 0;
+                                var shift = 1;
 
                                 do
                                 {
                                     diff = (shift << 4) - b_size;
-                                    bit_flag = DecodeBit(&range, &code, &shift, &@in, tmp_sect2 + (shift << 3));
-                                }
-                                while (diff < 0);
+                                    bit_flag = DecodeBit(
+                                        &range,
+                                        &code,
+                                        &shift,
+                                        &@in,
+                                        tmp_sect2 + (shift << 3)
+                                    );
+                                } while (diff < 0);
 
                                 if ((diff > 0) || (bit_flag != 0))
                                 {
                                     // Adjust diff if needed.
-                                    if (bit_flag == 0) diff -= 8;
+                                    if (bit_flag == 0)
+                                        diff -= 8;
 
                                     // Locate section.
                                     tmp_sect3 = tmp + 0x928 + diff;
 
                                     // Decode the data offset (1 bit fields).
-                                    data_offset = DecodeWord(tmp_sect3, diff, &bit_flag, &range, &code, &@in);
+                                    data_offset = DecodeWord(
+                                        tmp_sect3,
+                                        diff,
+                                        &bit_flag,
+                                        &range,
+                                        &code,
+                                        &@in
+                                    );
                                 }
                                 else // Assume one byte of advance.
                                     data_offset = 1;
@@ -259,7 +312,7 @@ namespace CastleLibrary.S0ny.PS3_Creator
 
                                 // Underflow.
                                 if (buf_start < @out)
-					                return -1;
+                                    return -1;
 
                                 // Overflow.
                                 if (buf_end > end)
@@ -272,8 +325,7 @@ namespace CastleLibrary.S0ny.PS3_Creator
                                 do
                                 {
                                     *start++ = *buf_start++;
-                                } 
-                                while (start < buf_end);
+                                } while (start < buf_end);
                             }
 
                             prev = *(start - 1);

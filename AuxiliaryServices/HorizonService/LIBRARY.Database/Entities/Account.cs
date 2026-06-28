@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace Horizon.LIBRARY.Database.Entities
 {
     public partial class Account
@@ -14,7 +11,7 @@ namespace Horizon.LIBRARY.Database.Entities
             Clan = new HashSet<Clan>();
             ClanInvitation = new HashSet<ClanInvitation>();
             ClanMember = new HashSet<ClanMember>();
-       }
+        }
 
         public int AccountId { get; set; }
         public string AccountName { get; set; }

@@ -1,13 +1,11 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     [ScertMessage(RT_MSG_TYPE.RT_MSG_CLIENT_CONNECT_READY_TCP)]
     public class RT_MSG_CLIENT_CONNECT_READY_TCP : BaseScertMessage
     {
-
         public override RT_MSG_TYPE Id => RT_MSG_TYPE.RT_MSG_CLIENT_CONNECT_READY_TCP;
 
         public byte StartOpt = 0x0E;
@@ -27,9 +25,7 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"StartOpt: {StartOpt} " +
-                $"RecvFlag: {RecvFlag}";
+            return base.ToString() + " " + $"StartOpt: {StartOpt} " + $"RecvFlag: {RecvFlag}";
         }
     }
 }

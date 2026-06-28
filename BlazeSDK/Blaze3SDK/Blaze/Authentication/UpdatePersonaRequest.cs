@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Authentication
 {
-	[TdfStruct]
-	public struct UpdatePersonaRequest
-	{
+    [TdfStruct]
+    public struct UpdatePersonaRequest
+    {
+        [TdfMember("DSNM")]
+        public string mDisplayName;
 
-		[TdfMember("DSNM")]
-		public string mDisplayName;
-
-		[TdfMember("PID")]
-		public long mPersonaId;
-
-	}
+        [TdfMember("PID")]
+        public long mPersonaId;
+    }
 }

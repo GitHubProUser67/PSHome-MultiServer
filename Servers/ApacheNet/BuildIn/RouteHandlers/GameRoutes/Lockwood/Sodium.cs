@@ -1,8 +1,8 @@
-﻿using CustomLogger;
-using System.IO;
 using System.Net;
+using CustomLogger;
 using WatsonWebserver.Core;
 using WebAPIService.GameServices.PSHOME.OHS;
+using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 {
@@ -10,35 +10,43 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
     {
         public static void BuildSodiumPlugin(WebserverBase server)
         {
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/webassets/Sodium/{project}/{version}/HoloTip_Data.xml", async (ctx) =>
-            {
-                string? project = ctx.Request.Url.Parameters["project"];
-                if (string.IsNullOrEmpty(project))
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/webassets/Sodium/{project}/{version}/HoloTip_Data.xml",
+                async (ctx) =>
                 {
-                    ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    ctx.Response.ContentType = "text/plain";
-                    await ctx.Response.Send();
-                    return;
-                }
-                string xmlPath = $"/webassets/Sodium/{project}/{ctx.Request.Url.Parameters["version"]}/HoloTip_Data.xml";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
+                    var project = ctx.Request.Url.Parameters["project"];
+                    if (string.IsNullOrEmpty(project))
+                    {
+                        ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        ctx.Response.ContentType = "text/plain";
+                        await ctx.Response.Send().ConfigureAwait(false);
+                        return;
+                    }
+                    var xmlPath =
+                        $"/webassets/Sodium/{project}/{ctx.Request.Url.Parameters["version"]}/HoloTip_Data.xml";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
-                if (File.Exists(filePath))
-                {
-                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                    ctx.Response.ContentType = "text/xml";
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
-                }
-
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - HoloTip_Data data was not found for project:{project}, falling back to server file.");
-
-                switch (project)
-                {
-                    case "sodium_blimp":
+                    if (File.Exists(filePath))
+                    {
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                         ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(@"<lua>
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - HoloTip_Data data was not found for project:{project}, falling back to server file."
+                    );
+
+                    switch (project)
+                    {
+                        case "sodium_blimp":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    @"<lua>
                     <SALES_04>
                         <radius type='num'>8.298</radius>
                         <dotFov type='num'>0.58</dotFov>
@@ -995,70 +1003,90 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                         <dotFov type='num'>0.74</dotFov>
                         <beamScale type='vec'>5.959,5.613,13.926,10.500</beamScale>
                     </TELEPORTER_MOVING>
-                </lua>");
-                        return;
-                    default:
-                        LoggerAccessor.LogWarn($"[PostAuthParameters] - HoloTip_Data data was not found for project:{project}!");
-                        break;
+                </lua>"
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        default:
+                            LoggerAccessor.LogWarn(
+                                $"[PostAuthParameters] - HoloTip_Data data was not found for project:{project}!"
+                            );
+                            break;
+                    }
+                    ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    await ctx.Response.Send().ConfigureAwait(false);
                 }
-                ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                await ctx.Response.Send();
-            });
+            );
         }
 
         public static void BuildSodiumBlimpPlugin(WebserverBase server)
         {
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/webassets/Sodium/sodium_blimp/{version}/{xmldef}", async (ctx) =>
-            {
-                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                ctx.Response.ContentType = "text/xml";
-
-                string version = ctx.Request.Url.Parameters["version"] ?? "7";
-                string xmldef = ctx.Request.Url.Parameters["xmldef"] ?? "en-US";
-
-                string xmlPath = $"/webassets/Sodium/sodium_blimp/{version}/{xmldef}";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
-
-                if (File.Exists(filePath))
-                {
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
-                }
-
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - SodiumBlimp regional definition data was not found for xmldef:{xmldef}, falling back to empty data.");
-
-                await ctx.Response.Send();
-            });
-
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/static/SodiumBlimp/{version}/defs/{defs}", async (ctx) =>
-            {
-                string? defs = ctx.Request.Url.Parameters["defs"];
-                if (string.IsNullOrEmpty(defs))
-                {
-                    ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    ctx.Response.ContentType = "text/plain";
-                    await ctx.Response.Send();
-                    return;
-                }
-                string xmlPath = $"/static/SodiumBlimp/{ctx.Request.Url.Parameters["version"]}/defs/{defs}";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
-
-                if (File.Exists(filePath))
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/webassets/Sodium/sodium_blimp/{version}/{xmldef}",
+                async (ctx) =>
                 {
                     ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                     ctx.Response.ContentType = "text/xml";
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
+
+                    var version = ctx.Request.Url.Parameters["version"] ?? "7";
+                    var xmldef = ctx.Request.Url.Parameters["xmldef"] ?? "en-US";
+
+                    var xmlPath = $"/webassets/Sodium/sodium_blimp/{version}/{xmldef}";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
+
+                    if (File.Exists(filePath))
+                    {
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - SodiumBlimp regional definition data was not found for xmldef:{xmldef}, falling back to empty data."
+                    );
+
+                    await ctx.Response.Send().ConfigureAwait(false);
                 }
+            );
 
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - SodiumBlimp definition data was not found for defs:{defs}, falling back to static file.");
-
-                switch (defs)
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/static/SodiumBlimp/{version}/defs/{defs}",
+                async (ctx) =>
                 {
-                    case "dig_defs.xml":
+                    var defs = ctx.Request.Url.Parameters["defs"];
+                    if (string.IsNullOrEmpty(defs))
+                    {
+                        ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        ctx.Response.ContentType = "text/plain";
+                        await ctx.Response.Send().ConfigureAwait(false);
+                        return;
+                    }
+                    var xmlPath =
+                        $"/static/SodiumBlimp/{ctx.Request.Url.Parameters["version"]}/defs/{defs}";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
+
+                    if (File.Exists(filePath))
+                    {
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                         ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - SodiumBlimp definition data was not found for defs:{defs}, falling back to static file."
+                    );
+
+                    switch (defs)
+                    {
+                        case "dig_defs.xml":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    LUA2XmlProcessor.TransformLuaTableToXml(
+                                        @"
                          local TableFromInput = {
                             defs = {
                                 rewards = { 
@@ -1091,12 +1119,18 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                         }
 
                         return Encode(TableFromInput, 4, 4)
-                        "));
-                        return;
-                    case "sound_defs.xml":
-                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                        ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
+                        "
+                                    )
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "sound_defs.xml":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    LUA2XmlProcessor.TransformLuaTableToXml(
+                                        @"
                          local TableFromInput = {
                             defs = {
                                 TELEPAD_HUM = {
@@ -1311,12 +1345,17 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                         }
 
                         return Encode(TableFromInput, 4, 4)
-                        "));
-                        return;
-                    case "burner_defs.xml":
-                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                        ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(@"<defs>
+                        "
+                                    )
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "burner_defs.xml":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    @"<defs>
                             <burner>
                                 <model>burner_001.mdl</model>
                                 <pos type='vec'>1.406,19.366,-4.964,0.000</pos>
@@ -1349,12 +1388,16 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                 <model>burner_001.mdl</model>
                                 <pos type='vec'>1.406,19.366,-1.000,0.000</pos>
                             </burner_6>
-                        </defs>");
-                        return;
-                    case "cloth_defs.xml":
-                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                        ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(@"<defs>
+                        </defs>"
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "cloth_defs.xml":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    @"<defs>
                             <cloth>
                                 <col type='vec'>1.000,0.000,0.000,1.000</col> <!-- Red -->
                                 <model>streamer_small.mdl</model>
@@ -1434,12 +1477,16 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                 <model>streamer_medium.mdl</model>
                                 <pos type='vec'>-11.699,3.213,1.252,0.000</pos>
                             </cloth_13>
-                        </defs>");
-                        return;
-                    case "light_defs.xml":
-                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                        ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(@"<defs>
+                        </defs>"
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "light_defs.xml":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    @"<defs>
                             <light_dummy>
                                 <atten_end type='num'>0</atten_end>
                                 <atten_power type='num'>0</atten_power>
@@ -1449,12 +1496,17 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                 <pos type='vec'>0.000,0.000,0.000,0.000</pos>
                                 <mask>mask_002.dds</mask>
                             </light_dummy>
-                        </defs>");
-                        return;
-                    case "gfx_defs.xml":
-                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                        ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
+                        </defs>"
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "gfx_defs.xml":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    LUA2XmlProcessor.TransformLuaTableToXml(
+                                        @"
                          local TableFromInput = {
                             defs = {
                                 CLOUD_002 = {
@@ -1521,12 +1573,18 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                         }
 
                         return Encode(TableFromInput, 4, 4)
-                        "));
-                        return;
-                    case "map_defs.xml":
-                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                        ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
+                        "
+                                    )
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "map_defs.xml":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    LUA2XmlProcessor.TransformLuaTableToXml(
+                                        @"
                             local TableFromInput = {
                                 [""def""] = {
                                     [""cloud_gfx""] = { ""CLOUD_002"", ""CLOUD_003"" },
@@ -1545,12 +1603,17 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                             }
 
                             return Encode(TableFromInput, 4, 4)
-                            "));
-                        return;
-                    case "blimp_defs.xml":
-                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                        ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(@"<defs>
+                            "
+                                    )
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "blimp_defs.xml":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    @"<defs>
                             <fwd_accel type='num'>300</fwd_accel>
                             <fwd_speed type='num'>999</fwd_speed>
                             <max_height type='num'>5050</max_height>
@@ -1562,12 +1625,17 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                 <_ type='vec'>12.557,30.923,-47.163,0.000</_>
                             </streaks>
                             <turn_speed type='num'>30</turn_speed>
-                        </defs>");
-                        return;
-                    case "prop_defs.xml":
-                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                        ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
+                        </defs>"
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "prop_defs.xml":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    LUA2XmlProcessor.TransformLuaTableToXml(
+                                        @"
                             local TableFromInput = {
                                 [""defs""] = {
                                     [""PROPS""] = {},
@@ -1576,12 +1644,18 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                             }
 
                             return Encode(TableFromInput, 4, 4)
-                            "));
-                        return;
-                    case "craft_defs.xml":
-                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                        ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
+                            "
+                                    )
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "craft_defs.xml":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    LUA2XmlProcessor.TransformLuaTableToXml(
+                                        @"
                             local TableFromInput = {
                                 [""defs""] = {
                                     [""SKIN_basic""] = {
@@ -1648,36 +1722,50 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                             }
 
                             return Encode(TableFromInput, 4, 4)
-                            "));
-                        return;
-                    default:
-                        LoggerAccessor.LogWarn($"[PostAuthParameters] - SodiumBlimp definition data was not found for defs:{defs}!");
-                        break;
+                            "
+                                    )
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        default:
+                            LoggerAccessor.LogWarn(
+                                $"[PostAuthParameters] - SodiumBlimp definition data was not found for defs:{defs}!"
+                            );
+                            break;
+                    }
+                    ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    await ctx.Response.Send().ConfigureAwait(false);
                 }
-                ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                await ctx.Response.Send();
-            });
+            );
         }
 
         public static void BuildSodium2Plugin(WebserverBase server)
         {
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/webassets/Sodium/sodium2/scores/{version}/{lang}", async (ctx) =>
-            {
-                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                ctx.Response.ContentType = "text/xml";
-
-                string xmlPath = $"/webassets/Sodium/sodium2/scores/{ctx.Request.Url.Parameters["version"]}/{ctx.Request.Url.Parameters["lang"]}";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
-
-                if (File.Exists(filePath))
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/webassets/Sodium/sodium2/scores/{version}/{lang}",
+                async (ctx) =>
                 {
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
-                }
+                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                    ctx.Response.ContentType = "text/xml";
 
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - sodium2 score definition data was not found, falling back to static file.");
+                    var xmlPath =
+                        $"/webassets/Sodium/sodium2/scores/{ctx.Request.Url.Parameters["version"]}/{ctx.Request.Url.Parameters["lang"]}";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
-                await ctx.Response.Send(@"
+                    if (File.Exists(filePath))
+                    {
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - sodium2 score definition data was not found, falling back to static file."
+                    );
+
+                    await ctx
+                        .Response.Send(
+                            @"
                     <?xml version='1.0' encoding='UTF-8'?>
                     <!--Archived from: https://web.archive.org/web/20110110184845/http://www.outso-srv1.com:80/webassets/Sodium/sodium2/scores/v1.0/en-GB.xml-->
                     <data>
@@ -2297,39 +2385,50 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                             <cr_curve>1</cr_curve>
                             <Evaluate>(c.propulse &gt; 0) and (c.rating+0.2 * lerpf(c.propulse, 0, 5, 0, 1))</Evaluate>
                         </ProPulse_Sponsored>
-                    </data>");
-            });
-
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/webassets/Sodium/sodium2_shop/{version}/{project}/{lang}", async (ctx) =>
-            {
-                string? project = ctx.Request.Url.Parameters["project"];
-                if (string.IsNullOrEmpty(project))
-                {
-                    ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    ctx.Response.ContentType = "text/plain";
-                    await ctx.Response.Send();
-                    return;
+                    </data>"
+                        )
+                        .ConfigureAwait(false);
                 }
-                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                ctx.Response.ContentType = "text/xml";
+            );
 
-                string xmlPath = $"/webassets/Sodium/sodium2_shop/{ctx.Request.Url.Parameters["version"]}/{project}/{ctx.Request.Url.Parameters["lang"]}";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
-
-                if (File.Exists(filePath))
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/webassets/Sodium/sodium2_shop/{version}/{project}/{lang}",
+                async (ctx) =>
                 {
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
-                }
+                    var project = ctx.Request.Url.Parameters["project"];
+                    if (string.IsNullOrEmpty(project))
+                    {
+                        ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        ctx.Response.ContentType = "text/plain";
+                        await ctx.Response.Send().ConfigureAwait(false);
+                        return;
+                    }
+                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                    ctx.Response.ContentType = "text/xml";
 
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - sodium2_shop {project} definition data was not found, falling back to static file.");
+                    var xmlPath =
+                        $"/webassets/Sodium/sodium2_shop/{ctx.Request.Url.Parameters["version"]}/{project}/{ctx.Request.Url.Parameters["lang"]}";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
-                switch (project)
-                {
-                    case "lang":
-                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                        ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(@"
+                    if (File.Exists(filePath))
+                    {
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - sodium2_shop {project} definition data was not found, falling back to static file."
+                    );
+
+                    switch (project)
+                    {
+                        case "lang":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    @"
                         <!--Archived from: https://web.archive.org/web/20110110184850/http://www.outso-srv1.com:80/webassets/Sodium/sodium2_shop/v0.2/lang/en-GB.xml-->
                         <lang>
                             <cloth>
@@ -2782,12 +2881,16 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                                     <desc>Mount nothing here</desc>
                                 </any_empty>
                             </any>
-                        </lang>");
-                        return;
-                    case "mountLocks":
-                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                        ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(@"
+                        </lang>"
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "mountLocks":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    @"
                         <!--Archived from: https://web.archive.org/web/20110110184918/http://www.outso-srv1.com:80/webassets/Sodium/sodium2_shop/v0.2/mountLocks/SCEE.xml-->
                         <mountlocks>
                             <jato1 type=""bool"">true</jato1>
@@ -2805,15 +2908,20 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                             <stbl type=""bool"">false</stbl>
                             <ctrl type=""bool"">false</ctrl>
                             <aero type=""bool"">true</aero>
-                        </mountlocks>");
-                        return;
-                    default:
-                        LoggerAccessor.LogWarn($"[PostAuthParameters] - sodium2_shop definition data was not found for project:{project}!");
-                        break;
+                        </mountlocks>"
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        default:
+                            LoggerAccessor.LogWarn(
+                                $"[PostAuthParameters] - sodium2_shop definition data was not found for project:{project}!"
+                            );
+                            break;
+                    }
+                    ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    await ctx.Response.Send().ConfigureAwait(false);
                 }
-                ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                await ctx.Response.Send();
-            });
+            );
         }
     }
 }

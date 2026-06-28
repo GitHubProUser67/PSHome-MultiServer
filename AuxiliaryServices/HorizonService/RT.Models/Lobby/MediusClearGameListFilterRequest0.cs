@@ -1,5 +1,5 @@
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -37,10 +37,11 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{MessageID} " +
-                $"SessionKey:{SessionKey} " +
-                $"FilterID:{FilterID}";
+            return base.ToString()
+                + " "
+                + $"MessageID:{MessageID} "
+                + $"SessionKey:{SessionKey} "
+                + $"FilterID:{FilterID}";
         }
     }
 }

@@ -1,5 +1,5 @@
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -38,12 +38,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"Severity: {Severity} " +
-                $"EncodingType: {EncodingType} " +
-                $"MediusLanguageType: {LanguageType} " +
-                $"EndOfMessage: {EndOfMessage} " +
-                $"Message: {Message}";
+            return base.ToString()
+                + " "
+                + $"Severity: {Severity} "
+                + $"EncodingType: {EncodingType} "
+                + $"MediusLanguageType: {LanguageType} "
+                + $"EndOfMessage: {EndOfMessage} "
+                + $"Message: {Message}";
         }
     }
 }

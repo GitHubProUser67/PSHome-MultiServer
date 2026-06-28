@@ -5,7 +5,6 @@ namespace Blaze2SDK.Blaze.GameManager
     [TdfStruct]
     public struct CreateGameStatus
     {
-
         [TdfMember("EVST")]
         public EvaluateStatus mEvaluateStatus;
 
@@ -16,10 +15,6 @@ namespace Blaze2SDK.Blaze.GameManager
         public uint mNumOfMatchedPlayers;
 
         [Flags]
-        public enum EvaluateStatus
-        {
-
-        }
-
+        public enum EvaluateStatus { }
     }
 }

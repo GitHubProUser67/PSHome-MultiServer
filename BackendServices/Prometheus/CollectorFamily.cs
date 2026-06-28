@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.ObjectPool;
 
@@ -8,7 +8,7 @@ internal sealed class CollectorFamily
 {
     public Type CollectorType { get; }
 
-    private readonly Dictionary<CollectorIdentity, Collector> _collectors = new();
+    private readonly Dictionary<CollectorIdentity, Collector> _collectors = [];
     private readonly ReaderWriterLockSlim _lock = new();
 
     public CollectorFamily(Type collectorType)
@@ -17,15 +17,17 @@ internal sealed class CollectorFamily
         _collectAndSerializeFunc = CollectAndSerialize;
     }
 
-#if NET
     [AsyncMethodBuilder(typeof(PoolingAsyncValueTaskMethodBuilder))]
-#endif
-    internal async ValueTask CollectAndSerializeAsync(IMetricsSerializer serializer, CancellationToken cancel)
+    internal async ValueTask CollectAndSerializeAsync(
+        IMetricsSerializer serializer,
+        CancellationToken cancel
+    )
     {
         var operation = _serializeFamilyOperationPool.Get();
         operation.Serializer = serializer;
 
-        await ForEachCollectorAsync(_collectAndSerializeFunc, operation, cancel);
+        await ForEachCollectorAsync(_collectAndSerializeFunc, operation, cancel)
+            .ConfigureAwait(false);
 
         _serializeFamilyOperationPool.Return(operation);
     }
@@ -49,9 +51,11 @@ internal sealed class CollectorFamily
     }
 
     // We have a bunch of families that get serialized often - no reason to churn the GC with a bunch of allocations if we can easily reuse it.
-    private static readonly ObjectPool<SerializeFamilyOperation> _serializeFamilyOperationPool = ObjectPool.Create(new SerializeFamilyOperationPoolingPolicy());
+    private static readonly ObjectPool<SerializeFamilyOperation> _serializeFamilyOperationPool =
+        ObjectPool.Create(new SerializeFamilyOperationPoolingPolicy());
 
-    private sealed class SerializeFamilyOperationPoolingPolicy : PooledObjectPolicy<SerializeFamilyOperation>
+    private sealed class SerializeFamilyOperationPoolingPolicy
+        : PooledObjectPolicy<SerializeFamilyOperation>
     {
         public override SerializeFamilyOperation Create() => new();
 
@@ -62,16 +66,25 @@ internal sealed class CollectorFamily
         }
     }
 
-#if NET
     [AsyncMethodBuilder(typeof(PoolingAsyncValueTaskMethodBuilder))]
-#endif
-    private async ValueTask CollectAndSerialize(Collector collector, SerializeFamilyOperation operation, CancellationToken cancel)
+    private async ValueTask CollectAndSerialize(
+        Collector collector,
+        SerializeFamilyOperation operation,
+        CancellationToken cancel
+    )
     {
-        await collector.CollectAndSerializeAsync(operation.Serializer!, operation.IsFirst, cancel);
+        await collector
+            .CollectAndSerializeAsync(operation.Serializer!, operation.IsFirst, cancel)
+            .ConfigureAwait(false);
         operation.IsFirst = false;
     }
 
-    private readonly Func<Collector, SerializeFamilyOperation, CancellationToken, ValueTask> _collectAndSerializeFunc;
+    private readonly Func<
+        Collector,
+        SerializeFamilyOperation,
+        CancellationToken,
+        ValueTask
+    > _collectAndSerializeFunc;
 
     internal Collector GetOrAdd<TCollector, TConfiguration>(
         in CollectorIdentity identity,
@@ -79,7 +92,8 @@ internal sealed class CollectorFamily
         string help,
         TConfiguration configuration,
         ExemplarBehavior exemplarBehavior,
-        CollectorRegistry.CollectorInitializer<TCollector, TConfiguration> initializer)
+        CollectorRegistry.CollectorInitializer<TCollector, TConfiguration> initializer
+    )
         where TCollector : Collector
         where TConfiguration : MetricConfiguration
     {
@@ -97,26 +111,23 @@ internal sealed class CollectorFamily
         }
 
         // Then we grab a write lock. This is the slow path.
-        var newCollector = initializer(name, help, identity.InstanceLabelNames, identity.StaticLabels, configuration, exemplarBehavior);
+        var newCollector = initializer(
+            name,
+            help,
+            identity.InstanceLabelNames,
+            identity.StaticLabels,
+            configuration,
+            exemplarBehavior
+        );
 
         _lock.EnterWriteLock();
 
         try
         {
-#if NET
             // It could be that someone beats us to it! Probably not, though.
-            if (_collectors.TryAdd(identity, newCollector))
-                return newCollector;
-
-            return _collectors[identity];
-#else
-            // On .NET Fx we need to do the pessimistic case first because there is no TryAdd().
-            if (_collectors.TryGetValue(identity, out var collector))
-                return collector;
-
-            _collectors.Add(identity, newCollector);
-            return newCollector;
-#endif
+            return _collectors.TryAdd(identity, newCollector)
+                ? newCollector
+                : _collectors[identity];
         }
         finally
         {
@@ -139,10 +150,12 @@ internal sealed class CollectorFamily
         }
     }
 
-#if NET
     [AsyncMethodBuilder(typeof(PoolingAsyncValueTaskMethodBuilder))]
-#endif
-    internal async ValueTask ForEachCollectorAsync<TArg>(Func<Collector, TArg, CancellationToken, ValueTask> func, TArg arg, CancellationToken cancel)
+    internal async ValueTask ForEachCollectorAsync<TArg>(
+        Func<Collector, TArg, CancellationToken, ValueTask> func,
+        TArg arg,
+        CancellationToken cancel
+    )
         where TArg : class
     {
         // This could potentially take nontrivial time, as we are serializing to a stream (potentially, a network stream).
@@ -168,7 +181,7 @@ internal sealed class CollectorFamily
             for (var i = 0; i < collectorCount; i++)
             {
                 var collector = buffer[i];
-                await func(collector, arg, cancel);
+                await func(collector, arg, cancel).ConfigureAwait(false);
             }
         }
         finally

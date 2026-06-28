@@ -2,45 +2,43 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.CommerceInfo
 {
-	[TdfStruct]
-	public struct GetProductAssociationResponse
-	{
+    [TdfStruct]
+    public struct GetProductAssociationResponse
+    {
+        [TdfMember("CCDT")]
+        public string mCreateDate;
 
-		[TdfMember("CCDT")]
-		public string mCreateDate;
+        [TdfMember("CSER")]
+        public string mExternalRef;
 
-		[TdfMember("CSER")]
-		public string mExternalRef;
+        [TdfMember("CSFN")]
+        public string mFileName;
 
-		[TdfMember("CSFN")]
-		public string mFileName;
+        [TdfMember("UID")]
+        public ulong mId;
 
-		[TdfMember("UID")]
-		public ulong mId;
+        [TdfMember("CMDT")]
+        public string mModifiedDate;
 
-		[TdfMember("CMDT")]
-		public string mModifiedDate;
+        [TdfMember("CSN")]
+        public string mName;
 
-		[TdfMember("CSN")]
-		public string mName;
+        [TdfMember("PLST")]
+        public List<ProductAssociation> mProductAssociationList;
 
-		[TdfMember("PLST")]
-		public List<ProductAssociation> mProductAssociationList;
+        [TdfMember("CPDN")]
+        public string mProductName;
 
-		[TdfMember("CPDN")]
-		public string mProductName;
+        [TdfMember("CPJN")]
+        public string mProjectNumber;
 
-		[TdfMember("CPJN")]
-		public string mProjectNumber;
+        [TdfMember("CSTA")]
+        public string mStatus;
 
-		[TdfMember("CSTA")]
-		public string mStatus;
+        [TdfMember("CST")]
+        public string mType;
 
-		[TdfMember("CST")]
-		public string mType;
-
-		[TdfMember("CURI")]
-		public string mUri;
-
-	}
+        [TdfMember("CURI")]
+        public string mUri;
+    }
 }

@@ -1,9 +1,4 @@
-﻿using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Transactions;
-
-namespace System.Text
+﻿namespace MultiServerLibrary.Extension.NET
 {
     /// https://stackoverflow.com/questions/54309810/how-to-detect-any-non-utf8-character-in-a-file-in-c
     ///
@@ -12,13 +7,6 @@ namespace System.Text
     /// </summary>
     public interface IUtf8Checker
     {
-        /// <summary>
-        /// Check if file is utf8 encoded.
-        /// </summary>
-        /// <param name="fileName"></param>
-        /// <returns>true if utf8 encoded, otherwise false.</returns>
-        bool Check(string fileName, bool allowPartialMatch);
-
         /// <summary>
         /// Check if stream is utf8 encoded.
         /// </summary>
@@ -33,29 +21,26 @@ namespace System.Text
         List<IErrorUtf8Checker> GetErrorList();
     }
 
-    public interface IErrorUtf8Checker
-    {
-
-    }
+    public interface IErrorUtf8Checker { }
 
     /// <summary>
     /// http://anubis.dkuug.dk/JTC1/SC2/WG2/docs/n1335
-    /// 
+    ///
     /// http://www.cl.cam.ac.uk/~mgk25/ucs/ISO-10646-UTF-8.html
-    /// 
+    ///
     /// http://www.unicode.org/versions/corrigendum1.html
-    /// 
+    ///
     /// http://www.ietf.org/rfc/rfc2279.txt
-    /// 
+    ///
     /// </summary>
     public class Utf8Checker : IUtf8Checker
     {
-        // newLineArray = used to understand the new line sequence 
+        // newLineArray = used to understand the new line sequence
         private static readonly byte[] _newLineArray = new byte[2] { 13, 10 };
         private int _line = 1;
         private readonly byte[] _lineArray = new byte[2] { 0, 0 };
 
-        // used to keep trak of number of errors found into the file            
+        // used to keep trak of number of errors found into the file
         private readonly List<IErrorUtf8Checker> errorsList;
 
         public Utf8Checker()
@@ -68,19 +53,13 @@ namespace System.Text
             return errorsList.Count;
         }
 
-        public bool Check(string fileName, bool allowPartialMatch = false)
-        {
-            using (BufferedStream fstream = new BufferedStream(File.OpenRead(fileName)))
-                return IsUtf8(fstream, allowPartialMatch);
-        }
-
         public bool Check(byte[] fileBytes, bool allowPartialMatch = false)
         {
-            using (MemoryStream mstream = new MemoryStream(fileBytes))
+            using (var mstream = new MemoryStream(fileBytes))
                 return IsUtf8(mstream, allowPartialMatch);
         }
 
-        public int getLine()
+        public int GetLine()
         {
             return _line;
         }
@@ -98,7 +77,7 @@ namespace System.Text
         /// <returns>True if the whole stream is utf8 encoded.</returns>
         public bool IsUtf8(Stream stream, bool allowPartialMatch)
         {
-            int count = 4 * 1024;
+            var count = 4 * 1024;
             byte[] buffer;
             int read;
             while (true)
@@ -108,23 +87,22 @@ namespace System.Text
                 read = stream.Read(buffer, 0, count);
                 if (read < count)
                     break;
-                buffer = null;
                 count *= 2;
             }
             return IsUtf8(buffer, read, allowPartialMatch);
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="buffer"></param>
         /// <param name="length"></param>
         /// <returns></returns>
         public bool IsUtf8(byte[] buffer, int length, bool allowPartialMatch)
         {
-            int position = 0;
-            int bytes = 0;
-            bool ret = !allowPartialMatch;
+            var position = 0;
+            var bytes = 0;
+            var ret = !allowPartialMatch;
             while (position < length)
             {
                 if (allowPartialMatch)
@@ -135,21 +113,21 @@ namespace System.Text
                             ret = true;
                     }
                     else
-                        errorsList.Add(new ErrorUtf8Checker(getLine(), buffer[position]));
+                        errorsList.Add(new ErrorUtf8Checker(GetLine(), buffer[position]));
                 }
                 else if (!IsValid(buffer, position, length, ref bytes))
                 {
                     ret = false;
-                    errorsList.Add(new ErrorUtf8Checker(getLine(), buffer[position]));
+                    errorsList.Add(new ErrorUtf8Checker(GetLine(), buffer[position]));
                 }
-                
+
                 position += bytes;
             }
             return ret;
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="buffer"></param>
         /// <param name="position"></param>
@@ -167,8 +145,7 @@ namespace System.Text
                 return true;
             }
 
-            byte ch = buffer[position];
-            char ctest = (char)ch; // for debug  only
+            var ch = buffer[position];
 
             DetectNewLine(ch);
 
@@ -186,10 +163,8 @@ namespace System.Text
                     return false;
                 }
                 if (buffer[position + 1] < 0x80 || buffer[position + 1] > 0xbf)
-                {
                     //bytes = 0;
                     return false;
-                }
                 bytes = 2;
                 return true;
             }
@@ -197,36 +172,35 @@ namespace System.Text
             if (ch == 0xe0)
             {
                 if (position >= length - 3)
-                {
                     //bytes = 0;
                     return false;
-                }
 
-                if (buffer[position + 1] < 0xa0 || buffer[position + 1] > 0xbf ||
-                    buffer[position + 2] < 0x80 || buffer[position + 2] > 0xbf)
-                {
+                if (
+                    buffer[position + 1] < 0xa0
+                    || buffer[position + 1] > 0xbf
+                    || buffer[position + 2] < 0x80
+                    || buffer[position + 2] > 0xbf
+                )
                     //bytes = 0;
                     return false;
-                }
                 bytes = 3;
                 return true;
             }
 
-
             if (ch >= 0xe1 && ch <= 0xef)
             {
                 if (position >= length - 3)
-                {
                     //bytes = 0;
                     return false;
-                }
 
-                if (buffer[position + 1] < 0x80 || buffer[position + 1] > 0xbf ||
-                    buffer[position + 2] < 0x80 || buffer[position + 2] > 0xbf)
-                {
+                if (
+                    buffer[position + 1] < 0x80
+                    || buffer[position + 1] > 0xbf
+                    || buffer[position + 2] < 0x80
+                    || buffer[position + 2] > 0xbf
+                )
                     //bytes = 0;
                     return false;
-                }
 
                 bytes = 3;
                 return true;
@@ -235,18 +209,19 @@ namespace System.Text
             if (ch == 0xf0)
             {
                 if (position >= length - 4)
-                {
                     //bytes = 0;
                     return false;
-                }
 
-                if (buffer[position + 1] < 0x90 || buffer[position + 1] > 0xbf ||
-                    buffer[position + 2] < 0x80 || buffer[position + 2] > 0xbf ||
-                    buffer[position + 3] < 0x80 || buffer[position + 3] > 0xbf)
-                {
+                if (
+                    buffer[position + 1] < 0x90
+                    || buffer[position + 1] > 0xbf
+                    || buffer[position + 2] < 0x80
+                    || buffer[position + 2] > 0xbf
+                    || buffer[position + 3] < 0x80
+                    || buffer[position + 3] > 0xbf
+                )
                     //bytes = 0;
                     return false;
-                }
 
                 bytes = 4;
                 return true;
@@ -255,18 +230,19 @@ namespace System.Text
             if (ch == 0xf4)
             {
                 if (position >= length - 4)
-                {
                     //bytes = 0;
                     return false;
-                }
 
-                if (buffer[position + 1] < 0x80 || buffer[position + 1] > 0x8f ||
-                    buffer[position + 2] < 0x80 || buffer[position + 2] > 0xbf ||
-                    buffer[position + 3] < 0x80 || buffer[position + 3] > 0xbf)
-                {
+                if (
+                    buffer[position + 1] < 0x80
+                    || buffer[position + 1] > 0x8f
+                    || buffer[position + 2] < 0x80
+                    || buffer[position + 2] > 0xbf
+                    || buffer[position + 3] < 0x80
+                    || buffer[position + 3] > 0xbf
+                )
                     //bytes = 0;
                     return false;
-                }
 
                 bytes = 4;
                 return true;
@@ -275,18 +251,19 @@ namespace System.Text
             if (ch >= 0xf1 && ch <= 0xf3)
             {
                 if (position >= length - 4)
-                {
                     //bytes = 0;
                     return false;
-                }
 
-                if (buffer[position + 1] < 0x80 || buffer[position + 1] > 0xbf ||
-                    buffer[position + 2] < 0x80 || buffer[position + 2] > 0xbf ||
-                    buffer[position + 3] < 0x80 || buffer[position + 3] > 0xbf)
-                {
+                if (
+                    buffer[position + 1] < 0x80
+                    || buffer[position + 1] > 0xbf
+                    || buffer[position + 2] < 0x80
+                    || buffer[position + 2] > 0xbf
+                    || buffer[position + 3] < 0x80
+                    || buffer[position + 3] > 0xbf
+                )
                     //bytes = 0;
                     return false;
-                }
 
                 bytes = 4;
                 return true;
@@ -338,18 +315,13 @@ namespace System.Text
 
         public override string ToString()
         {
-            string s;
             try
             {
-                if (_ch > 0)
-                    s = "line: " + _line + " code: " + _ch + ", char: " + (char)_ch;
-                else
-                    s = "line: " + _line;
-                return s;
+                return _ch > 0
+                    ? "line: " + _line + " code: " + _ch + ", char: " + (char)_ch
+                    : "line: " + _line;
             }
-            catch
-            {
-            }
+            catch { }
             return base.ToString();
         }
     }

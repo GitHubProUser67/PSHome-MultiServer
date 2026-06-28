@@ -1,15 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Migrations.Internal;
 using MultiServerLibrary.Extension.LinqSQL;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
 using WebAPIService.LeaderboardService.Context.Entities;
 
 namespace WebAPIService.LeaderboardService
@@ -18,42 +14,65 @@ namespace WebAPIService.LeaderboardService
     // EntityFrameworkCore\Add-Migration NAME -Project WebAPIService -StartupProject MultiServerWebServices -Context LeaderboardDbContext
 
     public class LeaderboardDbContext : DbContext
-	{
+    {
         private static readonly Type BaseType = typeof(ScoreboardEntryBase);
         private static List<Type> _discoveredEntryTypes;
 
-        public static DbContextOptionsBuilder OnContextBuilding(DbContextOptionsBuilder opt, DBType type, string connectionString)
-		{
-			opt.ReplaceService<IMigrationsAssembly, ContextAwareMigrationsAssembly>();
+        public static DbContextOptionsBuilder OnContextBuilding(
+            DbContextOptionsBuilder opt,
+            DBType type,
+            string connectionString
+        )
+        {
+            opt.ReplaceService<IMigrationsAssembly, ContextAwareMigrationsAssembly>();
 
-			if (type == DBType.SQLite)
-                return opt.UseSqlite(connectionString);
+            return type switch
+            {
+                DBType.SQLite => opt.UseSqlite(connectionString),
+                DBType.MySQL => opt.UseMySql(
+                    connectionString,
+                    new MySqlServerVersion(new Version(8, 0, 25)),
+                    conf => conf.CommandTimeout(60)
+                ),
+                _ => opt,
+            };
+        }
 
-            else if (type == DBType.MySQL)
-                return opt.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 25)), conf => conf.CommandTimeout(60));
+        public static DbContextOptions<LeaderboardDbContext> BuildOptions(
+            DBType type,
+            string connectionString
+        )
+        {
+            var builder = new DbContextOptionsBuilder<LeaderboardDbContext>();
 
-            return opt;
-		}
-		public LeaderboardDbContext()
-			: base()
-		{
-		}
+            OnContextBuilding(builder, type, connectionString);
 
-		public LeaderboardDbContext(DbContextOptions options)
-			: base(options)
-		{
-		}
+            return builder.Options;
+        }
+
+        [RequiresUnreferencedCode("Uses reflection that may break when trimming.")]
+        public LeaderboardDbContext()
+            : base() { }
+
+        [RequiresUnreferencedCode("Uses reflection that may break when trimming.")]
+        public LeaderboardDbContext(DbContextOptions<LeaderboardDbContext> options)
+            : base(options) { }
 
         public static string GetDefaultDbPath()
         {
-            string dbDir = Path.Combine(Directory.GetCurrentDirectory(), "static", "wwwapiroot", "LeaderboardsService");
+            var dbDir = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "static",
+                "wwwapiroot",
+                "LeaderboardsService"
+            );
             Directory.CreateDirectory(dbDir);
 
             return Path.Combine(dbDir, "Leaderboards.sqlite");
         }
 
-        public Task EnsureSeedData()
-		{
+        public static Task EnsureSeedData()
+        {
             return Task.CompletedTask;
         }
 
@@ -61,11 +80,14 @@ namespace WebAPIService.LeaderboardService
         // Model relations comes here
 
         protected override void OnModelCreating(ModelBuilder builder)
-		{
-            _discoveredEntryTypes = AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(x => x.GetTypes())
-                .Where(t => t.IsClass && !t.IsAbstract && BaseType.IsAssignableFrom(t))
-                .ToList();
+        {
+            _discoveredEntryTypes =
+            [
+                .. AppDomain
+                    .CurrentDomain.GetAssemblies()
+                    .SelectMany(x => x.GetTypes())
+                    .Where(t => t.IsClass && !t.IsAbstract && BaseType.IsAssignableFrom(t)),
+            ];
 
             foreach (var type in _discoveredEntryTypes)
             {
@@ -89,19 +111,15 @@ namespace WebAPIService.LeaderboardService
         }
     }
 
-	public class ContextAwareMigrationsAssembly : MigrationsAssembly
-	{
-		private readonly LeaderboardDbContext context;
-
-		public ContextAwareMigrationsAssembly(
-			ICurrentDbContext currentContext,
-			IDbContextOptions options,
-			IMigrationsIdGenerator idGenerator,
-			IDiagnosticsLogger<DbLoggerCategory.Migrations> logger)
-			: base(currentContext, options, idGenerator, logger)
-		{
-			context = (LeaderboardDbContext)currentContext.Context;
-		}
+    public class ContextAwareMigrationsAssembly(
+        ICurrentDbContext currentContext,
+        IDbContextOptions options,
+        IMigrationsIdGenerator idGenerator,
+        IDiagnosticsLogger<DbLoggerCategory.Migrations> logger
+    ) : MigrationsAssembly(currentContext, options, idGenerator, logger)
+    {
+        private readonly LeaderboardDbContext context = (LeaderboardDbContext)
+            currentContext.Context;
 
         /// <summary>
         /// Modified from https://web.archive.org/web/20181021034610/http://weblogs.thinktecture.com/pawel/2018/06/entity-framework-core-changing-db-migration-schema-at-runtime.html
@@ -110,18 +128,19 @@ namespace WebAPIService.LeaderboardService
         /// <param name="activeProvider"></param>
         /// <returns></returns>
         public override Migration CreateMigration(TypeInfo migrationClass, string activeProvider)
-		{
-			var hasCtorWithDbContext = migrationClass
-					.GetConstructor(new[] { typeof(LeaderboardDbContext) }) != null;
+        {
+            var hasCtorWithDbContext =
+                migrationClass.GetConstructor([typeof(LeaderboardDbContext)]) != null;
 
-			if (hasCtorWithDbContext)
-			{
-				var instance = (Migration)Activator.CreateInstance(migrationClass.AsType(), context);
-				instance.ActiveProvider = activeProvider;
-				return instance;
-			}
+            if (hasCtorWithDbContext)
+            {
+                var instance = (Migration)
+                    Activator.CreateInstance(migrationClass.AsType(), context);
+                instance.ActiveProvider = activeProvider;
+                return instance;
+            }
 
-			return base.CreateMigration(migrationClass, activeProvider);
-		}
-	}
+            return base.CreateMigration(migrationClass, activeProvider);
+        }
+    }
 }

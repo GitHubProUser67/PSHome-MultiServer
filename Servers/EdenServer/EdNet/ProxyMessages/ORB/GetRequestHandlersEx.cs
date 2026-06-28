@@ -1,26 +1,50 @@
+using System.Net;
+using System.Reflection;
 using EdNetService.CRC;
 using EdNetService.Models;
 using EndianTools;
 using MultiServerLibrary.Extension;
-using System.Net;
-using System.Reflection;
 
 namespace EdenServer.EdNet.ProxyMessages
 {
     public class GetRequestHandlersEx : AbstractProxyMessage
     {
-        private static readonly FieldInfo[] storeBank = typeof(edStoreBank).GetFields(BindingFlags.Public | BindingFlags.Static);
+        private static readonly FieldInfo[] storeBank = typeof(edStoreBank).GetFields(
+            BindingFlags.Public | BindingFlags.Static
+        );
 
-        private static List<ushort> exceptionList = new List<ushort>() { 0xCE94, 0xF5FB, 0x4445, 0x03D4, 0xCB67, 0x8CF6, 0x8731, 0xC0A0, 0x0813, 0x4F82, 0xC2AC, 0x853D, 0x95A8 };
-
-        public override byte[]? Process(IPEndPoint endpoint, IPEndPoint target, ClientTask task, ushort PacketMagic)
+        private static readonly List<ushort> exceptionList = new()
         {
-            byte numOfHandlers = (byte)EdPropsU8.COREREQUESTS_MAX_GETRPC_HANDLERS_EX;
-            List<ushort> request_crc_in = new List<ushort>(numOfHandlers);
-            uint targetIp = EndianUtils.ReverseUint(InternetProtocolUtils.GetIPAddressAsUInt(target.Address.MapToIPv4()));
-            ushort targetPort = (ushort)target.Port;
+            0xCE94,
+            0xF5FB,
+            0x4445,
+            0x03D4,
+            0xCB67,
+            0x8CF6,
+            0x8731,
+            0xC0A0,
+            0x0813,
+            0x4F82,
+            0xC2AC,
+            0x853D,
+            0x95A8,
+        };
 
-            EdStore request = task.Request;
+        public override byte[]? Process(
+            IPEndPoint endpoint,
+            IPEndPoint target,
+            ClientTask task,
+            ushort PacketMagic
+        )
+        {
+            var numOfHandlers = (byte)EdPropsU8.COREREQUESTS_MAX_GETRPC_HANDLERS_EX;
+            var request_crc_in = new List<ushort>(numOfHandlers);
+            var targetIp = EndianUtils.ReverseUint(
+                InternetProtocolUtils.GetIPAddressAsUInt(target.Address.MapToIPv4())
+            );
+            var targetPort = (ushort)target.Port;
+
+            var request = task.Request;
 
             task.Client.UserId = request.ExtractUInt32();
             task.Client.SessionId = request.ExtractUInt64();
@@ -31,11 +55,11 @@ namespace EdenServer.EdNet.ProxyMessages
             // Context (dunno what can be worth looking in this)
             request.ExtractRawBytes((ushort)request.FreeSize);
 
-            EdStore response = new EdStore(null, (8 * request_crc_in.Count) + 4);
+            var response = new EdStore(null, (8 * request_crc_in.Count) + 4);
 
             response.InsertStart(edStoreBank.CRC_COREREQUESTS_A_GET_REQUEST_HANDLERS_EX);
 
-            foreach (ushort handler_crc in request_crc_in)
+            foreach (var handler_crc in request_crc_in)
             {
                 response.InsertUInt16(handler_crc);
                 if (handler_crc != 0)
@@ -46,20 +70,26 @@ namespace EdenServer.EdNet.ProxyMessages
 
                     if (matchingField != null && matchingField.CRC.HasValue)
                     {
-                        string serviceName = matchingField.Name;
+                        var serviceName = matchingField.Name;
 #if DEBUG
-                        CustomLogger.LoggerAccessor.LogInfo($"[GetRequestHandlersEx] - Found service:{serviceName} for CRC:{matchingField.CRC.Value:X4}");
+                        CustomLogger.LoggerAccessor.LogInfo(
+                            $"[GetRequestHandlersEx] - Found service:{serviceName} for CRC:{matchingField.CRC.Value:X4}"
+                        );
 #endif
                         if (serviceName.EndsWith("SERVER"))
                         {
-                            var service = EdenServerConfiguration.GetServerConfigByServiceName(serviceName);
+                            var service = EdenServerConfiguration.GetServerConfigByServiceName(
+                                serviceName
+                            );
                             if (service != null)
                             {
-                                string? configIp = service.Value.address;
-                                ushort? configPort = service.Value.port;
+                                var configIp = service.Value.address;
+                                var configPort = service.Value.port;
                                 if (!string.IsNullOrEmpty(configIp) && configPort.HasValue)
                                 {
-                                    response.InsertUInt32(InternetProtocolUtils.GetIPAddressAsUInt(configIp));
+                                    response.InsertUInt32(
+                                        InternetProtocolUtils.GetIPAddressAsUInt(configIp)
+                                    );
                                     response.InsertUInt16(configPort.Value);
                                     continue;
                                 }
@@ -79,7 +109,9 @@ namespace EdenServer.EdNet.ProxyMessages
                     else
                     {
 #if DEBUG
-                        CustomLogger.LoggerAccessor.LogWarn($"[GetRequestHandlersEx] - Unknown service for CRC:{handler_crc:X4}");
+                        CustomLogger.LoggerAccessor.LogWarn(
+                            $"[GetRequestHandlersEx] - Unknown service for CRC:{handler_crc:X4}"
+                        );
 #endif
                         response.InsertUInt32(0);
                         response.InsertUInt16(0);

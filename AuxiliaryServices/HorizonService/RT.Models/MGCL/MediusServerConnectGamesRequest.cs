@@ -1,13 +1,15 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     /// <summary>
     /// Request for the Medius Servers to connect a game world to this host
     /// </summary>
-    [MediusMessage(NetMessageClass.MessageClassLobbyReport, MediusMGCLMessageIds.ServerConnectGamesRequest)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyReport,
+        MediusMGCLMessageIds.ServerConnectGamesRequest
+    )]
     public class MediusServerConnectGamesRequest : BaseMGCLMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusMGCLMessageIds.ServerConnectGamesRequest;
@@ -16,18 +18,22 @@ namespace Horizon.RT.Models
         /// Message ID used for asynchronous request processing.
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// IP Address of the server to connect to
         /// </summary>
         public string ServerIP; // MGCL_SERVERIP_MAXLEN
+
         /// <summary>
         /// Port of the server to connect to.
         /// </summary>
         public int ServerPort;
+
         /// <summary>
         /// Game World ID to connect to.
         /// </summary>
         public int GameWorldID;
+
         /// <summary>
         /// Spectator World ID to connect to.
         /// </summary>
@@ -35,10 +41,8 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            
             base.Deserialize(reader);
 
-            
             MessageID = reader.Read<MessageId>();
             ServerIP = reader.ReadString(Constants.MGCL_SERVERIP_MAXLEN);
             reader.ReadBytes(3);
@@ -49,10 +53,8 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            
             base.Serialize(writer);
 
-            
             writer.Write(MessageID ?? MessageId.Empty);
             writer.Write(ServerIP, Constants.MGCL_SERVERIP_MAXLEN);
             writer.Write(new byte[3]);
@@ -63,12 +65,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"ServerIP: {ServerIP} " +
-                $"ServerPort: {ServerPort} " +
-                $"GameWorldID: {GameWorldID} " +
-                $"SpectatorWorldID: {SpectatorWorldID}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"ServerIP: {ServerIP} "
+                + $"ServerPort: {ServerPort} "
+                + $"GameWorldID: {GameWorldID} "
+                + $"SpectatorWorldID: {SpectatorWorldID}";
         }
     }
 }

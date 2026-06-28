@@ -1,5 +1,5 @@
-using BlazeCommon.PacketDisplayAttributes;
 using System.ComponentModel.DataAnnotations;
+using BlazeCommon.PacketDisplayAttributes;
 using Tdf;
 
 namespace Blaze2SDK.Blaze.Redirector
@@ -7,7 +7,6 @@ namespace Blaze2SDK.Blaze.Redirector
     [TdfStruct]
     public struct ServerInstanceRequest
     {
-
         /// <summary>
         /// Max String Length: 64
         /// </summary>
@@ -84,6 +83,5 @@ namespace Blaze2SDK.Blaze.Redirector
         [TdfMember("PROF")]
         [StringLength(32)]
         public string mConnectionProfile;
-
     }
 }

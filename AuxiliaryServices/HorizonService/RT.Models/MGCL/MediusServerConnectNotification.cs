@@ -1,13 +1,15 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     /// <summary>
     /// Request a structure to notify Medius about the connect or disconnnect of a client on this game host.
     /// </summary>
-    [MediusMessage(NetMessageClass.MessageClassLobbyReport, MediusMGCLMessageIds.ServerConnectNotification)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyReport,
+        MediusMGCLMessageIds.ServerConnectNotification
+    )]
     public class MediusServerConnectNotification : BaseMGCLMessage
     {
         public override byte PacketType => (byte)MediusMGCLMessageIds.ServerConnectNotification;
@@ -16,11 +18,13 @@ namespace Horizon.RT.Models
         /// A connect or disconnect event.
         /// </summary>
         public MGCL_EVENT_TYPE ConnectEventType;
+
         /// <summary>
         /// Medius game world Unique ID that the player
         /// connected or disconnected from.
         /// </summary>
         public int MediusWorldUID;
+
         /// <summary>
         /// The player's session key.
         /// </summary>
@@ -48,10 +52,11 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"ConnectEventType: {ConnectEventType} " +
-                $"MediusWorldUID: {MediusWorldUID} " +
-                $"PlayerSessionKey: {PlayerSessionKey}";
+            return base.ToString()
+                + " "
+                + $"ConnectEventType: {ConnectEventType} "
+                + $"MediusWorldUID: {MediusWorldUID} "
+                + $"PlayerSessionKey: {PlayerSessionKey}";
         }
     }
 }

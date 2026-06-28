@@ -1,10 +1,10 @@
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     [ScertMessage(RT_MSG_TYPE.RT_MSG_CLIENT_FLUSH_ALL)]
-    public  class RT_MSG_CLIENT_FLUSH_ALL : BaseScertMessage 
+    public class RT_MSG_CLIENT_FLUSH_ALL : BaseScertMessage
     {
         public override RT_MSG_TYPE Id => RT_MSG_TYPE.RT_MSG_CLIENT_FLUSH_ALL;
 
@@ -22,8 +22,7 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"Contents: {System.BitConverter.ToString(Payload)}";
+            return base.ToString() + " " + $"Contents: {System.BitConverter.ToString(Payload)}";
         }
     }
 }

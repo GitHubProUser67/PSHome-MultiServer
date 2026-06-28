@@ -1,5 +1,5 @@
-using BlazeCommon.PacketDisplayAttributes;
 using System.ComponentModel.DataAnnotations;
+using BlazeCommon.PacketDisplayAttributes;
 using Tdf;
 
 namespace Blaze2SDK.Blaze
@@ -7,7 +7,6 @@ namespace Blaze2SDK.Blaze
     [TdfStruct]
     public struct UserIdentification
     {
-
         [TdfMember("AID")]
         public long mAccountId;
 
@@ -40,6 +39,5 @@ namespace Blaze2SDK.Blaze
         [TdfMember("PID")]
         [StringLength(32)]
         public string mPersonaId;
-
     }
 }

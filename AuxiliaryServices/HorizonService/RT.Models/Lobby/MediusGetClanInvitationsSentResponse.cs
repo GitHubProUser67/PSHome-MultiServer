@@ -1,13 +1,16 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.GetClanInvitationsSentResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.GetClanInvitationsSentResponse
+    )]
     public class MediusGetClanInvitationsSentResponse : BaseLobbyMessage, IMediusResponse
     {
-        public override byte PacketType => (byte)MediusLobbyMessageIds.GetClanInvitationsSentResponse;
+        public override byte PacketType =>
+            (byte)MediusLobbyMessageIds.GetClanInvitationsSentResponse;
 
         public bool IsSuccess => StatusCode >= 0;
 
@@ -23,25 +26,19 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             reader.ReadBytes(3);
             StatusCode = reader.Read<MediusCallbackStatus>();
             AccountID = reader.ReadInt32();
             AccountName = reader.ReadString(Constants.ACCOUNTNAME_MAXLEN);
 
-            if(reader.MediusVersion == 113)
-            {
-                ResponseMsg = reader.ReadString(Constants.CLANMSG_MAXLEN_113);
-            } else
-            {
-                ResponseMsg = reader.ReadString(Constants.CLANMSG_MAXLEN);
-            }
+            ResponseMsg =
+                reader.MediusVersion == 113
+                    ? reader.ReadString(Constants.CLANMSG_MAXLEN_113)
+                    : reader.ReadString(Constants.CLANMSG_MAXLEN);
             ResponseStatus = reader.Read<MediusClanInvitationsResponseStatus>();
             ResponseTime = reader.ReadInt32();
             EndOfList = reader.ReadBoolean();
@@ -50,21 +47,19 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(new byte[3]);
             writer.Write(StatusCode);
             writer.Write(AccountID);
             writer.Write(AccountName, Constants.ACCOUNTNAME_MAXLEN);
-            if(writer.MediusVersion == 113)
+            if (writer.MediusVersion == 113)
             {
                 writer.Write(ResponseMsg, Constants.CLANMSG_MAXLEN_113);
-            } else
+            }
+            else
             {
                 writer.Write(ResponseMsg, Constants.CLANMSG_MAXLEN);
             }
@@ -76,15 +71,16 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"AccountID: {AccountID} " +
-                $"AccountName: {AccountName} " +
-                $"ResponseMsg: {ResponseMsg} " +
-                $"ResponseStatus: {ResponseStatus} " +
-                $"ResponseTime: {ResponseTime} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"AccountID: {AccountID} "
+                + $"AccountName: {AccountName} "
+                + $"ResponseMsg: {ResponseMsg} "
+                + $"ResponseStatus: {ResponseStatus} "
+                + $"ResponseTime: {ResponseTime} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

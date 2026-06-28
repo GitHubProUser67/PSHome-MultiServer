@@ -1,12 +1,5 @@
-﻿using System;
-
-namespace ZTn.Json.JsonTreeView.Extensions
+﻿namespace ZTn.Json.JsonTreeView.Extensions
 {
-    public class JTokenTreeNodeDeleteException : AggregateException
-    {
-        public JTokenTreeNodeDeleteException(Exception sourceException)
-            : base(sourceException)
-        {
-        }
-    }
+    public class JTokenTreeNodeDeleteException(Exception sourceException)
+        : AggregateException(sourceException) { }
 }

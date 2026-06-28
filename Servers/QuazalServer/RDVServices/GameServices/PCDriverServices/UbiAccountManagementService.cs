@@ -1,8 +1,7 @@
-using QuazalServer.RDVServices.DDL.Models;
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
+using QuazalServer.RDVServices.DDL.Models;
 using RDVServices;
-using QuazalServer.QNetZ;
 
 namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 {
@@ -17,7 +16,7 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         {
             if (Context != null && Context.Client.PlayerInfo != null)
             {
-                PlayerInfo playerInfo = Context.Client.PlayerInfo;
+                var playerInfo = Context.Client.PlayerInfo;
 
                 UbiAccount account = new()
                 {
@@ -37,15 +36,31 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                         m_basic_status = 2,
                         m_missing_required_informations = false,
                         m_pending_deactivation = false,
-                        m_recovering_password = false
+                        m_recovering_password = false,
                     },
-                    m_date_of_birth = new System.DateTime(1990, 11, 1)
+                    m_date_of_birth = new System.DateTime(1990, 11, 1),
                 };
 
-                if (DBHelper.UpdateUbiAccountDataByUserName(Context.Handler.Factory.Item1, playerInfo.Name!, account))
+                if (
+                    DBHelper.UpdateUbiAccountDataByUserName(
+                        Context.Handler.Factory.Item1,
+                        playerInfo.Name!,
+                        account
+                    )
+                )
                 {
-                    DBHelper.UpdateUbiTokensDataByUserName(Context.Handler.Factory.Item1, playerInfo.Name!, 10);
-                    return Result(new { ubi_account = account, failed_reasons = new List<ValidationFailureReason>() });
+                    DBHelper.UpdateUbiTokensDataByUserName(
+                        Context.Handler.Factory.Item1,
+                        playerInfo.Name!,
+                        10
+                    );
+                    return Result(
+                        new
+                        {
+                            ubi_account = account,
+                            failed_reasons = new List<ValidationFailureReason>(),
+                        }
+                    );
                 }
 
                 // TODO, reverse validation reasons!
@@ -63,74 +78,19 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         [RMCMethod(3)]
         public RMCResult GetAccount()
         {
-            PlayerInfo? playerInfo = Context?.Client.PlayerInfo;
+            var playerInfo = Context?.Client.PlayerInfo;
 
             if (playerInfo != null)
             {
-                string? userName = playerInfo.Name;
+                var userName = playerInfo.Name;
 
                 if (string.IsNullOrEmpty(userName))
                     return Result(new { exist = false });
 
                 if (userName == "Tracking")
                 {
-                    return Result(new
-                    {
-                        account = new UbiAccount()
-                        {
-                            m_ubi_account_id = playerInfo.AccountId,
-                            m_username = playerInfo.Name,
-                            m_password = "",
-                            m_first_name = "",
-                            m_last_name = "",
-                            m_country_code = "KZ",
-                            m_email = "whatever@dontcare.com",
-                            m_preferred_language = "en",
-                            m_gender = 0,
-                            m_opt_in = true,
-                            m_third_party_opt_in = true,
-                            m_status = new UbiAccountStatus()
-                            {
-                                m_basic_status = 2,
-                                m_missing_required_informations = false,
-                                m_pending_deactivation = false,
-                                m_recovering_password = false
-                            },
-                            m_external_accounts = new List<ExternalAccount>()
-                            {
-                                new ExternalAccount()
-                                {
-                                    m_account_type = 11,
-                                    m_id = "loh",
-                                    m_username = "aabb0"
-                                },
-                                new ExternalAccount()
-                                {
-                                    m_account_type = 25,
-                                    m_id = "pidr",
-                                    m_username = "aabb1"
-                                },
-                                new ExternalAccount()
-                                {
-                                    m_account_type = 31,
-                                    m_id = "whatev",
-                                    m_username = "aabb2"
-                                }
-
-                            },
-                            m_date_of_birth = new DateTime(1990, 11, 1)
-                        },
-                        exist = true
-                    });
-                }
-                else
-                {
-                    UbiAccount? account = DBHelper.GetUbiAccountDataByUserName(Context!.Handler.Factory.Item1, userName);
-                    if (account != null)
-                        return Result(new { account = account, exist = true });
-                    else // DFS Workaround for lack of Uplay.
-                    {
-                        return Result(new
+                    return Result(
+                        new
                         {
                             account = new UbiAccount()
                             {
@@ -150,34 +110,94 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                                     m_basic_status = 2,
                                     m_missing_required_informations = false,
                                     m_pending_deactivation = false,
-                                    m_recovering_password = true
+                                    m_recovering_password = false,
                                 },
                                 m_external_accounts = new List<ExternalAccount>()
-                        {
-                            new ExternalAccount()
-                            {
-                                m_account_type = 11,
-                                m_id = "loh",
-                                m_username = "aabb0"
+                                {
+                                    new()
+                                    {
+                                        m_account_type = 11,
+                                        m_id = "loh",
+                                        m_username = "aabb0",
+                                    },
+                                    new()
+                                    {
+                                        m_account_type = 25,
+                                        m_id = "pidr",
+                                        m_username = "aabb1",
+                                    },
+                                    new()
+                                    {
+                                        m_account_type = 31,
+                                        m_id = "whatev",
+                                        m_username = "aabb2",
+                                    },
+                                },
+                                m_date_of_birth = new DateTime(1990, 11, 1),
                             },
-                            new ExternalAccount()
+                            exist = true,
+                        }
+                    );
+                }
+                else
+                {
+                    var account = DBHelper.GetUbiAccountDataByUserName(
+                        Context!.Handler.Factory.Item1,
+                        userName
+                    );
+                    if (account != null)
+                        return Result(new { account = account, exist = true });
+                    else // DFS Workaround for lack of Uplay.
+                    {
+                        return Result(
+                            new
                             {
-                                m_account_type = 25,
-                                m_id = "pidr",
-                                m_username = "aabb1"
-                            },
-                            new ExternalAccount()
-                            {
-                                m_account_type = 31,
-                                m_id = "whatev",
-                                m_username = "aabb2"
+                                account = new UbiAccount()
+                                {
+                                    m_ubi_account_id = playerInfo.AccountId,
+                                    m_username = playerInfo.Name,
+                                    m_password = "",
+                                    m_first_name = "",
+                                    m_last_name = "",
+                                    m_country_code = "KZ",
+                                    m_email = "whatever@dontcare.com",
+                                    m_preferred_language = "en",
+                                    m_gender = 0,
+                                    m_opt_in = true,
+                                    m_third_party_opt_in = true,
+                                    m_status = new UbiAccountStatus()
+                                    {
+                                        m_basic_status = 2,
+                                        m_missing_required_informations = false,
+                                        m_pending_deactivation = false,
+                                        m_recovering_password = true,
+                                    },
+                                    m_external_accounts = new List<ExternalAccount>()
+                                    {
+                                        new()
+                                        {
+                                            m_account_type = 11,
+                                            m_id = "loh",
+                                            m_username = "aabb0",
+                                        },
+                                        new()
+                                        {
+                                            m_account_type = 25,
+                                            m_id = "pidr",
+                                            m_username = "aabb1",
+                                        },
+                                        new()
+                                        {
+                                            m_account_type = 31,
+                                            m_id = "whatev",
+                                            m_username = "aabb2",
+                                        },
+                                    },
+                                    m_date_of_birth = new DateTime(1990, 11, 1),
+                                },
+                                exist = true,
                             }
-
-                        },
-                                m_date_of_birth = new DateTime(1990, 11, 1)
-                            },
-                            exist = true
-                        });
+                        );
                     }
                 }
             }
@@ -190,7 +210,10 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         {
             if (Context != null && Context.Client.PlayerInfo != null)
             {
-                UbiAccount? account = DBHelper.GetUbiAccountDataByUserName(Context.Handler.Factory.Item1, ubi_account_username);
+                var account = DBHelper.GetUbiAccountDataByUserName(
+                    Context.Handler.Factory.Item1,
+                    ubi_account_username
+                );
 
                 if (account != null && account.m_password == ubi_account_password)
                 {
@@ -230,7 +253,11 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         [RMCMethod(7)]
         public RMCResult ValidatePassword(string password, string username)
         {
-            if (Context != null && Context.Client.PlayerInfo != null && Context.Client.PlayerInfo.UbiAcctName == username)
+            if (
+                Context != null
+                && Context.Client.PlayerInfo != null
+                && Context.Client.PlayerInfo.UbiAcctName == username
+            )
                 Context.Client.PlayerInfo.UbiPass = password;
 
             return Result(new { failed_reasons = new List<ValidationFailureReason>() });

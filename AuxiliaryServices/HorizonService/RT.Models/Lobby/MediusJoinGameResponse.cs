@@ -1,7 +1,6 @@
-using System.IO;
 using CustomLogger;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -20,6 +19,7 @@ namespace Horizon.RT.Models
         public MediusCallbackStatus StatusCode;
         public MGCL_GAME_HOST_TYPE GameHostType;
         public NetConnectionInfo ConnectInfo;
+
         /// <summary>
         /// MaxPlayers
         /// </summary>
@@ -56,7 +56,9 @@ namespace Horizon.RT.Models
             if (writer.MediusVersion == 113 && SetMaxPlayers)
             {
 #if DEBUG
-                LoggerAccessor.LogInfo($"[MediusJoinGameResponse] - Setting MaxPlayers for {writer.AppId}");
+                LoggerAccessor.LogInfo(
+                    $"[MediusJoinGameResponse] - Setting MaxPlayers for {writer.AppId}"
+                );
 #endif
                 writer.Write(MaxPlayers);
             }
@@ -64,12 +66,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"GameHostType: {GameHostType} " +
-                $"ConnectInfo: {ConnectInfo} " +
-                $"MaxPlayers: {MaxPlayers}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"GameHostType: {GameHostType} "
+                + $"ConnectInfo: {ConnectInfo} "
+                + $"MaxPlayers: {MaxPlayers}";
         }
     }
 }

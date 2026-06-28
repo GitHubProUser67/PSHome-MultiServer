@@ -1,13 +1,13 @@
-﻿using CustomLogger;
-using Newtonsoft.Json;
-using System.Data.SQLite;
+﻿using System.Data.SQLite;
 using System.Text.RegularExpressions;
+using CustomLogger;
+using Newtonsoft.Json;
 
 namespace MultiSocks.Aries.DataStore
 {
-    public class DirtySocksSQLiteDatabase : IDatabase
+    public partial class DirtySocksSQLiteDatabase : IDatabase
     {
-        public int AutoInc = 0;
+        public int AutoInc = 2;
         public List<DbAccount> Accounts = new();
         public HashSet<string> Personas = new();
         public HashSet<string> Friends = new();
@@ -23,7 +23,9 @@ namespace MultiSocks.Aries.DataStore
                     Load();
                 else
                 {
-                    LoggerAccessor.LogWarn("Database file not existant. Starting with a blank state.");
+                    LoggerAccessor.LogWarn(
+                        "Database file not existant. Starting with a blank state."
+                    );
                     InitializeDatabase();
                     Save();
                 }
@@ -36,33 +38,29 @@ namespace MultiSocks.Aries.DataStore
             }
         }
 
-        private void InitializeDatabase()
+        private static void InitializeDatabase()
         {
-            using var connection = new SQLiteConnection($"Data Source={MultiSocksServerConfiguration.DirtySocksDatabasePath}");
+            using var connection = new SQLiteConnection(
+                $"Data Source={MultiSocksServerConfiguration.DirtySocksDatabasePath}"
+            );
             connection.Open();
 
             var cmd = connection.CreateCommand();
-            cmd.CommandText = @"CREATE TABLE IF NOT EXISTS AccountsJson (
+            cmd.CommandText =
+                @"CREATE TABLE IF NOT EXISTS AccountsJson (
                                 Id INTEGER PRIMARY KEY,
                                 Json TEXT NOT NULL
                             );";
             cmd.ExecuteNonQuery();
-
-            CreateNew(new DbAccount()
-            {
-                Username = "brobot24",
-                TOS = "1",
-                SHARE = "0",
-                MAIL = "dummy@ea.com",
-                Password = string.Empty,
-            });
         }
 
         private void Load()
         {
             InitializeDatabase();
 
-            using var connection = new SQLiteConnection($"Data Source={MultiSocksServerConfiguration.DirtySocksDatabasePath}");
+            using var connection = new SQLiteConnection(
+                $"Data Source={MultiSocksServerConfiguration.DirtySocksDatabasePath}"
+            );
             connection.Open();
 
             var cmd = connection.CreateCommand();
@@ -84,9 +82,12 @@ namespace MultiSocks.Aries.DataStore
                 {
                     Accounts.Add(acct);
 
-                    foreach (var p in acct.Personas) Personas.Add(p);
-                    foreach (var f in acct.Friends) Friends.Add(f);
-                    foreach (var r in acct.Rivals) Rivals.Add(r);
+                    foreach (var p in acct.Personas)
+                        Personas.Add(p);
+                    foreach (var f in acct.Friends)
+                        Friends.Add(f);
+                    foreach (var r in acct.Rivals)
+                        Rivals.Add(r);
                 }
             }
 
@@ -96,11 +97,13 @@ namespace MultiSocks.Aries.DataStore
 
         public bool CreateNew(DbAccount info)
         {
-            if (info.Username == null) return false;
+            if (info.Username == null)
+                return false;
             info.Personas.Add(info.Username); // Burnout Paradise seems to want at least one entry which is username itself.
             lock (Accounts)
             {
-                if (GetByName(info.Username) != null) return false; //already exists
+                if (GetByName(info.Username) != null)
+                    return false; //already exists
                 info.ID = AutoInc++;
                 Accounts.Add(info);
                 Save();
@@ -121,14 +124,17 @@ namespace MultiSocks.Aries.DataStore
 
         public int AddPersona(int id, string persona)
         {
-            Regex regex = new(@"[a-zA-Z0-9\s]");
-            if (!regex.IsMatch(persona)) return -1;
+            var regex = MyRegex();
+            if (!regex.IsMatch(persona))
+                return -1;
             var index = 0;
             lock (Accounts)
             {
                 var acct = Accounts.FirstOrDefault(x => x.ID == id);
-                if (acct == null || acct.Personas.Count == 4) return -1;
-                if (Personas.Contains(persona)) return -2;
+                if (acct == null || acct.Personas.Count == 4)
+                    return -1;
+                if (Personas.Contains(persona))
+                    return -2;
                 Personas.Add(persona);
                 acct.Personas.Add(persona);
                 index = acct.Personas.Count;
@@ -143,7 +149,8 @@ namespace MultiSocks.Aries.DataStore
             lock (Accounts)
             {
                 var acct = Accounts.FirstOrDefault(x => x.ID == id);
-                if (acct == null) return -1;
+                if (acct == null)
+                    return -1;
                 index = acct.Personas.IndexOf(persona);
                 if (index != -1)
                 {
@@ -157,14 +164,17 @@ namespace MultiSocks.Aries.DataStore
 
         public int AddFriend(int id, string Friend)
         {
-            Regex regex = new(@"[a-zA-Z0-9\s]");
-            if (!regex.IsMatch(Friend)) return -1;
+            var regex = MyRegex();
+            if (!regex.IsMatch(Friend))
+                return -1;
             var index = 0;
             lock (Accounts)
             {
                 var acct = Accounts.FirstOrDefault(x => x.ID == id);
-                if (acct == null) return -1;
-                if (Friends.Contains(Friend)) return -2;
+                if (acct == null)
+                    return -1;
+                if (Friends.Contains(Friend))
+                    return -2;
                 Friends.Add(Friend);
                 acct.Friends.Add(Friend);
                 index = acct.Friends.Count;
@@ -179,7 +189,8 @@ namespace MultiSocks.Aries.DataStore
             lock (Accounts)
             {
                 var acct = Accounts.FirstOrDefault(x => x.ID == id);
-                if (acct == null) return -1;
+                if (acct == null)
+                    return -1;
                 index = acct.Friends.IndexOf(Friend);
                 if (index != -1)
                 {
@@ -194,13 +205,16 @@ namespace MultiSocks.Aries.DataStore
         public int AddRival(int id, string Rival)
         {
             Regex regex = new(@"[a-zA-Z0-9\s]");
-            if (!regex.IsMatch(Rival)) return -1;
+            if (!regex.IsMatch(Rival))
+                return -1;
             var index = 0;
             lock (Accounts)
             {
                 var acct = Accounts.FirstOrDefault(x => x.ID == id);
-                if (acct == null) return -1;
-                if (Rivals.Contains(Rival)) return -2;
+                if (acct == null)
+                    return -1;
+                if (Rivals.Contains(Rival))
+                    return -2;
                 Rivals.Add(Rival);
                 acct.Rivals.Add(Rival);
                 index = acct.Rivals.Count;
@@ -215,7 +229,8 @@ namespace MultiSocks.Aries.DataStore
             lock (Accounts)
             {
                 var acct = Accounts.FirstOrDefault(x => x.ID == id);
-                if (acct == null) return -1;
+                if (acct == null)
+                    return -1;
                 index = acct.Rivals.IndexOf(Rival);
                 if (index != -1)
                 {
@@ -229,15 +244,20 @@ namespace MultiSocks.Aries.DataStore
 
         private void Save()
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(MultiSocksServerConfiguration.DirtySocksDatabasePath));
+            Directory.CreateDirectory(
+                Path.GetDirectoryName(MultiSocksServerConfiguration.DirtySocksDatabasePath)
+            );
 
-            using var connection = new SQLiteConnection($"Data Source={MultiSocksServerConfiguration.DirtySocksDatabasePath}");
+            using var connection = new SQLiteConnection(
+                $"Data Source={MultiSocksServerConfiguration.DirtySocksDatabasePath}"
+            );
             connection.Open();
 
             using var transaction = connection.BeginTransaction();
 
             var upsertCmd = connection.CreateCommand();
-            upsertCmd.CommandText = @"INSERT OR REPLACE INTO AccountsJson (Id, Json)
+            upsertCmd.CommandText =
+                @"INSERT OR REPLACE INTO AccountsJson (Id, Json)
                                   VALUES ($id, $json)";
 
             lock (Accounts)
@@ -254,5 +274,8 @@ namespace MultiSocks.Aries.DataStore
 
             transaction.Commit();
         }
+
+        [GeneratedRegex(@"[a-zA-Z0-9\s]")]
+        private static partial Regex MyRegex();
     }
 }

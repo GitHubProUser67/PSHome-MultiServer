@@ -18,8 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using NetFwTypeLib;
-using System;
-using System.Collections.Generic;
 
 namespace TechnitiumLibrary.Net.Firewall
 {
@@ -32,13 +30,13 @@ namespace TechnitiumLibrary.Net.Firewall
         TCP = 6,
         UDP = 17,
         IPv6 = 41,
-        ANY = 256
+        ANY = 256,
     }
 
     public enum FirewallAction
     {
         Block = 0,
-        Allow = 1
+        Allow = 1,
     }
 
     public enum InterfaceTypeFlags
@@ -46,13 +44,13 @@ namespace TechnitiumLibrary.Net.Firewall
         All = 0,
         Lan = 1,
         Wireless = 2,
-        RemoteAccess = 4
+        RemoteAccess = 4,
     }
 
     public enum Direction
     {
         Inbound = 0,
-        Outbound = 1
+        Outbound = 1,
     }
 
     public enum RuleStatus
@@ -60,15 +58,34 @@ namespace TechnitiumLibrary.Net.Firewall
         DoesNotExists = 0,
         Disabled = 1,
         Allowed = 2,
-        Blocked = 3
+        Blocked = 3,
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "Designed for Windows Firewall")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Interoperability",
+        "CA1416:Validate platform compatibility",
+        Justification = "Designed for Windows Firewall"
+    )]
     public static class WindowsFirewall
     {
-        public static void AddRuleVista(string name, string description = null, FirewallAction action = FirewallAction.Allow, string applicationPath = null, Protocol protocol = Protocol.IPv4, string localPorts = null, string remotePorts = null, string localAddresses = null, string remoteAddresses = null, InterfaceTypeFlags interfaceType = InterfaceTypeFlags.All, bool enable = true, Direction direction = Direction.Inbound, bool edgeTraversal = false)
+        public static void AddRuleVista(
+            string name,
+            string description = null,
+            FirewallAction action = FirewallAction.Allow,
+            string applicationPath = null,
+            Protocol protocol = Protocol.IPv4,
+            string localPorts = null,
+            string remotePorts = null,
+            string localAddresses = null,
+            string remoteAddresses = null,
+            InterfaceTypeFlags interfaceType = InterfaceTypeFlags.All,
+            bool enable = true,
+            Direction direction = Direction.Inbound,
+            bool edgeTraversal = false
+        )
         {
-            INetFwRule firewallRule = (INetFwRule)Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FWRule"));
+            INetFwRule firewallRule = (INetFwRule)
+                Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FWRule"));
 
             firewallRule.Name = name;
             firewallRule.Description = description;
@@ -130,19 +147,33 @@ namespace TechnitiumLibrary.Net.Firewall
                     break;
             }
 
-            INetFwPolicy2 firewallPolicy = (INetFwPolicy2)Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwPolicy2"));
+            INetFwPolicy2 firewallPolicy = (INetFwPolicy2)
+                Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwPolicy2"));
             firewallPolicy.Rules.Add(firewallRule);
         }
 
         public static void RemoveRuleVista(string name, string applicationPath)
         {
-            INetFwPolicy2 firewallPolicy = (INetFwPolicy2)Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwPolicy2"));
+            INetFwPolicy2 firewallPolicy = (INetFwPolicy2)
+                Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwPolicy2"));
 
             List<INetFwRule> removeRules = new List<INetFwRule>(2);
 
             foreach (INetFwRule rule in firewallPolicy.Rules)
             {
-                if (((rule.Name != null) && rule.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) || ((rule.ApplicationName != null) && rule.ApplicationName.Equals(applicationPath, StringComparison.OrdinalIgnoreCase)))
+                if (
+                    (
+                        (rule.Name != null)
+                        && rule.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
+                    )
+                    || (
+                        (rule.ApplicationName != null)
+                        && rule.ApplicationName.Equals(
+                            applicationPath,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                )
                     removeRules.Add(rule);
             }
 
@@ -152,13 +183,31 @@ namespace TechnitiumLibrary.Net.Firewall
             }
         }
 
-        public static RuleStatus RuleExistsVista(string name, string applicationPath, Protocol protocol = Protocol.Unknown)
+        public static RuleStatus RuleExistsVista(
+            string name,
+            string applicationPath,
+            Protocol protocol = Protocol.Unknown
+        )
         {
-            INetFwPolicy2 firewallPolicy = (INetFwPolicy2)Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwPolicy2"));
+            INetFwPolicy2 firewallPolicy = (INetFwPolicy2)
+                Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwPolicy2"));
 
             foreach (INetFwRule rule in firewallPolicy.Rules)
             {
-                if (((rule.Name == null) || string.IsNullOrEmpty(name) || rule.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) && ((rule.ApplicationName == null) || rule.ApplicationName.Equals(applicationPath, StringComparison.OrdinalIgnoreCase)))
+                if (
+                    (
+                        (rule.Name == null)
+                        || string.IsNullOrEmpty(name)
+                        || rule.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
+                    )
+                    && (
+                        (rule.ApplicationName == null)
+                        || rule.ApplicationName.Equals(
+                            applicationPath,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                )
                 {
                     if ((protocol != Protocol.Unknown) && (rule.Protocol != (int)protocol))
                         continue;
@@ -182,7 +231,8 @@ namespace TechnitiumLibrary.Net.Firewall
 
         public static void AddPort(string name, Protocol protocol, int port, bool enable)
         {
-            INetFwOpenPort portClass = (INetFwOpenPort)Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FWOpenPort"));
+            INetFwOpenPort portClass = (INetFwOpenPort)
+                Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FWOpenPort"));
 
             portClass.Name = name;
             portClass.Port = port;
@@ -207,7 +257,8 @@ namespace TechnitiumLibrary.Net.Firewall
                     throw new Exception("Protocol not supported.");
             }
 
-            INetFwMgr firewallManager = (INetFwMgr)Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwMgr"));
+            INetFwMgr firewallManager = (INetFwMgr)
+                Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwMgr"));
             firewallManager.LocalPolicy.CurrentProfile.GloballyOpenPorts.Add(portClass);
         }
 
@@ -233,7 +284,8 @@ namespace TechnitiumLibrary.Net.Firewall
                     throw new Exception("Protocol not supported.");
             }
 
-            INetFwMgr firewallManager = (INetFwMgr)Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwMgr"));
+            INetFwMgr firewallManager = (INetFwMgr)
+                Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwMgr"));
             firewallManager.LocalPolicy.CurrentProfile.GloballyOpenPorts.Remove(port, fwProtocol);
         }
 
@@ -259,9 +311,15 @@ namespace TechnitiumLibrary.Net.Firewall
                     throw new Exception("Protocol not supported.");
             }
 
-            INetFwMgr firewallManager = (INetFwMgr)Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwMgr"));
+            INetFwMgr firewallManager = (INetFwMgr)
+                Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwMgr"));
 
-            foreach (INetFwOpenPort fwPort in firewallManager.LocalPolicy.CurrentProfile.GloballyOpenPorts)
+            foreach (
+                INetFwOpenPort fwPort in firewallManager
+                    .LocalPolicy
+                    .CurrentProfile
+                    .GloballyOpenPorts
+            )
             {
                 if ((fwPort.Protocol == fwProtocol) && (fwPort.Port == port))
                     return true;
@@ -272,27 +330,36 @@ namespace TechnitiumLibrary.Net.Firewall
 
         public static void AddApplication(string name, string path)
         {
-            INetFwAuthorizedApplication application = (INetFwAuthorizedApplication)Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwAuthorizedApplication"));
+            INetFwAuthorizedApplication application = (INetFwAuthorizedApplication)
+                Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwAuthorizedApplication"));
 
             application.Name = name;
             application.ProcessImageFileName = path;
             application.Enabled = true;
 
-            INetFwMgr firewallManager = (INetFwMgr)Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwMgr"));
+            INetFwMgr firewallManager = (INetFwMgr)
+                Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwMgr"));
             firewallManager.LocalPolicy.CurrentProfile.AuthorizedApplications.Add(application);
         }
 
         public static void RemoveApplication(string path)
         {
-            INetFwMgr firewallManager = (INetFwMgr)Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwMgr"));
+            INetFwMgr firewallManager = (INetFwMgr)
+                Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwMgr"));
             firewallManager.LocalPolicy.CurrentProfile.AuthorizedApplications.Remove(path);
         }
 
         public static RuleStatus ApplicationExists(string path)
         {
-            INetFwMgr firewallManager = (INetFwMgr)Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwMgr"));
+            INetFwMgr firewallManager = (INetFwMgr)
+                Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwMgr"));
 
-            foreach (INetFwAuthorizedApplication app in firewallManager.LocalPolicy.CurrentProfile.AuthorizedApplications)
+            foreach (
+                INetFwAuthorizedApplication app in firewallManager
+                    .LocalPolicy
+                    .CurrentProfile
+                    .AuthorizedApplications
+            )
             {
                 if (app.ProcessImageFileName.Equals(path, StringComparison.OrdinalIgnoreCase))
                 {

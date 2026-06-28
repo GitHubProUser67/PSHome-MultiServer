@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze
 {
-	[TdfStruct]
-	public struct NetworkInfo
-	{
+    [TdfStruct]
+    public struct NetworkInfo
+    {
+        [TdfMember("ADDR")]
+        public NetworkAddress mAddress;
 
-		[TdfMember("ADDR")]
-		public NetworkAddress mAddress;
+        [TdfMember("NLMP")]
+        public SortedDictionary<string, int> mPingSiteLatencyByAliasMap;
 
-		[TdfMember("NLMP")]
-		public SortedDictionary<string, int> mPingSiteLatencyByAliasMap;
-
-		[TdfMember("NQOS")]
-		public Util.NetworkQosData mQosData;
-
-	}
+        [TdfMember("NQOS")]
+        public Util.NetworkQosData mQosData;
+    }
 }

@@ -3,21 +3,19 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Rsp
 {
-	[TdfStruct]
-	public struct GetGameDataResponse
-	{
+    [TdfStruct]
+    public struct GetGameDataResponse
+    {
+        [TdfMember("ATTR")]
+        public SortedDictionary<string, string> mGameAttribs;
 
-		[TdfMember("ATTR")]
-		public SortedDictionary<string, string> mGameAttribs;
+        [TdfMember("GNAM")]
+        public string mGameName;
 
-		[TdfMember("GNAM")]
-		public string mGameName;
+        [TdfMember("GSET")]
+        public GameSettings mGameSettings;
 
-		[TdfMember("GSET")]
-		public GameSettings mGameSettings;
-
-		[TdfMember("PRES")]
-		public PresenceMode mPresenceMode;
-
-	}
+        [TdfMember("PRES")]
+        public PresenceMode mPresenceMode;
+    }
 }

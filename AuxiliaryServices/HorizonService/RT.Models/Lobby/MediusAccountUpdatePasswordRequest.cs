@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -16,14 +15,17 @@ namespace Horizon.RT.Models
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Session Key
         /// </summary>
         public string SessionKey; // SESSIONKEY_MAXLEN
+
         /// <summary>
         /// Old Password
         /// </summary>
         public string OldPassword; // PASSWORD_MAXLEN
+
         /// <summary>
         /// New Password
         /// </summary>
@@ -51,14 +53,14 @@ namespace Horizon.RT.Models
             writer.Write(NewPassword, Constants.PASSWORD_MAXLEN);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"OldPassword: {OldPassword} " +
-                $"NewPassword: {NewPassword}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"OldPassword: {OldPassword} "
+                + $"NewPassword: {NewPassword}";
         }
     }
 }

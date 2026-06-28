@@ -1,18 +1,17 @@
-﻿using CustomLogger;
-using System.Text.Json;
-using System.Text.RegularExpressions;
+﻿using System.Text.Json;
+using CustomLogger;
 
 namespace SSFWServer.Services
 {
     public class SaveDataService
     {
-        public string? DebugGetFileList(string directoryPath, string? segment)
+        public static string? DebugGetFileList(string directoryPath, string? segment)
         {
             try
             {
                 if (segment != null)
                 {
-                    List<FileItem>? files = GetFilesInfo(directoryPath + "/" + segment);
+                    var files = GetFilesInfo(directoryPath + "/" + segment);
 
                     if (files != null)
                         return JsonSerializer.Serialize(new FilesContainer() { files = files });
@@ -28,19 +27,21 @@ namespace SSFWServer.Services
 
         private static List<FileItem>? GetFilesInfo(string directoryPath)
         {
-            List<FileItem> files = new();
+            List<FileItem> files = [];
             try
             {
-
-                foreach (string filePath in Directory.GetFiles(directoryPath))
+                foreach (var filePath in Directory.GetFiles(directoryPath))
                 {
                     FileInfo fileInfo = new(filePath);
-                    files.Add(new FileItem()
-                    {
-                        objectId = Path.GetFileNameWithoutExtension(fileInfo.Name),
-                        size = (int)fileInfo.Length,
-                        lastUpdate = (long)fileInfo.LastWriteTime.Subtract(DateTime.UnixEpoch).TotalSeconds
-                    });
+                    files.Add(
+                        new FileItem()
+                        {
+                            objectId = Path.GetFileNameWithoutExtension(fileInfo.Name),
+                            size = (int)fileInfo.Length,
+                            lastUpdate = (long)
+                                fileInfo.LastWriteTime.Subtract(DateTime.UnixEpoch).TotalSeconds,
+                        }
+                    );
                 }
 
                 return files;

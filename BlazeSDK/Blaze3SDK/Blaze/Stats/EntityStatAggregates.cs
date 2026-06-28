@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Stats
 {
-	[TdfStruct]
-	public struct EntityStatAggregates
-	{
+    [TdfStruct]
+    public struct EntityStatAggregates
+    {
+        [TdfMember("AGGR")]
+        public List<string> mAggrValues;
 
-		[TdfMember("AGGR")]
-		public List<string> mAggrValues;
-
-		[TdfMember("TYPE")]
-		public AggregateType mType;
-
-	}
+        [TdfMember("TYPE")]
+        public AggregateType mType;
+    }
 }

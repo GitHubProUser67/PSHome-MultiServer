@@ -1,34 +1,28 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
-using Horizon.RT.Models;
+using Horizon.RT.Common;
 
-namespace HorizonService.RT.Models.ServerPlugins.MAPS
+namespace Horizon.RT.Models.ServerPlugins.MAPS
 {
-    [MediusMessage(NetMessageClass.MessageClassApplication, NetMessageTypeIds.NetMessageTypeAccountLogoutRequest)]
-    public class NetMessageAccountLogoutRequest : BaseApplicationMessage
+    [MediusMessage(
+        NetMessageClass.MessageClassApplication,
+        NetMessageTypeIds.NetMessageTypeAccountLogoutRequest
+    )]
+    public class NetMessageAccountLogoutRequest : BaseMediusPluginMessage
     {
-        public override NetMessageTypeIds PacketType => NetMessageTypeIds.NetMessageTypeAccountLogoutRequest;
+        public override NetMessageTypeIds PacketType =>
+            NetMessageTypeIds.NetMessageTypeAccountLogoutRequest;
 
-        public override byte IncomingMessage => 0;
         public override int Size => 0;
+        public override ushort ClientBufferSize => 0;
+        public override byte PluginId => (byte)NetPluginType.kNetPluginMAPS;
 
-        public override byte PluginId => 0;
+        public override void DeserializePlugin(MessageReader reader) { }
 
-        public override void DeserializePlugin(MessageReader reader)
-        {
-
-        }
-
-        public override void SerializePlugin(MessageWriter writer)
-        {
-
-        }
+        public override void SerializePlugin(MessageWriter writer) { }
 
         public override string ToString()
         {
             return base.ToString() + " ";
         }
-
     }
 }

@@ -1,6 +1,5 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
@@ -23,13 +22,10 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             reader.ReadBytes(3);
             StatusCode = reader.Read<MediusCallbackStatus>();
             ApplicationID = reader.ReadInt32();
@@ -42,13 +38,10 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(new byte[3]);
             writer.Write(StatusCode);
             writer.Write(ApplicationID);
@@ -59,18 +52,18 @@ namespace Horizon.RT.Models
             writer.Write(Status);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{MessageID} " +
-             $"StatusCode:{StatusCode} " +
-$"ApplicationID:{ApplicationID} " +
-$"ClanName:{ClanName} " +
-$"LeaderAccountID:{LeaderAccountID} " +
-$"LeaderAccountName:{LeaderAccountName} " +
-$"Stats:{Stats} " +
-$"Status:{Status}";
+            return base.ToString()
+                + " "
+                + $"MessageID:{MessageID} "
+                + $"StatusCode:{StatusCode} "
+                + $"ApplicationID:{ApplicationID} "
+                + $"ClanName:{ClanName} "
+                + $"LeaderAccountID:{LeaderAccountID} "
+                + $"LeaderAccountName:{LeaderAccountName} "
+                + $"Stats:{Stats} "
+                + $"Status:{Status}";
         }
     }
 }

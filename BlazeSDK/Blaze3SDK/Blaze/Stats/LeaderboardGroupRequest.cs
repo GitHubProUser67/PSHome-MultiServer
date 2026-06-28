@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Stats
 {
-	[TdfStruct]
-	public struct LeaderboardGroupRequest
-	{
+    [TdfStruct]
+    public struct LeaderboardGroupRequest
+    {
+        [TdfMember("LBID")]
+        public int mBoardId;
 
-		[TdfMember("LBID")]
-		public int mBoardId;
-
-		[TdfMember("NAME")]
-		public string mBoardName;
-
-	}
+        [TdfMember("NAME")]
+        public string mBoardName;
+    }
 }

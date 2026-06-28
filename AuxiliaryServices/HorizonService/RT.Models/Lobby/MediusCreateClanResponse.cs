@@ -1,13 +1,11 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.CreateClanResponse)]
     public class MediusCreateClanResponse : BaseLobbyMessage, IMediusResponse
     {
-
         public override byte PacketType => (byte)MediusLobbyMessageIds.CreateClanResponse;
 
         public bool IsSuccess => StatusCode >= 0;
@@ -41,10 +39,11 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{MessageID} " +
-                $"StatusCode:{StatusCode} " +
-                $"ClanID:{ClanID}";
+            return base.ToString()
+                + " "
+                + $"MessageID:{MessageID} "
+                + $"StatusCode:{StatusCode} "
+                + $"ClanID:{ClanID}";
         }
     }
 }

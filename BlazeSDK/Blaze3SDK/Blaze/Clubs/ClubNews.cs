@@ -2,33 +2,31 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Clubs
 {
-	[TdfStruct]
-	public struct ClubNews
-	{
+    [TdfStruct]
+    public struct ClubNews
+    {
+        [TdfMember("CLID")]
+        public uint mAssociateClubId;
 
-		[TdfMember("CLID")]
-		public uint mAssociateClubId;
+        [TdfMember("NWCC")]
+        public long mContentCreator;
 
-		[TdfMember("NWCC")]
-		public long mContentCreator;
+        [TdfMember("NPRL")]
+        public string mParamList;
 
-		[TdfMember("NPRL")]
-		public string mParamList;
+        [TdfMember("PERS")]
+        public string mPersona;
 
-		[TdfMember("PERS")]
-		public string mPersona;
+        [TdfMember("NSIS")]
+        public string mStringId;
 
-		[TdfMember("NSIS")]
-		public string mStringId;
+        [TdfMember("NTXT")]
+        public string mText;
 
-		[TdfMember("NTXT")]
-		public string mText;
+        [TdfMember("TMST")]
+        public uint mTimestamp;
 
-		[TdfMember("TMST")]
-		public uint mTimestamp;
-
-		[TdfMember("NWTY")]
-		public NewsType mType;
-
-	}
+        [TdfMember("NWTY")]
+        public NewsType mType;
+    }
 }

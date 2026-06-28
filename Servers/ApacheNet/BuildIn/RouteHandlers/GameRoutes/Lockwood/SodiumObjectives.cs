@@ -1,8 +1,8 @@
-﻿using CustomLogger;
-using System.IO;
 using System.Net;
+using CustomLogger;
 using WatsonWebserver.Core;
 using WebAPIService.GameServices.PSHOME.OHS;
+using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
 {
@@ -10,43 +10,52 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
     {
         public static void BuildSodiumObjectivesPlugin(WebserverBase server)
         {
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/webassets/Sodium/objectives/data/{version}/{project}/{xmldef}", async (ctx) =>
-            {
-                string? project = ctx.Request.Url.Parameters["project"];
-                if (string.IsNullOrEmpty(project))
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/webassets/Sodium/objectives/data/{version}/{project}/{xmldef}",
+                async (ctx) =>
                 {
-                    ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    ctx.Response.ContentType = "text/plain";
-                    await ctx.Response.Send();
-                    return;
-                }
-                string version = ctx.Request.Url.Parameters["version"] ?? "7";
-                string xmldef = ctx.Request.Url.Parameters["xmldef"] ?? "SCEA";
+                    var project = ctx.Request.Url.Parameters["project"];
+                    if (string.IsNullOrEmpty(project))
+                    {
+                        ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        ctx.Response.ContentType = "text/plain";
+                        await ctx.Response.Send().ConfigureAwait(false);
+                        return;
+                    }
+                    var version = ctx.Request.Url.Parameters["version"] ?? "7";
+                    var xmldef = ctx.Request.Url.Parameters["xmldef"] ?? "SCEA";
 
-                string xmlPath = $"/webassets/Sodium/objectives/data/{version}/{project}/{ctx.Request.Url.Parameters["xmldef"]}";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
+                    var xmlPath =
+                        $"/webassets/Sodium/objectives/data/{version}/{project}/{ctx.Request.Url.Parameters["xmldef"]}";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
-                if (File.Exists(filePath))
-                {
-                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                    ctx.Response.ContentType = "text/xml";
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
-                }
-
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - Sodium objectives regional {project} definition data was not found, falling back to static file.");
-
-                switch (project)
-                {
-                    case "region":
+                    if (File.Exists(filePath))
+                    {
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                         ctx.Response.ContentType = "text/xml";
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - Sodium objectives regional {project} definition data was not found, falling back to static file."
+                    );
+
+                    switch (project)
+                    {
+                        case "region":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
 #if DEBUG
-                        bool debug = true;
+                            var debug = true;
 #else
-                        bool debug = false;
+                            bool debug = false;
 #endif
-                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml($@"
+                            await ctx
+                                .Response.Send(
+                                    LUA2XmlProcessor.TransformLuaTableToXml(
+                                        $@"
                             local TableFromInput = {{
                                 REGION = {{
                                     sodium_debug = {{
@@ -56,12 +65,18 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                             }}
 
                             return Encode(TableFromInput, 4, 4)
-                            "));
-                        return;
-                    case "lang":
-                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                        ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml($@"
+                            "
+                                    )
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "lang":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    LUA2XmlProcessor.TransformLuaTableToXml(
+                                        $@"
                             local TableFromInput = {{
                                 LOCALIZATION = {{
                                     sodium_1 = {{
@@ -512,47 +527,61 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                             }}
 
                             return Encode(TableFromInput, 4, 4)
-                            "));
+                            "
+                                    )
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        default:
+                            LoggerAccessor.LogWarn(
+                                $"[PostAuthParameters] - Sodium objectives regional definition data was not found for project:{project}!"
+                            );
+                            break;
+                    }
+                    ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    await ctx.Response.Send().ConfigureAwait(false);
+                }
+            );
+
+            server.Routes.PostAuthentication.Parameter.Add(
+                HttpMethod.GET,
+                "/webassets/Sodium/objectives/data/{version}/{project}",
+                async (ctx) =>
+                {
+                    var project = ctx.Request.Url.Parameters["project"];
+                    if (string.IsNullOrEmpty(project))
+                    {
+                        ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        ctx.Response.ContentType = "text/plain";
+                        await ctx.Response.Send().ConfigureAwait(false);
                         return;
-                    default:
-                        LoggerAccessor.LogWarn($"[PostAuthParameters] - Sodium objectives regional definition data was not found for project:{project}!");
-                        break;
-                }
-                ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                await ctx.Response.Send();
-            });
+                    }
+                    var version = ctx.Request.Url.Parameters["version"] ?? "7";
 
-            server.Routes.PostAuthentication.Parameter.Add(HttpMethod.GET, "/webassets/Sodium/objectives/data/{version}/{project}", async (ctx) =>
-            {
-                string? project = ctx.Request.Url.Parameters["project"];
-                if (string.IsNullOrEmpty(project))
-                {
-                    ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    ctx.Response.ContentType = "text/plain";
-                    await ctx.Response.Send();
-                    return;
-                }
-                string version = ctx.Request.Url.Parameters["version"] ?? "7";
+                    var xmlPath = $"/webassets/Sodium/objectives/data/{version}/{project}";
+                    var filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
 
-                string xmlPath = $"/webassets/Sodium/objectives/data/{version}/{project}";
-                string filePath = ApacheNetServerConfiguration.HTTPStaticFolder + xmlPath;
-
-                if (File.Exists(filePath))
-                {
-                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                    ctx.Response.ContentType = "text/xml";
-                    await ctx.Response.Send(File.ReadAllText(filePath));
-                    return;
-                }
-
-                LoggerAccessor.LogDebug($"[PostAuthParameters] - Sodium objectives {project} definition data was not found, falling back to static file.");
-
-                switch (project)
-                {
-                    case "ObjectiveOrder.xml":
+                    if (File.Exists(filePath))
+                    {
                         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                         ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml(@"
+                        await ctx.Response.Send(File.ReadAllText(filePath)).ConfigureAwait(false);
+                        return;
+                    }
+
+                    LoggerAccessor.LogDebug(
+                        $"[PostAuthParameters] - Sodium objectives {project} definition data was not found, falling back to static file."
+                    );
+
+                    switch (project)
+                    {
+                        case "ObjectiveOrder.xml":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    LUA2XmlProcessor.TransformLuaTableToXml(
+                                        @"
                             local TableFromInput = {
                                 ORDER = {
                                     ""sodium_44"", ""sodium_14"", ""sodium_45"", ""sodium_46"", ""sodium_66"", ""sodium_1"", 
@@ -569,12 +598,18 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                             }
 
                             return Encode(TableFromInput, 4, 4)
-                            "));
-                        return;
-                    case "ObjectiveDefs.xml":
-                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                        ctx.Response.ContentType = "text/xml";
-                        await ctx.Response.Send(LUA2XmlProcessor.TransformLuaTableToXml($@"local TableFromInput = {{
+                            "
+                                    )
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        case "ObjectiveDefs.xml":
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            ctx.Response.ContentType = "text/xml";
+                            await ctx
+                                .Response.Send(
+                                    LUA2XmlProcessor.TransformLuaTableToXml(
+                                        $@"local TableFromInput = {{
                               OBJECTIVES = {{
                                   sodium_1 = {{
                                       credits = 10,
@@ -1166,15 +1201,21 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes.Lockwood
                             }}
 
                             return Encode(TableFromInput, 4, 4)
-                            "));
-                        return;
-                    default:
-                        LoggerAccessor.LogWarn($"[PostAuthParameters] - Sodium objectives definition data was not found for project:{project}!");
-                        break;
+                            "
+                                    )
+                                )
+                                .ConfigureAwait(false);
+                            return;
+                        default:
+                            LoggerAccessor.LogWarn(
+                                $"[PostAuthParameters] - Sodium objectives definition data was not found for project:{project}!"
+                            );
+                            break;
+                    }
+                    ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    await ctx.Response.Send().ConfigureAwait(false);
                 }
-                ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                await ctx.Response.Send();
-            });
+            );
         }
     }
 }

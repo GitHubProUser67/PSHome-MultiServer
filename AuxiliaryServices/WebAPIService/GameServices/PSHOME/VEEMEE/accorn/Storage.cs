@@ -1,8 +1,6 @@
-using System.IO;
-using MultiServerLibrary.HTTP;
 using HttpMultipartParser;
+using MultiServerLibrary.HTTP;
 using Newtonsoft.Json.Linq;
-using WebAPIService.GameServices.PSHOME.VEEMEE;
 
 namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
 {
@@ -10,13 +8,13 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
     {
         public static string ReadConfig(byte[] PostData, string ContentType, string apiPath)
         {
-            string config = string.Empty;
-            string product = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var config = string.Empty;
+            var product = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
@@ -27,21 +25,21 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
                     ms.Flush();
                 }
 
-                string configValue = "{}"; // Default response when config field doesn't exist
+                var configValue = "{}"; // Default response when config field doesn't exist
 
                 if (!string.IsNullOrEmpty(config) && !string.IsNullOrEmpty(product))
                 {
-                    string jsonFilePath = Path.Combine($"{apiPath}/VEEMEE/Acorn_Medow/config.json");
+                    var jsonFilePath = Path.Combine($"{apiPath}/VEEMEE/Acorn_Medow/config.json");
 
                     if (File.Exists(jsonFilePath))
                     {
-                        JObject jObject = JObject.Parse(File.ReadAllText(jsonFilePath));
+                        var jObject = JObject.Parse(File.ReadAllText(jsonFilePath));
 
                         if (jObject != null)
                         {
                             if (jObject.SelectToken(product) is JObject productToken)
                             {
-                                JToken configToken = productToken.SelectToken(config);
+                                var configToken = productToken.SelectToken(config);
                                 if (configToken != null)
                                     configValue = configToken.ToString();
                             }
@@ -57,15 +55,15 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
 
         public static string ReadTable(byte[] PostData, string ContentType, string apiPath)
         {
-            string psnid = string.Empty;
-            string product = string.Empty;
-            string hex = string.Empty;
-            string __salt = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var psnid = string.Empty;
+            var product = string.Empty;
+            var hex = string.Empty;
+            var __salt = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
@@ -80,7 +78,13 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
                     ms.Flush();
                 }
 
-                string ProfileResult = ProfileManager.ReadProfile(psnid, product, hex, __salt, apiPath);
+                var ProfileResult = ProfileManager.ReadProfile(
+                    psnid,
+                    product,
+                    hex,
+                    __salt,
+                    apiPath
+                );
 
                 if (!string.IsNullOrEmpty(ProfileResult))
                     return ProfileResult;
@@ -91,13 +95,13 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
 
         public static string WriteTable(byte[] PostData, string ContentType, string apiPath)
         {
-            string psnid = string.Empty;
-            string profile = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var psnid = string.Empty;
+            var profile = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
@@ -119,15 +123,22 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
 
     public class ProfileManager
     {
-        public static string ReadProfile(string psnid, string product, string hex, string salt, string apiPath)
+        public static string ReadProfile(
+            string psnid,
+            string product,
+            string hex,
+            string salt,
+            string apiPath
+        )
         {
-            if (string.IsNullOrEmpty(hex) || string.IsNullOrEmpty(salt))
-                return null;
-
-            if (File.Exists($"{apiPath}/VEEMEE/Acorn_Medow/User_Profiles/{psnid}.json"))
-                return Processor.Sign(File.ReadAllText($"{apiPath}/VEEMEE/Acorn_Medow/User_Profiles/{psnid}.json"));
-            else
-                return Processor.Sign(File.ReadAllText($"{apiPath}/VEEMEE/Acorn_Medow/default_profile.json"));
+            return string.IsNullOrEmpty(hex) || string.IsNullOrEmpty(salt) ? null
+                : File.Exists($"{apiPath}/VEEMEE/Acorn_Medow/User_Profiles/{psnid}.json")
+                    ? Processor.Sign(
+                        File.ReadAllText($"{apiPath}/VEEMEE/Acorn_Medow/User_Profiles/{psnid}.json")
+                    )
+                : Processor.Sign(
+                    File.ReadAllText($"{apiPath}/VEEMEE/Acorn_Medow/default_profile.json")
+                );
         }
 
         public static void WriteProfile(string psnid, string profile, string apiPath)

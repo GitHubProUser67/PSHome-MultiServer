@@ -1,5 +1,4 @@
-using System;
-using System.IO;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text;
 
@@ -7,7 +6,12 @@ namespace Horizon.LIBRARY.Common.Stream
 {
     public static class BinaryReaderExt
     {
-        public static T Read<T>(this BinaryReader reader)
+        public static T Read<
+            [DynamicallyAccessedMembers(
+                DynamicallyAccessedMemberTypes.PublicParameterlessConstructor
+            )]
+                T
+        >(this BinaryReader reader)
         {
             //.NET8 reader.BaseStream will have length 0 sometimes.like:https://github.com/dotnet/wcf/issues/5205
             if (reader.BaseStream.Length == 0)
@@ -21,10 +25,9 @@ namespace Horizon.LIBRARY.Common.Stream
         public static IPAddress ReadIPAddress(this BinaryReader reader)
         {
             //.NET8 reader.BaseStream will have length 0 sometimes.like:https://github.com/dotnet/wcf/issues/5205
-            if (reader.BaseStream.Length == 0)
-                return IPAddress.None;
-
-            return IPAddress.Parse(reader.ReadString(16));
+            return reader.BaseStream.Length == 0
+                ? IPAddress.None
+                : IPAddress.Parse(reader.ReadString(16));
         }
 
         public static string ReadString(this BinaryReader reader, int length)
@@ -33,19 +36,22 @@ namespace Horizon.LIBRARY.Common.Stream
             if (reader.BaseStream.Length == 0)
                 return string.Empty;
 
-            byte[] buffer = reader.ReadBytes(length);
-            int i = 0;
+            var buffer = reader.ReadBytes(length);
+            var i = 0;
             for (i = 0; i < buffer.Length; ++i)
                 if (buffer[i] == 0)
                     break;
 
-            if (i > 0)
-                return Encoding.UTF8.GetString(buffer, 0, i);
-            else
-                return string.Empty;
+            return i > 0 ? Encoding.UTF8.GetString(buffer, 0, i) : string.Empty;
         }
 
-        public static object ReadObject(this BinaryReader reader, Type type)
+        public static object ReadObject(
+            this BinaryReader reader,
+            [DynamicallyAccessedMembers(
+                DynamicallyAccessedMemberTypes.PublicParameterlessConstructor
+            )]
+                Type type
+        )
         {
             //.NET8 reader.BaseStream will have length 0 sometimes.like:https://github.com/dotnet/wcf/issues/5205
             if (reader.BaseStream.Length == 0)
@@ -53,7 +59,7 @@ namespace Horizon.LIBRARY.Common.Stream
 
             if (type.GetInterface("IStreamSerializer") != null)
             {
-                IStreamSerializer result = (IStreamSerializer)Activator.CreateInstance(type);
+                var result = (IStreamSerializer)Activator.CreateInstance(type);
                 result?.Deserialize(reader);
                 return result;
             }
@@ -92,19 +98,17 @@ namespace Horizon.LIBRARY.Common.Stream
         public static byte[] ReadRest(this BinaryReader reader)
         {
             //.NET8 reader.BaseStream will have length 0 sometimes.like:https://github.com/dotnet/wcf/issues/5205
-            if (reader.BaseStream.Length == 0)
-                return Array.Empty<byte>();
-
-            return reader.ReadBytes((int)(reader.BaseStream.Length - reader.BaseStream.Position));
+            return reader.BaseStream.Length == 0
+                ? Array.Empty<byte>()
+                : reader.ReadBytes((int)(reader.BaseStream.Length - reader.BaseStream.Position));
         }
 
         public static string ReadRestAsString(this BinaryReader reader)
         {
             //.NET8 reader.BaseStream will have length 0 sometimes.like:https://github.com/dotnet/wcf/issues/5205
-            if (reader.BaseStream.Length == 0)
-                return string.Empty;
-
-            return reader.ReadString((int)(reader.BaseStream.Length - reader.BaseStream.Position));
+            return reader.BaseStream.Length == 0
+                ? string.Empty
+                : reader.ReadString((int)(reader.BaseStream.Length - reader.BaseStream.Position));
         }
     }
 }

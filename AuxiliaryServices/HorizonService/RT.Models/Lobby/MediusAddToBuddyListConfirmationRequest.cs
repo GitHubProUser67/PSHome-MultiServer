@@ -1,15 +1,19 @@
-using System.IO;
+using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
 using Horizon.RT.Models.Misc;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.AddToBuddyListConfirmation)]
-    public class MediusAddToBuddyListConfirmationRequest : BaseLobbyExtMessage, IMediusAddToBuddyListConfirmationRequest
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.AddToBuddyListConfirmation
+    )]
+    public class MediusAddToBuddyListConfirmationRequest
+        : BaseLobbyExtMessage,
+            IMediusAddToBuddyListConfirmationRequest
     {
-
-        public override byte PacketType => (byte)MediusLobbyExtMessageIds.AddToBuddyListConfirmation;
+        public override byte PacketType =>
+            (byte)MediusLobbyExtMessageIds.AddToBuddyListConfirmation;
 
         public MessageId MessageID { get; set; }
 
@@ -43,11 +47,12 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"TargetAccountID: {TargetAccountID} " +
-                $"AddType: {AddType} ";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"TargetAccountID: {TargetAccountID} "
+                + $"AddType: {AddType} ";
         }
     }
 }

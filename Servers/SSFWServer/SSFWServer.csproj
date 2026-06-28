@@ -1,15 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- "latest" works on local PC but not in build pipeline; Visual Studio version difference? Whatever, preview it is. -->
+    <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
-	<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-	<DockerfileRunArguments>-p 8080:8080 -p 10443:10443 -p 65535:65535</DockerfileRunArguments>
-	<ApplicationIcon>SSFW.ico</ApplicationIcon>
-	<ServerGarbageCollection>true</ServerGarbageCollection>
-	<DockerfileContext>..\..</DockerfileContext>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <DockerfileRunArguments>-p 8080:8080 -p 10443:10443 -p 65535:65535</DockerfileRunArguments>
+    <ApplicationIcon>SSFW.ico</ApplicationIcon>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <DockerfileContext>..\..</DockerfileContext>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,34 +18,37 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Costura.Fody" Version="6.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <!--<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>-->
-    </PackageReference>
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
+    <PackageReference Include="Fody" Version="6.9.3" PrivateAssets="none" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
-  
-  <ItemGroup>
-    <Content Include="static\**\*.*">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>  
-  </ItemGroup>
-  
-  <ItemGroup>
-    <Content Include="home_certificates\**\*.*">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>  
-  </ItemGroup>
-  
+
   <ItemGroup>
     <ProjectReference Include="..\..\BackendServices\MultiServerLibrary\MultiServerLibrary.csproj" />
     <ProjectReference Include="..\..\BackendServices\NetCoreServer\NetCoreServer.csproj" />
-	<ProjectReference Include="..\..\BackendServices\TechnitiumLibrary.Net.Firewall\TechnitiumLibrary.Net.Firewall.csproj" />
+    <ProjectReference Include="..\..\BackendServices\TechnitiumLibrary.Net.Firewall\TechnitiumLibrary.Net.Firewall.csproj" />
   </ItemGroup>
-  
-  <Target Name="ModifyDepsFile" AfterTargets="AfterBuild">
-    <Exec Command="cmd /c (where pwsh &gt;nul 2&gt;&amp;1 &amp;&amp; pwsh -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath &quot;$(OutDir)$(ProjectName).deps.json&quot; -targetFramework &quot;$(TargetFramework)&quot;) || (powershell -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath &quot;$(OutDir)$(ProjectName).deps.json&quot; -targetFramework &quot;$(TargetFramework)&quot;)" />
-  </Target>
 
+  <ItemGroup>
+    <WeaverFiles Include="..\..\CosturaService\netstandard2.0\Costura.Fody.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="static\**\*.*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="home_certificates\**\*.*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Try to use system Powershell even if on an outdated Windows install, Linux is assumed to be last version always (not bundled with) -->
+  <Target Name="ModifyDepsFile" AfterTargets="AfterBuild">
+    <Exec Condition="'$(OS)' == 'Windows_NT'" Command="cmd /c (where pwsh &gt;nul 2&gt;&amp;1 &amp;&amp; pwsh -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath &quot;$(OutDir)$(ProjectName).deps.json&quot; -targetFramework &quot;$(TargetFramework)&quot;) || (powershell -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath &quot;$(OutDir)$(ProjectName).deps.json&quot; -targetFramework &quot;$(TargetFramework)&quot;)" />
+
+    <Exec Condition="'$(OS)' != 'Windows_NT'" Command="pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DepsFixer.ps1&quot; -jsonFilePath &quot;$(OutDir)$(ProjectName).deps.json&quot; -targetFramework &quot;$(TargetFramework)&quot;" />
+  </Target>
 </Project>

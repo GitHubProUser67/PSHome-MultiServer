@@ -1,10 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.UniverseSvoURLResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.UniverseSvoURLResponse
+    )]
     public class MediusUniverseSvoURLResponse : BaseLobbyExtMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.UniverseSvoURLResponse;
@@ -25,14 +27,12 @@ namespace Horizon.RT.Models
             if (reader.MediusVersion >= 109)
             {
                 // 1 byte length prefixed url
-                byte len = reader.ReadByte();
+                var len = reader.ReadByte();
                 URL = reader.ReadString(len + 1);
             }
             else
-            {
                 // fixed size url
                 URL = reader.ReadString(128);
-            }
         }
 
         public override void Serialize(MessageWriter writer)
@@ -45,9 +45,7 @@ namespace Horizon.RT.Models
             {
                 // 1 byte length prefixed url
                 if (URL == null)
-                {
                     writer.Write((byte)0);
-                }
                 else
                 {
                     writer.Write((byte)(URL.Length + 1));
@@ -55,18 +53,13 @@ namespace Horizon.RT.Models
                 }
             }
             else
-            {
                 // fixed size url
                 writer.Write(URL, 128);
-            }
         }
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SVOURL: {URL}";
+            return base.ToString() + " " + $"MessageID: {MessageID} " + $"SVOURL: {URL}";
         }
-
     }
 }

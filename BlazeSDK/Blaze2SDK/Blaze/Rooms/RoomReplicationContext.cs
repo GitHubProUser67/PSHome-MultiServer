@@ -5,19 +5,18 @@ namespace Blaze2SDK.Blaze.Rooms
     [TdfStruct]
     public struct RoomReplicationContext
     {
-        
         [TdfMember("SEID")]
         public uint mUserSessionId;
-        
+
         [TdfMember("UPRE")]
         public RoomUpdateReason mUpdateReason;
-        
+
         [TdfMember("USID")]
         public uint mUserId;
-        
+
         [TdfMember("VWID")]
         public uint mViewId;
-        
+
         public enum RoomUpdateReason : int
         {
             DELETED_EXPANDED_ROOM = 0x0,
@@ -30,6 +29,5 @@ namespace Blaze2SDK.Blaze.Rooms
             USER_CREATED = 0x7,
             ATTRIBUTES_UPDATE = 0x8,
         }
-        
     }
 }

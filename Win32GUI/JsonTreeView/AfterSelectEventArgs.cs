@@ -1,18 +1,13 @@
-using System;
-
 namespace ZTn.Json.JsonTreeView
 {
-    public class AfterSelectEventArgs : EventArgs
+    public class AfterSelectEventArgs(
+        string typeName,
+        string jTokenTypeName,
+        Func<string> getJsonString
+    ) : EventArgs
     {
-        public AfterSelectEventArgs(string typeName, string jTokenTypeName, Func<string> getJsonString)
-        {
-            TypeName = typeName;
-            JTokenTypeName = jTokenTypeName;
-            GetJsonString = getJsonString;
-        }
-
-        public string TypeName { get; private set; }
-        public string JTokenTypeName { get; }
-        public Func<string> GetJsonString { get; }
+        public string TypeName { get; private set; } = typeName;
+        public string JTokenTypeName { get; } = jTokenTypeName;
+        public Func<string> GetJsonString { get; } = getJsonString;
     }
 }

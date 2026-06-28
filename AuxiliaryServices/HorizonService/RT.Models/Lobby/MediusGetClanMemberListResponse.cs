@@ -1,10 +1,12 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.GetClanMemberListResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.GetClanMemberListResponse
+    )]
     public class MediusGetClanMemberListResponse : BaseLobbyMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusLobbyMessageIds.GetClanMemberListResponse;
@@ -20,13 +22,10 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             reader.ReadBytes(3);
             AccountID = reader.ReadInt32();
             AccountName = reader.ReadString(Constants.ACCOUNTNAME_MAXLEN);
@@ -37,13 +36,10 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(new byte[3]);
             writer.Write(AccountID);
             writer.Write(AccountName, Constants.ACCOUNTNAME_MAXLEN);
@@ -54,12 +50,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"AccountID: {AccountID} " +
-                $"AccountName: {AccountName} " +
-                $"StatusCode: {StatusCode} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"AccountID: {AccountID} "
+                + $"AccountName: {AccountName} "
+                + $"StatusCode: {StatusCode} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

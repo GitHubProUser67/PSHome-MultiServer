@@ -1,12 +1,9 @@
-using CustomLogger;
+﻿using CustomLogger;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
 using DotNetty.Transport.Channels;
 using Horizon.RT.Common;
 using Horizon.RT.Cryptography;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Horizon.LIBRARY.Pipeline.Tcp
 {
@@ -27,17 +24,23 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
             };
         }
 
-        protected override void Decode(IChannelHandlerContext context, IByteBuffer input, List<object> output)
+        protected override void Decode(
+            IChannelHandlerContext context,
+            IByteBuffer input,
+            List<object> output
+        )
         {
             try
             {
-                List<object> decoded = Decode(context, input);
+                var decoded = Decode(context, input);
                 if (decoded != null)
                     output.AddRange(decoded);
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogWarn($"[ScertIEnumerableDecoder] - Tcp: Failed to decode a SCERT message. (Exception:{ex})");
+                LoggerAccessor.LogWarn(
+                    $"[ScertIEnumerableDecoder] - Tcp: Failed to decode a SCERT message. (Exception:{ex})"
+                );
             }
         }
 
@@ -52,16 +55,18 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
         /// <returns>The <see cref="IByteBuffer" /> which represents the frame or <c>null</c> if no frame could be created.</returns>
         protected virtual List<object> Decode(IChannelHandlerContext context, IByteBuffer input)
         {
-            List<object> messages = new List<object>();
+            var messages = new List<object>();
 
-            byte id = input.GetByte(input.ReaderIndex);
+            var id = input.GetByte(input.ReaderIndex);
             byte[] hash = null;
             long frameLength = input.GetShortLE(input.ReaderIndex + 1);
-            int totalLength = 3;
+            var totalLength = 3;
 
             if (!context.HasAttribute(Constants.SCERT_CLIENT))
-                context.GetAttribute(Constants.SCERT_CLIENT).Set(new Attribute.ScertClientAttribute());
-            Attribute.ScertClientAttribute scertClient = context.GetAttribute(Constants.SCERT_CLIENT).Get();
+                context
+                    .GetAttribute(Constants.SCERT_CLIENT)
+                    .Set(new Attribute.ScertClientAttribute());
+            var scertClient = context.GetAttribute(Constants.SCERT_CLIENT).Get();
 
             // only split messages if the RT_MSG_TYPE is the message list id
             if ((id & 0x7F) != 0x3B)
@@ -85,18 +90,24 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
             }
 
             // never overflows because it's less than maxFrameLength
-            int frameLengthInt = (int)frameLength;
+            var frameLengthInt = (int)frameLength;
             if (input.ReadableBytes < frameLengthInt)
                 return null;
 
             // extract frame
-            byte[] messageContents = new byte[frameLengthInt];
+            var messageContents = new byte[frameLengthInt];
             input.GetBytes(input.ReaderIndex + totalLength, messageContents);
 
             // parse out each message into their own buffers
-            for (int i = 0; i < messageContents.Length;)
+            for (var i = 0; i < messageContents.Length; )
             {
-                int subLen = BitConverter.ToInt16(!BitConverter.IsLittleEndian ? EndianTools.EndianUtils.ReverseArray(messageContents) : messageContents, i + 1) + 3;
+                var subLen =
+                    BitConverter.ToInt16(
+                        !EndianTools.EndianAwareConverter.isLittleEndianSystem
+                            ? EndianTools.EndianUtils.ReverseArray(messageContents)
+                            : messageContents,
+                        i + 1
+                    ) + 3;
                 if (messageContents[i] >= 0x80)
                     subLen += 4;
 

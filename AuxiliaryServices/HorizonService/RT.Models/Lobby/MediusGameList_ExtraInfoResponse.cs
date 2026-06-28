@@ -1,12 +1,16 @@
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.GameList_ExtraInfoResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.GameList_ExtraInfoResponse
+    )]
     public class MediusGameList_ExtraInfoResponse : BaseLobbyExtMessage, IMediusResponse
     {
-        public override byte PacketType => (byte)MediusLobbyExtMessageIds.GameList_ExtraInfoResponse;
+        public override byte PacketType =>
+            (byte)MediusLobbyExtMessageIds.GameList_ExtraInfoResponse;
 
         public bool IsSuccess => StatusCode >= 0;
 
@@ -37,13 +41,10 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             reader.ReadBytes(3);
             StatusCode = reader.Read<MediusCallbackStatus>();
             MediusWorldID = reader.ReadInt32();
@@ -73,13 +74,10 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(new byte[3]);
             writer.Write(StatusCode);
             writer.Write(MediusWorldID);
@@ -107,33 +105,33 @@ namespace Horizon.RT.Models
             writer.Write(new byte[3]);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"MediusWorldID: {MediusWorldID} " +
-                $"PlayerCount: {PlayerCount} " +
-                $"MinPlayers: {MinPlayers} " +
-                $"MaxPlayers: {MaxPlayers} " +
-                $"GameLevel: {GameLevel} " +
-                $"PlayerSkillLevel: {PlayerSkillLevel} " +
-                $"RulesSet: {RulesSet} " +
-                $"GenericField1: {GenericField1:X8} " +
-                $"GenericField2: {GenericField2:X8} " +
-                $"GenericField3: {GenericField3:X8} " +
-                $"GenericField4: {GenericField4:X8} " +
-                $"GenericField5: {GenericField5:X8} " +
-                $"GenericField6: {GenericField6:X8} " +
-                $"GenericField7: {GenericField7:X8} " +
-                $"GenericField8: {GenericField8:X8} " +
-                $"SecurityLevel: {SecurityLevel} " +
-                $"WorldStatus: {WorldStatus} " +
-                $"GameHostType: {GameHostType} " +
-                $"GameName: {GameName} " +
-                $"GameStats: {System.BitConverter.ToString(GameStats)} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"MediusWorldID: {MediusWorldID} "
+                + $"PlayerCount: {PlayerCount} "
+                + $"MinPlayers: {MinPlayers} "
+                + $"MaxPlayers: {MaxPlayers} "
+                + $"GameLevel: {GameLevel} "
+                + $"PlayerSkillLevel: {PlayerSkillLevel} "
+                + $"RulesSet: {RulesSet} "
+                + $"GenericField1: {GenericField1:X8} "
+                + $"GenericField2: {GenericField2:X8} "
+                + $"GenericField3: {GenericField3:X8} "
+                + $"GenericField4: {GenericField4:X8} "
+                + $"GenericField5: {GenericField5:X8} "
+                + $"GenericField6: {GenericField6:X8} "
+                + $"GenericField7: {GenericField7:X8} "
+                + $"GenericField8: {GenericField8:X8} "
+                + $"SecurityLevel: {SecurityLevel} "
+                + $"WorldStatus: {WorldStatus} "
+                + $"GameHostType: {GameHostType} "
+                + $"GameName: {GameName} "
+                + $"GameStats: {System.BitConverter.ToString(GameStats)} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

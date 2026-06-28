@@ -1,10 +1,12 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.DListSubscription)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.DListSubscription
+    )]
     public class MediusDListSubscription : BaseLobbyExtMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.DListSubscription;
@@ -19,10 +21,8 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             fieldMask = reader.ReadUInt32();
             instanceId = reader.ReadUInt32();
             relationId = reader.ReadUInt32();
@@ -34,10 +34,8 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(fieldMask);
             writer.Write(instanceId);
             writer.Write(relationId);
@@ -49,13 +47,14 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"fieldMask: {fieldMask} " +
-                $"instanceId: {instanceId} " +
-                $"relationId: {relationId} " +
-                $"filterId: {filterId} " +
-                $"listId: {listId} " +
-                $"level: {level}";
+            return base.ToString()
+                + " "
+                + $"fieldMask: {fieldMask} "
+                + $"instanceId: {instanceId} "
+                + $"relationId: {relationId} "
+                + $"filterId: {filterId} "
+                + $"listId: {listId} "
+                + $"level: {level}";
         }
     }
 }

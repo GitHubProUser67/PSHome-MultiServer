@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct UpdateAdminListRequest
-	{
+    [TdfStruct]
+    public struct UpdateAdminListRequest
+    {
+        [TdfMember("PID")]
+        public long mAdminPlayerId;
 
-		[TdfMember("PID")]
-		public long mAdminPlayerId;
-
-		[TdfMember("GID")]
-		public uint mGameId;
-
-	}
+        [TdfMember("GID")]
+        public uint mGameId;
+    }
 }

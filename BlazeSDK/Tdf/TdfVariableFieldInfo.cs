@@ -2,15 +2,10 @@ using System.Reflection;
 
 namespace Tdf
 {
-    internal class TdfVariableFieldInfo : FieldInfo
+    internal class TdfVariableFieldInfo(FieldInfo orgFieldInfo, Type actualFieldType) : FieldInfo
     {
-        private readonly FieldInfo _orgFieldInfo;
-        private readonly Type _actualFieldType;
-        public TdfVariableFieldInfo(FieldInfo orgFieldInfo, Type actualFieldType)
-        {
-            _orgFieldInfo = orgFieldInfo;
-            _actualFieldType = actualFieldType;
-        }
+        private readonly FieldInfo _orgFieldInfo = orgFieldInfo;
+        private readonly Type _actualFieldType = actualFieldType;
 
         public override FieldAttributes Attributes => _orgFieldInfo.Attributes;
 
@@ -44,7 +39,13 @@ namespace Tdf
             return _orgFieldInfo.IsDefined(attributeType, inherit);
         }
 
-        public override void SetValue(object? obj, object? value, BindingFlags invokeAttr, Binder? binder, System.Globalization.CultureInfo? culture)
+        public override void SetValue(
+            object? obj,
+            object? value,
+            BindingFlags invokeAttr,
+            Binder? binder,
+            System.Globalization.CultureInfo? culture
+        )
         {
             _orgFieldInfo.SetValue(obj, value, invokeAttr, binder, culture);
         }

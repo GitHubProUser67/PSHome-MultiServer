@@ -14,38 +14,52 @@ namespace Prometheus;
 /// For some, it means rarely used members are never allocated at all (e.g. if you never inspect the set of label names, they are never allocated).
 /// For others, it means they are allocated at first time of use (e.g. serialization-related fields are allocated when serializing the first time).
 /// </remarks>
-public abstract class Collector
+public abstract partial class Collector
 {
     /// <summary>
     /// The metric name, e.g. http_requests_total.
     /// </summary>
     public string Name { get; }
 
-    internal byte[] NameBytes => NonCapturingLazyInitializer.EnsureInitialized(ref _nameBytes, this, _assignNameBytesFunc)!;
+    internal byte[] NameBytes =>
+        NonCapturingLazyInitializer.EnsureInitialized(ref _nameBytes, this, _assignNameBytesFunc)!;
     private byte[]? _nameBytes;
     private static readonly Action<Collector> _assignNameBytesFunc = AssignNameBytes;
-    private static void AssignNameBytes(Collector instance) => instance._nameBytes = PrometheusConstants.ExportEncoding.GetBytes(instance.Name);
+
+    private static void AssignNameBytes(Collector instance) =>
+        instance._nameBytes = PrometheusConstants.ExportEncoding.GetBytes(instance.Name);
 
     /// <summary>
     /// The help text describing the metric for a human audience.
     /// </summary>
     public string Help { get; }
 
-    internal byte[] HelpBytes => NonCapturingLazyInitializer.EnsureInitialized(ref _helpBytes, this, _assignHelpBytesFunc)!;
+    internal byte[] HelpBytes =>
+        NonCapturingLazyInitializer.EnsureInitialized(ref _helpBytes, this, _assignHelpBytesFunc)!;
     private byte[]? _helpBytes;
     private static readonly Action<Collector> _assignHelpBytesFunc = AssignHelpBytes;
+
     private static void AssignHelpBytes(Collector instance) =>
-        instance._helpBytes = string.IsNullOrWhiteSpace(instance.Help) ? [] : PrometheusConstants.ExportEncoding.GetBytes(instance.Help);
+        instance._helpBytes = string.IsNullOrWhiteSpace(instance.Help)
+            ? []
+            : PrometheusConstants.ExportEncoding.GetBytes(instance.Help);
 
     /// <summary>
     /// Names of the instance-specific labels (name-value pairs) that apply to this metric.
     /// When the values are added to the names, you get a <see cref="ChildBase"/> instance.
     /// Does not include any static label names (from metric configuration, factory or registry).
     /// </summary>
-    public string[] LabelNames => NonCapturingLazyInitializer.EnsureInitialized(ref _labelNames, this, _assignLabelNamesFunc)!;
+    public string[] LabelNames =>
+        NonCapturingLazyInitializer.EnsureInitialized(
+            ref _labelNames,
+            this,
+            _assignLabelNamesFunc
+        )!;
     private string[]? _labelNames;
     private static readonly Action<Collector> _assignLabelNamesFunc = AssignLabelNames;
-    private static void AssignLabelNames(Collector instance) => instance._labelNames = instance.InstanceLabelNames.ToArray();
+
+    private static void AssignLabelNames(Collector instance) =>
+        instance._labelNames = instance.InstanceLabelNames.ToArray();
 
     internal StringSequence InstanceLabelNames;
     internal StringSequence FlattenedLabelNames;
@@ -63,7 +77,11 @@ public abstract class Collector
     internal abstract int ChildCount { get; }
     internal abstract int TimeseriesCount { get; }
 
-    internal abstract ValueTask CollectAndSerializeAsync(IMetricsSerializer serializer, bool writeFamilyDeclaration, CancellationToken cancel);
+    internal abstract ValueTask CollectAndSerializeAsync(
+        IMetricsSerializer serializer,
+        bool writeFamilyDeclaration,
+        CancellationToken cancel
+    );
 
     // Used by ChildBase.Remove()
     internal abstract void RemoveLabelled(LabelSequence instanceLabels);
@@ -72,14 +90,27 @@ public abstract class Collector
     private const string ValidLabelNameExpression = "^[a-zA-Z_][a-zA-Z0-9_]*$";
     private const string ReservedLabelNameExpression = "^__.*$";
 
-    private static readonly Regex MetricNameRegex = new(ValidMetricNameExpression, RegexOptions.Compiled);
-    private static readonly Regex LabelNameRegex = new(ValidLabelNameExpression, RegexOptions.Compiled);
-    private static readonly Regex ReservedLabelRegex = new(ReservedLabelNameExpression, RegexOptions.Compiled);
+    private static readonly Regex MetricNameRegex = MyRegex();
+    private static readonly Regex LabelNameRegex = new(
+        ValidLabelNameExpression,
+        RegexOptions.Compiled
+    );
+    private static readonly Regex ReservedLabelRegex = new(
+        ReservedLabelNameExpression,
+        RegexOptions.Compiled
+    );
 
-    internal Collector(string name, string help, StringSequence instanceLabelNames, LabelSequence staticLabels)
+    internal Collector(
+        string name,
+        string help,
+        StringSequence instanceLabelNames,
+        LabelSequence staticLabels
+    )
     {
         if (!MetricNameRegex.IsMatch(name))
-            throw new ArgumentException($"Metric name '{name}' does not match regex '{ValidMetricNameExpression}'.");
+            throw new ArgumentException(
+                $"Metric name '{name}' does not match regex '{ValidMetricNameExpression}'."
+            );
 
         Name = name;
         TypeBytes = TextSerializer.MetricTypeToBytes[Type];
@@ -105,7 +136,10 @@ public abstract class Collector
 
             // Here we check for label name collision, ensuring that the same label name is not defined twice on any label inheritance level.
             if (uniqueLabelNames.Count != FlattenedLabelNames.Length)
-                throw new InvalidOperationException("The set of label names includes duplicates: " + string.Join(", ", FlattenedLabelNames.ToArray()));
+                throw new InvalidOperationException(
+                    "The set of label names includes duplicates: "
+                        + string.Join(", ", FlattenedLabelNames.ToArray())
+                );
         }
         finally
         {
@@ -113,7 +147,8 @@ public abstract class Collector
         }
     }
 
-    private static readonly ObjectPool<HashSet<string>> LabelValidationHashSetPool = ObjectPool.Create(new LabelValidationHashSetPoolPolicy());
+    private static readonly ObjectPool<HashSet<string>> LabelValidationHashSetPool =
+        ObjectPool.Create(new LabelValidationHashSetPoolPolicy());
 
     private sealed class LabelValidationHashSetPoolPolicy : PooledObjectPolicy<HashSet<string>>
     {
@@ -121,11 +156,8 @@ public abstract class Collector
         // This should be more than generous even for the most verbosely labeled scenarios.
         private const int PooledHashSetMaxSize = 50;
 
-#if NET
-        public override HashSet<string> Create() => new(PooledHashSetMaxSize, StringComparer.Ordinal);
-#else
-        public override HashSet<string> Create() => new(StringComparer.Ordinal);
-#endif
+        public override HashSet<string> Create() =>
+            new(PooledHashSetMaxSize, StringComparer.Ordinal);
 
         public override bool Return(HashSet<string> obj)
         {
@@ -140,10 +172,14 @@ public abstract class Collector
     internal static void ValidateLabelName(string labelName)
     {
         if (!LabelNameRegex.IsMatch(labelName))
-            throw new ArgumentException($"Label name '{labelName}' does not match regex '{ValidLabelNameExpression}'.");
+            throw new ArgumentException(
+                $"Label name '{labelName}' does not match regex '{ValidLabelNameExpression}'."
+            );
 
         if (ReservedLabelRegex.IsMatch(labelName))
-            throw new ArgumentException($"Label name '{labelName}' is not valid - labels starting with double underscore are reserved!");
+            throw new ArgumentException(
+                $"Label name '{labelName}' is not valid - labels starting with double underscore are reserved!"
+            );
     }
 
     public override string ToString()
@@ -151,6 +187,9 @@ public abstract class Collector
         // Just for debugging.
         return $"{Name}{{{FlattenedLabelNames}}}";
     }
+
+    [GeneratedRegex(ValidMetricNameExpression, RegexOptions.Compiled)]
+    private static partial Regex MyRegex();
 }
 
 /// <summary>
@@ -170,14 +209,15 @@ public abstract class Collector<TChild> : Collector, ICollector<TChild>
     /// <summary>
     /// Gets the child instance that has no labels.
     /// </summary>
-    protected internal TChild Unlabelled => LazyInitializer.EnsureInitialized(ref _lazyUnlabelled, _createdUnlabelledFunc)!;
+    protected internal TChild Unlabelled =>
+        LazyInitializer.EnsureInitialized(ref _lazyUnlabelled, _createdUnlabelledFunc)!;
 
     private TChild CreateUnlabelled() => GetOrAddLabelled(LabelSequence.Empty);
+
     private readonly Func<TChild> _createdUnlabelledFunc;
 
     // We need it for the ICollector interface but using this is rarely relevant in client code, so keep it obscured.
     TChild ICollector<TChild>.Unlabelled => Unlabelled;
-
 
     // Old naming, deprecated for a silly reason: by default if you start typing .La... and trigger Intellisense
     // it will often for whatever reason focus on LabelNames instead of Labels, leading to tiny but persistent frustration.
@@ -188,8 +228,7 @@ public abstract class Collector<TChild> : Collector, ICollector<TChild>
 
     public TChild WithLabels(params string[] labelValues)
     {
-        if (labelValues == null)
-            throw new ArgumentNullException(nameof(labelValues));
+        ArgumentNullException.ThrowIfNull(labelValues);
 
         return WithLabels(labelValues.AsMemory());
     }
@@ -213,7 +252,10 @@ public abstract class Collector<TChild> : Collector, ICollector<TChild>
         {
             labelValues.CopyTo(buffer);
 
-            var temporaryLabels = LabelSequence.From(InstanceLabelNames, StringSequence.From(buffer.AsMemory(0, labelValues.Length)));
+            var temporaryLabels = LabelSequence.From(
+                InstanceLabelNames,
+                StringSequence.From(buffer.AsMemory(0, labelValues.Length))
+            );
 
             if (TryGetLabelled(temporaryLabels, out var existing))
                 return existing!;
@@ -224,14 +266,16 @@ public abstract class Collector<TChild> : Collector, ICollector<TChild>
         }
 
         // If we got this far, we did not succeed in finding an existing instance. We need to allocate a long-lived string[] for the label values.
-        var labels = LabelSequence.From(InstanceLabelNames, StringSequence.From(labelValues.ToArray()));
+        var labels = LabelSequence.From(
+            InstanceLabelNames,
+            StringSequence.From(labelValues.ToArray())
+        );
         return CreateLabelled(labels);
     }
 
     public void RemoveLabelled(params string[] labelValues)
     {
-        if (labelValues == null)
-            throw new ArgumentNullException(nameof(labelValues));
+        ArgumentNullException.ThrowIfNull(labelValues);
 
         var labels = LabelSequence.From(InstanceLabelNames, StringSequence.From(labelValues));
         RemoveLabelled(labels);
@@ -278,7 +322,7 @@ public abstract class Collector<TChild> : Collector, ICollector<TChild>
     /// <summary>
     /// Gets the instance-specific label values of all labelled instances of the collector.
     /// Values of any inherited static labels are not returned in the result.
-    /// 
+    ///
     /// Note that during concurrent operation, the set of values returned here
     /// may diverge from the latest set of values used by the collector.
     /// </summary>
@@ -365,20 +409,10 @@ public abstract class Collector<TChild> : Collector, ICollector<TChild>
 
         try
         {
-#if NET
             // It could be that someone beats us to it! Probably not, though.
-            if (_children.TryAdd(instanceLabels, newChild))
-                return newChild;
-
-            return _children[instanceLabels];
-#else
-            // On .NET Fx we need to do the pessimistic case first because there is no TryAdd().
-            if (_children.TryGetValue(instanceLabels, out var existing))
-                return existing;
-
-            _children.Add(instanceLabels, newChild);
-            return newChild;
-#endif
+            return _children.TryAdd(instanceLabels, newChild)
+                ? newChild
+                : _children[instanceLabels];
         }
         finally
         {
@@ -391,7 +425,12 @@ public abstract class Collector<TChild> : Collector, ICollector<TChild>
         // Order of labels is 1) instance labels; 2) static labels.
         var flattenedLabels = instanceLabels.Concat(StaticLabels);
 
-        return NewChild(instanceLabels, flattenedLabels, publish: !_suppressInitialValue, _exemplarBehavior);
+        return NewChild(
+            instanceLabels,
+            flattenedLabels,
+            publish: !_suppressInitialValue,
+            _exemplarBehavior
+        );
     }
 
     // Cache the delegate to avoid allocating a new one every time in GetOrAddLabelled.
@@ -401,9 +440,16 @@ public abstract class Collector<TChild> : Collector, ICollector<TChild>
     /// For tests that want to see what instance-level label values were used when metrics were created.
     /// This is for testing only, so does not respect locks - do not use this in concurrent context.
     /// </summary>
-    internal LabelSequence[] GetAllInstanceLabelsUnsafe() => _children.Keys.ToArray();
+    internal LabelSequence[] GetAllInstanceLabelsUnsafe() => [.. _children.Keys];
 
-    internal Collector(string name, string help, StringSequence instanceLabelNames, LabelSequence staticLabels, bool suppressInitialValue, ExemplarBehavior exemplarBehavior)
+    internal Collector(
+        string name,
+        string help,
+        StringSequence instanceLabelNames,
+        LabelSequence staticLabels,
+        bool suppressInitialValue,
+        ExemplarBehavior exemplarBehavior
+    )
         : base(name, help, instanceLabelNames, staticLabels)
     {
         _createdUnlabelledFunc = CreateUnlabelled;
@@ -416,18 +462,27 @@ public abstract class Collector<TChild> : Collector, ICollector<TChild>
     /// <summary>
     /// Creates a new instance of the child collector type.
     /// </summary>
-    private protected abstract TChild NewChild(LabelSequence instanceLabels, LabelSequence flattenedLabels, bool publish, ExemplarBehavior exemplarBehavior);
+    private protected abstract TChild NewChild(
+        LabelSequence instanceLabels,
+        LabelSequence flattenedLabels,
+        bool publish,
+        ExemplarBehavior exemplarBehavior
+    );
 
-#if NET
     [AsyncMethodBuilder(typeof(PoolingAsyncValueTaskMethodBuilder))]
-#endif
-    internal override async ValueTask CollectAndSerializeAsync(IMetricsSerializer serializer, bool writeFamilyDeclaration, CancellationToken cancel)
+    internal override async ValueTask CollectAndSerializeAsync(
+        IMetricsSerializer serializer,
+        bool writeFamilyDeclaration,
+        CancellationToken cancel
+    )
     {
         EnsureUnlabelledMetricCreatedIfNoLabels();
 
         // There may be multiple Collectors emitting data for the same family. Only the first will write out the family declaration.
         if (writeFamilyDeclaration)
-            await serializer.WriteFamilyDeclarationAsync(Name, NameBytes, HelpBytes, Type, TypeBytes, cancel);
+            await serializer
+                .WriteFamilyDeclarationAsync(Name, NameBytes, HelpBytes, Type, TypeBytes, cancel)
+                .ConfigureAwait(false);
 
         // This could potentially take nontrivial time, as we are serializing to a stream (potentially, a network stream).
         // Therefore we operate on a defensive copy in a reused buffer.
@@ -452,7 +507,7 @@ public abstract class Collector<TChild> : Collector, ICollector<TChild>
             for (var i = 0; i < childCount; i++)
             {
                 var child = children[i];
-                await child.CollectAndSerializeAsync(serializer, cancel);
+                await child.CollectAndSerializeAsync(serializer, cancel).ConfigureAwait(false);
             }
         }
         finally

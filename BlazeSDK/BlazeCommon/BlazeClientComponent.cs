@@ -3,10 +3,17 @@ using System.Reflection;
 
 namespace BlazeCommon
 {
-    public abstract class BlazeClientComponent<CommandEnum, NotificationEnum, ErrorEnum> : BlazeComponent<CommandEnum, NotificationEnum, ErrorEnum>, IBlazeClientComponent where CommandEnum : Enum where NotificationEnum : Enum where ErrorEnum : Enum
+    public abstract class BlazeClientComponent<CommandEnum, NotificationEnum, ErrorEnum>
+        : BlazeComponent<CommandEnum, NotificationEnum, ErrorEnum>,
+            IBlazeClientComponent
+        where CommandEnum : Enum
+        where NotificationEnum : Enum
+        where ErrorEnum : Enum
     {
         Dictionary<ushort, BlazeClientNotificationMethodInfo> _clientNotifications;
-        public BlazeClientComponent(ushort componentId, string componentName) : base(componentId, componentName)
+
+        public BlazeClientComponent(ushort componentId, string componentName)
+            : base(componentId, componentName)
         {
             InitializeComponent();
         }
@@ -14,16 +21,15 @@ namespace BlazeCommon
         [MemberNotNull(nameof(_clientNotifications))]
         void InitializeComponent()
         {
-            _clientNotifications = new Dictionary<ushort, BlazeClientNotificationMethodInfo>();
+            _clientNotifications = [];
 
-            Type componentType = GetType();
+            var componentType = GetType();
 
-            MethodInfo[] methods = componentType.GetMethods();
+            var methods = componentType.GetMethods();
 
-            foreach (MethodInfo method in methods)
+            foreach (var method in methods)
             {
-
-                BlazeNotification? notificationAttr = method.GetCustomAttribute<BlazeNotification>();
+                var notificationAttr = method.GetCustomAttribute<BlazeNotification>();
                 if (notificationAttr != null)
                 {
                     AddNotification(method, notificationAttr);
@@ -34,29 +40,36 @@ namespace BlazeCommon
 
         bool AddNotification(MethodInfo method, BlazeNotification notificationAttribute)
         {
-            ushort notificationId = notificationAttribute.Id;
+            var notificationId = notificationAttribute.Id;
             if (_clientNotifications.ContainsKey(notificationId))
-                throw new InvalidOperationException($"Blaze notification {notificationId} seen more than once for component {Id}");
+                throw new InvalidOperationException(
+                    $"Blaze notification {notificationId} seen more than once for component {Id}"
+                );
 
-            Type fullReturnType = method.ReturnType;
+            var fullReturnType = method.ReturnType;
             //we need to check if it is Task
             if (fullReturnType != typeof(Task))
                 return false;
 
-            Type[] parameterTypes = method.GetParameters().Select(x => x.ParameterType).ToArray();
+            Type[] parameterTypes = [.. method.GetParameters().Select(x => x.ParameterType)];
             if (parameterTypes.Length != 1)
                 return false;
 
-            Type notificationType = parameterTypes[0];
+            var notificationType = parameterTypes[0];
 
-            BlazeClientNotificationMethodInfo notificationInfo = new BlazeClientNotificationMethodInfo(this, notificationId, notificationType, method);
+            var notificationInfo = new BlazeClientNotificationMethodInfo(
+                this,
+                notificationId,
+                notificationType,
+                method
+            );
             _clientNotifications.Add(notificationId, notificationInfo);
             return true;
         }
 
         public BlazeClientNotificationMethodInfo? GetBlazeNotificationInfo(ushort notificationId)
         {
-            _clientNotifications.TryGetValue(notificationId, out BlazeClientNotificationMethodInfo? notificationInfo);
+            _clientNotifications.TryGetValue(notificationId, out var notificationInfo);
             return notificationInfo;
         }
     }

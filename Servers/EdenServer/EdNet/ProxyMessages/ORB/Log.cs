@@ -1,16 +1,21 @@
-﻿using CustomLogger;
+﻿using System.Net;
+using CustomLogger;
 using EdNetService.Models;
-using System.Net;
 
 namespace EdenServer.EdNet.ProxyMessages.ORB
 {
     public class Log : AbstractProxyMessage
     {
-        public override byte[]? Process(IPEndPoint endpoint, IPEndPoint target, ClientTask task, ushort PacketMagic)
+        public override byte[]? Process(
+            IPEndPoint endpoint,
+            IPEndPoint target,
+            ClientTask task,
+            ushort PacketMagic
+        )
         {
-            string clientName = task.Request.ExtractString();
-            string userName = task.Request.ExtractString();
-            string text = task.Request.ExtractString();
+            var clientName = task.Request.ExtractString();
+            var userName = task.Request.ExtractString();
+            var text = task.Request.ExtractString();
 
 #if DEBUG
             LoggerAccessor.LogInfo($"[Log] - User:{userName}|{clientName} sent a message:{text}");

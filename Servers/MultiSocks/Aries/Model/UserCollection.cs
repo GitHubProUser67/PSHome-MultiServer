@@ -1,4 +1,5 @@
-using MultiSocks.Aries.Messages;
+using MultiServerLibrary.Extension.NET;
+using MultiSocks.Aries.Components;
 
 namespace MultiSocks.Aries.Model
 {
@@ -31,18 +32,14 @@ namespace MultiSocks.Aries.Model
 
         public virtual bool RemoveUser(AriesUser? user)
         {
-            if (user == null)
-                return false;
-
-            return Users.Remove(user);
+            return user != null && Users.Remove(user);
         }
 
         public AriesUser? GetUserByName(string? name)
         {
-            if (string.IsNullOrEmpty(name))
-                return null;
-
-            return Users.FirstOrDefault(x => x.Username == name);
+            return string.IsNullOrEmpty(name)
+                ? null
+                : Users.FirstOrDefault(x => x.Username == name);
         }
 
         public AriesUser? GetUserByPersonaName(string name)
@@ -57,13 +54,13 @@ namespace MultiSocks.Aries.Model
 
         public void Broadcast(AbstractMessage msg)
         {
-            foreach (AriesUser user in Users)
+            foreach (var user in Users)
             {
                 if (user.Connection == null)
                 {
                     new Thread(() =>
                     {
-                        int retries = 0;
+                        var retries = 0;
                         while (retries < 5)
                         {
                             if (user.Connection != null)

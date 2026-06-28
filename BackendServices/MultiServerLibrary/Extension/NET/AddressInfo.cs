@@ -1,4 +1,6 @@
-namespace System.Net
+using System.Net;
+
+namespace MultiServerLibrary.Extension.NET
 {
     public class AddressInfo
     {

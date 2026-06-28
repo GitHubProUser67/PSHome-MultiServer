@@ -1,10 +1,13 @@
-﻿<Weavers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="FodyWeavers.xsd">
+﻿<Weavers
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="FodyWeavers.xsd"
+>
   <Costura>
     <Unmanaged32Assemblies>
-      SQLite.Interop
+      e_sqlite3
     </Unmanaged32Assemblies>
     <Unmanaged64Assemblies>
-      SQLite.Interop
+      e_sqlite3
     </Unmanaged64Assemblies>
     <ExcludeAssemblies>
       System.Data.SQLite

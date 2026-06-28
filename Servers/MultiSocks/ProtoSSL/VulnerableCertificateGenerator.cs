@@ -339,9 +339,11 @@ library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.*/
 
 using System.Collections.Concurrent;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using CastleLibrary.NetHasher.CRC;
 using CustomLogger;
 using MultiServerLibrary.Extension;
 using MultiServerLibrary.SSL;
@@ -350,6 +352,7 @@ using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Operators;
+using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Math;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
@@ -368,116 +371,273 @@ namespace MultiSocks.ProtoSSL;
 /// </summary>
 public class VulnerableCertificateGenerator
 {
-    private readonly ConcurrentDictionary<string, (AsymmetricKeyParameter, Certificate, X509Certificate2)> _certCache = new();
+    private readonly ConcurrentDictionary<
+        uint,
+        (AsymmetricKeyParameter, Certificate, X509Certificate2)
+    > _certCache = new();
     private static readonly Dictionary<string, DerObjectIdentifier> RDN_NAME_TO_BC_STYLE = new()
     {
         { "US", X509Name.C },
         { "California", X509Name.ST },
         { "Redwood City", X509Name.L },
         { "Electronic Arts, Inc.", X509Name.O },
-        { "Online Technology Group", X509Name.OU }
+        { "Online Technology Group", X509Name.OU },
     };
+    private const string FeslCN = "fesl.ea.com";
+    private const string FeslOU = "Online Technology Group";
     private const string SHA1CipherAlgorithm = "SHA1WITHRSA";
     private const string MD5CipherAlgorithm = "MD5WITHRSA";
-    private const string IssuerDN = "CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group";
-    private static readonly ReadOnlyMemory<byte> SHA1CipherSignature = new byte[] { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05 };
-    private static readonly ReadOnlyMemory<byte> MD5CipherSignature = new byte[] { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x04 };
-
-    public (AsymmetricKeyParameter, Certificate, X509Certificate2) GetVulnerableFeslEaCert(bool SHA1 = false)
+    private static readonly string IssuerDN =
+        $"CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU={FeslOU}";
+    private static readonly ReadOnlyMemory<byte> SHA1CipherSignature = new byte[]
     {
-        string cacheKey = "fesl.ea.com";
-        string SubjectDN = $"C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN={cacheKey}";
+        0x2a,
+        0x86,
+        0x48,
+        0x86,
+        0xf7,
+        0x0d,
+        0x01,
+        0x01,
+        0x05,
+    };
+    private static readonly ReadOnlyMemory<byte> MD5CipherSignature = new byte[]
+    {
+        0x2a,
+        0x86,
+        0x48,
+        0x86,
+        0xf7,
+        0x0d,
+        0x01,
+        0x01,
+        0x04,
+    };
+    private static readonly Assembly _assembly = Assembly.GetExecutingAssembly();
 
-        if (_certCache.TryGetValue(cacheKey, out (AsymmetricKeyParameter, Certificate, X509Certificate2) cacheHit))
-            // !TODO: New connections will break after running continuously several years without a restart 
+    public (AsymmetricKeyParameter, Certificate, X509Certificate2) GetVulnerableFeslEaCert(
+        bool SHA1 = false
+    )
+    {
+        var cacheKey = CRC32.CreateCastagnoli(Encoding.UTF8.GetBytes("fesl_" + (SHA1 ? 1 : 0)));
+
+        if (_certCache.TryGetValue(cacheKey, out var cacheHit))
+            // !TODO: New connections will break after running continuously several years without a restart
             return cacheHit;
 
-        (AsymmetricKeyParameter, Certificate, X509Certificate2) creds = GenerateVulnerableCert(IssuerDN, SubjectDN, SHA1);
+        (AsymmetricKeyParameter, Certificate, X509Certificate2) creds;
+
+        if (SHA1)
+        {
+            creds = GenerateVulnerableCert(
+                IssuerDN,
+                $"C=US, ST=California, O=\"Electronic Arts, Inc.\", OU={FeslOU}, CN={FeslCN}",
+                true
+            );
+            _certCache.TryAdd(cacheKey, creds);
+            return creds;
+        }
+
+        var key = ConstructRsaKeyPairTuple().Item2;
+
+        BcTlsCrypto crypto = new();
+
+        using var resource = _assembly.GetManifestResourceStream("MultiSocks.fesl-pub.der");
+        var cert = new X509CertificateParser().ReadCertificate(resource);
+
+        creds = (
+            key,
+            new Certificate(
+                new TlsCertificate[] { new BcTlsCertificate(crypto, cert.GetEncoded()) }
+            ),
+            ConvertPEMToX509Certificate2(WriteObjectToPEM(cert), WriteObjectToPEM(key))
+        );
         _certCache.TryAdd(cacheKey, creds);
         return creds;
     }
 
-    public (AsymmetricKeyParameter, Certificate, X509Certificate2) GetVulnerableCustomEaCert(string CN, string OU, bool SHA1 = false)
+    public (AsymmetricKeyParameter, Certificate, X509Certificate2) GetVulnerableCustomEaCert(
+        string CN,
+        string OU,
+        bool SHA1 = false
+    )
     {
-        string SubjectDN = $"C=US, ST=California, O=\"Electronic Arts, Inc.\", OU={OU}, CN={CN}";
+        if (FeslCN.Equals(CN) && FeslOU.Equals(OU))
+            return GetVulnerableFeslEaCert(SHA1);
 
-        if (_certCache.TryGetValue(CN, out (AsymmetricKeyParameter, Certificate, X509Certificate2) cacheHit))
-            // !TODO: New connections will break after running continuously several years without a restart 
+        var cacheKey = CRC32.CreateCastagnoli(
+            Encoding.UTF8.GetBytes("cust_" + CN + OU + (SHA1 ? 1 : 0))
+        );
+
+        if (_certCache.TryGetValue(cacheKey, out var cacheHit))
+            // !TODO: New connections will break after running continuously several years without a restart
             return cacheHit;
 
-        (AsymmetricKeyParameter, Certificate, X509Certificate2) creds = GenerateVulnerableCert(IssuerDN, SubjectDN, SHA1);
-        _certCache.TryAdd(CN, creds);
+        var creds = GenerateVulnerableCert(
+            IssuerDN,
+            $"C=US, ST=California, O=\"Electronic Arts, Inc.\", OU={OU}, CN={CN}",
+            SHA1
+        );
+        _certCache.TryAdd(cacheKey, creds);
         return creds;
     }
 
-    public (AsymmetricKeyParameter, Certificate, X509Certificate2) GetVulnerableLegacyCustomEaCert(string CN, bool WeakChainSignedRSAKey)
+    public (AsymmetricKeyParameter, Certificate, X509Certificate2) GetVulnerableLegacyCustomEaCert(
+        string CN,
+        bool WeakChainSignedRSAKey
+    )
     {
-        if (_certCache.TryGetValue(CN, out (AsymmetricKeyParameter, Certificate, X509Certificate2) cacheHit))
-            // !TODO: New connections will break after running continuously several years without a restart 
+        var cacheKey = CRC32.CreateCastagnoli(
+            Encoding.UTF8.GetBytes("leg_cust_" + CN + (WeakChainSignedRSAKey ? 1 : 0))
+        );
+
+        if (_certCache.TryGetValue(cacheKey, out var cacheHit))
+            // !TODO: New connections will break after running continuously several years without a restart
             return cacheHit;
 
-        (AsymmetricKeyParameter, Certificate, X509Certificate2) creds = GenerateVulnerableLegacyCert("OTG3 Certificate Authority",
-            CN, WeakChainSignedRSAKey);
-        _certCache.TryAdd(CN, creds);
+        var creds = GenerateVulnerableLegacyCert(
+            "OTG3 Certificate Authority",
+            CN,
+            WeakChainSignedRSAKey
+        );
+        _certCache.TryAdd(cacheKey, creds);
         return creds;
     }
 
     /// <summary>
     /// Generates a vulnerable certificate for vulnerable ProtoSSL versions.
     /// </summary>
-    private static (AsymmetricKeyParameter, Certificate, X509Certificate2) GenerateVulnerableCert(string issuer, string subject, bool SHA1 = false)
+    private static (AsymmetricKeyParameter, Certificate, X509Certificate2) GenerateVulnerableCert(
+        string issuer,
+        string subject,
+        bool SHA1 = false
+    )
     {
-        BcTlsCrypto crypto = new(new SecureRandom());
+        BcTlsCrypto crypto = new();
         RsaKeyPairGenerator rsaKeyPairGen = new();
         rsaKeyPairGen.Init(new KeyGenerationParameters(crypto.SecureRandom, 1024));
 
-        AsymmetricCipherKeyPair cKeyPair = rsaKeyPairGen.GenerateKeyPair();
-        AsymmetricCipherKeyPair caKeyPair = rsaKeyPairGen.GenerateKeyPair();
+        var caKeyPair = rsaKeyPairGen.GenerateKeyPair();
+        var cKeyPair = ConstructRsaKeyPair();
 
-        Pkcs12Store store = new Pkcs12StoreBuilder().Build();
-        X509CertificateEntry certEntry = new(PatchCertificateSignaturePattern(GenerateCertificate(SHA1 ? SHA1CipherAlgorithm : MD5CipherAlgorithm, subject,
-        cKeyPair, caKeyPair.Private, GenerateCertificate(SHA1 ? SHA1CipherAlgorithm : MD5CipherAlgorithm, issuer, caKeyPair, caKeyPair.Private)), !SHA1));
+        var store = new Pkcs12StoreBuilder().Build();
+        X509CertificateEntry certEntry = new(
+            PatchCertificateSignaturePattern(
+                GenerateCertificate(
+                    SHA1 ? SHA1CipherAlgorithm : MD5CipherAlgorithm,
+                    subject,
+                    cKeyPair,
+                    caKeyPair.Private,
+                    GenerateCertificate(
+                        SHA1 ? SHA1CipherAlgorithm : MD5CipherAlgorithm,
+                        issuer,
+                        caKeyPair,
+                        caKeyPair.Private
+                    )
+                ),
+                !SHA1
+            )
+        );
 
-        string certDomain = subject.Split("CN=")[1].Split(",")[0];
+        var certDomain = subject.Split("CN=")[1].Split(",")[0];
 
         LoggerAccessor.LogDebug("[ProtoSSL] - Certificate generated for: {domain}", certDomain);
 
         store.SetCertificateEntry(certDomain, certEntry);
-        store.SetKeyEntry(certDomain, new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
+        store.SetKeyEntry(
+            certDomain,
+            new AsymmetricKeyEntry(cKeyPair.Private),
+            new[] { certEntry }
+        );
 
-        return (cKeyPair.Private, new Certificate(new TlsCertificate[] { new BcTlsCertificate(crypto, certEntry.Certificate.GetEncoded()) }),
-            ConvertPEMToX509Certificate2(WriteObjectToPEM(certEntry.Certificate), WriteObjectToPEM(cKeyPair.Private)));
+        return (
+            cKeyPair.Private,
+            new Certificate(
+                new TlsCertificate[]
+                {
+                    new BcTlsCertificate(crypto, certEntry.Certificate.GetEncoded()),
+                }
+            ),
+            ConvertPEMToX509Certificate2(
+                WriteObjectToPEM(certEntry.Certificate),
+                WriteObjectToPEM(cKeyPair.Private)
+            )
+        );
     }
 
     /// <summary>
     /// Generates a vulnerable certificate for vulnerable ProtoSSL versions.
     /// </summary>
-    private static (AsymmetricKeyParameter, Certificate, X509Certificate2) GenerateVulnerableLegacyCert(string RootCN, string ChainCN, bool WeakChainSignedRSAKey)
+    private static (
+        AsymmetricKeyParameter,
+        Certificate,
+        X509Certificate2
+    ) GenerateVulnerableLegacyCert(string RootCN, string ChainCN, bool WeakChainSignedRSAKey)
     {
-        BcTlsCrypto crypto = new(new SecureRandom());
+        BcTlsCrypto crypto = new();
         RsaKeyPairGenerator rsaKeyPairGen = new();
-        rsaKeyPairGen.Init(new KeyGenerationParameters(crypto.SecureRandom, WeakChainSignedRSAKey ? 512 : 1024));
+        rsaKeyPairGen.Init(
+            new KeyGenerationParameters(crypto.SecureRandom, WeakChainSignedRSAKey ? 512 : 1024)
+        );
 
-        AsymmetricCipherKeyPair cKeyPair = rsaKeyPairGen.GenerateKeyPair();
-        AsymmetricCipherKeyPair caKeyPair = rsaKeyPairGen.GenerateKeyPair();
+        var caKeyPair = rsaKeyPairGen.GenerateKeyPair();
+        var cKeyPair = ConstructRsaKeyPair();
 
-        Pkcs12Store store = new Pkcs12StoreBuilder().Build();
-        X509CertificateEntry certEntry = new(PatchCertificateSignaturePattern(GenerateLegacyCertificate(MD5CipherAlgorithm, ChainCN,
-            cKeyPair, caKeyPair.Private, GenerateLegacyCertificate(MD5CipherAlgorithm, RootCN, caKeyPair, caKeyPair.Private)), true));
+        var store = new Pkcs12StoreBuilder().Build();
+        X509CertificateEntry certEntry = new(
+            PatchCertificateSignaturePattern(
+                GenerateLegacyCertificate(
+                    MD5CipherAlgorithm,
+                    ChainCN,
+                    cKeyPair,
+                    caKeyPair.Private,
+                    GenerateLegacyCertificate(
+                        MD5CipherAlgorithm,
+                        RootCN,
+                        caKeyPair,
+                        caKeyPair.Private
+                    )
+                ),
+                true
+            )
+        );
 
         LoggerAccessor.LogDebug("[ProtoSSL] - Legacy Certificate generated for: {domain}", ChainCN);
 
         store.SetCertificateEntry(ChainCN, certEntry);
         store.SetKeyEntry(ChainCN, new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
 
-        return (cKeyPair.Private, new Certificate(new TlsCertificate[] { new BcTlsCertificate(crypto, certEntry.Certificate.GetEncoded()) }),
-            ConvertPEMToX509Certificate2(WriteObjectToPEM(certEntry.Certificate), WriteObjectToPEM(cKeyPair.Private)));
+        return (
+            cKeyPair.Private,
+            new Certificate(
+                new TlsCertificate[]
+                {
+                    new BcTlsCertificate(crypto, certEntry.Certificate.GetEncoded()),
+                }
+            ),
+            ConvertPEMToX509Certificate2(
+                WriteObjectToPEM(certEntry.Certificate),
+                WriteObjectToPEM(cKeyPair.Private)
+            )
+        );
     }
 
-    private static Org.BouncyCastle.X509.X509Certificate GenerateCertificate(string CipherAlgorithm, string subjectName, AsymmetricCipherKeyPair subjectKeyPair, AsymmetricKeyParameter issuerPrivKey, Org.BouncyCastle.X509.X509Certificate? issuerCert = null)
+    private static Org.BouncyCastle.X509.X509Certificate GenerateCertificate(
+        string CipherAlgorithm,
+        string subjectName,
+        AsymmetricCipherKeyPair subjectKeyPair,
+        AsymmetricKeyParameter issuerPrivKey,
+        Org.BouncyCastle.X509.X509Certificate? issuerCert = null
+    )
     {
         X509V3CertificateGenerator certGen = new();
-        certGen.SetSerialNumber(BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), new SecureRandom()));
+        certGen.SetSerialNumber(
+            BigIntegers.CreateRandomInRange(
+                BigInteger.One,
+                BigInteger.ValueOf(long.MaxValue),
+                new SecureRandom()
+            )
+        );
         certGen.SetIssuerDN(issuerCert == null ? new X509Name(subjectName) : issuerCert.SubjectDN);
         certGen.SetNotBefore(DateTime.UtcNow.Date);
         certGen.SetNotAfter(DateTime.UtcNow.Date.AddYears(10));
@@ -486,10 +646,22 @@ public class VulnerableCertificateGenerator
         return certGen.Generate(new Asn1SignatureFactory(CipherAlgorithm, issuerPrivKey));
     }
 
-    private static Org.BouncyCastle.X509.X509Certificate GenerateLegacyCertificate(string CipherAlgorithm, string CN, AsymmetricCipherKeyPair subjectKeyPair, AsymmetricKeyParameter issuerPrivKey, Org.BouncyCastle.X509.X509Certificate? issuerCert = null)
+    private static Org.BouncyCastle.X509.X509Certificate GenerateLegacyCertificate(
+        string CipherAlgorithm,
+        string CN,
+        AsymmetricCipherKeyPair subjectKeyPair,
+        AsymmetricKeyParameter issuerPrivKey,
+        Org.BouncyCastle.X509.X509Certificate? issuerCert = null
+    )
     {
         X509V3CertificateGenerator certGen = new();
-        certGen.SetSerialNumber(BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(long.MaxValue), new SecureRandom()));
+        certGen.SetSerialNumber(
+            BigIntegers.CreateRandomInRange(
+                BigInteger.One,
+                BigInteger.ValueOf(long.MaxValue),
+                new SecureRandom()
+            )
+        );
         certGen.SetIssuerDN(issuerCert == null ? BuildX509Name(CN) : issuerCert.SubjectDN);
         certGen.SetNotBefore(new DateTime(2011, 08, 11));
         certGen.SetNotAfter(new DateTime(2011, 08, 11)); // No choice, ProtoSSL cannot handle years after 2050 (client bug).
@@ -498,13 +670,23 @@ public class VulnerableCertificateGenerator
         return certGen.Generate(new Asn1SignatureFactory(CipherAlgorithm, issuerPrivKey));
     }
 
-    private static Org.BouncyCastle.X509.X509Certificate PatchCertificateSignaturePattern(Org.BouncyCastle.X509.X509Certificate cCertificate, bool MD5Mode = false)
+    private static Org.BouncyCastle.X509.X509Certificate PatchCertificateSignaturePattern(
+        Org.BouncyCastle.X509.X509Certificate cCertificate,
+        bool MD5Mode = false
+    )
     {
-        byte[] certDer = DotNetUtilities.ToX509Certificate(cCertificate).GetRawCertData();
+        var certDer = DotNetUtilities.ToX509Certificate(cCertificate).GetRawCertData();
 
         // There must be two signatures in the DER encoded certificate
-        int signature1Offset = ByteUtils.FindBytePattern(certDer, MD5Mode ? MD5CipherSignature.Span : SHA1CipherSignature.Span);
-        int signature2Offset = ByteUtils.FindBytePattern(certDer, MD5Mode ? MD5CipherSignature.Span : SHA1CipherSignature.Span, signature1Offset + (MD5Mode ? MD5CipherSignature.Length : SHA1CipherSignature.Length));
+        var signature1Offset = ByteUtils.FindBytePattern(
+            certDer,
+            MD5Mode ? MD5CipherSignature.Span : SHA1CipherSignature.Span
+        );
+        var signature2Offset = ByteUtils.FindBytePattern(
+            certDer,
+            MD5Mode ? MD5CipherSignature.Span : SHA1CipherSignature.Span,
+            signature1Offset + (MD5Mode ? MD5CipherSignature.Length : SHA1CipherSignature.Length)
+        );
 
         if (signature1Offset == -1 || signature2Offset == -1)
             throw new Exception("[ProtoSSL] - Failed to find valid signature for patching!");
@@ -516,13 +698,43 @@ public class VulnerableCertificateGenerator
         return new X509CertificateParser().ReadCertificate(derStream);
     }
 
+    private static (AsymmetricKeyParameter, AsymmetricKeyParameter) ConstructRsaKeyPairTuple()
+    {
+        BigInteger p = new(
+            "111453461317074268353761995724716395361446805418267262156522133799013175060193"
+        );
+        BigInteger q = new(
+            "114726748596358283670400355329452217110158824439119423212154846632671665145039"
+        );
+        BigInteger e = new("3");
+
+        var n = p.Multiply(q);
+        var d = e.ModInverse(p.Subtract(BigInteger.One).Multiply(q.Subtract(BigInteger.One)));
+
+        var dP = d.Remainder(p.Subtract(BigInteger.One));
+        var dQ = d.Remainder(q.Subtract(BigInteger.One));
+        var qInv = q.ModInverse(p);
+
+        return (
+            new RsaKeyParameters(false, n, e),
+            new RsaPrivateCrtKeyParameters(n, e, d, p, q, dP, dQ, qInv)
+        );
+    }
+
+    private static AsymmetricCipherKeyPair ConstructRsaKeyPair()
+    {
+        var keyParam = ConstructRsaKeyPairTuple();
+
+        return new AsymmetricCipherKeyPair(keyParam.Item1, keyParam.Item2);
+    }
+
     private static X509Name BuildX509Name(string CN)
     {
         // build name attributes
         List<DerObjectIdentifier> nameOids = new();
         List<string> nameValues = new();
 
-        foreach (KeyValuePair<string, DerObjectIdentifier> props in RDN_NAME_TO_BC_STYLE)
+        foreach (var props in RDN_NAME_TO_BC_STYLE)
         {
             nameOids.Add(props.Value);
             nameValues.Add(props.Key);
@@ -536,8 +748,8 @@ public class VulnerableCertificateGenerator
 
     private static string WriteObjectToPEM(object obj)
     {
-        StringBuilder CertPem = new StringBuilder();
-        using (PemWriter CSRPemWriter = new PemWriter(new StringWriter(CertPem)))
+        var CertPem = new StringBuilder();
+        using (var CSRPemWriter = new PemWriter(new StringWriter(CertPem)))
         {
             CSRPemWriter.WriteObject(obj);
             CSRPemWriter.Writer.Flush();
@@ -547,13 +759,15 @@ public class VulnerableCertificateGenerator
 
     private static X509Certificate2? ConvertPEMToX509Certificate2(string certPem, string privKeyPem)
     {
-        X509Certificate2Collection coll = new X509Certificate2Collection();
+        var coll = new X509Certificate2Collection();
         coll.ImportFromPem(certPem);
 
         if (coll.Count == 0)
-            throw new InvalidOperationException("[ProtoSSL] - ConvertPEMToX509Certificate2: No certificates found in the provided PEM.");
+            throw new InvalidOperationException(
+                "[ProtoSSL] - ConvertPEMToX509Certificate2: No certificates found in the provided PEM."
+            );
 
-        string tempPrivKeyPath = Path.GetTempFileName();
+        var tempPrivKeyPath = Path.GetTempFileName();
 
         try
         {
@@ -570,12 +784,16 @@ public class VulnerableCertificateGenerator
                 return coll[0].CopyWithPrivateKey(ecdsaKey);
             else if (key is ECDiffieHellman ecdiffKey)
                 return coll[0].CopyWithPrivateKey(ecdiffKey);
-            else
-                LoggerAccessor.LogError($"[ProtoSSL] - ConvertPEMToX509Certificate2: Unsupported key type.");
+
+            LoggerAccessor.LogError(
+                $"[ProtoSSL] - ConvertPEMToX509Certificate2: Unsupported key type."
+            );
         }
         catch (Exception ex)
         {
-            LoggerAccessor.LogError($"[ProtoSSL] - ConvertPEMToX509Certificate2: Private key loading thrown an assertion. (Exception:{ex})");
+            LoggerAccessor.LogError(
+                $"[ProtoSSL] - ConvertPEMToX509Certificate2: Private key loading thrown an assertion. (Exception:{ex})"
+            );
         }
         finally
         {
@@ -585,6 +803,7 @@ public class VulnerableCertificateGenerator
             }
             catch
             {
+                // Not Important.
             }
         }
 

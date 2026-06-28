@@ -1,22 +1,18 @@
-using Microsoft.EntityFrameworkCore;
 using System.Text;
-using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using WebAPIService.GameServices.PSHOME.NDREAMS.Aurora.Entities;
 using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
 {
-    internal class OrbrunnerScoreBoardData
-    : ScoreboardService<OrbrunnerScoreBoardEntry>
+    internal class OrbrunnerScoreBoardData(
+        DbContextOptions<LeaderboardDbContext> options,
+        object obj = null
+    ) : ScoreboardService<OrbrunnerScoreBoardEntry>(options)
     {
-        public OrbrunnerScoreBoardData(DbContextOptions options, object obj = null)
-            : base(options)
-        {
-        }
-
         public override async Task<string> SerializeToString(string gameName, int max = 10)
         {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             foreach (var entry in await GetTopScoresAsync(max).ConfigureAwait(false))
             {

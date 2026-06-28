@@ -1,16 +1,16 @@
-﻿    using MultiServerLibrary.Extension;
-    using System;
-	using System.Net;
-    using System.Collections.Specialized;
-    using System.Globalization;
-    using System.IO;
-    using System.Linq;
-    using System.Text;
-    using System.Text.Json.Serialization;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using WatsonWebserver.Core;
-	
+﻿using System;
+using System.Collections.Specialized;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
+using MultiServerLibrary.Extension;
+using WatsonWebserver.Core;
+
 namespace WatsonWebserver
 {
     /// <summary>
@@ -25,17 +25,18 @@ namespace WatsonWebserver
         /// </summary>
         [JsonIgnore]
         public override Stream Data { get; set; } = null;
-         
+
         /// <summary>
-        /// Retrieve the request body as a byte array.  This will fully read the stream. 
+        /// Retrieve the request body as a byte array.  This will fully read the stream.
         /// </summary>
         [JsonIgnore]
         public override byte[] DataAsBytes
         {
             get
             {
-                if (_DataAsBytes != null) return _DataAsBytes;
-                if (Data != null && ContentLength > 0)
+                if (_DataAsBytes != null)
+                    return _DataAsBytes;
+                else if (Data != null && ContentLength > 0)
                 {
                     _DataAsBytes = ReadStreamFully(Data);
                     return _DataAsBytes;
@@ -52,11 +53,13 @@ namespace WatsonWebserver
         {
             get
             {
-                if (_DataAsBytes != null) return Encoding.UTF8.GetString(_DataAsBytes);
-                if (Data != null && ContentLength > 0)
+                if (_DataAsBytes != null)
+                    return Encoding.UTF8.GetString(_DataAsBytes);
+                else if (Data != null && ContentLength > 0)
                 {
                     _DataAsBytes = ReadStreamFully(Data);
-                    if (_DataAsBytes != null) return Encoding.UTF8.GetString(_DataAsBytes);
+                    if (_DataAsBytes != null)
+                        return Encoding.UTF8.GetString(_DataAsBytes);
                 }
                 return null;
             }
@@ -72,22 +75,17 @@ namespace WatsonWebserver
 
         #region Private-Members
 
-        private int _StreamBufferSize = 65536;
-        private Uri _Uri = null;
+        private readonly int _StreamBufferSize = 65536;
+        private readonly Uri _Uri = null;
         private byte[] _DataAsBytes = null;
-        private ISerializationHelper _Serializer = null;
-        private NameValueCollection _Headers = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ISerializationHelper _Serializer = null;
+        private readonly NameValueCollection _Headers = new(
+            StringComparer.InvariantCultureIgnoreCase
+        );
 
         #endregion
 
         #region Constructors-and-Factories
-
-        /// <summary>
-        /// HTTP request.
-        /// </summary>
-        public HttpRequestNative()
-        { 
-        }
 
         /// <summary>
         /// HTTP request.
@@ -96,31 +94,40 @@ namespace WatsonWebserver
         /// <param name="ctx">HttpListenerContext.</param>
         /// <param name="serializer">Serialization helper.</param>
         public HttpRequestNative(HttpListenerContext ctx, ISerializationHelper serializer)
-        { 
-            if (ctx == null) throw new ArgumentNullException(nameof(ctx));
-            if (ctx.Request == null) throw new ArgumentNullException(nameof(ctx.Request));
-            if (serializer == null) throw new ArgumentNullException(nameof(serializer));
+        {
+            ArgumentNullException.ThrowIfNull(ctx);
+            if (ctx.Request == null)
+                throw new ArgumentNullException(nameof(ctx.Request));
+            _Serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
 
-            _Serializer = serializer;
-
-            ListenerContext = ctx; 
+            ListenerContext = ctx;
             Keepalive = ctx.Request.KeepAlive;
             ContentLength = ctx.Request.ContentLength64;
             Useragent = ctx.Request.UserAgent;
             ContentType = ctx.Request.ContentType;
 
-            _Uri = new Uri(ctx.Request.Url.ToString().Trim()); 
+            _Uri = new Uri(ctx.Request.Url.ToString().Trim());
 
-            ProtocolVersion = "HTTP/" + ctx.Request.ProtocolVersion.ToString(); 
-            Source = new SourceDetails(ctx.Request.RemoteEndPoint.Address.ToString(), ctx.Request.RemoteEndPoint.Port);
-            Destination = new DestinationDetails(ctx.Request.LocalEndPoint.Address.ToString(), ctx.Request.LocalEndPoint.Port, _Uri.Host);
-            Url = new UrlDetails(ctx.Request.Url.ToString().Trim(), ctx.Request.RawUrl.ToString().Trim()); 
+            ProtocolVersion = "HTTP/" + ctx.Request.ProtocolVersion.ToString();
+            Source = new SourceDetails(
+                ctx.Request.RemoteEndPoint.Address.ToString(),
+                ctx.Request.RemoteEndPoint.Port
+            );
+            Destination = new DestinationDetails(
+                ctx.Request.LocalEndPoint.Address.ToString(),
+                ctx.Request.LocalEndPoint.Port,
+                _Uri.Host
+            );
+            Url = new UrlDetails(
+                ctx.Request.Url.ToString().Trim(),
+                ctx.Request.RawUrl.ToString().Trim()
+            );
             Query = new QueryDetails(Url.Full);
             MethodRaw = ctx.Request.HttpMethod;
 
             try
             {
-                Method = (HttpMethod)Enum.Parse(typeof(HttpMethod), ctx.Request.HttpMethod, true);
+                Method = Enum.Parse<HttpMethod>(ctx.Request.HttpMethod, true);
             }
             catch (Exception)
             {
@@ -128,14 +135,16 @@ namespace WatsonWebserver
             }
 
             Headers = ctx.Request.Headers;
-             
-            for (int i = 0; i < Headers.Count; i++)
-            {
-                string key = Headers.GetKey(i);
-                string[] vals = Headers.GetValues(i);
 
-                if (String.IsNullOrEmpty(key)) continue;
-                if (vals == null || vals.Length < 1) continue;
+            for (var i = 0; i < Headers.Count; i++)
+            {
+                var key = Headers.GetKey(i);
+                var vals = Headers.GetValues(i);
+
+                if (string.IsNullOrEmpty(key))
+                    continue;
+                else if (vals == null || vals.Length < 1)
+                    continue;
 
                 if (key.ToLower().Equals("transfer-encoding"))
                 {
@@ -149,12 +158,10 @@ namespace WatsonWebserver
                 else if (key.ToLower().Equals("x-amz-content-sha256"))
                 {
                     if (vals.Contains("streaming", StringComparer.InvariantCultureIgnoreCase))
-                    {
                         ChunkedTransfer = true;
-                    }
                 }
             }
-              
+
             Data = ctx.Request.InputStream;
         }
 
@@ -170,38 +177,36 @@ namespace WatsonWebserver
         /// <returns>Chunk.</returns>
         public override async Task<Chunk> ReadChunk(CancellationToken token = default)
         {
-            int bytesRead = 0;
+            var chunk = new Chunk();
 
-            Chunk chunk = new Chunk();
-             
             #region Get-Length-and-Metadata
 
-            byte[] buffer = new byte[1];
+            var buffer = new byte[1];
             byte[] lenBytes = null;
 
+            int bytesRead;
             while (true)
             {
-                bytesRead = await Data.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
+                bytesRead = await Data.ReadAsync(buffer, token).ConfigureAwait(false);
                 if (bytesRead > 0)
                 {
-                    lenBytes = ByteUtils.CombineByteArray(lenBytes, buffer);  
-                    string lenStr = Encoding.UTF8.GetString(lenBytes); 
+                    lenBytes = ByteUtils.CombineByteArray(lenBytes, buffer);
+                    var lenStr = Encoding.UTF8.GetString(lenBytes);
 
-                    if (lenBytes[lenBytes.Length - 1] == 10)
+                    if (lenBytes[^1] == 10)
                     {
                         lenStr = lenStr.Trim();
 
-                        if (lenStr.Contains(";"))
+                        if (lenStr.Contains(';'))
                         {
-                            string[] lenParts = lenStr.Split(new char[] { ';' }, 2);
+                            var lenParts = lenStr.Split([';'], 2);
                             chunk.Length = int.Parse(lenParts[0], NumberStyles.HexNumber);
-                            if (lenParts.Length >= 2) chunk.Metadata = lenParts[1];
+                            if (lenParts.Length >= 2)
+                                chunk.Metadata = lenParts[1];
                         }
                         else
-                        {
                             chunk.Length = int.Parse(lenStr, NumberStyles.HexNumber);
-                        }
-                         
+
                         break;
                     }
                 }
@@ -211,27 +216,31 @@ namespace WatsonWebserver
 
             #region Get-Data
 
-            int bytesRemaining = chunk.Length;
+            var bytesRemaining = chunk.Length;
 
             if (chunk.Length > 0)
             {
                 chunk.IsFinal = false;
-                using (MemoryStream ms = new MemoryStream())
+                using (var ms = new MemoryStream())
                 {
                     while (true)
                     {
-                        if (bytesRemaining > _StreamBufferSize) buffer = new byte[_StreamBufferSize];
-                        else buffer = new byte[bytesRemaining];
+                        buffer =
+                            bytesRemaining > _StreamBufferSize
+                                ? (new byte[_StreamBufferSize])
+                                : (new byte[bytesRemaining]);
 
-                        bytesRead = await Data.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
+                        bytesRead = await Data.ReadAsync(buffer, token).ConfigureAwait(false);
 
                         if (bytesRead > 0)
                         {
-                            await ms.WriteAsync(buffer, 0, bytesRead);
+                            await ms.WriteAsync(buffer.AsMemory(0, bytesRead), token)
+                                .ConfigureAwait(false);
                             bytesRemaining -= bytesRead;
                         }
 
-                        if (bytesRemaining == 0) break;
+                        if (bytesRemaining == 0)
+                            break;
                     }
 
                     ms.Seek(0, SeekOrigin.Begin);
@@ -251,18 +260,19 @@ namespace WatsonWebserver
 
             while (true)
             {
-                bytesRead = await Data.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
+                bytesRead = await Data.ReadAsync(buffer, token).ConfigureAwait(false);
                 if (bytesRead > 0)
                 {
-                    if (buffer[0] == 10) break;
+                    if (buffer[0] == 10)
+                        break;
                 }
             }
 
             #endregion
 
-            return chunk; 
+            return chunk;
         }
-         
+
         /// <summary>
         /// Determine if a header exists.
         /// </summary>
@@ -270,14 +280,9 @@ namespace WatsonWebserver
         /// <returns>True if exists.</returns>
         public override bool HeaderExists(string key)
         {
-            if (String.IsNullOrEmpty(key)) throw new ArgumentNullException(nameof(key));
-
-            if (Headers != null)
-            {
-                return Headers.AllKeys.Any(k => k.ToLower().Equals(key.ToLower()));
-            }
-
-            return false;
+            return string.IsNullOrEmpty(key)
+                ? throw new ArgumentNullException(nameof(key))
+                : Headers != null && Headers.AllKeys.Any(k => k.ToLower().Equals(key.ToLower()));
         }
 
         /// <summary>
@@ -287,15 +292,11 @@ namespace WatsonWebserver
         /// <returns>True if exists.</returns>
         public override bool QuerystringExists(string key)
         {
-            if (String.IsNullOrEmpty(key)) throw new ArgumentNullException(nameof(key));
-
-            if (Query != null
-                && Query.Elements != null)
-            {
-                return Query.Elements.AllKeys.Any(k => k.ToLower().Equals(key.ToLower()));
-            }
-
-            return false;
+            return string.IsNullOrEmpty(key)
+                ? throw new ArgumentNullException(nameof(key))
+                : Query != null
+                    && Query.Elements != null
+                    && Query.Elements.AllKeys.Any(k => k.ToLower().Equals(key.ToLower()));
         }
 
         /// <summary>
@@ -305,14 +306,9 @@ namespace WatsonWebserver
         /// <returns>Value.</returns>
         public override string RetrieveHeaderValue(string key)
         {
-            if (String.IsNullOrEmpty(key)) throw new ArgumentNullException(nameof(key));
-
-            if (Headers != null)
-            { 
-                return Headers.Get(key);
-            }
-
-            return null;
+            return string.IsNullOrEmpty(key) ? throw new ArgumentNullException(nameof(key))
+                : Headers != null ? Headers.Get(key)
+                : null;
         }
 
         /// <summary>
@@ -322,16 +318,14 @@ namespace WatsonWebserver
         /// <returns>Value.</returns>
         public override string RetrieveQueryValue(string key)
         {
-            if (String.IsNullOrEmpty(key)) throw new ArgumentNullException(nameof(key));
+            if (string.IsNullOrEmpty(key))
+                throw new ArgumentNullException(nameof(key));
 
-            if (Query != null
-                && Query.Elements != null)
+            if (Query != null && Query.Elements != null)
             {
-                string val = Query.Elements.Get(key);
-                if (!String.IsNullOrEmpty(val))
-                {
-                    val = System.Net.WebUtility.UrlDecode(val);
-                }
+                var val = Query.Elements.Get(key);
+                if (!string.IsNullOrEmpty(val))
+                    val = WebUtility.UrlDecode(val);
 
                 return val;
             }
@@ -345,18 +339,17 @@ namespace WatsonWebserver
 
         private static byte[] ReadStreamFully(Stream input)
         {
-            if (input == null) throw new ArgumentNullException(nameof(input));
-            if (!input.CanRead) throw new InvalidOperationException("Input stream is not readable");
+            ArgumentNullException.ThrowIfNull(input);
+            if (!input.CanRead)
+                throw new InvalidOperationException("Input stream is not readable");
 
-            byte[] buffer = new byte[16 * 1024];
-            using (MemoryStream ms = new MemoryStream())
+            var buffer = new byte[16 * 1024];
+            using (var ms = new MemoryStream())
             {
                 int read;
 
                 while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
-                {
                     ms.Write(buffer, 0, read);
-                }
 
                 return ms.ToArray();
             }

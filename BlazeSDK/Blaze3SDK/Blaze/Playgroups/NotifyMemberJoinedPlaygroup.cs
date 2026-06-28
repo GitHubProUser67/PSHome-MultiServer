@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Playgroups
 {
-	[TdfStruct]
-	public struct NotifyMemberJoinedPlaygroup
-	{
+    [TdfStruct]
+    public struct NotifyMemberJoinedPlaygroup
+    {
+        [TdfMember("PGID")]
+        public uint mPlaygroupId;
 
-		[TdfMember("PGID")]
-		public uint mPlaygroupId;
-
-		[TdfMember("MEMB")]
-		public PlaygroupMemberInfo mPlaygroupMemberInfo;
-
-	}
+        [TdfMember("MEMB")]
+        public PlaygroupMemberInfo mPlaygroupMemberInfo;
+    }
 }

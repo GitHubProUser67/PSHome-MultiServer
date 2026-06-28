@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -18,6 +17,7 @@ namespace Horizon.RT.Models
         /// Session Key
         /// </summary>
         public string SessionKey; // SESSIONKEY_MAXLEN
+
         /// <summary>
         /// Change to in chat channel, left game, or left party
         /// </summary>
@@ -43,9 +43,10 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-             $"SessionKey: {SessionKey} " +
-             $"UserAction: {UserAction}";
+            return base.ToString()
+                + " "
+                + $"SessionKey: {SessionKey} "
+                + $"UserAction: {UserAction}";
         }
     }
 }

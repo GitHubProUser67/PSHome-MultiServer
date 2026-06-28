@@ -2,21 +2,19 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct UEDRuleCriteria
-	{
+    [TdfStruct]
+    public struct UEDRuleCriteria
+    {
+        [TdfMember("CVAL")]
+        public long mClientUEDSearchValue;
 
-		[TdfMember("CVAL")]
-		public long mClientUEDSearchValue;
+        [TdfMember("OVAL")]
+        public long mOverrideUEDValue;
 
-		[TdfMember("OVAL")]
-		public long mOverrideUEDValue;
+        [TdfMember("NAME")]
+        public string mRuleName;
 
-		[TdfMember("NAME")]
-		public string mRuleName;
-
-		[TdfMember("THLD")]
-		public string mThresholdName;
-
-	}
+        [TdfMember("THLD")]
+        public string mThresholdName;
+    }
 }

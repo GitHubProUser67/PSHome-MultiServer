@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct SetGameSettingsRequest
-	{
+    [TdfStruct]
+    public struct SetGameSettingsRequest
+    {
+        [TdfMember("GID")]
+        public uint mGameId;
 
-		[TdfMember("GID")]
-		public uint mGameId;
-
-		[TdfMember("GSET")]
-		public GameSettings mGameSettings;
-
-	}
+        [TdfMember("GSET")]
+        public GameSettings mGameSettings;
+    }
 }

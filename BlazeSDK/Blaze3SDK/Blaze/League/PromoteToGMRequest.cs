@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.League
 {
-	[TdfStruct]
-	public struct PromoteToGMRequest
-	{
+    [TdfStruct]
+    public struct PromoteToGMRequest
+    {
+        [TdfMember("LGID")]
+        public uint mLeagueId;
 
-		[TdfMember("LGID")]
-		public uint mLeagueId;
-
-		[TdfMember("MMBR")]
-		public long mMemberId;
-
-	}
+        [TdfMember("MMBR")]
+        public long mMemberId;
+    }
 }

@@ -1,13 +1,11 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.AddAliasRequest)]
     public class MediusAddAliasRequest : BaseLobbyMessage, IMediusRequest
     {
-
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.AddAliasRequest;
 
         public MessageId MessageID { get; set; }
@@ -32,10 +30,11 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey}" +
-                $"AliasName: {AliasName}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey}"
+                + $"AliasName: {AliasName}";
         }
     }
 }

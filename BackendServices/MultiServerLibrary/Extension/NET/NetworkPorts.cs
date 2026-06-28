@@ -1,4 +1,4 @@
-﻿namespace System.Net
+﻿namespace MultiServerLibrary.Extension.NET
 {
     public static class NetworkPorts
     {

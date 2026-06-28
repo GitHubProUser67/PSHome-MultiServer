@@ -6,7 +6,6 @@ namespace Blaze2SDK.Blaze.Redirector
     [TdfStruct]
     public struct ServerInstanceInfo
     {
-
         [TdfMember("ADDR")]
         public ServerAddress mAddress;
 
@@ -28,6 +27,5 @@ namespace Blaze2SDK.Blaze.Redirector
         [TdfMember("XDNS")]
         [DisplayAsIpAddress]
         public uint mDefaultDnsAddress;
-
     }
 }

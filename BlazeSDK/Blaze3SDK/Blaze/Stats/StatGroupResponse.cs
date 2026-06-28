@@ -2,30 +2,28 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Stats
 {
-	[TdfStruct]
-	public struct StatGroupResponse
-	{
+    [TdfStruct]
+    public struct StatGroupResponse
+    {
+        [TdfMember("CNAM")]
+        public string mCategoryName;
 
-		[TdfMember("CNAM")]
-		public string mCategoryName;
+        [TdfMember("DESC")]
+        public string mDesc;
 
-		[TdfMember("DESC")]
-		public string mDesc;
+        [TdfMember("ETYP")]
+        public BlazeObjectType mEntityType;
 
-		[TdfMember("ETYP")]
-		public BlazeObjectType mEntityType;
+        [TdfMember("KSUM")]
+        public SortedDictionary<string, long> mKeyScopeNameValueMap;
 
-		[TdfMember("KSUM")]
-		public SortedDictionary<string, long> mKeyScopeNameValueMap;
+        [TdfMember("META")]
+        public string mMetadata;
 
-		[TdfMember("META")]
-		public string mMetadata;
+        [TdfMember("NAME")]
+        public string mName;
 
-		[TdfMember("NAME")]
-		public string mName;
-
-		[TdfMember("STAT")]
-		public List<StatDescSummary> mStatDescs;
-
-	}
+        [TdfMember("STAT")]
+        public List<StatDescSummary> mStatDescs;
+    }
 }

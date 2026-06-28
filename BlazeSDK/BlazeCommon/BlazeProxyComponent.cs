@@ -3,11 +3,18 @@ using System.Reflection;
 
 namespace BlazeCommon
 {
-    public abstract class BlazeProxyComponent<CommandEnum, NotificationEnum, ErrorEnum> : BlazeComponent<CommandEnum, NotificationEnum, ErrorEnum>, IBlazeProxyComponent where CommandEnum : Enum where NotificationEnum : Enum where ErrorEnum : Enum
+    public abstract class BlazeProxyComponent<CommandEnum, NotificationEnum, ErrorEnum>
+        : BlazeComponent<CommandEnum, NotificationEnum, ErrorEnum>,
+            IBlazeProxyComponent
+        where CommandEnum : Enum
+        where NotificationEnum : Enum
+        where ErrorEnum : Enum
     {
         Dictionary<ushort, BlazeProxyCommandMethodInfo> _proxyCommands;
         Dictionary<ushort, BlazeProxyNotificationMethodInfo> _proxyNotifications;
-        public BlazeProxyComponent(ushort componentId, string componentName) : base(componentId, componentName)
+
+        public BlazeProxyComponent(ushort componentId, string componentName)
+            : base(componentId, componentName)
         {
             InitializeComponent();
         }
@@ -15,23 +22,23 @@ namespace BlazeCommon
         [MemberNotNull(nameof(_proxyCommands), nameof(_proxyNotifications))]
         void InitializeComponent()
         {
-            _proxyCommands = new Dictionary<ushort, BlazeProxyCommandMethodInfo>();
-            _proxyNotifications = new Dictionary<ushort, BlazeProxyNotificationMethodInfo>();
+            _proxyCommands = [];
+            _proxyNotifications = [];
 
-            Type componentType = GetType();
+            var componentType = GetType();
 
-            MethodInfo[] methods = componentType.GetMethods();
+            var methods = componentType.GetMethods();
 
-            foreach (MethodInfo method in methods)
+            foreach (var method in methods)
             {
-                BlazeCommand? commandAttr = method.GetCustomAttribute<BlazeCommand>();
+                var commandAttr = method.GetCustomAttribute<BlazeCommand>();
                 if (commandAttr != null)
                 {
                     AddCommand(method, commandAttr);
                     continue;
                 }
 
-                BlazeNotification? notificationAttr = method.GetCustomAttribute<BlazeNotification>();
+                var notificationAttr = method.GetCustomAttribute<BlazeNotification>();
                 if (notificationAttr != null)
                 {
                     AddNotification(method, notificationAttr);
@@ -42,64 +49,79 @@ namespace BlazeCommon
 
         bool AddCommand(MethodInfo method, BlazeCommand commandAttribute)
         {
-            ushort commandId = commandAttribute.Id;
+            var commandId = commandAttribute.Id;
             if (_proxyCommands.ContainsKey(commandId))
-                throw new InvalidOperationException($"Blaze command {commandId} seen more than once for component {Id}");
+                throw new InvalidOperationException(
+                    $"Blaze command {commandId} seen more than once for component {Id}"
+                );
 
-            Type fullReturnType = method.ReturnType;
+            var fullReturnType = method.ReturnType;
             //we need to check if it is Task<Response>
             if (!fullReturnType.IsGenericType)
                 return false;
             if (fullReturnType.GetGenericTypeDefinition() != typeof(Task<>))
                 return false;
 
-            Type responseType = fullReturnType.GetGenericArguments()[0];
+            var responseType = fullReturnType.GetGenericArguments()[0];
 
-            Type[] parameterTypes = method.GetParameters().Select(x => x.ParameterType).ToArray();
+            Type[] parameterTypes = [.. method.GetParameters().Select(x => x.ParameterType)];
             if (parameterTypes.Length != 2)
                 return false;
 
             if (parameterTypes[1] != typeof(BlazeProxyContext))
                 return false;
 
-            Type requestType = parameterTypes[0];
+            var requestType = parameterTypes[0];
 
-            BlazeProxyCommandMethodInfo commandInfo = new BlazeProxyCommandMethodInfo(this, commandId, requestType, responseType, method);
+            var commandInfo = new BlazeProxyCommandMethodInfo(
+                this,
+                commandId,
+                requestType,
+                responseType,
+                method
+            );
             _proxyCommands.Add(commandId, commandInfo);
             return true;
         }
 
         bool AddNotification(MethodInfo method, BlazeNotification notificationAttribute)
         {
-            ushort notificationId = notificationAttribute.Id;
+            var notificationId = notificationAttribute.Id;
             if (_proxyNotifications.ContainsKey(notificationId))
-                throw new InvalidOperationException($"Blaze notification {notificationId} seen more than once for component {Id}");
+                throw new InvalidOperationException(
+                    $"Blaze notification {notificationId} seen more than once for component {Id}"
+                );
 
-            Type[] parameterTypes = method.GetParameters().Select(x => x.ParameterType).ToArray();
+            Type[] parameterTypes = [.. method.GetParameters().Select(x => x.ParameterType)];
             if (parameterTypes.Length != 1)
                 return false;
 
-            Type notificationType = parameterTypes[0];
+            var notificationType = parameterTypes[0];
 
-            Type fullReturnType = method.ReturnType;
-            Type expectedType = typeof(Task<>).MakeGenericType(notificationType);
+            var fullReturnType = method.ReturnType;
+            var expectedType = typeof(Task<>).MakeGenericType(notificationType);
             if (fullReturnType != expectedType)
                 return false;
 
-            BlazeProxyNotificationMethodInfo notificationInfo = new BlazeProxyNotificationMethodInfo(this, notificationId, notificationType, method);
+            var notificationInfo = new BlazeProxyNotificationMethodInfo(
+                this,
+                notificationId,
+                notificationType,
+                method
+            );
             _proxyNotifications.Add(notificationId, notificationInfo);
             return true;
         }
 
         public BlazeProxyCommandMethodInfo? GetBlazeCommandInfo(ushort commandId)
         {
-            _proxyCommands.TryGetValue(commandId, out BlazeProxyCommandMethodInfo? commandInfo);
+            _proxyCommands.TryGetValue(commandId, out var commandInfo);
             return commandInfo;
         }
 
         public BlazeProxyNotificationMethodInfo? GetBlazeNotificationInfo(ushort notificationId)
         {
-            _proxyNotifications.TryGetValue(notificationId, out BlazeProxyNotificationMethodInfo? notificationInfo);
+            _proxyNotifications.TryGetValue(notificationId, out var notificationInfo);
             return notificationInfo;
         }
     }

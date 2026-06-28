@@ -1,38 +1,40 @@
-using CustomLogger;
-using HttpMultipartParser;
 using System.Text;
-using System.IO;
-using System;
-using NetHasher;
+using CastleLibrary.NetHasher;
 using CastleLibrary.S0ny.SSFW;
 using CastleLibrary.S0ny.XI5;
+using CustomLogger;
+using HttpMultipartParser;
 
 namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
 {
     public class NPTicket
     {
-        public static string RequestNPTicket(byte[] PostData, string boundary, bool cross_save = false)
+        public static string RequestNPTicket(
+            byte[] PostData,
+            string boundary,
+            bool cross_save = false
+        )
         {
-            string userid = string.Empty;
-            string sessionid = string.Empty;
-            string resultString = string.Empty;
+            var userid = string.Empty;
+            var sessionid = string.Empty;
+            var resultString = string.Empty;
             byte[] ticketData = null;
 
             if (PostData != null)
             {
-                using (MemoryStream copyStream = new MemoryStream(PostData))
+                using (var copyStream = new MemoryStream(PostData))
                 {
                     foreach (var file in MultipartFormDataParser.Parse(copyStream, boundary).Files)
                     {
-                        using (Stream filedata = file.Data)
+                        using (var filedata = file.Data)
                         {
                             filedata.Position = 0;
 
                             // Find the number of bytes in the stream
-                            int contentLength = (int)filedata.Length;
+                            var contentLength = (int)filedata.Length;
 
                             // Create a byte array
-                            byte[] buffer = new byte[contentLength];
+                            var buffer = new byte[contentLength];
 
                             // Read the contents of the memory stream into the byte array
                             filedata.Read(buffer, 0, contentLength);
@@ -51,29 +53,31 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
             if (ticketData != null && ticketData.Length > 188)
             {
                 // Extract the desired portion of the binary data
-                byte[] extractedData = new byte[0x63 - 0x54 + 1];
+                var extractedData = new byte[0x63 - 0x54 + 1];
 
                 // Copy it
                 Array.Copy(ticketData, 0x54, extractedData, 0, extractedData.Length);
 
                 // Convert 0x00 bytes to 0x20 so we pad as space.
-                for (int i = 0; i < extractedData.Length; i++)
+                for (var i = 0; i < extractedData.Length; i++)
                 {
                     if (extractedData[i] == 0x00)
                         extractedData[i] = 0x20;
                 }
 
                 // get ticket
-                XI5Ticket ticket = XI5Ticket.ReadFromBytes(ticketData);
+                var ticket = XI5Ticket.ReadFromBytes(ticketData);
 
                 // setup username
-                string username = ticket.Username;
+                var username = ticket.Username;
 
                 // invalid ticket
                 if (!ticket.Valid)
                 {
                     // log to console
-                    LoggerAccessor.LogWarn($"[HFGames] - Hellfire : User {username} tried to alter their ticket data");
+                    LoggerAccessor.LogWarn(
+                        $"[HFGames] - Hellfire : User {username} tried to alter their ticket data"
+                    );
 
                     return null;
                 }
@@ -86,15 +90,18 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
                     if (!cross_save)
                     {
                         // Convert the modified data to a string
-                        resultString = Encoding.ASCII.GetString(extractedData) + XI5Ticket.RPCNSigner;
+                        resultString =
+                            Encoding.ASCII.GetString(extractedData) + XI5Ticket.RPCNSigner;
 
                         userid = resultString.Replace(" ", string.Empty);
 
                         // Calculate the MD5 hash of the result
-                        string hash = DotNetHasher.ComputeMD5String(Encoding.ASCII.GetBytes(resultString + salt));
+                        var hash = DotNetHasher.ComputeMD5String(
+                            Encoding.ASCII.GetBytes(resultString + salt)
+                        );
 
                         // Trim the hash to a specific length
-                        hash = hash.Substring(0, 10);
+                        hash = hash[..10];
 
                         // Append the trimmed hash to the result
                         resultString += hash;
@@ -102,16 +109,22 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
                         sessionid = GuidGenerator.SSFWGenerateGuid(hash, resultString);
                     }
 
-                    LoggerAccessor.LogInfo($"[HFGames] - Hellfire : User {username} connected at: {DateTime.Now} and is on RPCN");
+                    LoggerAccessor.LogInfo(
+                        $"[HFGames] - Hellfire : User {username} connected at: {DateTime.Now} and is on RPCN"
+                    );
                 }
                 else if (username.EndsWith($"@{XI5Ticket.RPCNSigner}"))
                 {
-                    LoggerAccessor.LogError($"[HFGames] - Hellfire : User {username} was caught using a RPCN suffix while not on it!");
+                    LoggerAccessor.LogError(
+                        $"[HFGames] - Hellfire : User {username} was caught using a RPCN suffix while not on it!"
+                    );
 
                     return null;
                 }
                 else
-                    LoggerAccessor.LogInfo($"[HFGames] - Hellfire : User {username} connected at: {DateTime.Now} and is on PSN");
+                    LoggerAccessor.LogInfo(
+                        $"[HFGames] - Hellfire : User {username} connected at: {DateTime.Now} and is on PSN"
+                    );
 
                 if (resultString == string.Empty)
                 {
@@ -121,10 +134,12 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
                     userid = resultString.Replace(" ", string.Empty);
 
                     // Calculate the MD5 hash of the result
-                    string hash = DotNetHasher.ComputeMD5String(Encoding.ASCII.GetBytes(resultString + salt));
+                    var hash = DotNetHasher.ComputeMD5String(
+                        Encoding.ASCII.GetBytes(resultString + salt)
+                    );
 
                     // Trim the hash to a specific length
-                    hash = hash.Substring(0, 14);
+                    hash = hash[..14];
 
                     // Append the trimmed hash to the result
                     resultString += hash;

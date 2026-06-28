@@ -1,6 +1,4 @@
-using MultiServerLibrary.Extension;
-
-namespace System.IO
+namespace MultiServerLibrary.Extension.NET
 {
     // This class removes the 2gb limit of the classic MemoryStream (but might consume more ram).
     public class HugeMemoryStream : Stream
@@ -34,14 +32,11 @@ namespace System.IO
             Seek(0, SeekOrigin.Begin);
         }
 
-        public HugeMemoryStream()
-        {
+        public HugeMemoryStream() { }
 
-        }
-
-        private int GetPageCount(long length)
+        private static int GetPageCount(long length)
         {
-            int pageCount = (int)(length / PAGE_SIZE) + 1;
+            var pageCount = (int)(length / PAGE_SIZE) + 1;
 
             if (length % PAGE_SIZE == 0)
                 pageCount--;
@@ -55,7 +50,7 @@ namespace System.IO
                 _streamBuffers = new byte[ALLOC_STEP][];
             else
             {
-                byte[][] streamBuffers = new byte[_streamBuffers.Length + ALLOC_STEP][];
+                var streamBuffers = new byte[_streamBuffers.Length + ALLOC_STEP][];
 
                 Array.Copy(_streamBuffers, streamBuffers, _streamBuffers.Length);
 
@@ -73,8 +68,8 @@ namespace System.IO
             if (value == 0)
                 return;
 
-            int currentPageCount = GetPageCount(_allocatedBytes);
-            int neededPageCount = GetPageCount(value);
+            var currentPageCount = GetPageCount(_allocatedBytes);
+            var neededPageCount = GetPageCount(value);
 
             while (currentPageCount < neededPageCount)
             {
@@ -109,12 +104,10 @@ namespace System.IO
             get { return _position; }
             set
             {
-                if (value > _length)
-                    throw new InvalidOperationException("Position > Length");
-                else if (value < 0)
-                    throw new InvalidOperationException("Position < 0");
-                else
-                    _position = value;
+                _position =
+                    value > _length ? throw new InvalidOperationException("Position > Length")
+                    : value < 0 ? throw new InvalidOperationException("Position < 0")
+                    : value;
             }
         }
 
@@ -122,11 +115,11 @@ namespace System.IO
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            int currentPage = (int)(_position / PAGE_SIZE);
-            int currentOffset = (int)(_position % PAGE_SIZE);
-            int currentLength = PAGE_SIZE - currentOffset;
+            var currentPage = (int)(_position / PAGE_SIZE);
+            var currentOffset = (int)(_position % PAGE_SIZE);
+            var currentLength = PAGE_SIZE - currentOffset;
 
-            long startPosition = _position;
+            var startPosition = _position;
 
             if (startPosition + count > _length)
                 count = (int)(_length - startPosition);
@@ -136,7 +129,13 @@ namespace System.IO
                 if (currentLength > count)
                     currentLength = count;
 
-                Array.Copy(_streamBuffers[currentPage++], currentOffset, buffer, offset, currentLength);
+                Array.Copy(
+                    _streamBuffers[currentPage++],
+                    currentOffset,
+                    buffer,
+                    offset,
+                    currentLength
+                );
 
                 offset += currentLength;
                 _position += currentLength;
@@ -184,8 +183,8 @@ namespace System.IO
                 return;
             }
 
-            int currentPageCount = GetPageCount(_allocatedBytes);
-            int neededPageCount = GetPageCount(value);
+            var currentPageCount = GetPageCount(_allocatedBytes);
+            var neededPageCount = GetPageCount(value);
 
             // Removes unused buffers if decreasing stream length
             while (currentPageCount > neededPageCount)
@@ -199,11 +198,11 @@ namespace System.IO
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            int currentPage = (int)(_position / PAGE_SIZE);
-            int currentOffset = (int)(_position % PAGE_SIZE);
-            int currentLength = PAGE_SIZE - currentOffset;
+            var currentPage = (int)(_position / PAGE_SIZE);
+            var currentOffset = (int)(_position % PAGE_SIZE);
+            var currentLength = PAGE_SIZE - currentOffset;
 
-            long startPosition = _position;
+            var startPosition = _position;
 
             AllocSpaceIfNeeded(_position + count);
 
@@ -212,7 +211,13 @@ namespace System.IO
                 if (currentLength > count)
                     currentLength = count;
 
-                Array.Copy(buffer, offset, _streamBuffers[currentPage++], currentOffset, currentLength);
+                Array.Copy(
+                    buffer,
+                    offset,
+                    _streamBuffers[currentPage++],
+                    currentOffset,
+                    currentLength
+                );
 
                 offset += currentLength;
                 _position += currentLength;

@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Util
 {
-	[TdfStruct]
-	public struct DeleteUserSettingsRequest
-	{
+    [TdfStruct]
+    public struct DeleteUserSettingsRequest
+    {
+        [TdfMember("KEY")]
+        public string mKey;
 
-		[TdfMember("KEY")]
-		public string mKey;
-
-		[TdfMember("UID")]
-		public long mUserId;
-
-	}
+        [TdfMember("UID")]
+        public long mUserId;
+    }
 }

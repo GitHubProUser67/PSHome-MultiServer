@@ -1,6 +1,5 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
@@ -16,18 +15,22 @@ namespace Horizon.RT.Models
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Vote addor remove
         /// </summary>
         public MediusVoteActionType VoteAction;
+
         /// <summary>
         /// Reason for vote: vulgarity, cheating, other.
         /// </summary>
         public MediusBanReasonType BanReason;
+
         /// <summary>
         /// Medius ID of game world to ban player from.
         /// </summary>
         public int MediusWorldID;
+
         /// <summary>
         /// DME Client index of player to vote off.
         /// </summary>
@@ -35,10 +38,8 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            // 
             VoteAction = reader.Read<MediusVoteActionType>();
             BanReason = reader.Read<MediusBanReasonType>();
             MediusWorldID = reader.ReadInt32();
@@ -47,10 +48,8 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            // 
             writer.Write(VoteAction);
             writer.Write(BanReason);
             writer.Write(MediusWorldID);
@@ -59,11 +58,12 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"VoteAction: {VoteAction} " +
-                $"BanReason: {BanReason} " +
-                $"MediusWorldID: {MediusWorldID} " +
-                $"DmeClientIndex: {DmeClientIndex}";
+            return base.ToString()
+                + " "
+                + $"VoteAction: {VoteAction} "
+                + $"BanReason: {BanReason} "
+                + $"MediusWorldID: {MediusWorldID} "
+                + $"DmeClientIndex: {DmeClientIndex}";
         }
     }
 }

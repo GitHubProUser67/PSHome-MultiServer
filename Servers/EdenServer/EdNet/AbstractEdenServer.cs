@@ -1,12 +1,13 @@
-#if DEBUG
-using CastleLibrary.Utils;
-#endif
+using System.Net;
+using System.Net.Sockets;
 using CustomLogger;
 using EdenServer.EdNet.Messages;
 using EdNetService.Models;
 using MultiServerLibrary.CustomServers;
-using System.Net;
-using System.Net.Sockets;
+#if DEBUG
+using CastleLibrary.Utils;
+#endif
+
 
 namespace EdenServer.EdNet
 {
@@ -14,21 +15,19 @@ namespace EdenServer.EdNet
     {
         public abstract Dictionary<ushort, Type?> CrcToClass { get; }
 
-        internal ClientStore ClientStore = new ClientStore();
+        internal ClientStore ClientStore = new();
 
         private readonly UDPServer _server;
 
         public AbstractEdenServer()
         {
-            if (_server == null)
-                _server = new UDPServer();
+            _server ??= new UDPServer();
         }
 
         public void Start(ushort Port)
         {
             _ = _server.StartAsync(
                 new List<ushort> { Port },
-                Environment.ProcessorCount,
                 null,
                 (serverPort, listener) =>
                 {
@@ -37,7 +36,7 @@ namespace EdenServer.EdNet
                 null,
                 ProcessMessagesFromClient,
                 new CancellationTokenSource().Token
-                );
+            );
         }
 
         public void Stop()
@@ -47,18 +46,27 @@ namespace EdenServer.EdNet
         }
 
         #region Protected Functions
-        protected virtual byte[]? ProcessMessagesFromClient(ushort serverPort, UdpClient listener, byte[] data, IPEndPoint remoteEP)
+        protected virtual byte[]? ProcessMessagesFromClient(
+            ushort serverPort,
+            UdpClient listener,
+            byte[] data,
+            IPEndPoint remoteEP
+        )
         {
-            EdStore receivedStore = new EdStore();
+            var receivedStore = new EdStore();
 
             receivedStore.LoadData(data, data.Length);
-            ushort initialCrc = receivedStore.ExtractStart();
+            var initialCrc = receivedStore.ExtractStart();
 #if DEBUG
-            LoggerAccessor.LogInfo($"[EDEN_UDP] - {remoteEP.Address} Requested EdStore {initialCrc:X4} : {{{receivedStore.Data.BytesToHexStr().Replace("\n", string.Empty)}}}");
+            LoggerAccessor.LogInfo(
+                $"[EDEN_UDP] - {remoteEP.Address} Requested EdStore {initialCrc:X4} : {{{receivedStore.Data.BytesToHexStr().Replace("\n", string.Empty)}}}"
+            );
 #else
-            LoggerAccessor.LogInfo($"[EDEN_UDP] - {remoteEP.Address} Requested EdStore {initialCrc:X4}");
+            LoggerAccessor.LogInfo(
+                $"[EDEN_UDP] - {remoteEP.Address} Requested EdStore {initialCrc:X4}"
+            );
 #endif
-            if (CrcToClass.TryGetValue(initialCrc, out Type? c))
+            if (CrcToClass.TryGetValue(initialCrc, out var c))
             {
                 AbstractMessage? msg = null;
 
@@ -67,14 +75,14 @@ namespace EdenServer.EdNet
                     if (c != null)
                         msg = (AbstractMessage?)Activator.CreateInstance(c);
                 }
-                catch
-                {
-                }
+                catch { }
 
                 msg?.Process(listener, this, remoteEP!, receivedStore);
             }
             else
-                LoggerAccessor.LogError($"[EDEN_UDP] - {remoteEP.Address} Requested an unexpected message Type {initialCrc:X4} : SizeOfPacket:{data.Length}");
+                LoggerAccessor.LogError(
+                    $"[EDEN_UDP] - {remoteEP.Address} Requested an unexpected message Type {initialCrc:X4} : SizeOfPacket:{data.Length}"
+                );
 
             return null;
         }

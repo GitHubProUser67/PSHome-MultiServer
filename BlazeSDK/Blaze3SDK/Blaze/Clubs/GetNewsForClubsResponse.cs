@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Clubs
 {
-	[TdfStruct]
-	public struct GetNewsForClubsResponse
-	{
+    [TdfStruct]
+    public struct GetNewsForClubsResponse
+    {
+        [TdfMember("NLMP")]
+        public SortedDictionary<uint, List<ClubLocalizedNews>> mLocalizedNewsListMap;
 
-		[TdfMember("NLMP")]
-		public SortedDictionary<uint, List<ClubLocalizedNews>> mLocalizedNewsListMap;
-
-		[TdfMember("TLPG")]
-		public ushort mTotalPages;
-
-	}
+        [TdfMember("TLPG")]
+        public ushort mTotalPages;
+    }
 }

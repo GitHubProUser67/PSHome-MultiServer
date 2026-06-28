@@ -1,13 +1,11 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.ChannelInfoResponse)]
     public class MediusChannelInfoResponse : BaseLobbyMessage, IMediusResponse
     {
-
         public override byte PacketType => (byte)MediusLobbyMessageIds.ChannelInfoResponse;
 
         public bool IsSuccess => StatusCode >= 0;
@@ -16,18 +14,22 @@ namespace Horizon.RT.Models
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Response status from the request to get information about a channel
         /// </summary>
         public MediusCallbackStatus StatusCode;
+
         /// <summary>
         /// Chat channel name
         /// </summary>
         public string LobbyName; // LOBBYNAME_MAXLEN
+
         /// <summary>
         /// Number of players
         /// </summary>
         public int ActivePlayerCount;
+
         /// <summary>
         /// Maximum number of players.
         /// </summary>
@@ -61,12 +63,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"LobbyName: {LobbyName} " +
-                $"ActivePlayerCount: {ActivePlayerCount} " +
-                $"MaxPlayers: {MaxPlayers}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"LobbyName: {LobbyName} "
+                + $"ActivePlayerCount: {ActivePlayerCount} "
+                + $"MaxPlayers: {MaxPlayers}";
         }
     }
 }

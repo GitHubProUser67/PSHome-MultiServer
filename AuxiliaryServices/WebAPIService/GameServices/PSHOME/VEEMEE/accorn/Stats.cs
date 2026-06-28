@@ -1,23 +1,26 @@
-using System.IO;
-using MultiServerLibrary.HTTP;
 using CustomLogger;
 using HttpMultipartParser;
-using WebAPIService.GameServices.PSHOME.VEEMEE;
+using MultiServerLibrary.HTTP;
 
 namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
 {
     public static class Stats
     {
-        public static string GetConfig(bool get, byte[] PostData, string ContentType, string apiPath)
+        public static string GetConfig(
+            bool get,
+            byte[] PostData,
+            string ContentType,
+            string apiPath
+        )
         {
             if (!get)
             {
-                string id = string.Empty;
-                string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+                var id = string.Empty;
+                var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
                 if (!string.IsNullOrEmpty(boundary) && PostData != null)
                 {
-                    using (MemoryStream ms = new MemoryStream(PostData))
+                    using (var ms = new MemoryStream(PostData))
                     {
                         id = MultipartFormDataParser.Parse(ms, boundary).GetParameterValue("id");
                         ms.Flush();
@@ -27,36 +30,37 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
                 LoggerAccessor.LogInfo($"[VEEMEE] - Getconfig values : id|{id}");
             }
 
-            if (File.Exists($"{apiPath}/VEEMEE/Acorn_Medow/stats_config.json"))
-                return Processor.Sign(File.ReadAllText($"{apiPath}/VEEMEE/Acorn_Medow/stats_config.json"));
-            if (File.Exists($"{apiPath}/VEEMEE/nml/stats_config.xml"))
-                return Processor.Sign(File.ReadAllText($"{apiPath}/VEEMEE/nml/stats_config.xml"));
-
-            return null;
+            return File.Exists($"{apiPath}/VEEMEE/Acorn_Medow/stats_config.json")
+                    ? Processor.Sign(
+                        File.ReadAllText($"{apiPath}/VEEMEE/Acorn_Medow/stats_config.json")
+                    )
+                : File.Exists($"{apiPath}/VEEMEE/nml/stats_config.xml")
+                    ? Processor.Sign(File.ReadAllText($"{apiPath}/VEEMEE/nml/stats_config.xml"))
+                : null;
         }
 
         public static string Crash(byte[] PostData, string ContentType, string apiPath)
         {
-            string corehook = string.Empty;
-            string territory = string.Empty;
-            string region = string.Empty;
-            string psnid = string.Empty;
-            string scene = string.Empty;
-            string sceneid = string.Empty;
-            string scenetime = string.Empty;
-            string sceneowner = string.Empty;
-            string owner = string.Empty;
-            string owned = string.Empty;
-            string crash = string.Empty;
-            string numplayers = string.Empty;
-            string numpeople = string.Empty;
-            string objectid = string.Empty;
-            string objectname = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var corehook = string.Empty;
+            var territory = string.Empty;
+            var region = string.Empty;
+            var psnid = string.Empty;
+            var scene = string.Empty;
+            var sceneid = string.Empty;
+            var scenetime = string.Empty;
+            var sceneowner = string.Empty;
+            var owner = string.Empty;
+            var owned = string.Empty;
+            var crash = string.Empty;
+            var numplayers = string.Empty;
+            var numpeople = string.Empty;
+            var objectid = string.Empty;
+            var objectname = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
@@ -93,25 +97,28 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.accorn
                     ms.Flush();
                 }
 
-                LoggerAccessor.LogWarn($"[VEEMEE] : A Client Crash Happened - Details : corehook|{corehook} - territory|{territory} - region|{region} - psnid|{psnid}" +
-                    $" - scene|{scene} - sceneid|{sceneid} - scenetime|{scenetime} - sceneowner|{sceneowner} - owner|{owner} - owned|{owned} - crash|{crash} -" +
-                    $" numplayers|{numplayers} - numpeople|{numpeople} - objectid|{objectid} - objectname|{objectname}");
+                LoggerAccessor.LogWarn(
+                    $"[VEEMEE] : A Client Crash Happened - Details : corehook|{corehook} - territory|{territory} - region|{region} - psnid|{psnid}"
+                        + $" - scene|{scene} - sceneid|{sceneid} - scenetime|{scenetime} - sceneowner|{sceneowner} - owner|{owner} - owned|{owned} - crash|{crash} -"
+                        + $" numplayers|{numplayers} - numpeople|{numpeople} - objectid|{objectid} - objectname|{objectname}"
+                );
             }
 
-            if (File.Exists($"{apiPath}/VEEMEE/Acorn_Medow/stats_config.json"))
-                return Processor.Sign(File.ReadAllText($"{apiPath}/VEEMEE/Acorn_Medow/stats_config.json"));
-            else
-                return null;
+            return File.Exists($"{apiPath}/VEEMEE/Acorn_Medow/stats_config.json")
+                ? Processor.Sign(
+                    File.ReadAllText($"{apiPath}/VEEMEE/Acorn_Medow/stats_config.json")
+                )
+                : null;
         }
 
         public static string Usage(byte[] PostData, string ContentType)
         {
-            string usage = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var usage = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 

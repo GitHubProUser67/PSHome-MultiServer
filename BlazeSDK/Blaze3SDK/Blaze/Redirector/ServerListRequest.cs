@@ -2,24 +2,22 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Redirector
 {
-	[TdfStruct]
-	public struct ServerListRequest
-	{
+    [TdfStruct]
+    public struct ServerListRequest
+    {
+        [TdfMember("PROF")]
+        public string mConnectionProfile;
 
-		[TdfMember("PROF")]
-		public string mConnectionProfile;
+        [TdfMember("CNT")]
+        public uint mCount;
 
-		[TdfMember("CNT")]
-		public uint mCount;
+        [TdfMember("ENV")]
+        public string mEnvironment;
 
-		[TdfMember("ENV")]
-		public string mEnvironment;
+        [TdfMember("NAME")]
+        public string mName;
 
-		[TdfMember("NAME")]
-		public string mName;
-
-		[TdfMember("PLAT")]
-		public string mPlatform;
-
-	}
+        [TdfMember("PLAT")]
+        public string mPlatform;
+    }
 }

@@ -1,14 +1,10 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-//
 // System.Net.ChunkedInputStream
-//
 // Authors:
 //  Gonzalo Paniagua Javier (gonzalo@novell.com)
-//
 // Copyright (c) 2005 Novell, Inc (http://www.novell.com)
-//
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
 // "Software"), to deal in the Software without restriction, including
@@ -16,10 +12,8 @@
 // distribute, sublicense, and/or sell copies of the Software, and to
 // permit persons to whom the Software is furnished to do so, subject to
 // the following conditions:
-//
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 // MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -28,8 +22,6 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-using System;
-using System.IO;
 using System.Net;
 
 namespace SpaceWizards.HttpListener
@@ -47,6 +39,7 @@ namespace SpaceWizards.HttpListener
             public int Count;
             public int InitialCount;
             public HttpStreamAsyncResult Ares;
+
             public ReadBufferState(byte[] buffer, int offset, int count, HttpStreamAsyncResult ares)
             {
                 Buffer = buffer;
@@ -57,11 +50,17 @@ namespace SpaceWizards.HttpListener
             }
         }
 
-        public ChunkedInputStream(HttpListenerContext context, Stream stream, byte[] buffer, int offset, int length)
-                    : base(stream, buffer, offset, length)
+        public ChunkedInputStream(
+            HttpListenerContext context,
+            Stream stream,
+            byte[] buffer,
+            int offset,
+            int length
+        )
+            : base(stream, buffer, offset, length)
         {
             _context = context;
-            WebHeaderCollection coll = (WebHeaderCollection)context.Request.Headers;
+            var coll = (WebHeaderCollection)context.Request.Headers;
             _decoder = new ChunkStream(coll);
         }
 
@@ -73,13 +72,19 @@ namespace SpaceWizards.HttpListener
 
         protected override int ReadCore(byte[] buffer, int offset, int count)
         {
-            IAsyncResult ares = BeginReadCore(buffer, offset, count, null, null);
+            var ares = BeginReadCore(buffer, offset, count, null, null);
             return EndRead(ares);
         }
 
-        protected override IAsyncResult BeginReadCore(byte[] buffer, int offset, int size, AsyncCallback cback, object state)
+        protected override IAsyncResult BeginReadCore(
+            byte[] buffer,
+            int offset,
+            int size,
+            AsyncCallback cback,
+            object state
+        )
         {
-            HttpStreamAsyncResult ares = new HttpStreamAsyncResult(this);
+            var ares = new HttpStreamAsyncResult(this);
             ares._callback = cback;
             ares._state = state;
             if (_no_more_data || size == 0 || _closed)
@@ -87,7 +92,7 @@ namespace SpaceWizards.HttpListener
                 ares.Complete();
                 return ares;
             }
-            int nread = _decoder.Read(buffer, offset, size);
+            var nread = _decoder.Read(buffer, offset, size);
             offset += nread;
             size -= nread;
             if (size == 0)
@@ -107,7 +112,7 @@ namespace SpaceWizards.HttpListener
             ares._buffer = new byte[8192];
             ares._offset = 0;
             ares._count = 8192;
-            ReadBufferState rb = new ReadBufferState(buffer, offset, size, ares);
+            var rb = new ReadBufferState(buffer, offset, size, ares);
             rb.InitialCount += nread;
             base.BeginReadCore(ares._buffer, ares._offset, ares._count, OnRead, rb);
             return ares;
@@ -115,11 +120,11 @@ namespace SpaceWizards.HttpListener
 
         private void OnRead(IAsyncResult base_ares)
         {
-            ReadBufferState rb = (ReadBufferState)base_ares.AsyncState;
-            HttpStreamAsyncResult ares = rb.Ares;
+            var rb = (ReadBufferState)base_ares.AsyncState;
+            var ares = rb.Ares;
             try
             {
-                int nread = base.EndRead(base_ares);
+                var nread = base.EndRead(base_ares);
                 if (nread == 0)
                 {
                     _no_more_data = true;
@@ -152,27 +157,30 @@ namespace SpaceWizards.HttpListener
 
         public override int EndRead(IAsyncResult asyncResult)
         {
-            if (asyncResult == null)
-                throw new ArgumentNullException(nameof(asyncResult));
+            ArgumentNullException.ThrowIfNull(asyncResult);
 
-            HttpStreamAsyncResult ares = asyncResult as HttpStreamAsyncResult;
+            var ares = asyncResult as HttpStreamAsyncResult;
             if (ares == null || !ReferenceEquals(this, ares._parent))
             {
                 throw new ArgumentException(SR.net_io_invalidasyncresult, nameof(asyncResult));
             }
             if (ares._endCalled)
             {
-                throw new InvalidOperationException(SR.Format(SR.net_io_invalidendcall, nameof(EndRead)));
+                throw new InvalidOperationException(
+                    SR.Format(SR.net_io_invalidendcall, nameof(EndRead))
+                );
             }
             ares._endCalled = true;
 
             if (!asyncResult.IsCompleted)
                 asyncResult.AsyncWaitHandle.WaitOne();
 
-            if (ares._error != null)
-                throw new HttpListenerException((int)HttpStatusCode.BadRequest, SR.Format(SR.net_io_operation_aborted, ares._error.Message));
-
-            return ares._count;
+            return ares._error != null
+                ? throw new HttpListenerException(
+                    (int)HttpStatusCode.BadRequest,
+                    SR.Format(SR.net_io_operation_aborted, ares._error.Message)
+                )
+                : ares._count;
         }
     }
 }

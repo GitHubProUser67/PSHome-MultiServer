@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GpsContentController
 {
-	[TdfStruct]
-	public struct ShowContentRequest
-	{
+    [TdfStruct]
+    public struct ShowContentRequest
+    {
+        [TdfMember("COID")]
+        public BlazeObjectId mContentId;
 
-		[TdfMember("COID")]
-		public BlazeObjectId mContentId;
-
-		[TdfMember("SHOW")]
-		public bool mShow;
-
-	}
+        [TdfMember("SHOW")]
+        public bool mShow;
+    }
 }

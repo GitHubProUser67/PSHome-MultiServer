@@ -1,51 +1,78 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using DNS.Protocol.Utils;
+﻿using System.Runtime.InteropServices;
+using DNSLibrary.Utils;
 using EndianTools;
+using EndianTools.Marshalling;
 
-namespace DNS.Protocol.ResourceRecords {
-    public class ResourceRecord : IResourceRecord {
-        private Domain domain;
-        private RecordType type;
-        private RecordClass klass;
-        private TimeSpan ttl;
-        private byte[] data;
+namespace DNSLibrary.ResourceRecords
+{
+    public class ResourceRecord(
+        Domain domain,
+        byte[] data,
+        RecordType type,
+        RecordClass klass = RecordClass.IN,
+        TimeSpan ttl = default
+        ) : IResourceRecord
+    {
+        private readonly Domain domain = domain;
+        private readonly RecordType type = type;
+        private readonly RecordClass klass = klass;
+        private readonly TimeSpan ttl = ttl;
+        private readonly byte[] data = data;
 
-        public static IList<ResourceRecord> GetAllFromArray(byte[] message, int offset, int count) {
-            return GetAllFromArray(message, offset, count, out offset);
+        public static IList<ResourceRecord> GetAllFromArray(byte[] message, int offset, int count)
+        {
+            return GetAllFromArray(message, offset, count, out _);
         }
 
-        public static IList<ResourceRecord> GetAllFromArray(byte[] message, int offset, int count, out int endOffset) {
-            IList<ResourceRecord> records = new List<ResourceRecord>(count);
+        public static IList<ResourceRecord> GetAllFromArray(
+            byte[] message,
+            int offset,
+            int count,
+            out int endOffset
+        )
+        {
+            IList<ResourceRecord> records = [with(count)];
 
-            for (int i = 0; i < count; i++) {
+            for (var i = 0; i < count; i++)
                 records.Add(FromArray(message, offset, out offset));
-            }
 
             endOffset = offset;
             return records;
         }
 
-        public static ResourceRecord FromArray(byte[] message, int offset) {
-            return FromArray(message, offset, out offset);
+        public static ResourceRecord FromArray(byte[] message, int offset)
+        {
+            return FromArray(message, offset, out _);
         }
 
-        public static ResourceRecord FromArray(byte[] message, int offset, out int endOffset) {
-            Domain domain = Domain.FromArray(message, offset, out offset);
+        public static ResourceRecord FromArray(byte[] message, int offset, out int endOffset)
+        {
+            var domain = Domain.FromArray(message, offset, out offset);
 
             if (offset + Tail.SIZE > message.Length)
                 throw new ArgumentException("Message too short for question tail");
 
-            Tail tail = new Tail
+            var tail = new Tail
             {
-                Type = (RecordType)EndianAwareConverter.ToUInt16(message, Endianness.BigEndian, (uint)offset),
-                Class = (RecordClass)EndianAwareConverter.ToUInt16(message, Endianness.BigEndian, (uint)(offset + 2)),
-                TimeToLive = TimeSpan.FromSeconds(EndianAwareConverter.ToUInt32(message, Endianness.BigEndian, (uint)(offset + 4))),
-                DataLength = EndianAwareConverter.ToUInt16(message, Endianness.BigEndian, (uint)(offset + 8)),
+                Type = (RecordType)
+                    EndianAwareConverter.ToUInt16(message, Endianness.BigEndian, (uint)offset),
+                Class = (RecordClass)
+                    EndianAwareConverter.ToUInt16(
+                        message,
+                        Endianness.BigEndian,
+                        (uint)(offset + 2)
+                    ),
+                TimeToLive = TimeSpan.FromSeconds(
+                    EndianAwareConverter.ToUInt32(message, Endianness.BigEndian, (uint)(offset + 4))
+                ),
+                DataLength = EndianAwareConverter.ToUInt16(
+                    message,
+                    Endianness.BigEndian,
+                    (uint)(offset + 8)
+                ),
             };
 
-            byte[] data = new byte[tail.DataLength];
+            var data = new byte[tail.DataLength];
 
             offset += Tail.SIZE;
             Array.Copy(message, offset, data, 0, data.Length);
@@ -55,72 +82,90 @@ namespace DNS.Protocol.ResourceRecords {
             return new ResourceRecord(domain, data, tail.Type, tail.Class, tail.TimeToLive);
         }
 
-        public static ResourceRecord FromQuestion(Question question, byte[] data, TimeSpan ttl = default(TimeSpan)) {
+        public static ResourceRecord FromQuestion(
+            Question question,
+            byte[] data,
+            TimeSpan ttl = default
+        )
+        {
             return new ResourceRecord(question.Name, data, question.Type, question.Class, ttl);
         }
 
-        public ResourceRecord(Domain domain, byte[] data, RecordType type,
-                RecordClass klass = RecordClass.IN, TimeSpan ttl = default(TimeSpan)) {
-            this.domain = domain;
-            this.type = type;
-            this.klass = klass;
-            this.ttl = ttl;
-            this.data = data;
-        }
-
-        public Domain Name {
+        public Domain Name
+        {
             get { return domain; }
         }
 
-        public RecordType Type {
+        public RecordType Type
+        {
             get { return type; }
         }
 
-        public RecordClass Class {
+        public RecordClass Class
+        {
             get { return klass; }
         }
 
-        public TimeSpan TimeToLive {
+        public TimeSpan TimeToLive
+        {
             get { return ttl; }
         }
 
-        public int DataLength {
+        public int DataLength
+        {
             get { return data.Length; }
         }
 
-        public byte[] Data {
+        public byte[] Data
+        {
             get { return data; }
         }
 
-        public int Size {
+        public int Size
+        {
             get { return domain.Size + Tail.SIZE + data.Length; }
         }
 
-        public byte[] ToArray() {
-            ByteStream result = new ByteStream(Size);
+        public byte[] ToArray()
+        {
+            var result = new ByteStream(Size);
 
             result
                 .Append(domain.ToArray())
-                .Append(Marshalling.Struct.GetBytes<Tail>(new Tail() {
-                    Type = Type,
-                    Class = Class,
-                    TimeToLive = ttl,
-                    DataLength = data.Length
-                }))
+                .Append(
+                    Struct.GetBytes<Tail>(
+                        new Tail()
+                        {
+                            Type = Type,
+                            Class = Class,
+                            TimeToLive = ttl,
+                            DataLength = data.Length,
+                        }
+                    )
+                )
                 .Append(data);
 
             return result.ToArray();
         }
 
-        public override string ToString() {
-            return ObjectStringifier.New(this)
-                .Add(nameof(Name), nameof(Type), nameof(Class), nameof(TimeToLive), nameof(DataLength))
+        public override string ToString()
+        {
+            return ObjectStringifier
+                .New(this)
+                .Add(
+                    nameof(Name),
+                    nameof(Type),
+                    nameof(Class),
+                    nameof(TimeToLive),
+                    nameof(DataLength)
+                )
                 .ToString();
         }
 
-        [Marshalling.Endian(Marshalling.Endianness.Big)]
+        [Endian(Endianness.BigEndian)]
         [StructLayout(LayoutKind.Sequential, Pack = 2)]
-        private struct Tail {
+        private struct Tail
+        {
             public const int SIZE = 10;
 
             private ushort type;
@@ -128,24 +173,28 @@ namespace DNS.Protocol.ResourceRecords {
             private uint ttl;
             private ushort dataLength;
 
-            public RecordType Type {
-                get { return (RecordType) type; }
-                set { type = (ushort) value; }
+            public RecordType Type
+            {
+                get { return (RecordType)type; }
+                set { type = (ushort)value; }
             }
 
-            public RecordClass Class {
-                get { return (RecordClass) klass; }
-                set { klass = (ushort) value; }
+            public RecordClass Class
+            {
+                get { return (RecordClass)klass; }
+                set { klass = (ushort)value; }
             }
 
-            public TimeSpan TimeToLive {
+            public TimeSpan TimeToLive
+            {
                 get { return TimeSpan.FromSeconds(ttl); }
-                set { ttl = (uint) value.TotalSeconds; }
+                set { ttl = (uint)value.TotalSeconds; }
             }
 
-            public int DataLength {
+            public int DataLength
+            {
                 get { return dataLength; }
-                set { dataLength = (ushort) value; }
+                set { dataLength = (ushort)value; }
             }
         }
     }

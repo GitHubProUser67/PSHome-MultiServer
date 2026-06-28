@@ -5,7 +5,6 @@ namespace Tdf
         public long Id { get; set; }
         public BlazeObjectType Type { get; set; }
 
-
         public BlazeObjectId()
         {
             Id = 0;
@@ -36,9 +35,8 @@ namespace Tdf
             Type = new BlazeObjectType(component, type);
         }
 
-
         //TODO: make sure the output order is correct, maybe in reality it is $"{Id}/{Type}"
-        public override string ToString()
+        public override readonly string ToString()
         {
             return $"{Type}/{Id}";
         }

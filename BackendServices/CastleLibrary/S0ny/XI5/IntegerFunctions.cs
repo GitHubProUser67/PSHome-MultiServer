@@ -1,4 +1,4 @@
-﻿/*
+/*
 This is free and unencumbered software released into the public domain.
 
 Anyone is free to copy, modify, publish, use, compile, sell, or
@@ -25,7 +25,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 For more information, please refer to <https://unlicense.org>
 */
 using Org.BouncyCastle.Math;
-using System;
 
 namespace CastleLibrary.S0ny.XI5
 {
@@ -52,14 +51,14 @@ namespace CastleLibrary.S0ny.XI5
         // (A|B) = (C|B) IF A = C (mod B)<br>
         // (2|B) = 1 IF N = 1 OR 7 (mod 8)<br>
         // (2|B) = 1 IF N = 3 OR 5 (mod 8)
-        //
         // @param A integer value
         // @param B integer value
         // @return value of the jacobi symbol (A|B)
-        //
         private static int Jacobi(BigInteger A, BigInteger B)
         {
-            BigInteger a, b, v;
+            BigInteger a,
+                b,
+                v;
             long k = 1;
 
             k = 1;
@@ -93,7 +92,7 @@ namespace CastleLibrary.S0ny.XI5
             }
 
             if (v.TestBit(0))
-                k = k * JacobiTable[a.IntValue & 7];
+                k *= JacobiTable[a.IntValue & 7];
 
             if (a.SignValue < 0)
             {
@@ -116,7 +115,7 @@ namespace CastleLibrary.S0ny.XI5
                 }
 
                 if (v.TestBit(0))
-                    k = k * JacobiTable[b.IntValue & 7];
+                    k *= JacobiTable[b.IntValue & 7];
 
                 if (a.CompareTo(b) < 0)
                 {
@@ -159,20 +158,23 @@ namespace CastleLibrary.S0ny.XI5
             // p = 3 mod 4
             if (p.TestBit(0) && p.TestBit(1))
             {
-                if (Jacobi(a, p) != 1) throw new ArgumentException("[IntegerFunctions] - Ressol: No quadratic residue: " + a + ", " + p);
+                if (Jacobi(a, p) != 1)
+                    throw new ArgumentException(
+                        "[IntegerFunctions] - Ressol: No quadratic residue: " + a + ", " + p
+                    );
 
                 // a quadr. residue mod p
                 v = p.Add(One); // v = p+1
                 v = v.ShiftRight(2); // v = v/4
                 return a.ModPow(v, p); // return a^v mod p
-                                       // return --> a^((p+1)/4) mod p
+                // return --> a^((p+1)/4) mod p
             }
 
             // initialization
             // compute k and s, where p = 2^s (2k+1) +1
 
             long s = 0;
-            BigInteger k = p.Subtract(One); // k = p-1
+            var k = p.Subtract(One); // k = p-1
             while (!k.TestBit(0))
             {
                 // while k is even
@@ -184,9 +186,9 @@ namespace CastleLibrary.S0ny.XI5
             k = k.ShiftRight(1); // k = k/2
 
             // initial values
-            BigInteger r = a.ModPow(k, p); // r = a^k mod p
+            var r = a.ModPow(k, p); // r = a^k mod p
 
-            BigInteger n = r.Multiply(r).Remainder(p); // n = r^2 % p
+            var n = r.Multiply(r).Remainder(p); // n = r^2 % p
             n = n.Multiply(a).Remainder(p); // n = n * a % p
             r = r.Multiply(a).Remainder(p); // r = r * a %p
 
@@ -194,7 +196,7 @@ namespace CastleLibrary.S0ny.XI5
                 return r;
 
             // non-quadratic residue
-            BigInteger z = Two; // z = 2
+            var z = Two; // z = 2
             while (Jacobi(z, p) == 1)
             {
                 // while z quadratic residue
@@ -204,14 +206,14 @@ namespace CastleLibrary.S0ny.XI5
             v = k;
             v = v.Multiply(Two); // v = 2k
             v = v.Add(One); // v = 2k + 1
-            BigInteger c = z.ModPow(v, p); // c = z^v mod p
+            var c = z.ModPow(v, p); // c = z^v mod p
 
             // iteration
             while (n.CompareTo(One) == 1)
             {
                 // n > 1
                 k = n; // k = n
-                long t = s;
+                var t = s;
                 s = 0;
 
                 while (!k.Equals(One))
@@ -223,7 +225,9 @@ namespace CastleLibrary.S0ny.XI5
 
                 t -= s; // t = t - s
                 if (t == 0)
-                    throw new ArgumentException("[IntegerFunctions] - Ressol: No quadratic residue: " + a + ", " + p);
+                    throw new ArgumentException(
+                        "[IntegerFunctions] - Ressol: No quadratic residue: " + a + ", " + p
+                    );
 
                 v = One;
                 for (long i = 0; i < t - 1; i++)

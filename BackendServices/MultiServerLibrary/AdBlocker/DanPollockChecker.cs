@@ -1,8 +1,6 @@
-using System;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Net;
-using System.Threading.Tasks;
+using MultiServerLibrary.Extension.NET;
 
 namespace MultiServerLibrary.AdBlocker
 {
@@ -11,6 +9,7 @@ namespace MultiServerLibrary.AdBlocker
         public bool isLoaded = false;
 
         private ConcurrentDictionary<string, IPAddress> UrlsDic;
+        private static readonly char[] separator = new[] { '\n', '\r' };
 
         // Download the DanPollock hosts file and parse the rules
         public async Task DownloadAndParseFilterListAsync(bool asLocalHost = false)
@@ -18,7 +17,9 @@ namespace MultiServerLibrary.AdBlocker
             if (isLoaded)
                 return;
 
-            string danpollockFilterUrl = asLocalHost ? "https://someonewhocares.org/hosts/" : "https://someonewhocares.org/hosts/zero/";
+            var danpollockFilterUrl = asLocalHost
+                ? "https://someonewhocares.org/hosts/"
+                : "https://someonewhocares.org/hosts/zero/";
 
             UrlsDic = new ConcurrentDictionary<string, IPAddress>();
 
@@ -28,24 +29,41 @@ namespace MultiServerLibrary.AdBlocker
                 using (FixedWebClient client = new FixedWebClient())
 #pragma warning restore
                 {
-                    string content = await client.DownloadStringTaskAsync(danpollockFilterUrl).ConfigureAwait(false);
-                    Parallel.ForEach(content.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries), line =>
-                    {
-                        // Exclude invalid lines on the webpage.
-                        if (!line.StartsWith("#") && !line.StartsWith("<") && !line.StartsWith("&"))
+                    var content = await client
+                        .DownloadStringTaskAsync(danpollockFilterUrl)
+                        .ConfigureAwait(false);
+                    Parallel.ForEach(
+                        content.Split(separator, StringSplitOptions.RemoveEmptyEntries),
+                        line =>
                         {
-                            string[] splitedLine = line.Trim().Replace("\t", string.Empty).Split(' ');
-                            if (splitedLine.Length >= 2 && IPAddress.TryParse(splitedLine[0], out IPAddress targetIp) && targetIp != null)
-                                UrlsDic.TryAdd(splitedLine[1], targetIp);
+                            // Exclude invalid lines on the webpage.
+                            if (
+                                !line.StartsWith("#")
+                                && !line.StartsWith("<")
+                                && !line.StartsWith("&")
+                            )
+                            {
+                                var splitedLine = line.Trim()
+                                    .Replace("\t", string.Empty)
+                                    .Split(' ');
+                                if (
+                                    splitedLine.Length >= 2
+                                    && IPAddress.TryParse(splitedLine[0], out var targetIp)
+                                    && targetIp != null
+                                )
+                                    UrlsDic.TryAdd(splitedLine[1], targetIp);
+                            }
                         }
-                    });
+                    );
                 }
 
                 isLoaded = true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[DanPollockChecker] - Error while downloading the DanPollock hosts file: {ex.Message}");
+                Console.WriteLine(
+                    $"[DanPollockChecker] - Error while downloading the DanPollock hosts file: {ex.Message}"
+                );
             }
         }
 

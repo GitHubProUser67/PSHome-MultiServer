@@ -1,10 +1,12 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.LadderList_ExtraInfo)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.LadderList_ExtraInfo
+    )]
     public class MediusLadderList_ExtraInfoRequest : BaseLobbyExtMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.LadderList_ExtraInfo;
@@ -18,13 +20,10 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            //
             reader.ReadBytes(3);
             LadderStatIndex = reader.ReadInt32();
             SortOrder = reader.Read<MediusSortOrder>();
@@ -34,13 +33,10 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(new byte[3]);
             writer.Write(LadderStatIndex);
             writer.Write(SortOrder);
@@ -48,15 +44,15 @@ namespace Horizon.RT.Models
             writer.Write(PageSize);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{MessageID} " +
-             $"LadderStatIndex:{LadderStatIndex} " +
-$"SortOrder:{SortOrder} " +
-$"StartPosition:{StartPosition} " +
-$"PageSize:{PageSize}";
+            return base.ToString()
+                + " "
+                + $"MessageID:{MessageID} "
+                + $"LadderStatIndex:{LadderStatIndex} "
+                + $"SortOrder:{SortOrder} "
+                + $"StartPosition:{StartPosition} "
+                + $"PageSize:{PageSize}";
         }
     }
 }

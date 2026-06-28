@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.League
 {
-	[TdfStruct]
-	public struct NewsItemParam
-	{
+    [TdfStruct]
+    public struct NewsItemParam
+    {
+        [TdfMember("TYPE")]
+        public NewsParamType mType;
 
-		[TdfMember("TYPE")]
-		public NewsParamType mType;
-
-		[TdfMember("VAL")]
-		public string mValue;
-
-	}
+        [TdfMember("VAL")]
+        public string mValue;
+    }
 }

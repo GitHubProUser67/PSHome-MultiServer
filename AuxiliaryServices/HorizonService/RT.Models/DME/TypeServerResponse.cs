@@ -1,7 +1,6 @@
-using System.IO;
-using Org.BouncyCastle.Utilities.Net;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
+using Org.BouncyCastle.Utilities.Net;
 
 namespace Horizon.RT.Models
 {
@@ -31,9 +30,7 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"IPAddress: {IPAddress} " +
-            $"Port: {Port}";
+            return base.ToString() + " " + $"IPAddress: {IPAddress} " + $"Port: {Port}";
         }
     }
 }

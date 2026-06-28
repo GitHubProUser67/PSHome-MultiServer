@@ -1,7 +1,4 @@
 namespace BlazeCommon.PacketDisplayAttributes
 {
-    public class DisplayAsIpAddress : Attribute
-    {
-
-    }
+    public class DisplayAsIpAddress : Attribute { }
 }

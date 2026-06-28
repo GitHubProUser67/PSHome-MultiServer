@@ -1,21 +1,13 @@
 using MultiServerLibrary.HTTP;
-using System;
 using WebAPIService.GameServices.PSHOME.HTS.Helpers;
 
 namespace WebAPIService.GameServices.PSHOME.HTS
 {
-    public class HTSClass
+    public class HTSClass(string method, string absolutepath, string workpath)
     {
-        private string workpath;
-        private string absolutepath;
-        private string method;
-
-        public HTSClass(string method, string absolutepath, string workpath)
-        {
-            this.absolutepath = absolutepath;
-            this.workpath = workpath;
-            this.method = method;
-        }
+        private readonly string workpath = workpath;
+        private readonly string absolutepath = absolutepath;
+        private readonly string method = method;
 
         public string ProcessRequest(byte[] PostData, string ContentType, bool https)
         {
@@ -32,10 +24,13 @@ namespace WebAPIService.GameServices.PSHOME.HTS
                         case "/NPTicketing/get_ticket_data.json":
                         case "/NPTicketing/get_ticket_data_base64.xml":
                         case "/NPTicketing/get_ticket_data_base64.json":
-                            return NPTicketSample.RequestNPTicket(PostData, HTTPProcessor.ExtractBoundary(ContentType));
+                            return NPTicketSample.RequestNPTicket(
+                                PostData,
+                                HTTPProcessor.ExtractBoundary(ContentType)
+                            );
                         #endregion
 
-                        default:    
+                        default:
                             break;
                     }
                     break;

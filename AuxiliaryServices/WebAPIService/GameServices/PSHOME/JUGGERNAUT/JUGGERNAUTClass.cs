@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using WebAPIService.GameServices.PSHOME.JUGGERNAUT.farm.animal;
 using WebAPIService.GameServices.PSHOME.JUGGERNAUT.farm.crafting;
 using WebAPIService.GameServices.PSHOME.JUGGERNAUT.farm.furniture;
@@ -7,18 +5,17 @@ using WebAPIService.GameServices.PSHOME.JUGGERNAUT.farm.plant;
 
 namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT
 {
-    public class JUGGERNAUTClass
+    public class JUGGERNAUTClass(string method, string absolutepath)
     {
-        private string absolutepath;
-        private string method;
+        private readonly string absolutepath = absolutepath;
+        private readonly string method = method;
 
-        public JUGGERNAUTClass(string method, string absolutepath)
-        {
-            this.absolutepath = absolutepath;
-            this.method = method;
-        }
-
-        public string ProcessRequest(IDictionary<string, string> QueryParameters, string apiStaticPath, byte[] PostData = null, string ContentType = null)
+        public string ProcessRequest(
+            IDictionary<string, string> QueryParameters,
+            string apiStaticPath,
+            byte[] PostData = null,
+            string ContentType = null
+        )
         {
             if (string.IsNullOrEmpty(absolutepath))
                 return null;
@@ -29,59 +26,105 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT
                     switch (absolutepath)
                     {
                         case "/clearasil/pushtelemetry.php":
-                            if (QueryParameters != null && QueryParameters.ContainsKey("user") && QueryParameters.ContainsKey("timeingame"))
+                            if (
+                                QueryParameters != null
+                                && QueryParameters.TryGetValue("user", out var user)
+                                && QueryParameters.ContainsKey("timeingame")
+                            )
                             {
-                                string user = QueryParameters["user"];
-                                string timeingame = QueryParameters["timeingame"];
-                                if (!string.IsNullOrEmpty(user) && !string.IsNullOrEmpty(timeingame))
+                                var timeingame = QueryParameters["timeingame"];
+                                if (
+                                    !string.IsNullOrEmpty(user) && !string.IsNullOrEmpty(timeingame)
+                                )
                                 {
                                     try
                                     {
-                                        int time = int.Parse(timeingame);
-                                        CustomLogger.LoggerAccessor.LogInfo($"[JUGGERNAUT] - User: {user} spent {time / 60}:{time % 60} minutes in clearasil.");
+                                        var time = int.Parse(timeingame);
+                                        CustomLogger.LoggerAccessor.LogInfo(
+                                            $"[JUGGERNAUT] - User: {user} spent {time / 60}:{time % 60} minutes in clearasil."
+                                        );
                                     }
-                                    catch (Exception)
-                                    {
-
-                                    }
+                                    catch (Exception) { }
                                 }
                                 return string.Empty;
                             }
                             break;
                         case "/clearasil/joinedspace.php":
-                            return clearasil.joinedspace.ProcessJoinedSpace(QueryParameters, apiStaticPath);
+                            return clearasil.joinedspace.ProcessJoinedSpace(
+                                QueryParameters,
+                                apiStaticPath
+                            );
                         case "/clearasil/getscores.php":
-                            return clearasil.getscores.ProcessGetScores(QueryParameters, apiStaticPath);
+                            return clearasil.getscores.ProcessGetScores(
+                                QueryParameters,
+                                apiStaticPath
+                            );
                         case "/clearasil/pushrewards.php":
-                            return clearasil.pushrewards.ProcessPushRewards(QueryParameters, apiStaticPath);
+                            return clearasil.pushrewards.ProcessPushRewards(
+                                QueryParameters,
+                                apiStaticPath
+                            );
                         case "/clearasil/pushtime.php":
-                            return clearasil.pushtime.ProcessPushTime(QueryParameters, apiStaticPath);
+                            return clearasil.pushtime.ProcessPushTime(
+                                QueryParameters,
+                                apiStaticPath
+                            );
                         case "/clearasil/pushscore.php":
-                            return clearasil.pushscore.ProcessPushScore(QueryParameters, apiStaticPath);
+                            return clearasil.pushscore.ProcessPushScore(
+                                QueryParameters,
+                                apiStaticPath
+                            );
                         case "/farm/crafting_getxpstats.php":
                             return crafting_getxpstats.ProcessGetXpStats();
                         case "/farm/crafting_stats.php":
                             return crafting_stats.ProcessGetStats(apiStaticPath);
                         case "/farm/furniture_crafting_up.php":
-                            return furniture_crafting_up.ProcessCraftingUp(QueryParameters, apiStaticPath);
+                            return furniture_crafting_up.ProcessCraftingUp(
+                                QueryParameters,
+                                apiStaticPath
+                            );
                         case "/farm/furniture_slot_saved.php":
-                            return furniture_slot_saved.ProcessSlotSaved(QueryParameters, apiStaticPath);
+                            return furniture_slot_saved.ProcessSlotSaved(
+                                QueryParameters,
+                                apiStaticPath
+                            );
                         case "/farm/furniture_crafting_crafted.php":
-                            return furniture_crafting_crafted.ProcessCraftingCrafted(QueryParameters, apiStaticPath);
+                            return furniture_crafting_crafted.ProcessCraftingCrafted(
+                                QueryParameters,
+                                apiStaticPath
+                            );
                         case "/farm/furniture_crafting_down.php":
-                            return furniture_crafting_down.ProcessCraftingDown(QueryParameters, apiStaticPath);
+                            return furniture_crafting_down.ProcessCraftingDown(
+                                QueryParameters,
+                                apiStaticPath
+                            );
                         case "/farm/furniture_crafting_sold.php":
-                            return furniture_crafting_sold.ProcessCraftingSold(QueryParameters, apiStaticPath);
+                            return furniture_crafting_sold.ProcessCraftingSold(
+                                QueryParameters,
+                                apiStaticPath
+                            );
                         case "/farm/resources_getall.php":
-                            return farm.resources_getall.ProcessGetAll(QueryParameters, apiStaticPath);
+                            return farm.resources_getall.ProcessGetAll(
+                                QueryParameters,
+                                apiStaticPath
+                            );
                         case "/farm/weather_up.php":
                             return farm.weather_up.ProcessWeatherUp(QueryParameters, apiStaticPath);
                         case "/farm/wood_earned.php":
-                            return farm.wood_earned.ProcessWoodEarned(QueryParameters, apiStaticPath);
+                            return farm.wood_earned.ProcessWoodEarned(
+                                QueryParameters,
+                                apiStaticPath
+                            );
                         case "/farm/remodel_getall.php":
-                            return farm.remodel_getall.ProcessGetAll(QueryParameters, apiStaticPath);
+                            return farm.remodel_getall.ProcessGetAll(
+                                QueryParameters,
+                                apiStaticPath
+                            );
                         case "/farm/remodel_bought.php":
-                            return farm.remodel_bought.ProcessBought(QueryParameters, apiStaticPath);
+                            return farm.remodel_bought.ProcessBought(
+                                QueryParameters,
+                                apiStaticPath
+                            );
                         case "/farm/animal_getall.php":
                             return animal_getall.ProcessGetAll(QueryParameters, apiStaticPath);
                         case "/farm/plant_getall.php":
@@ -113,7 +156,10 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT
                         case "/farm/animal_renewed.php":
                             return animal_renewed.ProcessRenewed(QueryParameters, apiStaticPath);
                         case "/farm/animal_collect_renew.php":
-                            return animal_collect_renew.ProcessCollectRenew(QueryParameters, apiStaticPath);
+                            return animal_collect_renew.ProcessCollectRenew(
+                                QueryParameters,
+                                apiStaticPath
+                            );
                         case "/farm/animal_stats.php":
                             return animal_stats.ProcessStats(apiStaticPath);
                         case "/farm/furniture_down.php":

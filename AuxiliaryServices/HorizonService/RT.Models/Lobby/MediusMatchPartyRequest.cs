@@ -1,13 +1,14 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.MatchPartyRequest2)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.MatchPartyRequest2
+    )]
     public class MediusMatchPartyRequest : BaseLobbyExtMessage, IMediusRequest
     {
-
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.MatchPartyRequest2;
 
         public MessageId MessageID { get; set; }
@@ -23,18 +24,12 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            //
-            SessionKey = reader.ReadString(Constants.SESSIONKEY_MAXLEN); 
+            SessionKey = reader.ReadString(Constants.SESSIONKEY_MAXLEN);
 
-            //reader.ReadBytes(2);
-
-            //
             SupersetID = reader.ReadInt32();
             PartySize = reader.ReadInt32();
 
@@ -45,56 +40,46 @@ namespace Horizon.RT.Models
             ApplicationDataSize = reader.ReadInt32();
 
             PartyAccountIDList = new int[PartySize];
-            for (int i = 0; i < PartySize; i++)
-            {
+            for (var i = 0; i < PartySize; i++)
                 PartyAccountIDList[i] = reader.ReadInt32();
-            }
 
             ApplicationData = reader.ReadString(Constants.APPLICATIONDATA_MAXLEN);
         }
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            //
             writer.Write(SessionKey);
 
-            //writer.Write(new byte[2]);
-
-            //
             writer.Write(SupersetID);
             writer.Write(PartySize);
-
 
             writer.Write(MinGameSize);
             writer.Write(MaxGameSize);
             writer.Write(MatchOptions);
-
 
             writer.Write(ApplicationDataSize);
             writer.Write(PartyAccountIDList);
             writer.Write(ApplicationData);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"SupersetID: {SupersetID} " +
-                $"PartySize: {PartySize} " +
-                $"MinGameSize: {MinGameSize} " +
-                $"MaxGameSize: {MaxGameSize} " +
-                $"MatchOptions: {MatchOptions} " +
-                $"ApplicationDataSize: {ApplicationDataSize} " +
-                $"PartyAccountIDList: {string.Join(" ", PartyAccountIDList)} " +
-                $"ApplicationData:  {string.Join(" ", ApplicationData)} ";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"SupersetID: {SupersetID} "
+                + $"PartySize: {PartySize} "
+                + $"MinGameSize: {MinGameSize} "
+                + $"MaxGameSize: {MaxGameSize} "
+                + $"MatchOptions: {MatchOptions} "
+                + $"ApplicationDataSize: {ApplicationDataSize} "
+                + $"PartyAccountIDList: {string.Join(" ", PartyAccountIDList)} "
+                + $"ApplicationData:  {string.Join(" ", ApplicationData)} ";
         }
     }
 }

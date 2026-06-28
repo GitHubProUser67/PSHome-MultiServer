@@ -14,15 +14,14 @@ namespace WebAPIService.Migrations
                 name: "Time",
                 table: "ClearasilScoreBoardEntry",
                 type: "TEXT",
-                nullable: true);
+                nullable: true
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "Time",
-                table: "ClearasilScoreBoardEntry");
+            migrationBuilder.DropColumn(name: "Time", table: "ClearasilScoreBoardEntry");
         }
     }
 }

@@ -1,20 +1,12 @@
-using System;
-using System.IO;
-
 namespace EndianTools.BinaryExtension
 {
-    public abstract class EndianAwareBinaryReader : IDisposable
+    public abstract class EndianAwareBinaryReader(Stream input) : IDisposable
     {
-        public EndianAwareBinaryReader(Stream input)
-        {
-            m_br = new BinaryReader(input);
-        }
-
         public static EndianAwareBinaryReader Create(Stream input, Endianness endian)
         {
-            if (endian == Endianness.LittleEndian)
-                return new LEBinaryReader(input);
-            return new BEBinaryReader(input);
+            return endian == Endianness.LittleEndian
+                ? new LEBinaryReader(input)
+                : new BEBinaryReader(input);
         }
 
         public abstract byte[] ReadBytes(int length);
@@ -35,7 +27,7 @@ namespace EndianTools.BinaryExtension
 
         public abstract ulong ReadUInt64();
 
-        protected BinaryReader m_br;
+        protected BinaryReader m_br = new(input);
         private bool disposedValue;
 
         protected virtual void Dispose(bool disposing)

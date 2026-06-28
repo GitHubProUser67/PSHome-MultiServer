@@ -1,21 +1,19 @@
 using CustomLogger;
-using System.IO;
 
 namespace WebAPIService.GameServices.PSHOME.LOOT
 {
     public class LOOTMovieDb
     {
-
         public static string FetchDBInfo(string workPath, string id)
         {
-            string LOOTTeleporterPath = $"{workPath}/LOOT/Teleporter";
-            string LOOTDBPath = $"{workPath}/LOOT/MovieDB";
+            var LOOTTeleporterPath = $"{workPath}/LOOT/Teleporter";
+            var LOOTDBPath = $"{workPath}/LOOT/MovieDB";
 
             switch (id)
             {
                 case "60575C5C-98C649E2-A64DDF82-BC3002B5":
                     Directory.CreateDirectory(LOOTDBPath);
-                    string movieDbJSONFilePath = $"{LOOTDBPath}/EOD.json";
+                    var movieDbJSONFilePath = $"{LOOTDBPath}/EOD.json";
 
                     if (File.Exists(movieDbJSONFilePath))
                     {
@@ -24,8 +22,10 @@ namespace WebAPIService.GameServices.PSHOME.LOOT
                     }
                     else
                     {
-                        LoggerAccessor.LogWarn($"[LOOT] MovieDb - No override id:{id} JSON found, using default!\nExpected path {movieDbJSONFilePath}");
-                        bool logTicket = false;
+                        LoggerAccessor.LogWarn(
+                            $"[LOOT] MovieDb - No override id:{id} JSON found, using default!\nExpected path {movieDbJSONFilePath}"
+                        );
+                        var logTicket = false;
 #if DEBUG
                         logTicket = true;
 #endif
@@ -34,7 +34,7 @@ namespace WebAPIService.GameServices.PSHOME.LOOT
                     }
                 default:
                     Directory.CreateDirectory(LOOTTeleporterPath);
-                    string teleporterJSONFilePath = $"{LOOTTeleporterPath}/Teleporter.json";
+                    var teleporterJSONFilePath = $"{LOOTTeleporterPath}/Teleporter.json";
 
                     if (File.Exists(teleporterJSONFilePath))
                     {
@@ -43,7 +43,9 @@ namespace WebAPIService.GameServices.PSHOME.LOOT
                     }
                     else
                     {
-                        LoggerAccessor.LogWarn($"[LOOT] Teleporter - No override Teleporter JSON found, using default!\nExpected path {teleporterJSONFilePath}");
+                        LoggerAccessor.LogWarn(
+                            $"[LOOT] Teleporter - No override Teleporter JSON found, using default!\nExpected path {teleporterJSONFilePath}"
+                        );
                         //NOT 100% yet working
                         return $"<parameter>{{\"g_destinations\":[{{\"sceneName\":\"tardis_open_house_b48d_2762\",\"name\":\"Destination 1\"}},{{\"sceneName\":\"pub_hollywood_hills_2d44_46fa\",\"name\":\"Destination 2\"}},{{\"sceneName\":\"stageset2_promo_c149_bd6e\",\"name\":\"Destination 3\"}}]}}</parameter>";
                     }

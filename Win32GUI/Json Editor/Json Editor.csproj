@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows7.0</TargetFramework>
+    <!-- "latest" works on local PC but not in build pipeline; Visual Studio version difference? Whatever, preview it is. -->
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
     <Product>Json Editor by ZTn</Product>
     <Description>Simple Json Editor based on Newtonsoft.Json library</Description>
     <Copyright>ZeToken.net 2013-2020 (MIT License)</Copyright>
@@ -12,20 +16,19 @@
     <AssemblyName>ZTn.Json.Editor</AssemblyName>
     <OutputType>WinExe</OutputType>
     <StartupObject>ZTn.Json.Editor.Program</StartupObject>
-	<GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
-	<ApplicationIcon>json-editor.ico</ApplicationIcon>
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+    <ApplicationIcon>json-editor.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="json-editor.ico" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Costura.Fody" Version="6.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <!--<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>-->
-    </PackageReference>
-    <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
+    <PackageReference Include="Fody" Version="6.9.3" PrivateAssets="none" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\JsonTreeView\JsonTreeView.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <WeaverFiles Include="..\..\CosturaService\netstandard2.0\Costura.Fody.dll" />
   </ItemGroup>
 </Project>

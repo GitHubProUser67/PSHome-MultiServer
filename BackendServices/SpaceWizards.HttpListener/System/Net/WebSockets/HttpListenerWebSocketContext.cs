@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Net;
@@ -40,7 +38,8 @@ namespace SpaceWizards.HttpListener.WebSockets
             IEnumerable<string> secWebSocketProtocols,
             string secWebSocketVersion,
             string secWebSocketKey,
-            WebSocket webSocket)
+            WebSocket webSocket
+        )
         {
             Debug.Assert(requestUri != null, "requestUri shouldn't be null");
             Debug.Assert(headers != null, "headers shouldn't be null");
@@ -98,7 +97,13 @@ namespace SpaceWizards.HttpListener.WebSockets
                     // AuthenticationSchemes.Basic.
                     if (user.Identity is HttpListenerBasicIdentity basicIdentity)
                     {
-                        return new GenericPrincipal(new HttpListenerBasicIdentity(basicIdentity.Name, basicIdentity.Password), null);
+                        return new GenericPrincipal(
+                            new HttpListenerBasicIdentity(
+                                basicIdentity.Name,
+                                basicIdentity.Password
+                            ),
+                            null
+                        );
                     }
                 }
                 /*else

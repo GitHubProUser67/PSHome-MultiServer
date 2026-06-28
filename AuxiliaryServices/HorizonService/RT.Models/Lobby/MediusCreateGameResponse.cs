@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -38,13 +37,13 @@ namespace Horizon.RT.Models
             writer.Write(MediusWorldID);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{MessageID} " +
-                $"StatusCode:{StatusCode} " +
-                $"MediusWorldID:{MediusWorldID}";
+            return base.ToString()
+                + " "
+                + $"MessageID:{MessageID} "
+                + $"StatusCode:{StatusCode} "
+                + $"MediusWorldID:{MediusWorldID}";
         }
     }
 }

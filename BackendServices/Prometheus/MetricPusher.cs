@@ -1,5 +1,5 @@
-using CustomLogger;
 using System.Text;
+using CustomLogger;
 
 namespace Prometheus;
 
@@ -13,18 +13,27 @@ public class MetricPusher : MetricHandler
     private readonly Uri _targetUrl;
     private readonly Func<HttpClient> _httpClientProvider;
 
-    public MetricPusher(string endpoint, string job, string? instance = null, long intervalMilliseconds = 1000, IEnumerable<Tuple<string, string>>? additionalLabels = null, CollectorRegistry? registry = null, bool pushReplace = false) : this(new MetricPusherOptions
-    {
-        Endpoint = endpoint,
-        Job = job,
-        Instance = instance,
-        IntervalMilliseconds = intervalMilliseconds,
-        AdditionalLabels = additionalLabels,
-        Registry = registry,
-        ReplaceOnPush = pushReplace,
-    })
-    {
-    }
+    public MetricPusher(
+        string endpoint,
+        string job,
+        string? instance = null,
+        long intervalMilliseconds = 1000,
+        IEnumerable<Tuple<string, string>>? additionalLabels = null,
+        CollectorRegistry? registry = null,
+        bool pushReplace = false
+    )
+        : this(
+            new MetricPusherOptions
+            {
+                Endpoint = endpoint,
+                Job = job,
+                Instance = instance,
+                IntervalMilliseconds = intervalMilliseconds,
+                AdditionalLabels = additionalLabels,
+                Registry = registry,
+                ReplaceOnPush = pushReplace,
+            }
+        ) { }
 
     public MetricPusher(MetricPusherOptions options)
     {
@@ -35,13 +44,18 @@ public class MetricPusher : MetricHandler
             throw new ArgumentNullException(nameof(options.Job));
 
         if (options.IntervalMilliseconds <= 0)
-            throw new ArgumentException("Interval must be greater than zero", nameof(options.IntervalMilliseconds));
+            throw new ArgumentException(
+                "Interval must be greater than zero",
+                nameof(options.IntervalMilliseconds)
+            );
 
         _registry = options.Registry ?? Metrics.DefaultRegistry;
 
         _httpClientProvider = options.HttpClientProvider ?? (() => _singletonHttpClient);
 
-        StringBuilder sb = new StringBuilder(string.Format("{0}/job/{1}", options.Endpoint!.TrimEnd('/'), options.Job));
+        var sb = new StringBuilder(
+            string.Format("{0}/job/{1}", options.Endpoint!.TrimEnd('/'), options.Job)
+        );
         if (!string.IsNullOrEmpty(options.Instance))
             sb.AppendFormat("/instance/{0}", options.Instance);
 
@@ -49,8 +63,14 @@ public class MetricPusher : MetricHandler
         {
             foreach (var pair in options.AdditionalLabels)
             {
-                if (pair == null || string.IsNullOrEmpty(pair.Item1) || string.IsNullOrEmpty(pair.Item2))
-                    throw new NotSupportedException($"Invalid {nameof(MetricPusher)} additional label: ({pair?.Item1}):({pair?.Item2})");
+                if (
+                    pair == null
+                    || string.IsNullOrEmpty(pair.Item1)
+                    || string.IsNullOrEmpty(pair.Item2)
+                )
+                    throw new NotSupportedException(
+                        $"Invalid {nameof(MetricPusher)} additional label: ({pair?.Item1}):({pair?.Item2})"
+                    );
 
                 sb.AppendFormat("/{0}/{1}", pair.Item1, pair.Item2);
             }
@@ -77,90 +97,100 @@ public class MetricPusher : MetricHandler
     protected override Task StartServer(CancellationToken cancel)
     {
         // Start the server processing loop asynchronously in the background.
-        return Task.Run(async delegate
-        {
-            // We do 1 final push after we get cancelled, to ensure that we publish the final state.
-            var pushingFinalState = false;
-
-            while (true)
+        return Task.Run(
+            async delegate
             {
-                // We schedule approximately at the configured interval. There may be some small accumulation for the
-                // part of the loop we do not measure but it is close enough to be acceptable for all practical scenarios.
-                var duration = ValueStopwatch.StartNew();
+                // We do 1 final push after we get cancelled, to ensure that we publish the final state.
+                var pushingFinalState = false;
 
-                try
+                while (true)
                 {
-                    var httpClient = _httpClientProvider();
+                    // We schedule approximately at the configured interval. There may be some small accumulation for the
+                    // part of the loop we do not measure but it is close enough to be acceptable for all practical scenarios.
+                    var duration = ValueStopwatch.StartNew();
 
-                    var request = new HttpRequestMessage
-                    {
-                        Method = _method,
-                        RequestUri = _targetUrl,
-                        // We use a copy-pasted implementation of PushStreamContent here to avoid taking a dependency on the old ASP.NET Web API where it lives.
-                        Content = new PushStreamContentInternal(async (stream, content, context) =>
-                        {
-                            try
-                            {
-                                // Do not pass CT because we only want to cancel after pushing, so a flush is always performed.
-                                await _registry.CollectAndExportAsTextAsync(stream, default);
-                            }
-                            finally
-                            {
-                                stream.Close();
-                            }
-                        }, PrometheusConstants.ExporterContentTypeValue),
-                    };
-
-                    var response = await httpClient.SendAsync(request);
-
-                    // If anything goes wrong, we want to get at least an entry in the trace log.
-                    response.EnsureSuccessStatusCode();
-                }
-                catch (ScrapeFailedException ex)
-                {
-                    // We do not consider failed scrapes a reportable error since the user code that raises the failure should be the one logging it.
-                    LoggerAccessor.LogError($"[MetricPusher] - StartServer: Skipping metrics push due to failed scrape: {ex.Message}");
-                }
-                catch (Exception ex)
-                {
-                    HandleFailedPush(ex);
-                }
-
-                if (cancel.IsCancellationRequested)
-                {
-                    if (!pushingFinalState)
-                    {
-                        // Continue for one more loop to push the final state.
-                        // We do this because it might be that we were stopped while in the middle of a push.
-                        pushingFinalState = true;
-                        continue;
-                    }
-                    else
-                    {
-                        // Final push completed, time to pack up our things and go home.
-                        break;
-                    }
-                }
-
-                var sleepTime = _pushInterval - duration.GetElapsedTime();
-
-                // Sleep until the interval elapses or the pusher is asked to shut down.
-                if (sleepTime > TimeSpan.Zero)
-                {
                     try
                     {
-                        await Task.Delay(sleepTime, cancel);
+                        var httpClient = _httpClientProvider();
+
+                        var request = new HttpRequestMessage
+                        {
+                            Method = _method,
+                            RequestUri = _targetUrl,
+                            // We use a copy-pasted implementation of PushStreamContent here to avoid taking a dependency on the old ASP.NET Web API where it lives.
+                            Content = new PushStreamContentInternal(
+                                async (stream, content, context) =>
+                                {
+                                    try
+                                    {
+                                        // Do not pass CT because we only want to cancel after pushing, so a flush is always performed.
+                                        await _registry
+                                            .CollectAndExportAsTextAsync(stream, default)
+                                            .ConfigureAwait(false);
+                                    }
+                                    finally
+                                    {
+                                        stream.Close();
+                                    }
+                                },
+                                PrometheusConstants.ExporterContentTypeValue
+                            ),
+                        };
+
+                        var response = await httpClient.SendAsync(request).ConfigureAwait(false);
+
+                        // If anything goes wrong, we want to get at least an entry in the trace log.
+                        response.EnsureSuccessStatusCode();
                     }
-                    catch (OperationCanceledException) when (cancel.IsCancellationRequested)
+                    catch (ScrapeFailedException ex)
                     {
-                        // The task was cancelled.
-                        // We continue the loop here to ensure final state gets pushed.
-                        pushingFinalState = true;
-                        continue;
+                        // We do not consider failed scrapes a reportable error since the user code that raises the failure should be the one logging it.
+                        LoggerAccessor.LogError(
+                            $"[MetricPusher] - StartServer: Skipping metrics push due to failed scrape: {ex.Message}"
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        HandleFailedPush(ex);
+                    }
+
+                    if (cancel.IsCancellationRequested)
+                    {
+                        if (!pushingFinalState)
+                        {
+                            // Continue for one more loop to push the final state.
+                            // We do this because it might be that we were stopped while in the middle of a push.
+                            pushingFinalState = true;
+                            continue;
+                        }
+                        else
+                        {
+                            // Final push completed, time to pack up our things and go home.
+                            break;
+                        }
+                    }
+
+                    var sleepTime = _pushInterval - duration.GetElapsedTime();
+
+                    // Sleep until the interval elapses or the pusher is asked to shut down.
+                    if (sleepTime > TimeSpan.Zero)
+                    {
+                        try
+                        {
+                            await Task.Delay(sleepTime, cancel).ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException) when (cancel.IsCancellationRequested)
+                        {
+                            // The task was cancelled.
+                            // We continue the loop here to ensure final state gets pushed.
+                            pushingFinalState = true;
+                            continue;
+                        }
                     }
                 }
-            }
-        });
+            },
+            cancel
+        );
     }
 
     private void HandleFailedPush(Exception ex)
@@ -173,7 +203,9 @@ public class MetricPusher : MetricHandler
         else
         {
             // If there is no error handler registered, we write to trace to at least hopefully get some attention to the problem.
-            LoggerAccessor.LogError(string.Format("[MetricPusher] - HandleFailedPush: Error in MetricPusher: {0}", ex));
+            LoggerAccessor.LogError(
+                string.Format("[MetricPusher] - HandleFailedPush: Error in MetricPusher: {0}", ex)
+            );
         }
     }
 }

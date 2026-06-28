@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameReporting
 {
-	[TdfStruct]
-	public struct GameReport
-	{
+    [TdfStruct]
+    public struct GameReport
+    {
+        [TdfMember("GRID")]
+        public ulong mGameReportingId;
 
-		[TdfMember("GRID")]
-		public ulong mGameReportingId;
+        [TdfMember("GTYP")]
+        public string mGameTypeName;
 
-		[TdfMember("GTYP")]
-		public string mGameTypeName;
-
-		[TdfMember("GAME")]
-		public object? mReport;
-
-	}
+        [TdfMember("GAME")]
+        public object? mReport;
+    }
 }

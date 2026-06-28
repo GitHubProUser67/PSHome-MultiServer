@@ -1,7 +1,5 @@
-using CustomLogger;
-using System;
 using System.Diagnostics;
-using System.Threading;
+using CustomLogger;
 
 namespace MultiServerLibrary.Extension
 {
@@ -25,13 +23,18 @@ namespace MultiServerLibrary.Extension
                 {
                     process.Kill();
 
-                    LoggerAccessor.LogWarn("[PreventProcessIdle] - Idle process {0} killed.", process.ProcessName);
+                    LoggerAccessor.LogWarn(
+                        "[PreventProcessIdle] - Idle process {0} killed.",
+                        process.ProcessName
+                    );
 
                     return true;
                 }
                 catch (Exception ex)
                 {
-                    LoggerAccessor.LogError($"[PreventProcessIdle] - Failed to kill idle process. Exception: {ex}");
+                    LoggerAccessor.LogError(
+                        $"[PreventProcessIdle] - Failed to kill idle process. Exception: {ex}"
+                    );
                 }
             }
 
@@ -48,17 +51,26 @@ namespace MultiServerLibrary.Extension
             //thx to: https://stackoverflow.com/a/49064915/7600726
             //see also https://www.mono-project.com/archived/mono_performance_counters/
 
-            if (process.HasExited) return double.MinValue;
+            if (process.HasExited)
+                return double.MinValue;
 
             // Preparing variable for application instance name
-            string name = string.Empty;
+            var name = string.Empty;
 #pragma warning disable
-            foreach (string instance in new PerformanceCounterCategory("Process").GetInstanceNames())
+            foreach (var instance in new PerformanceCounterCategory("Process").GetInstanceNames())
             {
-                if (process.HasExited) return double.MinValue;
+                if (process.HasExited)
+                    return double.MinValue;
                 if (instance.StartsWith(process.ProcessName))
                 {
-                    using (PerformanceCounter processId = new PerformanceCounter("Process", "ID Process", instance, true))
+                    using (
+                        PerformanceCounter processId = new PerformanceCounter(
+                            "Process",
+                            "ID Process",
+                            instance,
+                            true
+                        )
+                    )
                     {
                         if (process.Id == (int)processId.RawValue)
                         {
@@ -69,16 +81,28 @@ namespace MultiServerLibrary.Extension
                 }
             }
 
-            PerformanceCounter cpu = new PerformanceCounter("Process", "% Processor Time", name, true);
+            var cpu = new PerformanceCounter("Process", "% Processor Time", name, true);
 
             // Getting first initial values
             cpu.NextValue();
 
             // Creating delay to get correct values of CPU usage during next query
             Thread.Sleep(500);
-            if (process.HasExited) return double.MinValue;
+
+            if (process.HasExited)
+                return double.MinValue;
+
             return Math.Round(cpu.NextValue() / Environment.ProcessorCount, 2);
 #pragma warning restore
+        }
+
+        public static void RunDelayed(int delayMs, Func<Task> action)
+        {
+            Task.Run(async () =>
+            {
+                await Task.Delay(delayMs).ConfigureAwait(false);
+                await action().ConfigureAwait(false);
+            });
         }
     }
 }

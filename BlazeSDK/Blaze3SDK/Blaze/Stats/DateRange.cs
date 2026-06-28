@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Stats
 {
-	[TdfStruct]
-	public struct DateRange
-	{
+    [TdfStruct]
+    public struct DateRange
+    {
+        [TdfMember("END")]
+        public uint mEnd;
 
-		[TdfMember("END")]
-		public uint mEnd;
-
-		[TdfMember("STRT")]
-		public uint mStart;
-
-	}
+        [TdfMember("STRT")]
+        public uint mStart;
+    }
 }

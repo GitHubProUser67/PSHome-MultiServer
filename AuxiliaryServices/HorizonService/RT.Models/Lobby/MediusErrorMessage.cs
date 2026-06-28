@@ -1,6 +1,5 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
@@ -17,30 +16,27 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            // 
             ErrorCode = reader.ReadInt32();
             ErrorMessage = reader.ReadString(Constants.ERRORMSG_MAXLEN);
         }
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            // 
             writer.Write(ErrorCode);
             writer.Write(ErrorMessage, Constants.ERRORMSG_MAXLEN);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{ErrorCode}" + " " +
-                $"SessionKey: {ErrorMessage}";
+            return base.ToString()
+                + " "
+                + $"MessageID:{ErrorCode}"
+                + " "
+                + $"SessionKey: {ErrorMessage}";
         }
     }
 }

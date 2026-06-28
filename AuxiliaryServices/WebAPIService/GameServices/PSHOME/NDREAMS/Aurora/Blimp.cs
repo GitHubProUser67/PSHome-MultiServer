@@ -1,25 +1,25 @@
 using HttpMultipartParser;
 using MultiServerLibrary.HTTP;
-using System;
-using System.IO;
-using WebAPIService.GameServices.PSHOME.NDREAMS;
 
 namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
 {
     public static class Blimp
     {
-        public static string ProcessBlimps(DateTime CurrentDate, byte[] PostData, string ContentType)
+        public static string ProcessBlimps(
+            DateTime CurrentDate,
+            byte[] PostData,
+            string ContentType
+        )
         {
-            string key = string.Empty;
-            string func = string.Empty;
-            string resdata = string.Empty;
-            string user = string.Empty;
-            string ship = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var key = string.Empty;
+            var func = string.Empty;
+            var resdata = string.Empty;
+            var user = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
@@ -30,7 +30,7 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                         key = data.GetParameterValue("key");
                         resdata = data.GetParameterValue("data");
                         user = data.GetParameterValue("user");
-                        ship = data.GetParameterValue("ship");
+                        var ship = data.GetParameterValue("ship");
                     }
                     catch
                     {
@@ -45,12 +45,19 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                     case "play":
                         return "<xml></xml>";
                     case "ships":
-                        string ExpectedHash = NDREAMSServerUtils.Server_GetSignature("Blimps", user, resdata, CurrentDate);
+                        var ExpectedHash = NDREAMSServerUtils.Server_GetSignature(
+                            "Blimps",
+                            user,
+                            resdata,
+                            CurrentDate
+                        );
 
                         if (key == ExpectedHash)
                             return "<xml></xml>";
                         else
-                            CustomLogger.LoggerAccessor.LogWarn($"[nDreams] - Blimps: invalid key sent! Received:{key} Expected:{ExpectedHash}");
+                            CustomLogger.LoggerAccessor.LogWarn(
+                                $"[nDreams] - Blimps: invalid key sent! Received:{key} Expected:{ExpectedHash}"
+                            );
                         break;
                 }
             }

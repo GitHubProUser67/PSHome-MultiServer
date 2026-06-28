@@ -1,20 +1,20 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyReport, MediusMGCLMessageIds.ServerEndGameOnMeResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyReport,
+        MediusMGCLMessageIds.ServerEndGameOnMeResponse
+    )]
     public class MediusServerEndGameOnMeResponse : BaseMGCLMessage, IMediusResponse
     {
-
         public override byte PacketType => (byte)MediusMGCLMessageIds.ServerEndGameOnMeResponse;
 
         public MessageId MessageID { get; set; }
         public MGCL_ERROR_CODE Confirmation;
 
         public bool IsSuccess => Confirmation >= 0;
-
 
         public override void Deserialize(MessageReader reader)
         {
@@ -34,9 +34,10 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"Confirmation: {Confirmation}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"Confirmation: {Confirmation}";
         }
     }
 }

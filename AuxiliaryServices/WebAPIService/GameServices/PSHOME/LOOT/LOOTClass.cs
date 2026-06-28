@@ -1,23 +1,18 @@
 using CustomLogger;
-using System;
-using System.Collections.Generic;
 
 namespace WebAPIService.GameServices.PSHOME.LOOT
 {
-    public class LOOTClass
+    public class LOOTClass(string method, string absolutepath, string workpath)
     {
-        private string absolutepath;
-        private string workpath;
-        private string method;
+        private readonly string absolutepath = absolutepath;
+        private readonly string workpath = workpath;
+        private readonly string method = method;
 
-        public LOOTClass(string method, string absolutepath, string workpath)
-        {
-            this.absolutepath = absolutepath;
-            this.method = method;
-            this.workpath = workpath;
-        }
-
-        public string ProcessRequest(IDictionary<string, string> QueryParameters, byte[] PostData = null, string ContentType = null)
+        public string ProcessRequest(
+            IDictionary<string, string> QueryParameters,
+            byte[] PostData = null,
+            string ContentType = null
+        )
         {
             if (string.IsNullOrEmpty(absolutepath))
                 return null;
@@ -29,22 +24,30 @@ namespace WebAPIService.GameServices.PSHOME.LOOT
                     {
                         case "/index.action.php":
                             if (PostData != null && !string.IsNullOrEmpty(ContentType))
-                                return LOOTDatabase.ProcessDatabaseRequest(PostData, ContentType, workpath);
+                                return LOOTDatabase.ProcessDatabaseRequest(
+                                    PostData,
+                                    ContentType,
+                                    workpath
+                                );
                             break;
                         default:
-                            LoggerAccessor.LogWarn($"[LOOT] Unhandled POST request {absolutepath} please report to GITHUB");
+                            LoggerAccessor.LogWarn(
+                                $"[LOOT] Unhandled POST request {absolutepath} please report to GITHUB"
+                            );
                             break;
                     }
                     break;
                 case "GET":
-                    switch(absolutepath)
+                    switch (absolutepath)
                     {
                         case "/moviedb/settings/":
-                            {
-                                return LOOTMovieDb.FetchDBInfo(workpath, QueryParameters["id"]);
-                            }
+                        {
+                            return LOOTMovieDb.FetchDBInfo(workpath, QueryParameters["id"]);
+                        }
                         default:
-                            LoggerAccessor.LogWarn($"[LOOT] Unhandled GET request {absolutepath} please report to GITHUB");
+                            LoggerAccessor.LogWarn(
+                                $"[LOOT] Unhandled GET request {absolutepath} please report to GITHUB"
+                            );
                             break;
                     }
                     break;

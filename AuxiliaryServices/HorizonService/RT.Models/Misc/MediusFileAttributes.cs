@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -13,22 +12,27 @@ namespace Horizon.RT.Models
         /// Client provided text description of file
         /// </summary>
         public string Description; //MEDIUS_FILE_MAX_DESCRIPTION_LENGTH
+
         /// <summary>
         /// Read only date/time when file was last changed
         /// </summary>
         public uint LastChangedTimeStamp;
+
         /// <summary>
         /// Read only ID of user that last changed the file
         /// </summary>
         public uint LastChangedByUserID;
+
         /// <summary>
         /// Read only number of accesses requested for the file
         /// </summary>
         public uint NumberAccesses;
+
         /// <summary>
         /// Flag specifying if the file is streamable
         /// </summary>
         public uint StreamableFlag;
+
         /// <summary>
         /// The desired data rate to stream the file data to/from the client
         /// </summary>
@@ -56,13 +60,14 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"Description: {Description} " +
-                $"LastChangedTimeStamp: {LastChangedTimeStamp} " +
-                $"LastChangedByUserID: {LastChangedByUserID} " +
-                $"NumberAccesses: {NumberAccesses} " +
-                $"StreamableFlag: {StreamableFlag} " +
-                $"StreamingDataRate: {StreamingDataRate}";
+            return base.ToString()
+                + " "
+                + $"Description: {Description} "
+                + $"LastChangedTimeStamp: {LastChangedTimeStamp} "
+                + $"LastChangedByUserID: {LastChangedByUserID} "
+                + $"NumberAccesses: {NumberAccesses} "
+                + $"StreamableFlag: {StreamableFlag} "
+                + $"StreamingDataRate: {StreamingDataRate}";
         }
     }
 }

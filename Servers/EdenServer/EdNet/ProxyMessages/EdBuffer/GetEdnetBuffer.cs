@@ -1,6 +1,6 @@
-﻿using EdNetService.CRC;
+﻿using System.Net;
+using EdNetService.CRC;
 using EdNetService.Models;
-using System.Net;
 
 namespace EdenServer.EdNet.ProxyMessages.EdBuffer
 {
@@ -10,15 +10,20 @@ namespace EdenServer.EdNet.ProxyMessages.EdBuffer
 
         private static readonly byte[] defaultDriverProfile = GenerateDefaultDriverProfile();
 
-        public override byte[]? Process(IPEndPoint endpoint, IPEndPoint target, ClientTask task, ushort PacketMagic)
+        public override byte[]? Process(
+            IPEndPoint endpoint,
+            IPEndPoint target,
+            ClientTask task,
+            ushort PacketMagic
+        )
         {
-            EdStore request = task.Request;
+            var request = task.Request;
 
             uint profileSize;
-            uint bufferid = request.ExtractUInt32();
-            uint offset = request.ExtractUInt32();
+            var bufferid = request.ExtractUInt32();
+            var offset = request.ExtractUInt32();
 
-            EdStore response = new EdStore(null, 32767);
+            var response = new EdStore(null, 32767);
 
             response.InsertStart(edStoreBank.CRC_A_GET_EDNETBUFFER);
             response.InsertUInt32(bufferid);
@@ -31,7 +36,7 @@ namespace EdenServer.EdNet.ProxyMessages.EdBuffer
                         response.InsertUInt8(2); // Failure
                     else
                     {
-                        byte[] payload = new byte[Math.Min(chunkSize, profileSize - offset)];
+                        var payload = new byte[Math.Min(chunkSize, profileSize - offset)];
                         Array.Copy(defaultDriverProfile, (int)offset, payload, 0, payload.Length);
 
                         response.InsertUInt8(1); // Success
@@ -58,11 +63,11 @@ namespace EdenServer.EdNet.ProxyMessages.EdBuffer
 
         private static byte[] GenerateDefaultDriverProfile()
         {
-            EdStore driverStore = new EdStore(null, 1200);
+            var driverStore = new EdStore(null, 1200);
 
             // TODO
 
-            byte[] output = new byte[driverStore.CurrentSize];
+            var output = new byte[driverStore.CurrentSize];
             Array.Copy(driverStore.Data, 0, output, 0, output.Length);
 
             return output;

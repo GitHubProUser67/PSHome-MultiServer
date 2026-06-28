@@ -1,0 +1,74 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="ARM32" />
+    <Platform Name="ARM64" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/AuxiliaryServices/">
+    <Project Path="AuxiliaryServices/AlcatrazService/AlcatrazService.csproj" />
+    <Project Path="AuxiliaryServices/EdNetService/EdNetService.csproj" />
+    <Project Path="AuxiliaryServices/HorizonService/HorizonService.csproj" />
+    <Project Path="AuxiliaryServices/MultiSpyService/MultiSpyService.csproj" />
+    <Project Path="AuxiliaryServices/WebAPIService/WebAPIService.csproj" />
+  </Folder>
+  <Folder Name="/BackendServices/">
+    <Project Path="BackendServices/CastleLibrary/CastleLibrary.csproj" />
+    <Project Path="BackendServices/CustomLogger/CustomLogger.csproj" />
+    <Project Path="BackendServices/DNSLibrary/DNSLibrary.csproj" />
+    <Project Path="BackendServices/EndianTools/EndianTools.csproj" />
+    <Project Path="BackendServices/MultiServerLibrary/MultiServerLibrary.csproj" />
+    <Project Path="BackendServices/NetCoreServer/NetCoreServer.csproj" />
+    <Project Path="BackendServices/Prometheus/Prometheus.csproj" />
+    <Project Path="BackendServices/SpaceWizards.HttpListener/SpaceWizards.HttpListener.csproj" />
+    <Project Path="BackendServices/TechnitiumLibrary.Net.Firewall/TechnitiumLibrary.Net.Firewall.csproj" />
+    <Project Path="BackendServices/WatsonWebserver/WatsonWebserver.csproj" />
+  </Folder>
+  <Folder Name="/BlazeSDK/">
+    <Project Path="BlazeSDK/Blaze2SDK/Blaze2SDK.csproj" />
+    <Project Path="BlazeSDK/Blaze3SDK/Blaze3SDK.csproj" />
+    <Project Path="BlazeSDK/BlazeCommon/BlazeCommon.csproj" />
+    <Project Path="BlazeSDK/Tdf/Tdf.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/" />
+  <Folder Name="/Plugins/ApacheNet/" />
+  <Folder Name="/Plugins/ApacheNet/BuildIn/">
+    <Project Path="Plugins/ApacheNet/PdfToJpeg/PdfToJpeg.csproj" />
+    <Project Path="Plugins/ApacheNet/WebVideoService/WebVideoService.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/ApacheNet/Eden/">
+    <Project Path="Plugins/ApacheNet/EdNetCRCCalculator/EdNetCRCCalculator.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/ApacheNet/Sony/">
+    <Project Path="Plugins/ApacheNet/SceProfanityFilterService/SceProfanityFilterService.csproj" />
+    <Project Path="Plugins/ApacheNet/SonyCdnReroute/SonyCdnReroute.csproj" />
+  </Folder>
+  <Folder Name="/RoselynMaintainers/">
+    <Project Path="RoselynMaintainers/DirectiveRewriter/DirectiveRewriter.csproj" />
+  </Folder>
+  <Folder Name="/Servers/">
+    <Project Path="Servers/ApacheNet/ApacheNet.csproj" />
+    <Project Path="Servers/EdenServer/EdenServer.csproj" />
+    <Project Path="Servers/Horizon/Horizon.csproj" />
+    <Project Path="Servers/MitmDNS/MitmDNS.csproj" />
+    <Project Path="Servers/MultiServerWebServices/MultiServerWebServices.csproj" />
+    <Project Path="Servers/MultiSocks/MultiSocks.csproj" />
+    <Project Path="Servers/MultiSpy/MultiSpy.csproj" />
+    <Project Path="Servers/QuazalServer/QuazalServer.csproj" />
+    <Project Path="Servers/SSFWServer/SSFWServer.csproj" />
+    <Project Path="Servers/SVO/SVO.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Folder Name="/Win32GUI/">
+    <Project Path="Win32GUI/Json Editor/Json Editor.csproj" />
+    <Project Path="Win32GUI/JsonTreeView/JsonTreeView.csproj" />
+    <Project Path="Win32GUI/RemoteControl/RemoteControl.csproj" />
+  </Folder>
+  <Project Path="docker-compose.dcproj">
+    <Platform Project="AnyCPU" />
+    <Build />
+  </Project>
+</Solution>

@@ -1,13 +1,14 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyReport, MediusMGCLMessageIds.ServerWorldReportOnMe)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyReport,
+        MediusMGCLMessageIds.ServerWorldReportOnMe
+    )]
     public class MediusServerWorldReportOnMe : BaseMGCLMessage, IMediusRequest
     {
-
         public override byte PacketType => (byte)MediusMGCLMessageIds.ServerWorldReportOnMe;
 
         public MessageId MessageID { get; set; }
@@ -34,10 +35,8 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            // 
             MessageID = reader.Read<MessageId>();
 
             GameName = reader.ReadString(Constants.MGCL_GAMENAME_MAXLEN);
@@ -65,10 +64,8 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            // 
             writer.Write(MessageID ?? MessageId.Empty);
             writer.Write(GameName, Constants.MGCL_GAMENAME_MAXLEN);
             writer.Write(GameStats, Constants.MGCL_GAMESTATS_MAXLEN);
@@ -94,28 +91,29 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"GameName: {GameName} " +
-                $"GameStats: {System.BitConverter.ToString(GameStats)} " +
-                $"GamePassword: {GamePassword} " +
-                $"ApplicationID: {ApplicationID} " +
-                $"MaxClients: {MaxPlayers} " +
-                $"MinClients: {MinPlayers} " +
-                $"PlayerCount: {PlayerCount} " +
-                $"GameLevel: {GameLevel} " +
-                $"PlayerSkillLevel: {PlayerSkillLevel} " +
-                $"RulesSet: {RulesSet} " +
-                $"GenericField1: {GenericField1:X8} " +
-                $"GenericField2: {GenericField2:X8} " +
-                $"GenericField3: {GenericField3:X8} " +
-                $"GenericField4: {GenericField4:X8} " +
-                $"GenericField5: {GenericField5:X8} " +
-                $"GenericField6: {GenericField6:X8} " +
-                $"GenericField7: {GenericField7:X8} " +
-                $"GenericField8: {GenericField8:X8} " +
-                $"MediusWorldID: {MediusWorldID} " +
-                $"WorldStatus: {WorldStatus} ";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"GameName: {GameName} "
+                + $"GameStats: {System.BitConverter.ToString(GameStats)} "
+                + $"GamePassword: {GamePassword} "
+                + $"ApplicationID: {ApplicationID} "
+                + $"MaxClients: {MaxPlayers} "
+                + $"MinClients: {MinPlayers} "
+                + $"PlayerCount: {PlayerCount} "
+                + $"GameLevel: {GameLevel} "
+                + $"PlayerSkillLevel: {PlayerSkillLevel} "
+                + $"RulesSet: {RulesSet} "
+                + $"GenericField1: {GenericField1:X8} "
+                + $"GenericField2: {GenericField2:X8} "
+                + $"GenericField3: {GenericField3:X8} "
+                + $"GenericField4: {GenericField4:X8} "
+                + $"GenericField5: {GenericField5:X8} "
+                + $"GenericField6: {GenericField6:X8} "
+                + $"GenericField7: {GenericField7:X8} "
+                + $"GenericField8: {GenericField8:X8} "
+                + $"MediusWorldID: {MediusWorldID} "
+                + $"WorldStatus: {WorldStatus} ";
         }
     }
 }

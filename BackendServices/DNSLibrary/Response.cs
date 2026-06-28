@@ -1,23 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
-using DNS.Protocol.ResourceRecords;
-using DNS.Protocol.Utils;
+using DNSLibrary.ResourceRecords;
+using DNSLibrary.Utils;
 using EndianTools;
 
-namespace DNS.Protocol {
-    public class Response : IResponse {
+namespace DNSLibrary
+{
+    public class Response : IResponse
+    {
         private Header header;
-        private IList<Question> questions;
-        private IList<IResourceRecord> answers;
-        private IList<IResourceRecord> authority;
-        private IList<IResourceRecord> additional;
+        private readonly IList<Question> questions;
+        private readonly IList<IResourceRecord> answers;
+        private readonly IList<IResourceRecord> authority;
+        private readonly IList<IResourceRecord> additional;
 
         // Static byte arrays for record types and classes
-        private static readonly byte[] TypeA_InClass = new byte[4] { 0x00, 0x01, 0x00, 0x01 };   // A, IN
-        private static readonly byte[] TypeAAAA_InClass = new byte[4] { 0x00, 0x1C, 0x00, 0x01 }; // AAAA, IN
+        private static readonly byte[] TypeA_InClass = [0x00, 0x01, 0x00, 0x01]; // A, IN
+        private static readonly byte[] TypeAAAA_InClass = [0x00, 0x1C, 0x00, 0x01]; // AAAA, IN
 
         enum RCODE : byte
         {
@@ -25,7 +24,12 @@ namespace DNS.Protocol {
             X80 = 0x80,
         }
 
-        public static byte[] MakeType0DnsResponsePacket(byte[] Req, List<IPAddress> Ips, int maxResponseSize = 512, int timeToLive = 180)
+        public static byte[] MakeType0DnsResponsePacket(
+            byte[] Req,
+            List<IPAddress> Ips,
+            int maxResponseSize = 512,
+            int timeToLive = 180
+        )
         {
             const byte dnsHeaderSize = 12;
 
@@ -36,15 +40,15 @@ namespace DNS.Protocol {
             const byte ptr = byte.MinValue;
             const ushort sizeOfUshort = sizeof(ushort);
 
-            bool TruncateFlag = false;
-            List<byte> ans = new List<byte>();
+            var TruncateFlag = false;
+            var ans = new List<byte>();
 
             // https://web.archive.org/web/20150326065952/http://www.ccs.neu.edu/home/amislove/teaching/cs4700/fall09/handouts/project1-primer.pdf
             // Header
 
-            byte[] ulongBuffer = new byte[sizeof(ulong) - sizeOfUshort];
-            byte[] intBuffer = new byte[sizeof(int)];
-            byte[] ushortBuffer = new byte[sizeOfUshort] { Req[0], Req[1] }; // ID
+            var ulongBuffer = new byte[sizeof(ulong) - sizeOfUshort];
+            var intBuffer = new byte[sizeof(int)];
+            var ushortBuffer = new byte[sizeOfUshort] { Req[0], Req[1] }; // ID
 
             ans.AddRange(ushortBuffer);
 
@@ -75,14 +79,14 @@ namespace DNS.Protocol {
             for (int i = dnsHeaderSize; i < Req.Length; i++)
                 ans.Add(Req[i]);
 
-            int responseSize = ans.Count;
+            var responseSize = ans.Count;
 
-            foreach (IPAddress ip in Ips)
+            foreach (var ip in Ips)
             {
-                byte[] addrBytes = ip.GetAddressBytes();
+                var addrBytes = ip.GetAddressBytes();
 
-                ushort addrSizeOf = (ushort)addrBytes.Length;
-                int payloadSize = dnsHeaderSize + addrSizeOf;
+                var addrSizeOf = (ushort)addrBytes.Length;
+                var payloadSize = dnsHeaderSize + addrSizeOf;
 
                 if (payloadSize + responseSize > maxResponseSize)
                 {
@@ -105,7 +109,13 @@ namespace DNS.Protocol {
                     ans.AddRange(TypeA_InClass);
 
                 // Combine Data length (4 bytes for IPv4, 16 bytes for IPv6) and TTL
-                EndianAwareConverter.WriteUInt64(ulongBuffer, big, ptr, ((ulong)(uint)timeToLive << 16) | addrSizeOf, true);
+                EndianAwareConverter.WriteUInt64(
+                    ulongBuffer,
+                    big,
+                    ptr,
+                    ((ulong)(uint)timeToLive << 16) | addrSizeOf,
+                    true
+                );
 
                 ans.AddRange(ulongBuffer);
                 ans.AddRange(addrBytes);
@@ -117,7 +127,7 @@ namespace DNS.Protocol {
                 // Set the truncated (TC) flag in the header (6th bit of second byte)
                 ans[3] = (byte)(ans[3] | 0x02);
 
-            byte[] response = ans.ToArray();
+            var response = ans.ToArray();
 
             if (responseSize < maxResponseSize)
                 Array.Resize(ref response, response.Length + (maxResponseSize - responseSize));
@@ -125,44 +135,64 @@ namespace DNS.Protocol {
             return response;
         }
 
-        public static Response FromRequest(IRequest request) {
-            Response response = new Response
-            {
-                Id = request.Id
-            };
+        public static Response FromRequest(IRequest request)
+        {
+            var response = new Response { Id = request.Id };
 
-            foreach (Question question in request.Questions) {
+            foreach (var question in request.Questions)
+            {
                 response.Questions.Add(question);
             }
 
             return response;
         }
 
-        public static Response FromArray(byte[] message) {
-            Header header = Header.FromArray(message);
-            int offset = header.Size;
+        public static Response FromArray(byte[] message)
+        {
+            var header = Header.FromArray(message);
+            var offset = Header.Size;
 
-            if (!header.Response) {
-                throw new ArgumentException("Invalid response message");
-            }
-
-            if (header.Truncated) {
-                return new Response(header,
-                    Question.GetAllFromArray(message, offset, header.QuestionCount),
-                    new List<IResourceRecord>(),
-                    new List<IResourceRecord>(),
-                    new List<IResourceRecord>());
-            }
-
-            return new Response(header,
-                Question.GetAllFromArray(message, offset, header.QuestionCount, out offset),
-                ResourceRecordFactory.GetAllFromArray(message, offset, header.AnswerRecordCount, out offset),
-                ResourceRecordFactory.GetAllFromArray(message, offset, header.AuthorityRecordCount, out offset),
-                ResourceRecordFactory.GetAllFromArray(message, offset, header.AdditionalRecordCount, out offset));
+            return !header.Response ? throw new ArgumentException("Invalid response message")
+                : header.Truncated
+                    ? new Response(
+                        header,
+                        Question.GetAllFromArray(message, offset, header.QuestionCount),
+                        [],
+                        [],
+                        []
+                    )
+                : new Response(
+                    header,
+                    Question.GetAllFromArray(message, offset, header.QuestionCount, out offset),
+                    ResourceRecordFactory.GetAllFromArray(
+                        message,
+                        offset,
+                        header.AnswerRecordCount,
+                        out offset
+                    ),
+                    ResourceRecordFactory.GetAllFromArray(
+                        message,
+                        offset,
+                        header.AuthorityRecordCount,
+                        out offset
+                    ),
+                    ResourceRecordFactory.GetAllFromArray(
+                        message,
+                        offset,
+                        header.AdditionalRecordCount,
+                        out _
+                    )
+                );
         }
 
-        public Response(Header header, IList<Question> questions, IList<IResourceRecord> answers,
-                IList<IResourceRecord> authority, IList<IResourceRecord> additional) {
+        public Response(
+            Header header,
+            IList<Question> questions,
+            IList<IResourceRecord> answers,
+            IList<IResourceRecord> authority,
+            IList<IResourceRecord> additional
+        )
+        {
             this.header = header;
             this.questions = questions;
             this.answers = answers;
@@ -170,22 +200,24 @@ namespace DNS.Protocol {
             this.additional = additional;
         }
 
-        public Response() {
+        public Response()
+        {
             header = new Header();
-            questions = new List<Question>();
-            answers = new List<IResourceRecord>();
-            authority = new List<IResourceRecord>();
-            additional = new List<IResourceRecord>();
+            questions = [];
+            answers = [];
+            authority = [];
+            additional = [];
 
             header.Response = true;
         }
 
-        public Response(IResponse response) {
+        public Response(IResponse response)
+        {
             header = new Header();
-            questions = new List<Question>(response.Questions);
-            answers = new List<IResourceRecord>(response.AnswerRecords);
-            authority = new List<IResourceRecord>(response.AuthorityRecords);
-            additional = new List<IResourceRecord>(response.AdditionalRecords);
+            questions = [.. response.Questions];
+            answers = [.. response.AnswerRecords];
+            authority = [.. response.AuthorityRecords];
+            additional = [.. response.AdditionalRecords];
 
             header.Response = true;
 
@@ -196,75 +228,90 @@ namespace DNS.Protocol {
             ResponseCode = response.ResponseCode;
         }
 
-        public IList<Question> Questions {
+        public IList<Question> Questions
+        {
             get { return questions; }
         }
 
-        public IList<IResourceRecord> AnswerRecords {
+        public IList<IResourceRecord> AnswerRecords
+        {
             get { return answers; }
         }
 
-        public IList<IResourceRecord> AuthorityRecords {
+        public IList<IResourceRecord> AuthorityRecords
+        {
             get { return authority; }
         }
 
-        public IList<IResourceRecord> AdditionalRecords {
+        public IList<IResourceRecord> AdditionalRecords
+        {
             get { return additional; }
         }
 
-        public int Id {
+        public int Id
+        {
             get { return header.Id; }
             set { header.Id = value; }
         }
 
-        public bool RecursionAvailable {
+        public bool RecursionAvailable
+        {
             get { return header.RecursionAvailable; }
             set { header.RecursionAvailable = value; }
         }
 
-        public bool AuthenticData {
+        public bool AuthenticData
+        {
             get { return header.AuthenticData; }
             set { header.AuthenticData = value; }
         }
 
-        public bool CheckingDisabled {
+        public bool CheckingDisabled
+        {
             get { return header.CheckingDisabled; }
             set { header.CheckingDisabled = value; }
         }
 
-        public bool AuthorativeServer {
+        public bool AuthorativeServer
+        {
             get { return header.AuthorativeServer; }
             set { header.AuthorativeServer = value; }
         }
 
-        public bool Truncated {
+        public bool Truncated
+        {
             get { return header.Truncated; }
             set { header.Truncated = value; }
         }
 
-        public OperationCode OperationCode {
+        public OperationCode OperationCode
+        {
             get { return header.OperationCode; }
             set { header.OperationCode = value; }
         }
 
-        public ResponseCode ResponseCode {
+        public ResponseCode ResponseCode
+        {
             get { return header.ResponseCode; }
             set { header.ResponseCode = value; }
         }
 
-        public int Size {
-            get {
-                return header.Size +
-                    questions.Sum(q => q.Size) +
-                    answers.Sum(a => a.Size) +
-                    authority.Sum(a => a.Size) +
-                    additional.Sum(a => a.Size);
+        public int Size
+        {
+            get
+            {
+                return Header.Size
+                    + questions.Sum(q => q.Size)
+                    + answers.Sum(a => a.Size)
+                    + authority.Sum(a => a.Size)
+                    + additional.Sum(a => a.Size);
             }
         }
 
-        public byte[] ToArray() {
+        public byte[] ToArray()
+        {
             UpdateHeader();
-            ByteStream result = new ByteStream(Size);
+            var result = new ByteStream(Size);
 
             result
                 .Append(header.ToArray())
@@ -276,16 +323,24 @@ namespace DNS.Protocol {
             return result.ToArray();
         }
 
-        public override string ToString() {
+        public override string ToString()
+        {
             UpdateHeader();
 
-            return ObjectStringifier.New(this)
+            return ObjectStringifier
+                .New(this)
                 .Add(nameof(Header), header)
-                .Add(nameof(Questions), nameof(AnswerRecords), nameof(AuthorityRecords), nameof(AdditionalRecords))
+                .Add(
+                    nameof(Questions),
+                    nameof(AnswerRecords),
+                    nameof(AuthorityRecords),
+                    nameof(AdditionalRecords)
+                )
                 .ToString();
         }
 
-        private void UpdateHeader() {
+        private void UpdateHeader()
+        {
             header.QuestionCount = questions.Count;
             header.AnswerRecordCount = answers.Count;
             header.AuthorityRecordCount = authority.Count;

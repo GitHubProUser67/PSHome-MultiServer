@@ -1,43 +1,39 @@
-using CustomLogger;
-using MultiSpyService.Utils;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
+using CustomLogger;
+using MultiServerLibrary.Extension.NET;
+using MultiSpyService.Utils;
 
 namespace MultiSpy.Servers
 {
-    internal class CDKeyServer
-	{
-		public Thread Thread;
+    internal partial class CDKeyServer
+    {
+        public Thread Thread;
 
-		private const int BufferSize = 8192;
-		private Socket? _socket;
-		private SocketAsyncEventArgs? _socketReadEvent;
-		private byte[]? _socketReceivedBuffer;
+        private const int BufferSize = 8192;
+        private Socket? _socket;
+        private SocketAsyncEventArgs? _socketReadEvent;
+        private byte[]? _socketReceivedBuffer;
 
-		private readonly Regex _dataPattern = new Regex(@"^\\auth\\\\pid\\1059\\ch\\[a-zA-z0-9]{8,10}\\resp\\(?<Challenge>[a-zA-z0-9]{72})\\ip\\\d+\\skey\\(?<Key>\d+)(\\reqproof\\[01]\\)?$", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture);
-		private const string _dataResponse = @"\uok\\cd\{0}\skey\{1}";
+        private readonly Regex _dataPattern = MyRegex();
+        private const string _dataResponse = @"\uok\\cd\{0}\skey\{1}";
 
-		public CDKeyServer(IPAddress listen, ushort port)
-		{
-			Thread = new Thread(StartServer) {
-				Name = "CD Key Thread"
-			};
-			Thread.Start(new AddressInfo() {
-				Address = listen,
-				Port = port
-			});
-		}
+        public CDKeyServer(IPAddress listen, ushort port)
+        {
+            Thread = new Thread(StartServer) { Name = "CD Key Thread" };
+            Thread.Start(new AddressInfo() { Address = listen, Port = port });
+        }
 
-		public void Dispose()
-		{
-			Dispose(true);
-			GC.SuppressFinalize(this);
-		}
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
-		protected virtual void Dispose(bool disposing)
-		{
+        protected virtual void Dispose(bool disposing)
+        {
             if (disposing)
             {
                 if (_socket != null)
@@ -47,91 +43,134 @@ namespace MultiSpy.Servers
                         _socket.Close();
                         _socket.Dispose();
                     }
-                    catch { /* ignore */ }
+                    catch
+                    { /* ignore */
+                    }
                     _socket = null;
                 }
             }
         }
 
-		~CDKeyServer()
-		{
-			Dispose(false);
-		}
+        ~CDKeyServer()
+        {
+            Dispose(false);
+        }
 
-		private void StartServer(object? parameter)
-		{
-			AddressInfo? info = (AddressInfo?)parameter;
+        private void StartServer(object? parameter)
+        {
+            var info = (AddressInfo?)parameter;
 
-			LoggerAccessor.LogInfo("[CDKeyServer] - Starting CD Key Server");
+            LoggerAccessor.LogInfo("[CDKeyServer] - Starting CD Key Server");
 
-			try {
-				_socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp) {
-					SendTimeout = 5000,
-					ReceiveTimeout = 5000,
-					SendBufferSize = BufferSize,
-					ReceiveBufferSize = BufferSize
-				};
+            try
+            {
+                _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp)
+                {
+                    SendTimeout = 5000,
+                    ReceiveTimeout = 5000,
+                    SendBufferSize = BufferSize,
+                    ReceiveBufferSize = BufferSize,
+                };
 
-				_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, true);
-				_socket.Bind(new IPEndPoint(info.Address, info.Port));
+                _socket.SetSocketOption(
+                    SocketOptionLevel.Socket,
+                    SocketOptionName.ExclusiveAddressUse,
+                    true
+                );
+                _socket.Bind(new IPEndPoint(info.Address, info.Port));
 
-				_socketReadEvent = new SocketAsyncEventArgs() {
-					RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0)
-				};
-				_socketReceivedBuffer = new byte[BufferSize];
-				_socketReadEvent.SetBuffer(_socketReceivedBuffer, 0, BufferSize);
-				_socketReadEvent.Completed += OnDataReceived;
-			} catch (Exception e) {
-                LoggerAccessor.LogError("[CDKeyServer] - " + String.Format("Unable to bind CD Key Server to {0}:{1}", info.Address, info.Port));
+                _socketReadEvent = new SocketAsyncEventArgs()
+                {
+                    RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0),
+                };
+                _socketReceivedBuffer = new byte[BufferSize];
+                _socketReadEvent.SetBuffer(_socketReceivedBuffer, 0, BufferSize);
+                _socketReadEvent.Completed += OnDataReceived;
+            }
+            catch (Exception e)
+            {
+                LoggerAccessor.LogError(
+                    "[CDKeyServer] - "
+                        + String.Format(
+                            "Unable to bind CD Key Server to {0}:{1}",
+                            info.Address,
+                            info.Port
+                        )
+                );
                 LoggerAccessor.LogError("[CDKeyServer] - " + e.ToString());
-				return;
-			}
+                return;
+            }
 
-			WaitForData();
-		}
+            WaitForData();
+        }
 
-		private void WaitForData()
-		{
-			Thread.Sleep(10);
+        private void WaitForData()
+        {
+            Thread.Sleep(10);
 
-			try {
-				_socket?.ReceiveFromAsync(_socketReadEvent);
-			} catch (SocketException e) {
+            try
+            {
+                _socket?.ReceiveFromAsync(_socketReadEvent);
+            }
+            catch (SocketException e)
+            {
                 LoggerAccessor.LogError("[CDKeyServer] - Error receiving data");
                 LoggerAccessor.LogError("[CDKeyServer] - " + e.ToString());
-				return;
-			}
-		}
+                return;
+            }
+        }
 
-		private void OnDataReceived(object? sender, SocketAsyncEventArgs e)
-		{
-			try {
-				IPEndPoint? remote = (IPEndPoint?)e.RemoteEndPoint;
+        private void OnDataReceived(object? sender, SocketAsyncEventArgs e)
+        {
+            try
+            {
+                var remote = (IPEndPoint?)e.RemoteEndPoint;
 
-				string decrypted = XorEncoding.Xor(Encoding.UTF8.GetString(e.Buffer, e.Offset, e.BytesTransferred));
+                var decrypted = XorEncoding.Xor(
+                    Encoding.UTF8.GetString(e.Buffer, e.Offset, e.BytesTransferred)
+                );
 
-				// known messages
-				// \ka\ = keep alive from the game server every 20s, we don't care about this
-				// \auth\ ... = authenticate cd key, this is what we care about
-				// \disc\ ... = disconnect cd key, because there's checks if the cd key is in use, which we don't care about really, but we could if we wanted to
+                // known messages
+                // \ka\ = keep alive from the game server every 20s, we don't care about this
+                // \auth\ ... = authenticate cd key, this is what we care about
+                // \disc\ ... = disconnect cd key, because there's checks if the cd key is in use, which we don't care about really, but we could if we wanted to
 
-				// \ka\ is a keep alive from the game server, it's useless :p
-				if (decrypted != @"\ka\") {
-					Match m = _dataPattern.Match(decrypted);
+                // \ka\ is a keep alive from the game server, it's useless :p
+                if (decrypted != @"\ka\")
+                {
+                    var m = _dataPattern.Match(decrypted);
 
-					if (m.Success) {
-                        LoggerAccessor.LogInfo("[CDKeyServer] - " + String.Format("Received request from: {0}:{1}", ((IPEndPoint)e.RemoteEndPoint).Address, ((IPEndPoint)e.RemoteEndPoint).Port));
+                    if (m.Success)
+                    {
+                        LoggerAccessor.LogInfo(
+                            "[CDKeyServer] - "
+                                + String.Format(
+                                    "Received request from: {0}:{1}",
+                                    ((IPEndPoint)e.RemoteEndPoint).Address,
+                                    ((IPEndPoint)e.RemoteEndPoint).Port
+                                )
+                        );
 
-						string reply = String.Format(_dataResponse, m.Groups["Challenge"].Value.Substring(0, 32), m.Groups["Key"].Value);
+                        var reply = String.Format(
+                            _dataResponse,
+                            m.Groups["Challenge"].Value[..32],
+                            m.Groups["Key"].Value
+                        );
 
-						byte[] response = Encoding.UTF8.GetBytes(XorEncoding.Xor(reply));
-						_socket?.SendTo(response, remote);
-					}
-				}
-			} catch (Exception) {
-			}
+                        var response = Encoding.UTF8.GetBytes(XorEncoding.Xor(reply));
+                        _socket?.SendTo(response, remote);
+                    }
+                }
+            }
+            catch (Exception) { }
 
-			WaitForData();
-		}
-	}
+            WaitForData();
+        }
+
+        [GeneratedRegex(
+            @"^\\auth\\\\pid\\1059\\ch\\[a-zA-z0-9]{8,10}\\resp\\(?<Challenge>[a-zA-z0-9]{72})\\ip\\\d+\\skey\\(?<Key>\d+)(\\reqproof\\[01]\\)?$",
+            RegexOptions.ExplicitCapture | RegexOptions.Compiled | RegexOptions.CultureInvariant
+        )]
+        private static partial Regex MyRegex();
+    }
 }

@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct GetFullGameDataRequest
-	{
+    [TdfStruct]
+    public struct GetFullGameDataRequest
+    {
+        [TdfMember("GIDL")]
+        public List<uint> mGameIdList;
 
-		[TdfMember("GIDL")]
-		public List<uint> mGameIdList;
-
-		[TdfMember("PIDL")]
-		public List<string> mPersistedGameIdList;
-
-	}
+        [TdfMember("PIDL")]
+        public List<string> mPersistedGameIdList;
+    }
 }

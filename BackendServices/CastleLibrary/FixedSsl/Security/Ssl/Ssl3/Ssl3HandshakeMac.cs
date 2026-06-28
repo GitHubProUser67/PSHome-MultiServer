@@ -1,6 +1,6 @@
 /*
  *   Mentalis.org Security Library
- * 
+ *
  *     Copyright � 2002-2005, The Mentalis.org Team
  *     All rights reserved.
  *     http://www.mentalis.org/
@@ -11,11 +11,11 @@
  *   are met:
  *
  *     - Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer. 
+ *        notice, this list of conditions and the following disclaimer.
  *
  *     - Neither the name of the Mentalis.org Team, nor the names of its contributors
  *        may be used to endorse or promote products derived from this
- *        software without specific prior written permission. 
+ *        software without specific prior written permission.
  *
  *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -31,95 +31,99 @@
  *   OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-using System;
 using System.Security.Cryptography;
 
-namespace Org.Mentalis.Security.Ssl.Ssl3
+namespace CastleLibrary.FixedSsl.Security.Ssl.Ssl3
 {
-    internal sealed class Ssl3HandshakeMac : KeyedHashAlgorithm {
-		// hash(master_secret + pad2 + hash(handshake_messages +
-		//      Sender + master_secret + pad1));
-		public Ssl3HandshakeMac(HashType hash) : this(hash, null) {}
-		public Ssl3HandshakeMac(HashType hashType, byte[] rgbKey) {
-			if (rgbKey == null)
-				throw new ArgumentNullException();
-			if (hashType == HashType.MD5) {
-#if NET6_0_OR_GREATER
+    internal sealed class Ssl3HandshakeMac : KeyedHashAlgorithm
+    {
+        // hash(master_secret + pad2 + hash(handshake_messages +
+        //      Sender + master_secret + pad1));
+        public Ssl3HandshakeMac(HashType hash)
+            : this(hash, null) { }
+
+        public Ssl3HandshakeMac(HashType hashType, byte[] rgbKey)
+        {
+            ArgumentNullException.ThrowIfNull(rgbKey);
+            if (hashType == HashType.MD5)
+            {
                 m_HashAlgorithm = MD5.Create();
-#else
-			    m_HashAlgorithm = new MD5CryptoServiceProvider();
-#endif
-				m_PadSize = 48;
-			} else { // SHA1
-#if NET6_0_OR_GREATER
+                m_PadSize = 48;
+            }
+            else
+            { // SHA1
                 m_HashAlgorithm = SHA1.Create();
-#else
-			    m_HashAlgorithm = new SHA1CryptoServiceProvider();
-#endif
                 m_PadSize = 40;
-			}
-			this.KeyValue = (byte[])rgbKey.Clone();
-			m_IsDisposed = false;
-			Initialize();
-		}
-		public Ssl3HandshakeMac(HashType hashType, HashAlgorithm hash, byte[] rgbKey) {
-			if (rgbKey == null)
-				throw new ArgumentNullException();
-			if (hashType == HashType.MD5) {
-				m_PadSize = 48;
-			} else { // SHA1
-				m_PadSize = 40;
-			}
-			m_HashAlgorithm = hash;
-			this.KeyValue = (byte[])rgbKey.Clone();
-			m_IsDisposed = false;
-		}
-		public override void Initialize() {
-			if (m_IsDisposed)
-				throw new ObjectDisposedException(this.GetType().FullName);
-			m_HashAlgorithm.Initialize();
-			this.State = 0;
-		}
-		protected override void HashCore(byte[] rgb, int ib, int cb) {
-			if (m_IsDisposed)
-				throw new ObjectDisposedException(this.GetType().FullName);
-			m_HashAlgorithm.TransformBlock(rgb, ib, cb, rgb, ib);
-		}
-		protected override byte[] HashFinal() {
-			if (m_IsDisposed)
-				throw new ObjectDisposedException(this.GetType().FullName);
-			m_HashAlgorithm.TransformBlock(this.KeyValue, 0, this.KeyValue.Length, this.KeyValue, 0);
-			byte[] padding = new byte[m_PadSize];
-			for(int i = 0; i < padding.Length; i++)
-				padding[i] = 0x36;
-			m_HashAlgorithm.TransformFinalBlock(padding, 0, padding.Length); // finalize inner hash
-			byte[] dataHash = m_HashAlgorithm.Hash;
-			for(int i = 0; i < padding.Length; i++)
-				padding[i] = 0x5C;
-			m_HashAlgorithm.Initialize();
-			m_HashAlgorithm.TransformBlock(this.Key, 0, this.Key.Length, this.Key, 0);
-			m_HashAlgorithm.TransformBlock(padding, 0, padding.Length, padding, 0);
-			m_HashAlgorithm.TransformFinalBlock(dataHash, 0, dataHash.Length);
-			return m_HashAlgorithm.Hash;
-		}
-		public override int HashSize {
-			get {
-				return m_HashAlgorithm.HashSize;
-			}
-		}
-		protected override void Dispose(bool disposing) {
-			base.Dispose(disposing);
-			m_IsDisposed = true;
-			m_HashAlgorithm.Clear();
-			try {
-				GC.SuppressFinalize(this);
-			} catch {}
-		}
-		~Ssl3HandshakeMac() {
-			m_HashAlgorithm.Clear();
-		}
-		private HashAlgorithm m_HashAlgorithm;
-		private bool m_IsDisposed;
-		private int m_PadSize;
-	}
+            }
+            KeyValue = (byte[])rgbKey.Clone();
+            m_IsDisposed = false;
+            Initialize();
+        }
+
+        public Ssl3HandshakeMac(HashType hashType, HashAlgorithm hash, byte[] rgbKey)
+        {
+            ArgumentNullException.ThrowIfNull(rgbKey);
+            m_PadSize = hashType == HashType.MD5 ? 48 : 40;
+            m_HashAlgorithm = hash;
+            KeyValue = (byte[])rgbKey.Clone();
+            m_IsDisposed = false;
+        }
+
+        public override void Initialize()
+        {
+            ObjectDisposedException.ThrowIf(m_IsDisposed, this);
+            m_HashAlgorithm.Initialize();
+            State = 0;
+        }
+
+        protected override void HashCore(byte[] rgb, int ib, int cb)
+        {
+            ObjectDisposedException.ThrowIf(m_IsDisposed, this);
+            m_HashAlgorithm.TransformBlock(rgb, ib, cb, rgb, ib);
+        }
+
+        protected override byte[] HashFinal()
+        {
+            ObjectDisposedException.ThrowIf(m_IsDisposed, this);
+            m_HashAlgorithm.TransformBlock(KeyValue, 0, KeyValue.Length, KeyValue, 0);
+            var padding = new byte[m_PadSize];
+            for (var i = 0; i < padding.Length; i++)
+                padding[i] = 0x36;
+            m_HashAlgorithm.TransformFinalBlock(padding, 0, padding.Length); // finalize inner hash
+            var dataHash = m_HashAlgorithm.Hash;
+            for (var i = 0; i < padding.Length; i++)
+                padding[i] = 0x5C;
+            m_HashAlgorithm.Initialize();
+            m_HashAlgorithm.TransformBlock(Key, 0, Key.Length, Key, 0);
+            m_HashAlgorithm.TransformBlock(padding, 0, padding.Length, padding, 0);
+            m_HashAlgorithm.TransformFinalBlock(dataHash, 0, dataHash.Length);
+            return m_HashAlgorithm.Hash;
+        }
+
+        public override int HashSize
+        {
+            get { return m_HashAlgorithm.HashSize; }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            m_IsDisposed = true;
+            m_HashAlgorithm.Clear();
+            try
+            {
+                GC.SuppressFinalize(this);
+            }
+            catch { }
+        }
+
+        ~Ssl3HandshakeMac()
+        {
+            m_HashAlgorithm.Clear();
+        }
+
+        private readonly HashAlgorithm m_HashAlgorithm;
+        private bool m_IsDisposed;
+        private readonly int m_PadSize;
+    }
 }

@@ -5,5 +5,7 @@ using System.Net;
 
 namespace SpaceWizards.HttpListener
 {
-    public delegate AuthenticationSchemes AuthenticationSchemeSelector(HttpListenerRequest httpRequest);
+    public delegate AuthenticationSchemes AuthenticationSchemeSelector(
+        HttpListenerRequest httpRequest
+    );
 }

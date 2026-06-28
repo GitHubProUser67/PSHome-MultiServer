@@ -1,6 +1,5 @@
-using MultiServerLibrary.HTTP;
 using HttpMultipartParser;
-using System.IO;
+using MultiServerLibrary.HTTP;
 
 namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
 {
@@ -8,18 +7,16 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi2
     {
         public static string ProcessPStats(byte[] PostData, string ContentType)
         {
-            string func = null;
-            string name = null;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
-                    func = data.GetParameterValue("func");
-                    name = data.GetParameterValue("name");
+                    var func = data.GetParameterValue("func");
+                    var name = data.GetParameterValue("name");
 
                     ms.Flush();
                 }

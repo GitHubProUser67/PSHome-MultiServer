@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct PredefinedRuleConfig
-	{
+    [TdfStruct]
+    public struct PredefinedRuleConfig
+    {
+        [TdfMember("RNME")]
+        public string mRuleName;
 
-		[TdfMember("RNME")]
-		public string mRuleName;
+        [TdfMember("THLS")]
+        public List<string> mThresholdNames;
 
-		[TdfMember("THLS")]
-		public List<string> mThresholdNames;
-
-		[TdfMember("WGHT")]
-		public uint mWeight;
-
-	}
+        [TdfMember("WGHT")]
+        public uint mWeight;
+    }
 }

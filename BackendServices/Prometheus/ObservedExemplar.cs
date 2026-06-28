@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.ObjectPool;
-using System.Diagnostics;
+﻿using System.Diagnostics;
+using Microsoft.Extensions.ObjectPool;
 
 namespace Prometheus;
 
@@ -17,12 +17,15 @@ internal sealed class ObservedExemplar
     /// We have a pool of unused instances that we can reuse, to avoid constantly allocating memory. Once the set of metrics stabilizes,
     /// all allocations should generally be coming from the pool. We expect the default pool configuratiopn to be suitable for this.
     /// </summary>
-    private static readonly ObjectPool<ObservedExemplar> Pool = ObjectPool.Create<ObservedExemplar>();
+    private static readonly ObjectPool<ObservedExemplar> Pool =
+        ObjectPool.Create<ObservedExemplar>();
 
     public static readonly ObservedExemplar Empty = new();
 
     internal static Func<double> NowProvider = DefaultNowProvider;
-    internal static double DefaultNowProvider() => LowGranularityTimeSource.GetSecondsFromUnixEpoch();
+
+    internal static double DefaultNowProvider() =>
+        LowGranularityTimeSource.GetSecondsFromUnixEpoch();
 
     public Exemplar? Labels { get; private set; }
     public double Value { get; private set; }
@@ -48,14 +51,17 @@ internal sealed class ObservedExemplar
             totalRuneCount += labels[i].RuneCount;
             for (var j = 0; j < labels.Length; j++)
             {
-                if (i == j) continue;
+                if (i == j)
+                    continue;
                 if (ByteArraysEqual(labels[i].KeyBytes, labels[j].KeyBytes))
                     throw new ArgumentException("Exemplar contains duplicate keys.");
             }
         }
 
         if (totalRuneCount > MaxRunes)
-            throw new ArgumentException($"Exemplar consists of {totalRuneCount} runes, exceeding the OpenMetrics limit of {MaxRunes}.");
+            throw new ArgumentException(
+                $"Exemplar consists of {totalRuneCount} runes, exceeding the OpenMetrics limit of {MaxRunes}."
+            );
 
         Labels = labels;
         Value = value;
@@ -64,10 +70,12 @@ internal sealed class ObservedExemplar
 
     private static bool ByteArraysEqual(byte[] a, byte[] b)
     {
-        if (a.Length != b.Length) return false;
+        if (a.Length != b.Length)
+            return false;
 
         for (var i = 0; i < a.Length; i++)
-            if (a[i] != b[i]) return false;
+            if (a[i] != b[i])
+                return false;
 
         return true;
     }

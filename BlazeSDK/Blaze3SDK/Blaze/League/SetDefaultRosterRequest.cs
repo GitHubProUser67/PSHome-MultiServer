@@ -2,21 +2,19 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.League
 {
-	[TdfStruct]
-	public struct SetDefaultRosterRequest
-	{
+    [TdfStruct]
+    public struct SetDefaultRosterRequest
+    {
+        [TdfMember("LGID")]
+        public uint mLeagueId;
 
-		[TdfMember("LGID")]
-		public uint mLeagueId;
+        [TdfMember("ROST")]
+        public string mRosterId;
 
-		[TdfMember("ROST")]
-		public string mRosterId;
+        [TdfMember("TEAM")]
+        public uint mTeamId;
 
-		[TdfMember("TEAM")]
-		public uint mTeamId;
-
-		[TdfMember("USER")]
-		public long mUserId;
-
-	}
+        [TdfMember("USER")]
+        public long mUserId;
+    }
 }

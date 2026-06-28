@@ -1,18 +1,27 @@
-using CustomLogger;
-using Horizon.RT.Common;
 using System.Collections.Concurrent;
 using System.Reflection;
+using CustomLogger;
+using Horizon.RT.Common;
 
 namespace Horizon.PluginManager
 {
     public class MediusPluginsManager : IPluginHost
     {
-        private ConcurrentDictionary<PluginEvent, List<OnRegisterActionHandler>> _pluginCallbackInstances = new();
-        private ConcurrentDictionary<RT_MSG_TYPE, List<OnRegisterMessageActionHandler>> _pluginScertMessageCallbackInstances = new();
-        private ConcurrentDictionary<(NetMessageClass, byte), List<OnRegisterMediusMessageActionHandler>> _pluginMediusMessageCallbackInstances = new();
+        private readonly ConcurrentDictionary<
+            PluginEvent,
+            List<OnRegisterActionHandler>
+        > _pluginCallbackInstances = new();
+        private readonly ConcurrentDictionary<
+            RT_MSG_TYPE,
+            List<OnRegisterMessageActionHandler>
+        > _pluginScertMessageCallbackInstances = new();
+        private readonly ConcurrentDictionary<
+            (NetMessageClass, byte),
+            List<OnRegisterMediusMessageActionHandler>
+        > _pluginMediusMessageCallbackInstances = new();
         private bool _reload = false;
-        private DirectoryInfo? _pluginDir = null;
-        private FileSystemWatcher? _watcher = null;
+        private readonly DirectoryInfo? _pluginDir = null;
+        private readonly FileSystemWatcher? _watcher = null;
 
         public MediusPluginsManager(string pluginsDirectory)
         {
@@ -24,10 +33,22 @@ namespace Horizon.PluginManager
             // Add a watcher so we can auto reload the plugins on change
             _watcher = new FileSystemWatcher(_pluginDir.FullName, "*.dll");
             _watcher.IncludeSubdirectories = true;
-            _watcher.Changed += (s, e) => { _reload = true; };
-            _watcher.Renamed += (s, e) => { _reload = true; };
-            _watcher.Created += (s, e) => { _reload = true; };
-            _watcher.Deleted += (s, e) => { _reload = true; };
+            _watcher.Changed += (s, e) =>
+            {
+                _reload = true;
+            };
+            _watcher.Renamed += (s, e) =>
+            {
+                _reload = true;
+            };
+            _watcher.Created += (s, e) =>
+            {
+                _reload = true;
+            };
+            _watcher.Deleted += (s, e) =>
+            {
+                _reload = true;
+            };
             _watcher.EnableRaisingEvents = true;
 
             reloadPlugins();
@@ -55,10 +76,10 @@ namespace Horizon.PluginManager
 
         public async Task OnEvent(PluginEvent eventType, object? data)
         {
-            if (!_pluginCallbackInstances.ContainsKey(eventType))
+            if (!_pluginCallbackInstances.TryGetValue(eventType, out var value))
                 return;
 
-            foreach (var callback in _pluginCallbackInstances[eventType])
+            foreach (var callback in value)
             {
                 try
                 {
@@ -66,7 +87,9 @@ namespace Horizon.PluginManager
                 }
                 catch (Exception e)
                 {
-                    LoggerAccessor.LogError($"PLUGIN OnEvent Exception. {callback}({eventType}, {data})");
+                    LoggerAccessor.LogError(
+                        $"PLUGIN OnEvent Exception. {callback}({eventType}, {data})"
+                    );
                     LoggerAccessor.LogError(e);
                 }
             }
@@ -74,10 +97,10 @@ namespace Horizon.PluginManager
 
         public async Task OnMessageEvent(RT_MSG_TYPE msgId, object data)
         {
-            if (!_pluginScertMessageCallbackInstances.ContainsKey(msgId))
+            if (!_pluginScertMessageCallbackInstances.TryGetValue(msgId, out var value))
                 return;
 
-            foreach (var callback in _pluginScertMessageCallbackInstances[msgId])
+            foreach (var callback in value)
             {
                 try
                 {
@@ -85,7 +108,9 @@ namespace Horizon.PluginManager
                 }
                 catch (Exception e)
                 {
-                    LoggerAccessor.LogError($"PLUGIN OnMessageEvent Exception. {callback}({msgId}, {data})");
+                    LoggerAccessor.LogError(
+                        $"PLUGIN OnMessageEvent Exception. {callback}({msgId}, {data})"
+                    );
                     LoggerAccessor.LogError(e);
                 }
             }
@@ -94,10 +119,10 @@ namespace Horizon.PluginManager
         public async Task OnMediusMessageEvent(NetMessageClass msgClass, byte msgType, object data)
         {
             var key = (msgClass, msgType);
-            if (!_pluginMediusMessageCallbackInstances.ContainsKey(key))
+            if (!_pluginMediusMessageCallbackInstances.TryGetValue(key, out var value))
                 return;
 
-            foreach (var callback in _pluginMediusMessageCallbackInstances[key])
+            foreach (var callback in value)
             {
                 try
                 {
@@ -105,7 +130,9 @@ namespace Horizon.PluginManager
                 }
                 catch (Exception e)
                 {
-                    LoggerAccessor.LogError($"PLUGIN OnMediusMessageEvent Exception. {callback}({key}, {data})");
+                    LoggerAccessor.LogError(
+                        $"PLUGIN OnMediusMessageEvent Exception. {callback}({key}, {data})"
+                    );
                     LoggerAccessor.LogError(e);
                 }
             }
@@ -118,36 +145,49 @@ namespace Horizon.PluginManager
         public void RegisterAction(PluginEvent eventType, OnRegisterActionHandler callback)
         {
             List<OnRegisterActionHandler> callbacks;
-            if (!_pluginCallbackInstances.ContainsKey(eventType))
-                _pluginCallbackInstances.TryAdd(eventType, callbacks = new List<OnRegisterActionHandler>());
+            if (!_pluginCallbackInstances.TryGetValue(eventType, out var value))
+                _pluginCallbackInstances.TryAdd(
+                    eventType,
+                    callbacks = new List<OnRegisterActionHandler>()
+                );
             else
-                callbacks = _pluginCallbackInstances[eventType];
-
+                callbacks = value;
 
             callbacks.Add(callback);
         }
 
-        public void RegisterMessageAction(RT_MSG_TYPE msgId, OnRegisterMessageActionHandler callback)
+        public void RegisterMessageAction(
+            RT_MSG_TYPE msgId,
+            OnRegisterMessageActionHandler callback
+        )
         {
             List<OnRegisterMessageActionHandler> callbacks;
-            if (!_pluginScertMessageCallbackInstances.ContainsKey(msgId))
-                _pluginScertMessageCallbackInstances.TryAdd(msgId, callbacks = new List<OnRegisterMessageActionHandler>());
+            if (!_pluginScertMessageCallbackInstances.TryGetValue(msgId, out var value))
+                _pluginScertMessageCallbackInstances.TryAdd(
+                    msgId,
+                    callbacks = new List<OnRegisterMessageActionHandler>()
+                );
             else
-                callbacks = _pluginScertMessageCallbackInstances[msgId];
-
+                callbacks = value;
 
             callbacks.Add(callback);
         }
 
-        public void RegisterMediusMessageAction(NetMessageClass msgClass, byte msgType, OnRegisterMediusMessageActionHandler callback)
+        public void RegisterMediusMessageAction(
+            NetMessageClass msgClass,
+            byte msgType,
+            OnRegisterMediusMessageActionHandler callback
+        )
         {
             List<OnRegisterMediusMessageActionHandler> callbacks;
             var key = (msgClass, msgType);
-            if (!_pluginMediusMessageCallbackInstances.ContainsKey(key))
-                _pluginMediusMessageCallbackInstances.TryAdd(key, callbacks = new List<OnRegisterMediusMessageActionHandler>());
+            if (!_pluginMediusMessageCallbackInstances.TryGetValue(key, out var value))
+                _pluginMediusMessageCallbackInstances.TryAdd(
+                    key,
+                    callbacks = new List<OnRegisterMediusMessageActionHandler>()
+                );
             else
-                callbacks = _pluginMediusMessageCallbackInstances[key];
-
+                callbacks = value;
 
             callbacks.Add(callback);
         }
@@ -172,14 +212,15 @@ namespace Horizon.PluginManager
             {
                 try
                 {
-                    Assembly pluginAssembly = Assembly.LoadFile(file.FullName);
-                    Type pluginInterface = typeof(IPlugin);
-                    var plugins = pluginAssembly.GetTypes()
+                    var pluginAssembly = Assembly.LoadFile(file.FullName);
+                    var pluginInterface = typeof(IPlugin);
+                    var plugins = pluginAssembly
+                        .GetTypes()
                         .Where(type => pluginInterface.IsAssignableFrom(type));
 
                     foreach (var plugin in plugins)
                     {
-                        IPlugin? instance = Activator.CreateInstance(plugin) as IPlugin;
+                        var instance = Activator.CreateInstance(plugin) as IPlugin;
 
                         if (instance is not null && file.Directory is not null)
                             _ = instance.Start(file.Directory.FullName, this);

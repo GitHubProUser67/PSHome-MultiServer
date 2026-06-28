@@ -1,20 +1,22 @@
+using System.Collections.Concurrent;
+using System.Net;
 using CustomLogger;
 using Horizon.LIBRARY.Database.Models;
-using Horizon.SERVER;
-using Horizon.SERVER.PluginArgs;
+using Horizon.MEDIUS.PluginArgs;
+using Horizon.PlaystationHomePlugin.Models;
 using Horizon.PluginManager;
 using Horizon.RT.Common;
 using Horizon.RT.Models;
-using System.Collections.Concurrent;
-using System.Net;
 using MultiServerLibrary.Extension;
-using HorizonService.PlaystationHomePlugin.Models;
+using Org.BouncyCastle.Utilities.Encoders;
 
 namespace Horizon.MUM.Models
 {
     public class ClientObject
     {
-        protected static Random RNG = new();
+        private static ulong _sessionKeyCounter = 0;
+
+        private static readonly object _sessionKeyCounterLock = _sessionKeyCounter;
 
         protected ConcurrentDictionary<string, Task> Tasks = new();
 
@@ -27,94 +29,95 @@ namespace Horizon.MUM.Models
         public int CurrentWorlds { get; protected set; } = 0;
         public int CurrentPlayers { get; protected set; } = 0;
 
-        public MGCL_ALERT_LEVEL MGCL_ALERT_LEVEL { get; protected set; } = MGCL_ALERT_LEVEL.MGCL_ALERT_NONE;
+        public MGCL_ALERT_LEVEL MGCL_ALERT_LEVEL { get; protected set; } =
+            MGCL_ALERT_LEVEL.MGCL_ALERT_NONE;
         public MGCL_TRUST_LEVEL MGCL_TRUST_LEVEL { get; set; }
         public MGCL_SERVER_ATTRIBUTES MGCL_SERVER_ATTRIBUTES { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int Port { get; set; } = 0;
 
         #region HOME
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public HomeOffsetsJsonData? ClientHomeData { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public uint Hub_LocalPerson_ms_pInstance = 0;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public uint WorldCorePointer = 0;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public uint WorldCoreSpaceTypePointer = 0;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int CurrentSpaceType = 0;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        public byte ProtocolVersion = 0x64;
+        public byte ProtocolVersion = byte.MaxValue;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string? SSFWid = null;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string? LobbyKeyOverride = null;
         #endregion
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public bool IsOnRPCN = false;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int DmeId { get; protected set; } = -1;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public ConcurrentQueue<BaseScertMessage> SendMessageQueue { get; } = new();
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public MediusPlayerStatus PlayerStatus => GetStatus();
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public MGCL_GAME_HOST_TYPE ServerType { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string? ServerVersion { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public MediusConnectionType MediusConnectionType { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public NetConnectionType NetConnectionType { get; set; }
 
@@ -134,17 +137,17 @@ namespace Horizon.MUM.Models
         public MediusTimeZone TimeZone { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int AccountId { get; protected set; } = -1;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string? AccountName { get; protected set; } = null;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public byte[] AccountStats { get; set; } = new byte[256];
 
@@ -159,7 +162,7 @@ namespace Horizon.MUM.Models
         public string? AccessToken { get; protected set; } = null;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string? SessionKey { get; protected set; } = null;
 
@@ -169,42 +172,42 @@ namespace Horizon.MUM.Models
         public int ApplicationId { get; set; } = 0;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int LocationId { get; set; } = 0;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int MediusVersion { get; set; } = 0;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int? ClanId { get; set; } = -1;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int MediusWorldID { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int SignalId { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string? requestData { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int appDataSize { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string? appData { get; set; }
 
@@ -217,22 +220,22 @@ namespace Horizon.MUM.Models
         public MediusLobbyFilterType LobbyFilterType;
         public MediusLobbyFilterMaskLevelType FilterMaskLevel;
 
-        public List<ChannelListFilter> ChannelListFilters = new List<ChannelListFilter>();
+        public List<ChannelListFilter> ChannelListFilters = new();
 
         #endregion
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public List<GameListFilter> GameListFilters = new();
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public Channel? CurrentChannel { get; protected set; } = null;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public Game? CurrentGame { get; protected set; } = null;
 
@@ -244,22 +247,24 @@ namespace Horizon.MUM.Models
         public int PartyId { get; protected set; } = -1;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        public DateTime UtcLastServerEchoSent { get; set; } = DateTimeUtils.GetHighPrecisionUtcTime();
+        public DateTime UtcLastServerEchoSent { get; set; } =
+            DateTimeUtils.GetHighPrecisionUtcTime();
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public DateTime? UtcLastPlayerReportReceived { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        public DateTime UtcLastMessageReceived { get; protected set; } = DateTimeUtils.GetHighPrecisionUtcTime();
+        public DateTime UtcLastMessageReceived { get; protected set; } =
+            DateTimeUtils.GetHighPrecisionUtcTime();
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string? Metadata { get; set; } = null;
 
@@ -269,37 +274,38 @@ namespace Horizon.MUM.Models
         public uint LatencyMs { get; protected set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        public DateTime TimeCreated { get; protected set; } = DateTimeUtils.GetHighPrecisionUtcTime();
+        public DateTime TimeCreated { get; protected set; } =
+            DateTimeUtils.GetHighPrecisionUtcTime();
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public List<string>? FriendsListPS3 { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public Dictionary<int, string?>? FriendsList { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int[] Stats { get; set; } = new int[15];
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int[]? WideStats { get; set; } = new int[100];
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        public int[]? CustomWideStats { get; set; } = new int[0];
+        public int[]? CustomWideStats { get; set; } = Array.Empty<int>();
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public UploadState? Upload { get; set; }
 
@@ -309,30 +315,36 @@ namespace Horizon.MUM.Models
         public MediusFile? mediusFileToUpload;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public bool HasJoined { get; set; } = false;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int TimeoutSeconds { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int LongTimeoutSeconds { get; set; }
 
-        public virtual bool IsLoggedIn => !_logoutTime.HasValue && _loginTime.HasValue && IsConnected;
-        public virtual bool IsInGame => (CurrentParty != null || CurrentGame != null) && CurrentChannel != null && CurrentChannel.Type == ChannelType.Game;
+        public virtual bool IsLoggedIn =>
+            !_logoutTime.HasValue && _loginTime.HasValue && IsConnected;
+        public virtual bool IsInGame =>
+            (CurrentParty != null || CurrentGame != null)
+            && CurrentChannel != null
+            && CurrentChannel.Type == ChannelType.Game;
         public virtual bool IsActiveServer => _hasServerSession;
         public virtual bool Timedout
         {
             get
             {
                 const int expirationDelay = 2;
-                double deltaSec = (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds;
-                int timeoutThreshold = TimeoutSeconds;
+                var deltaSec = (
+                    DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived
+                ).TotalSeconds;
+                var timeoutThreshold = TimeoutSeconds;
 
                 if (deltaSec > timeoutThreshold + expirationDelay)
                 {
@@ -374,8 +386,10 @@ namespace Horizon.MUM.Models
             get
             {
                 const int expirationDelay = 2;
-                double deltaSec = (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived).TotalSeconds;
-                int timeoutThreshold = LongTimeoutSeconds;
+                var deltaSec = (
+                    DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastMessageReceived
+                ).TotalSeconds;
+                var timeoutThreshold = LongTimeoutSeconds;
 
                 if (deltaSec > timeoutThreshold + expirationDelay)
                 {
@@ -412,77 +426,95 @@ namespace Horizon.MUM.Models
                 return _long_timedout;
             }
         }
-        public virtual bool IsConnected => KeepAlive || (_hasSocket && !PlayerReportTimedout && !LongTimedout);
-        public bool KeepAlive => _keepAliveTime.HasValue && (DateTimeUtils.GetHighPrecisionUtcTime() - _keepAliveTime).Value.TotalSeconds < MediusClass.GetAppSettingsOrDefault(ApplicationId).KeepAliveGracePeriodSeconds;
-        public bool PlayerReportTimedout => UtcLastPlayerReportReceived.HasValue && (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastPlayerReportReceived).Value.TotalSeconds > MediusClass.GetAppSettingsOrDefault(ApplicationId).PlayerReportTimeoutSeconds;
+        public virtual bool IsConnected =>
+            KeepAlive || (_hasSocket && !PlayerReportTimedout && !LongTimedout);
+        public bool KeepAlive =>
+            _keepAliveTime.HasValue
+            && (DateTimeUtils.GetHighPrecisionUtcTime() - _keepAliveTime).Value.TotalSeconds
+                < DATABASE
+                    .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                    .KeepAliveGracePeriodSeconds;
+        public bool PlayerReportTimedout =>
+            UtcLastPlayerReportReceived.HasValue
+            && (DateTimeUtils.GetHighPrecisionUtcTime() - UtcLastPlayerReportReceived)
+                .Value
+                .TotalSeconds
+                > DATABASE
+                    .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                    .PlayerReportTimeoutSeconds;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected int _missedEchos;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected int _missedLongEchos;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected bool _timedout;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected bool _long_timedout;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected DateTime? _loginTime = null;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected DateTime? _logoutTime = null;
 
         /// <summary>
         /// The latest time a ban check occured from an echo
         /// </summary>
-        private DateTime LastAccountBanCheckTime { get; set; } = DateTimeUtils.GetHighPrecisionUtcTime();
+        private DateTime LastAccountBanCheckTime { get; set; } =
+            DateTimeUtils.GetHighPrecisionUtcTime();
 
         /// <summary>
         /// If we need to check if they are banned from the database when an echo comes in from the client.
         /// </summary>
-        private bool NeedToCheckBan => (DateTimeUtils.GetHighPrecisionUtcTime() - LastAccountBanCheckTime).TotalSeconds > MediusClass.GetAppSettingsOrDefault(ApplicationId).BanEchoCheckCadenceSeconds;
+        private bool NeedToCheckBan =>
+            (DateTimeUtils.GetHighPrecisionUtcTime() - LastAccountBanCheckTime).TotalSeconds
+            > DATABASE
+                .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                .BanEchoCheckCadenceSeconds;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected bool _hasServerSession = false;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         private uint _gameListFilterIdCounter = 1;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         private bool _hasSocket = false;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected DateTime? _keepAliveTime = null;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         private DateTime _lastServerEchoValue = DateTime.UnixEpoch;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         private DateTime? _lastForceDisconnect = null;
 
@@ -491,12 +523,10 @@ namespace Horizon.MUM.Models
             this.MediusVersion = MediusVersion;
 
             // Generate new session key
-            SessionKey = MediusClass.GenerateSessionKey();
+            SessionKey = GenerateSessionKey();
 
             // Generate new token
-            byte[] tokenBuf = new byte[12];
-            RNG.NextBytes(tokenBuf);
-            AccessToken = Convert.ToBase64String(tokenBuf);
+            AccessToken = Base64.ToBase64String(ByteUtils.GenerateRandomBytes(12));
 
             // default last echo to creation of client object
             if (MediusVersion <= 108)
@@ -506,10 +536,15 @@ namespace Horizon.MUM.Models
                 UtcLastMessageReceived = DateTimeUtils.GetHighPrecisionUtcTime();
             }
             else
-                UtcLastMessageReceived = UtcLastServerEchoSent = DateTimeUtils.GetHighPrecisionUtcTime();
+                UtcLastMessageReceived = UtcLastServerEchoSent =
+                    DateTimeUtils.GetHighPrecisionUtcTime();
 
-            TimeoutSeconds = MediusClass.GetAppSettingsOrDefault(ApplicationId).ClientTimeoutSeconds;
-            LongTimeoutSeconds = MediusClass.GetAppSettingsOrDefault(ApplicationId).ClientLongTimeoutSeconds;
+            TimeoutSeconds = DATABASE
+                .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                .ClientTimeoutSeconds;
+            LongTimeoutSeconds = DATABASE
+                .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                .ClientLongTimeoutSeconds;
         }
 
         public ClientObject(int MediusVersion, string SessionKey, string AccessToken)
@@ -527,10 +562,27 @@ namespace Horizon.MUM.Models
                 UtcLastMessageReceived = DateTimeUtils.GetHighPrecisionUtcTime();
             }
             else
-                UtcLastMessageReceived = UtcLastServerEchoSent = DateTimeUtils.GetHighPrecisionUtcTime();
+                UtcLastMessageReceived = UtcLastServerEchoSent =
+                    DateTimeUtils.GetHighPrecisionUtcTime();
 
-            TimeoutSeconds = MediusClass.GetAppSettingsOrDefault(ApplicationId).ClientTimeoutSeconds;
-            LongTimeoutSeconds = MediusClass.GetAppSettingsOrDefault(ApplicationId).ClientLongTimeoutSeconds;
+            TimeoutSeconds = DATABASE
+                .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                .ClientTimeoutSeconds;
+            LongTimeoutSeconds = DATABASE
+                .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                .ClientLongTimeoutSeconds;
+        }
+
+        /// <summary>
+        /// Generates a incremental session key number
+        /// </summary>
+        /// <returns></returns>
+        public static string GenerateSessionKey()
+        {
+            lock (_sessionKeyCounterLock)
+            {
+                return (++_sessionKeyCounter).ToString();
+            }
         }
 
         public void QueueServerEcho()
@@ -541,8 +593,8 @@ namespace Horizon.MUM.Models
 
         public void OnRecvServerEcho(RT_MSG_SERVER_ECHO echo)
         {
-            DateTime echoTime = echo.UnixTimestamp.ToUtcDateTime();
-            double latencyMs = (DateTimeUtils.GetHighPrecisionUtcTime() - echoTime).TotalMilliseconds;
+            var echoTime = echo.UnixTimestamp.ToUtcDateTime();
+            var latencyMs = (DateTimeUtils.GetHighPrecisionUtcTime() - echoTime).TotalMilliseconds;
 
             if (latencyMs >= 0 && latencyMs < 10000)
                 LatencyMs = (uint)latencyMs;
@@ -562,12 +614,6 @@ namespace Horizon.MUM.Models
         public virtual void OnRecv(BaseScertMessage msg)
         {
             UtcLastMessageReceived = DateTimeUtils.GetHighPrecisionUtcTime();
-        }
-
-        public virtual void OnFileDownloadResponse(MediusFileDownloadResponse statsRequest)
-        {
-            // Set Stats from stats_ file
-            //AccountStats = statsRequest.Data; 
         }
 
         public virtual void OnPlayerReport(MediusPlayerReport report)
@@ -619,7 +665,7 @@ namespace Horizon.MUM.Models
 
         public void ForceDisconnect()
         {
-            DateTime now = DateTimeUtils.GetHighPrecisionUtcTime();
+            var now = DateTimeUtils.GetHighPrecisionUtcTime();
             if ((now - _lastForceDisconnect)?.TotalSeconds < 5)
                 return;
 
@@ -638,18 +684,14 @@ namespace Horizon.MUM.Models
         #region Status
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <returns></returns>
         private MediusPlayerStatus GetStatus()
         {
-            if (!IsConnected || !IsLoggedIn)
-                return MediusPlayerStatus.MediusPlayerDisconnected;
-
-            if (IsInGame)
-                return MediusPlayerStatus.MediusPlayerInGameWorld;
-
-            return MediusPlayerStatus.MediusPlayerInChatWorld;
+            return !IsConnected || !IsLoggedIn ? MediusPlayerStatus.MediusPlayerDisconnected
+                : IsInGame ? MediusPlayerStatus.MediusPlayerInGameWorld
+                : MediusPlayerStatus.MediusPlayerInChatWorld;
 
             /* // Needs proper handling between Universes for MUIS
             if (IsInOtherUniverse)
@@ -662,18 +704,20 @@ namespace Horizon.MUM.Models
         /// </summary>
         protected virtual void PostStatus()
         {
-            _ = HorizonServerConfiguration.Database.PostAccountStatus(new AccountStatusDTO()
-            {
-                AppId = ApplicationId,
-                AccountId = AccountId,
-                LoggedIn = IsLoggedIn,
-                ChannelId = CurrentChannel?.Id,
-                GameId = CurrentGame?.MediusWorldId,
-                GameName = CurrentGame?.GameName,
-                PartyId = CurrentParty?.MediusWorldId,
-                PartyName = CurrentParty?.PartyName,
-                WorldId = CurrentGame?.MediusWorldId ?? CurrentParty?.MediusWorldId
-            });
+            _ = HorizonServerConfiguration.Database.PostAccountStatus(
+                new AccountStatusDTO()
+                {
+                    AppId = ApplicationId,
+                    AccountId = AccountId,
+                    LoggedIn = IsLoggedIn,
+                    ChannelId = CurrentChannel?.Id,
+                    GameId = CurrentGame?.MediusWorldId,
+                    GameName = CurrentGame?.GameName,
+                    PartyId = CurrentParty?.MediusWorldId,
+                    PartyName = CurrentParty?.PartyName,
+                    WorldId = CurrentGame?.MediusWorldId ?? CurrentParty?.MediusWorldId,
+                }
+            );
         }
 
         #endregion
@@ -681,7 +725,7 @@ namespace Horizon.MUM.Models
         #region Login / Logout
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public async Task Logout()
         {
@@ -690,19 +734,24 @@ namespace Horizon.MUM.Models
                 return;
 
             // Raise plugin event
-            await MediusClass.Plugins.OnEvent(PluginEvent.MEDIUS_PLAYER_ON_LOGGED_OUT, new OnPlayerArgs() { Player = this });
+            await Program
+                .MediusManager.Plugins.OnEvent(
+                    PluginEvent.MEDIUS_PLAYER_ON_LOGGED_OUT,
+                    new OnPlayerArgs() { Player = this }
+                )
+                .ConfigureAwait(false);
 
             // Leave game
-            await LeaveCurrentGame();
+            await LeaveCurrentGame().ConfigureAwait(false);
 
             // Leave party
-            await LeaveCurrentParty();
+            await LeaveCurrentParty().ConfigureAwait(false);
 
             // Leave channel
-            await LeaveCurrentChannel();
+            await LeaveCurrentChannel().ConfigureAwait(false);
 
             // Stop custom tasks
-            await DisposeTasks();
+            await DisposeTasks().ConfigureAwait(false);
 
             // Release home pointer
             Hub_LocalPerson_ms_pInstance = 0;
@@ -715,13 +764,23 @@ namespace Horizon.MUM.Models
             PostStatus();
         }
 
-        public async Task LoginAnonymous(MediusAnonymousLoginRequest anonymousLoginRequest, int iAccountID)
+        public async Task LoginAnonymous(
+            MediusAnonymousLoginRequest anonymousLoginRequest,
+            int iAccountID
+        )
         {
             if (IsLoggedIn)
-                throw new InvalidOperationException($"{this} attempting to log into temp session as {anonymousLoginRequest.SessionDisplayName} but is already logged in!");
+                throw new InvalidOperationException(
+                    $"{this} attempting to log into temp session as {anonymousLoginRequest.SessionDisplayName} but is already logged in!"
+                );
 
             // Raise plugin event
-            await MediusClass.Plugins.OnEvent(PluginEvent.MEDIUS_PLAYER_ON_LOGGED_IN, new OnPlayerArgs() { Player = this });
+            await Program
+                .MediusManager.Plugins.OnEvent(
+                    PluginEvent.MEDIUS_PLAYER_ON_LOGGED_IN,
+                    new OnPlayerArgs() { Player = this }
+                )
+                .ConfigureAwait(false);
 
             AccountName = anonymousLoginRequest.SessionDisplayName;
             AccountDisplayName = anonymousLoginRequest.SessionDisplayName;
@@ -733,8 +792,12 @@ namespace Horizon.MUM.Models
             _loginTime = DateTimeUtils.GetHighPrecisionUtcTime();
 
             // update timeout times
-            TimeoutSeconds = MediusClass.GetAppSettingsOrDefault(ApplicationId).ClientTimeoutSeconds;
-            LongTimeoutSeconds = MediusClass.GetAppSettingsOrDefault(ApplicationId).ClientLongTimeoutSeconds;
+            TimeoutSeconds = DATABASE
+                .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                .ClientTimeoutSeconds;
+            LongTimeoutSeconds = DATABASE
+                .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                .ClientLongTimeoutSeconds;
 
             // WE ARE ANONYMOUS SO DON'T POST TO DATABASE!!!!
 
@@ -752,22 +815,36 @@ namespace Horizon.MUM.Models
                 WideStats = account.AccountWideStats;
                 CustomWideStats = account.AccountCustomWideStats;
 
-                FriendsList = account.Friends?.ToDictionary(x => x.AccountId, x => x.AccountName) ?? new Dictionary<int, string>();
+                FriendsList =
+                    account.Friends?.ToDictionary(x => x.AccountId, x => x.AccountName)
+                    ?? new Dictionary<int, string>();
 
                 // Raise plugin event
-                await MediusClass.Plugins.OnEvent(PluginEvent.MEDIUS_PLAYER_ON_LOGGED_IN, new OnPlayerArgs() { Player = this });
+                await Program
+                    .MediusManager.Plugins.OnEvent(
+                        PluginEvent.MEDIUS_PLAYER_ON_LOGGED_IN,
+                        new OnPlayerArgs() { Player = this }
+                    )
+                    .ConfigureAwait(false);
 
                 // Login
                 _loginTime = DateTimeUtils.GetHighPrecisionUtcTime();
 
                 // update timeout times
-                TimeoutSeconds = MediusClass.GetAppSettingsOrDefault(ApplicationId).ClientTimeoutSeconds;
-                LongTimeoutSeconds = MediusClass.GetAppSettingsOrDefault(ApplicationId).ClientLongTimeoutSeconds;
+                TimeoutSeconds = DATABASE
+                    .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                    .ClientTimeoutSeconds;
+                LongTimeoutSeconds = DATABASE
+                    .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                    .ClientLongTimeoutSeconds;
 
                 // Update last sign in date and database if not anonymous
                 if (!anonymous)
                 {
-                    _ = HorizonServerConfiguration.Database.PostAccountSignInDate(AccountId, DateTimeUtils.GetHighPrecisionUtcTime());
+                    _ = HorizonServerConfiguration.Database.PostAccountSignInDate(
+                        AccountId,
+                        DateTimeUtils.GetHighPrecisionUtcTime()
+                    );
 
                     // Update database status
                     PostStatus();
@@ -776,7 +853,9 @@ namespace Horizon.MUM.Models
                 MumManager.playersJoined.Inc();
             }
             else
-                LoggerAccessor.LogError($"{this} attempting to log into {account} but is already logged in!");
+                LoggerAccessor.LogError(
+                    $"{this} attempting to log into {account} but is already logged in!"
+                );
         }
 
         public async Task<bool> CheckBan()
@@ -787,15 +866,25 @@ namespace Horizon.MUM.Models
             LastAccountBanCheckTime = DateTimeUtils.GetHighPrecisionUtcTime();
 
             // Check if user is Account or Ip banned
-            return await HorizonServerConfiguration.Database.GetAccountIsBanned(AccountName, ApplicationId) || await HorizonServerConfiguration.Database.GetIsIpBanned(IP);
+            return await HorizonServerConfiguration
+                    .Database.GetAccountIsBanned(AccountName, ApplicationId)
+                    .ConfigureAwait(false)
+                || await HorizonServerConfiguration
+                    .Database.GetIsIpBanned(IP)
+                    .ConfigureAwait(false);
         }
 
         public async Task RefreshAccount()
         {
-            var accountDto = await HorizonServerConfiguration.Database.GetAccountById(AccountId);
+            var accountDto = await HorizonServerConfiguration
+                .Database.GetAccountById(AccountId)
+                .ConfigureAwait(false);
             if (accountDto != null)
             {
-                FriendsList = accountDto.Friends?.ToDictionary(x => x.AccountId, x => x.AccountName);
+                FriendsList = accountDto.Friends?.ToDictionary(
+                    x => x.AccountId,
+                    x => x.AccountName
+                );
                 ClanId = accountDto.ClanId;
             }
         }
@@ -806,11 +895,25 @@ namespace Horizon.MUM.Models
 
         public async Task JoinParty(Party party, int partyIndex)
         {
-            // Leave current game
-            await LeaveCurrentParty();
+            // Leave current party
+            await LeaveCurrentParty().ConfigureAwait(false);
 
             CurrentParty = party;
             PartyId = partyIndex;
+            CurrentParty.AddPlayer(this);
+
+            UtcLastPlayerReportReceived = DateTimeUtils.GetHighPrecisionUtcTime();
+
+            // Tell database
+            PostStatus();
+        }
+
+        public async Task JoinPartyP2P(Party game)
+        {
+            // Leave current party
+            await LeaveCurrentParty().ConfigureAwait(false);
+
+            CurrentParty = game;
             CurrentParty.AddPlayer(this);
 
             UtcLastPlayerReportReceived = DateTimeUtils.GetHighPrecisionUtcTime();
@@ -823,7 +926,7 @@ namespace Horizon.MUM.Models
         {
             if (CurrentParty != null && CurrentParty == party)
             {
-                await LeaveCurrentParty();
+                await LeaveCurrentParty().ConfigureAwait(false);
 
                 // Tell database
                 PostStatus();
@@ -835,7 +938,13 @@ namespace Horizon.MUM.Models
             UtcLastPlayerReportReceived = null;
             if (CurrentParty != null)
             {
-                await CurrentParty.RemovePlayer(this, CurrentParty.ApplicationId, CurrentParty.MediusWorldId.ToString());
+                await CurrentParty
+                    .RemovePlayer(
+                        this,
+                        CurrentParty.ApplicationId,
+                        CurrentParty.MediusWorldId.ToString()
+                    )
+                    .ConfigureAwait(false);
                 CurrentParty = null;
             }
             PartyId = -1;
@@ -848,8 +957,8 @@ namespace Horizon.MUM.Models
         public async Task JoinGame(Game game, int dmeClientIndex)
         {
             // Leave current game
-            await LeaveCurrentGame();
-			
+            await LeaveCurrentGame().ConfigureAwait(false);
+
             CurrentGame = game;
             DmeId = dmeClientIndex;
             CurrentGame.AddPlayer(this);
@@ -863,8 +972,8 @@ namespace Horizon.MUM.Models
         public async Task JoinGameP2P(Game game)
         {
             // Leave current game
-            await LeaveCurrentGame();
-			
+            await LeaveCurrentGame().ConfigureAwait(false);
+
             CurrentGame = game;
             CurrentGame.AddPlayer(this);
 
@@ -881,7 +990,7 @@ namespace Horizon.MUM.Models
                 if (ApplicationId == 20371 || ApplicationId == 20374)
                     _ = DisposeTask("GJS GUEST BRUTEFORCE");
 
-                await LeaveCurrentGame();
+                await LeaveCurrentGame().ConfigureAwait(false);
 
                 // Tell database
                 PostStatus();
@@ -893,7 +1002,13 @@ namespace Horizon.MUM.Models
             UtcLastPlayerReportReceived = null;
             if (CurrentGame != null)
             {
-                await CurrentGame.RemovePlayer(this, CurrentGame.ApplicationId, CurrentGame.MediusWorldId.ToString());
+                await CurrentGame
+                    .RemovePlayer(
+                        this,
+                        CurrentGame.ApplicationId,
+                        CurrentGame.MediusWorldId.ToString()
+                    )
+                    .ConfigureAwait(false);
                 CurrentGame = null;
             }
             DmeId = -1;
@@ -906,13 +1021,15 @@ namespace Horizon.MUM.Models
         public async Task JoinChannel(Channel channel)
         {
 #if DEBUG
-            LoggerAccessor.LogInfo($"[ClientObject] - Leaving Channel: {CurrentChannel?.Id} | Joining Channel: {channel.Id}");
+            LoggerAccessor.LogInfo(
+                $"[ClientObject] - Leaving Channel: {CurrentChannel?.Id} | Joining Channel: {channel.Id}"
+            );
 #endif
             // Leave current channel
-            await LeaveCurrentChannel();
+            await LeaveCurrentChannel().ConfigureAwait(false);
 
             CurrentChannel = channel;
-            await CurrentChannel.OnPlayerJoined(this);
+            await CurrentChannel.OnPlayerJoined(this).ConfigureAwait(false);
 
             // Tell database
             PostStatus();
@@ -922,7 +1039,7 @@ namespace Horizon.MUM.Models
         {
             if (CurrentChannel != null && CurrentChannel == channel)
             {
-                await LeaveCurrentChannel();
+                await LeaveCurrentChannel().ConfigureAwait(false);
 
                 // Tell database
                 PostStatus();
@@ -972,14 +1089,16 @@ namespace Horizon.MUM.Models
         {
             GameListFilter result;
 
-            GameListFilters.Add(result = new GameListFilter()
-            {
-                FieldID = _gameListFilterIdCounter++,
-                Mask = request.Mask,
-                BaselineValue = (ulong)request.BaselineValue,
-                ComparisonOperator = request.ComparisonOperator,
-                FilterField = request.FilterField
-            });
+            GameListFilters.Add(
+                result = new GameListFilter()
+                {
+                    FieldID = _gameListFilterIdCounter++,
+                    Mask = request.Mask,
+                    BaselineValue = (ulong)request.BaselineValue,
+                    ComparisonOperator = request.ComparisonOperator,
+                    FilterField = request.FilterField,
+                }
+            );
 
             return result;
         }
@@ -987,14 +1106,16 @@ namespace Horizon.MUM.Models
         public GameListFilter SetGameListFilter(MediusSetGameListFilterRequest0 request)
         {
             GameListFilter result;
-            GameListFilters.Add(result = new GameListFilter()
-            {
-                FieldID = _gameListFilterIdCounter++,
-                Mask = 0xFFFFFFF,
-                BaselineValue = (ulong)request.BaselineValue,
-                ComparisonOperator = request.ComparisonOperator,
-                FilterField = request.FilterField
-            });
+            GameListFilters.Add(
+                result = new GameListFilter()
+                {
+                    FieldID = _gameListFilterIdCounter++,
+                    Mask = 0xFFFFFFF,
+                    BaselineValue = (ulong)request.BaselineValue,
+                    ComparisonOperator = request.ComparisonOperator,
+                    FilterField = request.FilterField,
+                }
+            );
 
             return result;
         }
@@ -1026,9 +1147,11 @@ namespace Horizon.MUM.Models
 
         public void Queue(BaseMediusMessage message)
         {
-            if (NetConnectionType == NetConnectionType.NetConnectionTypeClientListenerTCP ||
-               NetConnectionType == NetConnectionType.NetConnectionTypeClientListenerTCPAuxUDP ||
-               NetConnectionType == NetConnectionType.NetConnectionTypeClientListenerUDP)
+            if (
+                NetConnectionType == NetConnectionType.NetConnectionTypeClientListenerTCP
+                || NetConnectionType == NetConnectionType.NetConnectionTypeClientListenerTCPAuxUDP
+                || NetConnectionType == NetConnectionType.NetConnectionTypeClientListenerUDP
+            )
                 LoggerAccessor.LogWarn("\"Can't send on a client listener connection type\"");
             else
                 Queue(new RT_MSG_SERVER_APP() { Message = message });
@@ -1055,37 +1178,41 @@ namespace Horizon.MUM.Models
             switch (Uri.CheckHostName(ip))
             {
                 case UriHostNameType.IPv4:
-                    {
-                        IP = IPAddress.Parse(ip);
-                        break;
-                    }
+                {
+                    IP = IPAddress.Parse(ip);
+                    break;
+                }
                 case UriHostNameType.IPv6:
-                    {
-                        IP = IPAddress.Parse(ip).MapToIPv4();
-                        break;
-                    }
+                {
+                    IP = IPAddress.Parse(ip).MapToIPv4();
+                    break;
+                }
                 case UriHostNameType.Dns:
-                    {
-                        IP = Dns.GetHostAddresses(ip).FirstOrDefault()?.MapToIPv4() ?? IPAddress.Any;
-                        break;
-                    }
+                {
+                    IP = Dns.GetHostAddresses(ip).FirstOrDefault()?.MapToIPv4() ?? IPAddress.Any;
+                    break;
+                }
                 default:
-                    {
-                        LoggerAccessor.LogError($"Unhandled UriHostNameType {Uri.CheckHostName(ip)} from {ip} in ClientObject.SetIp()");
-                        break;
-                    }
+                {
+                    LoggerAccessor.LogError(
+                        $"Unhandled UriHostNameType {Uri.CheckHostName(ip)} from {ip} in ClientObject.SetIp()"
+                    );
+                    break;
+                }
             }
         }
 
         public void SetIpPort(NetAddress ListenServerAddress)
         {
-            if (IPAddress.TryParse(ListenServerAddress.Address, out IPAddress? addr) && addr != null)
+            if (IPAddress.TryParse(ListenServerAddress.Address, out var addr) && addr != null)
             {
                 IP = addr;
                 Port = ListenServerAddress.Port;
             }
             else
-                LoggerAccessor.LogError($"Unhandled NetAddress {ListenServerAddress} in ClientObject.SetIpPort()");
+                LoggerAccessor.LogError(
+                    $"Unhandled NetAddress {ListenServerAddress} in ClientObject.SetIpPort()"
+                );
         }
         #endregion
 
@@ -1103,15 +1230,21 @@ namespace Horizon.MUM.Models
 
         public bool TryAddTask(string taskIdent, Action actionToAddToAdd)
         {
-            return Tasks.TryAdd(taskIdent, Task.Factory.StartNew(actionToAddToAdd, TaskCreationOptions.LongRunning));
+            return Tasks.TryAdd(
+                taskIdent,
+                Task.Factory.StartNew(actionToAddToAdd, TaskCreationOptions.LongRunning)
+            );
         }
 
         public bool TryAddTask(string taskIdent, Action<int> actionToAddToAdd, int value)
         {
             return Tasks.TryAdd(
-                    taskIdent,
-                    Task.Factory.StartNew(() => actionToAddToAdd(value), TaskCreationOptions.LongRunning)
-                );
+                taskIdent,
+                Task.Factory.StartNew(
+                    () => actionToAddToAdd(value),
+                    TaskCreationOptions.LongRunning
+                )
+            );
         }
 
         public bool ContainsTaskWithIdent(string taskIdent)
@@ -1121,16 +1254,13 @@ namespace Horizon.MUM.Models
 
         public Task DisposeTasks()
         {
-            foreach (Task task in Tasks.Values)
+            foreach (var task in Tasks.Values)
             {
                 try
                 {
                     task.Dispose();
                 }
-                catch
-                {
-
-                }
+                catch { }
             }
 
             return Task.CompletedTask;
@@ -1138,32 +1268,17 @@ namespace Horizon.MUM.Models
 
         public Task DisposeTask(string taskIdentifier)
         {
-            if (Tasks.TryRemove(taskIdentifier, out Task? task))
+            if (Tasks.TryRemove(taskIdentifier, out var task))
             {
                 try
                 {
                     task?.Dispose();
                 }
-                catch
-                {
-
-                }
+                catch { }
             }
 
             return Task.CompletedTask;
         }
-
-        /*
-        public Task<RT_RESULT> rt_msg_server_check_protocol_compatibility(ushort clientVersion, int p_compatible)
-        {
-            if(clientVersion <= 113)
-            {
-
-                LoggerAccessor.LogInfo($"rt_msg_server_check_protocol_compatibility: client_version {clientVersion}, p_compatible {p_compatible}");
-            }
-            return 
-        }
-        */
 
         public override string ToString()
         {

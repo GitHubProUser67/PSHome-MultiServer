@@ -1,7 +1,5 @@
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
-using System.Collections.Generic;
-using System;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -16,7 +14,7 @@ namespace Horizon.RT.Models
         public override void Deserialize(MessageReader reader)
         {
             start_Address = reader.ReadUInt32();
-            int len = reader.ReadInt32();
+            var len = reader.ReadInt32();
             Payload = reader.ReadBytes(len);
         }
 
@@ -30,29 +28,29 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-
-                $"Address: {start_Address} " +
-                $"PayloadLen: {Payload?.Length} " +
-                $"Payload: {string.Join("", Payload ?? new byte[0])}";
+            return base.ToString()
+                + " "
+                + $"Address: {start_Address} "
+                + $"PayloadLen: {Payload?.Length} "
+                + $"Payload: {string.Join("", Payload ?? Array.Empty<byte>())}";
         }
 
         public static List<RT_MSG_SERVER_MEMORY_POKE> FromPayload(uint address, byte[] payload)
         {
-            int i = 0;
-            List<RT_MSG_SERVER_MEMORY_POKE> msgs = new List<RT_MSG_SERVER_MEMORY_POKE>();
+            var i = 0;
+            var msgs = new List<RT_MSG_SERVER_MEMORY_POKE>();
 
             while (i < payload.Length)
             {
-                int len = payload.Length - i;
+                var len = payload.Length - i;
                 if (len > Constants.MEDIUS_MESSAGE_MAXLEN)
                     len = Constants.MEDIUS_MESSAGE_MAXLEN;
 
-                RT_MSG_SERVER_MEMORY_POKE msg = new RT_MSG_SERVER_MEMORY_POKE()
+                var msg = new RT_MSG_SERVER_MEMORY_POKE()
                 {
                     start_Address = (uint)(address + i),
                     Payload = new byte[len],
-                    SkipEncryption = true
+                    SkipEncryption = true,
                 };
 
                 Array.Copy(payload, i, msg.Payload, 0, len);

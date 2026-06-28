@@ -1,20 +1,10 @@
-using MultiServerLibrary.HTTP;
-using System;
-
 namespace WebAPIService.GameServices.I_Love_Sony
 {
-    public class ILoveSonyClass
+    public class ILoveSonyClass(string method, string absolutepath, string workpath)
     {
-        private string workpath;
-        private string absolutepath;
-        private string method;
-
-        public ILoveSonyClass(string method, string absolutepath, string workpath)
-        {
-            this.absolutepath = absolutepath;
-            this.workpath = workpath;
-            this.method = method;
-        }
+        private readonly string workpath = workpath;
+        private readonly string absolutepath = absolutepath;
+        private readonly string method = method;
 
         public string ProcessRequest(byte[] PostData, string ContentType, bool https)
         {
@@ -31,7 +21,7 @@ namespace WebAPIService.GameServices.I_Love_Sony
                             return MyResistanceEula.ILoveSonyEula();
                         #endregion
 
-                        default:    
+                        default:
                             break;
                     }
                     break;

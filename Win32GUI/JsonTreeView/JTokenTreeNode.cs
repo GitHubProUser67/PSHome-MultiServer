@@ -1,7 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Windows.Forms;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using ZTn.Json.JsonTreeView.Controls;
 using ZTn.Json.JsonTreeView.Generic;
 
@@ -114,9 +111,7 @@ namespace ZTn.Json.JsonTreeView
                 .ToList()
                 .ForEach(n => Nodes.Remove(n));
 
-            return Nodes
-                .Cast<TreeNode>()
-                .FirstOrDefault();
+            return Nodes.Cast<TreeNode>().FirstOrDefault();
         }
 
         /// <summary>
@@ -196,7 +191,7 @@ namespace ZTn.Json.JsonTreeView
             var text = JTokenTag.ToString();
             if (text.Length > MaxTagTextLength)
             {
-                text = $"{text.Substring(0, MaxTagTextLength)} ...";
+                text = $"{text[..MaxTagTextLength]} ...";
             }
             return text;
         }

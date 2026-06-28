@@ -1,7 +1,6 @@
-using System.IO;
-using Horizon.RT.Common;
+﻿using System.Text;
 using Horizon.LIBRARY.Common.Stream;
-using System.Text;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -17,10 +16,12 @@ namespace Horizon.RT.Models
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Session Key
         /// </summary>
         public string SessionKey; // SESSIONKEY_MAXLEN
+
         /// <summary>
         /// SceNpId
         /// </summary>
@@ -36,66 +37,52 @@ namespace Horizon.RT.Models
 
         public byte[] opt;
         public byte[] reserved;
-        
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             SessionKey = reader.ReadString(Constants.SESSIONKEY_MAXLEN);
-            
+
             //SCE_NPID Data Blob
             data = reader.ReadBytes(16);
             term = reader.ReadByte();
             dummy = reader.ReadBytes(3);
 
-            //
             opt = reader.ReadBytes(8);
             reserved = reader.ReadBytes(8);
-            
         }
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(SessionKey, Constants.SESSIONKEY_MAXLEN);
 
-            
             //SCE_NPID Data Blob
-            //SCENpOnlineId
             writer.Write(data);
             writer.Write(term);
             writer.Write(dummy);
 
-            //
             writer.Write(opt);
             writer.Write(reserved);
         }
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                //$"SceNpId: {SceNpId}";
-
-                $"Data: {Encoding.Default.GetString(data)} " +
-                $"Term: {term} " +
-                $"Dummy: {Encoding.Default.GetString(dummy)} " +
-                $"Opt: {Encoding.Default.GetString(opt)}" +
-                $"Reserved: {Encoding.Default.GetString(reserved)}";
-                
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"Data: {Encoding.Default.GetString(data)} "
+                + $"Term: {term} "
+                + $"Dummy: {Encoding.Default.GetString(dummy)} "
+                + $"Opt: {Encoding.Default.GetString(opt)}"
+                + $"Reserved: {Encoding.Default.GetString(reserved)}";
         }
     }
 }

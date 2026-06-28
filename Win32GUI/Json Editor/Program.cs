@@ -1,7 +1,4 @@
-﻿using System;
-using System.Windows.Forms;
-
-namespace ZTn.Json.Editor
+﻿namespace ZTn.Json.Editor
 {
     static class Program
     {

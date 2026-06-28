@@ -1,14 +1,16 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
-using System.Collections.Generic;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.ChannelList_ExtraInfoResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.ChannelList_ExtraInfoResponse
+    )]
     public class MediusChannelList_ExtraInfoResponse : BaseLobbyMessage, IMediusResponse
     {
-        public override byte PacketType => (byte)MediusLobbyMessageIds.ChannelList_ExtraInfoResponse;
+        public override byte PacketType =>
+            (byte)MediusLobbyMessageIds.ChannelList_ExtraInfoResponse;
 
         public bool IsSuccess => StatusCode >= 0;
 
@@ -28,7 +30,17 @@ namespace Horizon.RT.Models
         public string LobbyName; // LOBBYNAME_MAXLEN
         public bool EndOfList;
 
-        public List<int> channelList1pre108Response = new List<int>() { 10202, 10304, 10550, 10724, 10680, 10681, 10683, 10684 };
+        public List<int> channelList1pre108Response = new()
+        {
+            10202,
+            10304,
+            10550,
+            10724,
+            10680,
+            10681,
+            10683,
+            10684,
+        };
 
         public override void Deserialize(MessageReader reader)
         {
@@ -43,7 +55,7 @@ namespace Horizon.RT.Models
             MaxPlayers = reader.ReadUInt16();
 
             // Older Pre 1.50 Medius titles didn't include this
-            if (reader.MediusVersion > 108) 
+            if (reader.MediusVersion > 108)
             {
                 GameWorldCount = reader.ReadUInt16();
                 reader.ReadBytes(2);
@@ -103,21 +115,22 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-                return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"MediusWorldID: {MediusWorldID} " +
-                $"PlayerCount: {PlayerCount} " +
-                $"MaxPlayers: {MaxPlayers} " +
-                $"GameWorldCount: {GameWorldCount} " +
-                $"SecurityLevel: {SecurityLevel} " +
-                $"GenericField1: {GenericField1:X8} " +
-                $"GenericField2: {GenericField2:X8} " +
-                $"GenericField3: {GenericField3:X8} " +
-                $"GenericField4: {GenericField4:X8} " +
-                $"GenericFieldLevel: {GenericFieldLevel} " +
-                $"LobbyName: {LobbyName} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"MediusWorldID: {MediusWorldID} "
+                + $"PlayerCount: {PlayerCount} "
+                + $"MaxPlayers: {MaxPlayers} "
+                + $"GameWorldCount: {GameWorldCount} "
+                + $"SecurityLevel: {SecurityLevel} "
+                + $"GenericField1: {GenericField1:X8} "
+                + $"GenericField2: {GenericField2:X8} "
+                + $"GenericField3: {GenericField3:X8} "
+                + $"GenericField4: {GenericField4:X8} "
+                + $"GenericFieldLevel: {GenericFieldLevel} "
+                + $"LobbyName: {LobbyName} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

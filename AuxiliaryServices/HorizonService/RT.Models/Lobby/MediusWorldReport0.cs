@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -13,54 +12,67 @@ namespace Horizon.RT.Models
         /// Session Key
         /// </summary>
         public string SessionKey;
+
         /// <summary>
         /// MediusWorldID
         /// </summary>
         public int MediusWorldID;
+
         /// <summary>
         /// PlayerCount
         /// </summary>
         public int PlayerCount;
+
         /// <summary>
         /// GameName
         /// </summary>
         public string GameName; // GAMENAME_MAXLEN
+
         /// <summary>
         /// GameStats
         /// </summary>
         public byte[] GameStats = new byte[Constants.GAMESTATS_MAXLEN]; // GAMESTATS_MAXLEN
+
         /// <summary>
         /// Minimum Players
         /// </summary>
         public int MinPlayers;
+
         /// <summary>
         /// Maximum Players
         /// </summary>
         public int MaxPlayers;
+
         /// <summary>
         /// Game Level
         /// </summary>
         public int GameLevel;
+
         /// <summary>
         /// Player Skill Level
         /// </summary>
         public int PlayerSkillLevel;
+
         /// <summary>
         /// RulesSet
         /// </summary>
         public int RulesSet;
+
         /// <summary>
         /// GenericField1
         /// </summary>
         public int GenericField1;
+
         /// <summary>
         /// GenericField2
         /// </summary>
         public int GenericField2;
+
         /// <summary>
         /// GenericField3
         /// </summary>
         public int GenericField3;
+
         /// <summary>
         /// WorldStatus
         /// </summary>
@@ -112,21 +124,22 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"SessionKey: {SessionKey} " +
-                $"MediusWorldID: {MediusWorldID} " +
-                $"PlayerCount: {PlayerCount} " +
-                $"GameName: {GameName} " +
-                $"GameStats: {System.BitConverter.ToString(GameStats)} " +
-                $"MinPlayers: {MinPlayers} " +
-                $"MaxPlayers: {MaxPlayers} " +
-                $"GameLevel: {GameLevel} " +
-                $"PlayerSkillLevel: {PlayerSkillLevel} " +
-                $"RulesSet: {RulesSet} " +
-                $"GenericField1: {GenericField1:X8} " +
-                $"GenericField2: {GenericField2:X8} " +
-                $"GenericField3: {GenericField3:X8} " +
-                $"WorldStatus: {WorldStatus}";
+            return base.ToString()
+                + " "
+                + $"SessionKey: {SessionKey} "
+                + $"MediusWorldID: {MediusWorldID} "
+                + $"PlayerCount: {PlayerCount} "
+                + $"GameName: {GameName} "
+                + $"GameStats: {System.BitConverter.ToString(GameStats)} "
+                + $"MinPlayers: {MinPlayers} "
+                + $"MaxPlayers: {MaxPlayers} "
+                + $"GameLevel: {GameLevel} "
+                + $"PlayerSkillLevel: {PlayerSkillLevel} "
+                + $"RulesSet: {RulesSet} "
+                + $"GenericField1: {GenericField1:X8} "
+                + $"GenericField2: {GenericField2:X8} "
+                + $"GenericField3: {GenericField3:X8} "
+                + $"WorldStatus: {WorldStatus}";
         }
     }
 }

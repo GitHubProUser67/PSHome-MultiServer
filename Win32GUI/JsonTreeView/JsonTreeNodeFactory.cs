@@ -1,6 +1,4 @@
-﻿using System.Linq;
-using System.Windows.Forms;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 
 namespace ZTn.Json.JsonTreeView
 {
@@ -56,12 +54,10 @@ namespace ZTn.Json.JsonTreeView
 
             if (depth != 1)
             {
-                int remainingDepth = (depth == UnlimitedDepth ? UnlimitedDepth : depth - 1);
-                node.Nodes.AddRange(obj
-                    .Select(o => Create((dynamic)o, remainingDepth))
-                    .Cast<TreeNode>()
-                    .ToArray()
-                    );
+                var remainingDepth = depth == UnlimitedDepth ? UnlimitedDepth : depth - 1;
+                node.Nodes.AddRange([
+                    .. obj.Select(o => Create((dynamic)o, remainingDepth)).Cast<TreeNode>(),
+                ]);
             }
 
             return node;
@@ -79,11 +75,8 @@ namespace ZTn.Json.JsonTreeView
 
             if (depth != 1)
             {
-                int remainingDepth = (depth == UnlimitedDepth ? UnlimitedDepth : depth - 1);
-                node.Nodes.AddRange(obj.Properties()
-                    .Select(o => Create(o, remainingDepth))
-                    .ToArray()
-                    );
+                var remainingDepth = depth == UnlimitedDepth ? UnlimitedDepth : depth - 1;
+                node.Nodes.AddRange([.. obj.Properties().Select(o => Create(o, remainingDepth))]);
             }
 
             return node;
@@ -101,12 +94,10 @@ namespace ZTn.Json.JsonTreeView
 
             if (depth != 1)
             {
-                int remainingDepth = (depth == UnlimitedDepth ? UnlimitedDepth : depth - 1);
-                node.Nodes.AddRange(obj
-                   .Select(o => Create((dynamic)o, remainingDepth))
-                   .Cast<TreeNode>()
-                   .ToArray()
-                   );
+                var remainingDepth = depth == UnlimitedDepth ? UnlimitedDepth : depth - 1;
+                node.Nodes.AddRange([
+                    .. obj.Select(o => Create((dynamic)o, remainingDepth)).Cast<TreeNode>(),
+                ]);
             }
 
             return node;

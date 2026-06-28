@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze
 {
-	[TdfStruct]
-	public struct NotifyUserAdded
-	{
+    [TdfStruct]
+    public struct NotifyUserAdded
+    {
+        [TdfMember("DATA")]
+        public UserSessionExtendedData mExtendedData;
 
-		[TdfMember("DATA")]
-		public UserSessionExtendedData mExtendedData;
-
-		[TdfMember("USER")]
-		public UserIdentification mUserInfo;
-
-	}
+        [TdfMember("USER")]
+        public UserIdentification mUserInfo;
+    }
 }

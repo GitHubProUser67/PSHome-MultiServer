@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using static WebAPIService.GameServices.PSHOME.NDREAMS.Xi1.StatusBuilder;
+﻿using static WebAPIService.GameServices.PSHOME.NDREAMS.Xi1.StatusBuilder;
 
 namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi1
 {
@@ -53,42 +52,42 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi1
             { StatusMonth.September, "B622-0E3A-6BA0-A8B9" },
             { StatusMonth.October, "2817-8811-F9F4-EB6F" },
             { StatusMonth.November, "0567-33F4-4E99-289A" },
-            { StatusMonth.December, "6BFE-FDDA-544D-E769" }
+            { StatusMonth.December, "6BFE-FDDA-544D-E769" },
         };
 
         public static readonly Dictionary<int, string> Alpha1Doors = new()
         {
-            { 1,   "63EF-59F6-FA7F-A9A2" },
-            { 2,   "6BD5-6F19-6AE6-B25A" },
-            { 3, "C3C0-EA9A-138D-5B01" }
+            { 1, "63EF-59F6-FA7F-A9A2" },
+            { 2, "6BD5-6F19-6AE6-B25A" },
+            { 3, "C3C0-EA9A-138D-5B01" },
         };
 
         public static readonly Dictionary<int, string> Alpha2Puzzles = new()
         {
-            { 1,   "D005-533A-544C-7813" },
-            { 2,   "79AA-6BDD-D68A-6BD3" },
-            { 3, "B695-0960-BB8D-48C4" }
+            { 1, "D005-533A-544C-7813" },
+            { 2, "79AA-6BDD-D68A-6BD3" },
+            { 3, "B695-0960-BB8D-48C4" },
         };
 
         public static readonly Dictionary<int, string> Alpha3Doors = new()
         {
-            { 1,   "DED5-9BA2-8C37-2AEC" },
-            { 2,   "E83A-6F5F-FC68-8CC4" },
+            { 1, "DED5-9BA2-8C37-2AEC" },
+            { 2, "E83A-6F5F-FC68-8CC4" },
             { 3, "770F-102A-F5FE-BF14" },
-            { 4,  "3E89-B262-BC16-12CE" }
+            { 4, "3E89-B262-BC16-12CE" },
         };
 
         public static readonly Dictionary<TD32Missions, string> TD32 = new()
         {
-            { TD32Missions.M1,  "5F83-4338-4969-FEB3" },
-            { TD32Missions.M2,  "5702-1924-CA00-CCF1" },
-            { TD32Missions.M3,  "60D7-BB9C-ED92-E057" },
-            { TD32Missions.M4,  "380C-06E2-A6DB-CDDB" },
-            { TD32Missions.M5,  "D97B-ECF3-4C75-96A0" },
-            { TD32Missions.M6,  "9FB4-A924-A4FD-9AB3" },
-            { TD32Missions.M7,  "4821-5193-76A8-77ED" },
-            { TD32Missions.M8,  "24B6-CB03-97EC-76BC" },
-            { TD32Missions.M9,  "33FF-9354-7D29-C8DE" },
+            { TD32Missions.M1, "5F83-4338-4969-FEB3" },
+            { TD32Missions.M2, "5702-1924-CA00-CCF1" },
+            { TD32Missions.M3, "60D7-BB9C-ED92-E057" },
+            { TD32Missions.M4, "380C-06E2-A6DB-CDDB" },
+            { TD32Missions.M5, "D97B-ECF3-4C75-96A0" },
+            { TD32Missions.M6, "9FB4-A924-A4FD-9AB3" },
+            { TD32Missions.M7, "4821-5193-76A8-77ED" },
+            { TD32Missions.M8, "24B6-CB03-97EC-76BC" },
+            { TD32Missions.M9, "33FF-9354-7D29-C8DE" },
             { TD32Missions.M10, "C3E5-D843-AE65-4A79" },
             { TD32Missions.M11, "6DCF-AF9C-8D44-49DA" },
             { TD32Missions.M12, "7A90-4C6D-C2DA-2D2C" },
@@ -104,15 +103,15 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi1
 
         public static readonly Dictionary<FragmentMissions, string> Fragment = new()
         {
-            { FragmentMissions.F1,  "F9E0-532F-9F53-4CBD" },
-            { FragmentMissions.F2,  "9C77-4D56-5AA1-FFE0" },
-            { FragmentMissions.F3,  "C95D-BF8F-846A-2DD5" },
-            { FragmentMissions.F4,  "74EC-70EC-AA75-0EC1" },
-            { FragmentMissions.F5,  "784D-D378-3417-F73F" },
-            { FragmentMissions.F6,  "BBA9-472E-06A5-CBBC" },
-            { FragmentMissions.F7,  "4262-4E83-DA29-6CD2" },
-            { FragmentMissions.F8,  "E600-4D81-E939-0DE2" },
-            { FragmentMissions.F9,  "BDAF-39EC-D78E-4C69" },
+            { FragmentMissions.F1, "F9E0-532F-9F53-4CBD" },
+            { FragmentMissions.F2, "9C77-4D56-5AA1-FFE0" },
+            { FragmentMissions.F3, "C95D-BF8F-846A-2DD5" },
+            { FragmentMissions.F4, "74EC-70EC-AA75-0EC1" },
+            { FragmentMissions.F5, "784D-D378-3417-F73F" },
+            { FragmentMissions.F6, "BBA9-472E-06A5-CBBC" },
+            { FragmentMissions.F7, "4262-4E83-DA29-6CD2" },
+            { FragmentMissions.F8, "E600-4D81-E939-0DE2" },
+            { FragmentMissions.F9, "BDAF-39EC-D78E-4C69" },
             { FragmentMissions.F10, "D20F-22F3-4E57-C4E8" },
             { FragmentMissions.F11, "A1BB-D10D-DE6E-A770" },
             { FragmentMissions.F12, "BFC8-4965-DC09-305B" },
@@ -127,7 +126,7 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi1
             { FragmentMissions.F21, "FBA4-E78D-1614-890A" },
             { FragmentMissions.F22, "4B3D-BE62-E497-8DA5" },
             { FragmentMissions.F23, "2A8A-F44B-AF08-1F44" },
-            { FragmentMissions.F24, "7714-117B-E83D-8FCF" }
+            { FragmentMissions.F24, "7714-117B-E83D-8FCF" },
         };
 
         public static readonly Dictionary<VideosUnlocked, string> Videos = new()
@@ -142,24 +141,24 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi1
             { VideosUnlocked.V7, "4613-875F-8E38-5B7E" },
             { VideosUnlocked.V8, "4089-F3AD-50AB-612A" },
             { VideosUnlocked.V9, "DB71-1F94-05B0-3C30" },
-            { VideosUnlocked.V10,"765C-0A81-9D4D-5714" }
+            { VideosUnlocked.V10, "765C-0A81-9D4D-5714" },
         };
 
         public static readonly Dictionary<RecapVideo, string> Recap = new()
         {
-            { RecapVideo.R1,  "0BFB-AA51-4F0E-633C" },
-            { RecapVideo.R2,  "4156-2004-DFBE-4310" },
-            { RecapVideo.R3,  "DD4B-4CE0-B500-DEAD" },
-            { RecapVideo.R4,  "393E-9DC6-639D-CE8C" },
-            { RecapVideo.R5,  "4D7E-3622-BFF3-1396" },
-            { RecapVideo.R6,  "A4AB-F1DA-5AAF-A408" },
-            { RecapVideo.R7,  "E75E-89DA-DF1B-05EC" },
-            { RecapVideo.R8,  "9FAB-79FB-D02B-3825" },
-            { RecapVideo.R9,  "B622-0E3A-6BA0-A8B9" },
+            { RecapVideo.R1, "0BFB-AA51-4F0E-633C" },
+            { RecapVideo.R2, "4156-2004-DFBE-4310" },
+            { RecapVideo.R3, "DD4B-4CE0-B500-DEAD" },
+            { RecapVideo.R4, "393E-9DC6-639D-CE8C" },
+            { RecapVideo.R5, "4D7E-3622-BFF3-1396" },
+            { RecapVideo.R6, "A4AB-F1DA-5AAF-A408" },
+            { RecapVideo.R7, "E75E-89DA-DF1B-05EC" },
+            { RecapVideo.R8, "9FAB-79FB-D02B-3825" },
+            { RecapVideo.R9, "B622-0E3A-6BA0-A8B9" },
             { RecapVideo.R10, "2817-8811-F9F4-EB6F" },
             { RecapVideo.R11, "0567-33F4-4E99-289A" },
             { RecapVideo.R12, "6BFE-FDDA-544D-E769" },
-            { RecapVideo.R13, "6129-FAAA-5AFE-E768" }
+            { RecapVideo.R13, "6129-FAAA-5AFE-E768" },
         };
     }
 }

@@ -1,11 +1,7 @@
 namespace BlazeCommon
 {
-    public class BlazeNotification : Attribute
+    public class BlazeNotification(ushort commandId) : Attribute
     {
-        public ushort Id { get; }
-        public BlazeNotification(ushort commandId)
-        {
-            Id = commandId;
-        }
+        public ushort Id { get; } = commandId;
     }
 }

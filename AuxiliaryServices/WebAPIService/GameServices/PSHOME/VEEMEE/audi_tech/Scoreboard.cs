@@ -1,4 +1,3 @@
-using System.IO;
 using System.Xml;
 
 namespace WebAPIService.GameServices.PSHOME.VEEMEE.audi_tech
@@ -11,9 +10,9 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.audi_tech
         {
             // System.Random random = new System.Random();
 
-            using (StringWriter stringWriter = new StringWriter())
+            using (var stringWriter = new StringWriter())
             {
-                using (XmlWriter writer = XmlWriter.Create(stringWriter))
+                using (var writer = XmlWriter.Create(stringWriter))
                 {
                     writer.WriteStartDocument();
                     writer.WriteStartElement("AudiTechHighScore");
@@ -36,12 +35,12 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.audi_tech
                                     writer.WriteElementString("Efficiency", random.Next(1, 10).ToString());
                                 }*/
 
-                                writer.WriteEndElement();  // End of Table
+                                writer.WriteEndElement(); // End of Table
                             }
                         }
                     }
 
-                    writer.WriteEndElement();  // End of AudiTechHighScore
+                    writer.WriteEndElement(); // End of AudiTechHighScore
                     writer.WriteEndDocument();
                 }
 

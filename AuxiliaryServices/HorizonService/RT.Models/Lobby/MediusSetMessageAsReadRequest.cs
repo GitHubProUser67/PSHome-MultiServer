@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -11,22 +10,27 @@ namespace Horizon.RT.Models
     public class MediusSetMessageAsReadRequest : BaseLobbyMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusLobbyMessageIds.SetMessageAsRead;
+
         /// <summary>
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Session Key
         /// </summary>
         public string SessionKey; // SESSIONKEY_MAXLEN
+
         /// <summary>
         /// MessageType to mark as read
         /// </summary>
         public MediusMessageType MessageType;
+
         /// <summary>
         /// MessageID to Tag with
         /// </summary>
         public int MessageIDToTag;
+
         public override void Deserialize(MessageReader reader)
         {
             base.Deserialize(reader);
@@ -35,6 +39,7 @@ namespace Horizon.RT.Models
             MessageType = reader.Read<MediusMessageType>();
             MessageIDToTag = reader.ReadInt32();
         }
+
         public override void Serialize(MessageWriter writer)
         {
             base.Serialize(writer);
@@ -43,13 +48,15 @@ namespace Horizon.RT.Models
             writer.Write(MessageType);
             writer.Write(MessageIDToTag);
         }
+
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"MessageType: {MessageType} " +
-                $"MessageIDToTag: {MessageIDToTag}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"MessageType: {MessageType} "
+                + $"MessageIDToTag: {MessageIDToTag}";
         }
     }
 }

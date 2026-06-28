@@ -1,5 +1,5 @@
-using Horizon.RT.Models;
 using System.Net;
+using Horizon.RT.Models;
 
 namespace Horizon.LIBRARY.Pipeline.Udp
 {

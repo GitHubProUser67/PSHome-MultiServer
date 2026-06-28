@@ -1,11 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- "latest" works on local PC but not in build pipeline; Visual Studio version difference? Whatever, preview it is. -->
+    <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
-	<IsTrimmable>true</IsTrimmable>
-	<IsPublishable>false</IsPublishable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsTrimmable>true</IsTrimmable>
+    <IsPublishable>false</IsPublishable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\BackendServices\CastleLibrary\CastleLibrary.csproj" />
+  </ItemGroup>
 </Project>

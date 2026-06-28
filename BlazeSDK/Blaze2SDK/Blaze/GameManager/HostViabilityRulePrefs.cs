@@ -6,13 +6,11 @@ namespace Blaze2SDK.Blaze.GameManager
     [TdfStruct]
     public struct HostViabilityRulePrefs
     {
-        
         /// <summary>
         /// Max String Length: 32
         /// </summary>
         [TdfMember("THLD")]
         [StringLength(32)]
         public string mMinFitThresholdName;
-        
     }
 }

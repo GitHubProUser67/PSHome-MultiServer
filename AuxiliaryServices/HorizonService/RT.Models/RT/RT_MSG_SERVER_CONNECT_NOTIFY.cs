@@ -1,7 +1,6 @@
-using System.IO;
-using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 using System.Net;
+using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -12,9 +11,9 @@ namespace Horizon.RT.Models
 
         public short PlayerIndex;
         public short ScertId;
-        public short UNK_04 = 0;
+        public NetDisconnectReason Reason = 0;
         public IPAddress IP = IPAddress.Any;
-        public RSA_KEY Key = new RSA_KEY();
+        public RSA_KEY Key = new();
 
         public override void Deserialize(MessageReader reader)
         {
@@ -28,7 +27,7 @@ namespace Horizon.RT.Models
             {
                 PlayerIndex = reader.ReadInt16();
                 ScertId = reader.ReadInt16();
-                UNK_04 = reader.ReadInt16();
+                Reason = (NetDisconnectReason)reader.ReadInt16();
                 IP = reader.Read<IPAddress>();
                 Key = reader.Read<RSA_KEY>();
             }
@@ -46,7 +45,7 @@ namespace Horizon.RT.Models
             {
                 writer.Write(PlayerIndex);
                 writer.Write(ScertId);
-                writer.Write(UNK_04);
+                writer.Write((short)Reason);
                 writer.Write(IP ?? IPAddress.Any);
                 writer.Write(Key);
             }

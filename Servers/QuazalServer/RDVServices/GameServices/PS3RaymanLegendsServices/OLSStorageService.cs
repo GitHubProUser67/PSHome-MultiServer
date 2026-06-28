@@ -1,6 +1,5 @@
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.Interfaces;
-using QuazalServer.RDVServices.RMC;
 
 namespace QuazalServer.RDVServices.GameServices.PS3RaymanLegendsServices
 {
@@ -11,9 +10,16 @@ namespace QuazalServer.RDVServices.GameServices.PS3RaymanLegendsServices
         public RMCResult LoadVersion()
         {
             ushort version = 1;
-            string sandboxName = "RaymanPS3";
+            var sandboxName = "RaymanPS3";
             uint applicationMask = 1;
-            return Result(new { version, sandboxName, applicationMask });
+            return Result(
+                new
+                {
+                    version,
+                    sandboxName,
+                    applicationMask,
+                }
+            );
         }
 
         [RMCMethod(2)]

@@ -5,7 +5,6 @@ namespace Blaze2SDK.Blaze.Rooms
     [TdfStruct]
     public struct RoomViewReplicationContext
     {
-
         [TdfMember("UPRE")]
         public RoomViewUpdateReason mUpdateReason;
 
@@ -15,6 +14,5 @@ namespace Blaze2SDK.Blaze.Rooms
             USER_ROOM_CREATED = 0x1,
             USER_ROOM_DESTROYED = 0x2,
         }
-
     }
 }

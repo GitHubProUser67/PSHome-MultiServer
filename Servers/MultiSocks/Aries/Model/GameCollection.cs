@@ -1,13 +1,13 @@
-using MultiSocks.Aries.Messages;
 using System.Collections.Concurrent;
+using MultiSocks.Aries.Components;
 
 namespace MultiSocks.Aries.Model
 {
     public class GameCollection
     {
-        private static object _Lock = new();
+        private static readonly object _Lock = new();
 
-        private static ConcurrentDictionary<int, bool> _IdCounter = new();
+        private static readonly ConcurrentDictionary<int, bool> _IdCounter = new();
         public ConcurrentDictionary<int, AriesGame> GamesSessions = new();
 
         private static bool TryGetNextAvailableId(out int index)
@@ -16,7 +16,7 @@ namespace MultiSocks.Aries.Model
             {
                 for (index = 1; index < int.MaxValue; ++index)
                 {
-                    if (_IdCounter.TryGetValue(index, out bool isUsed) && !isUsed)
+                    if (_IdCounter.TryGetValue(index, out var isUsed) && !isUsed)
                     {
                         _IdCounter[index] = true;
                         return true;
@@ -37,9 +37,9 @@ namespace MultiSocks.Aries.Model
 
             lock (_Lock)
             {
-                if (!_IdCounter.ContainsKey(idToAdd))
+                if (!_IdCounter.TryGetValue(idToAdd, out var value))
                     return _IdCounter.TryAdd(idToAdd, true);
-                else if (!_IdCounter[idToAdd])
+                else if (_IdCounter[idToAdd] = !value)
                 {
                     _IdCounter[idToAdd] = true;
                     return true;
@@ -55,36 +55,66 @@ namespace MultiSocks.Aries.Model
                 _IdCounter[idToRemove] = false;
         }
 
-        public virtual AriesGame? AddGame(int maxSize, int minSize, string? custFlags, string @params,
-                string name, bool priv, string? seed, string sysFlags, string? pass, int roomId)
+        public virtual AriesGame? AddGame(
+            int maxSize,
+            int minSize,
+            string ident,
+            string? sku,
+            string? custFlags,
+            string @params,
+            string name,
+            bool priv,
+            string? seed,
+            string sysFlags,
+            string? pass,
+            int roomId
+        )
         {
-            if (!GamesSessions.Values.Any(game =>
-                    game.Name == name))
+            if (!GamesSessions.Values.Any(game => game.Name == name))
             {
-                if (TryGetNextAvailableId(out int GameID))
+                if (TryGetNextAvailableId(out var GameID))
                 {
-                    AriesGame game = new(maxSize, minSize, GameID, custFlags, @params,
-                        name, priv, seed, sysFlags, pass, roomId);
+                    AriesGame game = new(
+                        maxSize,
+                        minSize,
+                        GameID,
+                        ident,
+                        sku,
+                        custFlags,
+                        @params,
+                        name,
+                        priv,
+                        seed,
+                        sysFlags,
+                        pass,
+                        roomId
+                    );
                     GamesSessions.TryAdd(game.ID, game);
-                    CustomLogger.LoggerAccessor.LogInfo($"[Game] - Adding Game:{game.Name}:{game.ID}.");
+                    CustomLogger.LoggerAccessor.LogInfo(
+                        $"[Game] - Adding Game:{game.Name}:{game.ID}."
+                    );
                     return game;
                 }
                 else
                     CustomLogger.LoggerAccessor.LogError($"[Game] - Failed to register game id!");
             }
             else
-                CustomLogger.LoggerAccessor.LogWarn("[Game] - Trying to add a game while an other one with the same name exists!");
+                CustomLogger.LoggerAccessor.LogWarn(
+                    "[Game] - Trying to add a game while an other one with the same name exists!"
+                );
 
             return null;
         }
 
         public virtual bool RemoveGame(AriesGame? game)
         {
-            if (game != null && GamesSessions.ContainsKey(game.ID))
+            if (game != null && GamesSessions.TryGetValue(game.ID, out var value))
             {
-                CustomLogger.LoggerAccessor.LogWarn($"[Game] - Removing Game:{game.Name}:{game.ID}.");
+                CustomLogger.LoggerAccessor.LogWarn(
+                    $"[Game] - Removing Game:{game.Name}:{game.ID}."
+                );
 
-                foreach (AriesUser user in GamesSessions[game.ID].Users.GetAll())
+                foreach (var user in value.Users.GetAll())
                 {
                     user.Connection?.SendMessage(new Gdel());
 
@@ -118,10 +148,14 @@ namespace MultiSocks.Aries.Model
 
         public AriesGame? GetGameByName(string? name, string? pass)
         {
-            if (string.IsNullOrEmpty(name))
-                return null;
-
-            return GamesSessions.FirstOrDefault(x => x.Value.Name == name && (string.IsNullOrEmpty(x.Value.pass) || x.Value.pass == pass)).Value;
+            return string.IsNullOrEmpty(name)
+                ? null
+                : GamesSessions
+                    .FirstOrDefault(x =>
+                        x.Value.Name == name
+                        && (string.IsNullOrEmpty(x.Value.pass) || x.Value.pass == pass)
+                    )
+                    .Value;
         }
 
         public int Count()

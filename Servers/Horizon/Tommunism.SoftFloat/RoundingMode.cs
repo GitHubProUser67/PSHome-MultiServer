@@ -38,15 +38,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 =============================================================================*/
 #endregion
 
-namespace Tommunism.SoftFloat
+namespace Tommunism.SoftFloat;
+
+public enum RoundingMode : byte
 {
-    public enum RoundingMode : byte
-    {
-        NearEven = 0,
-        MinMag = 1,
-        Min = 2,
-        Max = 3,
-        NearMaxMag = 4,
-        Odd = 6
-    }
+    NearEven = 0,
+    MinMag = 1,
+    Min = 2,
+    Max = 3,
+    NearMaxMag = 4,
+    Odd = 6,
 }

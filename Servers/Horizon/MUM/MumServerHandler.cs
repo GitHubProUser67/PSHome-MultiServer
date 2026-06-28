@@ -1,9 +1,9 @@
-using MultiServerLibrary.HTTP;
-using CustomLogger;
 using System.Net;
 using System.Text;
-using WatsonWebserver.Core;
+using CustomLogger;
+using MultiServerLibrary.HTTP;
 using WatsonWebserver;
+using WatsonWebserver.Core;
 
 namespace Horizon.MUM
 {
@@ -16,11 +16,7 @@ namespace Horizon.MUM
         {
             _port = port;
 
-            WebserverSettings settings = new()
-            {
-                Hostname = ip,
-                Port = port,
-            };
+            WebserverSettings settings = new() { Hostname = ip, Port = port };
 
             if (!string.IsNullOrEmpty(certpath))
             {
@@ -50,242 +46,430 @@ namespace Horizon.MUM
                 _server.Settings.Debug.Responses = true;
                 _server.Settings.Debug.Routing = true;
 
-                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/GetChannelsJson/", async (HttpContextBase ctx) =>
-                {
-                    string userAgent = ctx.Request.Useragent;
-
-                    if (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase)) // Get Away TikTok.
+                _server.Routes.PostAuthentication.Parameter.Add(
+                    WatsonWebserver.Core.HttpMethod.GET,
+                    "/GetChannelsJson/",
+                    async (HttpContextBase ctx) =>
                     {
-                        ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-                        ctx.Response.ContentType = "text/plain";
-                        await ctx.Response.Send();
-                    }
-                    else
-                    {
-                        ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                        string? encoding = ctx.Request.RetrieveHeaderValue("Accept-Encoding");
-                        string? query = ctx.Request.Query.Querystring;
-                        ctx.Response.ContentType = "text/xml; charset=UTF-8";
+                        var userAgent = ctx.Request.Useragent;
 
-                        if (!string.IsNullOrEmpty(encoding))
+                        if (
+                            !string.IsNullOrEmpty(userAgent)
+                            && userAgent.Contains(
+                                "bytespider",
+                                StringComparison.InvariantCultureIgnoreCase
+                            )
+                        ) // Get Away TikTok.
                         {
-                            if (encoding.Contains("zstd"))
-                            {
-                                ctx.Response.Headers.Add("Content-Encoding", "zstd");
-                                string? base64json = MumChannelHandler.JsonSerializeChannelsList();
-
-                                if (!string.IsNullOrEmpty(base64json))
-                                    await ctx.Response.Send(HTTPProcessor.CompressZstd(Encoding.UTF8.GetBytes(base64json)));
-                                else
-                                    await ctx.Response.Send();
-                            }
-                            else if (encoding.Contains("br"))
-                            {
-                                ctx.Response.Headers.Add("Content-Encoding", "br");
-                                string? base64json = MumChannelHandler.JsonSerializeChannelsList();
-
-                                if (!string.IsNullOrEmpty(base64json))
-                                    await ctx.Response.Send(HTTPProcessor.CompressBrotli(Encoding.UTF8.GetBytes(base64json)));
-                                else
-                                    await ctx.Response.Send();
-                            }
-                            else if (encoding.Contains("gzip"))
-                            {
-                                ctx.Response.Headers.Add("Content-Encoding", "gzip");
-                                string? base64json = MumChannelHandler.JsonSerializeChannelsList();
-
-                                if (!string.IsNullOrEmpty(base64json))
-                                    await ctx.Response.Send(HTTPProcessor.CompressGzip(Encoding.UTF8.GetBytes(base64json)));
-                                else
-                                    await ctx.Response.Send();
-                            }
-                            else if (encoding.Contains("deflate"))
-                            {
-                                ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                string? base64json = MumChannelHandler.JsonSerializeChannelsList();
-
-                                if (!string.IsNullOrEmpty(base64json))
-                                    await ctx.Response.Send(HTTPProcessor.Deflate(Encoding.UTF8.GetBytes(base64json)));
-                                else
-                                    await ctx.Response.Send();
-                            }
-                            else
-                                await ctx.Response.Send(MumChannelHandler.JsonSerializeChannelsList());
+                            ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                            ctx.Response.ContentType = "text/plain";
+                            await ctx.Response.Send().ConfigureAwait(false);
                         }
                         else
-                            await ctx.Response.Send(MumChannelHandler.JsonSerializeChannelsList());
-                    }
-                });
-
-                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/GetChannelsXML/", async (HttpContextBase ctx) =>
-                {
-                    string userAgent = ctx.Request.Useragent;
-
-                    if (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase)) // Get Away TikTok.
-                    {
-                        ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-                        ctx.Response.ContentType = "text/plain";
-                        await ctx.Response.Send();
-                    }
-                    else
-                    {
-                        ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                        ctx.Response.ContentType = "text/xml; charset=UTF-8";
-                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                        string? encoding = ctx.Request.RetrieveHeaderValue("Accept-Encoding");
-                        string? query = ctx.Request.Query.Querystring;
-
-                        if (!string.IsNullOrEmpty(encoding))
-                        {
-                            if (encoding.Contains("zstd"))
-                            {
-                                ctx.Response.Headers.Add("Content-Encoding", "zstd");
-                                string? base64xml = MumChannelHandler.XMLSerializeChannelsList();
-
-                                if (!string.IsNullOrEmpty(base64xml))
-                                    await ctx.Response.Send(HTTPProcessor.CompressZstd(Encoding.UTF8.GetBytes(base64xml)));
-                                else
-                                    await ctx.Response.Send();
-                            }
-                            else if (encoding.Contains("br"))
-                            {
-                                ctx.Response.Headers.Add("Content-Encoding", "br");
-                                string? base64xml = MumChannelHandler.XMLSerializeChannelsList();
-
-                                if (!string.IsNullOrEmpty(base64xml))
-                                    await ctx.Response.Send(HTTPProcessor.CompressBrotli(Encoding.UTF8.GetBytes(base64xml)));
-                                else
-                                    await ctx.Response.Send();
-                            }
-                            else if (encoding.Contains("gzip"))
-                            {
-                                ctx.Response.Headers.Add("Content-Encoding", "gzip");
-                                string? base64xml = MumChannelHandler.XMLSerializeChannelsList();
-
-                                if (!string.IsNullOrEmpty(base64xml))
-                                    await ctx.Response.Send(HTTPProcessor.CompressGzip(Encoding.UTF8.GetBytes(base64xml)));
-                                else
-                                    await ctx.Response.Send();
-                            }
-                            else if (encoding.Contains("deflate"))
-                            {
-                                ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                string? base64xml = MumChannelHandler.XMLSerializeChannelsList();
-
-                                if (!string.IsNullOrEmpty(base64xml))
-                                    await ctx.Response.Send(HTTPProcessor.Deflate(Encoding.UTF8.GetBytes(base64xml)));
-                                else
-                                    await ctx.Response.Send();
-                            }
-                            else
-                                await ctx.Response.Send(MumChannelHandler.XMLSerializeChannelsList());
-                        }
-                        else
-                            await ctx.Response.Send(MumChannelHandler.XMLSerializeChannelsList());
-                    }
-                });
-
-                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/GetChannelsCRC/", async (HttpContextBase ctx) =>
-                {
-                    string userAgent = ctx.Request.Useragent;
-
-                    if (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase)) // Get Away TikTok.
-                    {
-                        ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-                        ctx.Response.ContentType = "text/plain";
-                        await ctx.Response.Send();
-                    }
-                    else
-                    {
-                        ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                        ctx.Response.ContentType = "text/xml; charset=UTF-8";
-                        ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                        string? encoding = ctx.Request.RetrieveHeaderValue("Accept-Encoding");
-                        if (!string.IsNullOrEmpty(encoding))
-                        {
-                            if (encoding.Contains("zstd"))
-                            {
-                                ctx.Response.Headers.Add("Content-Encoding", "zstd");
-                                await ctx.Response.Send(HTTPProcessor.CompressZstd(Encoding.UTF8.GetBytes(MumChannelHandler.GetCRC32ChannelsList())));
-                            }
-                            else if (encoding.Contains("br"))
-                            {
-                                ctx.Response.Headers.Add("Content-Encoding", "br");
-                                await ctx.Response.Send(HTTPProcessor.CompressBrotli(Encoding.UTF8.GetBytes(MumChannelHandler.GetCRC32ChannelsList())));
-                            }
-                            else if (encoding.Contains("gzip"))
-                            {
-                                ctx.Response.Headers.Add("Content-Encoding", "gzip");
-                                await ctx.Response.Send(HTTPProcessor.CompressGzip(Encoding.UTF8.GetBytes(MumChannelHandler.GetCRC32ChannelsList())));
-                            }
-                            else if (encoding.Contains("deflate"))
-                            {
-                                ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                await ctx.Response.Send(HTTPProcessor.Deflate(Encoding.UTF8.GetBytes(MumChannelHandler.GetCRC32ChannelsList())));
-                            }
-                            else
-                                await ctx.Response.Send(MumChannelHandler.GetCRC32ChannelsList());
-                        }
-                        else
-                            await ctx.Response.Send(MumChannelHandler.GetCRC32ChannelsList());
-                    }
-                });
-
-                _server.Routes.PostAuthentication.Parameter.Add(WatsonWebserver.Core.HttpMethod.GET, "/favicon.ico", async (HttpContextBase ctx) =>
-                {
-                    string userAgent = ctx.Request.Useragent;
-
-                    if (!string.IsNullOrEmpty(userAgent) && userAgent.Contains("bytespider", StringComparison.InvariantCultureIgnoreCase)) // Get Away TikTok.
-                    {
-                        ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-                        ctx.Response.ContentType = "text/plain";
-                        await ctx.Response.Send();
-                    }
-                    else
-                    {
-                        if (File.Exists(Directory.GetCurrentDirectory() + "/static/wwwroot/favicon.ico"))
                         {
                             ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                            ctx.Response.ContentType = "image/x-icon";
                             ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                            string? encoding = ctx.Request.RetrieveHeaderValue("Accept-Encoding");
+                            var encoding = ctx.Request.RetrieveHeaderValue("Accept-Encoding");
+                            var query = ctx.Request.Query.Querystring;
+                            ctx.Response.ContentType = "text/xml; charset=UTF-8";
+
                             if (!string.IsNullOrEmpty(encoding))
                             {
                                 if (encoding.Contains("zstd"))
                                 {
                                     ctx.Response.Headers.Add("Content-Encoding", "zstd");
-                                    await ctx.Response.Send(HTTPProcessor.CompressZstd(File.ReadAllBytes(Directory.GetCurrentDirectory() + "/static/wwwroot/favicon.ico")));
+                                    var base64json = MumChannelHandler.JsonSerializeChannelsList();
+
+                                    if (!string.IsNullOrEmpty(base64json))
+                                        await ctx
+                                            .Response.Send(
+                                                HTTPProcessor.CompressZstd(
+                                                    Encoding.UTF8.GetBytes(base64json)
+                                                )
+                                            )
+                                            .ConfigureAwait(false);
+                                    else
+                                        await ctx.Response.Send().ConfigureAwait(false);
                                 }
                                 else if (encoding.Contains("br"))
                                 {
                                     ctx.Response.Headers.Add("Content-Encoding", "br");
-                                    await ctx.Response.Send(HTTPProcessor.CompressBrotli(File.ReadAllBytes(Directory.GetCurrentDirectory() + "/static/wwwroot/favicon.ico")));
+                                    var base64json = MumChannelHandler.JsonSerializeChannelsList();
+
+                                    if (!string.IsNullOrEmpty(base64json))
+                                        await ctx
+                                            .Response.Send(
+                                                HTTPProcessor.CompressBrotli(
+                                                    Encoding.UTF8.GetBytes(base64json)
+                                                )
+                                            )
+                                            .ConfigureAwait(false);
+                                    else
+                                        await ctx.Response.Send().ConfigureAwait(false);
                                 }
                                 else if (encoding.Contains("gzip"))
                                 {
                                     ctx.Response.Headers.Add("Content-Encoding", "gzip");
-                                    await ctx.Response.Send(HTTPProcessor.CompressGzip(File.ReadAllBytes(Directory.GetCurrentDirectory() + "/static/wwwroot/favicon.ico")));
+                                    var base64json = MumChannelHandler.JsonSerializeChannelsList();
+
+                                    if (!string.IsNullOrEmpty(base64json))
+                                        await ctx
+                                            .Response.Send(
+                                                HTTPProcessor.CompressGzip(
+                                                    Encoding.UTF8.GetBytes(base64json)
+                                                )
+                                            )
+                                            .ConfigureAwait(false);
+                                    else
+                                        await ctx.Response.Send().ConfigureAwait(false);
                                 }
                                 else if (encoding.Contains("deflate"))
                                 {
                                     ctx.Response.Headers.Add("Content-Encoding", "deflate");
-                                    await ctx.Response.Send(HTTPProcessor.Deflate(File.ReadAllBytes(Directory.GetCurrentDirectory() + "/static/wwwroot/favicon.ico")));
+                                    var base64json = MumChannelHandler.JsonSerializeChannelsList();
+
+                                    if (!string.IsNullOrEmpty(base64json))
+                                        await ctx
+                                            .Response.Send(
+                                                HTTPProcessor.Deflate(
+                                                    Encoding.UTF8.GetBytes(base64json)
+                                                )
+                                            )
+                                            .ConfigureAwait(false);
+                                    else
+                                        await ctx.Response.Send().ConfigureAwait(false);
                                 }
                                 else
-                                    await ctx.Response.Send(File.ReadAllBytes(Directory.GetCurrentDirectory() + "/static/wwwroot/favicon.ico"));
+                                    await ctx
+                                        .Response.Send(
+                                            MumChannelHandler.JsonSerializeChannelsList()
+                                        )
+                                        .ConfigureAwait(false);
                             }
                             else
-                                await ctx.Response.Send(File.ReadAllBytes(Directory.GetCurrentDirectory() + "/static/wwwroot/favicon.ico"));
+                                await ctx
+                                    .Response.Send(MumChannelHandler.JsonSerializeChannelsList())
+                                    .ConfigureAwait(false);
+                        }
+                    }
+                );
+
+                _server.Routes.PostAuthentication.Parameter.Add(
+                    WatsonWebserver.Core.HttpMethod.GET,
+                    "/GetChannelsXML/",
+                    async (HttpContextBase ctx) =>
+                    {
+                        var userAgent = ctx.Request.Useragent;
+
+                        if (
+                            !string.IsNullOrEmpty(userAgent)
+                            && userAgent.Contains(
+                                "bytespider",
+                                StringComparison.InvariantCultureIgnoreCase
+                            )
+                        ) // Get Away TikTok.
+                        {
+                            ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                            ctx.Response.ContentType = "text/plain";
+                            await ctx.Response.Send().ConfigureAwait(false);
                         }
                         else
                         {
-                            ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            ctx.Response.ContentType = "text/plain";
-                            await ctx.Response.Send();
+                            ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                            ctx.Response.ContentType = "text/xml; charset=UTF-8";
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            var encoding = ctx.Request.RetrieveHeaderValue("Accept-Encoding");
+                            var query = ctx.Request.Query.Querystring;
+
+                            if (!string.IsNullOrEmpty(encoding))
+                            {
+                                if (encoding.Contains("zstd"))
+                                {
+                                    ctx.Response.Headers.Add("Content-Encoding", "zstd");
+                                    var base64xml = MumChannelHandler.XMLSerializeChannelsList();
+
+                                    if (!string.IsNullOrEmpty(base64xml))
+                                        await ctx
+                                            .Response.Send(
+                                                HTTPProcessor.CompressZstd(
+                                                    Encoding.UTF8.GetBytes(base64xml)
+                                                )
+                                            )
+                                            .ConfigureAwait(false);
+                                    else
+                                        await ctx.Response.Send().ConfigureAwait(false);
+                                }
+                                else if (encoding.Contains("br"))
+                                {
+                                    ctx.Response.Headers.Add("Content-Encoding", "br");
+                                    var base64xml = MumChannelHandler.XMLSerializeChannelsList();
+
+                                    if (!string.IsNullOrEmpty(base64xml))
+                                        await ctx
+                                            .Response.Send(
+                                                HTTPProcessor.CompressBrotli(
+                                                    Encoding.UTF8.GetBytes(base64xml)
+                                                )
+                                            )
+                                            .ConfigureAwait(false);
+                                    else
+                                        await ctx.Response.Send().ConfigureAwait(false);
+                                }
+                                else if (encoding.Contains("gzip"))
+                                {
+                                    ctx.Response.Headers.Add("Content-Encoding", "gzip");
+                                    var base64xml = MumChannelHandler.XMLSerializeChannelsList();
+
+                                    if (!string.IsNullOrEmpty(base64xml))
+                                        await ctx
+                                            .Response.Send(
+                                                HTTPProcessor.CompressGzip(
+                                                    Encoding.UTF8.GetBytes(base64xml)
+                                                )
+                                            )
+                                            .ConfigureAwait(false);
+                                    else
+                                        await ctx.Response.Send().ConfigureAwait(false);
+                                }
+                                else if (encoding.Contains("deflate"))
+                                {
+                                    ctx.Response.Headers.Add("Content-Encoding", "deflate");
+                                    var base64xml = MumChannelHandler.XMLSerializeChannelsList();
+
+                                    if (!string.IsNullOrEmpty(base64xml))
+                                        await ctx
+                                            .Response.Send(
+                                                HTTPProcessor.Deflate(
+                                                    Encoding.UTF8.GetBytes(base64xml)
+                                                )
+                                            )
+                                            .ConfigureAwait(false);
+                                    else
+                                        await ctx.Response.Send().ConfigureAwait(false);
+                                }
+                                else
+                                    await ctx
+                                        .Response.Send(MumChannelHandler.XMLSerializeChannelsList())
+                                        .ConfigureAwait(false);
+                            }
+                            else
+                                await ctx
+                                    .Response.Send(MumChannelHandler.XMLSerializeChannelsList())
+                                    .ConfigureAwait(false);
                         }
                     }
-                });
+                );
+
+                _server.Routes.PostAuthentication.Parameter.Add(
+                    WatsonWebserver.Core.HttpMethod.GET,
+                    "/GetChannelsCRC/",
+                    async (HttpContextBase ctx) =>
+                    {
+                        var userAgent = ctx.Request.Useragent;
+
+                        if (
+                            !string.IsNullOrEmpty(userAgent)
+                            && userAgent.Contains(
+                                "bytespider",
+                                StringComparison.InvariantCultureIgnoreCase
+                            )
+                        ) // Get Away TikTok.
+                        {
+                            ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                            ctx.Response.ContentType = "text/plain";
+                            await ctx.Response.Send().ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                            ctx.Response.ContentType = "text/xml; charset=UTF-8";
+                            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                            var encoding = ctx.Request.RetrieveHeaderValue("Accept-Encoding");
+                            if (!string.IsNullOrEmpty(encoding))
+                            {
+                                if (encoding.Contains("zstd"))
+                                {
+                                    ctx.Response.Headers.Add("Content-Encoding", "zstd");
+                                    await ctx
+                                        .Response.Send(
+                                            HTTPProcessor.CompressZstd(
+                                                Encoding.UTF8.GetBytes(
+                                                    MumChannelHandler.GetCRC32ChannelsList()
+                                                )
+                                            )
+                                        )
+                                        .ConfigureAwait(false);
+                                }
+                                else if (encoding.Contains("br"))
+                                {
+                                    ctx.Response.Headers.Add("Content-Encoding", "br");
+                                    await ctx
+                                        .Response.Send(
+                                            HTTPProcessor.CompressBrotli(
+                                                Encoding.UTF8.GetBytes(
+                                                    MumChannelHandler.GetCRC32ChannelsList()
+                                                )
+                                            )
+                                        )
+                                        .ConfigureAwait(false);
+                                }
+                                else if (encoding.Contains("gzip"))
+                                {
+                                    ctx.Response.Headers.Add("Content-Encoding", "gzip");
+                                    await ctx
+                                        .Response.Send(
+                                            HTTPProcessor.CompressGzip(
+                                                Encoding.UTF8.GetBytes(
+                                                    MumChannelHandler.GetCRC32ChannelsList()
+                                                )
+                                            )
+                                        )
+                                        .ConfigureAwait(false);
+                                }
+                                else if (encoding.Contains("deflate"))
+                                {
+                                    ctx.Response.Headers.Add("Content-Encoding", "deflate");
+                                    await ctx
+                                        .Response.Send(
+                                            HTTPProcessor.Deflate(
+                                                Encoding.UTF8.GetBytes(
+                                                    MumChannelHandler.GetCRC32ChannelsList()
+                                                )
+                                            )
+                                        )
+                                        .ConfigureAwait(false);
+                                }
+                                else
+                                    await ctx
+                                        .Response.Send(MumChannelHandler.GetCRC32ChannelsList())
+                                        .ConfigureAwait(false);
+                            }
+                            else
+                                await ctx
+                                    .Response.Send(MumChannelHandler.GetCRC32ChannelsList())
+                                    .ConfigureAwait(false);
+                        }
+                    }
+                );
+
+                _server.Routes.PostAuthentication.Parameter.Add(
+                    WatsonWebserver.Core.HttpMethod.GET,
+                    "/favicon.ico",
+                    async (HttpContextBase ctx) =>
+                    {
+                        var userAgent = ctx.Request.Useragent;
+
+                        if (
+                            !string.IsNullOrEmpty(userAgent)
+                            && userAgent.Contains(
+                                "bytespider",
+                                StringComparison.InvariantCultureIgnoreCase
+                            )
+                        ) // Get Away TikTok.
+                        {
+                            ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                            ctx.Response.ContentType = "text/plain";
+                            await ctx.Response.Send().ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            if (
+                                File.Exists(
+                                    Directory.GetCurrentDirectory() + "/static/wwwroot/favicon.ico"
+                                )
+                            )
+                            {
+                                ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                                ctx.Response.ContentType = "image/x-icon";
+                                ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+                                var encoding = ctx.Request.RetrieveHeaderValue("Accept-Encoding");
+                                if (!string.IsNullOrEmpty(encoding))
+                                {
+                                    if (encoding.Contains("zstd"))
+                                    {
+                                        ctx.Response.Headers.Add("Content-Encoding", "zstd");
+                                        await ctx
+                                            .Response.Send(
+                                                HTTPProcessor.CompressZstd(
+                                                    File.ReadAllBytes(
+                                                        Directory.GetCurrentDirectory()
+                                                            + "/static/wwwroot/favicon.ico"
+                                                    )
+                                                )
+                                            )
+                                            .ConfigureAwait(false);
+                                    }
+                                    else if (encoding.Contains("br"))
+                                    {
+                                        ctx.Response.Headers.Add("Content-Encoding", "br");
+                                        await ctx
+                                            .Response.Send(
+                                                HTTPProcessor.CompressBrotli(
+                                                    File.ReadAllBytes(
+                                                        Directory.GetCurrentDirectory()
+                                                            + "/static/wwwroot/favicon.ico"
+                                                    )
+                                                )
+                                            )
+                                            .ConfigureAwait(false);
+                                    }
+                                    else if (encoding.Contains("gzip"))
+                                    {
+                                        ctx.Response.Headers.Add("Content-Encoding", "gzip");
+                                        await ctx
+                                            .Response.Send(
+                                                HTTPProcessor.CompressGzip(
+                                                    File.ReadAllBytes(
+                                                        Directory.GetCurrentDirectory()
+                                                            + "/static/wwwroot/favicon.ico"
+                                                    )
+                                                )
+                                            )
+                                            .ConfigureAwait(false);
+                                    }
+                                    else if (encoding.Contains("deflate"))
+                                    {
+                                        ctx.Response.Headers.Add("Content-Encoding", "deflate");
+                                        await ctx
+                                            .Response.Send(
+                                                HTTPProcessor.Deflate(
+                                                    File.ReadAllBytes(
+                                                        Directory.GetCurrentDirectory()
+                                                            + "/static/wwwroot/favicon.ico"
+                                                    )
+                                                )
+                                            )
+                                            .ConfigureAwait(false);
+                                    }
+                                    else
+                                        await ctx
+                                            .Response.Send(
+                                                File.ReadAllBytes(
+                                                    Directory.GetCurrentDirectory()
+                                                        + "/static/wwwroot/favicon.ico"
+                                                )
+                                            )
+                                            .ConfigureAwait(false);
+                                }
+                                else
+                                    await ctx
+                                        .Response.Send(
+                                            File.ReadAllBytes(
+                                                Directory.GetCurrentDirectory()
+                                                    + "/static/wwwroot/favicon.ico"
+                                            )
+                                        )
+                                        .ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                                ctx.Response.ContentType = "text/plain";
+                                await ctx.Response.Send().ConfigureAwait(false);
+                            }
+                        }
+                    }
+                );
 
                 _server.Start();
 

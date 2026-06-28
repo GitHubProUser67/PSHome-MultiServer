@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -10,20 +9,24 @@ namespace Horizon.RT.Models
     /// which this host can connect in order to interface with the Medius universe.<br></br>
     /// Save the connect information in a variable, and use it with MGCL_Connect().
     /// </summary>
-    [MediusMessage(NetMessageClass.MessageClassLobbyReport, MediusMGCLMessageIds.ServerAuthenticationResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyReport,
+        MediusMGCLMessageIds.ServerAuthenticationResponse
+    )]
     public class MediusServerAuthenticationResponse : BaseMGCLMessage, IMediusResponse
     {
-
         public override byte PacketType => (byte)MediusMGCLMessageIds.ServerAuthenticationResponse;
 
         /// <summary>
         /// Message ID used for asynchronous request processing.
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// MGCL_SUCCESS or an error.
         /// </summary>
         public MGCL_ERROR_CODE Confirmation;
+
         /// <summary>
         /// Address of the proxy server to connect to.
         /// </summary>
@@ -53,10 +56,11 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"Confirmation: {Confirmation} " +
-                $"ConnectInfo: {ConnectInfo}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"Confirmation: {Confirmation} "
+                + $"ConnectInfo: {ConnectInfo}";
         }
     }
 }

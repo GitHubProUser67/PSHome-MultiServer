@@ -1,16 +1,14 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     /// <summary>
     /// Introduced in Medius 1.42
     /// </summary>
-	[MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.AddToIgnoreList)]
+    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.AddToIgnoreList)]
     public class MediusAddToIgnoreListRequest : BaseLobbyMessage, IMediusRequest
     {
-
         public override byte PacketType => (byte)MediusLobbyMessageIds.AddToIgnoreList;
 
         public MessageId MessageID { get; set; }
@@ -40,13 +38,13 @@ namespace Horizon.RT.Models
             writer.Write(IgnoreAccountID);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{MessageID} " +
-                $"SessionKey:{SessionKey} " +
-                $"IgnoreAccountID:{IgnoreAccountID}";
+            return base.ToString()
+                + " "
+                + $"MessageID:{MessageID} "
+                + $"SessionKey:{SessionKey} "
+                + $"IgnoreAccountID:{IgnoreAccountID}";
         }
     }
 }

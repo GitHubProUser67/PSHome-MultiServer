@@ -1,5 +1,5 @@
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -7,10 +7,14 @@ namespace Horizon.RT.Models
     /// Wraps the information in a session begin <br></br>
     /// Request to begin a session (first network request to Medius).
     /// </summary>
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.ExtendedSessionBeginRequest)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.ExtendedSessionBeginRequest
+    )]
     public class MediusExtendedSessionBeginRequest : BaseLobbyExtMessage, IMediusRequest
     {
-        public override byte PacketType => (byte)MediusLobbyExtMessageIds.ExtendedSessionBeginRequest;
+        public override byte PacketType =>
+            (byte)MediusLobbyExtMessageIds.ExtendedSessionBeginRequest;
 
         /// <summary>
         /// Message ID
@@ -18,22 +22,25 @@ namespace Horizon.RT.Models
         public MessageId MessageID { get; set; }
 
         /// <summary>
-        /// Connection Class: Ethernet, modem, or wireless 
+        /// Connection Class: Ethernet, modem, or wireless
         /// </summary>
         public MediusConnectionType ConnectionClass;
-        
+
         /// <summary>
         /// Major version for the Medius Client
         /// </summary>
         public int ClientVersionMajor;
+
         /// <summary>
         /// Minor version for the Medius Client
         /// </summary>
         public int ClientVersionMinor;
+
         /// <summary>
         /// Special Patch version for the Medius Client
         /// </summary>
         public int ClientVersionSpecialPatch;
+
         /// <summary>
         /// Build version for the Medius Client
         /// </summary>
@@ -69,16 +76,16 @@ namespace Horizon.RT.Models
             writer.Write(ClientVersionBuild);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"ConnectionClass: {ConnectionClass} " +
-                $"ClientVersionMajor: {ClientVersionMajor} " +
-                $"ClientVersionMinor: {ClientVersionMinor} " +
-                $"ClientVersionSpecialPatch: {ClientVersionSpecialPatch} " +
-                $"ClientVersionBuild: {ClientVersionBuild}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"ConnectionClass: {ConnectionClass} "
+                + $"ClientVersionMajor: {ClientVersionMajor} "
+                + $"ClientVersionMinor: {ClientVersionMinor} "
+                + $"ClientVersionSpecialPatch: {ClientVersionSpecialPatch} "
+                + $"ClientVersionBuild: {ClientVersionBuild}";
         }
     }
 }

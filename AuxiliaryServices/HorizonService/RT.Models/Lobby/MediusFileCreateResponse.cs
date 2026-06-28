@@ -1,20 +1,18 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.FileCreateResponse)]
     public class MediusFileCreateResponse : BaseLobbyMessage, IMediusResponse
     {
-
         public override byte PacketType => (byte)MediusLobbyMessageIds.FileCreateResponse;
 
         public bool IsSuccess => StatusCode >= 0;
 
         public MessageId MessageID { get; set; }
 
-        public MediusFile MediusFileInfo = new MediusFile();
+        public MediusFile MediusFileInfo = new();
         public MediusCallbackStatus StatusCode;
 
         public override void Deserialize(MessageReader reader)
@@ -39,13 +37,13 @@ namespace Horizon.RT.Models
             writer.Write(new byte[3]);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"MediusFileInfo: {MediusFileInfo} " +
-                $"StatusCode: {StatusCode}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"MediusFileInfo: {MediusFileInfo} "
+                + $"StatusCode: {StatusCode}";
         }
     }
 }

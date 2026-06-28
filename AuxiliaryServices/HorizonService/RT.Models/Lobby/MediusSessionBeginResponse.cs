@@ -1,7 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
-using System.Collections.Generic;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -9,7 +7,7 @@ namespace Horizon.RT.Models
     public class MediusSessionBeginResponse : BaseLobbyMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusLobbyMessageIds.SessionBeginResponse;
-        List<int> shortPadding = new List<int> { 10694, 21064 };
+        readonly List<int> shortPadding = new() { 10694, 21064 };
 
         public bool IsSuccess => StatusCode >= 0;
 
@@ -50,10 +48,11 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"SessionKey: {SessionKey}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"SessionKey: {SessionKey}";
         }
     }
 }

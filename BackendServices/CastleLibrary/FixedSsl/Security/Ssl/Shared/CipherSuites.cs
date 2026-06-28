@@ -1,6 +1,6 @@
 /*
  *   Mentalis.org Security Library
- * 
+ *
  *     Copyright � 2002-2005, The Mentalis.org Team
  *     All rights reserved.
  *     http://www.mentalis.org/
@@ -11,11 +11,11 @@
  *   are met:
  *
  *     - Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer. 
+ *        notice, this list of conditions and the following disclaimer.
  *
  *     - Neither the name of the Mentalis.org Team, nor the names of its contributors
  *        may be used to endorse or promote products derived from this
- *        software without specific prior written permission. 
+ *        software without specific prior written permission.
  *
  *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -31,58 +31,62 @@
  *   OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-using Org.Mentalis.Security.Cryptography;
-using Org.Mentalis.Security.Ssl.Ssl3;
-using Org.Mentalis.Security.Ssl.Tls1;
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Security.Cryptography;
+using CastleLibrary.FixedSsl.Security.Cryptography;
+using CastleLibrary.FixedSsl.Security.Ssl.Ssl3;
+using CastleLibrary.FixedSsl.Security.Ssl.Tls1;
 
-namespace Org.Mentalis.Security.Ssl.Shared
+namespace CastleLibrary.FixedSsl.Security.Ssl.Shared
 {
     // AES ciphers: http://www.ietf.org/rfc/rfc3268.txt
     // 1024bit export ciphers: http://www.ietf.org/proceedings/99nov/I-D/draft-ietf-tls-56-bit-ciphersuites-00.txt
-    internal sealed class CipherSuites {
-		private CipherSuites() {}
+    internal sealed class CipherSuites
+    {
+        private CipherSuites() { }
 
         // Map TLS cipher identifiers (0x00XX) to algorithms
         public static Dictionary<(byte, byte), SslAlgorithms> CipherMap = new()
-		{
-			{ (0, 0), SslAlgorithms.NONE },
-			{ (0, 3), SslAlgorithms.RSA_RC4_40_MD5 },
-			{ (0, 4), SslAlgorithms.RSA_RC4_128_MD5 },
-			{ (0, 5), SslAlgorithms.RSA_RC4_128_SHA },
-			{ (0, 6), SslAlgorithms.RSA_RC2_40_MD5 },
-			{ (0, 8), SslAlgorithms.RSA_DES_40_SHA },
-			{ (0, 9), SslAlgorithms.RSA_DES_56_SHA },
-			{ (0, 10), SslAlgorithms.RSA_3DES_168_SHA },
-			{ (0, 47), SslAlgorithms.RSA_AES_128_SHA },
-			{ (0, 53), SslAlgorithms.RSA_AES_256_SHA },
-		};
+        {
+            { (0, 0), SslAlgorithms.NONE },
+            { (0, 3), SslAlgorithms.RSA_RC4_40_MD5 },
+            { (0, 4), SslAlgorithms.RSA_RC4_128_MD5 },
+            { (0, 5), SslAlgorithms.RSA_RC4_128_SHA },
+            { (0, 6), SslAlgorithms.RSA_RC2_40_MD5 },
+            { (0, 8), SslAlgorithms.RSA_DES_40_SHA },
+            { (0, 9), SslAlgorithms.RSA_DES_56_SHA },
+            { (0, 10), SslAlgorithms.RSA_3DES_168_SHA },
+            { (0, 47), SslAlgorithms.RSA_AES_128_SHA },
+            { (0, 53), SslAlgorithms.RSA_AES_256_SHA },
+        };
 
-		public static Dictionary<SslAlgorithms, byte[]> AlgorithmBytes = new()
-		{
-			{ SslAlgorithms.RSA_AES_256_SHA, new byte[] { 0, 53 } },
-			{ SslAlgorithms.RSA_AES_128_SHA, new byte[] { 0, 47 } },
-			{ SslAlgorithms.RSA_RC4_128_SHA, new byte[] { 0, 5 } },
-			{ SslAlgorithms.RSA_RC4_128_MD5, new byte[] { 0, 4 } },
-			{ SslAlgorithms.RSA_3DES_168_SHA, new byte[] { 0, 10 } },
-			{ SslAlgorithms.RSA_DES_56_SHA, new byte[] { 0, 9 } },
-			{ SslAlgorithms.RSA_RC4_40_MD5, new byte[] { 0, 3 } },
-			{ SslAlgorithms.RSA_RC2_40_MD5, new byte[] { 0, 6 } },
-			{ SslAlgorithms.RSA_DES_40_SHA, new byte[] { 0, 8 } },
-		};
+        public static Dictionary<SslAlgorithms, byte[]> AlgorithmBytes = new()
+        {
+            { SslAlgorithms.RSA_AES_256_SHA, new byte[] { 0, 53 } },
+            { SslAlgorithms.RSA_AES_128_SHA, new byte[] { 0, 47 } },
+            { SslAlgorithms.RSA_RC4_128_SHA, new byte[] { 0, 5 } },
+            { SslAlgorithms.RSA_RC4_128_MD5, new byte[] { 0, 4 } },
+            { SslAlgorithms.RSA_3DES_168_SHA, new byte[] { 0, 10 } },
+            { SslAlgorithms.RSA_DES_56_SHA, new byte[] { 0, 9 } },
+            { SslAlgorithms.RSA_RC4_40_MD5, new byte[] { 0, 3 } },
+            { SslAlgorithms.RSA_RC2_40_MD5, new byte[] { 0, 6 } },
+            { SslAlgorithms.RSA_DES_40_SHA, new byte[] { 0, 8 } },
+        };
 
-        public static SslAlgorithms GetCipherAlgorithmType(byte[] buffer, int offset) {
-			if (buffer.Length < offset + 2)
-				throw new SslException(AlertDescription.InternalError, "Buffer overflow in GetCipherAlgorithm.");
+        public static SslAlgorithms GetCipherAlgorithmType(byte[] buffer, int offset)
+        {
+            if (buffer.Length < offset + 2)
+                throw new SslException(
+                    AlertDescription.InternalError,
+                    "Buffer overflow in GetCipherAlgorithm."
+                );
             var key = (buffer[offset], buffer[offset + 1]);
             return CipherMap.TryGetValue(key, out var algorithm) ? algorithm : SslAlgorithms.NONE;
         }
-		public static byte[] GetCipherAlgorithmBytes(SslAlgorithms algorithms) {
-			using (MemoryStream ms = new MemoryStream())
-			{
+
+        public static byte[] GetCipherAlgorithmBytes(SslAlgorithms algorithms)
+        {
+            using (var ms = new MemoryStream())
+            {
                 // Write them to the memory stream in order of preference as registered in the dictionary
                 foreach (var (algo, bytes) in AlgorithmBytes)
                 {
@@ -91,76 +95,228 @@ namespace Org.Mentalis.Security.Ssl.Shared
                 }
                 return ms.ToArray();
             }
-		}
-		public static SslAlgorithms GetCipherSuiteAlgorithm(byte[] algorithms, SslAlgorithms allowed) {
-			int alwd = (int)allowed;
-			for(int i = 0; i < algorithms.Length; i+=2) {
-				SslAlgorithms alg = GetCipherAlgorithmType(algorithms, i);
-				if (((int)alg & alwd) != 0)
-					return alg;
-			}
-			throw new SslException(AlertDescription.HandshakeFailure, "No encryption scheme matches the available schemes.");
-		}
-		public static CipherSuite GetCipherSuite(SecureProtocol protocol, byte[] master, byte[] clientrnd, byte[] serverrnd, SslAlgorithms scheme, ConnectionEnd entity) {
-			for(int i = 0; i < Definitions.Length; i++) {
-				if (Definitions[i].Scheme == scheme) {
-					if (protocol == SecureProtocol.Tls1) {
-						return Tls1CipherSuites.InitializeCipherSuite(master, clientrnd, serverrnd, Definitions[i], entity);
-					} else if (protocol == SecureProtocol.Ssl3) {
-						return Ssl3CipherSuites.InitializeCipherSuite(master, clientrnd, serverrnd, Definitions[i], entity); 
-					}
-				}
-			}
-			throw new SslException(AlertDescription.IllegalParameter, "The cipher suite is unknown.");
-		}
-		public static CipherDefinition GetCipherDefinition(SslAlgorithms scheme) {
-			for(int i = 0; i < Definitions.Length; i++) {
-				if (Definitions[i].Scheme == scheme) {
-					return Definitions[i];
-				}
-			}
-			throw new SslException(AlertDescription.IllegalParameter, "The cipher suite is unknown.");
-		}
+        }
+
+        public static SslAlgorithms GetCipherSuiteAlgorithm(
+            byte[] algorithms,
+            SslAlgorithms allowed
+        )
+        {
+            var alwd = (int)allowed;
+            for (var i = 0; i < algorithms.Length; i += 2)
+            {
+                var alg = GetCipherAlgorithmType(algorithms, i);
+                if (((int)alg & alwd) != 0)
+                    return alg;
+            }
+            throw new SslException(
+                AlertDescription.HandshakeFailure,
+                "No encryption scheme matches the available schemes."
+            );
+        }
+
+        public static CipherSuite GetCipherSuite(
+            SecureProtocol protocol,
+            byte[] master,
+            byte[] clientrnd,
+            byte[] serverrnd,
+            SslAlgorithms scheme,
+            ConnectionEnd entity
+        )
+        {
+            for (var i = 0; i < Definitions.Length; i++)
+            {
+                if (Definitions[i].Scheme == scheme)
+                {
+                    if (protocol == SecureProtocol.Tls1 || protocol == SecureProtocol.Tls1_1)
+                    {
+                        return Tls1CipherSuites.InitializeCipherSuite(
+                            master,
+                            clientrnd,
+                            serverrnd,
+                            Definitions[i],
+                            entity
+                        );
+                    }
+                    else if (protocol == SecureProtocol.Ssl3)
+                    {
+                        return Ssl3CipherSuites.InitializeCipherSuite(
+                            master,
+                            clientrnd,
+                            serverrnd,
+                            Definitions[i],
+                            entity
+                        );
+                    }
+                }
+            }
+            throw new SslException(
+                AlertDescription.IllegalParameter,
+                "The cipher suite is unknown."
+            );
+        }
+
+        public static CipherDefinition GetCipherDefinition(SslAlgorithms scheme)
+        {
+            for (var i = 0; i < Definitions.Length; i++)
+            {
+                if (Definitions[i].Scheme == scheme)
+                {
+                    return Definitions[i];
+                }
+            }
+            throw new SslException(
+                AlertDescription.IllegalParameter,
+                "The cipher suite is unknown."
+            );
+        }
 #pragma warning disable
-		private static CipherDefinition[] Definitions = new CipherDefinition[] {
-				new CipherDefinition(SslAlgorithms.RSA_RC4_128_MD5, typeof(ARCFourManaged), 16, 0, 16, typeof(MD5CryptoServiceProvider), HashType.MD5, 16, false),
-				new CipherDefinition(SslAlgorithms.RSA_RC4_128_SHA, typeof(ARCFourManaged), 16, 0, 16, typeof(SHA1CryptoServiceProvider), HashType.SHA1, 20, false),
-				new CipherDefinition(SslAlgorithms.RSA_RC4_40_MD5, typeof(ARCFourManaged), 5, 0, 16, typeof(MD5CryptoServiceProvider), HashType.MD5, 16, true),
-				new CipherDefinition(SslAlgorithms.RSA_RC2_40_MD5, typeof(RC2CryptoServiceProvider), 5, 8, 16, typeof(MD5CryptoServiceProvider), HashType.MD5, 16, true),
-				new CipherDefinition(SslAlgorithms.RSA_DES_56_SHA, typeof(DESCryptoServiceProvider), 8, 8, 8, typeof(SHA1CryptoServiceProvider), HashType.SHA1, 20, false),
-				new CipherDefinition(SslAlgorithms.RSA_3DES_168_SHA, typeof(TripleDESCryptoServiceProvider), 24, 8, 24, typeof(SHA1CryptoServiceProvider), HashType.SHA1, 20, false),
-				new CipherDefinition(SslAlgorithms.RSA_DES_40_SHA, typeof(DESCryptoServiceProvider), 5, 8, 8, typeof(SHA1CryptoServiceProvider), HashType.SHA1, 20, true),
-				new CipherDefinition(SslAlgorithms.RSA_AES_128_SHA, typeof(RijndaelManaged), 16, 16, 16, typeof(SHA1CryptoServiceProvider), HashType.SHA1, 20, false),
-				new CipherDefinition(SslAlgorithms.RSA_AES_256_SHA, typeof(RijndaelManaged), 32, 16, 32, typeof(SHA1CryptoServiceProvider), HashType.SHA1, 20, false)
-			};
+        private static readonly CipherDefinition[] Definitions = new CipherDefinition[]
+        {
+            new CipherDefinition(
+                SslAlgorithms.RSA_RC4_128_MD5,
+                typeof(ARCFourManaged),
+                16,
+                0,
+                16,
+                typeof(MD5CryptoServiceProvider),
+                HashType.MD5,
+                16,
+                false
+            ),
+            new CipherDefinition(
+                SslAlgorithms.RSA_RC4_128_SHA,
+                typeof(ARCFourManaged),
+                16,
+                0,
+                16,
+                typeof(SHA1CryptoServiceProvider),
+                HashType.SHA1,
+                20,
+                false
+            ),
+            new CipherDefinition(
+                SslAlgorithms.RSA_RC4_40_MD5,
+                typeof(ARCFourManaged),
+                5,
+                0,
+                16,
+                typeof(MD5CryptoServiceProvider),
+                HashType.MD5,
+                16,
+                true
+            ),
+            new CipherDefinition(
+                SslAlgorithms.RSA_RC2_40_MD5,
+                typeof(RC2CryptoServiceProvider),
+                5,
+                8,
+                16,
+                typeof(MD5CryptoServiceProvider),
+                HashType.MD5,
+                16,
+                true
+            ),
+            new CipherDefinition(
+                SslAlgorithms.RSA_DES_56_SHA,
+                typeof(DESCryptoServiceProvider),
+                8,
+                8,
+                8,
+                typeof(SHA1CryptoServiceProvider),
+                HashType.SHA1,
+                20,
+                false
+            ),
+            new CipherDefinition(
+                SslAlgorithms.RSA_3DES_168_SHA,
+                typeof(TripleDESCryptoServiceProvider),
+                24,
+                8,
+                24,
+                typeof(SHA1CryptoServiceProvider),
+                HashType.SHA1,
+                20,
+                false
+            ),
+            new CipherDefinition(
+                SslAlgorithms.RSA_DES_40_SHA,
+                typeof(DESCryptoServiceProvider),
+                5,
+                8,
+                8,
+                typeof(SHA1CryptoServiceProvider),
+                HashType.SHA1,
+                20,
+                true
+            ),
+            new CipherDefinition(
+                SslAlgorithms.RSA_AES_128_SHA,
+                typeof(RijndaelManaged),
+                16,
+                16,
+                16,
+                typeof(SHA1CryptoServiceProvider),
+                HashType.SHA1,
+                20,
+                false
+            ),
+            new CipherDefinition(
+                SslAlgorithms.RSA_AES_256_SHA,
+                typeof(RijndaelManaged),
+                32,
+                16,
+                32,
+                typeof(SHA1CryptoServiceProvider),
+                HashType.SHA1,
+                20,
+                false
+            ),
+        };
 #pragma warning restore
-	}
-	internal class CipherSuite {
-		public ICryptoTransform Decryptor;
-		public ICryptoTransform Encryptor;
-		public KeyedHashAlgorithm LocalHasher;
-		public KeyedHashAlgorithm RemoteHasher;
-	}
-	internal struct CipherDefinition {
-		public CipherDefinition(SslAlgorithms scheme, Type bulk, int keysize, int ivsize, int expsize, Type hash, HashType hashType, int hashsize, bool exportable) {
-			this.Scheme = scheme;
-			this.BulkCipherAlgorithm = bulk;
-			this.BulkKeySize = keysize;
-			this.BulkIVSize = ivsize;
-			this.BulkExpandedSize = expsize;
-			this.HashAlgorithm = hash;
-			this.HashAlgorithmType = hashType;
-			this.HashSize = hashsize;
-			this.Exportable = exportable;
-		}
-		public SslAlgorithms Scheme;
-		public Type BulkCipherAlgorithm;
-		public int BulkKeySize; // in bytes
-		public int BulkIVSize; // in bytes
-		public int BulkExpandedSize; // in bytes
-		public Type HashAlgorithm;
-		public int HashSize; // in bytes
-		public bool Exportable;
-		public HashType HashAlgorithmType;
-	}
+    }
+
+    internal class CipherSuite
+    {
+        public ICryptoTransform Decryptor;
+        public ICryptoTransform Encryptor;
+        public KeyedHashAlgorithm LocalHasher;
+        public KeyedHashAlgorithm RemoteHasher;
+    }
+
+    internal struct CipherDefinition
+    {
+        public CipherDefinition(
+            SslAlgorithms scheme,
+            Type bulk,
+            int keysize,
+            int ivsize,
+            int expsize,
+            Type hash,
+            HashType hashType,
+            int hashsize,
+            bool exportable
+        )
+        {
+            Scheme = scheme;
+            BulkCipherAlgorithm = bulk;
+            BulkKeySize = keysize;
+            BulkIVSize = ivsize;
+            BulkExpandedSize = expsize;
+            HashAlgorithm = hash;
+            HashAlgorithmType = hashType;
+            HashSize = hashsize;
+            Exportable = exportable;
+        }
+
+        public SslAlgorithms Scheme;
+        public Type BulkCipherAlgorithm;
+        public int BulkKeySize; // in bytes
+        public int BulkIVSize; // in bytes
+        public int BulkExpandedSize; // in bytes
+        public Type HashAlgorithm;
+        public int HashSize; // in bytes
+        public bool Exportable;
+        public HashType HashAlgorithmType;
+    }
 }

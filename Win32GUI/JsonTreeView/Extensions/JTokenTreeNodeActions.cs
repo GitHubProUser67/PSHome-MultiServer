@@ -1,6 +1,4 @@
-﻿using System;
-using System.Windows.Forms;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using ZTn.Json.JsonTreeView.Generic;
 
 namespace ZTn.Json.JsonTreeView.Extensions
@@ -38,7 +36,7 @@ namespace ZTn.Json.JsonTreeView.Extensions
             node.ClipboardPaste(
                 jt => node.JTokenTag.AddAfterSelf(jt),
                 n => node.InsertInParent(n, false)
-                );
+            );
         }
 
         /// <summary>
@@ -50,7 +48,7 @@ namespace ZTn.Json.JsonTreeView.Extensions
             node.ClipboardPaste(
                 jt => node.JTokenTag.AddBeforeSelf(jt),
                 n => node.InsertInParent(n, true)
-                );
+            );
         }
 
         /// <summary>
@@ -62,7 +60,7 @@ namespace ZTn.Json.JsonTreeView.Extensions
             node.ClipboardPaste(
                 jt => ((JContainer)node.JTokenTag).AddFirst(jt),
                 n => node.InsertInCurrent(n)
-                );
+            );
         }
 
         /// <summary>
@@ -74,7 +72,7 @@ namespace ZTn.Json.JsonTreeView.Extensions
             node.ClipboardPaste(
                 jt => node.JTokenTag.Replace(jt),
                 n => node.InsertInParent(n, true)
-                );
+            );
         }
 
         /// <summary>
@@ -83,7 +81,11 @@ namespace ZTn.Json.JsonTreeView.Extensions
         /// <param name="node"></param>
         /// <param name="pasteJTokenImplementation">Implementation of paste action in the JToken tree.</param>
         /// <param name="pasteTreeNodeImplementation">Implementation of paste action in the treeView.</param>
-        private static void ClipboardPaste(this JTokenTreeNode node, Action<JToken> pasteJTokenImplementation, Action<TreeNode> pasteTreeNodeImplementation)
+        private static void ClipboardPaste(
+            this JTokenTreeNode node,
+            Action<JToken> pasteJTokenImplementation,
+            Action<TreeNode> pasteTreeNodeImplementation
+        )
         {
             var sourceJTokenTreeNode = EditorClipboard<JTokenTreeNode>.Get();
 

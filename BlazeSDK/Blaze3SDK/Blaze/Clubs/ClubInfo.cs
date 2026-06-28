@@ -2,42 +2,40 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Clubs
 {
-	[TdfStruct]
-	public struct ClubInfo
-	{
+    [TdfStruct]
+    public struct ClubInfo
+    {
+        [TdfMember("AWCN")]
+        public uint mAwardCount;
 
-		[TdfMember("AWCN")]
-		public uint mAwardCount;
+        [TdfMember("CRTI")]
+        public uint mCreationTime;
 
-		[TdfMember("CRTI")]
-		public uint mCreationTime;
+        [TdfMember("GMCN")]
+        public uint mGmCount;
 
-		[TdfMember("GMCN")]
-		public uint mGmCount;
+        [TdfMember("LATI")]
+        public uint mLastActiveTime;
 
-		[TdfMember("LATI")]
-		public uint mLastActiveTime;
+        [TdfMember("LSGR")]
+        public string mLastGameResult;
 
-		[TdfMember("LSGR")]
-		public string mLastGameResult;
+        [TdfMember("LGTM")]
+        public uint mLastGameTime;
 
-		[TdfMember("LGTM")]
-		public uint mLastGameTime;
+        [TdfMember("LSOP")]
+        public uint mLastOppo;
 
-		[TdfMember("LSOP")]
-		public uint mLastOppo;
+        [TdfMember("OPNM")]
+        public string mLastOppoName;
 
-		[TdfMember("OPNM")]
-		public string mLastOppoName;
+        [TdfMember("CIMC")]
+        public uint mMemberCount;
 
-		[TdfMember("CIMC")]
-		public uint mMemberCount;
+        [TdfMember("MSCO")]
+        public SortedDictionary<MemberOnlineStatus, ushort> mMemberOnlineStatusCounts;
 
-		[TdfMember("MSCO")]
-		public SortedDictionary<MemberOnlineStatus, ushort> mMemberOnlineStatusCounts;
-
-		[TdfMember("RVCN")]
-		public uint mRivalCount;
-
-	}
+        [TdfMember("RVCN")]
+        public uint mRivalCount;
+    }
 }

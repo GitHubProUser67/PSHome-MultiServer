@@ -1,16 +1,17 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     /// <summary>
     /// Introduced in Medius 1.42
     /// </summary>
-	[MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.AddToIgnoreListResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.AddToIgnoreListResponse
+    )]
     public class MediusAddToIgnoreListResponse : BaseLobbyMessage, IMediusResponse
     {
-
         public override byte PacketType => (byte)MediusLobbyMessageIds.AddToIgnoreListResponse;
 
         public bool IsSuccess => StatusCode >= 0;
@@ -39,12 +40,9 @@ namespace Horizon.RT.Models
             writer.Write(StatusCode);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{MessageID} " +
-                $"StatusCode:{StatusCode}";
+            return base.ToString() + " " + $"MessageID:{MessageID} " + $"StatusCode:{StatusCode}";
         }
     }
 }

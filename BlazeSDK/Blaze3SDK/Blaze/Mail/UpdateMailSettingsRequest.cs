@@ -2,12 +2,10 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Mail
 {
-	[TdfStruct]
-	public struct UpdateMailSettingsRequest
-	{
-
-		[TdfMember("MSET")]
-		public MailSettings mMailSettings;
-
-	}
+    [TdfStruct]
+    public struct UpdateMailSettingsRequest
+    {
+        [TdfMember("MSET")]
+        public MailSettings mMailSettings;
+    }
 }

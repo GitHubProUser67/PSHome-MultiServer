@@ -1,14 +1,14 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.GenericChatFwdMessage1)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.GenericChatFwdMessage1
+    )]
     public class MediusGenericChatFwdMessage1 : BaseLobbyExtMessage
     {
-
-
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.GenericChatFwdMessage1;
 
         public uint TimeStamp;
@@ -40,21 +40,21 @@ namespace Horizon.RT.Models
                 writer.Write(0);
             else
             {
-                int len = Message.Length;
+                var len = Message.Length;
                 writer.Write(len + 1);
                 writer.Write(Message, len + 1);
             }
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"TimeStamp:{TimeStamp} " +
-                $"OriginatorAccountID:{OriginatorAccountID} " +
-                $"MessageType:{MessageType} " +
-                $"OriginatorAccountName:{OriginatorAccountName} " +
-                $"Message:{Message}";
+            return base.ToString()
+                + " "
+                + $"TimeStamp:{TimeStamp} "
+                + $"OriginatorAccountID:{OriginatorAccountID} "
+                + $"MessageType:{MessageType} "
+                + $"OriginatorAccountName:{OriginatorAccountName} "
+                + $"Message:{Message}";
         }
     }
 }

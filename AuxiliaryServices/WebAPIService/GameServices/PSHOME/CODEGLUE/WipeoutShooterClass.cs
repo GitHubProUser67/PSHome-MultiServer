@@ -1,49 +1,44 @@
-﻿using CustomLogger;
-using HttpMultipartParser;
-using Microsoft.EntityFrameworkCore;
-using MultiServerLibrary.HTTP;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
+﻿using System.Globalization;
 using System.Text;
+using CustomLogger;
+using HttpMultipartParser;
+using MultiServerLibrary.HTTP;
 using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.PSHOME.CODEGLUE
 {
-    public class WipeoutShooterClass
+    public class WipeoutShooterClass(string method, string workpath)
     {
-        private static Dictionary<string, WipeoutShooterScoreBoardData> _leaderboards = new Dictionary<string, WipeoutShooterScoreBoardData>();
+        private static readonly Dictionary<string, WipeoutShooterScoreBoardData> _leaderboards = [];
 
-        private string workpath;
-        private string method;
+        private readonly string workpath = workpath;
+        private readonly string method = method;
 
-        public WipeoutShooterClass(string method, string workpath)
+        public string ProcessRequest(
+            IDictionary<string, string> QueryParameters,
+            byte[] PostData = null,
+            string ContentType = null
+        )
         {
-            this.method = method;
-            this.workpath = workpath;
-        }
-
-        public string ProcessRequest(IDictionary<string, string> QueryParameters, byte[] PostData = null, string ContentType = null)
-        {
+            string TERRITORY;
             switch (method)
             {
                 case "POST":
-                    string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+                    var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
                     if (PostData != null && !string.IsNullOrEmpty(boundary))
                     {
                         try
                         {
-                            using (MemoryStream copyStream = new MemoryStream(PostData))
+                            using (var copyStream = new MemoryStream(PostData))
                             {
                                 var data = MultipartFormDataParser.Parse(copyStream, boundary);
 
-                                string GAME_TYPE = data.GetParameterValue("GAME_TYPE");
-                                string TERRITORY = data.GetParameterValue("TERRITORY");
-                                string REGION = data.GetParameterValue("REGION");
+                                var GAME_TYPE = data.GetParameterValue("GAME_TYPE");
+                                TERRITORY = data.GetParameterValue("TERRITORY");
+                                var REGION = data.GetParameterValue("REGION");
 
-                                if (byte.TryParse(GAME_TYPE, out byte gameTypeIByte))
+                                if (byte.TryParse(GAME_TYPE, out var gameTypeIByte))
                                 {
                                     switch (gameTypeIByte)
                                     {
@@ -61,33 +56,55 @@ namespace WebAPIService.GameServices.PSHOME.CODEGLUE
                                     lock (_leaderboards)
                                     {
                                         if (!_leaderboards.ContainsKey(GAME_TYPE))
-                                            _leaderboards.Add(GAME_TYPE, new WipeoutShooterScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, GAME_TYPE));
+                                            _leaderboards.Add(
+                                                GAME_TYPE,
+                                                new WipeoutShooterScoreBoardData(
+                                                    LeaderboardDbContext.BuildOptions(
+                                                        0,
+                                                        $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}"
+                                                    ),
+                                                    GAME_TYPE
+                                                )
+                                            );
 
-                                        _ = _leaderboards[GAME_TYPE].UpdateScoreAsync(data.GetParameterValue("NAME"), float.Parse(data.GetParameterValue("SCORE"), CultureInfo.InvariantCulture));
-                                        return _leaderboards[GAME_TYPE].SerializeToString(GAME_TYPE).Result;
+                                        _ = _leaderboards[GAME_TYPE]
+                                            .UpdateScoreAsync(
+                                                data.GetParameterValue("NAME"),
+                                                float.Parse(
+                                                    data.GetParameterValue("SCORE"),
+                                                    CultureInfo.InvariantCulture
+                                                )
+                                            );
+                                        return _leaderboards[GAME_TYPE]
+                                            .SerializeToString(GAME_TYPE)
+                                            .Result;
                                     }
                                 }
                             }
                         }
                         catch (Exception ex)
                         {
-                            LoggerAccessor.LogError($"[WipeoutShooterClass] - leaderboard submit request thrown an assertion. (Exception: {ex})");
+                            LoggerAccessor.LogError(
+                                $"[WipeoutShooterClass] - leaderboard submit request thrown an assertion. (Exception: {ex})"
+                            );
                         }
                     }
                     break;
                 case "GET":
-                    if (QueryParameters.ContainsKey("TERRITORY") && QueryParameters.ContainsKey("NAME"))
+                    if (
+                        QueryParameters.TryGetValue("TERRITORY", out TERRITORY)
+                        && QueryParameters.ContainsKey("NAME")
+                    )
                     {
-                        StringBuilder st = new StringBuilder("<XML><LEADERBOARD>");
+                        var st = new StringBuilder("<XML><LEADERBOARD>");
 
                         try
                         {
-                            string TERRITORY = QueryParameters["TERRITORY"];
-                            string NAME = QueryParameters["NAME"];
+                            var NAME = QueryParameters["NAME"];
 
                             for (byte i = 1; i < 4; i++)
                             {
-                                string GAME_TYPE = string.Empty;
+                                var GAME_TYPE = string.Empty;
                                 switch (i)
                                 {
                                     case 1:
@@ -104,15 +121,28 @@ namespace WebAPIService.GameServices.PSHOME.CODEGLUE
                                 lock (_leaderboards)
                                 {
                                     if (!_leaderboards.ContainsKey(GAME_TYPE))
-                                        _leaderboards.Add(GAME_TYPE, new WipeoutShooterScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, GAME_TYPE));
+                                        _leaderboards.Add(
+                                            GAME_TYPE,
+                                            new WipeoutShooterScoreBoardData(
+                                                LeaderboardDbContext.BuildOptions(
+                                                    0,
+                                                    $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}"
+                                                ),
+                                                GAME_TYPE
+                                            )
+                                        );
 
-                                    st.Append(_leaderboards[GAME_TYPE].SerializeToString(GAME_TYPE).Result);
+                                    st.Append(
+                                        _leaderboards[GAME_TYPE].SerializeToString(GAME_TYPE).Result
+                                    );
                                 }
                             }
                         }
                         catch (Exception ex)
                         {
-                            LoggerAccessor.LogError($"[WipeoutShooterClass] - leaderboard list querying request thrown an assertion. (Exception: {ex})");
+                            LoggerAccessor.LogError(
+                                $"[WipeoutShooterClass] - leaderboard list querying request thrown an assertion. (Exception: {ex})"
+                            );
                         }
 
                         st.Append("</LEADERBOARD></XML>");

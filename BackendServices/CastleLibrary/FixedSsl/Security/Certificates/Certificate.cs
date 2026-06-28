@@ -1,6 +1,6 @@
 /*
  *   Mentalis.org Security Library
- * 
+ *
  *     Copyright � 2002-2005, The Mentalis.org Team
  *     All rights reserved.
  *     http://www.mentalis.org/
@@ -11,11 +11,11 @@
  *   are met:
  *
  *     - Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer. 
+ *        notice, this list of conditions and the following disclaimer.
  *
  *     - Neither the name of the Mentalis.org Team, nor the names of its contributors
  *        may be used to endorse or promote products derived from this
- *        software without specific prior written permission. 
+ *        software without specific prior written permission.
  *
  *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -31,21 +31,16 @@
  *   OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-using System;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
-namespace Org.Mentalis.Security.Certificates
+namespace CastleLibrary.FixedSsl.Security.Certificates
 {
     /// <summary>
     /// Defines a X509 v3 encoded certificate.
     /// </summary>
-    public class Certificate
+    public class Certificate(X509Certificate certificate)
     {
-        public Certificate(X509Certificate certificate)
-        {
-            UnderlyingCert = new X509Certificate2(certificate);
-        }
         /// <summary>
         /// Returns the length of the public key of the X.509v3 certificate.
         /// </summary>
@@ -54,6 +49,7 @@ namespace Org.Mentalis.Security.Certificates
         {
             return UnderlyingCert.GetRSAPublicKey().KeySize;
         }
+
         /// <summary>
         /// Checks whether the <see cref="Certificate"/> has a private key associated with it.
         /// </summary>
@@ -62,6 +58,7 @@ namespace Org.Mentalis.Security.Certificates
         {
             return UnderlyingCert.HasPrivateKey;
         }
+
         /// <summary>
         /// Saves the <see cref="Certificate"/> as an encoded buffer.
         /// </summary>
@@ -69,23 +66,8 @@ namespace Org.Mentalis.Security.Certificates
         public byte[] ToCerBuffer()
         {
             return UnderlyingCert.Export(X509ContentType.Cert);
-            //return GetCertificateBuffer();
         }
-        /// <summary>
-        /// Gets the handle of the associated <see cref="CertificateStore"/>, if any.
-        /// </summary>
-        /// <value>A CertificateStore instance -or- a null reference (<b>Nothing</b> in Visual Basic) is no store is associated with this certificate.</value>
-        internal CertificateStore Store
-        {
-            get
-            {
-                return m_Store;
-            }
-            set
-            {
-                m_Store = value;
-            }
-        }
+
         /// <summary>
         /// Gets the private key for the certificate.
         /// </summary>
@@ -100,14 +82,11 @@ namespace Org.Mentalis.Security.Certificates
 
                 try
                 {
-                    RSACryptoServiceProvider provider = new RSACryptoServiceProvider();
+                    var provider = RSA.Create();
                     provider.ImportParameters(underlyingRsa.ExportParameters(true));
                     return provider;
                 }
-                catch (CryptographicException)
-                {
-                    
-                }
+                catch (CryptographicException) { }
 
                 // Fallback: return the original RSA object directly if not exportable
                 return underlyingRsa;
@@ -123,30 +102,23 @@ namespace Org.Mentalis.Security.Certificates
         {
             get
             {
-                RSACryptoServiceProvider provider = new RSACryptoServiceProvider();
-#if NET6_0_OR_GREATER
-                provider.ImportParameters(UnderlyingCert.PublicKey.GetRSAPublicKey()!.ExportParameters(false));
-#else
-                provider.ImportParameters(GetRSAPublicKeyLegacyNet(UnderlyingCert).ExportParameters(false));
-#endif
+                var provider = RSA.Create();
+                provider.ImportParameters(
+                    UnderlyingCert.PublicKey.GetRSAPublicKey()!.ExportParameters(false)
+                );
                 return provider;
             }
         }
 
-        public X509Certificate2 UnderlyingCert { get; set; }
-        /// <summary>
-        /// The handle of the <see cref="CertificateStore"/> object.
-        /// </summary>
-        private CertificateStore m_Store;
+        public X509Certificate2 UnderlyingCert { get; set; } = new X509Certificate2(certificate);
 
         public static RSA GetRSAPublicKeyLegacyNet(X509Certificate2 certificate)
         {
-            if (certificate.GetRSAPublicKey() is not RSA rsaPublicKey)
-            {
-                throw new InvalidOperationException("Certificate does not contain an RSA public key.");
-            }
-
-            return rsaPublicKey;
+            return certificate.GetRSAPublicKey() is not RSA rsaPublicKey
+                ? throw new InvalidOperationException(
+                    "Certificate does not contain an RSA public key."
+                )
+                : rsaPublicKey;
         }
     }
 }

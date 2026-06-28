@@ -1,0 +1,138 @@
+{
+  "runtimeTarget": {
+    "name": ".NETStandard,Version=v2.0/",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETStandard,Version=v2.0": {},
+    ".NETStandard,Version=v2.0/": {
+      "Costura.Fody/1.0.0": {
+        "dependencies": {
+          "Catel.Analyzers": "1.6.1",
+          "CatenaLogic.Analyzers": "1.5.0",
+          "FodyHelpers": "6.9.1",
+          "IDisposableAnalyzers": "4.0.8",
+          "Microsoft.NETFramework.ReferenceAssemblies.net48": "1.0.3",
+          "NETStandard.Library": "2.0.3",
+          "NUnit.Analyzers": "4.11.2",
+          "SourceLink.Copy.PdbFiles": "2.8.3",
+          "WpfAnalyzers": "4.1.1"
+        },
+        "runtime": {
+          "Costura.Fody.dll": {}
+        }
+      },
+      "Catel.Analyzers/1.6.1": {},
+      "CatenaLogic.Analyzers/1.5.0": {},
+      "FodyHelpers/6.9.1": {
+        "runtime": {
+          "lib/netstandard2.0/FodyHelpers.dll": {
+            "assemblyVersion": "6.9.1.0",
+            "fileVersion": "6.9.1.0"
+          },
+          "lib/netstandard2.0/Mono.Cecil.Pdb.dll": {
+            "assemblyVersion": "0.11.6.0",
+            "fileVersion": "0.11.6.0"
+          },
+          "lib/netstandard2.0/Mono.Cecil.Rocks.dll": {
+            "assemblyVersion": "0.11.6.0",
+            "fileVersion": "0.11.6.0"
+          },
+          "lib/netstandard2.0/Mono.Cecil.dll": {
+            "assemblyVersion": "0.11.6.0",
+            "fileVersion": "0.11.6.0"
+          }
+        }
+      },
+      "IDisposableAnalyzers/4.0.8": {},
+      "Microsoft.NETCore.Platforms/1.1.0": {},
+      "Microsoft.NETFramework.ReferenceAssemblies.net48/1.0.3": {},
+      "NETStandard.Library/2.0.3": {
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "1.1.0"
+        }
+      },
+      "NUnit.Analyzers/4.11.2": {},
+      "SourceLink.Copy.PdbFiles/2.8.3": {},
+      "WpfAnalyzers/4.1.1": {}
+    }
+  },
+  "libraries": {
+    "Costura.Fody/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Catel.Analyzers/1.6.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-r01kn1IP1J18ZvtBGERvN606AoCj5NXoJFcAGgvY+WoRQ0/zm9R/lnZ3ZEs7wUHGslEto9805REZxDDlxpfE3Q==",
+      "path": "catel.analyzers/1.6.1",
+      "hashPath": "catel.analyzers.1.6.1.nupkg.sha512"
+    },
+    "CatenaLogic.Analyzers/1.5.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-uBhAhVkEMMSFznzjo5ahaD+0y+4oXBZEMbQ0T/IvlehaQkLxIMAeaZS8HTL4barZVOWV63ctGhstwBDQEm5CnA==",
+      "path": "catenalogic.analyzers/1.5.0",
+      "hashPath": "catenalogic.analyzers.1.5.0.nupkg.sha512"
+    },
+    "FodyHelpers/6.9.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-PyvEDbC1kDiqQgu/tg82NRAw18sWBjTFXJCl5bTb8q8Ko5IRoZFzsSduZGV/gM9RLgfOSXW/LkNEoApfu/fmGg==",
+      "path": "fodyhelpers/6.9.1",
+      "hashPath": "fodyhelpers.6.9.1.nupkg.sha512"
+    },
+    "IDisposableAnalyzers/4.0.8": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-vNi4NMG0CcJyjXxiNDcQ21FwV/whM9o9OEZKD+oP7tuxAqFEzX/x5OhC3OZJqW/w+8GOtCmJPBquYgMWgz0rfQ==",
+      "path": "idisposableanalyzers/4.0.8",
+      "hashPath": "idisposableanalyzers.4.0.8.nupkg.sha512"
+    },
+    "Microsoft.NETCore.Platforms/1.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-kz0PEW2lhqygehI/d6XsPCQzD7ff7gUJaVGPVETX611eadGsA3A877GdSlU0LRVMCTH/+P3o2iDTak+S08V2+A==",
+      "path": "microsoft.netcore.platforms/1.1.0",
+      "hashPath": "microsoft.netcore.platforms.1.1.0.nupkg.sha512"
+    },
+    "Microsoft.NETFramework.ReferenceAssemblies.net48/1.0.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-zMk4D+9zyiEWByyQ7oPImPN/Jhpj166Ky0Nlla4eXlNL8hI/BtSJsgR8Inldd4NNpIAH3oh8yym0W2DrhXdSLQ==",
+      "path": "microsoft.netframework.referenceassemblies.net48/1.0.3",
+      "hashPath": "microsoft.netframework.referenceassemblies.net48.1.0.3.nupkg.sha512"
+    },
+    "NETStandard.Library/2.0.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-st47PosZSHrjECdjeIzZQbzivYBJFv6P2nv4cj2ypdI204DO+vZ7l5raGMiX4eXMJ53RfOIg+/s4DHVZ54Nu2A==",
+      "path": "netstandard.library/2.0.3",
+      "hashPath": "netstandard.library.2.0.3.nupkg.sha512"
+    },
+    "NUnit.Analyzers/4.11.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-D9w1tsxMyBAsINY2yyIaS59V9W4iGtuPyHs+9enuhmDAaCsSOitJKha4TUPENCAd2LrylCawur0YhCJoLMHBJA==",
+      "path": "nunit.analyzers/4.11.2",
+      "hashPath": "nunit.analyzers.4.11.2.nupkg.sha512"
+    },
+    "SourceLink.Copy.PdbFiles/2.8.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-cxlw1QHd/J7lOtSZ45VZMOsF/YSOlwZy0fCkauo9Ib9vOv+zGzjm9q3D8qGyMII0Zz1GSmli/oxhmUNuYUpc1g==",
+      "path": "sourcelink.copy.pdbfiles/2.8.3",
+      "hashPath": "sourcelink.copy.pdbfiles.2.8.3.nupkg.sha512"
+    },
+    "WpfAnalyzers/4.1.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-4+oLAk4gB4Wqn0ozKstB6fY9BafSU6c6GEgWjgOThyzHFBVqxihkS/1OmvEaYJnhjNUA/GOcZ6m2B7Xr2EePNw==",
+      "path": "wpfanalyzers/4.1.1",
+      "hashPath": "wpfanalyzers.4.1.1.nupkg.sha512"
+    }
+  }
+}

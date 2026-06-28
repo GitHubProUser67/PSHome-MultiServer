@@ -4,12 +4,14 @@ namespace SSFWServer.Services
 {
     public class PlayerLookupService
     {
-        public string HandlePlayerLookupService(string url)
+        public static string HandlePlayerLookupService(string url)
         {
-            string byDisplayName = url.Split("=")[1];
-            string? userId = SSFWUserSessionManager.GetIdByUsername(byDisplayName);
+            var byDisplayName = url.Split("=")[1];
+            var userId = SSFWUserSessionManager.GetIdByUsername(byDisplayName);
 #if DEBUG
-            LoggerAccessor.LogInfo($"[SSFW] PlayerLookupService - Requesting {byDisplayName}'s id, successfully returned userId {userId}");
+            LoggerAccessor.LogInfo(
+                $"[SSFW] PlayerLookupService - Requesting {byDisplayName}'s id, successfully returned userId {userId}"
+            );
 #endif
             return $"{{\"@id\": {userId} }}";
         }

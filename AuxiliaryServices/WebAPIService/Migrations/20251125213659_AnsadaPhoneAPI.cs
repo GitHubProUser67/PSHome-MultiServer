@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -15,7 +14,8 @@ namespace WebAPIService.Migrations
                 name: "AnsadaScoreBoardEntry",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table
+                        .Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     PsnId = table.Column<string>(type: "TEXT", nullable: true),
                     Time = table.Column<string>(type: "TEXT", nullable: true),
@@ -26,19 +26,19 @@ namespace WebAPIService.Migrations
                     ExtraData3 = table.Column<string>(type: "TEXT", maxLength: 255, nullable: true),
                     ExtraData4 = table.Column<string>(type: "TEXT", maxLength: 255, nullable: true),
                     ExtraData5 = table.Column<string>(type: "TEXT", maxLength: 255, nullable: true),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AnsadaScoreBoardEntry", x => x.Id);
-                });
+                }
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "AnsadaScoreBoardEntry");
+            migrationBuilder.DropTable(name: "AnsadaScoreBoardEntry");
         }
     }
 }

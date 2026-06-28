@@ -1,6 +1,6 @@
 /*
  *   Mentalis.org Security Library
- * 
+ *
  *     Copyright � 2002-2005, The Mentalis.org Team
  *     All rights reserved.
  *     http://www.mentalis.org/
@@ -11,11 +11,11 @@
  *   are met:
  *
  *     - Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer. 
+ *        notice, this list of conditions and the following disclaimer.
  *
  *     - Neither the name of the Mentalis.org Team, nor the names of its contributors
  *        may be used to endorse or promote products derived from this
- *        software without specific prior written permission. 
+ *        software without specific prior written permission.
  *
  *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -31,68 +31,92 @@
  *   OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-using Org.Mentalis.Security.Ssl.Shared;
-using System;
+using CastleLibrary.FixedSsl.Security.Ssl.Shared;
 
-namespace Org.Mentalis.Security.Ssl.Tls1
+namespace CastleLibrary.FixedSsl.Security.Ssl.Tls1
 {
     /*
-	  Client                                               Server
+      Client                                               Server
 
-	  ClientHello                  -------->
-													  ServerHello
-													 Certificate*
-											   ServerKeyExchange*
-											  CertificateRequest*
-								   <--------      ServerHelloDone
-	  Certificate*
-	  ClientKeyExchange
-	  CertificateVerify*
-	  [ChangeCipherSpec]
-	  Finished                     -------->
-											   [ChangeCipherSpec]
-								   <--------             Finished
-	  Application Data             <------->     Application Data
-	*/
-    internal class Tls1ClientHandshakeLayer : ClientHandshakeLayer {
-		public Tls1ClientHandshakeLayer(RecordLayer recordLayer, SecurityOptions options) : base(recordLayer, options) {}
-		public Tls1ClientHandshakeLayer(HandshakeLayer handshakeLayer) : base(handshakeLayer) {}
-		public override SecureProtocol GetProtocol() {
-			return SecureProtocol.Tls1;
-		}
-		protected override byte[] GenerateMasterSecret(byte[] premaster, byte[] clientRandom, byte[] serverRandom) {
-			return Tls1CipherSuites.GenerateMasterSecret(premaster, clientRandom, serverRandom);
-		}
-		protected override byte[] GetFinishedMessage() {
-			HandshakeMessage hm = new HandshakeMessage(HandshakeType.Finished, null);
-			byte[] hash = new byte[36];
-			m_LocalMD5Hash.TransformFinalBlock(new byte[0], 0, 0);
-			m_LocalSHA1Hash.TransformFinalBlock(new byte[0], 0, 0);
-			Array.Copy(m_LocalMD5Hash.Hash, 0, hash, 0, 16);
-			Array.Copy(m_LocalSHA1Hash.Hash, 0, hash, 16, 20);
-			PseudoRandomDeriveBytes prf = new PseudoRandomDeriveBytes(m_MasterSecret, "client finished", hash);
-			hm.fragment = prf.GetBytes(12);
-			prf.Dispose();
-			return hm.ToBytes();
-		}
-		protected override void VerifyFinishedMessage(byte[] peerFinished) {
-			if (peerFinished.Length != 12)
-				throw new SslException(AlertDescription.IllegalParameter, "The ServerHelloDone message is invalid.");
-			byte[] hash = new byte[36];
-			m_RemoteMD5Hash.TransformFinalBlock(new byte[0], 0, 0);
-			m_RemoteSHA1Hash.TransformFinalBlock(new byte[0], 0, 0);
-			Array.Copy(m_RemoteMD5Hash.Hash, 0, hash, 0, 16);
-			Array.Copy(m_RemoteSHA1Hash.Hash, 0, hash, 16, 20);
-			PseudoRandomDeriveBytes prf = new PseudoRandomDeriveBytes(m_MasterSecret, "server finished", hash);
-			byte[] prfBytes = prf.GetBytes(12);
-			prf.Dispose();
-			for(int i = 0; i < prfBytes.Length; i++) {
-				if (prfBytes[i] != peerFinished[i])
-					throw new SslException(AlertDescription.HandshakeFailure, "The computed hash verification does not correspond with the one of the client.");
-			}
-		}
-		public override ProtocolVersion GetVersion() {
-			return new ProtocolVersion(3, 1);
-		}
-	}
+      ClientHello                  -------->
+                                                      ServerHello
+                                                     Certificate*
+                                               ServerKeyExchange*
+                                              CertificateRequest*
+                                   <--------      ServerHelloDone
+      Certificate*
+      ClientKeyExchange
+      CertificateVerify*
+      [ChangeCipherSpec]
+      Finished                     -------->
+                                               [ChangeCipherSpec]
+                                   <--------             Finished
+      Application Data             <------->     Application Data
+    */
+    internal class Tls1ClientHandshakeLayer : ClientHandshakeLayer
+    {
+        public Tls1ClientHandshakeLayer(RecordLayer recordLayer, SecurityOptions options)
+            : base(recordLayer, options) { }
+
+        public Tls1ClientHandshakeLayer(HandshakeLayer handshakeLayer)
+            : base(handshakeLayer) { }
+
+        public override SecureProtocol GetProtocol()
+        {
+            return SecureProtocol.Tls1;
+        }
+
+        protected override byte[] GenerateMasterSecret(
+            byte[] premaster,
+            byte[] clientRandom,
+            byte[] serverRandom
+        )
+        {
+            return Tls1CipherSuites.GenerateMasterSecret(premaster, clientRandom, serverRandom);
+        }
+
+        protected override byte[] GetFinishedMessage()
+        {
+            var hm = new HandshakeMessage(HandshakeType.Finished, null);
+            var hash = new byte[36];
+            m_LocalMD5Hash.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+            m_LocalSHA1Hash.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+            Array.Copy(m_LocalMD5Hash.Hash, 0, hash, 0, 16);
+            Array.Copy(m_LocalSHA1Hash.Hash, 0, hash, 16, 20);
+            var prf = new PseudoRandomDeriveBytes(m_MasterSecret, "client finished", hash);
+            hm.fragment = prf.GetBytes(12);
+            prf.Dispose();
+            return hm.ToBytes();
+        }
+
+        protected override void VerifyFinishedMessage(byte[] peerFinished)
+        {
+            if (peerFinished.Length != 12)
+                throw new SslException(
+                    AlertDescription.IllegalParameter,
+                    "The ServerHelloDone message is invalid."
+                );
+            var hash = new byte[36];
+            m_RemoteMD5Hash.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+            m_RemoteSHA1Hash.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+            Array.Copy(m_RemoteMD5Hash.Hash, 0, hash, 0, 16);
+            Array.Copy(m_RemoteSHA1Hash.Hash, 0, hash, 16, 20);
+            var prf = new PseudoRandomDeriveBytes(m_MasterSecret, "server finished", hash);
+            var prfBytes = prf.GetBytes(12);
+            prf.Dispose();
+            for (var i = 0; i < prfBytes.Length; i++)
+            {
+                if (prfBytes[i] != peerFinished[i])
+                    throw new SslException(
+                        AlertDescription.HandshakeFailure,
+                        "The computed hash verification does not correspond with the one of the client."
+                    );
+            }
+        }
+
+        public override ProtocolVersion GetVersion()
+        {
+            return new ProtocolVersion(3, 1);
+        }
+    }
 }

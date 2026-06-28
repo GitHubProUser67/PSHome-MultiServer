@@ -1,4 +1,3 @@
-using System;
 using System.Text;
 
 namespace MultiSpyService.Utils
@@ -13,27 +12,16 @@ namespace MultiSpyService.Utils
         /// <returns></returns>
         public static byte[] Xor(byte[] plaintext, byte type = 0)
         {
-            int index = 0;
-            int length = plaintext.Length;
-            byte[] KeyData;
-
-            switch (type)
+            var index = 0;
+            var length = plaintext.Length;
+            var KeyData = type switch
             {
-                case 1:
-                    KeyData = Encoding.UTF8.GetBytes("GameSpy3D");
-                    break;
-                case 2:
-                    KeyData = Encoding.UTF8.GetBytes("Industries");
-                    break;
-                case 3:
-                    KeyData = Encoding.UTF8.GetBytes("ProjectAphex");
-                    break;
-                default:
-                    KeyData = Encoding.UTF8.GetBytes("gamespy");
-                    break;
-            }
-
-            for (int i = 0; length > 0; length--)
+                1 => Encoding.UTF8.GetBytes("GameSpy3D"),
+                2 => Encoding.UTF8.GetBytes("Industries"),
+                3 => Encoding.UTF8.GetBytes("ProjectAphex"),
+                _ => Encoding.UTF8.GetBytes("gamespy"),
+            };
+            for (var i = 0; length > 0; length--)
             {
                 if (i >= KeyData.Length)
                     i = 0;
@@ -46,28 +34,17 @@ namespace MultiSpyService.Utils
 
         public static string Xor(string plaintext, byte type = 0)
         {
-            int index = 0;
-            int length = plaintext.Length;
-            char[] data = plaintext.ToCharArray();
-            string KeyData;
-
-            switch (type)
+            var index = 0;
+            var length = plaintext.Length;
+            var data = plaintext.ToCharArray();
+            var KeyData = type switch
             {
-                case 1:
-                    KeyData = "GameSpy3D";
-                    break;
-                case 2:
-                    KeyData = "Industries";
-                    break;
-                case 3:
-                    KeyData = "ProjectAphex";
-                    break;
-                default:
-                    KeyData = "gamespy";
-                    break;
-            }
-
-            for (int i = 0; length > 0; length--)
+                1 => "GameSpy3D",
+                2 => "Industries",
+                3 => "ProjectAphex",
+                _ => "gamespy",
+            };
+            for (var i = 0; length > 0; length--)
             {
                 if (i >= KeyData.Length)
                     i = 0;

@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -16,7 +15,10 @@ namespace Horizon.RT.Models
             get => Message?.SkipEncryption ?? base.SkipEncryption;
             set
             {
-                if (Message != null) { Message.SkipEncryption = value; }
+                if (Message != null)
+                {
+                    Message.SkipEncryption = value;
+                }
                 base.SkipEncryption = value;
             }
         }
@@ -47,8 +49,7 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"Message: {Message}";
+            return base.ToString() + " " + $"Message: {Message}";
         }
     }
 }

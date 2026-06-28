@@ -1,10 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using WebAPIService.LeaderboardService.Context.Entities;
+﻿using WebAPIService.LeaderboardService.Context.Entities;
 
 namespace WebAPIService.LeaderboardService
 {
-    public interface IScoreboardService<TEntry> where TEntry : ScoreboardEntryBase, new()
+    public interface IScoreboardService<TEntry>
+        where TEntry : ScoreboardEntryBase, new()
     {
         // Top scores
         Task<List<TEntry>> GetTopScoresAsync(int max = 10);
@@ -24,5 +23,4 @@ namespace WebAPIService.LeaderboardService
         Task<List<TEntry>> GetCurrentMonthScoresAsync(int max = 10);
         Task<string> SerializeToMonthlyString(string gameName, int max = 10);
     }
-
 }

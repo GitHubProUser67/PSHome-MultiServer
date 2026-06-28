@@ -1,6 +1,5 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
@@ -25,13 +24,10 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             reader.ReadBytes(3);
             StatusCode = reader.Read<MediusCallbackStatus>();
             ClanID = reader.ReadInt32();
@@ -47,13 +43,10 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(new byte[3]);
             writer.Write(StatusCode);
             writer.Write(ClanID);
@@ -69,17 +62,18 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"ClanID: {ClanID} " +
-                $"ApplicationID: {ApplicationID} " +
-                $"ClanName: {ClanName} " +
-                $"LeaderAccountID: {LeaderAccountID} " +
-                $"LeaderAccountName: {LeaderAccountName} " +
-                $"Stats: {System.BitConverter.ToString(Stats)} " +
-                $"Status: {Status} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"ClanID: {ClanID} "
+                + $"ApplicationID: {ApplicationID} "
+                + $"ClanName: {ClanName} "
+                + $"LeaderAccountID: {LeaderAccountID} "
+                + $"LeaderAccountName: {LeaderAccountName} "
+                + $"Stats: {System.BitConverter.ToString(Stats)} "
+                + $"Status: {Status} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

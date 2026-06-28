@@ -1,31 +1,33 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
     [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.GameList)]
     public class MediusGameListRequest : BaseLobbyMessage, IMediusRequest
     {
-
         public override byte PacketType => (byte)MediusLobbyMessageIds.GameList;
 
         /// <summary>
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Session Key
         /// </summary>
         public string SessionKey; // SESSIONKEY_MAXLEN
+
         /// <summary>
         /// ApplicationID
         /// </summary>
         public int ApplicatinID;
+
         /// <summary>
         /// PageID
         /// </summary>
         public ushort PageID;
+
         /// <summary>
         /// Page Size
         /// </summary>
@@ -33,13 +35,10 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             SessionKey = reader.ReadString(Constants.SESSIONKEY_MAXLEN);
             reader.ReadBytes(2);
             ApplicatinID = reader.ReadInt32();
@@ -49,13 +48,10 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(SessionKey);
             writer.Write(2);
             writer.Write(ApplicatinID);
@@ -63,15 +59,15 @@ namespace Horizon.RT.Models
             writer.Write(PageSize);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{MessageID} " +
-                $"Sessionkey: {SessionKey} " +
-                $"ApplicationID: {ApplicatinID} " +
-                $"PageID: {PageID} " +
-                $"PageSize: {PageSize}";
+            return base.ToString()
+                + " "
+                + $"MessageID:{MessageID} "
+                + $"Sessionkey: {SessionKey} "
+                + $"ApplicationID: {ApplicatinID} "
+                + $"PageID: {PageID} "
+                + $"PageSize: {PageSize}";
         }
     }
 }

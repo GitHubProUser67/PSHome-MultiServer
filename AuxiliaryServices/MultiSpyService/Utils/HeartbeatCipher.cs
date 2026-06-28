@@ -1,5 +1,4 @@
-﻿using System;
-using System.Text;
+﻿using System.Text;
 
 namespace MultiSpyService.Utils
 {
@@ -12,7 +11,7 @@ namespace MultiSpyService.Utils
         static HeartbeatCipher()
         {
             var builder = new StringBuilder();
-            for (int i = 0x21; i < 0x7f; i++) // From 33 to 126 (inclusive)
+            for (var i = 0x21; i < 0x7f; i++) // From 33 to 126 (inclusive)
             {
                 builder.Append((char)i);
             }
@@ -21,24 +20,17 @@ namespace MultiSpyService.Utils
 
         public HeartbeatCipher(string salt = null)
         {
-            if (salt == null)
-            {
-                Salt = GenerateRandomSalt(6);
-            }
-            else
-            {
-                Salt = salt;
-            }
+            Salt = salt ?? GenerateRandomSalt(6);
         }
 
-        private string GenerateRandomSalt(int length)
+        private static string GenerateRandomSalt(int length)
         {
             var random = new Random();
             var result = new StringBuilder();
 
-            for (int i = 0; i < length; i++)
+            for (var i = 0; i < length; i++)
             {
-                int index = random.Next(Alphabet.Length);
+                var index = random.Next(Alphabet.Length);
                 result.Append(Alphabet[index]);
             }
 

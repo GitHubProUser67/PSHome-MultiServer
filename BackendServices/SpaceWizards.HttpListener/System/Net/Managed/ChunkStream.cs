@@ -1,16 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-//
 // System.Net.ChunkStream
-//
 // Authors:
 //  Gonzalo Paniagua Javier (gonzalo@ximian.com)
-//
 // (C) 2003 Ximian, Inc (http://www.ximian.com)
-//
 
-//
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
 // "Software"), to deal in the Software without restriction, including
@@ -18,10 +13,8 @@
 // distribute, sublicense, and/or sell copies of the Software, and to
 // permit persons to whom the Software is furnished to do so, subject to
 // the following conditions:
-//
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 // MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -29,13 +22,9 @@
 // LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-//
 
-using System;
 using System.Diagnostics;
-using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Net;
 using System.Text;
 
@@ -49,7 +38,7 @@ namespace SpaceWizards.HttpListener
             PartialSize,
             Body,
             BodyFinished,
-            Trailer
+            Trailer,
         }
 
         private sealed class Chunk
@@ -64,7 +53,7 @@ namespace SpaceWizards.HttpListener
 
             public int Read(byte[] buffer, int offset, int size)
             {
-                int nread = (size > Bytes.Length - Offset) ? Bytes.Length - Offset : size;
+                var nread = (size > Bytes.Length - Offset) ? Bytes.Length - Offset : size;
                 Buffer.BlockCopy(Bytes, Offset, buffer, offset, nread);
                 Offset += nread;
                 return nread;
@@ -76,11 +65,11 @@ namespace SpaceWizards.HttpListener
         private int _chunkRead;
         private int _totalWritten;
         private State _state;
-        private StringBuilder _saved;
+        private readonly StringBuilder _saved;
         private bool _sawCR;
         private bool _gotit;
         private int _trailerState;
-        private List<Chunk> _chunks;
+        private readonly List<Chunk> _chunks;
 
         public ChunkStream(WebHeaderCollection headers)
         {
@@ -106,13 +95,13 @@ namespace SpaceWizards.HttpListener
 
         private int ReadFromChunks(byte[] buffer, int offset, int size)
         {
-            int count = _chunks.Count;
-            int nread = 0;
+            var count = _chunks.Count;
+            var nread = 0;
 
             var chunksForRemoving = new List<Chunk>(count);
-            for (int i = 0; i < count; i++)
+            for (var i = 0; i < count; i++)
             {
-                Chunk chunk = _chunks[i];
+                var chunk = _chunks[i];
 
                 if (chunk.Offset == chunk.Bytes.Length)
                 {
@@ -187,21 +176,21 @@ namespace SpaceWizards.HttpListener
 
         public bool WantMore
         {
-            get { return (_chunkRead != _chunkSize || _chunkSize != 0 || _state != State.None); }
+            get { return _chunkRead != _chunkSize || _chunkSize != 0 || _state != State.None; }
         }
 
         public bool DataAvailable
         {
             get
             {
-                int count = _chunks.Count;
-                for (int i = 0; i < count; i++)
+                var count = _chunks.Count;
+                for (var i = 0; i < count; i++)
                 {
-                    Chunk ch = _chunks[i];
+                    var ch = _chunks[i];
                     if (ch == null || ch.Bytes == null)
                         continue;
                     if (ch.Bytes.Length > 0 && ch.Offset < ch.Bytes.Length)
-                        return (_state != State.Body);
+                        return _state != State.Body;
                 }
                 return false;
             }
@@ -222,11 +211,11 @@ namespace SpaceWizards.HttpListener
             if (_chunkSize == 0)
                 return State.BodyFinished;
 
-            int diff = size - offset;
+            var diff = size - offset;
             if (diff + _chunkRead > _chunkSize)
                 diff = _chunkSize - _chunkRead;
 
-            byte[] chunk = new byte[diff];
+            var chunk = new byte[diff];
             Buffer.BlockCopy(buffer, offset, chunk, 0, diff);
             _chunks.Add(new Chunk(chunk));
             offset += diff;
@@ -240,7 +229,7 @@ namespace SpaceWizards.HttpListener
         {
             _chunkRead = 0;
             _chunkSize = 0;
-            char c = '\0';
+            var c = '\0';
             while (offset < size)
             {
                 c = (char)buffer[offset++];
@@ -275,7 +264,11 @@ namespace SpaceWizards.HttpListener
                 {
                     if (_saved.Length > 0)
                     {
-                        _chunkSize = int.Parse(RemoveChunkExtension(_saved.ToString()), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                        _chunkSize = int.Parse(
+                            RemoveChunkExtension(_saved.ToString()),
+                            NumberStyles.HexNumber,
+                            CultureInfo.InvariantCulture
+                        );
                     }
                 }
                 catch (Exception)
@@ -289,7 +282,11 @@ namespace SpaceWizards.HttpListener
             _chunkRead = 0;
             try
             {
-                _chunkSize = int.Parse(RemoveChunkExtension(_saved.ToString()), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                _chunkSize = int.Parse(
+                    RemoveChunkExtension(_saved.ToString()),
+                    NumberStyles.HexNumber,
+                    CultureInfo.InvariantCulture
+                );
             }
             catch (Exception)
             {
@@ -307,10 +304,8 @@ namespace SpaceWizards.HttpListener
 
         private static string RemoveChunkExtension(string input)
         {
-            int idx = input.IndexOf(';');
-            if (idx == -1)
-                return input;
-            return input.Substring(0, idx);
+            var idx = input.IndexOf(';');
+            return idx == -1 ? input : input.Substring(0, idx);
         }
 
         private State ReadCRLF(byte[] buffer, ref int offset, int size)
@@ -333,7 +328,7 @@ namespace SpaceWizards.HttpListener
 
         private State ReadTrailer(byte[] buffer, ref int offset, int size)
         {
-            char c = '\0';
+            var c = '\0';
 
             // short path
             if (_trailerState == 2 && (char)buffer[offset] == '\r' && _saved.Length == 0)
@@ -347,8 +342,8 @@ namespace SpaceWizards.HttpListener
                 offset--;
             }
 
-            int st = _trailerState;
-            string stString = "\r\n\r";
+            var st = _trailerState;
+            var stString = "\r\n\r";
             while (offset < size && st < 4)
             {
                 c = (char)buffer[offset++];
@@ -366,11 +361,7 @@ namespace SpaceWizards.HttpListener
 
                 if (st > 0)
                 {
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
                     _saved.Append(stString.AsSpan(0, _saved.Length == 0 ? st - 2 : st));
-#else
-                    _saved.Append(stString.AsSpan(0, _saved.Length == 0 ? st - 2 : st).ToString());
-#endif
                     st = 0;
                     if (_saved.Length > 4196)
                         ThrowProtocolViolation("Error reading trailer (too long).");
@@ -386,7 +377,7 @@ namespace SpaceWizards.HttpListener
                 return State.Trailer;
             }
 
-            StringReader reader = new StringReader(_saved.ToString());
+            var reader = new StringReader(_saved.ToString());
             string line;
             while ((line = reader.ReadLine()) != null && line != "")
                 _headers.Add(line);
@@ -396,7 +387,12 @@ namespace SpaceWizards.HttpListener
 
         private static void ThrowProtocolViolation(string message)
         {
-            WebException we = new WebException(message, null, WebExceptionStatus.ServerProtocolViolation, null);
+            var we = new WebException(
+                message,
+                null,
+                WebExceptionStatus.ServerProtocolViolation,
+                null
+            );
             throw we;
         }
     }

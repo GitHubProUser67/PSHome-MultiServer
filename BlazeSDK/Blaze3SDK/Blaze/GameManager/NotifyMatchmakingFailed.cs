@@ -2,21 +2,19 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct NotifyMatchmakingFailed
-	{
+    [TdfStruct]
+    public struct NotifyMatchmakingFailed
+    {
+        [TdfMember("RSLT")]
+        public MatchmakingResult mMatchmakingResult;
 
-		[TdfMember("RSLT")]
-		public MatchmakingResult mMatchmakingResult;
+        [TdfMember("MAXF")]
+        public uint mMaxPossibleFitScore;
 
-		[TdfMember("MAXF")]
-		public uint mMaxPossibleFitScore;
+        [TdfMember("MSID")]
+        public uint mSessionId;
 
-		[TdfMember("MSID")]
-		public uint mSessionId;
-
-		[TdfMember("USID")]
-		public uint mUserSessionId;
-
-	}
+        [TdfMember("USID")]
+        public uint mUserSessionId;
+    }
 }

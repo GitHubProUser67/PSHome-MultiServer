@@ -5,6 +5,6 @@ namespace Blaze3SDK.Blaze.Rooms
     {
         None = 0,
         Pseudo = 4,
-        AutoRemoveMember = 8
+        AutoRemoveMember = 8,
     }
 }

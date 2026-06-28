@@ -1,39 +1,48 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Xml;
+﻿using System.Xml;
 
 namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.farm
 {
     public class remodel_bought
     {
-        public static string ProcessBought(IDictionary<string, string> QueryParameters, string apiPath)
+        public static string ProcessBought(
+            IDictionary<string, string> QueryParameters,
+            string apiPath
+        )
         {
             if (QueryParameters != null)
             {
-                string user = QueryParameters["user"];
-                string type = QueryParameters["type"];
-                string amount = QueryParameters["amount"];
-                string wood = QueryParameters["wood"];
+                var user = QueryParameters["user"];
+                var type = QueryParameters["type"];
+                var amount = QueryParameters["amount"];
+                var wood = QueryParameters["wood"];
 
-                if (!string.IsNullOrEmpty(user) && !string.IsNullOrEmpty(type) && !string.IsNullOrEmpty(amount) && !string.IsNullOrEmpty(wood))
+                if (
+                    !string.IsNullOrEmpty(user)
+                    && !string.IsNullOrEmpty(type)
+                    && !string.IsNullOrEmpty(amount)
+                    && !string.IsNullOrEmpty(wood)
+                )
                 {
                     Directory.CreateDirectory($"{apiPath}/juggernaut/farm/User_Data");
 
                     if (File.Exists($"{apiPath}/juggernaut/farm/User_Data/{user}.xml"))
                     {
                         // Load the XML string into an XmlDocument
-                        XmlDocument xmlDoc = new XmlDocument();
-                        xmlDoc.LoadXml(File.ReadAllText($"{apiPath}/juggernaut/farm/User_Data/{user}.xml"));
+                        var xmlDoc = new XmlDocument();
+                        xmlDoc.LoadXml(
+                            File.ReadAllText($"{apiPath}/juggernaut/farm/User_Data/{user}.xml")
+                        );
 
                         // Find the <gold> element
-                        XmlElement goldElement = xmlDoc.SelectSingleNode("/xml/resources/gold") as XmlElement;
 
-                        if (goldElement != null)
+                        if (
+                            xmlDoc.SelectSingleNode("/xml/resources/gold") is XmlElement goldElement
+                        )
                         {
                             try
                             {
-                                int remaininggold = int.Parse(goldElement.InnerText) - int.Parse(amount);
+                                var remaininggold =
+                                    int.Parse(goldElement.InnerText) - int.Parse(amount);
 
                                 if (remaininggold < 0)
                                     remaininggold = 0;
@@ -48,13 +57,15 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.farm
                         }
 
                         // Find the <wood> element
-                        XmlElement woodElement = xmlDoc.SelectSingleNode("/xml/resources/wood") as XmlElement;
 
-                        if (woodElement != null)
+                        if (
+                            xmlDoc.SelectSingleNode("/xml/resources/wood") is XmlElement woodElement
+                        )
                         {
                             try
                             {
-                                int remainingwood = int.Parse(woodElement.InnerText) - int.Parse(wood);
+                                var remainingwood =
+                                    int.Parse(woodElement.InnerText) - int.Parse(wood);
 
                                 if (remainingwood < 0)
                                     remainingwood = 0;
@@ -68,7 +79,10 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.farm
                             }
                         }
 
-                        File.WriteAllText($"{apiPath}/juggernaut/farm/User_Data/{user}.xml", xmlDoc.OuterXml);
+                        File.WriteAllText(
+                            $"{apiPath}/juggernaut/farm/User_Data/{user}.xml",
+                            xmlDoc.OuterXml
+                        );
                     }
 
                     return string.Empty;

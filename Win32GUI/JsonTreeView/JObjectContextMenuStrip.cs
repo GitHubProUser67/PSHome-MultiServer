@@ -1,6 +1,4 @@
-﻿using System;
-using System.Windows.Forms;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 
 namespace ZTn.Json.JsonTreeView
 {
@@ -19,9 +17,21 @@ namespace ZTn.Json.JsonTreeView
         public JObjectContextMenuStrip()
         {
             ObjectToolStripItem = new ToolStripMenuItem(Resources.Lang.JsonObject);
-            InsertPropertyAsValueToolStripItem = new ToolStripMenuItem(Resources.Lang.InsertPropertyAsValue, null, InsertProperty_Click);
-            InsertPropertyAsArrayToolStripItem = new ToolStripMenuItem(Resources.Lang.InsertPropertyAsArray, null, InsertPropertyAsArray_Click);
-            InsertPropertyAsObjectToolStripItem = new ToolStripMenuItem(Resources.Lang.InsertPropertyAsObject, null, InsertPropertyAsObject_Click);
+            InsertPropertyAsValueToolStripItem = new ToolStripMenuItem(
+                Resources.Lang.InsertPropertyAsValue,
+                null,
+                InsertProperty_Click
+            );
+            InsertPropertyAsArrayToolStripItem = new ToolStripMenuItem(
+                Resources.Lang.InsertPropertyAsArray,
+                null,
+                InsertPropertyAsArray_Click
+            );
+            InsertPropertyAsObjectToolStripItem = new ToolStripMenuItem(
+                Resources.Lang.InsertPropertyAsObject,
+                null,
+                InsertPropertyAsObject_Click
+            );
 
             ObjectToolStripItem.DropDownItems.Add(InsertPropertyAsValueToolStripItem);
             ObjectToolStripItem.DropDownItems.Add(InsertPropertyAsArrayToolStripItem);
@@ -33,9 +43,7 @@ namespace ZTn.Json.JsonTreeView
 
         private void InsertProperty(object propertyValue)
         {
-            var jObjectTreeNode = JTokenNode as JObjectTreeNode;
-
-            if (jObjectTreeNode == null)
+            if (JTokenNode is not JObjectTreeNode jObjectTreeNode)
             {
                 return;
             }

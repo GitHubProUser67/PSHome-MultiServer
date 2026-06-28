@@ -1,17 +1,11 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.Globalization;
 using System.Net;
-using System.Net.WebSockets;
-using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading.Tasks;
 using SpaceWizards.HttpListener.WebSockets;
 
 namespace SpaceWizards.HttpListener
@@ -24,24 +18,28 @@ namespace SpaceWizards.HttpListener
         private Uri _requestUri;
         private Version _version;
 
-        public string[] AcceptTypes => Helpers.ParseMultivalueHeader(Headers[HttpKnownHeaderNames.Accept]);
+        public string[] AcceptTypes =>
+            Helpers.ParseMultivalueHeader(Headers[HttpKnownHeaderNames.Accept]);
 
-        public string[] UserLanguages => Helpers.ParseMultivalueHeader(Headers[HttpKnownHeaderNames.AcceptLanguage]);
+        public string[] UserLanguages =>
+            Helpers.ParseMultivalueHeader(Headers[HttpKnownHeaderNames.AcceptLanguage]);
 
         private CookieCollection ParseCookies(Uri uri, string setCookieHeader)
         {
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, "uri:" + uri + " setCookieHeader:" + setCookieHeader);
-            CookieCollection cookies = new CookieCollection();
-            CookieParser parser = new CookieParser(setCookieHeader);
+            if (NetEventSource.Log.IsEnabled())
+                NetEventSource.Info(this, "uri:" + uri + " setCookieHeader:" + setCookieHeader);
+            var cookies = new CookieCollection();
+            var parser = new CookieParser(setCookieHeader);
             while (true)
             {
-                Cookie cookie = parser.GetServer();
+                var cookie = parser.GetServer();
                 if (cookie == null)
                 {
                     // EOF, done.
                     break;
                 }
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, "CookieParser returned cookie: " + cookie.ToString());
+                if (NetEventSource.Log.IsEnabled())
+                    NetEventSource.Info(this, "CookieParser returned cookie: " + cookie.ToString());
                 if (cookie.Name.Length == 0)
                 {
                     continue;
@@ -58,15 +56,12 @@ namespace SpaceWizards.HttpListener
             {
                 if (_cookies == null)
                 {
-                    string cookieString = Headers[HttpKnownHeaderNames.Cookie];
+                    var cookieString = Headers[HttpKnownHeaderNames.Cookie];
                     if (!string.IsNullOrEmpty(cookieString))
                     {
                         _cookies = ParseCookies(RequestUri, cookieString);
                     }
-                    if (_cookies == null)
-                    {
-                        _cookies = new CookieCollection();
-                    }
+                    _cookies ??= new CookieCollection();
                 }
                 return _cookies;
             }
@@ -76,34 +71,33 @@ namespace SpaceWizards.HttpListener
         {
             get
             {
-                if (UserAgent != null && CultureInfo.InvariantCulture.CompareInfo.IsPrefix(UserAgent, "UP"))
+                if (
+                    UserAgent != null
+                    && CultureInfo.InvariantCulture.CompareInfo.IsPrefix(UserAgent, "UP")
+                )
                 {
-                    string postDataCharset = Headers["x-up-devcap-post-charset"];
+                    var postDataCharset = Headers["x-up-devcap-post-charset"];
                     if (postDataCharset != null && postDataCharset.Length > 0)
                     {
                         try
                         {
                             return Encoding.GetEncoding(postDataCharset);
                         }
-                        catch (ArgumentException)
-                        {
-                        }
+                        catch (ArgumentException) { }
                     }
                 }
                 if (HasEntityBody)
                 {
                     if (ContentType != null)
                     {
-                        string charSet = Helpers.GetCharSetValueFromHeader(ContentType);
+                        var charSet = Helpers.GetCharSetValueFromHeader(ContentType);
                         if (charSet != null)
                         {
                             try
                             {
                                 return Encoding.GetEncoding(charSet);
                             }
-                            catch (ArgumentException)
-                            {
-                            }
+                            catch (ArgumentException) { }
                         }
                     }
                 }
@@ -124,15 +118,24 @@ namespace SpaceWizards.HttpListener
                     return false;
                 }
 
-                bool foundConnectionUpgradeHeader = false;
-                if (string.IsNullOrEmpty(Headers[HttpKnownHeaderNames.Connection]) || string.IsNullOrEmpty(Headers[HttpKnownHeaderNames.Upgrade]))
+                var foundConnectionUpgradeHeader = false;
+                if (
+                    string.IsNullOrEmpty(Headers[HttpKnownHeaderNames.Connection])
+                    || string.IsNullOrEmpty(Headers[HttpKnownHeaderNames.Upgrade])
+                )
                 {
                     return false;
                 }
 
-                foreach (string connection in Headers.GetValues(HttpKnownHeaderNames.Connection))
+                foreach (var connection in Headers.GetValues(HttpKnownHeaderNames.Connection))
                 {
-                    if (string.Equals(connection, HttpKnownHeaderNames.Upgrade, StringComparison.OrdinalIgnoreCase))
+                    if (
+                        string.Equals(
+                            connection,
+                            HttpKnownHeaderNames.Upgrade,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
                     {
                         foundConnectionUpgradeHeader = true;
                         break;
@@ -144,9 +147,15 @@ namespace SpaceWizards.HttpListener
                     return false;
                 }
 
-                foreach (string upgrade in Headers.GetValues(HttpKnownHeaderNames.Upgrade))
+                foreach (var upgrade in Headers.GetValues(HttpKnownHeaderNames.Upgrade))
                 {
-                    if (string.Equals(upgrade, HttpWebSocket.WebSocketUpgradeToken, StringComparison.OrdinalIgnoreCase))
+                    if (
+                        string.Equals(
+                            upgrade,
+                            HttpWebSocket.WebSocketUpgradeToken,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
                     {
                         return true;
                     }
@@ -162,7 +171,7 @@ namespace SpaceWizards.HttpListener
             {
                 if (!_keepAlive.HasValue)
                 {
-                    string header = Headers[HttpKnownHeaderNames.ProxyConnection];
+                    var header = Headers[HttpKnownHeaderNames.ProxyConnection];
                     if (string.IsNullOrEmpty(header))
                     {
                         header = Headers[HttpKnownHeaderNames.Connection];
@@ -183,12 +192,13 @@ namespace SpaceWizards.HttpListener
                     {
                         header = header.ToLowerInvariant();
                         _keepAlive =
-                            header.IndexOf("close", StringComparison.OrdinalIgnoreCase) < 0 ||
-                            header.IndexOf("keep-alive", StringComparison.OrdinalIgnoreCase) >= 0;
+                            header.IndexOf("close", StringComparison.OrdinalIgnoreCase) < 0
+                            || header.Contains("keep-alive", StringComparison.OrdinalIgnoreCase);
                     }
                 }
 
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, "_keepAlive=" + _keepAlive);
+                if (NetEventSource.Log.IsEnabled())
+                    NetEventSource.Info(this, "_keepAlive=" + _keepAlive);
                 return _keepAlive.Value;
             }
         }
@@ -197,7 +207,7 @@ namespace SpaceWizards.HttpListener
         {
             get
             {
-                NameValueCollection queryString = new NameValueCollection();
+                var queryString = new NameValueCollection();
                 Helpers.FillFromString(queryString, Url.Query, true, ContentEncoding);
                 return queryString;
             }
@@ -217,13 +227,17 @@ namespace SpaceWizards.HttpListener
         {
             get
             {
-                string referrer = Headers[HttpKnownHeaderNames.Referer];
+                var referrer = Headers[HttpKnownHeaderNames.Referer];
                 if (referrer == null)
                 {
                     return null;
                 }
 
-                bool success = Uri.TryCreate(referrer, UriKind.RelativeOrAbsolute, out Uri urlReferrer);
+                var success = Uri.TryCreate(
+                    referrer,
+                    UriKind.RelativeOrAbsolute,
+                    out var urlReferrer
+                );
                 return success ? urlReferrer : null;
             }
         }
@@ -235,22 +249,34 @@ namespace SpaceWizards.HttpListener
         public X509Certificate2 GetClientCertificate()
         {
             if (ClientCertState == ListenerClientCertState.InProgress)
-                throw new InvalidOperationException(SR.Format(SR.net_listener_callinprogress, $"{nameof(GetClientCertificate)}()/{nameof(BeginGetClientCertificate)}()"));
+                throw new InvalidOperationException(
+                    SR.Format(
+                        SR.net_listener_callinprogress,
+                        $"{nameof(GetClientCertificate)}()/{nameof(BeginGetClientCertificate)}()"
+                    )
+                );
             ClientCertState = ListenerClientCertState.InProgress;
 
             GetClientCertificateCore();
 
             ClientCertState = ListenerClientCertState.Completed;
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"_clientCertificate:{ClientCertificate}");
+            if (NetEventSource.Log.IsEnabled())
+                NetEventSource.Info(this, $"_clientCertificate:{ClientCertificate}");
 
             return ClientCertificate;
         }
 
         public IAsyncResult BeginGetClientCertificate(AsyncCallback requestCallback, object state)
         {
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this);
+            if (NetEventSource.Log.IsEnabled())
+                NetEventSource.Info(this);
             if (ClientCertState == ListenerClientCertState.InProgress)
-                throw new InvalidOperationException(SR.Format(SR.net_listener_callinprogress, $"{nameof(GetClientCertificate)}()/{nameof(BeginGetClientCertificate)}()"));
+                throw new InvalidOperationException(
+                    SR.Format(
+                        SR.net_listener_callinprogress,
+                        $"{nameof(GetClientCertificate)}()/{nameof(BeginGetClientCertificate)}()"
+                    )
+                );
             ClientCertState = ListenerClientCertState.InProgress;
 
             return BeginGetClientCertificateCore(requestCallback, state);
@@ -259,12 +285,15 @@ namespace SpaceWizards.HttpListener
         public Task<X509Certificate2> GetClientCertificateAsync()
         {
             return Task.Factory.FromAsync(
-                (callback, state) => ((HttpListenerRequest)state).BeginGetClientCertificate(callback, state),
+                (callback, state) =>
+                    ((HttpListenerRequest)state).BeginGetClientCertificate(callback, state),
                 iar => ((HttpListenerRequest)iar.AsyncState).EndGetClientCertificate(iar),
-                this);
+                this
+            );
         }
 
-        internal ListenerClientCertState ClientCertState { get; set; } = ListenerClientCertState.NotInitialized;
+        internal ListenerClientCertState ClientCertState { get; set; } =
+            ListenerClientCertState.NotInitialized;
         internal X509Certificate2 ClientCertificate { get; set; }
 
         public int ClientCertificateError
@@ -272,9 +301,19 @@ namespace SpaceWizards.HttpListener
             get
             {
                 if (ClientCertState == ListenerClientCertState.NotInitialized)
-                    throw new InvalidOperationException(SR.Format(SR.net_listener_mustcall, "GetClientCertificate()/BeginGetClientCertificate()"));
+                    throw new InvalidOperationException(
+                        SR.Format(
+                            SR.net_listener_mustcall,
+                            "GetClientCertificate()/BeginGetClientCertificate()"
+                        )
+                    );
                 else if (ClientCertState == ListenerClientCertState.InProgress)
-                    throw new InvalidOperationException(SR.Format(SR.net_listener_mustcompletecall, "GetClientCertificate()/BeginGetClientCertificate()"));
+                    throw new InvalidOperationException(
+                        SR.Format(
+                            SR.net_listener_mustcompletecall,
+                            "GetClientCertificate()/BeginGetClientCertificate()"
+                        )
+                    );
 
                 return GetClientCertificateErrorCore();
             }
@@ -282,9 +321,7 @@ namespace SpaceWizards.HttpListener
 
         private static class Helpers
         {
-            //
             // Get attribute off header value
-            //
             internal static string GetCharSetValueFromHeader(string headerValue)
             {
                 const string AttrName = "charset";
@@ -292,23 +329,31 @@ namespace SpaceWizards.HttpListener
                 if (headerValue == null)
                     return null;
 
-                int l = headerValue.Length;
-                int k = AttrName.Length;
+                var l = headerValue.Length;
+                var k = AttrName.Length;
 
                 // find properly separated attribute name
-                int i = 1; // start searching from 1
+                var i = 1; // start searching from 1
 
                 while (i < l)
                 {
-                    i = CultureInfo.InvariantCulture.CompareInfo.IndexOf(headerValue, AttrName, i, CompareOptions.IgnoreCase);
+                    i = CultureInfo.InvariantCulture.CompareInfo.IndexOf(
+                        headerValue,
+                        AttrName,
+                        i,
+                        CompareOptions.IgnoreCase
+                    );
                     if (i < 0)
                         break;
                     if (i + k >= l)
                         break;
 
-                    char chPrev = headerValue[i - 1];
-                    char chNext = headerValue[i + k];
-                    if ((chPrev == ';' || chPrev == ',' || char.IsWhiteSpace(chPrev)) && (chNext == '=' || char.IsWhiteSpace(chNext)))
+                    var chPrev = headerValue[i - 1];
+                    var chNext = headerValue[i + k];
+                    if (
+                        (chPrev == ';' || chPrev == ',' || char.IsWhiteSpace(chPrev))
+                        && (chNext == '=' || char.IsWhiteSpace(chNext))
+                    )
                         break;
 
                     i += k;
@@ -366,17 +411,17 @@ namespace SpaceWizards.HttpListener
                 if (s == null)
                     return null;
 
-                int l = s.Length;
+                var l = s.Length;
 
                 // collect comma-separated values into list
 
-                List<string> values = new List<string>();
-                int i = 0;
+                var values = new List<string>();
+                var i = 0;
 
                 while (i < l)
                 {
                     // find next ,
-                    int ci = s.IndexOf(',', i);
+                    var ci = s.IndexOf(',', i);
                     if (ci < 0)
                         ci = l;
 
@@ -393,7 +438,7 @@ namespace SpaceWizards.HttpListener
 
                 // return list as array of strings
 
-                int n = values.Count;
+                var n = values.Count;
                 string[] strings;
 
                 // if n is 0 that means s was empty string
@@ -411,19 +456,18 @@ namespace SpaceWizards.HttpListener
                 return strings;
             }
 
-
             private static string UrlDecodeStringFromStringInternal(string s, Encoding e)
             {
-                int count = s.Length;
-                UrlDecoder helper = new UrlDecoder(count, e);
+                var count = s.Length;
+                var helper = new UrlDecoder(count, e);
 
                 // go through the string's chars collapsing %XX and %uXXXX and
                 // appending each char as char, with exception of %XX constructs
                 // that are appended as bytes
 
-                for (int pos = 0; pos < count; pos++)
+                for (var pos = 0; pos < count; pos++)
                 {
-                    char ch = s[pos];
+                    var ch = s[pos];
 
                     if (ch == '+')
                     {
@@ -433,13 +477,13 @@ namespace SpaceWizards.HttpListener
                     {
                         if (s[pos + 1] == 'u' && pos < count - 5)
                         {
-                            int h1 = HexConverter.FromChar(s[pos + 2]);
-                            int h2 = HexConverter.FromChar(s[pos + 3]);
-                            int h3 = HexConverter.FromChar(s[pos + 4]);
-                            int h4 = HexConverter.FromChar(s[pos + 5]);
+                            var h1 = HexConverter.FromChar(s[pos + 2]);
+                            var h2 = HexConverter.FromChar(s[pos + 3]);
+                            var h3 = HexConverter.FromChar(s[pos + 4]);
+                            var h4 = HexConverter.FromChar(s[pos + 5]);
 
                             if ((h1 | h2 | h3 | h4) != 0xFF)
-                            {   // valid 4 hex chars
+                            { // valid 4 hex chars
                                 ch = (char)((h1 << 12) | (h2 << 8) | (h3 << 4) | h4);
                                 pos += 5;
 
@@ -450,12 +494,12 @@ namespace SpaceWizards.HttpListener
                         }
                         else
                         {
-                            int h1 = HexConverter.FromChar(s[pos + 1]);
-                            int h2 = HexConverter.FromChar(s[pos + 2]);
+                            var h1 = HexConverter.FromChar(s[pos + 1]);
+                            var h2 = HexConverter.FromChar(s[pos + 2]);
 
                             if ((h1 | h2) != 0xFF)
-                            {     // valid 2 hex chars
-                                byte b = (byte)((h1 << 4) | h2);
+                            { // valid 2 hex chars
+                                var b = (byte)((h1 << 4) | h2);
                                 pos += 2;
 
                                 // don't add as char
@@ -493,7 +537,13 @@ namespace SpaceWizards.HttpListener
                 {
                     if (_numBytes > 0)
                     {
-                        _numChars += _encoding.GetChars(_byteBuffer, 0, _numBytes, _charBuffer, _numChars);
+                        _numChars += _encoding.GetChars(
+                            _byteBuffer,
+                            0,
+                            _numBytes,
+                            _charBuffer,
+                            _numChars
+                        );
                         _numBytes = 0;
                     }
                 }
@@ -518,8 +568,7 @@ namespace SpaceWizards.HttpListener
                 internal void AddByte(byte b)
                 {
                     {
-                        if (_byteBuffer == null)
-                            _byteBuffer = new byte[_bufferSize];
+                        _byteBuffer ??= new byte[_bufferSize];
 
                         _byteBuffer[_numBytes++] = b;
                     }
@@ -530,29 +579,30 @@ namespace SpaceWizards.HttpListener
                     if (_numBytes > 0)
                         FlushBytes();
 
-                    if (_numChars > 0)
-                        return new string(_charBuffer, 0, _numChars);
-                    else
-                        return string.Empty;
+                    return _numChars > 0 ? new string(_charBuffer, 0, _numChars) : string.Empty;
                 }
             }
 
-
-            internal static void FillFromString(NameValueCollection nvc, string s, bool urlencoded, Encoding encoding)
+            internal static void FillFromString(
+                NameValueCollection nvc,
+                string s,
+                bool urlencoded,
+                Encoding encoding
+            )
             {
-                int l = s.Length;
-                int i = (l > 0 && s[0] == '?') ? 1 : 0;
+                var l = s.Length;
+                var i = (l > 0 && s[0] == '?') ? 1 : 0;
 
                 while (i < l)
                 {
                     // find next & while noting first = on the way (and if there are more)
 
-                    int si = i;
-                    int ti = -1;
+                    var si = i;
+                    var ti = -1;
 
                     while (i < l)
                     {
-                        char ch = s[i];
+                        var ch = s[i];
 
                         if (ch == '=')
                         {
@@ -586,8 +636,9 @@ namespace SpaceWizards.HttpListener
 
                     if (urlencoded)
                         nvc.Add(
-                           name == null ? null : UrlDecodeStringFromStringInternal(name, encoding),
-                           UrlDecodeStringFromStringInternal(value, encoding));
+                            name == null ? null : UrlDecodeStringFromStringInternal(name, encoding),
+                            UrlDecodeStringFromStringInternal(value, encoding)
+                        );
                     else
                         nvc.Add(name, value);
 

@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct UpdateMeshConnectionRequest
-	{
+    [TdfStruct]
+    public struct UpdateMeshConnectionRequest
+    {
+        [TdfMember("GID")]
+        public uint mGameId;
 
-		[TdfMember("GID")]
-		public uint mGameId;
-
-		[TdfMember("TARG")]
-		public List<PlayerConnectionStatus> mMeshConnectionStatusList;
-
-	}
+        [TdfMember("TARG")]
+        public List<PlayerConnectionStatus> mMeshConnectionStatusList;
+    }
 }

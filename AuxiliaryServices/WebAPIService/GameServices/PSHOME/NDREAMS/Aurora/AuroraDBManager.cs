@@ -1,71 +1,76 @@
+﻿using System.Text.RegularExpressions;
+using CastleLibrary.NetHasher;
 using CastleLibrary.Utils;
 using HttpMultipartParser;
-using Microsoft.EntityFrameworkCore;
 using MultiServerLibrary.Extension;
 using MultiServerLibrary.HTTP;
-using NetHasher;
 using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
 using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
 {
-    public static class AuroraDBManager
+    public static partial class AuroraDBManager
     {
         private static OrbrunnerScoreBoardData _leaderboard = null;
 
-        public static string ProcessVisitCounter2(DateTime CurrentDate, byte[] PostData, string ContentType, string apipath)
+        public static string ProcessVisitCounter2(
+            DateTime CurrentDate,
+            byte[] PostData,
+            string ContentType,
+            string apipath
+        )
         {
-            string func = string.Empty;
-            string name = string.Empty;
-            string game = string.Empty;
-            string territory = string.Empty;
-            string key = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var func = string.Empty;
+            var name = string.Empty;
+            var game = string.Empty;
+            var key = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
                     func = data.GetParameterValue("func");
                     name = data.GetParameterValue("name");
                     game = data.GetParameterValue("game");
-                    territory = data.GetParameterValue("territory");
+                    var territory = data.GetParameterValue("territory");
                     key = data.GetParameterValue("key");
 
                     ms.Flush();
                 }
 
-                string ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom("nDreamsAuroraCont", name, func + game, CurrentDate);
+                var ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(
+                    "nDreamsAuroraCont",
+                    name,
+                    func + game,
+                    CurrentDate
+                );
 
                 if (key == ExpectedHash)
                 {
                     Directory.CreateDirectory(apipath + $"/NDREAMS/Aurora/PlayersInventory/{name}");
 
-                    string PlayerVisitProfilePath = apipath + $"/NDREAMS/Aurora/PlayersInventory/{name}/visit_counter.json";
-                    string Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).BytesToHexStr(); // Seems to not make a difference.
+                    var PlayerVisitProfilePath =
+                        apipath + $"/NDREAMS/Aurora/PlayersInventory/{name}/visit_counter.json";
+                    var Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).BytesToHexStr(); // Seems to not make a difference.
 
                     if (File.Exists(PlayerVisitProfilePath))
                     {
                         // Parse the JSON string
-                        JObject jsonObject = JObject.Parse(File.ReadAllText(PlayerVisitProfilePath));
+                        var jsonObject = JObject.Parse(File.ReadAllText(PlayerVisitProfilePath));
 
                         // Check if the game exists in the JSON object
                         if (jsonObject.ContainsKey(game))
                         {
                             // Increment the counter associated with the game
-                            int? currentValue = jsonObject[game]?.Value<int?>();
+                            var currentValue = jsonObject[game]?.Value<int?>();
 
-                            if (currentValue == null)
-                                jsonObject[game] = currentValue;
-                            else
-                                jsonObject[game] = currentValue + 1;
+                            jsonObject[game] =
+                                currentValue == null
+                                    ? (JToken)currentValue
+                                    : (JToken)(currentValue + 1);
                         }
                         else
                             // If the game doesn't exist, add it with the value 1
@@ -81,7 +86,8 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                 }
                 else
                 {
-                    string errMsg = $"[nDreams] - VisitCounter2: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                    var errMsg =
+                        $"[nDreams] - VisitCounter2: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessVisitCounter2</function></xml>";
                 }
@@ -90,17 +96,22 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
             return null;
         }
 
-        public static string ProcessTheEnd(DateTime CurrentDate, byte[] PostData, string ContentType, string apipath)
+        public static string ProcessTheEnd(
+            DateTime CurrentDate,
+            byte[] PostData,
+            string ContentType,
+            string apipath
+        )
         {
-            string func = string.Empty;
-            string name = string.Empty;
-            string doom = string.Empty;
-            string key = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var func = string.Empty;
+            var name = string.Empty;
+            var doom = string.Empty;
+            var key = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
@@ -120,16 +131,21 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                     ms.Flush();
                 }
 
-                string ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom("nDreamsAuroraTheEnd", name, !string.IsNullOrEmpty(doom) ? func + doom : func, CurrentDate);
+                var ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(
+                    "nDreamsAuroraTheEnd",
+                    name,
+                    !string.IsNullOrEmpty(doom) ? func + doom : func,
+                    CurrentDate
+                );
 
                 if (key == ExpectedHash)
                 {
                     Directory.CreateDirectory(apipath + "/NDREAMS/Aurora/TheEnd");
 
-                    string DayProfilePath = apipath + $"/NDREAMS/Aurora/TheEnd/{name}.txt";
-                    string qa = "false";
+                    var DayProfilePath = apipath + $"/NDREAMS/Aurora/TheEnd/{name}.txt";
+                    var qa = "false";
                     ushort state = 6;
-                    int message = 10; // Seems unused.
+                    var message = 10; // Seems unused.
 
                     // Get the current day of the week
                     switch (DateTime.Today.DayOfWeek)
@@ -156,10 +172,12 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
 
                     if (File.Exists(DayProfilePath))
                     {
-                        string ProfileContent = File.ReadAllText(DayProfilePath);
+                        var ProfileContent = File.ReadAllText(DayProfilePath);
 
-                        Match qaMatch = new Regex(@"qa=(true|false)", RegexOptions.IgnoreCase).Match(ProfileContent);
-                        Match stateMatch = new Regex(@"state=(\d+)", RegexOptions.IgnoreCase).Match(ProfileContent);
+                        var qaMatch = MyRegex().Match(ProfileContent);
+                        var stateMatch = new Regex(@"state=(\d+)", RegexOptions.IgnoreCase).Match(
+                            ProfileContent
+                        );
 
                         // Check if both matches are successful
                         if (qaMatch.Success && stateMatch.Success)
@@ -171,12 +189,18 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                                 state = ushort.Parse(stateMatch.Groups[1].Value);
                         }
                         else
-                            CustomLogger.LoggerAccessor.LogWarn($"[nDreams] - TheEnd: Profile:{DayProfilePath} has an invalid format! Using default...");
+                            CustomLogger.LoggerAccessor.LogWarn(
+                                $"[nDreams] - TheEnd: Profile:{DayProfilePath} has an invalid format! Using default..."
+                            );
                     }
                     else
                         File.WriteAllText(DayProfilePath, $"qa={qa},state=0");
 
-                    if (func == "ChangeDoomLevel" && !string.IsNullOrEmpty(doom) && ushort.TryParse(doom, out ushort resstate))
+                    if (
+                        func == "ChangeDoomLevel"
+                        && !string.IsNullOrEmpty(doom)
+                        && ushort.TryParse(doom, out var resstate)
+                    )
                     {
                         state = resstate;
                         File.WriteAllText(DayProfilePath, $"qa={qa},state={state}");
@@ -186,7 +210,8 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                 }
                 else
                 {
-                    string errMsg = $"[nDreams] - TheEnd: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                    var errMsg =
+                        $"[nDreams] - TheEnd: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessTheEnd</function></xml>";
                 }
@@ -195,16 +220,20 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
             return null;
         }
 
-        public static string ProcessComplexABTest(DateTime CurrentDate, byte[] PostData, string ContentType)
+        public static string ProcessComplexABTest(
+            DateTime CurrentDate,
+            byte[] PostData,
+            string ContentType
+        )
         {
-            string func = string.Empty;
-            string name = string.Empty;
-            string key = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var func = string.Empty;
+            var name = string.Empty;
+            var key = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
@@ -215,13 +244,19 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                     ms.Flush();
                 }
 
-                string ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom("nDreamsCommiePlexCont", name, func, CurrentDate);
+                var ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(
+                    "nDreamsCommiePlexCont",
+                    name,
+                    func,
+                    CurrentDate
+                );
 
                 if (key == ExpectedHash)
                     return $"<xml><success>true</success><result><Success>true</Success></result></xml>";
                 else
                 {
-                    string errMsg = $"[nDreams] - ComplexABTest: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                    var errMsg =
+                        $"[nDreams] - ComplexABTest: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessComplexABTest</function></xml>";
                 }
@@ -230,19 +265,24 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
             return null;
         }
 
-        public static string ProcessOrbrunnerScores(DateTime CurrentDate, byte[] PostData, string ContentType, string apipath)
+        public static string ProcessOrbrunnerScores(
+            DateTime CurrentDate,
+            byte[] PostData,
+            string ContentType,
+            string apipath
+        )
         {
-            string func = string.Empty;
-            string name = string.Empty;
-            string score = string.Empty;
-            string xp = string.Empty;
-            string orbs = string.Empty;
-            string key = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var func = string.Empty;
+            var name = string.Empty;
+            var score = string.Empty;
+            var xp = string.Empty;
+            var orbs = string.Empty;
+            var key = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
@@ -263,24 +303,32 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                     ms.Flush();
                 }
 
-                string high = string.Empty;
-                (string, int)? HighestScore = null;
-
+                var high = string.Empty;
                 switch (func)
                 {
                     case "submit":
-                        string ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom("nDreamsAuroraCont", name, func + score + orbs, CurrentDate);
+                        var ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(
+                            "nDreamsAuroraCont",
+                            name,
+                            func + score + orbs,
+                            CurrentDate
+                        );
 
                         if (key == ExpectedHash)
                         {
-                            int best = 0;
-                            string Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).BytesToHexStr();
+                            var best = 0;
+                            var Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).BytesToHexStr();
 
-                            if (int.TryParse(score, out int resscore))
+                            if (int.TryParse(score, out var resscore))
                             {
                                 if (_leaderboard == null)
                                 {
-                                    _leaderboard = new OrbrunnerScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+                                    _leaderboard = new OrbrunnerScoreBoardData(
+                                        LeaderboardDbContext.BuildOptions(
+                                            0,
+                                            $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}"
+                                        )
+                                    );
 
                                     _ = _leaderboard.UpdateScoreAsync("EatFlammingDeath", 50000);
                                 }
@@ -288,28 +336,37 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                                 _ = _leaderboard.UpdateScoreAsync(name, resscore);
 
                                 var scoreExtraction = _leaderboard.GetTopScoresAsync(1).Result;
-                                if (scoreExtraction.Any())
+                                if (scoreExtraction.Count != 0)
                                 {
-                                    HighestScore = (scoreExtraction.First().PsnId, (int)scoreExtraction.First().Score);
+                                    (string, int)? HighestScore = (
+                                        scoreExtraction.First().PsnId,
+                                        (int)scoreExtraction.First().Score
+                                    );
                                     best = HighestScore.Value.Item2;
                                     high = $"{HighestScore.Value.Item1},{best}";
                                 }
                             }
 
-                            return $"<xml><success>true</success><result><Success>true</Success><Hash>{Hash}</Hash><high>{high}</high><best>{best}</best>" +
-                                $"<score>{score}</score><exp>{(File.Exists(apipath + $"/NDREAMS/Aurora/PlayersInventory/{name}/inventory.json") ? NDREAMSProfilesUtils.ExtractProfileProperties(File.ReadAllText(apipath + $"/NDREAMS/Aurora/PlayersInventory/{name}/inventory.json")).Item1.ToString() : xp)}" +
-                                $"</exp><confirm>{NDREAMSServerUtils.Server_GetSignatureCustom("nDreamsAuroraCont", name, $"{Hash}{high}", CurrentDate)}</confirm></result></xml>";
+                            return $"<xml><success>true</success><result><Success>true</Success><Hash>{Hash}</Hash><high>{high}</high><best>{best}</best>"
+                                + $"<score>{score}</score><exp>{(File.Exists(apipath + $"/NDREAMS/Aurora/PlayersInventory/{name}/inventory.json") ? NDREAMSProfilesUtils.ExtractProfileProperties(File.ReadAllText(apipath + $"/NDREAMS/Aurora/PlayersInventory/{name}/inventory.json")).Item1.ToString() : xp)}"
+                                + $"</exp><confirm>{NDREAMSServerUtils.Server_GetSignatureCustom("nDreamsAuroraCont", name, $"{Hash}{high}", CurrentDate)}</confirm></result></xml>";
                         }
                         else
                         {
-                            string errMsg = $"[nDreams] - OrbrunnerScores: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                            var errMsg =
+                                $"[nDreams] - OrbrunnerScores: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                             CustomLogger.LoggerAccessor.LogWarn(errMsg);
                             return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessOrbrunnerScores</function></xml>";
                         }
                     case "high":
                         if (_leaderboard == null)
                         {
-                            _leaderboard = new OrbrunnerScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+                            _leaderboard = new OrbrunnerScoreBoardData(
+                                LeaderboardDbContext.BuildOptions(
+                                    0,
+                                    $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}"
+                                )
+                            );
 
                             _ = _leaderboard.UpdateScoreAsync("EatFlammingDeath", 50000);
                         }
@@ -320,26 +377,30 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
             return null;
         }
 
-        public static string ProcessConsumables(DateTime CurrentDate, byte[] PostData, string ContentType, string apipath)
+        public static string ProcessConsumables(
+            DateTime CurrentDate,
+            byte[] PostData,
+            string ContentType,
+            string apipath
+        )
         {
-            string func = string.Empty;
-            string name = string.Empty;
-            string territory = string.Empty;
-            string everything = string.Empty;
-            string consumable = string.Empty;
-            string count = string.Empty;
-            string key = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var func = string.Empty;
+            var name = string.Empty;
+            var everything = string.Empty;
+            var consumable = string.Empty;
+            var count = string.Empty;
+            var key = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
                     func = data.GetParameterValue("func");
                     name = data.GetParameterValue("name");
-                    territory = data.GetParameterValue("territory");
+                    var territory = data.GetParameterValue("territory");
                     key = data.GetParameterValue("key");
                     try
                     {
@@ -369,24 +430,30 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                     ms.Flush();
                 }
 
-                string ExpectedHash = string.Empty;
-                string directoryPath = apipath + $"/NDREAMS/Aurora/PlayersInventory/{name}/Consumables";
+                var directoryPath =
+                    apipath + $"/NDREAMS/Aurora/PlayersInventory/{name}/Consumables";
 
                 Directory.CreateDirectory(directoryPath);
 
+                string ExpectedHash;
                 switch (func)
                 {
                     case "update":
-                        ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom("nDreamsAuroraCont", name, func + everything, CurrentDate);
+                        ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(
+                            "nDreamsAuroraCont",
+                            name,
+                            func + everything,
+                            CurrentDate
+                        );
 
                         if (key == ExpectedHash)
                         {
-                            string Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).BytesToHexStr();
+                            var Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).BytesToHexStr();
                             if (!string.IsNullOrEmpty(everything))
                             {
-                                string[] parts = everything.Split(',');
+                                var parts = everything.Split(',');
 
-                                for (int i = 0; i < parts.Length; i += 2)
+                                for (var i = 0; i < parts.Length; i += 2)
                                 {
                                     File.WriteAllText(directoryPath + $"/{parts[i]}", parts[i + 1]);
                                 }
@@ -396,16 +463,22 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                         }
                         else
                         {
-                            string errMsg = $"[nDreams] - Consumables: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                            var errMsg =
+                                $"[nDreams] - Consumables: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                             CustomLogger.LoggerAccessor.LogWarn(errMsg);
                             return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessConsumables</function></xml>";
                         }
                     case "set":
-                        ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom("nDreamsAuroraCont", name, func + count, CurrentDate);
+                        ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(
+                            "nDreamsAuroraCont",
+                            name,
+                            func + count,
+                            CurrentDate
+                        );
 
                         if (key == ExpectedHash)
                         {
-                            string Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).BytesToHexStr();
+                            var Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).BytesToHexStr();
 
                             if (!string.IsNullOrEmpty(consumable))
                                 File.WriteAllText(directoryPath + $"/{consumable}", count);
@@ -414,23 +487,34 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                         }
                         else
                         {
-                            string errMsg = $"[nDreams] - Consumables: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                            var errMsg =
+                                $"[nDreams] - Consumables: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                             CustomLogger.LoggerAccessor.LogWarn(errMsg);
                             return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessConsumables</function></xml>";
                         }
                     case "get":
-                        ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom("nDreamsAuroraCont", name, func + consumable, CurrentDate);
+                        ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(
+                            "nDreamsAuroraCont",
+                            name,
+                            func + consumable,
+                            CurrentDate
+                        );
 
                         if (key == ExpectedHash)
                         {
-                            string Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).BytesToHexStr();
-                            int rescount = 0;
+                            var Hash = DotNetHasher.ComputeMD5(Array.Empty<byte>()).BytesToHexStr();
+                            var rescount = 0;
 
-                            if (!string.IsNullOrEmpty(consumable) && File.Exists(directoryPath + $"/{consumable}"))
+                            if (
+                                !string.IsNullOrEmpty(consumable)
+                                && File.Exists(directoryPath + $"/{consumable}")
+                            )
                             {
                                 try
                                 {
-                                    rescount = int.Parse(File.ReadAllText(directoryPath + $"/{consumable}"));
+                                    rescount = int.Parse(
+                                        File.ReadAllText(directoryPath + $"/{consumable}")
+                                    );
                                 }
                                 catch
                                 {
@@ -442,7 +526,8 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                         }
                         else
                         {
-                            string errMsg = $"[nDreams] - Consumables: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                            var errMsg =
+                                $"[nDreams] - Consumables: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                             CustomLogger.LoggerAccessor.LogWarn(errMsg);
                             return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessConsumables</function></xml>";
                         }
@@ -454,24 +539,19 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
 
         public static string ProcessPStats(byte[] PostData, string ContentType)
         {
-            string func = string.Empty;
-            string scene = string.Empty;
-            string resdata = string.Empty;
-            string counts = string.Empty;
-            string rgn = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
-                    func = data.GetParameterValue("func");
-                    scene = data.GetParameterValue("scene");
-                    resdata = data.GetParameterValue("data");
-                    counts = data.GetParameterValue("counts");
-                    rgn = data.GetParameterValue("rgn");
+                    var func = data.GetParameterValue("func");
+                    var scene = data.GetParameterValue("scene");
+                    var resdata = data.GetParameterValue("data");
+                    var counts = data.GetParameterValue("counts");
+                    var rgn = data.GetParameterValue("rgn");
 
                     ms.Flush();
                 }
@@ -482,17 +562,22 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
             return null;
         }
 
-        public static string ProcessReleaseInfo(DateTime CurrentDate, byte[] PostData, string ContentType, string apipath)
+        public static string ProcessReleaseInfo(
+            DateTime CurrentDate,
+            byte[] PostData,
+            string ContentType,
+            string apipath
+        )
         {
-            string func = string.Empty;
-            string name = string.Empty;
-            string version = string.Empty;
-            string key = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var func = string.Empty;
+            var name = string.Empty;
+            var version = string.Empty;
+            var key = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
@@ -511,14 +596,20 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                     ms.Flush();
                 }
 
-                string ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom("nDreamsAuroraWelcome", name, !string.IsNullOrEmpty(version) ? func + version : func, CurrentDate);
+                var ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(
+                    "nDreamsAuroraWelcome",
+                    name,
+                    !string.IsNullOrEmpty(version) ? func + version : func,
+                    CurrentDate
+                );
 
                 if (key == ExpectedHash)
                 {
                     Directory.CreateDirectory(apipath + $"/NDREAMS/Aurora/Welcome");
 
-                    string introProfilePath = apipath + $"/NDREAMS/Aurora/Welcome/intro_{name}.txt";
-                    string infopointsProfilePath = apipath + $"/NDREAMS/Aurora/Welcome/infopoints_{name}.txt";
+                    var introProfilePath = apipath + $"/NDREAMS/Aurora/Welcome/intro_{name}.txt";
+                    var infopointsProfilePath =
+                        apipath + $"/NDREAMS/Aurora/Welcome/infopoints_{name}.txt";
 
                     switch (func)
                     {
@@ -534,7 +625,8 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                 }
                 else
                 {
-                    string errMsg = $"[nDreams] - ReleaseInfo: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                    var errMsg =
+                        $"[nDreams] - ReleaseInfo: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessReleaseInfo</function></xml>";
                 }
@@ -543,18 +635,23 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
             return null;
         }
 
-        public static string ProcessAuroraXP(DateTime CurrentDate, byte[] PostData, string ContentType, string apipath)
+        public static string ProcessAuroraXP(
+            DateTime CurrentDate,
+            byte[] PostData,
+            string ContentType,
+            string apipath
+        )
         {
-            string func = string.Empty;
-            string name = string.Empty;
-            string locale = string.Empty;
-            string ticket = string.Empty;
-            string key = string.Empty;
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
+            var func = string.Empty;
+            var name = string.Empty;
+            var locale = string.Empty;
+            var ticket = string.Empty;
+            var key = string.Empty;
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
 
             if (!string.IsNullOrEmpty(boundary) && PostData != null)
             {
-                using (MemoryStream ms = new MemoryStream(PostData))
+                using (var ms = new MemoryStream(PostData))
                 {
                     var data = MultipartFormDataParser.Parse(ms, boundary);
 
@@ -574,27 +671,32 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                     ms.Flush();
                 }
 
-                string ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom("nDreamsAuroraXP", name, !string.IsNullOrEmpty(ticket) ? func + locale + ticket : func + locale, CurrentDate);
+                var ExpectedHash = NDREAMSServerUtils.Server_GetSignatureCustom(
+                    "nDreamsAuroraXP",
+                    name,
+                    !string.IsNullOrEmpty(ticket) ? func + locale + ticket : func + locale,
+                    CurrentDate
+                );
 
                 if (key == ExpectedHash)
                 {
                     Directory.CreateDirectory(apipath + $"/NDREAMS/Aurora/PlayersInventory/{name}");
 
-                    string PlayerInventoryPath = apipath + $"/NDREAMS/Aurora/PlayersInventory/{name}/inventory.json";
+                    var PlayerInventoryPath =
+                        apipath + $"/NDREAMS/Aurora/PlayersInventory/{name}/inventory.json";
 
-                    int Level = 1;
-                    int AwaredLevels = 0;
-                    int XP = 0;
-                    int NextXP = 0;
-                    int LastRewardXP = 0;
-                    int NextRewardXP = 0;
-                    float NextRewardProgress = 0F;
+                    var Level = 1;
+                    var AwaredLevels = 0;
+                    var XP = 0;
+                    var NextXP = 0;
+                    var LastRewardXP = 0;
+                    var NextRewardXP = 0;
+                    var NextRewardProgress = 0F;
 
                     switch (func)
                     {
                         case "GetInitData":
-                            string GUIDS = NDREAMSServerUtils.CreateBase64StringFromGuids(new List<string>
-                            {
+                            var GUIDS = NDREAMSServerUtils.CreateBase64StringFromGuids([
                                 "1A645C1F-91FA47C0-833EA523-4E491A8B",
                                 "711733DB-785A4753-B997EF54-5E8A7D36",
                                 "81F209BC-5ED54D71-AAE4EC2A-BD38AFF3",
@@ -628,21 +730,27 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                                 "57421054-BED04C84-AA1DAF30-497CF607",
                                 "0F758E3C-9C3C4D21-80991302-5125AB00",
                                 "4B2B989E-CC0B4AA8-858B1FE3-859FA45B",
-                                "CC3B9E04-A0DE4733-95B7BFBB-0F865CFE"
-                            });
+                                "CC3B9E04-A0DE4733-95B7BFBB-0F865CFE",
+                            ]);
 
                             if (string.IsNullOrEmpty(GUIDS))
-                                CustomLogger.LoggerAccessor.LogError($"[nDreams] - AuroraXP: GUIDS list produced a null result, issues will happen!!");
+                                CustomLogger.LoggerAccessor.LogError(
+                                    $"[nDreams] - AuroraXP: GUIDS list produced a null result, issues will happen!!"
+                                );
                             else
                             {
 #if DEBUG
-                                CustomLogger.LoggerAccessor.LogInfo($"[nDreams] - AuroraXP: Debug GUIDS list:{GUIDS}");
+                                CustomLogger.LoggerAccessor.LogInfo(
+                                    $"[nDreams] - AuroraXP: Debug GUIDS list:{GUIDS}"
+                                );
 #endif
                             }
 
                             if (File.Exists(PlayerInventoryPath))
                             {
-                                (int, int) PlayerStats = NDREAMSProfilesUtils.ExtractProfileProperties(File.ReadAllText(PlayerInventoryPath));
+                                var PlayerStats = NDREAMSProfilesUtils.ExtractProfileProperties(
+                                    File.ReadAllText(PlayerInventoryPath)
+                                );
                                 XP = PlayerStats.Item1;
                                 Level = PlayerStats.Item2;
                             }
@@ -656,39 +764,47 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                             if (NextRewardXP != 0)
                             {
                                 NextRewardProgress = (float)XP / NextRewardXP;
-#if NET5_0_OR_GREATER
                                 NextRewardProgress = Math.Clamp(NextRewardProgress, 0.0F, 1.0F);
-#else
-                                NextRewardProgress = Clamp(NextRewardProgress, 0.0F, 1.0F);
-#endif
                             }
 
-                            return $"<xml><success>true</success><result><Level>{Level}</Level><XP>{XP}</XP><NextXP>{NextXP}</NextXP><GUIDS>{GUIDS}</GUIDS><LastRewardXP>{LastRewardXP}</LastRewardXP>" +
-                                $"<NextRewardXP>{NextRewardXP}</NextRewardXP><NextRewardProgress>{NextRewardProgress.ToString().Replace(',', '.')}</NextRewardProgress><Notifications></Notifications><History></History></result></xml>";
+                            return $"<xml><success>true</success><result><Level>{Level}</Level><XP>{XP}</XP><NextXP>{NextXP}</NextXP><GUIDS>{GUIDS}</GUIDS><LastRewardXP>{LastRewardXP}</LastRewardXP>"
+                                + $"<NextRewardXP>{NextRewardXP}</NextRewardXP><NextRewardProgress>{NextRewardProgress.ToString().Replace(',', '.')}</NextRewardProgress><Notifications></Notifications><History></History></result></xml>";
                         case "AddTicket":
-                            int XPAwarded = 0;
+                            var XPAwarded = 0;
 
                             (bool, byte[]) base64Data = ticket.IsBase64();
 
                             if (base64Data.Item1)
                             {
-                                byte[] DecodedTicket = base64Data.Item2;
+                                var DecodedTicket = base64Data.Item2;
 
                                 if (DecodedTicket[0] == 0x00 && DecodedTicket[1] == 0x01)
-                                    XPAwarded = BitConverter.ToInt16(BitConverter.IsLittleEndian ? new byte[] { DecodedTicket[22], DecodedTicket[21] } : new byte[] { DecodedTicket[21], DecodedTicket[22] }, 0);
+                                    XPAwarded = BitConverter.ToInt16(
+                                        EndianTools.EndianAwareConverter.isLittleEndianSystem
+                                            ? [DecodedTicket[22], DecodedTicket[21]]
+                                            : [DecodedTicket[21], DecodedTicket[22]],
+                                        0
+                                    );
                                 else
-                                    CustomLogger.LoggerAccessor.LogWarn($"[nDreams] - AuroraXP: Unknown Base64 Ticket format detected, generated by:{name}. Ignoring...");
+                                    CustomLogger.LoggerAccessor.LogWarn(
+                                        $"[nDreams] - AuroraXP: Unknown Base64 Ticket format detected, generated by:{name}. Ignoring..."
+                                    );
                             }
                             else
-                                CustomLogger.LoggerAccessor.LogWarn($"[nDreams] - AuroraXP: Unknown Ticket format detected, generated by:{name}. Ignoring...");
+                                CustomLogger.LoggerAccessor.LogWarn(
+                                    $"[nDreams] - AuroraXP: Unknown Ticket format detected, generated by:{name}. Ignoring..."
+                                );
 
                             if (File.Exists(PlayerInventoryPath))
                             {
-                                JObject profile = JObject.Parse(File.ReadAllText(PlayerInventoryPath));
+                                var profile = JObject.Parse(File.ReadAllText(PlayerInventoryPath));
 
                                 XP = NDREAMSProfilesUtils.UpdateXP(profile, XPAwarded);
 
-                                (int, int) LVLProperties = NDREAMSProfilesUtils.UpdateLevel(profile, AuroraXPTable.FindClosestPreviousLevel(XP));
+                                var LVLProperties = NDREAMSProfilesUtils.UpdateLevel(
+                                    profile,
+                                    AuroraXPTable.FindClosestPreviousLevel(XP)
+                                );
 
                                 Level = LVLProperties.Item2;
 
@@ -699,7 +815,10 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                             else
                             {
                                 XP = XPAwarded;
-                                File.WriteAllText(PlayerInventoryPath, $"{{\"XP\":{XPAwarded},\"level\":1}}");
+                                File.WriteAllText(
+                                    PlayerInventoryPath,
+                                    $"{{\"XP\":{XPAwarded},\"level\":1}}"
+                                );
                             }
 
                             NextXP = AuroraXPTable.FindClosestHigherXP(XP) - XP;
@@ -709,20 +828,17 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
                             if (NextRewardXP != 0)
                             {
                                 NextRewardProgress = (float)XP / NextRewardXP;
-#if NET5_0_OR_GREATER
                                 NextRewardProgress = Math.Clamp(NextRewardProgress, 0.0F, 1.0F);
-#else
-                                NextRewardProgress = Clamp(NextRewardProgress, 0.0F, 1.0F);
-#endif
                             }
 
-                            return $"<xml><success>true</success><result><Level>{Level}</Level><Awarded>{XPAwarded}</Awarded><LvlChange>{AwaredLevels}</LvlChange><LvlChang>{(AwaredLevels != 0 ? "true" : "false")}</LvlChang><XP>{XP}</XP><NextXP>{NextXP}</NextXP><LastRewardXP>{LastRewardXP}</LastRewardXP>" +
-                                $"<NextRewardXP>{NextRewardXP}</NextRewardXP><NextRewardProgress>{NextRewardProgress.ToString().Replace(',', '.')}</NextRewardProgress><Success>true</Success><XPAwarded>{XPAwarded}</XPAwarded><Notifications></Notifications></result></xml>";
+                            return $"<xml><success>true</success><result><Level>{Level}</Level><Awarded>{XPAwarded}</Awarded><LvlChange>{AwaredLevels}</LvlChange><LvlChang>{(AwaredLevels != 0 ? "true" : "false")}</LvlChang><XP>{XP}</XP><NextXP>{NextXP}</NextXP><LastRewardXP>{LastRewardXP}</LastRewardXP>"
+                                + $"<NextRewardXP>{NextRewardXP}</NextRewardXP><NextRewardProgress>{NextRewardProgress.ToString().Replace(',', '.')}</NextRewardProgress><Success>true</Success><XPAwarded>{XPAwarded}</XPAwarded><Notifications></Notifications></result></xml>";
                     }
                 }
                 else
                 {
-                    string errMsg = $"[nDreams] - AuroraXP: invalid key sent! Received:{key} Expected:{ExpectedHash}";
+                    var errMsg =
+                        $"[nDreams] - AuroraXP: invalid key sent! Received:{key} Expected:{ExpectedHash}";
                     CustomLogger.LoggerAccessor.LogWarn(errMsg);
                     return $"<xml><success>false</success><error>Signature Mismatch</error><extra>{errMsg}</extra><function>ProcessAuroraXP</function></xml>";
                 }
@@ -730,14 +846,8 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Aurora
 
             return null;
         }
-#if !NET5_0_OR_GREATER
-        // Custom Clamp method
-        private static float Clamp(float value, float min, float max)
-        {
-            if (value < min) return min;
-            if (value > max) return max;
-            return value;
-        }
-#endif
+
+        [GeneratedRegex(@"qa=(true|false)", RegexOptions.IgnoreCase, "fr-FR")]
+        private static partial Regex MyRegex();
     }
 }

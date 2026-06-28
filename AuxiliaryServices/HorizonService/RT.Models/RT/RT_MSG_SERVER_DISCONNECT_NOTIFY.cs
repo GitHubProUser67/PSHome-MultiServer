@@ -1,14 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 using System.Net;
+using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     [ScertMessage(RT_MSG_TYPE.RT_MSG_SERVER_DISCONNECT_NOTIFY)]
     public class RT_MSG_SERVER_DISCONNECT_NOTIFY : BaseScertMessage
     {
-
         public override RT_MSG_TYPE Id => RT_MSG_TYPE.RT_MSG_SERVER_DISCONNECT_NOTIFY;
 
         public short PlayerIndex;

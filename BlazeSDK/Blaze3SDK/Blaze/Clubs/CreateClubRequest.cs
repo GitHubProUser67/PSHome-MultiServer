@@ -2,21 +2,19 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Clubs
 {
-	[TdfStruct]
-	public struct CreateClubRequest
-	{
+    [TdfStruct]
+    public struct CreateClubRequest
+    {
+        [TdfMember("DMID")]
+        public uint mClubDomainId;
 
-		[TdfMember("DMID")]
-		public uint mClubDomainId;
+        [TdfMember("CSET")]
+        public ClubSettings mClubSettings;
 
-		[TdfMember("CSET")]
-		public ClubSettings mClubSettings;
+        [TdfMember("CNAM")]
+        public string mName;
 
-		[TdfMember("CNAM")]
-		public string mName;
-
-		[TdfMember("CLTG")]
-		public List<string> mTagList;
-
-	}
+        [TdfMember("CLTG")]
+        public List<string> mTagList;
+    }
 }

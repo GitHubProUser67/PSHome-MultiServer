@@ -2,30 +2,28 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Stats
 {
-	[TdfStruct]
-	public struct LeaderboardFolderGroup
-	{
+    [TdfStruct]
+    public struct LeaderboardFolderGroup
+    {
+        [TdfMember("OWDS")]
+        public string mDescription;
 
-		[TdfMember("OWDS")]
-		public string mDescription;
+        [TdfMember("FLDS")]
+        public List<FolderDescriptor> mFolderDescriptors;
 
-		[TdfMember("FLDS")]
-		public List<FolderDescriptor> mFolderDescriptors;
+        [TdfMember("OWID")]
+        public uint mFolderId;
 
-		[TdfMember("OWID")]
-		public uint mFolderId;
+        [TdfMember("META")]
+        public string mMetadata;
 
-		[TdfMember("META")]
-		public string mMetadata;
+        [TdfMember("OWNM")]
+        public string mName;
 
-		[TdfMember("OWNM")]
-		public string mName;
+        [TdfMember("PRID")]
+        public uint mParentId;
 
-		[TdfMember("PRID")]
-		public uint mParentId;
-
-		[TdfMember("SDES")]
-		public string mShortDesc;
-
-	}
+        [TdfMember("SDES")]
+        public string mShortDesc;
+    }
 }

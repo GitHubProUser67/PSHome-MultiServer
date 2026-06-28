@@ -1,8 +1,7 @@
-using EdNetService.Crypto;
+using System.Text;
+using CastleLibrary.Utils.Crypto;
 using EndianTools;
 using EndianTools.BitConverterExtension;
-using System;
-using System.Text;
 
 namespace EdNetService.Models
 {
@@ -33,7 +32,7 @@ namespace EdNetService.Models
         {
             get
             {
-                byte[] output = new byte[_position];
+                var output = new byte[_position];
                 Array.Copy(_data, 0, output, 0, output.Length);
                 return output;
             }
@@ -56,7 +55,7 @@ namespace EdNetService.Models
 
         public void LoadData(byte[] data, int realSize)
         {
-            _data = data == null ? new byte[realSize] : data;
+            _data = data ?? (new byte[realSize]);
             _position = 0;
             _bufferSize = realSize;
         }
@@ -125,7 +124,7 @@ namespace EdNetService.Models
 
         public int ExtractInt32()
         {
-            int result = 0;
+            var result = 0;
 
             if (IsReadable(4))
             {
@@ -138,7 +137,7 @@ namespace EdNetService.Models
 
         public uint ExtractUInt32()
         {
-            uint result = 0U;
+            var result = 0U;
 
             if (IsReadable(4))
             {
@@ -151,7 +150,7 @@ namespace EdNetService.Models
 
         public float ExtractFloat32()
         {
-            float result = 0f;
+            var result = 0f;
 
             if (IsReadable(4))
             {
@@ -164,7 +163,7 @@ namespace EdNetService.Models
 
         public long ExtractInt64()
         {
-            long result = 0L;
+            var result = 0L;
 
             if (IsReadable(8))
             {
@@ -177,7 +176,7 @@ namespace EdNetService.Models
 
         public ulong ExtractUInt64()
         {
-            ulong result = 0UL;
+            var result = 0UL;
 
             if (IsReadable(8))
             {
@@ -190,7 +189,7 @@ namespace EdNetService.Models
 
         public double ExtractDouble64()
         {
-            double result = 0.0;
+            var result = 0.0;
 
             if (IsReadable(8))
             {
@@ -203,7 +202,7 @@ namespace EdNetService.Models
 
         public string ExtractString()
         {
-            ushort length = ExtractUInt16();
+            var length = ExtractUInt16();
             string result = null;
 
             if (length != 0 && IsReadable(length))
@@ -217,7 +216,7 @@ namespace EdNetService.Models
 
         public byte[] ExtractByteArray()
         {
-            ushort length = ExtractUInt16();
+            var length = ExtractUInt16();
             byte[] result = null;
 
             if (length != 0 && IsReadable(length))
@@ -262,7 +261,7 @@ namespace EdNetService.Models
 
         public EdStore ExtractDataStore()
         {
-            byte[] data = ExtractByteArray();
+            var data = ExtractByteArray();
             return data == null ? null : new EdStore(data, data.Length);
         }
 
@@ -346,7 +345,7 @@ namespace EdNetService.Models
                 InsertUInt16(0);
             else
             {
-                ushort shortLength = (ushort)value.Length;
+                var shortLength = (ushort)value.Length;
                 InsertUInt16(shortLength);
                 Encoding.ASCII.GetBytes(value).CopyTo(_data, _position);
                 _position += shortLength;
@@ -362,8 +361,8 @@ namespace EdNetService.Models
             {
                 if (size < value.Length)
                     size = (ushort)value.Length;
-                byte[] paddedTextPayload = new byte[size];
-                byte[] textPayload = Encoding.ASCII.GetBytes(value);
+                var paddedTextPayload = new byte[size];
+                var textPayload = Encoding.ASCII.GetBytes(value);
                 Array.Copy(textPayload, 0, paddedTextPayload, 0, textPayload.Length);
                 InsertUInt16(size);
                 paddedTextPayload.CopyTo(_data, _position);
@@ -398,7 +397,7 @@ namespace EdNetService.Models
             else
             {
                 InsertUInt16(currentSizeWithoutEncryption);
-                int paddedLength = data.Length;
+                var paddedLength = data.Length;
                 EnsureCapacity(_position + paddedLength);
                 Buffer.BlockCopy(data, 0, _data, (int)_position, paddedLength);
                 _position += (uint)paddedLength;

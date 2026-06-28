@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -78,25 +77,26 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MediusWorldID: {MediusWorldID} " +
-                $"PlayerCount:{PlayerCount} " +
-                $"GameName: {GameName} " +
-                $"GameStats: {System.BitConverter.ToString(GameStats)} " +
-                $"MinPlayers: {MinPlayers} " +
-                $"MaxPlayers: {MaxPlayers} " +
-                $"GameLevel: {GameLevel} " +
-                $"PlayerSkillLevel: {PlayerSkillLevel} " +
-                $"RulesSet: {RulesSet} " +
-                $"GenericField1: {GenericField1:X8} " +
-                $"GenericField2: {GenericField2:X8} " +
-                $"GenericField3: {GenericField3:X8} " +
-                $"GenericField4: {GenericField4:X8} " +
-                $"GenericField5: {GenericField5:X8} " +
-                $"GenericField6: {GenericField6:X8} " +
-                $"GenericField7: {GenericField7:X8} " +
-                $"GenericField8: {GenericField8:X8} " +
-                $"WorldStatus: {WorldStatus}";
+            return base.ToString()
+                + " "
+                + $"MediusWorldID: {MediusWorldID} "
+                + $"PlayerCount:{PlayerCount} "
+                + $"GameName: {GameName} "
+                + $"GameStats: {System.BitConverter.ToString(GameStats)} "
+                + $"MinPlayers: {MinPlayers} "
+                + $"MaxPlayers: {MaxPlayers} "
+                + $"GameLevel: {GameLevel} "
+                + $"PlayerSkillLevel: {PlayerSkillLevel} "
+                + $"RulesSet: {RulesSet} "
+                + $"GenericField1: {GenericField1:X8} "
+                + $"GenericField2: {GenericField2:X8} "
+                + $"GenericField3: {GenericField3:X8} "
+                + $"GenericField4: {GenericField4:X8} "
+                + $"GenericField5: {GenericField5:X8} "
+                + $"GenericField6: {GenericField6:X8} "
+                + $"GenericField7: {GenericField7:X8} "
+                + $"GenericField8: {GenericField8:X8} "
+                + $"WorldStatus: {WorldStatus}";
         }
     }
 }

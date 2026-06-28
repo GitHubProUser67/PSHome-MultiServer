@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace WebAPIService.GameServices.UBISOFT.Models.Hermes.v1
 {
     public class V1Sessions
@@ -25,6 +22,7 @@ namespace WebAPIService.GameServices.UBISOFT.Models.Hermes.v1
 
         public DateTime dateCreated { get; set; } = DateTime.Parse("2012-08-01T03:30:12.0000000Z");
 
-        public DateTime dateLastModified { get; set; } = DateTime.Parse("2020-10-30T05:59:36.0000000Z");
+        public DateTime dateLastModified { get; set; } =
+            DateTime.Parse("2020-10-30T05:59:36.0000000Z");
     }
 }

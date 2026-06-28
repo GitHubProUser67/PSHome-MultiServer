@@ -1,7 +1,6 @@
-using System.IO;
+using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
 using Horizon.RT.Models.Misc;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
@@ -45,12 +44,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"MessageType: {MessageType} " +
-                $"TargetID: {TargetID} " +
-                $"Message: {Message}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"MessageType: {MessageType} "
+                + $"TargetID: {TargetID} "
+                + $"Message: {Message}";
         }
     }
 }

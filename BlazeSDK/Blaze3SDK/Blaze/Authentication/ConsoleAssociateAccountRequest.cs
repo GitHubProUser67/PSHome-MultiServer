@@ -2,24 +2,22 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Authentication
 {
-	[TdfStruct]
-	public struct ConsoleAssociateAccountRequest
-	{
+    [TdfStruct]
+    public struct ConsoleAssociateAccountRequest
+    {
+        [TdfMember("MAIL")]
+        public string mEmail;
 
-		[TdfMember("MAIL")]
-		public string mEmail;
+        [TdfMember("XREF")]
+        public ulong mExtId;
 
-		[TdfMember("XREF")]
-		public ulong mExtId;
+        [TdfMember("PERS")]
+        public string mExtName;
 
-		[TdfMember("PERS")]
-		public string mExtName;
+        [TdfMember("PASS")]
+        public string mPassword;
 
-		[TdfMember("PASS")]
-		public string mPassword;
-
-		[TdfMember("TICK")]
-		public byte[] mTicketBlob;
-
-	}
+        [TdfMember("TICK")]
+        public byte[] mTicketBlob;
+    }
 }

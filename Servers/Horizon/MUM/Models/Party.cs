@@ -1,16 +1,18 @@
+using System.Data;
 using CustomLogger;
+using Horizon.LIBRARY.Database.Models;
+using Horizon.MEDIUS.PluginArgs;
+using Horizon.PluginManager;
 using Horizon.RT.Common;
 using Horizon.RT.Models;
-using Horizon.LIBRARY.Database.Models;
-using System.Data;
-using Horizon.SERVER;
 using MultiServerLibrary.Extension;
 
 namespace Horizon.MUM.Models
 {
     public class Party
     {
-        private object _Lock = new();
+        private readonly Lock _Lock = new();
+
         public class PartyClient
         {
             public ClientObject? Client;
@@ -57,6 +59,7 @@ namespace Horizon.MUM.Models
         public MediusWorldAttributesType Attributes;
         public MediusMatchOptions MatchOptions;
         public ClientObject? DMEServer;
+        public Channel? ChatChannel = null;
         public Channel? GameChannel;
         public ClientObject? Host;
 
@@ -73,11 +76,16 @@ namespace Horizon.MUM.Models
 
         protected string? accountIdsAtStart;
 
-        public uint Time => (uint)(DateTimeUtils.GetHighPrecisionUtcTime() - utcTimeCreated).TotalMilliseconds;
+        public uint Time =>
+            (uint)(DateTimeUtils.GetHighPrecisionUtcTime() - utcTimeCreated).TotalMilliseconds;
 
         public bool Destroyed = false;
 
-        public virtual bool ReadyToDestroy => !Destroyed && WorldStatus == MediusWorldStatus.WorldClosed && utcTimeEmpty.HasValue && (DateTimeUtils.GetHighPrecisionUtcTime() - utcTimeEmpty)?.TotalSeconds > 1f;
+        public virtual bool ReadyToDestroy =>
+            !Destroyed
+            && WorldStatus == MediusWorldStatus.WorldClosed
+            && utcTimeEmpty.HasValue
+            && (DateTimeUtils.GetHighPrecisionUtcTime() - utcTimeEmpty)?.TotalSeconds > 1f;
 
         public Party(ClientObject client, IMediusRequest createParty, ClientObject? dmeServer)
         {
@@ -91,10 +99,18 @@ namespace Horizon.MUM.Models
             utcTimeEmpty = null;
             DMEServer = dmeServer;
             GameChannel!.RegisterParty(this);
+            var chatChannel = client.CurrentChannel;
+            if (chatChannel != null && chatChannel.Type == ChannelType.Lobby)
+            {
+                ChatChannel = chatChannel;
+                chatChannel.RegisterGameSubChannel(GameChannel);
+            }
             Host = client;
             SetWorldStatus(MediusWorldStatus.WorldStaging).Wait();
 
-            LoggerAccessor.LogInfo($"Party {MediusWorldId}: {PartyName}: Created by {client} | Host: {Host}");
+            LoggerAccessor.LogInfo(
+                $"Party {MediusWorldId}: {PartyName}: Created by {client} | Host: {Host}"
+            );
         }
 
         public PartyDTO ToPartyDTO()
@@ -120,7 +136,7 @@ namespace Horizon.MUM.Models
                 MaxPlayers = MaxPlayers,
                 MinPlayers = MinPlayers,
                 Metadata = Metadata,
-                Destroyed = Destroyed
+                Destroyed = Destroyed,
             };
         }
 
@@ -137,9 +153,11 @@ namespace Horizon.MUM.Models
                 GenericField3 = (ulong)partyCreate.GenericField3,
                 GenericField4 = (ulong)partyCreate.GenericField4,
                 Password = partyCreate.PartyPassword,
-                SecurityLevel = string.IsNullOrEmpty(partyCreate.PartyPassword) ? MediusWorldSecurityLevelType.WORLD_SECURITY_NONE : MediusWorldSecurityLevelType.WORLD_SECURITY_PLAYER_PASSWORD,
+                SecurityLevel = string.IsNullOrEmpty(partyCreate.PartyPassword)
+                    ? MediusWorldSecurityLevelType.WORLD_SECURITY_NONE
+                    : MediusWorldSecurityLevelType.WORLD_SECURITY_PLAYER_PASSWORD,
                 GameHostType = partyCreate.PartyHostType,
-                Type = ChannelType.Game
+                Type = ChannelType.Game,
             };
 
             ApplicationId = partyCreate.ApplicationID;
@@ -160,13 +178,15 @@ namespace Horizon.MUM.Models
 
             GameChannel = gameChannel;
 
-            MediusClass.Manager.AddChannel(gameChannel).Wait();
+            Program.MUMManager.AddChannel(gameChannel).Wait();
         }
 
-        public virtual int ReassignGameMediusWorldID(MediusReassignGameMediusWorldID reassignGameMediusWorldID)
+        public virtual int ReassignGameMediusWorldID(
+            MediusReassignGameMediusWorldID reassignGameMediusWorldID
+        )
         {
-            int newId = reassignGameMediusWorldID.NewMediusWorldID;
-            int oldId = reassignGameMediusWorldID.OldMediusWorldID;
+            var newId = reassignGameMediusWorldID.NewMediusWorldID;
+            var oldId = reassignGameMediusWorldID.OldMediusWorldID;
 
             // Ensure reassignedGame Old MediusWorldID matches current Game.
             if (oldId != MediusWorldId)
@@ -179,20 +199,24 @@ namespace Horizon.MUM.Models
 
             Channel.UnregisterId(ApplicationId, oldId);
 
-            DMEServer?.Queue(new MediusServerMoveGameWorldOnMeRequest()
-            {
-                MessageID = new MessageId(),
-                CurrentMediusWorldID = oldId,
-                NewGameMediusWorldID = newId,
-            });
+            DMEServer?.Queue(
+                new MediusServerMoveGameWorldOnMeRequest()
+                {
+                    MessageID = new MessageId(),
+                    CurrentMediusWorldID = oldId,
+                    NewGameMediusWorldID = newId,
+                }
+            );
 
             return MediusWorldId;
         }
 
-        public virtual int ReassignGameMediusWorldID(MediusServerMoveGameWorldOnMeRequest reassignGameMediusWorldID)
+        public virtual int ReassignGameMediusWorldID(
+            MediusServerMoveGameWorldOnMeRequest reassignGameMediusWorldID
+        )
         {
-            int newId = reassignGameMediusWorldID.NewGameMediusWorldID;
-            int oldId = reassignGameMediusWorldID.CurrentMediusWorldID;
+            var newId = reassignGameMediusWorldID.NewGameMediusWorldID;
+            var oldId = reassignGameMediusWorldID.CurrentMediusWorldID;
 
             // Ensure reassignedGame Old MediusWorldID matches current Game.
             if (oldId != MediusWorldId)
@@ -213,12 +237,11 @@ namespace Horizon.MUM.Models
             IEnumerable<string?>? playlist;
 
             lock (LocalClients)
-                playlist = LocalClients?.Select(x => x.Client?.AccountId.ToString()).Where(x => x != null);
+                playlist = LocalClients
+                    ?.Select(x => x.Client?.AccountId.ToString())
+                    .Where(x => x != null);
 
-            if (playlist != null)
-                return string.Join(",", playlist);
-
-            return string.Empty;
+            return playlist != null ? string.Join(",", playlist) : string.Empty;
         }
 
         public virtual async Task Tick()
@@ -226,13 +249,20 @@ namespace Horizon.MUM.Models
             // Remove timedout clients
             lock (LocalClients)
             {
-                for (int i = 0; i < LocalClients.Count; ++i)
+                for (var i = 0; i < LocalClients.Count; ++i)
                 {
                     var client = LocalClients[i];
 
-                    if (client == null || client.Client == null || !client.Client.IsConnected || client.Client.CurrentParty?.MediusWorldId != MediusWorldId)
+                    if (
+                        client == null
+                        || client.Client == null
+                        || !client.Client.IsConnected
+                        || client.Client.CurrentParty?.MediusWorldId != MediusWorldId
+                    )
                     {
-                        LoggerAccessor.LogWarn($"REMOVING CLIENT: {client}\n IS: {client?.Client}\nHasHostJoined: {hasHostJoined}\nIS Connected?: {client?.Client?.IsConnected}\nClient CurrentParty ID: {client?.Client?.CurrentParty?.MediusWorldId}\nGameId: {MediusWorldId}\nMatch?: {client?.Client?.CurrentParty?.MediusWorldId != MediusWorldId}");
+                        LoggerAccessor.LogWarn(
+                            $"REMOVING CLIENT: {client}\n IS: {client?.Client}\nHasHostJoined: {hasHostJoined}\nIS Connected?: {client?.Client?.IsConnected}\nClient CurrentParty ID: {client?.Client?.CurrentParty?.MediusWorldId}\nGameId: {MediusWorldId}\nMatch?: {client?.Client?.CurrentParty?.MediusWorldId != MediusWorldId}"
+                        );
                         LocalClients.RemoveAt(i);
                         --i;
                     }
@@ -240,22 +270,44 @@ namespace Horizon.MUM.Models
             }
 
             // Auto close when everyone leaves or if host fails to connect after timeout time if not a p2p game.
-            if ((PartyHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer) ? (!utcTimeEmpty.HasValue && !LocalClients.Any(x => x.InGame)
-                && (hasHostJoined || (DateTimeUtils.GetHighPrecisionUtcTime() - utcTimeTick).TotalSeconds > MediusClass.GetAppSettingsOrDefault(ApplicationId).GameTimeoutSeconds))
-                : (!utcTimeEmpty.HasValue && (DateTimeUtils.GetHighPrecisionUtcTime() - utcTimeTick).TotalSeconds > MediusClass.GetAppSettingsOrDefault(ApplicationId).GameTimeoutSeconds))
+            if (
+                (PartyHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
+                    ? (
+                        !utcTimeEmpty.HasValue
+                        && !LocalClients.Any(x => x.InGame)
+                        && (
+                            hasHostJoined
+                            || (DateTimeUtils.GetHighPrecisionUtcTime() - utcTimeTick).TotalSeconds
+                                > DATABASE
+                                    .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                                    .GameTimeoutSeconds
+                        )
+                    )
+                    : (
+                        !utcTimeEmpty.HasValue
+                        && (DateTimeUtils.GetHighPrecisionUtcTime() - utcTimeTick).TotalSeconds
+                            > DATABASE
+                                .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                                .GameTimeoutSeconds
+                    )
+            )
             {
                 LoggerAccessor.LogWarn("AUTO CLOSING WORLD");
                 utcTimeEmpty = DateTimeUtils.GetHighPrecisionUtcTime();
-                await SetWorldStatus(MediusWorldStatus.WorldClosed);
+                await SetWorldStatus(MediusWorldStatus.WorldClosed).ConfigureAwait(false);
             }
         }
 
-        public virtual async Task OnMediusServerConnectNotification(MediusServerConnectNotification connectNotification)
+        public virtual async Task OnMediusServerConnectNotification(
+            MediusServerConnectNotification connectNotification
+        )
         {
             PartyClient? player;
 
             lock (LocalClients)
-                player = LocalClients.FirstOrDefault(x => x.Client?.SessionKey == connectNotification.PlayerSessionKey);
+                player = LocalClients.FirstOrDefault(x =>
+                    x.Client?.SessionKey == connectNotification.PlayerSessionKey
+                );
 
             if (player == null)
                 return;
@@ -263,36 +315,43 @@ namespace Horizon.MUM.Models
             switch (connectNotification.ConnectEventType)
             {
                 case MGCL_EVENT_TYPE.MGCL_EVENT_CLIENT_CONNECT:
-                    {
-                        await OnPlayerJoined(player);
-                        break;
-                    }
+                {
+                    await OnPlayerJoined(player).ConfigureAwait(false);
+                    break;
+                }
                 case MGCL_EVENT_TYPE.MGCL_EVENT_CLIENT_DISCONNECT:
-                    {
-                        await OnPlayerLeft(player, connectNotification);
-                        break;
-                    }
+                {
+                    await OnPlayerLeft(player, connectNotification).ConfigureAwait(false);
+                    break;
+                }
             }
         }
 
-        public virtual Task OnPlayerJoined(PartyClient player)
+        public virtual async Task OnPlayerJoined(PartyClient player)
         {
             utcLastJoined = DateTime.UtcNow;
-
-            bool ishost = false;
 
             player.InGame = true;
 
             if (player.Client == Host)
             {
-                LoggerAccessor.LogInfo($"[Party] -> OnHostJoined -> {player.Client?.ApplicationId} - {player.Client?.CurrentParty?.PartyName} (id : {player.Client?.CurrentParty?.MediusWorldId}) -> {player.Client?.AccountName} -> {player.Client?.LanguageType}");
-                ishost = true;
+                LoggerAccessor.LogInfo(
+                    $"[Party] -> OnHostJoined -> {player.Client?.ApplicationId} - {player.Client?.CurrentParty?.PartyName} (id : {player.Client?.CurrentParty?.MediusWorldId}) -> {player.Client?.AccountName} -> {player.Client?.LanguageType}"
+                );
                 hasHostJoined = true;
             }
             else
-                LoggerAccessor.LogInfo($"[Party] -> OnPlayerJoined -> {player.Client?.ApplicationId} - {player.Client?.CurrentParty?.PartyName} (id : {player.Client?.CurrentParty?.MediusWorldId}) -> {player.Client?.AccountName} -> {player.Client?.LanguageType}");
+                LoggerAccessor.LogInfo(
+                    $"[Party] -> OnPlayerJoined -> {player.Client?.ApplicationId} - {player.Client?.CurrentParty?.PartyName} (id : {player.Client?.CurrentParty?.MediusWorldId}) -> {player.Client?.AccountName} -> {player.Client?.LanguageType}"
+                );
 
-            return Task.CompletedTask;
+            // Send to plugins
+            await Program
+                .MediusManager.Plugins.OnEvent(
+                    PluginEvent.MEDIUS_PLAYER_ON_JOINED_GAME,
+                    new OnPlayerGameArgs() { Player = player.Client, Party = this }
+                )
+                .ConfigureAwait(false);
         }
 
         public virtual void AddPlayer(ClientObject client)
@@ -303,45 +362,69 @@ namespace Horizon.MUM.Models
                 if (LocalClients.Any(x => x.Client == client))
                     return;
 
-                LoggerAccessor.LogInfo($"Party {MediusWorldId}: {PartyName}: {client} added with sessionkey {client.SessionKey}.");
+                LoggerAccessor.LogInfo(
+                    $"Party {MediusWorldId}: {PartyName}: {client} added with sessionkey {client.SessionKey}."
+                );
 
-                LocalClients.Add(new PartyClient()
-                {
-                    Client = client,
-                    DmeId = client.DmeId
-                });
+                LocalClients.Add(new PartyClient() { Client = client, DmeId = client.DmeId });
             }
 
             // Inform the client of any custom game mode
             //client.CurrentChannel?.SendSystemMessage(client, $"Gamemode is {CustomGamemode?.FullName ?? "default"}.");
         }
 
-        protected virtual async Task OnPlayerLeft(PartyClient player, MediusServerConnectNotification connectNotification)
+        protected virtual async Task OnPlayerLeft(
+            PartyClient player,
+            MediusServerConnectNotification connectNotification
+        )
         {
-            LoggerAccessor.LogInfo($"[Party] -> OnPlayerLeft -> {player.Client?.ApplicationId} - {player.Client?.CurrentParty?.PartyName} (id : {player.Client?.CurrentParty?.MediusWorldId}) -> {player.Client?.AccountName} -> {player.Client?.LanguageType}");
+            LoggerAccessor.LogInfo(
+                $"[Party] -> OnPlayerLeft -> {player.Client?.ApplicationId} - {player.Client?.CurrentParty?.PartyName} (id : {player.Client?.CurrentParty?.MediusWorldId}) -> {player.Client?.AccountName} -> {player.Client?.LanguageType}"
+            );
 
             player.InGame = false;
 
             if (player.Client != null)
             {
                 // Update player object
-                await player.Client.LeaveParty(this);
+                await player.Client.LeaveParty(this).ConfigureAwait(false);
 
                 // Remove from collection
                 if (player.Client.CurrentParty != null)
-                    await RemovePlayer(player.Client, player.Client.ApplicationId, player.Client.CurrentParty?.MediusWorldId.ToString());
+                    await RemovePlayer(
+                            player.Client,
+                            player.Client.ApplicationId,
+                            player.Client.CurrentParty?.MediusWorldId.ToString()
+                        )
+                        .ConfigureAwait(false);
             }
         }
 
-        public virtual Task RemovePlayer(ClientObject client, int appid, string? WorldId)
+        public virtual async Task RemovePlayer(ClientObject client, int appid, string? WorldId)
         {
-            bool MigrateHost = false;
+            var MigrateHost = false;
             LoggerAccessor.LogInfo($"Party {MediusWorldId}: {PartyName}: {client} removed.");
+
+            // Send to plugins
+            await Program
+                .MediusManager.Plugins.OnEvent(
+                    PluginEvent.MEDIUS_PLAYER_ON_LEFT_GAME,
+                    new OnPlayerGameArgs() { Player = client, Party = this }
+                )
+                .ConfigureAwait(false);
 
             // Remove host
             if (Host == client)
             {
                 MigrateHost = true;
+
+                // Send to plugins
+                await Program
+                    .MediusManager.Plugins.OnEvent(
+                        PluginEvent.MEDIUS_GAME_ON_HOST_LEFT,
+                        new OnPlayerGameArgs() { Player = client, Party = this }
+                    )
+                    .ConfigureAwait(false);
 
                 Host = null;
             }
@@ -356,8 +439,6 @@ namespace Horizon.MUM.Models
                 else if (MigrateHost && MediusVersion >= 109)
                     Host = LocalClients.FirstOrDefault()?.Client;
             }
-
-            return Task.CompletedTask;
         }
 
         public virtual async Task OnEndPartyReport(MediusEndGameReport report, int appid)
@@ -365,20 +446,21 @@ namespace Horizon.MUM.Models
             try
             {
                 // Send database EndGameReport info
-                await EndParty(appid);
+                await EndParty(appid).ConfigureAwait(false);
 
-                LoggerAccessor.LogInfo($"Successful local delete of game world [{report.MediusWorldID}]");
+                LoggerAccessor.LogInfo(
+                    $"Successful local delete of game world [{report.MediusWorldID}]"
+                );
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogWarn($"Couldn't perform local delete of game world [{report.MediusWorldID}] with exception: {e}");
+                LoggerAccessor.LogWarn(
+                    $"Couldn't perform local delete of game world [{report.MediusWorldID}] with exception: {e}"
+                );
             }
         }
 
-        public virtual void OnPartyPlayerReport(MediusPartyPlayerReport report)
-        {
-            
-        }
+        public virtual void OnPartyPlayerReport(MediusPartyPlayerReport report) { }
 
         public virtual async Task OnWorldReport(MediusWorldReport report, int appId)
         {
@@ -388,7 +470,7 @@ namespace Horizon.MUM.Models
 
             utcTimeTick = DateTimeUtils.GetHighPrecisionUtcTime();
 
-            string? previousGameName = PartyName;
+            var previousGameName = PartyName;
 
             PartyName = report.GameName;
             PartyStats = report.GameStats;
@@ -409,7 +491,9 @@ namespace Horizon.MUM.Models
             if (PartyHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
             {
                 lock (LocalClients)
-                    PlayerCount = LocalClients.Count(x => x != null && x.Client != null && x.Client.IsConnected && x.InGame);
+                    PlayerCount = LocalClients.Count(x =>
+                        x != null && x.Client != null && x.Client.IsConnected && x.InGame
+                    );
             }
             else
                 PlayerCount = report.PlayerCount;
@@ -436,7 +520,7 @@ namespace Horizon.MUM.Models
             // This gives the host a "Game Name Already Exists" when they try to remake with the same name.
             // This just fixes that. At the cost of the game not showing after a host leaves a game.
             if (WorldStatus != MediusWorldStatus.WorldClosed && WorldStatus != report.WorldStatus)
-                await SetWorldStatus(report.WorldStatus);
+                await SetWorldStatus(report.WorldStatus).ConfigureAwait(false);
             else
             {
                 // Update db
@@ -453,7 +537,7 @@ namespace Horizon.MUM.Models
 
             utcTimeTick = DateTimeUtils.GetHighPrecisionUtcTime();
 
-            string? previousGameName = PartyName;
+            var previousGameName = PartyName;
 
             ApplicationId = report.ApplicationID;
             PartyName = report.GameName;
@@ -475,7 +559,9 @@ namespace Horizon.MUM.Models
             if (PartyHostType != MGCL_GAME_HOST_TYPE.MGCLGameHostPeerToPeer)
             {
                 lock (LocalClients)
-                    PlayerCount = LocalClients.Count(x => x != null && x.Client != null && x.Client.IsConnected && x.InGame);
+                    PlayerCount = LocalClients.Count(x =>
+                        x != null && x.Client != null && x.Client.IsConnected && x.InGame
+                    );
             }
             else
                 PlayerCount = report.PlayerCount;
@@ -502,7 +588,7 @@ namespace Horizon.MUM.Models
             // This gives the host a "Game Name Already Exists" when they try to remake with the same name.
             // This just fixes that. At the cost of the game not showing after a host leaves a game.
             if (WorldStatus != MediusWorldStatus.WorldClosed && WorldStatus != report.WorldStatus)
-                await SetWorldStatus(report.WorldStatus);
+                await SetWorldStatus(report.WorldStatus).ConfigureAwait(false);
             else
             {
                 // Update db
@@ -525,12 +611,20 @@ namespace Horizon.MUM.Models
 
                 LoggerAccessor.LogInfo($"Party {MediusWorldId}: {PartyName}: EndParty() called.");
 
+                // Send to plugins
+                Program
+                    .MediusManager.Plugins.OnEvent(
+                        PluginEvent.MEDIUS_GAME_ON_DESTROYED,
+                        new OnGameArgs() { Party = this }
+                    )
+                    .Wait();
+
                 // Remove players from game world
                 lock (LocalClients)
                 {
                     while (LocalClients.Count > 0)
                     {
-                        ClientObject? client = LocalClients[0].Client;
+                        var client = LocalClients[0].Client;
                         if (client == null)
                             LocalClients.RemoveAt(0);
                         else
@@ -539,58 +633,73 @@ namespace Horizon.MUM.Models
                 }
 
                 // Unregister from channel
-                GameChannel?.UnregisterParty(this);
+                GameChannel!.UnregisterParty();
+                ChatChannel?.UnregisterGameSubChannel(GameChannel);
 
                 // Send end game
-                DMEServer?.Queue(new MediusServerEndGameRequest()
-                {
-                    MediusWorldID = MediusWorldId,
-                    BrutalFlag = false
-                });
+                DMEServer?.Queue(
+                    new MediusServerEndGameRequest()
+                    {
+                        MediusWorldID = MediusWorldId,
+                        BrutalFlag = false,
+                    }
+                );
 
                 // destroy flag
                 Destroyed = true;
 
                 // Delete db entry if game hasn't started
                 // Otherwise do a final update
-                if (!utcTimeStarted.HasValue)
-                    _ = HorizonServerConfiguration.Database.DeleteGame(MediusWorldId);
-                else
-                    _ = HorizonServerConfiguration.Database.UpdateParty(ToPartyDTO());
+                _ = !utcTimeStarted.HasValue
+                    ? HorizonServerConfiguration.Database.DeleteGame(MediusWorldId)
+                    : HorizonServerConfiguration.Database.UpdateParty(ToPartyDTO());
             }
 
             return Task.CompletedTask;
         }
 
-        public virtual Task SetWorldStatus(MediusWorldStatus status)
+        public virtual async Task SetWorldStatus(MediusWorldStatus status)
         {
             if (WorldStatus == status)
-                return Task.CompletedTask;
+                return;
 
             _worldStatus = status;
 
             switch (status)
             {
                 case MediusWorldStatus.WorldActive:
-                    {
-                        utcTimeStarted = DateTimeUtils.GetHighPrecisionUtcTime();
-                        accountIdsAtStart = GetActivePlayerList();
+                {
+                    utcTimeStarted = DateTimeUtils.GetHighPrecisionUtcTime();
+                    accountIdsAtStart = GetActivePlayerList();
 
-                        break;
-                    }
+                    // Send to plugins
+                    await Program
+                        .MediusManager.Plugins.OnEvent(
+                            PluginEvent.MEDIUS_GAME_ON_STARTED,
+                            new OnGameArgs() { Party = this }
+                        )
+                        .ConfigureAwait(false);
+                    break;
+                }
                 case MediusWorldStatus.WorldClosed:
-                    {
-                        utcTimeEnded = DateTimeUtils.GetHighPrecisionUtcTime();
+                {
+                    utcTimeEnded = DateTimeUtils.GetHighPrecisionUtcTime();
 
-                        return Task.CompletedTask;
-                    }
+                    // Send to plugins
+                    await Program
+                        .MediusManager.Plugins.OnEvent(
+                            PluginEvent.MEDIUS_GAME_ON_ENDED,
+                            new OnGameArgs() { Party = this }
+                        )
+                        .ConfigureAwait(false);
+
+                    return;
+                }
             }
 
             // Update db
             if (!utcTimeEnded.HasValue)
                 _ = HorizonServerConfiguration.Database.UpdateParty(ToPartyDTO());
-
-            return Task.CompletedTask;
         }
     }
 }

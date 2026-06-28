@@ -1,22 +1,20 @@
-﻿using CustomLogger;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
+using CustomLogger;
 
 namespace BlazeCommon
 {
-    public class MitmBlazeServer : MitmProtoFireServer
+    public class MitmBlazeServer(BlazeServerConfiguration settings, uint addressEncryptionKey)
+        : MitmProtoFireServer(settings, addressEncryptionKey)
     {
-        public BlazeServerConfiguration Configuration { get; }
+        public BlazeServerConfiguration Configuration { get; } = settings;
 
-        private ConcurrentDictionary<ProtoFireConnection, BlazeServerConnection> _connections;
+        private readonly ConcurrentDictionary<
+            ProtoFireConnection,
+            BlazeServerConnection
+        > _connections = new();
 
-        public MitmBlazeServer(BlazeServerConfiguration settings, uint addressEncryptionKey) : base(settings, addressEncryptionKey)
-        {
-            Configuration = settings;
-
-            _connections = new ConcurrentDictionary<ProtoFireConnection, BlazeServerConnection>();
-        }
-
-        public bool AddComponent<TComponent>() where TComponent : IBlazeServerComponent, new()
+        public bool AddComponent<TComponent>()
+            where TComponent : IBlazeServerComponent, new()
         {
             return Configuration.AddComponent<TComponent>();
         }
@@ -33,10 +31,13 @@ namespace BlazeCommon
 
         BlazeServerConnection GetBlazeConnection(ProtoFireConnection connection)
         {
-            return _connections.GetOrAdd(connection, (c) =>
-            {
-                return new BlazeServerConnection(c, Configuration);
-            });
+            return _connections.GetOrAdd(
+                connection,
+                (c) =>
+                {
+                    return new BlazeServerConnection(c, Configuration);
+                }
+            );
         }
 
         public override Task OnProtoFireConnectAsync(ProtoFireConnection connection)
@@ -47,12 +48,15 @@ namespace BlazeCommon
 
         public override Task OnProtoFireDisconnectAsync(ProtoFireConnection connection)
         {
-            if (_connections.TryRemove(connection, out BlazeServerConnection? connectionInfo))
+            if (_connections.TryRemove(connection, out var connectionInfo))
                 Configuration.OnDisconnected?.Invoke(connectionInfo);
             return Task.CompletedTask;
         }
 
-        public override Task OnProtoFireErrorAsync(ProtoFireConnection connection, Exception exception)
+        public override Task OnProtoFireErrorAsync(
+            ProtoFireConnection connection,
+            Exception exception
+        )
         {
             OnProtoFireError(connection, exception);
             return Task.CompletedTask;
@@ -60,7 +64,9 @@ namespace BlazeCommon
 
         private void OnProtoFireError(ProtoFireConnection connection, Exception exception)
         {
-            LoggerAccessor.LogError($"[BlazeServer] - ProtoFireError occured (Exception: {exception})");
+            LoggerAccessor.LogError(
+                $"[BlazeServer] - ProtoFireError occured (Exception: {exception})"
+            );
             Configuration.OnError?.Invoke(GetBlazeConnection(connection), exception);
         }
     }

@@ -1,9 +1,7 @@
-using System;
-using System.IO;
-using MultiServerLibrary.HTTP;
+using System.Xml;
 using CustomLogger;
 using HttpMultipartParser;
-using System.Xml;
+using MultiServerLibrary.HTTP;
 
 namespace WebAPIService.GameServices.PSHOME.OUWF
 {
@@ -11,19 +9,21 @@ namespace WebAPIService.GameServices.PSHOME.OUWF
     {
         public static string List(byte[] PostData, string ContentType)
         {
-            string boundary = HTTPProcessor.ExtractBoundary(ContentType);
-            
-            using (MemoryStream ms = new MemoryStream(PostData))
+            var boundary = HTTPProcessor.ExtractBoundary(ContentType);
+
+            using (var ms = new MemoryStream(PostData))
             {
                 var data = MultipartFormDataParser.Parse(ms, boundary);
 
-                int instanceId = Convert.ToInt32(data.GetParameterValue("instanceId"));
-                string vers = data.GetParameterValue("version");
-                string path = data.GetParameterValue("path");
+                var instanceId = Convert.ToInt32(data.GetParameterValue("instanceId"));
+                var vers = data.GetParameterValue("version");
+                var path = data.GetParameterValue("path");
 
-                LoggerAccessor.LogInfo($"[OuWF] - Requested List with instanceId {instanceId} | version {vers} | path {path}");
+                LoggerAccessor.LogInfo(
+                    $"[OuWF] - Requested List with instanceId {instanceId} | version {vers} | path {path}"
+                );
 
-                string xml = GenerateXml(path);
+                var xml = GenerateXml(path);
                 ms.Flush();
 
                 return xml;
@@ -37,13 +37,13 @@ namespace WebAPIService.GameServices.PSHOME.OUWF
             var dirs = Directory.GetDirectories(directoryPath);
             var files = Directory.GetFiles(directoryPath);
 
-            XmlDocument xmlDoc = new XmlDocument();
-            XmlElement root = xmlDoc.CreateElement("list");
+            var xmlDoc = new XmlDocument();
+            var root = xmlDoc.CreateElement("list");
 
-            XmlElement dirsElement = xmlDoc.CreateElement("dirs");
+            var dirsElement = xmlDoc.CreateElement("dirs");
             foreach (var dir in dirs)
             {
-                XmlElement dirElement = xmlDoc.CreateElement("dir");
+                var dirElement = xmlDoc.CreateElement("dir");
 
                 //string HDKBuildRoot = "H:/HDK186/Build/";
 
@@ -64,27 +64,25 @@ namespace WebAPIService.GameServices.PSHOME.OUWF
                 }
                 */
 
-
-
                 //string pathEditTrim = editDir.Replace(directoryPath, "");
 
-                string partialPath = SplitPath(dir, directoryPath);
+                var partialPath = SplitPath(dir, directoryPath);
 
                 dirElement.InnerText = partialPath;
 
                 dirsElement.AppendChild(dirElement);
             }
 
-            XmlElement filesElement = xmlDoc.CreateElement("files");
+            var filesElement = xmlDoc.CreateElement("files");
             if (files.Length == 0)
             {
                 foreach (var file in files)
                 {
-                    FileInfo fileInfo = new FileInfo(file);
+                    var fileInfo = new FileInfo(file);
 
-                    XmlElement fileElement = xmlDoc.CreateElement("file");
+                    var fileElement = xmlDoc.CreateElement("file");
 
-                    string filePathTrimmed = fileInfo.Name.Replace(directoryPath, "");
+                    var filePathTrimmed = fileInfo.Name.Replace(directoryPath, "");
 
                     fileElement.SetAttribute("value", filePathTrimmed);
 
@@ -95,7 +93,6 @@ namespace WebAPIService.GameServices.PSHOME.OUWF
 
                 root.AppendChild(filesElement);
             }
-
 
             root.AppendChild(dirsElement);
             xmlDoc.AppendChild(root);
@@ -112,21 +109,26 @@ namespace WebAPIService.GameServices.PSHOME.OUWF
                 throw new InvalidOperationException("Paths must have the same root.");
             }
 
-            Uri rootUri = new Uri(rootPath);
-            Uri fullUri = new Uri(fullPath);
+            var rootUri = new Uri(rootPath);
+            var fullUri = new Uri(fullPath);
 
-            return Uri.UnescapeDataString(rootUri.MakeRelativeUri(fullUri).ToString().Replace('/', Path.DirectorySeparatorChar));
+            return Uri.UnescapeDataString(
+                rootUri
+                    .MakeRelativeUri(fullUri)
+                    .ToString()
+                    .Replace('/', Path.DirectorySeparatorChar)
+            );
         }
 
         static string SplitPath(string directory, string baseDirectory)
         {
             // Split the directory path into components
-            string[] directoryComponents = directory.Split(Path.DirectorySeparatorChar);
-            string[] baseDirectoryComponents = baseDirectory.Split(Path.DirectorySeparatorChar);
+            var directoryComponents = directory.Split(Path.DirectorySeparatorChar);
+            var baseDirectoryComponents = baseDirectory.Split(Path.DirectorySeparatorChar);
 
             // Find the common base directory components
-            int commonLength = Math.Min(directoryComponents.Length, baseDirectoryComponents.Length);
-            for (int i = 0; i < commonLength; i++)
+            var commonLength = Math.Min(directoryComponents.Length, baseDirectoryComponents.Length);
+            for (var i = 0; i < commonLength; i++)
             {
                 if (directoryComponents[i] != baseDirectoryComponents[i])
                 {
@@ -136,8 +138,14 @@ namespace WebAPIService.GameServices.PSHOME.OUWF
             }
 
             // Concatenate the remaining directory components
-            string[] partialPathComponents = new string[directoryComponents.Length - commonLength];
-            Array.Copy(directoryComponents, commonLength, partialPathComponents, 0, partialPathComponents.Length);
+            var partialPathComponents = new string[directoryComponents.Length - commonLength];
+            Array.Copy(
+                directoryComponents,
+                commonLength,
+                partialPathComponents,
+                0,
+                partialPathComponents.Length
+            );
 
             return string.Join(Path.DirectorySeparatorChar.ToString(), partialPathComponents);
         }

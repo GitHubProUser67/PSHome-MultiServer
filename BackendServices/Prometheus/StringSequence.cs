@@ -9,7 +9,7 @@ namespace Prometheus;
 /// <remarks>
 /// We assume (as an optimization) that the segments the sequence is made from never change.
 /// We compare values using ordinal comparison.
-/// 
+///
 /// We explicitly do not mark this sequence as enumerable or a collection type, to prevent accidentally using a non-performance-tuned enumeration method.
 /// </remarks>
 internal readonly struct StringSequence : IEquatable<StringSequence>
@@ -86,16 +86,20 @@ internal readonly struct StringSequence : IEquatable<StringSequence>
 
     public bool Equals(StringSequence other)
     {
-        if (_hashCode != other._hashCode) return false;
-        if (Length != other.Length) return false;
+        if (_hashCode != other._hashCode)
+            return false;
+        if (Length != other.Length)
+            return false;
 
         var left = GetEnumerator();
         var right = other.GetEnumerator();
 
         for (var i = 0; i < Length; i++)
         {
-            if (!left.MoveNext()) throw new Exception("API contract violation.");
-            if (!right.MoveNext()) throw new Exception("API contract violation.");
+            if (!left.MoveNext())
+                throw new Exception("API contract violation.");
+            if (!right.MoveNext())
+                throw new Exception("API contract violation.");
 
             if (!string.Equals(left.Current, right.Current, StringComparison.Ordinal))
                 return false;
@@ -106,17 +110,18 @@ internal readonly struct StringSequence : IEquatable<StringSequence>
 
     public override bool Equals(object? obj)
     {
-        if (obj is StringSequence ss)
-            return Equals(ss);
-
-        return false;
+        return obj is StringSequence ss && Equals(ss);
     }
 
     public override int GetHashCode() => _hashCode;
 
     // There are various ways we can make a StringSequence, comining one or two parents and maybe adding some extra to the start.
     // This ctor tries to account for all these options.
-    private StringSequence(StringSequence inheritFrom, StringSequence thenFrom, in ReadOnlyMemory<string> andFinallyPrepend)
+    private StringSequence(
+        StringSequence inheritFrom,
+        StringSequence thenFrom,
+        in ReadOnlyMemory<string> andFinallyPrepend
+    )
     {
         // Anything inherited is already validated. Perform a sanity check on anything new.
         if (andFinallyPrepend.Length != 0)
@@ -126,7 +131,9 @@ internal readonly struct StringSequence : IEquatable<StringSequence>
             for (var i = 0; i < span.Length; i++)
             {
                 if (span[i] == null)
-                    throw new NotSupportedException("Null values are not supported for metric label names and values.");
+                    throw new NotSupportedException(
+                        "Null values are not supported for metric label names and values."
+                    );
             }
 
             _values = andFinallyPrepend;
@@ -142,51 +149,34 @@ internal readonly struct StringSequence : IEquatable<StringSequence>
 
     public static StringSequence From(params string[] values)
     {
-        if (values.Length == 0)
-            return Empty;
-
-        return new StringSequence(Empty, Empty, values);
+        return values.Length == 0 ? Empty : new StringSequence(Empty, Empty, values);
     }
 
     public static StringSequence From(ReadOnlyMemory<string> values)
     {
-        if (values.Length == 0)
-            return Empty;
-
-        return new StringSequence(Empty, Empty, values);
+        return values.Length == 0 ? Empty : new StringSequence(Empty, Empty, values);
     }
 
     // Creates a new sequence, inheriting all current values and optionally adding more. New values are prepended to the sequence, inherited values come last.
     public StringSequence InheritAndPrepend(params string[] prependValues)
     {
-        if (prependValues.Length == 0)
-            return this;
-
-        return new StringSequence(this, Empty, prependValues);
+        return prependValues.Length == 0 ? this : new StringSequence(this, Empty, prependValues);
     }
 
     // Creates a new sequence, inheriting all current values and optionally adding more. New values are prepended to the sequence, inherited values come last.
     public StringSequence InheritAndPrepend(StringSequence prependValues)
     {
-        if (prependValues.IsEmpty)
-            return this;
-
-        if (IsEmpty)
-            return prependValues;
-
-        return new StringSequence(this, prependValues, null);
+        return prependValues.IsEmpty ? this
+            : IsEmpty ? prependValues
+            : new StringSequence(this, prependValues, null);
     }
 
     // Creates a new sequence, concatenating another string sequence (by inheriting from it).
     public StringSequence Concat(StringSequence concatenatedValues)
     {
-        if (concatenatedValues.IsEmpty)
-            return this;
-
-        if (IsEmpty)
-            return concatenatedValues;
-
-        return new StringSequence(concatenatedValues, this, null);
+        return concatenatedValues.IsEmpty ? this
+            : IsEmpty ? concatenatedValues
+            : new StringSequence(concatenatedValues, this, null);
     }
 
     // Values added by this instance. It may be empty.
@@ -203,10 +193,10 @@ internal readonly struct StringSequence : IEquatable<StringSequence>
     {
         // Expected output: second._values, second._inheritedValues, first._values, first._inheritedValues
 
-        int firstOwnArrayCount = 0;
-        int firstInheritedArrayCount = 0;
-        int secondOwnArrayCount = 0;
-        int secondInheritedArrayCount = 0;
+        var firstOwnArrayCount = 0;
+        var firstInheritedArrayCount = 0;
+        var secondOwnArrayCount = 0;
+        var secondInheritedArrayCount = 0;
 
         if (!first.IsEmpty)
         {
@@ -220,10 +210,16 @@ internal readonly struct StringSequence : IEquatable<StringSequence>
             secondInheritedArrayCount = second._inheritedValueArrays?.Length ?? 0;
         }
 
-        var totalSegmentCount = firstOwnArrayCount + firstInheritedArrayCount + secondOwnArrayCount + secondInheritedArrayCount;
+        var totalSegmentCount =
+            firstOwnArrayCount
+            + firstInheritedArrayCount
+            + secondOwnArrayCount
+            + secondInheritedArrayCount;
 
         if (totalSegmentCount == 0)
-            throw new Exception("Unreachable code reached: InheritFrom() should not even be called if there is nothing to inherit.");
+            throw new Exception(
+                "Unreachable code reached: InheritFrom() should not even be called if there is nothing to inherit."
+            );
 
         var result = new ReadOnlyMemory<string>[totalSegmentCount];
 
@@ -236,7 +232,13 @@ internal readonly struct StringSequence : IEquatable<StringSequence>
 
         if (secondInheritedArrayCount != 0)
         {
-            Array.Copy(second._inheritedValueArrays!, 0, result, targetIndex, secondInheritedArrayCount);
+            Array.Copy(
+                second._inheritedValueArrays!,
+                0,
+                result,
+                targetIndex,
+                secondInheritedArrayCount
+            );
             targetIndex += secondInheritedArrayCount;
         }
 
@@ -247,7 +249,13 @@ internal readonly struct StringSequence : IEquatable<StringSequence>
 
         if (firstInheritedArrayCount != 0)
         {
-            Array.Copy(first._inheritedValueArrays!, 0, result, targetIndex, firstInheritedArrayCount);
+            Array.Copy(
+                first._inheritedValueArrays!,
+                0,
+                result,
+                targetIndex,
+                firstInheritedArrayCount
+            );
         }
 
         return result;
@@ -255,13 +263,13 @@ internal readonly struct StringSequence : IEquatable<StringSequence>
 
     private int CalculateHashCode()
     {
-        int hashCode = 0;
+        var hashCode = 0;
 
         foreach (var item in this)
         {
             unchecked
             {
-                hashCode ^= (item.GetHashCode() * 397);
+                hashCode ^= item.GetHashCode() * 397;
             }
         }
 

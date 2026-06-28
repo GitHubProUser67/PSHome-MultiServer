@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Authentication
 {
-	[TdfStruct]
-	public struct StressLoginRequest
-	{
+    [TdfStruct]
+    public struct StressLoginRequest
+    {
+        [TdfMember("MAIL")]
+        public string mEmail;
 
-		[TdfMember("MAIL")]
-		public string mEmail;
+        [TdfMember("NUID")]
+        public ulong mNucleusId;
 
-		[TdfMember("NUID")]
-		public ulong mNucleusId;
-
-		[TdfMember("PNAM")]
-		public string mPersonaName;
-
-	}
+        [TdfMember("PNAM")]
+        public string mPersonaName;
+    }
 }

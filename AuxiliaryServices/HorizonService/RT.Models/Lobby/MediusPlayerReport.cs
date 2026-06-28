@@ -1,7 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
-using System;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -13,16 +11,22 @@ namespace Horizon.RT.Models
     {
         public override byte PacketType => (byte)MediusLobbyMessageIds.PlayerReport;
 
-        public MessageId MessageID { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public MessageId MessageID
+        {
+            get => throw new NotImplementedException();
+            set => throw new NotImplementedException();
+        }
 
         /// <summary>
         /// Session Key
         /// </summary>
         public string SessionKey; // SESSIONKEY_MAXLEN
+
         /// <summary>
         /// MediusWorldID
         /// </summary>
         public int MediusWorldID;
+
         /// <summary>
         /// Account Stats to update
         /// </summary>
@@ -52,10 +56,11 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"SessionKey: {SessionKey} " +
-                $"MediusWorldID: {MediusWorldID} " +
-                $"Stats: {BitConverter.ToString(Stats)}";
+            return base.ToString()
+                + " "
+                + $"SessionKey: {SessionKey} "
+                + $"MediusWorldID: {MediusWorldID} "
+                + $"Stats: {BitConverter.ToString(Stats)}";
         }
     }
 }

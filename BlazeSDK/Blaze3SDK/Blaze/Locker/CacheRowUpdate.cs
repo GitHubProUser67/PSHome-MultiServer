@@ -2,30 +2,28 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Locker
 {
-	[TdfStruct]
-	public struct CacheRowUpdate
-	{
+    [TdfStruct]
+    public struct CacheRowUpdate
+    {
+        [TdfMember("UPDT")]
+        public List<Attribute> mAttributes;
 
-		[TdfMember("UPDT")]
-		public List<Attribute> mAttributes;
+        [TdfMember("CAT")]
+        public string mCategory;
 
-		[TdfMember("CAT")]
-		public string mCategory;
+        [TdfMember("CID")]
+        public int mContentId;
 
-		[TdfMember("CID")]
-		public int mContentId;
+        [TdfMember("CTYP")]
+        public BlazeObjectType mContextType;
 
-		[TdfMember("CTYP")]
-		public BlazeObjectType mContextType;
+        [TdfMember("ETYP")]
+        public BlazeObjectType mEntityType;
 
-		[TdfMember("ETYP")]
-		public BlazeObjectType mEntityType;
+        [TdfMember("HIDE")]
+        public bool mHide;
 
-		[TdfMember("HIDE")]
-		public bool mHide;
-
-		[TdfMember("TAGS")]
-		public List<string> mTags;
-
-	}
+        [TdfMember("TAGS")]
+        public List<string> mTags;
+    }
 }

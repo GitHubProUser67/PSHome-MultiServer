@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Clubs
 {
-	[TdfStruct]
-	public struct SeasonTime
-	{
+    [TdfStruct]
+    public struct SeasonTime
+    {
+        [TdfMember("SOVR")]
+        public int mSeasonRolloverTime;
 
-		[TdfMember("SOVR")]
-		public int mSeasonRolloverTime;
-
-		[TdfMember("STRT")]
-		public int mSeasonStartTime;
-
-	}
+        [TdfMember("STRT")]
+        public int mSeasonStartTime;
+    }
 }

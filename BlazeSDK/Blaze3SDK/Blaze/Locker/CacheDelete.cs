@@ -2,21 +2,19 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Locker
 {
-	[TdfStruct]
-	public struct CacheDelete
-	{
+    [TdfStruct]
+    public struct CacheDelete
+    {
+        [TdfMember("CAT")]
+        public string mCategory;
 
-		[TdfMember("CAT")]
-		public string mCategory;
+        [TdfMember("CID")]
+        public int mContentId;
 
-		[TdfMember("CID")]
-		public int mContentId;
+        [TdfMember("CTYP")]
+        public BlazeObjectType mContextType;
 
-		[TdfMember("CTYP")]
-		public BlazeObjectType mContextType;
-
-		[TdfMember("ETYP")]
-		public BlazeObjectType mEntityType;
-
-	}
+        [TdfMember("ETYP")]
+        public BlazeObjectType mEntityType;
+    }
 }

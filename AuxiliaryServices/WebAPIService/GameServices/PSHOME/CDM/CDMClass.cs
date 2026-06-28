@@ -1,38 +1,40 @@
 using CustomLogger;
-using System.Collections.Generic;
 
 namespace WebAPIService.GameServices.PSHOME.CDM
 {
-    public class CDMClass
+    public class CDMClass(string method, string absolutePath, string workPath)
     {
-        private string workPath;
-        private string absolutePath;
-        private string method;
-
-        public CDMClass(string method, string absolutePath, string workPath)
-        {
-            this.workPath = workPath;
-            this.absolutePath = absolutePath;
-            this.method = method;
-        }
+        private readonly string workPath = workPath;
+        private readonly string absolutePath = absolutePath;
+        private readonly string method = method;
 
         public string ProcessRequest(byte[] PostData, string ContentType)
         {
             if (string.IsNullOrEmpty(absolutePath))
                 return null;
 
-            string res = string.Empty;
-            string endPointURI = string.Empty;
+            var res = string.Empty;
+            var endPointURI = string.Empty;
 
-            List<string> endPoints = new List<string>() { "/user/game/", "/user/sync/", "/user/event/", "/user/quest/", "/user/space/",
-                "/userevent/list/date/", "/userevent/list/friend/", "/quest/list/date/", "/leaderboard/" };
+            List<string> endPoints =
+            [
+                "/user/game/",
+                "/user/sync/",
+                "/user/event/",
+                "/user/quest/",
+                "/user/space/",
+                "/userevent/list/date/",
+                "/userevent/list/friend/",
+                "/quest/list/date/",
+                "/leaderboard/",
+            ];
 
             // Dedicated endpoint trimmer for sanity checks!
-            foreach (string endPoint in endPoints)
+            foreach (var endPoint in endPoints)
             {
                 if (absolutePath.StartsWith(endPoint))
                 {
-                    endPointURI = absolutePath.Substring(0, endPoint.Length);
+                    endPointURI = absolutePath[..endPoint.Length];
                     break;
                 }
             }
@@ -53,30 +55,51 @@ namespace WebAPIService.GameServices.PSHOME.CDM
                         /// If this publisher list does not contain a valid token and pubID, the minigame will consider the server unavailable.
                         ///</summary>
                         case "/publisher/list/":
-                            return Publisher.handlePublisherList(PostData, ContentType, workPath, absolutePath);
+                            return Publisher.handlePublisherList(
+                                PostData,
+                                ContentType,
+                                workPath,
+                                absolutePath
+                            );
                         case "/user/game/":
                             return User.HandleGame(PostData, ContentType, workPath, absolutePath);
                         case "/user/space/":
                             return User.HandleSpace(PostData, ContentType, workPath, absolutePath);
                         case "/leaderboard/":
-                            return Leaderboards.handleLeaderboards(PostData, ContentType, workPath, absolutePath);
+                            return Leaderboards.handleLeaderboards(
+                                PostData,
+                                ContentType,
+                                workPath,
+                                absolutePath
+                            );
                         default:
-                            LoggerAccessor.LogWarn($"[CDM] - Unhandled GET endpoint for {endPointURI}");
+                            LoggerAccessor.LogWarn(
+                                $"[CDM] - Unhandled GET endpoint for {endPointURI}"
+                            );
                             break;
                     }
                     break;
                 case "POST":
-                   switch (endPointURI)
+                    switch (endPointURI)
                     {
                         case "/user/sync/":
-                            return User.HandleUserSync(PostData, ContentType, workPath, absolutePath);
+                            return User.HandleUserSync(
+                                PostData,
+                                ContentType,
+                                workPath,
+                                absolutePath
+                            );
                         default:
-                            LoggerAccessor.LogWarn($"[CDM] - Unhandled POST endpoint for {endPointURI}");
+                            LoggerAccessor.LogWarn(
+                                $"[CDM] - Unhandled POST endpoint for {endPointURI}"
+                            );
                             break;
                     }
                     break;
                 default:
-                    LoggerAccessor.LogWarn($"[CDM] - Unhandled {method} endpoint for {absolutePath}");
+                    LoggerAccessor.LogWarn(
+                        $"[CDM] - Unhandled {method} endpoint for {absolutePath}"
+                    );
                     break;
             }
 

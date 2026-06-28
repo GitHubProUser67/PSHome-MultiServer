@@ -1,6 +1,6 @@
 /*
  *   Mentalis.org Security Library
- * 
+ *
  *     Copyright � 2002-2005, The Mentalis.org Team
  *     All rights reserved.
  *     http://www.mentalis.org/
@@ -11,11 +11,11 @@
  *   are met:
  *
  *     - Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer. 
+ *        notice, this list of conditions and the following disclaimer.
  *
  *     - Neither the name of the Mentalis.org Team, nor the names of its contributors
  *        may be used to endorse or promote products derived from this
- *        software without specific prior written permission. 
+ *        software without specific prior written permission.
  *
  *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -31,10 +31,9 @@
  *   OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-using System;
 using System.Security.Cryptography;
 
-namespace Org.Mentalis.Security.Cryptography
+namespace CastleLibrary.FixedSsl.Security.Cryptography
 {
     /// <summary>
     /// Accesses the managed version of the ARCFour algorithm. This class cannot be inherited.
@@ -43,52 +42,59 @@ namespace Org.Mentalis.Security.Cryptography
     /// <remarks>
     /// RC4 is a trademark of RSA Data Security Inc.
     /// </remarks>
-    public sealed class ARCFourManaged : RC4 {
-		/// <summary>
-		/// Initializes a new instance of the ARCFourManaged class.
-		/// </summary>
-		/// <remarks>
-		/// The default keysize is 128 bits.
-		/// </remarks>
-		public ARCFourManaged() {
-			m_IsDisposed = false;
-		}
-		/// <summary>
-		/// Creates a symmetric <see cref="RC4"/> decryptor object with the specified Key.
-		/// </summary>
-		/// <param name="rgbKey">The secret key to be used for the symmetric algorithm.</param>
-		/// <param name="rgbIV">This parameter is not used an should be set to a null reference, or to an array with zero or one bytes.</param>
-		/// <returns>A symmetric ARCFour decryptor object.</returns>
-		/// <remarks>This method decrypts an encrypted message created using the <see cref="CreateEncryptor"/> overload with the same signature.</remarks>
-		public override ICryptoTransform CreateDecryptor(byte[] rgbKey, byte[] rgbIV) {
-			if (m_IsDisposed)
-				throw new ObjectDisposedException(this.GetType().FullName);
-			if (rgbKey == null)
-				throw new ArgumentNullException("Key is a null reference.");
-			if (rgbKey.Length == 0 || rgbKey.Length > 256)
-				throw new CryptographicException("Invalid Key.");
-			if (rgbIV != null && rgbIV.Length > 1)
-				throw new CryptographicException("Invalid Initialization Vector.");
-			return new ARCFourManagedTransform(rgbKey);
-		}
-		/// <summary>
-		/// Creates a symmetric <see cref="RC4"/> encryptor object with the specified Key.
-		/// </summary>
-		/// <param name="rgbKey">The secret key to be used for the symmetric algorithm.</param>
-		/// <param name="rgbIV">This parameter is not used an should be set to a null reference, or to an array with zero or one bytes.</param>
-		/// <returns>A symmetric ARCFour encryptor object.</returns>
-		/// <remarks>Use the <see cref="CreateDecryptor"/> overload with the same signature to decrypt the result of this method.</remarks>
-		public override ICryptoTransform CreateEncryptor(byte[] rgbKey, byte[] rgbIV) {
-			return CreateDecryptor(rgbKey, rgbIV);
-		}
-		/// <summary>
-		/// Releases the unmanaged resources used by the <see cref="ARCFourManaged"/> and optionally releases the managed resources.
-		/// </summary>
-		/// <param name="disposing"><b>true</b> to release both managed and unmanaged resources; <b>false</b> to release only unmanaged resources.</param>
-		protected override void Dispose(bool disposing) {
-			base.Dispose(true);
-			m_IsDisposed = true;
-		}
-		private bool m_IsDisposed;
-	}
+    public sealed class ARCFourManaged : RC4
+    {
+        /// <summary>
+        /// Initializes a new instance of the ARCFourManaged class.
+        /// </summary>
+        /// <remarks>
+        /// The default keysize is 128 bits.
+        /// </remarks>
+        public ARCFourManaged()
+        {
+            m_IsDisposed = false;
+        }
+
+        /// <summary>
+        /// Creates a symmetric <see cref="RC4"/> decryptor object with the specified Key.
+        /// </summary>
+        /// <param name="rgbKey">The secret key to be used for the symmetric algorithm.</param>
+        /// <param name="rgbIV">This parameter is not used an should be set to a null reference, or to an array with zero or one bytes.</param>
+        /// <returns>A symmetric ARCFour decryptor object.</returns>
+        /// <remarks>This method decrypts an encrypted message created using the <see cref="CreateEncryptor"/> overload with the same signature.</remarks>
+        public override ICryptoTransform CreateDecryptor(byte[] rgbKey, byte[] rgbIV)
+        {
+            ObjectDisposedException.ThrowIf(m_IsDisposed, this);
+            ArgumentNullException.ThrowIfNull(rgbKey);
+            return rgbKey.Length == 0 || rgbKey.Length > 256
+                    ? throw new CryptographicException("Invalid Key.")
+                : rgbIV != null && rgbIV.Length > 1
+                    ? throw new CryptographicException("Invalid Initialization Vector.")
+                : (ICryptoTransform)new ARCFourManagedTransform(rgbKey);
+        }
+
+        /// <summary>
+        /// Creates a symmetric <see cref="RC4"/> encryptor object with the specified Key.
+        /// </summary>
+        /// <param name="rgbKey">The secret key to be used for the symmetric algorithm.</param>
+        /// <param name="rgbIV">This parameter is not used an should be set to a null reference, or to an array with zero or one bytes.</param>
+        /// <returns>A symmetric ARCFour encryptor object.</returns>
+        /// <remarks>Use the <see cref="CreateDecryptor"/> overload with the same signature to decrypt the result of this method.</remarks>
+        public override ICryptoTransform CreateEncryptor(byte[] rgbKey, byte[] rgbIV)
+        {
+            return CreateDecryptor(rgbKey, rgbIV);
+        }
+
+        /// <summary>
+        /// Releases the unmanaged resources used by the <see cref="ARCFourManaged"/> and optionally releases the managed resources.
+        /// </summary>
+        /// <param name="disposing"><b>true</b> to release both managed and unmanaged resources; <b>false</b> to release only unmanaged resources.</param>
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(true);
+            m_IsDisposed = true;
+        }
+
+        private bool m_IsDisposed;
+    }
 }

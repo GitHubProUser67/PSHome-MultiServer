@@ -1,29 +1,40 @@
-using System.Linq;
-using System;
-using System.IO;
-using System.Collections.Generic;
 using System.Xml.Linq;
 
 namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.farm.animal
 {
     public class animal_leveled
     {
-        public static string ProcessLeveled(IDictionary<string, string> QueryParameters, string apiPath)
+        public static string ProcessLeveled(
+            IDictionary<string, string> QueryParameters,
+            string apiPath
+        )
         {
             if (QueryParameters != null)
             {
-                string user = QueryParameters["user"];
-                string type = QueryParameters["type"];
-                string id = QueryParameters["id"];
-                string level = QueryParameters["level"];
+                var user = QueryParameters["user"];
+                var type = QueryParameters["type"];
+                var id = QueryParameters["id"];
+                var level = QueryParameters["level"];
 
-                if (!string.IsNullOrEmpty(user) && !string.IsNullOrEmpty(type) && !string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(level))
+                if (
+                    !string.IsNullOrEmpty(user)
+                    && !string.IsNullOrEmpty(type)
+                    && !string.IsNullOrEmpty(id)
+                    && !string.IsNullOrEmpty(level)
+                )
                 {
                     Directory.CreateDirectory($"{apiPath}/juggernaut/farm/User_Data");
 
                     if (File.Exists($"{apiPath}/juggernaut/farm/User_Data/{user}.xml"))
-                        File.WriteAllText($"{apiPath}/juggernaut/farm/User_Data/{user}.xml",
-                                UpdateLevel(File.ReadAllText($"{apiPath}/juggernaut/farm/User_Data/{user}.xml"), id, type, level));
+                        File.WriteAllText(
+                            $"{apiPath}/juggernaut/farm/User_Data/{user}.xml",
+                            UpdateLevel(
+                                File.ReadAllText($"{apiPath}/juggernaut/farm/User_Data/{user}.xml"),
+                                id,
+                                type,
+                                level
+                            )
+                        );
 
                     return string.Empty;
                 }
@@ -36,20 +47,18 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.farm.animal
         {
             try
             {
-                XDocument xdoc = XDocument.Parse(xmlData);
+                var xdoc = XDocument.Parse(xmlData);
 
-                XElement animalToUpdate = xdoc.Descendants("animal")
-                    .FirstOrDefault(a => a.Element("id")?.Value == id && a.Element("t")?.Value == type);
+                var animalToUpdate = xdoc.Descendants("animal")
+                    .FirstOrDefault(a =>
+                        a.Element("id")?.Value == id && a.Element("t")?.Value == type
+                    );
 
-                if (animalToUpdate != null)
-                    animalToUpdate.Element("l").Value = newLevel.ToString();
+                animalToUpdate?.Element("l").Value = newLevel.ToString();
 
                 return xdoc.ToString();
             }
-            catch (Exception)
-            {
-
-            }
+            catch (Exception) { }
 
             return xmlData;
         }

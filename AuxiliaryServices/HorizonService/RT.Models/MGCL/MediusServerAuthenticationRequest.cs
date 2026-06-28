@@ -1,23 +1,26 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyReport, MediusMGCLMessageIds.ServerAuthenticationRequest)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyReport,
+        MediusMGCLMessageIds.ServerAuthenticationRequest
+    )]
     public class MediusServerAuthenticationRequest : BaseMGCLMessage, IMediusRequest
     {
-
         public override byte PacketType => (byte)MediusMGCLMessageIds.ServerAuthenticationRequest;
 
         /// <summary>
         /// Message ID used for asynchronous request processing.
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Trust level for this game server.
         /// </summary>
         public MGCL_TRUST_LEVEL TrustLevel;
+
         /// <summary>
         /// Server address or port for standalone GS;<Br></Br>
         /// it is only populated internally by MGCL.
@@ -46,10 +49,11 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"TrustLevel: {TrustLevel} " +
-                $"AddressList: {AddressList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"TrustLevel: {TrustLevel} "
+                + $"AddressList: {AddressList}";
         }
     }
 }

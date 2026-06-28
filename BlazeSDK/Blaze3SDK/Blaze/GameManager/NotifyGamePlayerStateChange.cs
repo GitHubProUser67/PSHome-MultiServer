@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct NotifyGamePlayerStateChange
-	{
+    [TdfStruct]
+    public struct NotifyGamePlayerStateChange
+    {
+        [TdfMember("GID")]
+        public uint mGameId;
 
-		[TdfMember("GID")]
-		public uint mGameId;
+        [TdfMember("PID")]
+        public long mPlayerId;
 
-		[TdfMember("PID")]
-		public long mPlayerId;
-
-		[TdfMember("STAT")]
-		public PlayerState mPlayerState;
-
-	}
+        [TdfMember("STAT")]
+        public PlayerState mPlayerState;
+    }
 }

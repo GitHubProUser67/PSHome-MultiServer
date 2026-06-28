@@ -10,6 +10,6 @@ namespace MitmDNS
     {
         Deny,
         Allow,
-        Redirect
+        Redirect,
     }
 }

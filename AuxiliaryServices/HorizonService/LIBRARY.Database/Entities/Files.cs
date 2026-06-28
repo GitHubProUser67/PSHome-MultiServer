@@ -1,5 +1,3 @@
-using System;
-
 namespace Horizon.LIBRARY.Database.Entities
 {
     public partial class Files
@@ -59,22 +57,27 @@ namespace Horizon.LIBRARY.Database.Entities
         /// Less than comparison operator
         /// </summary>
         LESS_THAN,
+
         /// <summary>
         /// Less than or equal to comparison operator
         /// </summary>
         LESS_THAN_OR_EQUAL_TO,
+
         /// <summary>
         /// Equal to comparison operator
         /// </summary>
         EQUAL_TO,
+
         /// <summary>
         /// Greater than or equal to comparison operator
         /// </summary>
         GREATER_THAN_OR_EQUAL_TO,
+
         /// <summary>
         /// Great than comparison operator
         /// </summary>
         GREATER_THAN,
+
         /// <summary>
         /// Not equals comparison operator
         /// </summary>
@@ -91,7 +94,7 @@ namespace Horizon.LIBRARY.Database.Entities
         MFSortByGroupID,
         MFSortByPopularity,
         MFSortByMetaValue,
-        MFSortByMetaString
+        MFSortByMetaString,
     }
 
     public enum MediusSortOrder : int

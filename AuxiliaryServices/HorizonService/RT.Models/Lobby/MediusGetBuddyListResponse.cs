@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -15,22 +14,27 @@ namespace Horizon.RT.Models
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Response codefor the request to get your buddy list.
         /// </summary>
         public MediusCallbackStatus StatusCode;
+
         /// <summary>
         /// The Account ID of the Buddy.
         /// </summary>
         public int AccountID;
+
         /// <summary>
         /// The Account Name of the Buddy.
         /// </summary>
         public string AccountName; // ACCOUNTNAME_MAXLEN
+
         /// <summary>
         /// The player's status
         /// </summary>
         public MediusPlayerStatus PlayerStatus;
+
         /// <summary>
         /// Flag 0 or 1 to determine th end of list.
         /// </summary>
@@ -68,13 +72,14 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"AccountID: {AccountID} " +
-                $"AccountName: {AccountName} " +
-                $"OnlineState: {PlayerStatus} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"AccountID: {AccountID} "
+                + $"AccountName: {AccountName} "
+                + $"OnlineState: {PlayerStatus} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

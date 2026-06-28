@@ -1,5 +1,7 @@
-using Newtonsoft.Json;
 using System.Text;
+using MultiServerLibrary.Extension.NET;
+using Newtonsoft.Json;
+using Org.BouncyCastle.Utilities.Encoders;
 
 namespace Horizon.HTTPSERVICE
 {
@@ -13,7 +15,9 @@ namespace Horizon.HTTPSERVICE
             if (string.IsNullOrEmpty(UserName) || string.IsNullOrEmpty(MachineID))
                 return;
 
-            CIDPair? cidpairToUpdate = cids.FirstOrDefault(cidpair => cidpair.UserName == UserName && cidpair.MachineID == MachineID);
+            var cidpairToUpdate = cids.FirstOrDefault(cidpair =>
+                cidpair.UserName == UserName && cidpair.MachineID == MachineID
+            );
 
             if (cidpairToUpdate == null)
             {
@@ -31,8 +35,10 @@ namespace Horizon.HTTPSERVICE
         // Serialize the CIDPair list to JSON
         public static string ToJson(bool encrypt)
         {
-            string JsonData = JsonConvert.SerializeObject(GetAllCIDPair());
-            return encrypt ? XORString(JsonData, HorizonServerConfiguration.MediusAPIKey) : JsonData;
+            var JsonData = JsonConvert.SerializeObject(GetAllCIDPair());
+            return encrypt
+                ? XORString(JsonData, HorizonServerConfiguration.MEDIUSAPIKey)
+                : JsonData;
         }
 
         private static string XORString(string input, string? key)
@@ -42,12 +48,12 @@ namespace Horizon.HTTPSERVICE
 
             StringBuilder result = new();
 
-            for (int i = 0; i < input.Length; i++)
+            for (var i = 0; i < input.Length; i++)
             {
                 result.Append((char)(input[i] ^ key[i % key.Length]));
             }
 
-            return Convert.ToBase64String(Encoding.UTF8.GetBytes(result.ToString()));
+            return Base64.ToBase64String(Encoding.UTF8.GetBytes(result.ToString()));
         }
     }
 

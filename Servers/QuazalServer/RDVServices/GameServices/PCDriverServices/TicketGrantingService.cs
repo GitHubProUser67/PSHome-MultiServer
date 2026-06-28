@@ -1,13 +1,13 @@
-using QuazalServer.RDVServices.DDL.Models;
+using System.Net;
+using Alcatraz.DTO.Helpers;
+using CustomLogger;
 using QuazalServer.QNetZ;
 using QuazalServer.QNetZ.Attributes;
-using QuazalServer.QNetZ.Interfaces;
 using QuazalServer.QNetZ.Connection;
 using QuazalServer.QNetZ.DDL;
-using System.Net;
+using QuazalServer.QNetZ.Interfaces;
+using QuazalServer.RDVServices.DDL.Models;
 using RDVServices;
-using CustomLogger;
-using Alcatraz.DTO.Helpers;
 
 namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 {
@@ -22,9 +22,17 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         {
             if (Context != null)
             {
-                string prudplink = string.IsNullOrWhiteSpace(QuazalServerConfiguration.ServerBindAddress) ? Dns.GetHostName() : QuazalServerConfiguration.ServerBindAddress;
+                var prudplink = string.IsNullOrWhiteSpace(
+                    QuazalServerConfiguration.ServerBindAddress
+                )
+                    ? Dns.GetHostName()
+                    : QuazalServerConfiguration.ServerBindAddress;
                 if (QuazalServerConfiguration.UsePublicIP)
-                    prudplink = string.IsNullOrWhiteSpace(QuazalServerConfiguration.ServerPublicBindAddress) ? Dns.GetHostName() : QuazalServerConfiguration.ServerPublicBindAddress;
+                    prudplink = string.IsNullOrWhiteSpace(
+                        QuazalServerConfiguration.ServerPublicBindAddress
+                    )
+                        ? Dns.GetHostName()
+                        : QuazalServerConfiguration.ServerPublicBindAddress;
 
                 PlayerInfo? plInfo = null;
 
@@ -35,26 +43,35 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                     plInfo.AccountId = userName;
                     plInfo.Name = userName;
 
-                    return Result(new Login(plInfo.PID)
-                    {
-                        retVal = (int)ErrorCode.Core_NoError,
-                        pConnectionData = new RVConnectionData()
+                    return Result(
+                        new Login(plInfo.PID)
                         {
-                            m_urlRegularProtocols = new(
+                            retVal = (int)ErrorCode.Core_NoError,
+                            pConnectionData = new RVConnectionData()
+                            {
+                                m_urlRegularProtocols = new(
                                     "prudps",
                                     prudplink,
-                                    new Dictionary<string, int>() {
+                                    new Dictionary<string, int>()
+                                    {
                                         { "port", Context.Handler.BackendPort },
                                         { "CID", 1 },
                                         { "PID", (int)Context.Client.sPID },
                                         { "sid", 1 },
                                         { "stream", 3 },
-                                        { "type", 2 } // Public, not BehindNAT
-                                    })
-                        },
-                        strReturnMsg = string.Empty,
-                        pbufResponse = new KerberosTicket(plInfo.PID, Context.Client.sPID, Constants.SessionKey, Constants.TicketData).ToBuffer(Context.Handler.AccessKey, "h7fyctiuucf")
-                    });
+                                        { "type", 2 }, // Public, not BehindNAT
+                                    }
+                                ),
+                            },
+                            strReturnMsg = string.Empty,
+                            pbufResponse = new KerberosTicket(
+                                plInfo.PID,
+                                Context.Client.sPID,
+                                Constants.SessionKey,
+                                Constants.TicketData
+                            ).ToBuffer(Context.Handler.AccessKey, "h7fyctiuucf"),
+                        }
+                    );
                 }
                 else if (userName == "Tracking")
                 {
@@ -63,47 +80,62 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                     plInfo.AccountId = userName;
                     plInfo.Name = userName;
 
-                    return Result(new Login(plInfo.PID)
-                    {
-                        retVal = (int)ErrorCode.Core_NoError,
-                        pConnectionData = new RVConnectionData()
+                    return Result(
+                        new Login(plInfo.PID)
                         {
-                            m_urlRegularProtocols = new(
+                            retVal = (int)ErrorCode.Core_NoError,
+                            pConnectionData = new RVConnectionData()
+                            {
+                                m_urlRegularProtocols = new(
                                     "prudps",
                                     prudplink,
-                                    new Dictionary<string, int>() {
+                                    new Dictionary<string, int>()
+                                    {
                                         { "port", Context.Handler.BackendPort },
                                         { "CID", 1 },
                                         { "PID", (int)Context.Client.sPID },
                                         { "sid", 1 },
                                         { "stream", 3 },
-                                        { "type", 2 } // Public, not BehindNAT
-                                    })
-                        },
-                        strReturnMsg = string.Empty,
-                        pbufResponse = new KerberosTicket(plInfo.PID, Context.Client.sPID, Constants.SessionKey, Constants.TicketData).ToBuffer(Context.Handler.AccessKey, "JaDe!")
-                    });
+                                        { "type", 2 }, // Public, not BehindNAT
+                                    }
+                                ),
+                            },
+                            strReturnMsg = string.Empty,
+                            pbufResponse = new KerberosTicket(
+                                plInfo.PID,
+                                Context.Client.sPID,
+                                Constants.SessionKey,
+                                Constants.TicketData
+                            ).ToBuffer(Context.Handler.AccessKey, "JaDe!"),
+                        }
+                    );
                 }
 
                 plInfo = NetworkPlayers.GetPlayerInfoByUsername(userName);
 
                 if (plInfo != null)
                 {
-                    if (plInfo.Client != null &&
-                        !plInfo.Client.Endpoint.Equals(Context.Client.Endpoint) &&
-                        plInfo.Client.TimeSinceLastPacket < Constants.ClientTimeoutSeconds)
+                    if (
+                        plInfo.Client != null
+                        && !plInfo.Client.Endpoint.Equals(Context.Client.Endpoint)
+                        && plInfo.Client.TimeSinceLastPacket < Constants.ClientTimeoutSeconds
+                    )
                     {
-                        LoggerAccessor.LogWarn($"[RMC Authentication] - User login request {userName} was already logged-in - disconnecting...");
-                        return Result(new Login(0)
-                        {
-                            retVal = (uint)ErrorCode.RendezVous_ConcurrentLoginDenied,
-                            pConnectionData = new RVConnectionData()
+                        LoggerAccessor.LogWarn(
+                            $"[RMC Authentication] - User login request {userName} was already logged-in - disconnecting..."
+                        );
+                        return Result(
+                            new Login(0)
                             {
-                                m_urlRegularProtocols = new StationURL("prudp:/")
-                            },
-                            strReturnMsg = string.Empty,
-                            pbufResponse = new byte[] { }
-                        });
+                                retVal = (uint)ErrorCode.RendezVous_ConcurrentLoginDenied,
+                                pConnectionData = new RVConnectionData()
+                                {
+                                    m_urlRegularProtocols = new StationURL("prudp:/"),
+                                },
+                                strReturnMsg = string.Empty,
+                                pbufResponse = Array.Empty<byte>(),
+                            }
+                        );
                     }
                     else
                         NetworkPlayers.DropPlayerInfo(plInfo);
@@ -118,67 +150,91 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                 plInfo.AccountId = userName;
                 plInfo.Name = userName;
 
-                return Result(new Login(plInfo.PID)
-                {
-                    retVal = (int)ErrorCode.Core_NoError,
-                    pConnectionData = new RVConnectionData()
+                return Result(
+                    new Login(plInfo.PID)
                     {
-                        m_urlRegularProtocols = new(
-                                    "prudps",
-                                    prudplink,
-                                    new Dictionary<string, int>() {
-                                        { "port", Context.Handler.BackendPort },
-                                        { "CID", 1 },
-                                        { "PID", (int)Context.Client.sPID },
-                                        { "sid", 1 },
-                                        { "stream", 3 },
-                                        { "type", 2 } // Public, not BehindNAT
-                                    })
-                    },
-                    strReturnMsg = string.Empty,
-                    pbufResponse = new KerberosTicket(plInfo.PID, Context.Client.sPID, Constants.SessionKey, Constants.TicketData).ToBuffer(Context.Handler.AccessKey)
-                });
+                        retVal = (int)ErrorCode.Core_NoError,
+                        pConnectionData = new RVConnectionData()
+                        {
+                            m_urlRegularProtocols = new(
+                                "prudps",
+                                prudplink,
+                                new Dictionary<string, int>()
+                                {
+                                    { "port", Context.Handler.BackendPort },
+                                    { "CID", 1 },
+                                    { "PID", (int)Context.Client.sPID },
+                                    { "sid", 1 },
+                                    { "stream", 3 },
+                                    { "type", 2 }, // Public, not BehindNAT
+                                }
+                            ),
+                        },
+                        strReturnMsg = string.Empty,
+                        pbufResponse = new KerberosTicket(
+                            plInfo.PID,
+                            Context.Client.sPID,
+                            Constants.SessionKey,
+                            Constants.TicketData
+                        ).ToBuffer(Context.Handler.AccessKey),
+                    }
+                );
             }
 
             return Error(0);
         }
 
         /// <summary>
-		/// Function where client login is performed by account ID and password
-		/// </summary>
-		/// <param name="login"></param>
-		[RMCMethod(2)]
-        public RMCResult LoginEx(string userName, AnyData<UbiAuthenticationLoginCustomData> oExtraData)
+        /// Function where client login is performed by account ID and password
+        /// </summary>
+        /// <param name="login"></param>
+        [RMCMethod(2)]
+        public RMCResult LoginEx(
+            string userName,
+            AnyData<UbiAuthenticationLoginCustomData> oExtraData
+        )
         {
-            string prudplink = string.IsNullOrWhiteSpace(QuazalServerConfiguration.ServerBindAddress) ? Dns.GetHostName() : QuazalServerConfiguration.ServerBindAddress;
+            var prudplink = string.IsNullOrWhiteSpace(QuazalServerConfiguration.ServerBindAddress)
+                ? Dns.GetHostName()
+                : QuazalServerConfiguration.ServerBindAddress;
             if (QuazalServerConfiguration.UsePublicIP)
-                prudplink = string.IsNullOrWhiteSpace(QuazalServerConfiguration.ServerPublicBindAddress) ? Dns.GetHostName() : QuazalServerConfiguration.ServerPublicBindAddress;
+                prudplink = string.IsNullOrWhiteSpace(
+                    QuazalServerConfiguration.ServerPublicBindAddress
+                )
+                    ? Dns.GetHostName()
+                    : QuazalServerConfiguration.ServerPublicBindAddress;
 
             var rdvConnectionString = new StationURL(
                 "prudps",
                 prudplink,
-                new Dictionary<string, int>() {
+                new Dictionary<string, int>()
+                {
                     { "port", Context.Handler.BackendPort },
                     { "CID", 1 },
                     { "PID", (int)Context.Client.sPID },
                     { "sid", 1 },
                     { "stream", 3 },
-                    { "type", 2 }	// Public, not BehindNAT
-				});
+                    { "type", 2 }, // Public, not BehindNAT
+                }
+            );
 
             if (oExtraData.data != null)
             {
-                ErrorCode loginCode = ErrorCode.Core_NoError;
+                var loginCode = ErrorCode.Core_NoError;
 
                 var plInfo = NetworkPlayers.GetPlayerInfoByUsername(userName);
 
                 if (plInfo != null)
                 {
-                    if (plInfo.Client != null &&
-                        !plInfo.Client.Endpoint.Equals(Context.Client.Endpoint) &&
-                        plInfo.Client.TimeSinceLastPacket < Constants.ClientTimeoutSeconds)
+                    if (
+                        plInfo.Client != null
+                        && !plInfo.Client.Endpoint.Equals(Context.Client.Endpoint)
+                        && plInfo.Client.TimeSinceLastPacket < Constants.ClientTimeoutSeconds
+                    )
                     {
-                        LoggerAccessor.LogWarn($"[RMC Authentication] - User login request {userName} was already logged-in - disconnecting...");
+                        LoggerAccessor.LogWarn(
+                            $"[RMC Authentication] - User login request {userName} was already logged-in - disconnecting..."
+                        );
                         loginCode = ErrorCode.RendezVous_ConcurrentLoginDenied;
                     }
                     else
@@ -187,35 +243,47 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
 
                 LoggerAccessor.LogInfo($"[RMC Authentication] - User login request {userName}");
 
-                var user = DBHelper.GetUserByUserName(Context.Handler.Factory.Item1, oExtraData.data.username);
+                var user = DBHelper.GetUserByUserName(
+                    Context.Handler.Factory.Item1,
+                    oExtraData.data.username
+                );
 
                 if (user != null)
                 {
                     if (user.Password == oExtraData.data.password)
-                        LoggerAccessor.LogInfo($"[RMC Authentication] - User login request {userName} - success");
+                        LoggerAccessor.LogInfo(
+                            $"[RMC Authentication] - User login request {userName} - success"
+                        );
                     else
                     {
-                        bool passwordCheckResult = false;
+                        var passwordCheckResult = false;
                         try
                         {
-                            passwordCheckResult = SecurePasswordHasher.Verify($"{user.Id}-{oExtraData.data.password}", user.Password);
+                            passwordCheckResult = SecurePasswordHasher.Verify(
+                                $"{user.Id}-{oExtraData.data.password}",
+                                user.Password
+                            );
                         }
-                        catch
-                        {
-                        }
+                        catch { }
 
                         if (passwordCheckResult)
-                            LoggerAccessor.LogInfo($"[RMC Authentication] - User login request {userName} - success");
+                            LoggerAccessor.LogInfo(
+                                $"[RMC Authentication] - User login request {userName} - success"
+                            );
                         else
                         {
-                            LoggerAccessor.LogWarn($"[RMC Authentication] - User login request {userName} - invalid password");
+                            LoggerAccessor.LogWarn(
+                                $"[RMC Authentication] - User login request {userName} - invalid password"
+                            );
                             loginCode = ErrorCode.RendezVous_InvalidPassword;
                         }
                     }
                 }
                 else
                 {
-                    LoggerAccessor.LogWarn($"[RMC Authentication] - User login request {userName} - invalid user name");
+                    LoggerAccessor.LogWarn(
+                        $"[RMC Authentication] - User login request {userName} - invalid user name"
+                    );
                     loginCode = ErrorCode.RendezVous_InvalidUsername;
                 }
 
@@ -226,10 +294,10 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                         retVal = (uint)loginCode,
                         pConnectionData = new RVConnectionData()
                         {
-                            m_urlRegularProtocols = new StationURL("prudp:/")
+                            m_urlRegularProtocols = new StationURL("prudp:/"),
                         },
                         strReturnMsg = string.Empty,
-                        pbufResponse = new byte[] { }
+                        pbufResponse = Array.Empty<byte>(),
                     };
 
                     return Result(loginData);
@@ -241,24 +309,31 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
                     plInfo.AccountId = userName;
                     plInfo.Name = oExtraData.data.username;
 
-                    var kerberos = new KerberosTicket(plInfo.PID, Context.Client.sPID, Constants.SessionKey, Constants.TicketData);
+                    var kerberos = new KerberosTicket(
+                        plInfo.PID,
+                        Context.Client.sPID,
+                        Constants.SessionKey,
+                        Constants.TicketData
+                    );
 
                     var loginData = new Login(plInfo.PID)
                     {
                         retVal = (uint)loginCode,
                         pConnectionData = new RVConnectionData()
                         {
-                            m_urlRegularProtocols = rdvConnectionString
+                            m_urlRegularProtocols = rdvConnectionString,
                         },
                         strReturnMsg = string.Empty,
-                        pbufResponse = kerberos.ToBuffer(Context.Handler.AccessKey)
+                        pbufResponse = kerberos.ToBuffer(Context.Handler.AccessKey),
                     };
 
                     return Result(loginData);
                 }
             }
             else
-                LoggerAccessor.LogError($"[RMC Authentication] - Error: Unknown Custom Data class '{oExtraData.className}'");
+                LoggerAccessor.LogError(
+                    $"[RMC Authentication] - Error: Unknown Custom Data class '{oExtraData.className}'"
+                );
 
             return Error((int)ErrorCode.RendezVous_ClassNotFound);
         }
@@ -268,19 +343,19 @@ namespace QuazalServer.RDVServices.GameServices.PCDriverServices
         {
             if (Context != null)
             {
-                KerberosTicket kerberos = new(sourcePID, targetPID, Constants.SessionKey, Constants.TicketData);
+                KerberosTicket kerberos = new(
+                    sourcePID,
+                    targetPID,
+                    Constants.SessionKey,
+                    Constants.TicketData
+                );
 
-                TicketData ticketData = new()
-                {
-                    retVal = (int)ErrorCode.Core_NoError,
-                };
+                TicketData ticketData = new() { retVal = (int)ErrorCode.Core_NoError };
 
-                if (sourcePID == 0) // Ubisoft tracker account.
-                    ticketData.pbufResponse = kerberos.ToBuffer(Context.Handler.AccessKey, "JaDe!");
-                else if (sourcePID == 100) // Quazal guest account.
-                    ticketData.pbufResponse = kerberos.ToBuffer(Context.Handler.AccessKey, "h7fyctiuucf");
-                else
-                    ticketData.pbufResponse = kerberos.ToBuffer(Context.Handler.AccessKey);
+                ticketData.pbufResponse =
+                    sourcePID == 0 ? kerberos.ToBuffer(Context.Handler.AccessKey, "JaDe!")
+                    : sourcePID == 100 ? kerberos.ToBuffer(Context.Handler.AccessKey, "h7fyctiuucf")
+                    : kerberos.ToBuffer(Context.Handler.AccessKey);
 
                 return Result(ticketData);
             }

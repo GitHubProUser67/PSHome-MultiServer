@@ -1,8 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
-using System.Collections.Generic;
-using System;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -55,31 +52,42 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"FragmentMessageClass: {FragmentMessageClass} " +
-                $"FragmentMessageType: {FragmentMessageType} " +
-                $"SubPacketSize: {SubPacketSize} " +
-                $"SubPacketCount: {SubPacketCount} " +
-                $"SubPacketIndex: {SubPacketIndex} " +
-                $"MultiPacketindex: {MultiPacketindex} " +
-                $"PacketBufferSize: {PacketBufferSize} " +
-                $"PacketBufferOffset: {PacketBufferOffset}";
+            return base.ToString()
+                + " "
+                + $"FragmentMessageClass: {FragmentMessageClass} "
+                + $"FragmentMessageType: {FragmentMessageType} "
+                + $"SubPacketSize: {SubPacketSize} "
+                + $"SubPacketCount: {SubPacketCount} "
+                + $"SubPacketIndex: {SubPacketIndex} "
+                + $"MultiPacketindex: {MultiPacketindex} "
+                + $"PacketBufferSize: {PacketBufferSize} "
+                + $"PacketBufferOffset: {PacketBufferOffset}";
         }
 
-        public static List<TypePacketFragment> FromPayload(NetMessageClass msgClass, byte msgType, byte[] payload)
+        public static List<TypePacketFragment> FromPayload(
+            NetMessageClass msgClass,
+            byte msgType,
+            byte[] payload
+        )
         {
             return FromPayload(msgClass, msgType, payload, 0, payload.Length);
         }
 
-        public static List<TypePacketFragment> FromPayload(NetMessageClass msgClass, byte msgType, byte[] payload, int index, int length)
+        public static List<TypePacketFragment> FromPayload(
+            NetMessageClass msgClass,
+            byte msgType,
+            byte[] payload,
+            int index,
+            int length
+        )
         {
-            List<TypePacketFragment> fragments = new List<TypePacketFragment>();
+            var fragments = new List<TypePacketFragment>();
 
-            int i = 0;
+            var i = 0;
 
             while (i < length)
             {
-                ushort subPacketSize = (ushort)(length - i);
+                var subPacketSize = (ushort)(length - i);
                 if (subPacketSize > Constants.DME_FRAGMENT_MAX_PAYLOAD_SIZE)
                     subPacketSize = Constants.DME_FRAGMENT_MAX_PAYLOAD_SIZE;
 
@@ -93,7 +101,7 @@ namespace Horizon.RT.Models
                     MultiPacketindex = 0,
                     PacketBufferSize = length,
                     PacketBufferOffset = i,
-                    Payload = new byte[subPacketSize]
+                    Payload = new byte[subPacketSize],
                 };
 
                 // Copy payload segment into fragment payload

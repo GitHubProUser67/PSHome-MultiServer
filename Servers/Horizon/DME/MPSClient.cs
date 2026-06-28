@@ -1,27 +1,30 @@
+using System.Collections.Concurrent;
+using System.Net;
 using CustomLogger;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
+using EndianTools;
+using Horizon.DME.Models;
+using Horizon.LIBRARY.Pipeline.Attribute;
+using Horizon.LIBRARY.Pipeline.Tcp;
+using Horizon.MEDIUS;
 using Horizon.RT.Common;
 using Horizon.RT.Cryptography;
 using Horizon.RT.Models;
-using Horizon.LIBRARY.Pipeline.Tcp;
-using Horizon.DME.Models;
-using System.Collections.Concurrent;
-using System.Net;
-using Horizon.LIBRARY.Pipeline.Attribute;
-using Horizon.SERVER;
+using Microsoft.Extensions.Logging;
 using MultiServerLibrary.Extension;
+using MultiServerLibrary.Extension.NET;
 
 namespace Horizon.DME
 {
-    public class MPSClient
+    public class MPSClient(int appId, string? SessionKey, string? AccessKey)
     {
         public bool IsConnected => _mpsChannel != null && _mpsChannel.Active && _mpsState > 0;
         public DateTime? TimeLostConnection { get; set; } = null;
-        public string? SessionKey = null;
-        public string? AccessKey = null;
-        public int ApplicationId { get; } = 0;
+        public string? SessionKey = SessionKey;
+        public string? AccessKey = AccessKey;
+        public int ApplicationId { get; } = appId;
 
         private enum MPSConnectionState
         {
@@ -33,11 +36,11 @@ namespace Horizon.DME
             CONNECT_TCP,
             SET_ATTRIBUTES,
             PENDING_TCP_ACK,
-            AUTHENTICATED
+            AUTHENTICATED,
         }
 
-        private ConcurrentDictionary<string, DMEObject> _accessTokenToClient = new();
-        private ConcurrentDictionary<string, DMEObject> _sessionKeyToClient = new();
+        private readonly ConcurrentDictionary<string, DMEObject> _accessTokenToClient = new();
+        private readonly ConcurrentDictionary<string, DMEObject> _sessionKeyToClient = new();
 
         private DateTime _utcConnectionState;
         private MPSConnectionState _mpsState = MPSConnectionState.NO_CONNECTION;
@@ -48,42 +51,33 @@ namespace Horizon.DME
         private ScertServerHandler? _scertHandler = null;
 
         private readonly ConcurrentList<World> _worlds = new();
-        private ConcurrentQueue<World> _removeWorldQueue = new();
+        private readonly ConcurrentQueue<World> _removeWorldQueue = new();
 
         private ConcurrentQueue<BaseScertMessage> _mpsRecvQueue { get; } = new();
         private ConcurrentQueue<BaseScertMessage> _mpsSendQueue { get; } = new();
 
-        public MPSClient(int appId, string? SessionKey, string? AccessKey)
-        {
-            this.SessionKey = SessionKey;
-            this.AccessKey = AccessKey;
-            ApplicationId = appId;
-        }
-
         #region Clients
         public DMEObject? GetClientByAccessToken(string accessToken)
         {
-            if (_accessTokenToClient.TryGetValue(accessToken, out var result))
-                return result;
-
-            return null;
+            return _accessTokenToClient.TryGetValue(accessToken, out var result) ? result : null;
         }
+
         public DMEObject? GetClientBySessionKey(string sessionKey)
         {
-            if (_sessionKeyToClient.TryGetValue(sessionKey, out var result))
-                return result;
-
-            return null;
+            return _sessionKeyToClient.TryGetValue(sessionKey, out var result) ? result : null;
         }
-
 
         public void AddClient(DMEObject client)
         {
             if (client.Destroy)
-                throw new InvalidOperationException($"Attempting to add {client} to MediusManager but client is ready to be destroyed.");
+                throw new InvalidOperationException(
+                    $"[MPSClient] - Attempting to add {client} to MediusManager but client is ready to be destroyed."
+                );
 
             if (string.IsNullOrEmpty(client.Token) || string.IsNullOrEmpty(client.SessionKey))
-                throw new InvalidOperationException($"Attempting to add {client} but it has invalid token or SessionKey.");
+                throw new InvalidOperationException(
+                    $"[MPSClient] - Attempting to add {client} but it has invalid token or SessionKey."
+                );
 
             if (_accessTokenToClient.TryAdd(client.Token, client))
             {
@@ -98,7 +92,9 @@ namespace Horizon.DME
                 return;
 
             if (string.IsNullOrEmpty(client.Token) || string.IsNullOrEmpty(client.SessionKey))
-                throw new InvalidOperationException($"Attempting to remove {client} but it has invalid token or SessionKey.");
+                throw new InvalidOperationException(
+                    $"[MPSClient] - Attempting to remove {client} but it has invalid token or SessionKey."
+                );
 
             _sessionKeyToClient.TryRemove(client.SessionKey, out _);
             _accessTokenToClient.TryRemove(client.Token, out _);
@@ -118,28 +114,25 @@ namespace Horizon.DME
             TimeLostConnection = null;
 
             // Add client on connect
-            _scertHandler.OnChannelActive += (channel) =>
-            {
-
-            };
+            _scertHandler.OnChannelActive = (channel) => { };
 
             // Remove client on disconnect
-            _scertHandler.OnChannelInactive += async (channel) =>
+            _scertHandler.OnChannelInactive = (channel) =>
             {
-                LoggerAccessor.LogError("Lost connection to MPS");
+                LoggerAccessor.LogError("[MPSClient] - Lost connection to MPS");
                 TimeLostConnection = DateTimeUtils.GetHighPrecisionUtcTime();
-                await Stop();
+                _ = Stop();
             };
 
             // Queue all incoming messages
-            _scertHandler.OnChannelMessage += (channel, message) =>
+            _scertHandler.OnChannelMessage = (channel, message) =>
             {
                 // Add to queue
                 _mpsRecvQueue.Enqueue(message);
 
                 // Log if id is set
                 if (message.CanLog())
-                    LoggerAccessor.LogDebug($"MPS {channel}: {message}");
+                    LoggerAccessor.LogDebug($"[MPSClient] - {channel}: {message}");
             };
 
             _bootstrap = new Bootstrap();
@@ -147,31 +140,64 @@ namespace Horizon.DME
                 .Group(_group)
                 .Channel<TcpSocketChannel>()
                 .Option(ChannelOption.TcpNodelay, true)
-                .Handler(new ActionChannelInitializer<ISocketChannel>(channel =>
-                {
-                    IChannelPipeline pipeline = channel.Pipeline;
+                .Handler(
+                    new ActionChannelInitializer<ISocketChannel>(channel =>
+                    {
+                        var pipeline = channel.Pipeline;
 
-                    pipeline.AddLast(new ScertEncoder());
-                    pipeline.AddLast(new ScertIEnumerableEncoder());
-                    pipeline.AddLast(new ScertTcpFrameDecoder(DotNetty.Buffers.ByteOrder.LittleEndian, Constants.MEDIUS_MESSAGE_MAXLEN, 1, 2, 0, 0, false));
-                    pipeline.AddLast(new ScertDecoder());
-                    pipeline.AddLast(new ScertMultiAppDecoder());
-                    pipeline.AddLast(_scertHandler);
-                }));
+                        pipeline.AddLast(new ScertEncoder());
+                        pipeline.AddLast(new ScertIEnumerableEncoder());
+                        pipeline.AddLast(
+                            new ScertTcpFrameDecoder(
+                                DotNetty.Buffers.ByteOrder.LittleEndian,
+                                Constants.MEDIUS_MESSAGE_MAXLEN,
+                                1,
+                                2,
+                                0,
+                                0,
+                                false
+                            )
+                        );
+                        pipeline.AddLast(new ScertDecoder());
+                        pipeline.AddLast(new ScertMultiAppDecoder());
+                        pipeline.AddLast(_scertHandler);
+                    })
+                );
 
-            await ConnectMPS();
+            await ConnectMPS().ConfigureAwait(false);
         }
 
         public async Task Stop()
         {
-            await Task.WhenAll(_worlds.Select(x => x.Stop()));
+            await Task.WhenAll(_worlds.Select(x => x.Stop())).ConfigureAwait(false);
             if (_mpsChannel != null)
             {
-                await _mpsChannel.CloseAsync();
-                _mpsChannel = null;
+                var disconnectTask = _mpsChannel.DisconnectAsync();
+                if (
+                    !await disconnectTask
+                        .TryAwait(TimeSpan.FromMilliseconds(2000))
+                        .ConfigureAwait(false)
+                )
+                    LoggerAccessor.LogWarn(
+                        "[MPSClient] - Timed out waiting for DME MPS channel disconnect."
+                    );
             }
+
             if (_group != null)
-                await _group.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(1));
+            {
+                var shutdownTask = _group.ShutdownGracefullyAsync(
+                    TimeSpan.FromMilliseconds(100),
+                    TimeSpan.FromSeconds(1)
+                );
+                if (
+                    !await shutdownTask
+                        .TryAwait(TimeSpan.FromMilliseconds(2000))
+                        .ConfigureAwait(false)
+                )
+                    LoggerAccessor.LogWarn(
+                        "[MPSClient] - Timed out waiting for DME MPS event loop shutdown."
+                    );
+            }
 
             _worlds.Clear();
             _removeWorldQueue.Clear();
@@ -182,16 +208,24 @@ namespace Horizon.DME
 
         public bool CheckMPSConnectivity()
         {
-            if (_mpsState == MPSConnectionState.FAILED ||
-                (_mpsState != MPSConnectionState.AUTHENTICATED && (DateTimeUtils.GetHighPrecisionUtcTime() - _utcConnectionState).TotalSeconds > 30))
+            if (
+                _mpsState == MPSConnectionState.FAILED
+                || (
+                    _mpsState != MPSConnectionState.AUTHENTICATED
+                    && (DateTimeUtils.GetHighPrecisionUtcTime() - _utcConnectionState).TotalSeconds
+                        > 30
+                )
+            )
             {
-                LoggerAccessor.LogError("[MPSClient] - HandleIncomingMessages() - MPS server is not authenticated!");
+                LoggerAccessor.LogError(
+                    "[MPSClient] - HandleIncomingMessages() - MPS server is not authenticated!"
+                );
                 TimeLostConnection = DateTimeUtils.GetHighPrecisionUtcTime();
                 Stop().Wait();
                 return false;
             }
-            else
-                return true;
+
+            return true;
         }
 
         public async Task HandleIncomingMessages()
@@ -206,20 +240,25 @@ namespace Horizon.DME
                 {
                     try
                     {
-                        await ProcessMessage(message, _mpsChannel);
+                        await ProcessMessage(message, _mpsChannel).ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
-                        LoggerAccessor.LogError($"[MPSClient] - HandleIncomingMessages() - Error while Processing incoming messages: {e}");
+                        LoggerAccessor.LogError(
+                            $"[MPSClient] - HandleIncomingMessages() - Error while Processing incoming messages: {e}"
+                        );
                     }
                 }
 
                 // Handle incoming for each world
-                await Task.WhenAll(_worlds.Select(x => x.HandleIncomingMessages())).ConfigureAwait(false);
+                await Task.WhenAll(_worlds.Select(x => x.HandleIncomingMessages()))
+                    .ConfigureAwait(false);
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError($"[MPSClient] - HandleIncomingMessages() - Error while Handling incoming messages: {e}");
+                LoggerAccessor.LogError(
+                    $"[MPSClient] - HandleIncomingMessages() - Error while Handling incoming messages: {e}"
+                );
             }
         }
 
@@ -233,7 +272,8 @@ namespace Horizon.DME
             try
             {
                 // Handle outgoing for each world
-                await Task.WhenAll(_worlds.Select(x => x.HandleOutgoingMessages())).ConfigureAwait(false);
+                await Task.WhenAll(_worlds.Select(x => x.HandleOutgoingMessages()))
+                    .ConfigureAwait(false);
 
                 // Handle world removals
                 while (_removeWorldQueue.TryDequeue(out var world))
@@ -247,12 +287,14 @@ namespace Horizon.DME
                         responses.Add(message);
 
                     if (responses.Count > 0)
-                        await _mpsChannel.WriteAndFlushAsync(responses);
+                        await _mpsChannel.WriteAndFlushAsync(responses).ConfigureAwait(false);
                 }
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError($"[MPSClient] - HandleOutgoingMessages() - Error while Handling outgoing messages: {e}");
+                LoggerAccessor.LogError(
+                    $"[MPSClient] - HandleOutgoingMessages() - Error while Handling outgoing messages: {e}"
+                );
             }
         }
 
@@ -264,7 +306,14 @@ namespace Horizon.DME
             try
             {
                 if (_bootstrap != null)
-                    _mpsChannel = await _bootstrap.ConnectAsync(new IPEndPoint(IPAddress.Parse(DmeClass.Settings.MPS.Ip) ?? MediusClass.SERVER_IP, DmeClass.Settings.MPS.Port));
+                    _mpsChannel = await _bootstrap
+                        .ConnectAsync(
+                            new IPEndPoint(
+                                IPAddress.Parse(HorizonServerConfiguration.DMEMPSIp),
+                                HorizonServerConfiguration.DMEMPSPort
+                            )
+                        )
+                        .ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -278,30 +327,30 @@ namespace Horizon.DME
 
             _mpsState = MPSConnectionState.CONNECTED;
 
-            if (_mpsChannel != null && !_mpsChannel.HasAttribute(LIBRARY.Pipeline.Constants.SCERT_CLIENT))
-                _mpsChannel.GetAttribute(LIBRARY.Pipeline.Constants.SCERT_CLIENT).Set(new ScertClientAttribute());
-            var scertClient = _mpsChannel?.GetAttribute(LIBRARY.Pipeline.Constants.SCERT_CLIENT).Get();
+            if (
+                _mpsChannel != null
+                && !_mpsChannel.HasAttribute(LIBRARY.Pipeline.Constants.SCERT_CLIENT)
+            )
+                _mpsChannel
+                    .GetAttribute(LIBRARY.Pipeline.Constants.SCERT_CLIENT)
+                    .Set(new ScertClientAttribute());
+            var scertClient = _mpsChannel
+                ?.GetAttribute(LIBRARY.Pipeline.Constants.SCERT_CLIENT)
+                .Get();
             if (scertClient != null)
             {
-                scertClient.RsaAuthKey = DmeClass.Settings.MPS.Key;
+                scertClient.RsaAuthKey = ScertClientAttribute.DefaultRsaAuthKey;
                 scertClient.CipherService?.GenerateCipher(scertClient.RsaAuthKey);
             }
 
             RT_MSG_CLIENT_HELLO clientHello = new()
             {
-                Parameters = new ushort[]
-                {
-                    2,
-                    0x6e,
-                    0x6d,
-                    1,
-                    1
-                }
+                Parameters = new ushort[] { 2, 0x6e, 0x6d, 1, 1 },
             };
 
             // Send hello
             if (_mpsChannel != null)
-                await _mpsChannel.WriteAndFlushAsync(clientHello);
+                await _mpsChannel.WriteAndFlushAsync(clientHello).ConfigureAwait(false);
 
             _mpsState = MPSConnectionState.HELLO;
         }
@@ -309,112 +358,148 @@ namespace Horizon.DME
         private async Task ProcessMessage(BaseScertMessage message, IChannel serverChannel)
         {
             // Get ScertClient data
-            var scertClient = serverChannel.GetAttribute(LIBRARY.Pipeline.Constants.SCERT_CLIENT).Get();
+            var scertClient = serverChannel
+                .GetAttribute(LIBRARY.Pipeline.Constants.SCERT_CLIENT)
+                .Get();
 
             switch (message)
             {
                 // Authentication
                 case RT_MSG_SERVER_HELLO serverHello:
-                    {
-                        if (_mpsState != MPSConnectionState.HELLO)
-                            throw new Exception($"Unexpected RT_MSG_SERVER_HELLO from server. {serverHello}");
+                {
+                    if (_mpsState != MPSConnectionState.HELLO)
+                        throw new Exception(
+                            $"[MPSClient] - Unexpected RT_MSG_SERVER_HELLO from server. {serverHello}"
+                        );
 
-                        // Send public key
-                        Enqueue(new RT_MSG_CLIENT_CRYPTKEY_PUBLIC()
+                    // Send public key
+                    Enqueue(
+                        new RT_MSG_CLIENT_CRYPTKEY_PUBLIC()
                         {
-                            PublicKey = DmeClass.Settings.MPS.Key.N.ToByteArrayUnsigned().Reverse().ToArray()
-                        });
+                            PublicKey = ScertClientAttribute
+                                .DefaultRsaAuthKey.N.ToByteArrayUnsigned()
+                                .ReverseArray(),
+                        }
+                    );
 
-                        _mpsState = MPSConnectionState.HANDSHAKE;
-                        break;
-                    }
+                    _mpsState = MPSConnectionState.HANDSHAKE;
+                    break;
+                }
                 case RT_MSG_SERVER_CRYPTKEY_PEER serverCryptKeyPeer:
-                    {
-                        if (_mpsState != MPSConnectionState.HANDSHAKE)
-                            throw new Exception($"Unexpected RT_MSG_SERVER_CRYPTKEY_PEER from server. {serverCryptKeyPeer}");
+                {
+                    if (_mpsState != MPSConnectionState.HANDSHAKE)
+                        throw new Exception(
+                            $"[MPSClient] - Unexpected RT_MSG_SERVER_CRYPTKEY_PEER from server. {serverCryptKeyPeer}"
+                        );
 
-                        // generate new client session key
-                        scertClient.CipherService?.GenerateCipher(CipherContext.RC_CLIENT_SESSION, serverCryptKeyPeer.SessionKey ?? Array.Empty<byte>());
+                    // generate new client session key
+                    scertClient.CipherService?.GenerateCipher(
+                        CipherContext.RC_CLIENT_SESSION,
+                        serverCryptKeyPeer.SessionKey ?? Array.Empty<byte>()
+                    );
 
-                        if (_mpsChannel != null)
-                            await _mpsChannel.WriteAndFlushAsync(new RT_MSG_CLIENT_CONNECT_TCP()
-                            {
-                                TargetWorldId = 1,
-                                SessionKey = SessionKey,
-                                AccessToken = AccessKey,
-                                AppId = ApplicationId,
-                                Key = DmeClass.GlobalAuthPublic
-                            });
+                    if (_mpsChannel != null)
+                        await _mpsChannel
+                            .WriteAndFlushAsync(
+                                new RT_MSG_CLIENT_CONNECT_TCP()
+                                {
+                                    TargetWorldId = 1,
+                                    SessionKey = SessionKey,
+                                    AccessToken = AccessKey,
+                                    AppId = ApplicationId,
+                                    Key = new RSA_KEY(
+                                        ScertClientAttribute
+                                            .DefaultRsaAuthKey.N.ToByteArrayUnsigned()
+                                            .ReverseArray()
+                                    ),
+                                }
+                            )
+                            .ConfigureAwait(false);
 
-                        _mpsState = MPSConnectionState.CONNECT_TCP;
-                        break;
-                    }
+                    _mpsState = MPSConnectionState.CONNECT_TCP;
+                    break;
+                }
                 case RT_MSG_SERVER_CONNECT_ACCEPT_TCP serverConnectAcceptTcp:
-                    {
-                        if (_mpsState != MPSConnectionState.CONNECT_TCP)
-                            throw new Exception($"Unexpected RT_MSG_SERVER_CONNECT_ACCEPT_TCP from server. {serverConnectAcceptTcp}");
+                {
+                    if (_mpsState != MPSConnectionState.CONNECT_TCP)
+                        throw new Exception(
+                            $"[MPSClient] - Unexpected RT_MSG_SERVER_CONNECT_ACCEPT_TCP from server. {serverConnectAcceptTcp}"
+                        );
 
-                        if (_mpsChannel != null)
-                            await _mpsChannel.WriteAndFlushAsync(new RT_MSG_CLIENT_CONNECT_READY_TCP()
-                            {
+                    if (_mpsChannel != null)
+                        await _mpsChannel
+                            .WriteAndFlushAsync(new RT_MSG_CLIENT_CONNECT_READY_TCP())
+                            .ConfigureAwait(false);
 
-                            });
-
-                        _mpsState = MPSConnectionState.PENDING_TCP_ACK;
-                        break;
-                    }
+                    _mpsState = MPSConnectionState.PENDING_TCP_ACK;
+                    break;
+                }
                 case RT_MSG_SERVER_CONNECT_COMPLETE serverComplete:
-                    {
-                        if (_mpsState != MPSConnectionState.PENDING_TCP_ACK)
-                            throw new Exception($"Unexpected RT_MSG_SERVER_CONNECT_COMPLETE from server. {serverComplete}");
+                {
+                    if (_mpsState != MPSConnectionState.PENDING_TCP_ACK)
+                        throw new Exception(
+                            $"[MPSClient] - Unexpected RT_MSG_SERVER_CONNECT_COMPLETE from server. {serverComplete}"
+                        );
 
-                        _mpsState = MPSConnectionState.AUTHENTICATED;
-                        break;
-                    }
+                    _mpsState = MPSConnectionState.AUTHENTICATED;
+                    break;
+                }
                 case RT_MSG_SERVER_CONNECT_REQUIRE serverRequire:
-                    {
-                        if (_mpsChannel != null)
-                            await _mpsChannel.WriteAndFlushAsync(new RT_MSG_CLIENT_CONNECT_READY_REQUIRE()
-                            {
-                                ServReq = 0
-                            });
-                        break;
-                    }
+                {
+                    if (_mpsChannel != null)
+                        await _mpsChannel
+                            .WriteAndFlushAsync(
+                                new RT_MSG_CLIENT_CONNECT_READY_REQUIRE() { ServReq = 0 }
+                            )
+                            .ConfigureAwait(false);
+                    break;
+                }
                 case RT_MSG_SERVER_ECHO serverEcho:
-                    {
-                        Enqueue(serverEcho);
-                        break;
-                    }
+                {
+                    Enqueue(serverEcho);
+                    break;
+                }
                 case RT_MSG_CLIENT_ECHO clientEcho:
-                    {
-                        Enqueue(new RT_MSG_CLIENT_ECHO() { Value = clientEcho.Value });
-                        break;
-                    }
+                {
+                    Enqueue(new RT_MSG_CLIENT_ECHO() { Value = clientEcho.Value });
+                    break;
+                }
                 case RT_MSG_SERVER_CHEAT_QUERY cheatQuery:
-                    {
-
-                        break;
-                    }
+                {
+                    break;
+                }
                 case RT_MSG_SERVER_APP serverApp:
-                    {
-                        if (serverApp.Message != null)
-                            await ProcessMediusMessage(serverApp.Message, serverChannel);
-                        break;
-                    }
+                {
+                    if (serverApp.Message != null)
+                        await ProcessMediusMessage(serverApp.Message, serverChannel)
+                            .ConfigureAwait(false);
+                    break;
+                }
 
                 case RT_MSG_SERVER_FORCED_DISCONNECT serverForcedDisconnect:
                 case RT_MSG_CLIENT_DISCONNECT_WITH_REASON clientDisconnectWithReason:
+                {
+                    if (serverChannel != null)
                     {
-                        await serverChannel.CloseAsync();
-                        _mpsState = MPSConnectionState.NO_CONNECTION;
-                        break;
+                        var closeTask = serverChannel.CloseAsync();
+                        if (
+                            !await closeTask
+                                .TryAwait(TimeSpan.FromMilliseconds(2000))
+                                .ConfigureAwait(false)
+                        )
+                            LoggerAccessor.LogWarn(
+                                "[MPSClient] - Timed out waiting for DME MPS server channel close."
+                            );
                     }
+                    _mpsState = MPSConnectionState.NO_CONNECTION;
+                    break;
+                }
                 default:
-                    {
-                        LoggerAccessor.LogWarn($"UNHANDLED MPS MESSAGE: {message}");
+                {
+                    LoggerAccessor.LogWarn($"[MPSClient] - UNHANDLED MPS MESSAGE: {message}");
 
-                        break;
-                    }
+                    break;
+                }
             }
 
             return;
@@ -428,136 +513,179 @@ namespace Horizon.DME
             switch (message)
             {
                 case MediusServerCreateGameWithAttributesRequest createGameWithAttributesRequest:
+                {
+                    try
                     {
-                        try
+                        if (
+                            createGameWithAttributesRequest.MessageID != null
+                            && createGameWithAttributesRequest.MessageID.Value.Contains('-')
+                        )
                         {
-                            if (createGameWithAttributesRequest.MessageID != null && createGameWithAttributesRequest.MessageID.Value.Contains('-'))
+                            var offseted = false;
+                            var partyType = 0;
+                            var gameOrPartyId = 0;
+                            var accountId = 0;
+                            var msgId = string.Empty;
+
+                            var messageParts =
+                                createGameWithAttributesRequest.MessageID.Value.Split('-');
+
+                            if (messageParts.Length == 5) // This is an ugly hack, anonymous accounts can have a negative ID which messes up the traditional parser.
                             {
-                                bool offseted = false;
-                                int partyType = 0;
-                                int gameOrPartyId = 0;
-                                int accountId = 0;
-                                string msgId = string.Empty;
+                                offseted = true;
+                                gameOrPartyId = int.Parse(messageParts[0]);
+                                accountId = -int.Parse(messageParts[2]);
+                                msgId = messageParts[3];
+                            }
+                            else if (
+                                int.TryParse(messageParts[0], out gameOrPartyId)
+                                && int.TryParse(messageParts[1], out accountId)
+                            )
+                                msgId = messageParts[2];
+                            else
+                            {
+                                LoggerAccessor.LogWarn(
+                                    "[MPSClient] - MediusServerCreateGameWithAttributesRequest received an invalid MessageID, ignoring request..."
+                                );
+                                break;
+                            }
 
-                                string[] messageParts = createGameWithAttributesRequest.MessageID.Value.Split('-');
+                            try
+                            {
+                                partyType = offseted
+                                    ? int.Parse(messageParts[4])
+                                    : int.Parse(messageParts[3]);
+                            }
+                            catch
+                            {
+                                // Not Important.
+                            }
 
-                                if (messageParts.Length == 5) // This is an ugly hack, anonymous accounts can have a negative ID which messes up the traditional parser.
-                                {
-                                    offseted = true;
-                                    gameOrPartyId = int.Parse(messageParts[0]);
-                                    accountId = -int.Parse(messageParts[2]);
-                                    msgId = messageParts[3];
-                                }
-                                else if (int.TryParse(messageParts[0], out gameOrPartyId) &&
-                                    int.TryParse(messageParts[1], out accountId))
-                                    msgId = messageParts[2];
-                                else
-                                {
-                                    LoggerAccessor.LogWarn("[MPSClient] - MediusServerCreateGameWithAttributesRequest received an invalid MessageID, ignoring request...");
-                                    break;
-                                }
+                            World world = new(
+                                this,
+                                createGameWithAttributesRequest.ApplicationID,
+                                createGameWithAttributesRequest.MaxClients,
+                                gameOrPartyId
+                            );
 
-                                try
-                                {
-                                    if (offseted)
-                                        partyType = int.Parse(messageParts[4]);
-                                    else
-                                        partyType = int.Parse(messageParts[3]);
-                                }
-                                catch
-                                {
-                                    // Not Important.
-                                }
-
-                                World world = new(this, createGameWithAttributesRequest.ApplicationID, createGameWithAttributesRequest.MaxClients, gameOrPartyId);
-
-                                if (world.WorldId == -1)
-                                    Enqueue(new MediusServerCreateGameWithAttributesResponse()
+                            if (world.WorldId == -1)
+                                Enqueue(
+                                    new MediusServerCreateGameWithAttributesResponse()
                                     {
-                                        MessageID = new MessageId($"{world.MediusWorldId}-{accountId}-{msgId}-{partyType}"),
-                                        Confirmation = MGCL_ERROR_CODE.MGCL_WORLDID_INUSE
-                                    });
-                                else
-                                {
-                                    _worlds.Add(world);
+                                        MessageID = new MessageId(
+                                            $"{world.MediusWorldId}-{accountId}-{msgId}-{partyType}"
+                                        ),
+                                        Confirmation = MGCL_ERROR_CODE.MGCL_WORLDID_INUSE,
+                                    }
+                                );
+                            else
+                            {
+                                _worlds.Add(world);
 
-                                    Enqueue(new MediusServerCreateGameWithAttributesResponse()
+                                Enqueue(
+                                    new MediusServerCreateGameWithAttributesResponse()
                                     {
-                                        MessageID = new MessageId($"{world.MediusWorldId}-{accountId}-{msgId}-{partyType}"),
+                                        MessageID = new MessageId(
+                                            $"{world.MediusWorldId}-{accountId}-{msgId}-{partyType}"
+                                        ),
                                         Confirmation = MGCL_ERROR_CODE.MGCL_SUCCESS,
                                         MediusWorldId = gameOrPartyId,
-                                    });
-                                }
+                                    }
+                                );
                             }
                         }
-                        catch (Exception e)
-                        {
-                            LoggerAccessor.LogError($"[MPSClient] - ProcessMediusMessage errored out at {e}");
-                        }
-
-                        break;
                     }
-                case MediusServerJoinGameRequest joinGameRequest:
+                    catch (Exception e)
                     {
-                        if (int.TryParse(joinGameRequest.MessageID?.Value.Split('-')[0], out int gameOrPartyId))
-                        {
-                            World? world = _worlds.FirstOrDefault(x => x.MediusWorldId == gameOrPartyId && !x.Destroyed);
-                            if (world == null)
-                                Enqueue(new MediusServerJoinGameResponse()
+                        LoggerAccessor.LogError(
+                            $"[MPSClient] - ProcessMediusMessage errored out at {e}"
+                        );
+                    }
+
+                    break;
+                }
+                case MediusServerJoinGameRequest joinGameRequest:
+                {
+                    if (
+                        int.TryParse(
+                            joinGameRequest.MessageID?.Value.Split('-')[0],
+                            out var gameOrPartyId
+                        )
+                    )
+                    {
+                        var world = _worlds.FirstOrDefault(x =>
+                            x.MediusWorldId == gameOrPartyId && !x.Destroyed
+                        );
+                        if (world == null)
+                            Enqueue(
+                                new MediusServerJoinGameResponse()
                                 {
                                     MessageID = joinGameRequest.MessageID,
                                     Confirmation = MGCL_ERROR_CODE.MGCL_INVALID_ARG,
-                                });
-                            else
-                                _ = world.EnqueueJoinGame(joinGameRequest);
-                        }
+                                }
+                            );
                         else
-                        {
-                            LoggerAccessor.LogWarn("[MPSClient] - joinGameRequest received an invalid MessageID, ignoring request...");
+                            _ = world.EnqueueJoinGame(joinGameRequest);
+                    }
+                    else
+                    {
+                        LoggerAccessor.LogWarn(
+                            "[MPSClient] - joinGameRequest received an invalid MessageID, ignoring request..."
+                        );
 
-                            Enqueue(new MediusServerJoinGameResponse()
+                        Enqueue(
+                            new MediusServerJoinGameResponse()
                             {
                                 MessageID = joinGameRequest.MessageID,
                                 Confirmation = MGCL_ERROR_CODE.MGCL_DME_ERROR,
-                            });
-                        }
-
-                        break;
+                            }
+                        );
                     }
+
+                    break;
+                }
                 case MediusServerMoveGameWorldOnMeRequest moveGameRequest:
-                    {
-                        World? world = _worlds.FirstOrDefault(x => x.MediusWorldId == moveGameRequest.CurrentMediusWorldID);
-                        if (world == null)
-                            Enqueue(new MediusServerMoveGameWorldOnMeResponse()
+                {
+                    var world = _worlds.FirstOrDefault(x =>
+                        x.MediusWorldId == moveGameRequest.CurrentMediusWorldID
+                    );
+                    if (world == null)
+                        Enqueue(
+                            new MediusServerMoveGameWorldOnMeResponse()
                             {
                                 MessageID = moveGameRequest.MessageID,
                                 Confirmation = MGCL_ERROR_CODE.MGCL_UNSUCCESSFUL,
-                            });
-                        else
-                        {
-                            world.MoveGameWorldId(moveGameRequest.NewGameMediusWorldID);
-                            Enqueue(new MediusServerMoveGameWorldOnMeResponse()
+                            }
+                        );
+                    else
+                    {
+                        world.MoveGameWorldId(moveGameRequest.NewGameMediusWorldID);
+                        Enqueue(
+                            new MediusServerMoveGameWorldOnMeResponse()
                             {
                                 MessageID = moveGameRequest.MessageID,
                                 Confirmation = MGCL_ERROR_CODE.MGCL_SUCCESS,
-                                MediusWorldID = world.MediusWorldId
-                            });
-                        }
-
-                        break;
+                                MediusWorldID = world.MediusWorldId,
+                            }
+                        );
                     }
+
+                    break;
+                }
                 case MediusServerEndGameRequest endGameRequest:
-                    {
-                        _worlds.FirstOrDefault(x => x.MediusWorldId == endGameRequest.MediusWorldID)?.OnEndGameRequest(endGameRequest);
+                {
+                    _worlds
+                        .FirstOrDefault(x => x.MediusWorldId == endGameRequest.MediusWorldID)
+                        ?.OnEndGameRequest(endGameRequest);
 
-                        break;
-                    }
+                    break;
+                }
                 default:
-                    {
-                        LoggerAccessor.LogWarn($"UNHANDLED MPS MESSAGE: {message}");
+                {
+                    LoggerAccessor.LogWarn($"[MPSClient] - UNHANDLED MPS MESSAGE: {message}");
 
-                        break;
-                    }
+                    break;
+                }
             }
 
             return Task.CompletedTask;

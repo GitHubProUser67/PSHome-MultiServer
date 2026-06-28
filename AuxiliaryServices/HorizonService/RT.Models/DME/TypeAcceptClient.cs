@@ -1,13 +1,11 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     [MediusMessage(NetMessageClass.MessageClassDME, MediusDmeMessageIds.AcceptClient)]
     public class TypeAcceptClient : BaseDMEMessage
     {
-
         public override byte PacketType => (byte)MediusDmeMessageIds.AcceptClient;
 
         public short NetObjectBufferStart;
@@ -29,12 +27,12 @@ namespace Horizon.RT.Models
             writer.Write(NetDataStreamStart);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"NetObjectBufferStart: {NetObjectBufferStart} " +
-                $"NetDataStreamStart: {NetDataStreamStart}";
+            return base.ToString()
+                + " "
+                + $"NetObjectBufferStart: {NetObjectBufferStart} "
+                + $"NetDataStreamStart: {NetDataStreamStart}";
         }
     }
 }

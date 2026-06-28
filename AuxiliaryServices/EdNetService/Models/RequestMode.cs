@@ -3,6 +3,6 @@
     public enum RequestMode
     {
         Unreliable = 1,
-        Reliable
+        Reliable,
     }
 }

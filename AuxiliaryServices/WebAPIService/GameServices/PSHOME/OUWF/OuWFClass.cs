@@ -1,21 +1,13 @@
-using CustomLogger;
-using System;
 using System.Text;
+using CustomLogger;
 
 namespace WebAPIService.GameServices.PSHOME.OUWF
 {
-    public class OuWFClass
+    public class OuWFClass(string method, string absolutepath, string workpath)
     {
-        string workpath;
-        string absolutepath;
-        string method;
-
-        public OuWFClass(string method, string absolutepath, string workpath)
-        {
-            this.workpath = workpath;
-            this.absolutepath = absolutepath;
-            this.method = method;
-        }
+        readonly string workpath = workpath;
+        readonly string absolutepath = absolutepath;
+        readonly string method = method;
 
         public string ProcessRequest(byte[] PostData, string ContentType)
         {
@@ -27,7 +19,6 @@ namespace WebAPIService.GameServices.PSHOME.OUWF
                 case "POST":
                     switch (absolutepath)
                     {
-
                         case "/list/":
                             return OuWFList.List(PostData, ContentType);
                         case "/scrape/":
@@ -38,7 +29,9 @@ namespace WebAPIService.GameServices.PSHOME.OUWF
                             return OuWFExecute.Execute(PostData, ContentType);
                         default:
                             {
-                                LoggerAccessor.LogError($"[OuWF] - Unhandled server request discovered: {absolutepath} | DETAILS: \n{Encoding.UTF8.GetString(PostData)}");
+                                LoggerAccessor.LogError(
+                                    $"[OuWF] - Unhandled server request discovered: {absolutepath} | DETAILS: \n{Encoding.UTF8.GetString(PostData)}"
+                                );
                             }
                             break;
                     }

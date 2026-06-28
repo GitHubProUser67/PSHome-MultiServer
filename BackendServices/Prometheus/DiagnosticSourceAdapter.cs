@@ -1,4 +1,3 @@
-﻿#if NET
 using System.Diagnostics;
 
 namespace Prometheus;
@@ -17,23 +16,30 @@ public sealed class DiagnosticSourceAdapter : IDisposable
     /// Starts listening for DiagnosticSource events and reporting them as Prometheus metrics.
     /// Dispose of the return value to stop listening.
     /// </summary>
-    public static IDisposable StartListening() => StartListening(DiagnosticSourceAdapterOptions.Default);
+    public static IDisposable StartListening() =>
+        StartListening(DiagnosticSourceAdapterOptions.Default);
 
     /// <summary>
     /// Starts listening for DiagnosticSource events and reporting them as Prometheus metrics.
     /// Dispose of the return value to stop listening.
     /// </summary>
-    public static IDisposable StartListening(DiagnosticSourceAdapterOptions options) => new DiagnosticSourceAdapter(options);
+    public static IDisposable StartListening(DiagnosticSourceAdapterOptions options) =>
+        new DiagnosticSourceAdapter(options);
 
     private DiagnosticSourceAdapter(DiagnosticSourceAdapterOptions options)
     {
         _options = options;
-        _metric = Metrics.WithCustomRegistry(options.Registry)
-            .CreateCounter("diagnostic_events_total", "Total count of events received via the DiagnosticSource infrastructure.", labelNames: new[]
-            {
-                "source", // Name of the DiagnosticSource
-                "event" // Name of the event
-            });
+        _metric = Metrics
+            .WithCustomRegistry(options.Registry)
+            .CreateCounter(
+                "diagnostic_events_total",
+                "Total count of events received via the DiagnosticSource infrastructure.",
+                labelNames:
+                [
+                    "source", // Name of the DiagnosticSource
+                    "event", // Name of the event
+                ]
+            );
 
         var newListenerObserver = new NewListenerObserver(OnNewListener);
         _newListenerSubscription = DiagnosticListener.AllListeners.Subscribe(newListenerObserver);
@@ -45,8 +51,8 @@ public sealed class DiagnosticSourceAdapter : IDisposable
     private readonly IDisposable _newListenerSubscription;
 
     // listener name -> subscription
-    private readonly Dictionary<string, IDisposable> _newEventSubscription = new Dictionary<string, IDisposable>();
-    private readonly object _newEventSubscriptionLock = new object();
+    private readonly Dictionary<string, IDisposable> _newEventSubscription = [];
+    private readonly object _newEventSubscriptionLock = new();
 
     private void OnNewListener(DiagnosticListener listener)
     {
@@ -62,7 +68,9 @@ public sealed class DiagnosticSourceAdapter : IDisposable
                 return;
 
             var listenerName = listener.Name;
-            var newEventObserver = new NewEventObserver(kvp => OnEvent(listenerName, kvp.Key, kvp.Value));
+            var newEventObserver = new NewEventObserver(kvp =>
+                OnEvent(listenerName, kvp.Key, kvp.Value)
+            );
             _newEventSubscription[listenerName] = listener.Subscribe(newEventObserver);
         }
     }
@@ -72,15 +80,12 @@ public sealed class DiagnosticSourceAdapter : IDisposable
         _metric.WithLabels(listenerName, eventName).Inc();
     }
 
-    private sealed class NewListenerObserver(Action<DiagnosticListener> onNewListener) : IObserver<DiagnosticListener>
+    private sealed class NewListenerObserver(Action<DiagnosticListener> onNewListener)
+        : IObserver<DiagnosticListener>
     {
-        public void OnCompleted()
-        {
-        }
+        public void OnCompleted() { }
 
-        public void OnError(Exception error)
-        {
-        }
+        public void OnError(Exception error) { }
 
         public void OnNext(DiagnosticListener listener)
         {
@@ -88,15 +93,12 @@ public sealed class DiagnosticSourceAdapter : IDisposable
         }
     }
 
-    private sealed class NewEventObserver(Action<KeyValuePair<string, object?>> onEvent) : IObserver<KeyValuePair<string, object?>>
+    private sealed class NewEventObserver(Action<KeyValuePair<string, object?>> onEvent)
+        : IObserver<KeyValuePair<string, object?>>
     {
-        public void OnCompleted()
-        {
-        }
+        public void OnCompleted() { }
 
-        public void OnError(Exception error)
-        {
-        }
+        public void OnError(Exception error) { }
 
         public void OnNext(KeyValuePair<string, object?> receivedEvent)
         {
@@ -115,4 +117,3 @@ public sealed class DiagnosticSourceAdapter : IDisposable
         }
     }
 }
-#endif

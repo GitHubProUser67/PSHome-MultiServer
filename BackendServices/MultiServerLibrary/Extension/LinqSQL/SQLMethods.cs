@@ -33,8 +33,6 @@ For more information, please refer to <http://unlicense.org/>
 * Added a NotLike method, which is the same as Like, but not'd :p
 */
 
-using System;
-
 namespace MultiServerLibrary.Extension.LinqSQL
 {
     public static class SQLMethods
@@ -67,15 +65,21 @@ namespace MultiServerLibrary.Extension.LinqSQL
         /// <param name="MatchValue">The value to evaluate</param>
         /// <param name="Pattern">The pattern to use</param>
         /// <returns>Whether the pattern matches the value to evaluate</returns>
-        public static bool EvaluateIsLike(string MatchValue, string Pattern, char Wildcard = '%', char Placeholder = '_', char Escape = '!')
+        public static bool EvaluateIsLike(
+            string MatchValue,
+            string Pattern,
+            char Wildcard = '%',
+            char Placeholder = '_',
+            char Escape = '!'
+        )
         {
-            LikeParams l = new LikeParams()
+            var l = new LikeParams()
             {
                 MatchValue = MatchValue.ToLowerInvariant(),
                 Pattern = Pattern.ToLowerInvariant(),
                 Wildcard = Wildcard,
                 PlaceHolder = Placeholder,
-                Escape = Escape
+                Escape = Escape,
             };
 
             return EvaluateIsLike(l, 0, 0);
@@ -87,15 +91,21 @@ namespace MultiServerLibrary.Extension.LinqSQL
         /// <param name="MatchValue">The value to evaluate</param>
         /// <param name="Pattern">The pattern to use</param>
         /// <returns>Whether the pattern matches the value to evaluate</returns>
-        public static bool EvaluateIsNotLike(string MatchValue, string Pattern, char Wildcard = '%', char Placeholder = '_', char Escape = '!')
+        public static bool EvaluateIsNotLike(
+            string MatchValue,
+            string Pattern,
+            char Wildcard = '%',
+            char Placeholder = '_',
+            char Escape = '!'
+        )
         {
-            LikeParams l = new LikeParams()
+            var l = new LikeParams()
             {
                 MatchValue = MatchValue.ToLowerInvariant(),
                 Pattern = Pattern.ToLowerInvariant(),
                 Wildcard = Wildcard,
                 PlaceHolder = Placeholder,
-                Escape = Escape
+                Escape = Escape,
             };
 
             return !EvaluateIsLike(l, 0, 0);
@@ -103,7 +113,7 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         private static bool EvaluateIsLike(LikeParams l, int ValuePosition, int PatternPosition)
         {
-            bool IsOnEscape = false;
+            var IsOnEscape = false;
 
             while (true)
             {
@@ -137,7 +147,9 @@ namespace MultiServerLibrary.Extension.LinqSQL
                             IsOnEscape = true;
                             PatternPosition++;
                             if (PatternPosition == l.Pattern.Length)
-                                throw new Exception("Escape character found at end of string - can't use that"); //Run out of characters
+                                throw new Exception(
+                                    "Escape character found at end of string - can't use that"
+                                ); //Run out of characters
                         }
 
                         if (!IsOnEscape && l.Pattern[PatternPosition] == l.PlaceHolder)
@@ -154,34 +166,43 @@ namespace MultiServerLibrary.Extension.LinqSQL
                         }
                         else
                         {
-                            char SearchCharacter = l.Pattern[PatternPosition];
-                            if (IsOnEscape && SearchCharacter != l.Wildcard && SearchCharacter != l.PlaceHolder && SearchCharacter != l.Escape)
-                                throw new Exception("Invalid escape sequence (wildcard scan) - " + PatternPosition);
+                            var SearchCharacter = l.Pattern[PatternPosition];
+                            if (
+                                IsOnEscape
+                                && SearchCharacter != l.Wildcard
+                                && SearchCharacter != l.PlaceHolder
+                                && SearchCharacter != l.Escape
+                            )
+                                throw new Exception(
+                                    "Invalid escape sequence (wildcard scan) - " + PatternPosition
+                                );
 
-                            int start = ValuePosition;
+                            var start = ValuePosition;
                             while (true)
                             {
                                 //Now we can find a starting position for continued Evaluation
-                                start = l.MatchValue != null ? l.MatchValue.IndexOf(SearchCharacter, start) : -1;
+                                start =
+                                    l.MatchValue != null
+                                        ? l.MatchValue.IndexOf(SearchCharacter, start)
+                                        : -1;
                                 if (start == -1)
                                     return false; //Match could not be found
 
                                 if (!IsOnEscape)
                                 {
                                     if (EvaluateIsLike(l, start, PatternPosition))
-                                        return true;  //Pop the true up the stack
+                                        return true; //Pop the true up the stack
                                 }
                                 else
                                 {
                                     if (EvaluateIsLike(l, start, PatternPosition - 1)) //Substract 1 so the recursed function can re-evaluate
-                                        return true;  //Pop the true up the stack
+                                        return true; //Pop the true up the stack
                                 }
 
                                 start++; //Try to find another match
                             }
                         }
                     }
-
                 }
                 else if (!IsOnEscape && l.Pattern?[PatternPosition] == l.PlaceHolder)
                 {
@@ -193,14 +214,30 @@ namespace MultiServerLibrary.Extension.LinqSQL
                     if (ValuePosition == l.MatchValue?.Length)
                         return false; //Characters left over in value, without wildcard in pattern on last character
 
-                    char? ValueCharacter = l.MatchValue?[ValuePosition];
-                    char? PatternCharacter = l.Pattern?[PatternPosition];
+                    var ValueCharacter = l.MatchValue?[ValuePosition];
+                    var PatternCharacter = l.Pattern?[PatternPosition];
 
                     if (!ValueCharacter.HasValue || !PatternCharacter.HasValue)
-                        throw new ArgumentNullException(string.Format("Value and/or Pattern Character was null - {0}", PatternPosition));
+                        throw new ArgumentNullException(
+                            string.Format(
+                                "Value and/or Pattern Character was null - {0}",
+                                PatternPosition
+                            )
+                        );
 
-                    if (IsOnEscape && PatternCharacter.Value != l.Wildcard && PatternCharacter.Value != l.PlaceHolder && PatternCharacter.Value != l.Escape)
-                        throw new Exception(string.Format("Invalid escape sequence - {0} - {1}", PatternPosition, ValueCharacter.Value));
+                    if (
+                        IsOnEscape
+                        && PatternCharacter.Value != l.Wildcard
+                        && PatternCharacter.Value != l.PlaceHolder
+                        && PatternCharacter.Value != l.Escape
+                    )
+                        throw new Exception(
+                            string.Format(
+                                "Invalid escape sequence - {0} - {1}",
+                                PatternPosition,
+                                ValueCharacter.Value
+                            )
+                        );
 
                     if (ValueCharacter.Value != PatternCharacter.Value) //Characters don't match - fail
                         return false;

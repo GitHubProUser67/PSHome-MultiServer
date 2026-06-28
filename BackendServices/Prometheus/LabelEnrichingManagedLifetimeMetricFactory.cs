@@ -1,34 +1,33 @@
-﻿namespace Prometheus;
+namespace Prometheus;
 
 /// <summary>
 /// Applies a set of static labels to lifetime-managed metrics. Multiple instances are functionally equivalent for the same label set.
 /// </summary>
-internal sealed class LabelEnrichingManagedLifetimeMetricFactory : IManagedLifetimeMetricFactory
+internal sealed class LabelEnrichingManagedLifetimeMetricFactory(
+    ManagedLifetimeMetricFactory inner,
+    IDictionary<string, string> enrichWithLabels
+) : IManagedLifetimeMetricFactory
 {
-    public LabelEnrichingManagedLifetimeMetricFactory(ManagedLifetimeMetricFactory inner, IDictionary<string, string> enrichWithLabels)
-    {
-        _inner = inner;
-
-        // We just need the items to be consistently ordered between equivalent instances but it does not actually matter what the order is.
-        _labels = enrichWithLabels.OrderBy(x => x.Key, StringComparer.Ordinal).ToList();
-
-        _enrichWithLabelNames = enrichWithLabels.Select(x => x.Key).ToArray();
-        _enrichWithLabelValues = enrichWithLabels.Select(x => x.Value).ToArray();
-    }
-
-    private readonly ManagedLifetimeMetricFactory _inner;
+    private readonly ManagedLifetimeMetricFactory _inner = inner;
 
     // This is an ordered list because labels have specific order.
-    private readonly IReadOnlyList<KeyValuePair<string, string>> _labels;
+    private readonly IReadOnlyList<KeyValuePair<string, string>> _labels = enrichWithLabels
+        .OrderBy(x => x.Key, StringComparer.Ordinal)
+        .ToList();
 
     // Cache the names/values to enrich with, for reuse.
     // We could perhaps improve even further via StringSequence but that requires creating separate internal APIs so can be a future optimization.
-    private readonly string[] _enrichWithLabelNames;
-    private readonly string[] _enrichWithLabelValues;
+    private readonly string[] _enrichWithLabelNames = [.. enrichWithLabels.Select(x => x.Key)];
+    private readonly string[] _enrichWithLabelValues = [.. enrichWithLabels.Select(x => x.Value)];
 
-    public IManagedLifetimeMetricHandle<ICounter> CreateCounter(string name, string help, string[]? instanceLabelNames, CounterConfiguration? configuration)
+    public IManagedLifetimeMetricHandle<ICounter> CreateCounter(
+        string name,
+        string help,
+        string[]? instanceLabelNames,
+        CounterConfiguration? configuration
+    )
     {
-        var combinedLabelNames = WithEnrichedLabelNames(instanceLabelNames ?? Array.Empty<string>());
+        var combinedLabelNames = WithEnrichedLabelNames(instanceLabelNames ?? []);
         var innerHandle = _inner.CreateCounter(name, help, combinedLabelNames, configuration);
 
         // 1-1 relationship between instance of inner handle and our labeling handle.
@@ -52,20 +51,8 @@ internal sealed class LabelEnrichingManagedLifetimeMetricFactory : IManagedLifet
 
         try
         {
-#if NET
             // It could be that someone beats us to it! Probably not, though.
-            if (_counters.TryAdd(innerHandle, instance))
-                return instance;
-
-            return _counters[innerHandle];
-#else
-            // On .NET Fx we need to do the pessimistic case first because there is no TryAdd().
-            if (_counters.TryGetValue(innerHandle, out var existing))
-                return existing;
-
-            _counters.Add(innerHandle, instance);
-            return instance;
-#endif
+            return _counters.TryAdd(innerHandle, instance) ? instance : _counters[innerHandle];
         }
         finally
         {
@@ -73,14 +60,24 @@ internal sealed class LabelEnrichingManagedLifetimeMetricFactory : IManagedLifet
         }
     }
 
-    private LabelEnrichingManagedLifetimeCounter CreateCounterCore(IManagedLifetimeMetricHandle<ICounter> inner) => new LabelEnrichingManagedLifetimeCounter(inner, _enrichWithLabelValues);
+    private LabelEnrichingManagedLifetimeCounter CreateCounterCore(
+        IManagedLifetimeMetricHandle<ICounter> inner
+    ) => new(inner, _enrichWithLabelValues);
 
-    private readonly Dictionary<IManagedLifetimeMetricHandle<ICounter>, LabelEnrichingManagedLifetimeCounter> _counters = new();
+    private readonly Dictionary<
+        IManagedLifetimeMetricHandle<ICounter>,
+        LabelEnrichingManagedLifetimeCounter
+    > _counters = [];
     private readonly ReaderWriterLockSlim _countersLock = new();
 
-    public IManagedLifetimeMetricHandle<IGauge> CreateGauge(string name, string help, string[]? instanceLabelNames, GaugeConfiguration? configuration)
+    public IManagedLifetimeMetricHandle<IGauge> CreateGauge(
+        string name,
+        string help,
+        string[]? instanceLabelNames,
+        GaugeConfiguration? configuration
+    )
     {
-        var combinedLabelNames = WithEnrichedLabelNames(instanceLabelNames ?? Array.Empty<string>());
+        var combinedLabelNames = WithEnrichedLabelNames(instanceLabelNames ?? []);
         var innerHandle = _inner.CreateGauge(name, help, combinedLabelNames, configuration);
 
         // 1-1 relationship between instance of inner handle and our labeling handle.
@@ -104,20 +101,8 @@ internal sealed class LabelEnrichingManagedLifetimeMetricFactory : IManagedLifet
 
         try
         {
-#if NET
             // It could be that someone beats us to it! Probably not, though.
-            if (_gauges.TryAdd(innerHandle, instance))
-                return instance;
-
-            return _gauges[innerHandle];
-#else
-            // On .NET Fx we need to do the pessimistic case first because there is no TryAdd().
-            if (_gauges.TryGetValue(innerHandle, out var existing))
-                return existing;
-
-            _gauges.Add(innerHandle, instance);
-            return instance;
-#endif
+            return _gauges.TryAdd(innerHandle, instance) ? instance : _gauges[innerHandle];
         }
         finally
         {
@@ -125,13 +110,24 @@ internal sealed class LabelEnrichingManagedLifetimeMetricFactory : IManagedLifet
         }
     }
 
-    private LabelEnrichingManagedLifetimeGauge CreateGaugeCore(IManagedLifetimeMetricHandle<IGauge> inner) => new LabelEnrichingManagedLifetimeGauge(inner, _enrichWithLabelValues);
-    private readonly Dictionary<IManagedLifetimeMetricHandle<IGauge>, LabelEnrichingManagedLifetimeGauge> _gauges = new();
+    private LabelEnrichingManagedLifetimeGauge CreateGaugeCore(
+        IManagedLifetimeMetricHandle<IGauge> inner
+    ) => new(inner, _enrichWithLabelValues);
+
+    private readonly Dictionary<
+        IManagedLifetimeMetricHandle<IGauge>,
+        LabelEnrichingManagedLifetimeGauge
+    > _gauges = [];
     private readonly ReaderWriterLockSlim _gaugesLock = new();
 
-    public IManagedLifetimeMetricHandle<IHistogram> CreateHistogram(string name, string help, string[]? instanceLabelNames, HistogramConfiguration? configuration)
+    public IManagedLifetimeMetricHandle<IHistogram> CreateHistogram(
+        string name,
+        string help,
+        string[]? instanceLabelNames,
+        HistogramConfiguration? configuration
+    )
     {
-        var combinedLabelNames = WithEnrichedLabelNames(instanceLabelNames ?? Array.Empty<string>());
+        var combinedLabelNames = WithEnrichedLabelNames(instanceLabelNames ?? []);
         var innerHandle = _inner.CreateHistogram(name, help, combinedLabelNames, configuration);
 
         // 1-1 relationship between instance of inner handle and our labeling handle.
@@ -155,20 +151,8 @@ internal sealed class LabelEnrichingManagedLifetimeMetricFactory : IManagedLifet
 
         try
         {
-#if NET
             // It could be that someone beats us to it! Probably not, though.
-            if (_histograms.TryAdd(innerHandle, instance))
-                return instance;
-
-            return _histograms[innerHandle];
-#else
-            // On .NET Fx we need to do the pessimistic case first because there is no TryAdd().
-            if (_histograms.TryGetValue(innerHandle, out var existing))
-                return existing;
-
-            _histograms.Add(innerHandle, instance);
-            return instance;
-#endif
+            return _histograms.TryAdd(innerHandle, instance) ? instance : _histograms[innerHandle];
         }
         finally
         {
@@ -176,13 +160,24 @@ internal sealed class LabelEnrichingManagedLifetimeMetricFactory : IManagedLifet
         }
     }
 
-    private LabelEnrichingManagedLifetimeHistogram CreateHistogramCore(IManagedLifetimeMetricHandle<IHistogram> inner) => new LabelEnrichingManagedLifetimeHistogram(inner, _enrichWithLabelValues);
-    private readonly Dictionary<IManagedLifetimeMetricHandle<IHistogram>, LabelEnrichingManagedLifetimeHistogram> _histograms = new();
+    private LabelEnrichingManagedLifetimeHistogram CreateHistogramCore(
+        IManagedLifetimeMetricHandle<IHistogram> inner
+    ) => new(inner, _enrichWithLabelValues);
+
+    private readonly Dictionary<
+        IManagedLifetimeMetricHandle<IHistogram>,
+        LabelEnrichingManagedLifetimeHistogram
+    > _histograms = [];
     private readonly ReaderWriterLockSlim _histogramsLock = new();
 
-    public IManagedLifetimeMetricHandle<ISummary> CreateSummary(string name, string help, string[]? instanceLabelNames, SummaryConfiguration? configuration)
+    public IManagedLifetimeMetricHandle<ISummary> CreateSummary(
+        string name,
+        string help,
+        string[]? instanceLabelNames,
+        SummaryConfiguration? configuration
+    )
     {
-        var combinedLabelNames = WithEnrichedLabelNames(instanceLabelNames ?? Array.Empty<string>());
+        var combinedLabelNames = WithEnrichedLabelNames(instanceLabelNames ?? []);
         var innerHandle = _inner.CreateSummary(name, help, combinedLabelNames, configuration);
 
         // 1-1 relationship between instance of inner handle and our labeling handle.
@@ -206,20 +201,8 @@ internal sealed class LabelEnrichingManagedLifetimeMetricFactory : IManagedLifet
 
         try
         {
-#if NET
             // It could be that someone beats us to it! Probably not, though.
-            if (_summaries.TryAdd(innerHandle, instance))
-                return instance;
-
-            return _summaries[innerHandle];
-#else
-            // On .NET Fx we need to do the pessimistic case first because there is no TryAdd().
-            if (_summaries.TryGetValue(innerHandle, out var existing))
-                return existing;
-
-            _summaries.Add(innerHandle, instance);
-            return instance;
-#endif
+            return _summaries.TryAdd(innerHandle, instance) ? instance : _summaries[innerHandle];
         }
         finally
         {
@@ -227,8 +210,14 @@ internal sealed class LabelEnrichingManagedLifetimeMetricFactory : IManagedLifet
         }
     }
 
-    private LabelEnrichingManagedLifetimeSummary CreateSummaryCore(IManagedLifetimeMetricHandle<ISummary> inner) => new LabelEnrichingManagedLifetimeSummary(inner, _enrichWithLabelValues);
-    private readonly Dictionary<IManagedLifetimeMetricHandle<ISummary>, LabelEnrichingManagedLifetimeSummary> _summaries = new();
+    private LabelEnrichingManagedLifetimeSummary CreateSummaryCore(
+        IManagedLifetimeMetricHandle<ISummary> inner
+    ) => new(inner, _enrichWithLabelValues);
+
+    private readonly Dictionary<
+        IManagedLifetimeMetricHandle<ISummary>,
+        LabelEnrichingManagedLifetimeSummary
+    > _summaries = [];
     private readonly ReaderWriterLockSlim _summariesLock = new();
 
     public IManagedLifetimeMetricFactory WithLabels(IDictionary<string, string> labels)
@@ -242,6 +231,6 @@ internal sealed class LabelEnrichingManagedLifetimeMetricFactory : IManagedLifet
     private string[] WithEnrichedLabelNames(string[] instanceLabelNames)
     {
         // Enrichment labels always go first when we are communicating with the inner factory.
-        return _enrichWithLabelNames.Concat(instanceLabelNames).ToArray();
+        return [.. _enrichWithLabelNames, .. instanceLabelNames];
     }
 }

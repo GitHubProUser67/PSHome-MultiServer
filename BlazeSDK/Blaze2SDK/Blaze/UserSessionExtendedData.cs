@@ -1,5 +1,5 @@
-using Blaze2SDK.Blaze.Util;
 using System.ComponentModel.DataAnnotations;
+using Blaze2SDK.Blaze.Util;
 using Tdf;
 
 namespace Blaze2SDK.Blaze
@@ -7,7 +7,6 @@ namespace Blaze2SDK.Blaze
     [TdfStruct]
     public struct UserSessionExtendedData
     {
-
         [TdfMember("ADDR")]
         public NetworkAddress mAddress;
 
@@ -45,6 +44,5 @@ namespace Blaze2SDK.Blaze
 
         [TdfMember("ULST")]
         public List<ulong> mBlazeObjectIdList;
-
     }
 }

@@ -10,20 +10,40 @@ internal interface IMetricsSerializer
     /// <summary>
     /// Writes the lines that declare the metric family.
     /// </summary>
-    ValueTask WriteFamilyDeclarationAsync(string name, byte[] nameBytes, byte[] helpBytes, MetricType type,
-        byte[] typeBytes, CancellationToken cancel);
+    ValueTask WriteFamilyDeclarationAsync(
+        string name,
+        byte[] nameBytes,
+        byte[] helpBytes,
+        MetricType type,
+        byte[] typeBytes,
+        CancellationToken cancel
+    );
 
     /// <summary>
     /// Writes out a single metric point with a floating point value.
     /// </summary>
-    ValueTask WriteMetricPointAsync(byte[] name, byte[] flattenedLabels, CanonicalLabel extraLabel,
-        double value, ObservedExemplar exemplar, byte[]? suffix, CancellationToken cancel);
+    ValueTask WriteMetricPointAsync(
+        byte[] name,
+        byte[] flattenedLabels,
+        CanonicalLabel extraLabel,
+        double value,
+        ObservedExemplar exemplar,
+        byte[]? suffix,
+        CancellationToken cancel
+    );
 
     /// <summary>
     /// Writes out a single metric point with an integer value.
     /// </summary>
-    ValueTask WriteMetricPointAsync(byte[] name, byte[] flattenedLabels, CanonicalLabel extraLabel,
-        long value, ObservedExemplar exemplar, byte[]? suffix, CancellationToken cancel);
+    ValueTask WriteMetricPointAsync(
+        byte[] name,
+        byte[] flattenedLabels,
+        CanonicalLabel extraLabel,
+        long value,
+        ObservedExemplar exemplar,
+        byte[]? suffix,
+        CancellationToken cancel
+    );
 
     /// <summary>
     /// Writes out terminal lines

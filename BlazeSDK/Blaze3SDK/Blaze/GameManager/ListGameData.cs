@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct ListGameData
-	{
+    [TdfStruct]
+    public struct ListGameData
+    {
+        [TdfMember("GAME")]
+        public ReplicatedGameData mGame;
 
-		[TdfMember("GAME")]
-		public ReplicatedGameData mGame;
-
-		[TdfMember("PROS")]
-		public List<ReplicatedGamePlayer> mGameRoster;
-
-	}
+        [TdfMember("PROS")]
+        public List<ReplicatedGamePlayer> mGameRoster;
+    }
 }

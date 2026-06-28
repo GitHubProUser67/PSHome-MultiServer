@@ -1,19 +1,14 @@
 namespace BlazeCommon.PacketDisplayAttributes
 {
-    public class DisplayAsDateTime : Attribute
+    public class DisplayAsDateTime(TimeFormat format) : Attribute
     {
-        public TimeFormat Format { get; set; }
-
-        public DisplayAsDateTime(TimeFormat format)
-        {
-            Format = format;
-        }
+        public TimeFormat Format { get; set; } = format;
     }
 
     public enum TimeFormat
     {
         UnixSeconds,
         UnixMilliseconds,
-        UnixMicroseconds
+        UnixMicroseconds,
     }
 }

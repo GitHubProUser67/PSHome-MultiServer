@@ -1,20 +1,21 @@
+using System.Text;
+using CastleLibrary.NetHasher.CRC;
+using MultiServerLibrary.Extension.NET;
 using MultiSocks.Aries.DataStore;
-using MultiSocks.Aries.Messages;
-using MultiSocks.Aries.Messages.AccountService;
-using MultiSocks.Aries.Messages.AccountService.ErrorCodes;
-using MultiSocks.Aries.Messages.AuthService;
-using MultiSocks.Aries.Messages.AuthService.News;
-using MultiSocks.Aries.Messages.PersonaService;
+using MultiSocks.Aries.Components;
+using MultiSocks.Aries.Components.AccountService;
+using MultiSocks.Aries.Components.AccountService.ErrorCodes;
+using MultiSocks.Aries.Components.AuthService;
+using MultiSocks.Aries.Components.AuthService.News;
+using MultiSocks.Aries.Components.PersonaService;
 using MultiSocks.Aries.Model;
 using MultiSocks.Utils;
-using NetHasher.CRC;
-using System.Text;
 
 namespace MultiSocks.Aries
 {
     public class MatchmakerServer : AbstractAriesServer
     {
-        private readonly UniqueIDGenerator _guestIdGen = new UniqueIDGenerator();
+        private readonly UniqueIDGenerator _guestIdGen = new();
 
         public override Dictionary<string, Type?> NameToClass { get; } =
             new Dictionary<string, Type?>()
@@ -36,7 +37,7 @@ namespace MultiSocks.Aries
                 { "fget", typeof(Fget) }, // get friend/rival list
                 { "fupd", typeof(Fupd) }, // Update friend/rival lists in user record
                 { "fupr", typeof(Fupr) }, //?
-                { "hchk", typeof(Hchk) }, //?
+                { "hchk", typeof(Hchk) }, // HashCHecK?
                 { "peek", typeof(Peek) }, //Audit room and receive infos about it, but not enter.
                 { "pent", typeof(Pent) }, // Purchase entitlement.
                 { "pers", typeof(Pers) }, //select persona
@@ -72,15 +73,15 @@ namespace MultiSocks.Aries
                 { "rank", typeof(Rank) }, //unknown. { RANK = "Unranked", TIME = 866 }
                 { "tcup", typeof(Tcup) }, // Time Challenge Score Upload?
                 { "snap", typeof(Snap) }, // Get Leaderboard snapshot
-                { "quik", typeof(Quik) }, // Old version Quick Match
+                { "quik", null }, // Old version Quick Match
                 { "rept", typeof(Rept) }, // Submit a Report about a user
                 { "rcat", typeof(Rcat) }, // Fetch room category information
                 { "priv", typeof(Priv) }, // Set Private Message mode.
                 { "qdef", typeof(Qdef) }, // Quick Message Defaults -- load a user's default quickmessages.
-                { "flag", typeof(Flag) }, // Set attribute flags.
-                { "ucre", typeof(Ucre) }, // Create a new user set. A user set maps a set of online users into a group.
-                { "uatr", typeof(Uatr) }, // Update user attributes and hardware flags
-                { "lggr", typeof(Lggr) } // Client -> Server logger 
+                { "flag", null }, // Set attribute flags.
+                { "ucre", null }, // Create a new user set. A user set maps a set of online users into a group.
+                { "uatr", null }, // Update user attributes and hardware flags
+                { "lggr", typeof(Lggr) }, // Client -> Server logger
             };
 
         public UserCollection Users = new();
@@ -89,7 +90,17 @@ namespace MultiSocks.Aries
 
         private readonly Thread PingThread;
 
-        public MatchmakerServer(ushort port, string listenIP, List<Tuple<string, bool>>? RoomToAdd = null, string? Project = null, string? SKU = null, bool secure = false, string CN = "", bool WeakChainSignedRSAKey = false) : base(port, listenIP, Project, SKU, secure, CN, WeakChainSignedRSAKey)
+        public MatchmakerServer(
+            ushort port,
+            string listenIP,
+            List<Tuple<string, bool>>? RoomToAdd = null,
+            string? Project = null,
+            string? SKU = null,
+            bool secure = false,
+            string CN = "",
+            bool WeakChainSignedRSAKey = false
+        )
+            : base(port, listenIP, Project, SKU, secure, CN, WeakChainSignedRSAKey)
         {
             Rooms.Server = this;
 
@@ -105,7 +116,9 @@ namespace MultiSocks.Aries
                 {
                     foreach (var pair in RoomToAdd)
                     {
-                        CustomLogger.LoggerAccessor.LogInfo($"[MatchmakerServer] - Adding Room: {pair.Item1}, {(pair.Item2 ? ("With Global Availability: " + pair.Item2 + " ") : string.Empty)}on Port: {port}");
+                        CustomLogger.LoggerAccessor.LogInfo(
+                            $"[MatchmakerServer] - Adding Room: {pair.Item1}, {(pair.Item2 ? ("With Global Availability: " + pair.Item2 + " ") : string.Empty)}on Port: {port}"
+                        );
                         Rooms.AddRoom(new AriesRoom() { Name = pair.Item1, IsGlobal = pair.Item2 });
                     }
                 }
@@ -125,7 +138,7 @@ namespace MultiSocks.Aries
 
         public Task BroadcastGamesListDetails()
         {
-            foreach (AriesGame game in Games.GamesSessions.Values)
+            foreach (var game in Games.GamesSessions.Values)
             {
                 Broadcast(game.GetGameDetails("+gam"));
             }
@@ -139,43 +152,48 @@ namespace MultiSocks.Aries
 
             //clean up this user's state.
             //are they logged in?
-            AriesUser? user = client.User;
+            var user = client.User;
             if (user != null)
             {
                 Users.RemoveUser(user);
 
-                AriesGame? game = user.CurrentGame;
-                AriesRoom? room = user.CurrentRoom;
+                var game = user.CurrentGame;
+                var room = user.CurrentRoom;
                 if (game != null && game.RemoveUserAndCheckGameValidity(user))
                     Games.RemoveGame(game);
 
                 if (room != null && room.Users.RemoveUserAndCheckRoomValidity(user))
-                   Rooms.RemoveRoom(room);
+                    Rooms.RemoveRoom(room);
             }
         }
 
         public void SendToPersona(string name, AbstractMessage msg)
         {
-            AriesUser? user = Users.GetUserByPersonaName(name);
+            var user = Users.GetUserByPersonaName(name);
             user?.Connection?.SendMessage(msg);
         }
 
-        public void TryLogin(DbAccount user, AriesClient client, string? PASS, string LOC, string? MAC, string? TOKEN)
+        public void TryLogin(
+            DbAccount user,
+            AriesClient client,
+            string? PASS,
+            string LOC,
+            string? MAC,
+            string? TOKEN
+        )
         {
             //is someone else already logged in as this user?
-            AriesUser? oldUser = Users.GetUserByName(user.Username);
+            var oldUser = Users.GetUserByName(user.Username);
             if (oldUser != null)
             {
                 client.SendMessage(new AuthLogn());
                 return;
             }
 
-            string? DecryptedPass = PasswordUtils.Ssc2Decode(PASS, client.SKEY);
+            var DecryptedPass = PasswordUtils.Ssc2Decode(PASS, client.SKEY);
 
             if (DecryptedPass == string.Empty) // EA assumed that Consoles protect the login so they crypt an empty password, extremly bad, but can't do anything.
-            {
-
-            }
+            { }
             else if (user.Password != DecryptedPass)
             {
                 client.SendMessage(new AuthPass());
@@ -184,8 +202,8 @@ namespace MultiSocks.Aries
 
             CustomLogger.LoggerAccessor.LogInfo("Logged in: " + user.Username);
 
-            string[] personas = new string[user.Personas.Count];
-            for (int i = 0; i < user.Personas.Count; i++)
+            var personas = new string[user.Personas.Count];
+            for (var i = 0; i < user.Personas.Count; i++)
             {
                 personas[i] = user.Personas[i];
             }
@@ -202,7 +220,7 @@ namespace MultiSocks.Aries
                 Username = user.Username,
                 ADDR = client.ADDR,
                 LADDR = client.LADDR,
-                LOC = LOC
+                LOC = LOC,
             };
 
             Users.AddUser(user2);
@@ -210,39 +228,59 @@ namespace MultiSocks.Aries
 
             Dictionary<string, string?> OutputCache;
 
-            if (client.VERS.Contains("BURNOUT5") || client.VERS.Contains("DPR-09") || (client.VERS.Contains("NASCAR09") && client.SKU == "PS3"))
+            if (
+                client.VERS.Contains("BURNOUT5")
+                || client.VERS.Contains("BOTTEST")
+                || (
+                    (
+                        client.VERS.Contains("PS3/DEV")
+                        || client.VERS.Contains("NASCAR09")
+                        || client.VERS.Contains("NBA08")
+                    )
+                    && client.SKU == "PS3"
+                )
+            )
             {
-                OutputCache = new() {
-                { "LAST", DateTime.Now.ToString("yyyy.M.d-HH:mm:ss") },
-                { "TOS", user.TOS },
-                { "SHARE", user.SHARE },
-                { "_LUID", "$00000000000003fe" },
-                { "NAME", user.Username },
-                { "PERSONAS", string.Join(',', user.Personas) },
-                { "MAIL", user.MAIL }, 
-                { "BORN", "19700101" },
-                { "FROM", user2.LOC[2..] },
-                { "LOC", user2.LOC },
-                { "SPAM", "NN" },
-                { "SINCE", "2008.1.1-00:00:00" },
-                { "GFIDS", "1" },
-                { "ADDR", client.ADDR },
-                { "TOKEN", (!string.IsNullOrEmpty(TOKEN)) ? TOKEN : "pc6r0gHSgZXe1dgwo_CegjBCn24uzUC7KVq1LJDKJ0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" }};
+                OutputCache = new()
+                {
+                    { "LAST", DateTime.Now.ToString("yyyy.M.d-HH:mm:ss") },
+                    { "TOS", user.TOS },
+                    { "SHARE", user.SHARE },
+                    { "_LUID", "$00000000000003fe" },
+                    { "NAME", user.Username },
+                    { "PERSONAS", string.Join(',', user.Personas) },
+                    { "MAIL", user.MAIL },
+                    { "BORN", "19700101" },
+                    { "FROM", user2.LOC[2..] },
+                    { "LOC", user2.LOC },
+                    { "SPAM", "NN" },
+                    { "SINCE", "2008.1.1-00:00:00" },
+                    { "GFIDS", "1" },
+                    { "ADDR", client.ADDR },
+                    {
+                        "TOKEN",
+                        (!string.IsNullOrEmpty(TOKEN))
+                            ? TOKEN
+                            : "pc6r0gHSgZXe1dgwo_CegjBCn24uzUC7KVq1LJDKJ0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                    },
+                };
 
                 client.SendMessage(new Auth() { OutputCache = OutputCache });
             }
             else
             {
-                OutputCache = new() {
-                { "BORN", "19800325" },
-                { "GEND", "M" },
-                { "FROM", user2.LOC[2..] },
-                { "LANG", user2.LOC[..2] },
-                { "LAST", DateTime.Now.ToString("yyyy.M.d HH:mm:ss") },
-                { "TOS", user.TOS },
-                { "NAME", user.Username },
-                { "MAIL", user.MAIL },
-                { "PERSONAS", string.Join(',', user.Personas) }};
+                OutputCache = new()
+                {
+                    { "BORN", "19800325" },
+                    { "GEND", "M" },
+                    { "FROM", user2.LOC[2..] },
+                    { "LANG", user2.LOC[..2] },
+                    { "LAST", DateTime.Now.ToString("yyyy.M.d HH:mm:ss") },
+                    { "TOS", user.TOS },
+                    { "NAME", user.Username },
+                    { "MAIL", user.MAIL },
+                    { "PERSONAS", string.Join(',', user.Personas) },
+                };
 
                 client.SendMessage(new Auth() { OutputCache = OutputCache });
 
@@ -250,13 +288,19 @@ namespace MultiSocks.Aries
             }
         }
 
-        public void TryGuestLogin(AriesClient client, string? PASS, string LOC, string? MAC, string TOKEN)
+        public void TryGuestLogin(
+            AriesClient client,
+            string? PASS,
+            string LOC,
+            string? MAC,
+            string TOKEN
+        )
         {
             // From: https://github.com/teknogods/eaEmu/blob/master/eaEmu/ea/games/pcburnout08.py#L184
-            string guestUsername = $"guest{_guestIdGen.CreateSequentialID()}";
+            var guestUsername = $"guest{_guestIdGen.CreateSequentialID()}";
 
             //is someone else already logged in as this user?
-            AriesUser? oldUser = Users.GetUserByName(guestUsername);
+            var oldUser = Users.GetUserByName(guestUsername);
             if (oldUser != null)
             {
                 client.SendMessage(new AuthLogn());
@@ -265,19 +309,26 @@ namespace MultiSocks.Aries
 
             CustomLogger.LoggerAccessor.LogInfo("Logged in: " + guestUsername);
 
-            string[] personas = new string[1] { guestUsername };
+            var personas = new string[1] { guestUsername };
 
             // make a user object from DB user
             AriesUser user2 = new()
             {
                 MAC = MAC ?? string.Empty,
                 Connection = client,
-                ID = (int)CRC32.CreateCastagnoli(Encoding.UTF8.GetBytes(guestUsername + (PasswordUtils.Ssc2Decode(PASS, client.SKEY) ?? string.Empty) + "EA")),
+                ID = (int)
+                    CRC32.CreateCastagnoli(
+                        Encoding.UTF8.GetBytes(
+                            guestUsername
+                                + (PasswordUtils.Ssc2Decode(PASS, client.SKEY) ?? string.Empty)
+                                + "EA"
+                        )
+                    ),
                 Personas = personas,
                 Username = guestUsername,
                 ADDR = client.ADDR,
                 LADDR = client.LADDR,
-                LOC = LOC
+                LOC = LOC,
             };
 
             Users.AddUser(user2);
@@ -287,37 +338,41 @@ namespace MultiSocks.Aries
 
             if (client.VERS.Contains("BURNOUT5"))
             {
-                OutputCache = new() {
-                { "LAST", DateTime.Now.ToString("yyyy.M.d-HH:mm:ss") },
-                { "TOS", "1" },
-                { "SHARE", "1" },
-                { "_LUID", "$00000000000003fe" },
-                { "NAME", guestUsername },
-                { "PERSONAS", string.Join(',', personas) },
-                { "MAIL", "user@domain.com" },
-                { "BORN", "19700101" },
-                { "FROM", user2.LOC[2..] },
-                { "LOC", user2.LOC },
-                { "SPAM", "NN" },
-                { "SINCE", "2008.1.1-00:00:00" },
-                { "GFIDS", "1" },
-                { "ADDR", client.ADDR },
-                { "TOKEN", TOKEN }};
+                OutputCache = new()
+                {
+                    { "LAST", DateTime.Now.ToString("yyyy.M.d-HH:mm:ss") },
+                    { "TOS", "1" },
+                    { "SHARE", "1" },
+                    { "_LUID", "$00000000000003fe" },
+                    { "NAME", guestUsername },
+                    { "PERSONAS", string.Join(',', personas) },
+                    { "MAIL", "user@domain.com" },
+                    { "BORN", "19700101" },
+                    { "FROM", user2.LOC[2..] },
+                    { "LOC", user2.LOC },
+                    { "SPAM", "NN" },
+                    { "SINCE", "2008.1.1-00:00:00" },
+                    { "GFIDS", "1" },
+                    { "ADDR", client.ADDR },
+                    { "TOKEN", TOKEN },
+                };
 
                 client.SendMessage(new Auth() { OutputCache = OutputCache });
             }
             else
             {
-                OutputCache = new() {
-                { "BORN", "19800325" },
-                { "GEND", "M" },
-                { "FROM", user2.LOC[2..] },
-                { "LANG", user2.LOC[..2] },
-                { "LAST", DateTime.Now.ToString("yyyy.M.d HH:mm:ss") },
-                { "TOS", "1" },
-                { "NAME", guestUsername },
-                { "MAIL", "user@domain.com" },
-                { "PERSONAS", string.Join(',', personas) }};
+                OutputCache = new()
+                {
+                    { "BORN", "19800325" },
+                    { "GEND", "M" },
+                    { "FROM", user2.LOC[2..] },
+                    { "LANG", user2.LOC[..2] },
+                    { "LAST", DateTime.Now.ToString("yyyy.M.d HH:mm:ss") },
+                    { "TOS", "1" },
+                    { "NAME", guestUsername },
+                    { "MAIL", "user@domain.com" },
+                    { "PERSONAS", string.Join(',', personas) },
+                };
 
                 client.SendMessage(new Auth() { OutputCache = OutputCache });
 

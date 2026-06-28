@@ -1,12 +1,14 @@
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.TicketLoginResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.TicketLoginResponse
+    )]
     public class MediusTicketLoginResponse : BaseLobbyExtMessage, IMediusResponse
     {
-
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.TicketLoginResponse;
 
         public bool IsSuccess => StatusCodeTicketLogin >= 0;
@@ -26,13 +28,10 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             reader.ReadBytes(3);
             StatusCodeTicketLogin = reader.Read<MediusCallbackStatus>();
             PasswordType = reader.Read<MediusPasswordType>();
@@ -48,13 +47,10 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(new byte[3]);
             writer.Write(StatusCodeTicketLogin);
             writer.Write(PasswordType);
@@ -68,19 +64,19 @@ namespace Horizon.RT.Models
             writer.Write(ConnectInfo);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                    $"MessageIDTicketLogin: {MessageID} " +
-                    $"StatusCodeTicketLogin: {StatusCodeTicketLogin} " +
-                    $"PasswordType: {PasswordType} " +
-                    $"MessageIDAccountLogin: {MessageID2} " +
-                    $"StatusCodeAccountLogin: {StatusCodeAccountLogin} " +
-                    $"AccountID: {AccountID} " +
-                    $"AccountType: {AccountType} " +
-                    $"MediusWorldID: {MediusWorldID} " +
-                    $"ConnectInfo: {ConnectInfo}";
+            return base.ToString()
+                + " "
+                + $"MessageIDTicketLogin: {MessageID} "
+                + $"StatusCodeTicketLogin: {StatusCodeTicketLogin} "
+                + $"PasswordType: {PasswordType} "
+                + $"MessageIDAccountLogin: {MessageID2} "
+                + $"StatusCodeAccountLogin: {StatusCodeAccountLogin} "
+                + $"AccountID: {AccountID} "
+                + $"AccountType: {AccountType} "
+                + $"MediusWorldID: {MediusWorldID} "
+                + $"ConnectInfo: {ConnectInfo}";
         }
     }
 }

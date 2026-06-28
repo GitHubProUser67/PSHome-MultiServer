@@ -1,6 +1,6 @@
-﻿using EdNetService.CRC;
+﻿using System.Net;
+using EdNetService.CRC;
 using EdNetService.Models;
-using System.Net;
 
 namespace EdenServer.EdNet.ProxyMessages.ORB.File
 {
@@ -9,14 +9,19 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
         private const ushort nexttimewait = 5;
         private const ushort chunkSize = 512;
 
-        public override byte[]? Process(IPEndPoint endpoint, IPEndPoint target, ClientTask task, ushort PacketMagic)
+        public override byte[]? Process(
+            IPEndPoint endpoint,
+            IPEndPoint target,
+            ClientTask task,
+            ushort PacketMagic
+        )
         {
-            EdStore request = task.Request;
+            var request = task.Request;
 
-            uint fileid = request.ExtractUInt32();
-            uint offset = request.ExtractUInt32();
+            var fileid = request.ExtractUInt32();
+            var offset = request.ExtractUInt32();
 
-            EdStore response = new EdStore(null, 1400);
+            var response = new EdStore(null, 1400);
 
             response.InsertStart(edStoreBank.CRC_A_ORB_GETFILE);
 
@@ -24,7 +29,9 @@ namespace EdenServer.EdNet.ProxyMessages.ORB.File
             {
                 OpenFile.FileSystemIdCounter.ReleaseID(fileid);
 
-                byte[] responseBytes = new byte[(int)Math.Min(chunkSize, fileSystemEntry.Item2.Length - offset)];
+                var responseBytes = new byte[
+                    (int)Math.Min(chunkSize, fileSystemEntry.Item2.Length - offset)
+                ];
 
                 Array.Copy(fileSystemEntry.Item2, offset, responseBytes, 0, responseBytes.Length);
 

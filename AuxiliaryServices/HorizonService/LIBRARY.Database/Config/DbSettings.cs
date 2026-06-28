@@ -9,6 +9,11 @@ namespace Horizon.LIBRARY.Database.Config
         public bool SimulatedMode { get; set; } = true;
 
         /// <summary>
+        /// If set, will be used to encrypt/decrypt persistent data in simulated mode.
+        /// </summary>
+        public string SimulatedEncryptionKey { get; set; } = null;
+
+        /// <summary>
         /// Database url.
         /// </summary>
         public string DatabaseUrl { get; set; }

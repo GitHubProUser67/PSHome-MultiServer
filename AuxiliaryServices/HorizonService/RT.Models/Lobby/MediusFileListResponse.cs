@@ -1,6 +1,5 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
@@ -18,10 +17,8 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MediusFileToList = reader.Read<MediusFile>();
             StatusCode = reader.Read<MediusCallbackStatus>();
             MessageID = reader.Read<MessageId>();
@@ -31,10 +28,8 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MediusFileToList);
             writer.Write(StatusCode);
             writer.Write(MessageID ?? MessageId.Empty);
@@ -44,12 +39,12 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-
-                $"MediusFileToList: {MediusFileToList} " +
-                $"StatusCode: {StatusCode} " +
-                $"MessageID: {MessageID} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MediusFileToList: {MediusFileToList} "
+                + $"StatusCode: {StatusCode} "
+                + $"MessageID: {MessageID} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

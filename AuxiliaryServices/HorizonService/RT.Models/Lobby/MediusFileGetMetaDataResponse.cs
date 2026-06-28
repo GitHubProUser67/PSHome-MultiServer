@@ -1,13 +1,14 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.FileGetMetaDataResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.FileGetMetaDataResponse
+    )]
     public class MediusFileGetMetaDataResponse : BaseLobbyMessage, IMediusResponse
     {
-
         public override byte PacketType => (byte)MediusLobbyMessageIds.FileGetMetaDataResponse;
 
         public bool IsSuccess => StatusCode >= 0;
@@ -20,15 +21,12 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            // 
             MediusFileInfo = reader.Read<MediusFile>();
             MediusMetaDataResponseKey = reader.Read<MediusFileMetaData>();
             StatusCode = reader.Read<MediusCallbackStatus>();
 
-            //
             MessageID = reader.Read<MessageId>();
             EndOfList = reader.ReadBoolean();
             reader.ReadBytes(2);
@@ -36,15 +34,12 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            // 
             writer.Write(MediusFileInfo);
             writer.Write(MediusMetaDataResponseKey);
             writer.Write(StatusCode);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
             writer.Write(EndOfList);
             writer.Write(new byte[2]);
@@ -52,12 +47,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-             $"MessageID: {MessageID} " +
-             $"StatusCode: {StatusCode} " +
-             $"MediusFileInfo: {MediusFileInfo} " +
-             $"MediusFileMetaData: {MediusMetaDataResponseKey} " +
-             $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"MediusFileInfo: {MediusFileInfo} "
+                + $"MediusFileMetaData: {MediusMetaDataResponseKey} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

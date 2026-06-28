@@ -1,17 +1,19 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     /// <summary>
-    /// Request to move a game world from one host to this host using the 
+    /// Request to move a game world from one host to this host using the
     /// </summary>
-    [MediusMessage(NetMessageClass.MessageClassLobbyReport, MediusMGCLMessageIds.ServerMoveGameWorldOnMeRequest)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyReport,
+        MediusMGCLMessageIds.ServerMoveGameWorldOnMeRequest
+    )]
     public class MediusServerMoveGameWorldOnMeRequest : BaseMGCLMessage, IMediusRequest
     {
-
-        public override byte PacketType => (byte)MediusMGCLMessageIds.ServerMoveGameWorldOnMeRequest;
+        public override byte PacketType =>
+            (byte)MediusMGCLMessageIds.ServerMoveGameWorldOnMeRequest;
 
         public MessageId MessageID { get; set; }
         public int CurrentMediusWorldID;
@@ -42,11 +44,12 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"CurrentMediusWorldID: {CurrentMediusWorldID} " +
-                $"NewGameWorldID: {NewGameMediusWorldID} " +
-                $"AddressList: {AddressList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"CurrentMediusWorldID: {CurrentMediusWorldID} "
+                + $"NewGameWorldID: {NewGameMediusWorldID} "
+                + $"AddressList: {AddressList}";
         }
     }
 }

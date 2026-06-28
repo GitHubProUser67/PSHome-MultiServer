@@ -1,12 +1,16 @@
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models.Lobby
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.JoinLeastPopulatedChannelResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.JoinLeastPopulatedChannelResponse
+    )]
     public class MediusJoinLeastPopulatedChannelResponse : BaseLobbyExtMessage, IMediusResponse
     {
-        public override byte PacketType => (byte)MediusLobbyExtMessageIds.JoinLeastPopulatedChannelResponse;
+        public override byte PacketType =>
+            (byte)MediusLobbyExtMessageIds.JoinLeastPopulatedChannelResponse;
 
         public bool IsSuccess => StatusCode >= 0;
 
@@ -40,11 +44,12 @@ namespace Horizon.RT.Models.Lobby
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"MediusWorldID: {MediusWorldID} " +
-                $"ConnectInfo: {ConnectInfo}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"MediusWorldID: {MediusWorldID} "
+                + $"ConnectInfo: {ConnectInfo}";
         }
     }
 }

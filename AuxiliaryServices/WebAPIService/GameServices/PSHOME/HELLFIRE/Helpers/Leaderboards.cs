@@ -1,8 +1,6 @@
+using System.Xml;
 using CustomLogger;
 using HttpMultipartParser;
-using Microsoft.EntityFrameworkCore;
-using System.IO;
-using System.Xml;
 using WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers.NovusPrime;
 using WebAPIService.LeaderboardService;
 
@@ -12,15 +10,22 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
     {
         public static InterGalacticScoreBoardData NovusLeaderboard = null;
 
-        public static string GetLeaderboardsClearasil(byte[] PostData, string boundary, string UserID, string WorkPath)
+        public static string GetLeaderboardsClearasil(
+            byte[] PostData,
+            string boundary,
+            string UserID,
+            string WorkPath
+        )
         {
-            string path = $"{WorkPath}/ClearasilSkater/User_Data";
+            var path = $"{WorkPath}/ClearasilSkater/User_Data";
 
-            string[] playerDataFiles = Directory.GetFiles(path);
+            var playerDataFiles = Directory.GetFiles(path);
 
             // Create an XmlDocument
-            XmlDocument doc = new XmlDocument();
-            doc.LoadXml("<Response><table type=\"table\" classname=\"ClearasilLeaderboards\"></table></Response>");
+            var doc = new XmlDocument();
+            doc.LoadXml(
+                "<Response><table type=\"table\" classname=\"ClearasilLeaderboards\"></table></Response>"
+            );
 
             foreach (var playerData in playerDataFiles)
             {
@@ -31,34 +36,45 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
                 }
 
                 // Load the XML file
-                XmlDocument doc2 = new XmlDocument();
-                string xmlProfile = File.ReadAllText(playerData);
+                var doc2 = new XmlDocument();
+                var xmlProfile = File.ReadAllText(playerData);
                 doc2.LoadXml("<root>" + xmlProfile + "</root>");
 
                 // Get all LeaderboardScore elements
-                XmlNodeList leaderboardScoreNodeList = doc2.GetElementsByTagName("LeaderboardScore");
+                var leaderboardScoreNodeList = doc2.GetElementsByTagName("LeaderboardScore");
 
-                foreach(XmlNode lbScoreNode in leaderboardScoreNodeList)
+                foreach (XmlNode lbScoreNode in leaderboardScoreNodeList)
                 {
-                    if (lbScoreNode != null && float.TryParse(lbScoreNode.InnerText, out float score))
+                    if (lbScoreNode != null && float.TryParse(lbScoreNode.InnerText, out var score))
                         // Use the score value here to display
-                        doc.SelectSingleNode("//table").InnerXml += $"<DisplayName>{Path.GetFileNameWithoutExtension(playerData)}</DisplayName><LeaderboardScore>{score}</LeaderboardScore>";
+                        doc.SelectSingleNode("//table").InnerXml +=
+                            $"<DisplayName>{Path.GetFileNameWithoutExtension(playerData)}</DisplayName><LeaderboardScore>{score}</LeaderboardScore>";
                     else
-                        LoggerAccessor.LogError($"[HFGAMEs] - LeaderboardScore element is incorrect: {lbScoreNode?.InnerText}.");
+                        LoggerAccessor.LogError(
+                            $"[HFGAMEs] - LeaderboardScore element is incorrect: {lbScoreNode?.InnerText}."
+                        );
                 }
             }
 
             return doc.OuterXml;
         }
-        public static string GetLeaderboardsSlimJim(byte[] PostData, string boundary, string UserID, string WorkPath)
-        {
-            string path = $"{WorkPath}/SlimJim/User_Data";
 
-            string[] playerDataFiles = Directory.GetFiles(path);
+        public static string GetLeaderboardsSlimJim(
+            byte[] PostData,
+            string boundary,
+            string UserID,
+            string WorkPath
+        )
+        {
+            var path = $"{WorkPath}/SlimJim/User_Data";
+
+            var playerDataFiles = Directory.GetFiles(path);
 
             // Create an XmlDocument
-            XmlDocument doc = new XmlDocument();
-            doc.LoadXml("<Response><table type=\"table\" classname=\"SlimJimLeaderboards\"></table></Response>");
+            var doc = new XmlDocument();
+            doc.LoadXml(
+                "<Response><table type=\"table\" classname=\"SlimJimLeaderboards\"></table></Response>"
+            );
 
             foreach (var playerData in playerDataFiles)
             {
@@ -69,41 +85,59 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
                 }
 
                 // Load the XML file
-                XmlDocument doc2 = new XmlDocument();
+                var doc2 = new XmlDocument();
                 doc2.LoadXml("<root>" + File.ReadAllText(playerData) + "</root>");
 
                 // Get all LeaderboardScore elements
-                XmlNodeList leaderboardScoreNodeList = doc2.GetElementsByTagName("LeaderboardScore");
+                var leaderboardScoreNodeList = doc2.GetElementsByTagName("LeaderboardScore");
 
                 foreach (XmlNode lbScoreNode in leaderboardScoreNodeList)
                 {
-                    if (lbScoreNode != null && float.TryParse(lbScoreNode.InnerText, out float score))
+                    if (lbScoreNode != null && float.TryParse(lbScoreNode.InnerText, out var score))
                         // Use the score value here to display
-                        doc.SelectSingleNode("//table").InnerXml += $"<DisplayName>{Path.GetFileNameWithoutExtension(playerData)}</DisplayName><LeaderboardScore>{score}</LeaderboardScore>";
+                        doc.SelectSingleNode("//table").InnerXml +=
+                            $"<DisplayName>{Path.GetFileNameWithoutExtension(playerData)}</DisplayName><LeaderboardScore>{score}</LeaderboardScore>";
                     else
-                        LoggerAccessor.LogError($"[HFGAMEs] - LeaderboardScore element is incorrect: {lbScoreNode?.InnerText}.");
+                        LoggerAccessor.LogError(
+                            $"[HFGAMEs] - LeaderboardScore element is incorrect: {lbScoreNode?.InnerText}."
+                        );
                 }
             }
 
             return doc.OuterXml;
         }
 
-        public static string GetLeaderboardsNovusPrime(byte[] PostData, string boundary, string UserID, string WorkPath)
+        public static string GetLeaderboardsNovusPrime(
+            byte[] PostData,
+            string boundary,
+            string UserID,
+            string WorkPath
+        )
         {
-            using (MemoryStream ms = new MemoryStream(PostData))
+            using (var ms = new MemoryStream(PostData))
             {
-                MultipartFormDataParser data = MultipartFormDataParser.Parse(ms, boundary);
+                var data = MultipartFormDataParser.Parse(ms, boundary);
 
-                string UserNovusPrimeID = data.GetParameterValue("UserID");
+                var UserNovusPrimeID = data.GetParameterValue("UserID");
 
-                if (NovusLeaderboard == null)
-                    NovusLeaderboard = new InterGalacticScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+                NovusLeaderboard ??= new InterGalacticScoreBoardData(
+                    LeaderboardDbContext.BuildOptions(
+                        0,
+                        $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}"
+                    )
+                );
 
-                return "<Response>" + NovusLeaderboard.SerializeToString("Root").Result ?? string.Empty + "</Response>";
+                return "<Response>" + NovusLeaderboard.SerializeToString("Root").Result
+                    ?? string.Empty + "</Response>";
             }
         }
 
-        public static string GetGlobalPopulationLeaderboard(byte[] PostData, string boundary, string UserID, string WorkPath)
+        public static string GetGlobalPopulationLeaderboard(
+            byte[] PostData,
+            string boundary,
+            string UserID,
+            string WorkPath
+        )
         {
             // TODO
             return @"<Response>
@@ -111,7 +145,12 @@ namespace WebAPIService.GameServices.PSHOME.HELLFIRE.Helpers
                     </Response>";
         }
 
-        public static string GetGlobalRevenueCollectedLeaderboard(byte[] PostData, string boundary, string UserID, string WorkPath)
+        public static string GetGlobalRevenueCollectedLeaderboard(
+            byte[] PostData,
+            string boundary,
+            string UserID,
+            string WorkPath
+        )
         {
             // TODO
             return @"<Response>

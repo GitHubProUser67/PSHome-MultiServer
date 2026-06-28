@@ -38,11 +38,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 =============================================================================*/
 #endregion
 
-namespace Tommunism.SoftFloat
+namespace Tommunism.SoftFloat;
+
+public enum TininessMode : byte
 {
-    public enum TininessMode : byte
-    {
-        BeforeRounding = 0,
-        AfterRounding = 1
-    }
+    BeforeRounding = 0,
+    AfterRounding = 1,
 }

@@ -1,12 +1,16 @@
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models.Lobby
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.JoinLeastPopulatedChannelRequest)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.JoinLeastPopulatedChannelRequest
+    )]
     public class MediusJoinLeastPopulatedChannelRequest : BaseLobbyExtMessage, IMediusRequest
     {
-        public override byte PacketType => (byte)MediusLobbyExtMessageIds.JoinLeastPopulatedChannelRequest;
+        public override byte PacketType =>
+            (byte)MediusLobbyExtMessageIds.JoinLeastPopulatedChannelRequest;
 
         public MessageId MessageID { get; set; }
 
@@ -37,10 +41,11 @@ namespace Horizon.RT.Models.Lobby
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"AlwaysLeaveCurrentLobbyServer: {AlwaysLeaveCurrentLobbyServer}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"AlwaysLeaveCurrentLobbyServer: {AlwaysLeaveCurrentLobbyServer}";
         }
     }
 }

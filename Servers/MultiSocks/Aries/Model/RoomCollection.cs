@@ -1,4 +1,4 @@
-using MultiSocks.Aries.Messages;
+using MultiSocks.Aries.Components;
 
 namespace MultiSocks.Aries.Model
 {
@@ -6,7 +6,7 @@ namespace MultiSocks.Aries.Model
     {
         public MatchmakerServer? Server;
         private int RoomID = 1;
-        private List<AriesRoom> Rooms = new();
+        private readonly List<AriesRoom> Rooms = new();
 
         public virtual void AddRoom(AriesRoom room)
         {
@@ -25,7 +25,9 @@ namespace MultiSocks.Aries.Model
         {
             lock (Rooms)
             {
-                CustomLogger.LoggerAccessor.LogWarn($"[Room] - Removing Room:{room.Name}:{room.ID}.");
+                CustomLogger.LoggerAccessor.LogWarn(
+                    $"[Room] - Removing Room:{room.Name}:{room.ID}."
+                );
                 Rooms.Remove(room);
             }
         }
@@ -59,7 +61,8 @@ namespace MultiSocks.Aries.Model
                     infos.Add(room.GetInfo());
                 }
             }
-            foreach (PlusRom info in infos) user.Connection?.SendMessage(info);
+            foreach (var info in infos)
+                user.Connection?.SendMessage(info);
         }
     }
 }

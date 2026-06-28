@@ -2,24 +2,22 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.League
 {
-	[TdfStruct]
-	public struct JoinLeagueRequest
-	{
+    [TdfStruct]
+    public struct JoinLeagueRequest
+    {
+        [TdfMember("DNF")]
+        public int mDNF;
 
-		[TdfMember("DNF")]
-		public int mDNF;
+        [TdfMember("MMBR")]
+        public long mInviter;
 
-		[TdfMember("MMBR")]
-		public long mInviter;
+        [TdfMember("LGID")]
+        public uint mLeagueId;
 
-		[TdfMember("LGID")]
-		public uint mLeagueId;
+        [TdfMember("PASS")]
+        public string mPassword;
 
-		[TdfMember("PASS")]
-		public string mPassword;
-
-		[TdfMember("TEAM")]
-		public uint mTeamId;
-
-	}
+        [TdfMember("TEAM")]
+        public uint mTeamId;
+    }
 }

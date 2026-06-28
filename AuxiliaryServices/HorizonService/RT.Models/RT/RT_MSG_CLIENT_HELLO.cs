@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -13,22 +12,23 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            long len = reader.BaseStream.Length - reader.BaseStream.Position;
+            var len = reader.BaseStream.Length - reader.BaseStream.Position;
             Parameters = new ushort[len / 2];
-            for (int i = 0; i < Parameters.Length; ++i)
+            for (var i = 0; i < Parameters.Length; ++i)
                 Parameters[i] = reader.ReadUInt16();
         }
 
         public override void Serialize(MessageWriter writer)
         {
-            for (int i = 0; i < 5; ++i)
-                writer.Write((Parameters == null || i >= Parameters.Length) ? ushort.MinValue : Parameters[i]);
+            for (var i = 0; i < 5; ++i)
+                writer.Write(
+                    (Parameters == null || i >= Parameters.Length) ? ushort.MinValue : Parameters[i]
+                );
         }
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"Version: {Parameters[1]}";
+            return base.ToString() + " " + $"Version: {Parameters[1]}";
         }
     }
 }

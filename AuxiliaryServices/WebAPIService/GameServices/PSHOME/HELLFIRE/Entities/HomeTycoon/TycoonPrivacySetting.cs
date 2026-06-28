@@ -4,6 +4,6 @@
     {
         Public = 1,
         FriendsOnly = 2,
-        Private = 3
+        Private = 3,
     }
 }

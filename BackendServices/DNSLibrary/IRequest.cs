@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
-using DNS.Protocol.ResourceRecords;
+﻿using DNSLibrary.ResourceRecords;
 
-namespace DNS.Protocol {
-    public interface IRequest : IMessage {
+namespace DNSLibrary
+{
+    public interface IRequest : IMessage
+    {
         int Id { get; set; }
         IList<IResourceRecord> AdditionalRecords { get; }
         OperationCode OperationCode { get; set; }

@@ -1,9 +1,6 @@
-﻿using MultiServerLibrary.Extension;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
+using MultiServerLibrary.Extension;
 
 namespace MultiServerLibrary.HTTP
 {
@@ -14,23 +11,23 @@ namespace MultiServerLibrary.HTTP
         public byte[] Data { get; set; }
     }
 
-    public static class RawMultipartFormDataParser
+    public static partial class RawMultipartFormDataParser
     {
         public static List<RawMultipartField> Parse(Stream stream, string boundary)
         {
             var fields = new List<RawMultipartField>();
 
             int nextBoundary;
-            int pos = 0;
+            var pos = 0;
 
             byte[] body;
-            byte[] boundaryBytes = Encoding.UTF8.GetBytes("--" + boundary);
+            var boundaryBytes = Encoding.UTF8.GetBytes("--" + boundary);
 
             if (stream is MemoryStream ms)
                 body = ms.ToArray();
             else
             {
-                using MemoryStream tempMs = new MemoryStream();
+                using var tempMs = new MemoryStream();
                 stream.CopyTo(tempMs);
                 body = tempMs.ToArray();
             }
@@ -38,7 +35,7 @@ namespace MultiServerLibrary.HTTP
             // Iterate over each boundary occurrence
             while ((nextBoundary = ByteUtils.FindBytePattern(body, boundaryBytes, pos)) >= 0)
             {
-                int start = nextBoundary + boundaryBytes.Length;
+                var start = nextBoundary + boundaryBytes.Length;
 
                 if (start + 2 >= body.Length)
                     break;
@@ -47,42 +44,45 @@ namespace MultiServerLibrary.HTTP
                 if (body[start] == (byte)'\r' && body[start + 1] == (byte)'\n')
                     start += 2;
 
-                int headerEnd = ByteUtils.FindBytePattern(body, Encoding.UTF8.GetBytes("\r\n\r\n"), start);
+                var headerEnd = ByteUtils.FindBytePattern(
+                    body,
+                    Encoding.UTF8.GetBytes("\r\n\r\n"),
+                    start
+                );
                 if (headerEnd < 0)
                     break;
 
-                string header = Encoding.UTF8.GetString(body, start, headerEnd - start);
+                var header = Encoding.UTF8.GetString(body, start, headerEnd - start);
 
-                var nameMatch = Regex.Match(header, "name=\"([^\"]+)\"");
+                var nameMatch = MyRegex().Match(header);
                 if (!nameMatch.Success)
                     break;
 
-                string name = nameMatch.Groups[1].Value;
+                var name = nameMatch.Groups[1].Value;
 
-                int dataStart = headerEnd + 4;
+                var dataStart = headerEnd + 4;
 
-                int nextBoundaryStart = ByteUtils.FindBytePattern(body, boundaryBytes, dataStart);
+                var nextBoundaryStart = ByteUtils.FindBytePattern(body, boundaryBytes, dataStart);
                 if (nextBoundaryStart < 0)
                     nextBoundaryStart = body.Length;
 
-                int dataEnd = nextBoundaryStart - 2;
+                var dataEnd = nextBoundaryStart - 2;
                 if (dataEnd < dataStart)
                     dataEnd = dataStart;
 
-                byte[] data = new byte[dataEnd - dataStart];
+                var data = new byte[dataEnd - dataStart];
 
                 Array.Copy(body, dataStart, data, 0, data.Length);
 
-                fields.Add(new RawMultipartField
-                {
-                    Name = name,
-                    Data = data
-                });
+                fields.Add(new RawMultipartField { Name = name, Data = data });
 
                 pos = nextBoundaryStart;
             }
 
             return fields;
         }
+
+        [GeneratedRegex("name=\"([^\"]+)\"")]
+        private static partial Regex MyRegex();
     }
 }

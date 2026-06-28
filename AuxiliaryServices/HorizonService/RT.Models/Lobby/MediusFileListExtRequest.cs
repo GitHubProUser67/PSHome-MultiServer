@@ -1,13 +1,14 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.FileListExtRequest)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.FileListExtRequest
+    )]
     public class MediusFileListExtRequest : BaseLobbyExtMessage, IMediusRequest
     {
-
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.FileListExtRequest;
 
         public string FileNameBeginsWith;
@@ -26,7 +27,6 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
             // MediusFileListRequest Wrapped
@@ -37,7 +37,6 @@ namespace Horizon.RT.Models
             NewerThanTimestamp = reader.ReadUInt32();
             StartingEntryNumber = reader.ReadUInt32();
             PageSize = reader.ReadUInt32();
-            //
             MessageID = reader.Read<MessageId>();
             reader.ReadBytes(3);
 
@@ -50,10 +49,8 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(FileNameBeginsWith);
             writer.Write(FilesizeGreaterThan);
             writer.Write(FilesizeLessThan);
@@ -62,7 +59,6 @@ namespace Horizon.RT.Models
             writer.Write(StartingEntryNumber);
             writer.Write(PageSize);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
             writer.Write(new byte[3]);
 
@@ -70,24 +66,24 @@ namespace Horizon.RT.Models
             writer.Write(metaOperator);
             writer.Write(sortBy);
             writer.Write(sortOrder);
-
         }
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"FileNameBeginsWith: {FileNameBeginsWith} " +
-                $"FilesizeGreaterThan: {FilesizeGreaterThan} " +
-                $"FilesizeLessThan: {FilesizeLessThan} " +
-                $"OwnerByID: {OwnerByID} " +
-                $"NewerThanTimestamp: {NewerThanTimestamp} " +
-                $"StartingEntryNumber: {StartingEntryNumber} " +
-                $"PageSize: {PageSize} " +
-                $"MessageID:{MessageID} " +
-                $"MetaData: {metaData} " +
-                $"MetaOperator: {metaOperator} " + 
-                $"SortBy: {sortBy} " +
-                $"SortOrder: {sortOrder}";
+            return base.ToString()
+                + " "
+                + $"FileNameBeginsWith: {FileNameBeginsWith} "
+                + $"FilesizeGreaterThan: {FilesizeGreaterThan} "
+                + $"FilesizeLessThan: {FilesizeLessThan} "
+                + $"OwnerByID: {OwnerByID} "
+                + $"NewerThanTimestamp: {NewerThanTimestamp} "
+                + $"StartingEntryNumber: {StartingEntryNumber} "
+                + $"PageSize: {PageSize} "
+                + $"MessageID:{MessageID} "
+                + $"MetaData: {metaData} "
+                + $"MetaOperator: {metaOperator} "
+                + $"SortBy: {sortBy} "
+                + $"SortOrder: {sortOrder}";
         }
     }
 }

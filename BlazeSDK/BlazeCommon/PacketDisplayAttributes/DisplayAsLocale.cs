@@ -1,7 +1,4 @@
 namespace BlazeCommon.PacketDisplayAttributes
 {
-    public class DisplayAsLocale : Attribute
-    {
-
-    }
+    public class DisplayAsLocale : Attribute { }
 }

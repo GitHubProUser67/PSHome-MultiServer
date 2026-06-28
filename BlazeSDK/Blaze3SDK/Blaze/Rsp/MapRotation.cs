@@ -2,30 +2,28 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Rsp
 {
-	[TdfStruct]
-	public struct MapRotation
-	{
+    [TdfStruct]
+    public struct MapRotation
+    {
+        [TdfMember("DESC")]
+        public string mDescription;
 
-		[TdfMember("DESC")]
-		public string mDescription;
+        [TdfMember("MRID")]
+        public byte mMapRotationId;
 
-		[TdfMember("MRID")]
-		public byte mMapRotationId;
+        [TdfMember("MLST")]
+        public List<MapRotationEntry> mMaps;
 
-		[TdfMember("MLST")]
-		public List<MapRotationEntry> mMaps;
+        [TdfMember("MOD")]
+        public string mMod;
 
-		[TdfMember("MOD")]
-		public string mMod;
+        [TdfMember("NAME")]
+        public string mName;
 
-		[TdfMember("NAME")]
-		public string mName;
+        [TdfMember("RAND")]
+        public bool mRandomStartMap;
 
-		[TdfMember("RAND")]
-		public bool mRandomStartMap;
-
-		[TdfMember("SLST")]
-		public List<PresetSetting> mSettings;
-
-	}
+        [TdfMember("SLST")]
+        public List<PresetSetting> mSettings;
+    }
 }

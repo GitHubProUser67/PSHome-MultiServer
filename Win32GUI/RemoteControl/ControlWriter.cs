@@ -1,29 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using System.Windows.Forms;
+﻿using System.Text;
 
 namespace RemoteControl
 {
-    public class ControlWriter : TextWriter
+    public class ControlWriter(Control textbox) : TextWriter
     {
         private const int maxLines = 46;
 
-        private Control textbox;
+        private readonly Control textbox = textbox;
 
-        private readonly Queue<string> lines = new Queue<string>();
-        private readonly StringBuilder currentLine = new StringBuilder();
-
-        public ControlWriter(Control textbox)
-        {
-            this.textbox = textbox;
-        }
+        private readonly Queue<string> lines = new();
+        private readonly StringBuilder currentLine = new();
 
         public override void Write(char value)
         {
             switch (value)
-            { 
+            {
                 case '\n':
                     FlushCurrentLine();
                     break;
@@ -36,20 +27,22 @@ namespace RemoteControl
 
         public override void Write(string value)
         {
-            foreach (char c in value)
+            foreach (var c in value)
                 Write(c);
         }
 
         private void FlushCurrentLine()
         {
-            string line = currentLine.ToString();
+            var line = currentLine.ToString();
             currentLine.Clear();
 
             if (textbox.InvokeRequired)
-                textbox.Invoke(new Action(() =>
-                {
-                    AddLineToTextbox(line);
-                }));
+                textbox.Invoke(
+                    new Action(() =>
+                    {
+                        AddLineToTextbox(line);
+                    })
+                );
             else
                 AddLineToTextbox(line);
         }

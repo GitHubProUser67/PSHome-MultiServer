@@ -1,21 +1,24 @@
-using CustomLogger;
-using MultiServerLibrary.Extension;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
+using CustomLogger;
+using MultiServerLibrary.Extension;
 using HttpListenerRequest = SpaceWizards.HttpListener.HttpListenerRequest;
 using HttpListenerResponse = SpaceWizards.HttpListener.HttpListenerResponse;
 
 namespace SVO.Games.PS3
 {
-    public class MotorstormPR2
+    public partial class MotorstormPR2
     {
-        public static async Task MotorStormPR_SVO(HttpListenerRequest request, HttpListenerResponse response)
+        public static async Task MotorStormPR_SVO(
+            HttpListenerRequest request,
+            HttpListenerResponse response
+        )
         {
             try
             {
-                string? method = request.HttpMethod;
+                var method = request.HttpMethod;
 
                 using (response)
                 {
@@ -23,36 +26,40 @@ namespace SVO.Games.PS3
                     {
                         #region MotorStorm 2
                         case "/MOTORSTORM2PS3_SVML/index.jsp":
+                        {
+                            switch (request.HttpMethod)
                             {
-                                switch (request.HttpMethod)
-                                {
-                                    case "GET":
-                                        HttpListenerRequest req = request;
-                                        HttpListenerResponse resp = response;
-                                        resp.Headers.Set("Content-Type", "text/xml");
+                                case "GET":
+                                    var req = request;
+                                    var resp = response;
+                                    resp.Headers.Set("Content-Type", "text/xml");
 
-                                        string? clientMac = req.Headers.Get("X-SVOMac");
+                                    var clientMac = req.Headers.Get("X-SVOMac");
 
-                                        string? serverMac = CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
+                                    var serverMac =
+                                        CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(
+                                            clientMac
+                                        );
 
-                                        if (string.IsNullOrEmpty(serverMac))
-                                        {
-                                            response.StatusCode = (int)HttpStatusCode.Forbidden;
-                                            return;
-                                        }
-                                        else
-                                        {
-                                            resp.Headers.Set("X-SVOMac", serverMac);
+                                    if (string.IsNullOrEmpty(serverMac))
+                                    {
+                                        response.StatusCode = (int)HttpStatusCode.Forbidden;
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        resp.Headers.Set("X-SVOMac", serverMac);
 
-                                            string domain = "motorstorm2ps3.svo.online.scee.com";
+                                        var domain = "motorstorm2ps3.svo.online.scee.com";
 
-                                            if (!SVOServerConfiguration.PreferDNSUrls)
-                                                await InternetProtocolUtils.TryGetServerIP(out domain).ConfigureAwait(false);
+                                        if (!SVOServerConfiguration.PreferDNSUrls)
+                                            await InternetProtocolUtils
+                                                .TryGetServerIP(out domain)
+                                                .ConfigureAwait(false);
 
-                                            byte[]? uriStore = null;
-                                            if (SVOServerConfiguration.SVOHTTPSBypass)
-                                            {
-                                                uriStore = Encoding.UTF8.GetBytes($@"<?xml version=""1.0"" encoding=""UTF-8""?> 
+                                        var uriStore = SVOServerConfiguration.SVOHTTPSBypass
+                                            ? Encoding.UTF8.GetBytes(
+                                                $@"<?xml version=""1.0"" encoding=""UTF-8""?> 
                                                 <XML> 
                                                  <URL_List> 
                                                   <!-- SVO Actions --> 
@@ -119,11 +126,9 @@ namespace SVO.Games.PS3
                                                    <DATA dataType=""URI"" name=""homeURI"" value=""http://{domain}:10060/MOTORSTORM2PS3_XML/home.jsp"" />     
                                                  </URL_List> 
                                                 </XML>"
-                                                );
-                                            }
-                                            else
-                                            {
-                                                uriStore = Encoding.UTF8.GetBytes($@"<?xml version=""1.0"" encoding=""UTF-8""?> 
+                                            )
+                                            : Encoding.UTF8.GetBytes(
+                                                $@"<?xml version=""1.0"" encoding=""UTF-8""?> 
                                                 <XML> 
                                                  <URL_List> 
                                                   <!-- SVO Actions --> 
@@ -190,82 +195,104 @@ namespace SVO.Games.PS3
                                                    <DATA dataType=""URI"" name=""homeURI"" value=""http://{domain}:10060/MOTORSTORM2PS3_XML/home.jsp"" />     
                                                  </URL_List> 
                                                 <XML>"
-                                                );
-                                            }
-
-                                            resp.OutputStream.Write(uriStore);
+                                            );
+                                        resp.OutputStream.Write(uriStore);
 #if DEBUG
-                                            LoggerAccessor.LogInfo($"Start URIStore for Resistance: Fall of Man SENT!");
+                                        LoggerAccessor.LogInfo(
+                                            $"Start URIStore for Resistance: Fall of Man SENT!"
+                                        );
 #endif
-                                        }
-                                        break;
-                                }
-                                break;
+                                    }
+                                    break;
                             }
-
+                            break;
+                        }
 
                         case "/MOTORSTORM2PS3_XML/account/SP_Login.jsp":
                             switch (request.HttpMethod)
                             {
                                 case "POST":
 
-                                    string? clientMac = request.Headers.Get("X-SVOMac");
+                                    var clientMac = request.Headers.Get("X-SVOMac");
 
-                                    string? serverMac = CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
+                                    var serverMac =
+                                        CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(
+                                            clientMac
+                                        );
 
                                     if (string.IsNullOrEmpty(serverMac))
                                     {
-                                        response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                        response.StatusCode = (int)
+                                            System.Net.HttpStatusCode.Forbidden;
                                         return;
                                     }
                                     else
                                     {
-                                        int appId = Convert.ToInt32(HttpUtility.ParseQueryString(request.Url.Query).Get("applicationID"));
+                                        var appId = Convert.ToInt32(
+                                            HttpUtility
+                                                .ParseQueryString(request.Url.Query)
+                                                .Get("applicationID")
+                                        );
 
                                         if (!request.HasEntityBody)
                                         {
-                                            response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                                            response.StatusCode = (int)
+                                                System.Net.HttpStatusCode.Forbidden;
                                             return;
                                         }
 
                                         response.Headers.Set("Content-Type", "text/xml");
 
-                                        string s = string.Empty;
+                                        var s = string.Empty;
 
                                         // Get the data from the HTTP stream
-                                        using (StreamReader reader = new(request.InputStream, request.ContentEncoding))
+                                        using (
+                                            StreamReader reader = new(
+                                                request.InputStream,
+                                                request.ContentEncoding
+                                            )
+                                        )
                                         {
                                             // Convert the data to a string and display it on the console.
                                             s = reader.ReadToEnd();
                                             reader.Close();
                                         }
 
-                                        byte[] bytes = Encoding.ASCII.GetBytes(s);
-                                        int AcctNameLen = Convert.ToInt32(bytes.GetValue(81));
+                                        var bytes = Encoding.ASCII.GetBytes(s);
+                                        var AcctNameLen = Convert.ToInt32(bytes.GetValue(81));
 
-                                        string acctName = s.Substring(82, 32);
+                                        var acctName = s.Substring(82, 32);
 
-                                        string acctNameREX = Regex.Replace(acctName, @"[^a-zA-Z0-9]+", string.Empty);
+                                        var acctNameREX = MyRegex().Replace(acctName, string.Empty);
 
-                                        LoggerAccessor.LogInfo($"Logging user {acctNameREX} into SVO...\n");
+                                        LoggerAccessor.LogInfo(
+                                            $"Logging user {acctNameREX} into SVO...\n"
+                                        );
 
                                         response.Headers.Set("X-SVOMac", serverMac);
 
-                                        string? sig = HttpUtility.ParseQueryString(request.Url.Query).Get("sig");
+                                        var sig = HttpUtility
+                                            .ParseQueryString(request.Url.Query)
+                                            .Get("sig");
 
-                                        int accountId = -1;
+                                        var accountId = -1;
 
-                                        string langId = "0";
+                                        var langId = "0";
 
                                         try
                                         {
-                                            await SVOServerConfiguration.Database?.GetAccountByName(acctNameREX, appId).ContinueWith((r) =>
-                                            {
-                                                //Found in database so keep.
-                                                langId = request.Url.Query[94..];
-                                                if (r.Result != null)
-                                                    accountId = r.Result.AccountId;
-                                            });
+                                            await SVOServerConfiguration
+                                                .Database.GetAccountByName(acctNameREX, appId)
+                                                .ContinueWith(
+                                                    (r) =>
+                                                    {
+                                                        //Found in database so keep.
+                                                        langId = request.Url.Query[94..];
+                                                        if (r.Result != null)
+                                                            accountId = r.Result.AccountId;
+                                                    }
+                                                )
+                                                .ConfigureAwait(false);
                                         }
                                         catch (Exception)
                                         {
@@ -273,32 +300,64 @@ namespace SVO.Games.PS3
                                             accountId = 0;
                                         }
 
-                                        response.AddHeader("Set-Cookie", $"LangID={langId}; Path=/");
-                                        response.AppendHeader("Set-Cookie", $"AcctID={accountId}; Path=/");
-                                        response.AppendHeader("Set-Cookie", $"NPCountry=us; Path=/");
+                                        response.AddHeader(
+                                            "Set-Cookie",
+                                            $"LangID={langId}; Path=/"
+                                        );
+                                        response.AppendHeader(
+                                            "Set-Cookie",
+                                            $"AcctID={accountId}; Path=/"
+                                        );
+                                        response.AppendHeader(
+                                            "Set-Cookie",
+                                            $"NPCountry=us; Path=/"
+                                        );
                                         response.AppendHeader("Set-Cookie", $"ClanID=-1; Path=/");
-                                        response.AppendHeader("Set-Cookie", $"AuthKeyTime=03-31-2023 16:03:41; Path=/");
+                                        response.AppendHeader(
+                                            "Set-Cookie",
+                                            $"AuthKeyTime=03-31-2023 16:03:41; Path=/"
+                                        );
                                         response.AppendHeader("Set-Cookie", $"NPLang=1; Path=/");
-                                        response.AppendHeader("Set-Cookie", $"ModerateMode=false; Path=/");
-                                        response.AppendHeader("Set-Cookie", $"TimeZone=PST; Path=/");
+                                        response.AppendHeader(
+                                            "Set-Cookie",
+                                            $"ModerateMode=false; Path=/"
+                                        );
+                                        response.AppendHeader(
+                                            "Set-Cookie",
+                                            $"TimeZone=PST; Path=/"
+                                        );
                                         response.AppendHeader("Set-Cookie", $"ClanID=-1; Path=/");
-                                        response.AppendHeader("Set-Cookie", $"NPContentRating=201326592; Path=/");
-                                        response.AppendHeader("Set-Cookie", $"AuthKey=nRqnf97f~UaSANLErurJIzq9GXGWqWCADdA3TfqUIVXXisJyMnHsQ34kA&C^0R#&~JULZ7xUOY*rXW85slhQF&P&Eq$7kSB&VBtf`V8rb^BC`53jGCgIT; Path=/");
-                                        response.AppendHeader("Set-Cookie", $"AcctName={acctNameREX}; Path=/");
-                                        response.AppendHeader("Set-Cookie", $"OwnerID=-255; Path=/");
+                                        response.AppendHeader(
+                                            "Set-Cookie",
+                                            $"NPContentRating=201326592; Path=/"
+                                        );
+                                        response.AppendHeader(
+                                            "Set-Cookie",
+                                            $"AuthKey=nRqnf97f~UaSANLErurJIzq9GXGWqWCADdA3TfqUIVXXisJyMnHsQ34kA&C^0R#&~JULZ7xUOY*rXW85slhQF&P&Eq$7kSB&VBtf`V8rb^BC`53jGCgIT; Path=/"
+                                        );
+                                        response.AppendHeader(
+                                            "Set-Cookie",
+                                            $"AcctName={acctNameREX}; Path=/"
+                                        );
+                                        response.AppendHeader(
+                                            "Set-Cookie",
+                                            $"OwnerID=-255; Path=/"
+                                        );
                                         response.AppendHeader("Set-Cookie", $"Sig={sig}==; Path=/");
 
-                                        byte[] sp_Login = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
-                                            "<XML>\r\n" +
-                                            "    <SP_Login>\r\n" +
-                                            "        <status>\r\n" +
-                                            "            <id>20600</id>\r\n" +
-                                            "            <message>ACCT_LOGIN_SUCCESS</message>\r\n" +
-                                            "        </status>\r\n" +
-                                            $"       <accountID>{accountId}</accountID>\r\n" +
-                                            "        <userContext>0</userContext>\r\n" +
-                                            "    </SP_Login>\r\n" +
-                                            "</XML>");
+                                        var sp_Login = Encoding.UTF8.GetBytes(
+                                            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"
+                                                + "<XML>\r\n"
+                                                + "    <SP_Login>\r\n"
+                                                + "        <status>\r\n"
+                                                + "            <id>20600</id>\r\n"
+                                                + "            <message>ACCT_LOGIN_SUCCESS</message>\r\n"
+                                                + "        </status>\r\n"
+                                                + $"       <accountID>{accountId}</accountID>\r\n"
+                                                + "        <userContext>0</userContext>\r\n"
+                                                + "    </SP_Login>\r\n"
+                                                + "</XML>"
+                                        );
 
                                         response.StatusCode = (int)System.Net.HttpStatusCode.OK;
 
@@ -307,7 +366,11 @@ namespace SVO.Games.PS3
                                             try
                                             {
                                                 response.ContentLength64 = sp_Login.Length;
-                                                response.OutputStream.Write(sp_Login, 0, sp_Login.Length);
+                                                response.OutputStream.Write(
+                                                    sp_Login,
+                                                    0,
+                                                    sp_Login.Length
+                                                );
                                             }
                                             catch (Exception)
                                             {
@@ -321,91 +384,104 @@ namespace SVO.Games.PS3
 
                             break;
 
-
                         case "/MOTORSTORM2PS3_SVML/getEula":
+                        {
+                            switch (request.HttpMethod)
                             {
-                                switch (request.HttpMethod)
-                                {
-                                    case "GET":
-                                        HttpListenerRequest req = request;
-                                        HttpListenerResponse resp = response;
-                                        resp.Headers.Set("Content-Type", "text/xml");
+                                case "GET":
+                                    var req = request;
+                                    var resp = response;
+                                    resp.Headers.Set("Content-Type", "text/xml");
 
-                                        string? clientMac = req.Headers.Get("X-SVOMac");
+                                    var clientMac = req.Headers.Get("X-SVOMac");
 
-                                        string? serverMac = CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
+                                    var serverMac =
+                                        CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(
+                                            clientMac
+                                        );
 
-                                        if (string.IsNullOrEmpty(serverMac))
-                                        {
-                                            response.StatusCode = (int)HttpStatusCode.Forbidden;
-                                            return;
-                                        }
-                                        else
-                                        {
-                                            resp.Headers.Set("X-SVOMac", serverMac);
+                                    if (string.IsNullOrEmpty(serverMac))
+                                    {
+                                        response.StatusCode = (int)HttpStatusCode.Forbidden;
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        resp.Headers.Set("X-SVOMac", serverMac);
 
-                                            byte[] getEula = Encoding.UTF8.GetBytes(@"<?xml version=""1.0"" encoding=""UTF-8""?> 
+                                        var getEula = Encoding.UTF8.GetBytes(
+                                            @"<?xml version=""1.0"" encoding=""UTF-8""?> 
                                                  <XML>
 	                                                <eula>
 		                                                <text>Test</text>
 		                                                <accepted>true</accepted>
 	                                                </eula>
-                                                </XML>");
+                                                </XML>"
+                                        );
 
-                                            resp.OutputStream.Write(getEula);
+                                        resp.OutputStream.Write(getEula);
 #if DEBUG
-                                            LoggerAccessor.LogInfo($"Start getEula for Resistance: Fall of Man SENT!");
+                                        LoggerAccessor.LogInfo(
+                                            $"Start getEula for Resistance: Fall of Man SENT!"
+                                        );
 #endif
-                                        }
-                                        break;
-                                }
-                                break;
+                                    }
+                                    break;
                             }
+                            break;
+                        }
 
                         case "/MOTORSTORM2PS3_SVML/getAnnouncement":
+                        {
+                            switch (request.HttpMethod)
                             {
-                                switch (request.HttpMethod)
-                                {
-                                    case "GET":
-                                        HttpListenerRequest req = request;
-                                        HttpListenerResponse resp = response;
-                                        resp.Headers.Set("Content-Type", "text/xml");
+                                case "GET":
+                                    var req = request;
+                                    var resp = response;
+                                    resp.Headers.Set("Content-Type", "text/xml");
 
-                                        string? clientMac = req.Headers.Get("X-SVOMac");
+                                    var clientMac = req.Headers.Get("X-SVOMac");
 
-                                        string? serverMac = CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(clientMac);
+                                    var serverMac =
+                                        CastleLibrary.S0ny.SVO.WebSecurityUtils.CalcuateSVOMac(
+                                            clientMac
+                                        );
 
-                                        if (string.IsNullOrEmpty(serverMac))
-                                        {
-                                            response.StatusCode = (int)HttpStatusCode.Forbidden;
-                                            return;
-                                        }
-                                        else
-                                        {
-                                            resp.Headers.Set("X-SVOMac", serverMac);
+                                    if (string.IsNullOrEmpty(serverMac))
+                                    {
+                                        response.StatusCode = (int)HttpStatusCode.Forbidden;
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        resp.Headers.Set("X-SVOMac", serverMac);
 
-                                            byte[] getAnnouncement = Encoding.UTF8.GetBytes(@"<?xml version=""1.0"" encoding=""UTF-8""?> 
+                                        var getAnnouncement = Encoding.UTF8.GetBytes(
+                                            @"<?xml version=""1.0"" encoding=""UTF-8""?> 
                                                  <XML>
 	                                                <AnnouncementTxt>
 		                                                <msg>Test Announcement</msg>
 	                                                </AnnouncementTxt>
-                                                </XML>");
+                                                </XML>"
+                                        );
 
-                                            resp.OutputStream.Write(getAnnouncement);
+                                        resp.OutputStream.Write(getAnnouncement);
 #if DEBUG
-                                            LoggerAccessor.LogInfo($"Start getEula for Resistance: Fall of Man SENT!");
+                                        LoggerAccessor.LogInfo(
+                                            $"Start getEula for Resistance: Fall of Man SENT!"
+                                        );
 #endif
-                                        }
-                                        break;
-                                }
-                                break;
+                                    }
+                                    break;
                             }
+                            break;
+                        }
 
                         default:
                             response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
                             break;
 
-                            #endregion
+                        #endregion
                     }
                 }
             }
@@ -415,5 +491,8 @@ namespace SVO.Games.PS3
                 response.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
             }
         }
+
+        [GeneratedRegex(@"[^a-zA-Z0-9]+")]
+        private static partial Regex MyRegex();
     }
 }

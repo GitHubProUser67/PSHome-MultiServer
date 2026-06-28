@@ -9,7 +9,10 @@ public static class HttpClientMetricsExtensions
     /// <summary>
     /// Configures the HttpClient pipeline to collect Prometheus metrics.
     /// </summary>
-    public static IHttpClientBuilder UseHttpClientMetrics(this IHttpClientBuilder builder, Action<HttpClientExporterOptions> configure)
+    public static IHttpClientBuilder UseHttpClientMetrics(
+        this IHttpClientBuilder builder,
+        Action<HttpClientExporterOptions> configure
+    )
     {
         var options = new HttpClientExporterOptions();
 
@@ -23,7 +26,10 @@ public static class HttpClientMetricsExtensions
     /// <summary>
     /// Configures the HttpClient pipeline to collect Prometheus metrics.
     /// </summary>
-    public static IHttpClientBuilder UseHttpClientMetrics(this IHttpClientBuilder builder, HttpClientExporterOptions? options = null)
+    public static IHttpClientBuilder UseHttpClientMetrics(
+        this IHttpClientBuilder builder,
+        HttpClientExporterOptions? options = null
+    )
     {
         options ??= new HttpClientExporterOptions();
 
@@ -31,22 +37,34 @@ public static class HttpClientMetricsExtensions
 
         if (options.InProgress.Enabled)
         {
-            builder = builder.AddHttpMessageHandler(x => new HttpClientInProgressHandler(options.InProgress, identity));
+            builder = builder.AddHttpMessageHandler(x => new HttpClientInProgressHandler(
+                options.InProgress,
+                identity
+            ));
         }
 
         if (options.RequestCount.Enabled)
         {
-            builder = builder.AddHttpMessageHandler(x => new HttpClientRequestCountHandler(options.RequestCount, identity));
+            builder = builder.AddHttpMessageHandler(x => new HttpClientRequestCountHandler(
+                options.RequestCount,
+                identity
+            ));
         }
 
         if (options.RequestDuration.Enabled)
         {
-            builder = builder.AddHttpMessageHandler(x => new HttpClientRequestDurationHandler(options.RequestDuration, identity));
+            builder = builder.AddHttpMessageHandler(x => new HttpClientRequestDurationHandler(
+                options.RequestDuration,
+                identity
+            ));
         }
 
         if (options.ResponseDuration.Enabled)
         {
-            builder = builder.AddHttpMessageHandler(x => new HttpClientResponseDurationHandler(options.ResponseDuration, identity));
+            builder = builder.AddHttpMessageHandler(x => new HttpClientResponseDurationHandler(
+                options.ResponseDuration,
+                identity
+            ));
         }
 
         return builder;
@@ -55,7 +73,10 @@ public static class HttpClientMetricsExtensions
     /// <summary>
     /// Configures the HttpMessageHandler pipeline to collect Prometheus metrics.
     /// </summary>
-    public static HttpMessageHandlerBuilder UseHttpClientMetrics(this HttpMessageHandlerBuilder builder, HttpClientExporterOptions? options = null)
+    public static HttpMessageHandlerBuilder UseHttpClientMetrics(
+        this HttpMessageHandlerBuilder builder,
+        HttpClientExporterOptions? options = null
+    )
     {
         options ??= new HttpClientExporterOptions();
 
@@ -63,22 +84,30 @@ public static class HttpClientMetricsExtensions
 
         if (options.InProgress.Enabled)
         {
-            builder.AdditionalHandlers.Add(new HttpClientInProgressHandler(options.InProgress, identity));
+            builder.AdditionalHandlers.Add(
+                new HttpClientInProgressHandler(options.InProgress, identity)
+            );
         }
 
         if (options.RequestCount.Enabled)
         {
-            builder.AdditionalHandlers.Add(new HttpClientRequestCountHandler(options.RequestCount, identity));
+            builder.AdditionalHandlers.Add(
+                new HttpClientRequestCountHandler(options.RequestCount, identity)
+            );
         }
 
         if (options.RequestDuration.Enabled)
         {
-            builder.AdditionalHandlers.Add(new HttpClientRequestDurationHandler(options.RequestDuration, identity));
+            builder.AdditionalHandlers.Add(
+                new HttpClientRequestDurationHandler(options.RequestDuration, identity)
+            );
         }
 
         if (options.ResponseDuration.Enabled)
         {
-            builder.AdditionalHandlers.Add(new HttpClientResponseDurationHandler(options.ResponseDuration, identity));
+            builder.AdditionalHandlers.Add(
+                new HttpClientResponseDurationHandler(options.ResponseDuration, identity)
+            );
         }
 
         return builder;
@@ -87,14 +116,19 @@ public static class HttpClientMetricsExtensions
     /// <summary>
     /// Configures the service container to collect Prometheus metrics from all registered HttpClients.
     /// </summary>
-    public static IServiceCollection UseHttpClientMetrics(this IServiceCollection services, HttpClientExporterOptions? options = null)
+    public static IServiceCollection UseHttpClientMetrics(
+        this IServiceCollection services,
+        HttpClientExporterOptions? options = null
+    )
     {
-        return services.ConfigureAll((HttpClientFactoryOptions optionsToConfigure) =>
-        {
-            optionsToConfigure.HttpMessageHandlerBuilderActions.Add(builder =>
+        return services.ConfigureAll(
+            (HttpClientFactoryOptions optionsToConfigure) =>
             {
-                builder.UseHttpClientMetrics(options); 
-            });
-        });
+                optionsToConfigure.HttpMessageHandlerBuilderActions.Add(builder =>
+                {
+                    builder.UseHttpClientMetrics(options);
+                });
+            }
+        );
     }
 }

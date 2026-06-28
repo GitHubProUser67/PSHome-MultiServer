@@ -1,4 +1,4 @@
-﻿namespace Prometheus;
+namespace Prometheus;
 
 internal sealed class ManagedLifetimeMetricFactory : IManagedLifetimeMetricFactory
 {
@@ -7,7 +7,10 @@ internal sealed class ManagedLifetimeMetricFactory : IManagedLifetimeMetricFacto
         // .NET Framework requires the timer to fit in int.MaxValue and we will have hidden failures to expire if it does not.
         // For simplicity, let's just limit it to 1 day, which should be enough for anyone.
         if (expiresAfter > TimeSpan.FromDays(1))
-            throw new ArgumentOutOfRangeException(nameof(expiresAfter), "Automatic metric expiration time must be no greater than 1 day.");
+            throw new ArgumentOutOfRangeException(
+                nameof(expiresAfter),
+                "Automatic metric expiration time must be no greater than 1 day."
+            );
 
         _inner = inner;
         _expiresAfter = expiresAfter;
@@ -21,9 +24,17 @@ internal sealed class ManagedLifetimeMetricFactory : IManagedLifetimeMetricFacto
         return new LabelEnrichingManagedLifetimeMetricFactory(this, labels);
     }
 
-    public IManagedLifetimeMetricHandle<ICounter> CreateCounter(string name, string help, string[]? instanceLabelNames, CounterConfiguration? configuration)
+    public IManagedLifetimeMetricHandle<ICounter> CreateCounter(
+        string name,
+        string help,
+        string[]? instanceLabelNames,
+        CounterConfiguration? configuration
+    )
     {
-        var identity = new ManagedLifetimeMetricIdentity(name, StringSequence.From(instanceLabelNames ?? Array.Empty<string>()));
+        var identity = new ManagedLifetimeMetricIdentity(
+            name,
+            StringSequence.From(instanceLabelNames ?? [])
+        );
 
         _countersLock.EnterReadLock();
 
@@ -38,27 +49,20 @@ internal sealed class ManagedLifetimeMetricFactory : IManagedLifetimeMetricFacto
             _countersLock.ExitReadLock();
         }
 
-        var metric = _inner.CreateCounter(identity.MetricFamilyName, help, identity.InstanceLabelNames, configuration);
+        var metric = _inner.CreateCounter(
+            identity.MetricFamilyName,
+            help,
+            identity.InstanceLabelNames,
+            configuration
+        );
         var instance = new ManagedLifetimeCounter(metric, _expiresAfter);
 
         _countersLock.EnterWriteLock();
 
         try
         {
-#if NET
             // It could be that someone beats us to it! Probably not, though.
-            if (_counters.TryAdd(identity, instance))
-                return instance;
-
-            return _counters[identity];
-#else
-            // On .NET Fx we need to do the pessimistic case first because there is no TryAdd().
-            if (_counters.TryGetValue(identity, out var existing))
-                return existing;
-            
-            _counters.Add(identity, instance);
-            return instance;
-#endif
+            return _counters.TryAdd(identity, instance) ? instance : _counters[identity];
         }
         finally
         {
@@ -66,9 +70,17 @@ internal sealed class ManagedLifetimeMetricFactory : IManagedLifetimeMetricFacto
         }
     }
 
-    public IManagedLifetimeMetricHandle<IGauge> CreateGauge(string name, string help, string[]? instanceLabelNames, GaugeConfiguration? configuration)
+    public IManagedLifetimeMetricHandle<IGauge> CreateGauge(
+        string name,
+        string help,
+        string[]? instanceLabelNames,
+        GaugeConfiguration? configuration
+    )
     {
-        var identity = new ManagedLifetimeMetricIdentity(name, StringSequence.From(instanceLabelNames ?? Array.Empty<string>()));
+        var identity = new ManagedLifetimeMetricIdentity(
+            name,
+            StringSequence.From(instanceLabelNames ?? [])
+        );
 
         _gaugesLock.EnterReadLock();
 
@@ -83,27 +95,20 @@ internal sealed class ManagedLifetimeMetricFactory : IManagedLifetimeMetricFacto
             _gaugesLock.ExitReadLock();
         }
 
-        var metric = _inner.CreateGauge(identity.MetricFamilyName, help, identity.InstanceLabelNames, configuration);
+        var metric = _inner.CreateGauge(
+            identity.MetricFamilyName,
+            help,
+            identity.InstanceLabelNames,
+            configuration
+        );
         var instance = new ManagedLifetimeGauge(metric, _expiresAfter);
 
         _gaugesLock.EnterWriteLock();
 
         try
         {
-#if NET
             // It could be that someone beats us to it! Probably not, though.
-            if (_gauges.TryAdd(identity, instance))
-                return instance;
-
-            return _gauges[identity];
-#else
-            // On .NET Fx we need to do the pessimistic case first because there is no TryAdd().
-            if (_gauges.TryGetValue(identity, out var existing))
-                return existing;
-            
-            _gauges.Add(identity, instance);
-            return instance;
-#endif
+            return _gauges.TryAdd(identity, instance) ? instance : _gauges[identity];
         }
         finally
         {
@@ -111,9 +116,17 @@ internal sealed class ManagedLifetimeMetricFactory : IManagedLifetimeMetricFacto
         }
     }
 
-    public IManagedLifetimeMetricHandle<IHistogram> CreateHistogram(string name, string help, string[]? instanceLabelNames, HistogramConfiguration? configuration)
+    public IManagedLifetimeMetricHandle<IHistogram> CreateHistogram(
+        string name,
+        string help,
+        string[]? instanceLabelNames,
+        HistogramConfiguration? configuration
+    )
     {
-        var identity = new ManagedLifetimeMetricIdentity(name, StringSequence.From(instanceLabelNames ?? Array.Empty<string>()));
+        var identity = new ManagedLifetimeMetricIdentity(
+            name,
+            StringSequence.From(instanceLabelNames ?? [])
+        );
 
         _histogramsLock.EnterReadLock();
 
@@ -128,27 +141,20 @@ internal sealed class ManagedLifetimeMetricFactory : IManagedLifetimeMetricFacto
             _histogramsLock.ExitReadLock();
         }
 
-        var metric = _inner.CreateHistogram(identity.MetricFamilyName, help, identity.InstanceLabelNames, configuration);
+        var metric = _inner.CreateHistogram(
+            identity.MetricFamilyName,
+            help,
+            identity.InstanceLabelNames,
+            configuration
+        );
         var instance = new ManagedLifetimeHistogram(metric, _expiresAfter);
 
         _histogramsLock.EnterWriteLock();
 
         try
         {
-#if NET
             // It could be that someone beats us to it! Probably not, though.
-            if (_histograms.TryAdd(identity, instance))
-                return instance;
-
-            return _histograms[identity];
-#else
-            // On .NET Fx we need to do the pessimistic case first because there is no TryAdd().
-            if (_histograms.TryGetValue(identity, out var existing))
-                return existing;
-            
-            _histograms.Add(identity, instance);
-            return instance;
-#endif
+            return _histograms.TryAdd(identity, instance) ? instance : _histograms[identity];
         }
         finally
         {
@@ -156,9 +162,17 @@ internal sealed class ManagedLifetimeMetricFactory : IManagedLifetimeMetricFacto
         }
     }
 
-    public IManagedLifetimeMetricHandle<ISummary> CreateSummary(string name, string help, string[]? instanceLabelNames, SummaryConfiguration? configuration)
+    public IManagedLifetimeMetricHandle<ISummary> CreateSummary(
+        string name,
+        string help,
+        string[]? instanceLabelNames,
+        SummaryConfiguration? configuration
+    )
     {
-        var identity = new ManagedLifetimeMetricIdentity(name, StringSequence.From(instanceLabelNames ?? Array.Empty<string>()));
+        var identity = new ManagedLifetimeMetricIdentity(
+            name,
+            StringSequence.From(instanceLabelNames ?? [])
+        );
 
         _summariesLock.EnterReadLock();
 
@@ -173,27 +187,20 @@ internal sealed class ManagedLifetimeMetricFactory : IManagedLifetimeMetricFacto
             _summariesLock.ExitReadLock();
         }
 
-        var metric = _inner.CreateSummary(identity.MetricFamilyName, help, identity.InstanceLabelNames, configuration);
+        var metric = _inner.CreateSummary(
+            identity.MetricFamilyName,
+            help,
+            identity.InstanceLabelNames,
+            configuration
+        );
         var instance = new ManagedLifetimeSummary(metric, _expiresAfter);
 
         _summariesLock.EnterWriteLock();
 
         try
         {
-#if NET
             // It could be that someone beats us to it! Probably not, though.
-            if (_summaries.TryAdd(identity, instance))
-                return instance;
-
-            return _summaries[identity];
-#else
-            // On .NET Fx we need to do the pessimistic case first because there is no TryAdd().
-            if (_summaries.TryGetValue(identity, out var existing))
-                return existing;
-            
-            _summaries.Add(identity, instance);
-            return instance;
-#endif
+            return _summaries.TryAdd(identity, instance) ? instance : _summaries[identity];
         }
         finally
         {
@@ -209,15 +216,20 @@ internal sealed class ManagedLifetimeMetricFactory : IManagedLifetimeMetricFacto
     // We need to reuse existing instances of lifetime-managed metrics because the user might not want to cache it.
     // This somewhat duplicates the metric identity tracking logic in CollectorRegistry but this is intentional, as we really do need to do this work on two layers.
     // We never remove collectors from here as long as the factory is alive. The expectation is that there is not an unbounded set of label names, so this set is non-gigantic.
-    private readonly Dictionary<ManagedLifetimeMetricIdentity, ManagedLifetimeCounter> _counters = new();
+    private readonly Dictionary<ManagedLifetimeMetricIdentity, ManagedLifetimeCounter> _counters =
+    [];
     private readonly ReaderWriterLockSlim _countersLock = new();
 
-    private readonly Dictionary<ManagedLifetimeMetricIdentity, ManagedLifetimeGauge> _gauges = new();
+    private readonly Dictionary<ManagedLifetimeMetricIdentity, ManagedLifetimeGauge> _gauges = [];
     private readonly ReaderWriterLockSlim _gaugesLock = new();
 
-    private readonly Dictionary<ManagedLifetimeMetricIdentity, ManagedLifetimeHistogram> _histograms = new();
+    private readonly Dictionary<
+        ManagedLifetimeMetricIdentity,
+        ManagedLifetimeHistogram
+    > _histograms = [];
     private readonly ReaderWriterLockSlim _histogramsLock = new();
 
-    private readonly Dictionary<ManagedLifetimeMetricIdentity, ManagedLifetimeSummary> _summaries = new();
+    private readonly Dictionary<ManagedLifetimeMetricIdentity, ManagedLifetimeSummary> _summaries =
+    [];
     private readonly ReaderWriterLockSlim _summariesLock = new();
 }

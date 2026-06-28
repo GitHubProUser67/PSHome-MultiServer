@@ -1,8 +1,5 @@
-﻿using Alcatraz.DTO.Helpers;
-using Microsoft.EntityFrameworkCore;
+﻿using AlcatrazService;
 using Microsoft.EntityFrameworkCore.Migrations;
-using System;
-
 
 #nullable disable
 
@@ -11,28 +8,26 @@ namespace Alcatraz.Context.Migrations
     /// <inheritdoc />
     public partial class UpdatePasswordStorage : Migration
     {
-        MainDbContext _dbContext;
-		public UpdatePasswordStorage(MainDbContext context)
-		{
-            _dbContext = context;
-		}
+        readonly MainDbContext _dbContext;
 
-		/// <inheritdoc />
-		protected override void Up(MigrationBuilder migrationBuilder)
+        public UpdatePasswordStorage(MainDbContext context)
         {
-			/* Disabled password updating since v2 services expect the classic passwd format (and causes problems with further migrations).
-			 * 
-			 *  foreach (var user in _dbContext.Users)
+            _dbContext = context;
+        }
+
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            /* Disabled password updating since v2 services expect the classic passwd format (and causes problems with further migrations).
+             *
+             *  foreach (var user in _dbContext.Users)
                 {
-				    user.Password = SecurePasswordHasher.Hash($"{user.Id}-{user.Password}");
-			    }
+                    user.Password = SecurePasswordHasher.Hash($"{user.Id}-{user.Password}");
+                }
             */
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-        }
+        protected override void Down(MigrationBuilder migrationBuilder) { }
     }
-
 }

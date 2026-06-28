@@ -2,24 +2,22 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Redirector
 {
-	[TdfStruct]
-	public struct InstanceRemoveInfo
-	{
+    [TdfStruct]
+    public struct InstanceRemoveInfo
+    {
+        [TdfMember("IID")]
+        public int mInstanceId;
 
-		[TdfMember("IID")]
-		public int mInstanceId;
+        [TdfMember("INAM")]
+        public string mInstanceName;
 
-		[TdfMember("INAM")]
-		public string mInstanceName;
+        [TdfMember("SNAM")]
+        public string mServiceName;
 
-		[TdfMember("SNAM")]
-		public string mServiceName;
+        [TdfMember("SNMS")]
+        public List<string> mServiceNames;
 
-		[TdfMember("SNMS")]
-		public List<string> mServiceNames;
-
-		[TdfMember("TYPE")]
-		public InstanceType mType;
-
-	}
+        [TdfMember("TYPE")]
+        public InstanceType mType;
+    }
 }

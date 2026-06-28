@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Clubs
 {
-	[TdfStruct]
-	public struct GetMembersAsyncResult
-	{
+    [TdfStruct]
+    public struct GetMembersAsyncResult
+    {
+        [TdfMember("MMBR")]
+        public ClubMember mClubMember;
 
-		[TdfMember("MMBR")]
-		public ClubMember mClubMember;
-
-		[TdfMember("SQID")]
-		public uint mSequenceID;
-
-	}
+        [TdfMember("SQID")]
+        public uint mSequenceID;
+    }
 }

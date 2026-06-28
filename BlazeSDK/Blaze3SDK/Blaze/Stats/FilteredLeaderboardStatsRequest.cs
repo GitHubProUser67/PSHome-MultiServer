@@ -2,33 +2,31 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Stats
 {
-	[TdfStruct]
-	public struct FilteredLeaderboardStatsRequest
-	{
+    [TdfStruct]
+    public struct FilteredLeaderboardStatsRequest
+    {
+        [TdfMember("LBID")]
+        public int mBoardId;
 
-		[TdfMember("LBID")]
-		public int mBoardId;
+        [TdfMember("NAME")]
+        public string mBoardName;
 
-		[TdfMember("NAME")]
-		public string mBoardName;
+        [TdfMember("FILT")]
+        public bool mIncludeStatlessEntities;
 
-		[TdfMember("FILT")]
-		public bool mIncludeStatlessEntities;
+        [TdfMember("KSUM")]
+        public SortedDictionary<string, long> mKeyScopeNameValueMap;
 
-		[TdfMember("KSUM")]
-		public SortedDictionary<string, long> mKeyScopeNameValueMap;
+        [TdfMember("IDLS")]
+        public List<long> mListOfIds;
 
-		[TdfMember("IDLS")]
-		public List<long> mListOfIds;
+        [TdfMember("POFF")]
+        public int mPeriodOffset;
 
-		[TdfMember("POFF")]
-		public int mPeriodOffset;
+        [TdfMember("TIME")]
+        public int mTime;
 
-		[TdfMember("TIME")]
-		public int mTime;
-
-		[TdfMember("USET")]
-		public BlazeObjectId mUserSetId;
-
-	}
+        [TdfMember("USET")]
+        public BlazeObjectId mUserSetId;
+    }
 }

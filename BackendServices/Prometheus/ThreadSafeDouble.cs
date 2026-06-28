@@ -2,35 +2,31 @@
 
 namespace Prometheus;
 
-internal struct ThreadSafeDouble
+internal struct ThreadSafeDouble(double value)
 {
-    private long _value;
-
-    public ThreadSafeDouble(double value)
-    {
-        _value = BitConverter.DoubleToInt64Bits(value);
-    }
+    private long _value = BitConverter.DoubleToInt64Bits(value);
 
     public double Value
     {
-        get
-        {
-            return BitConverter.Int64BitsToDouble(Interlocked.Read(ref _value));
-        }
-        set
-        {
-            Interlocked.Exchange(ref _value, BitConverter.DoubleToInt64Bits(value));
-        }
+        get { return BitConverter.Int64BitsToDouble(Interlocked.Read(ref _value)); }
+        set { Interlocked.Exchange(ref _value, BitConverter.DoubleToInt64Bits(value)); }
     }
 
     public void Add(double increment)
     {
         while (true)
         {
-            long initialValue = Volatile.Read(ref _value);
-            double computedValue = BitConverter.Int64BitsToDouble(initialValue) + increment;
+            var initialValue = Volatile.Read(ref _value);
+            var computedValue = BitConverter.Int64BitsToDouble(initialValue) + increment;
 
-            if (initialValue == Interlocked.CompareExchange(ref _value, BitConverter.DoubleToInt64Bits(computedValue), initialValue))
+            if (
+                initialValue
+                == Interlocked.CompareExchange(
+                    ref _value,
+                    BitConverter.DoubleToInt64Bits(computedValue),
+                    initialValue
+                )
+            )
                 return;
         }
     }
@@ -42,13 +38,20 @@ internal struct ThreadSafeDouble
     {
         while (true)
         {
-            long initialRaw = Volatile.Read(ref _value);
-            double initialValue = BitConverter.Int64BitsToDouble(initialRaw);
+            var initialRaw = Volatile.Read(ref _value);
+            var initialValue = BitConverter.Int64BitsToDouble(initialRaw);
 
             if (initialValue >= to)
                 return; // Already greater.
 
-            if (initialRaw == Interlocked.CompareExchange(ref _value, BitConverter.DoubleToInt64Bits(to), initialRaw))
+            if (
+                initialRaw
+                == Interlocked.CompareExchange(
+                    ref _value,
+                    BitConverter.DoubleToInt64Bits(to),
+                    initialRaw
+                )
+            )
                 return;
         }
     }
@@ -60,13 +63,20 @@ internal struct ThreadSafeDouble
     {
         while (true)
         {
-            long initialRaw = Volatile.Read(ref _value);
-            double initialValue = BitConverter.Int64BitsToDouble(initialRaw);
+            var initialRaw = Volatile.Read(ref _value);
+            var initialValue = BitConverter.Int64BitsToDouble(initialRaw);
 
             if (initialValue <= to)
                 return; // Already smaller.
 
-            if (initialRaw == Interlocked.CompareExchange(ref _value, BitConverter.DoubleToInt64Bits(to), initialRaw))
+            if (
+                initialRaw
+                == Interlocked.CompareExchange(
+                    ref _value,
+                    BitConverter.DoubleToInt64Bits(to),
+                    initialRaw
+                )
+            )
                 return;
         }
     }
@@ -78,10 +88,7 @@ internal struct ThreadSafeDouble
 
     public override bool Equals(object? obj)
     {
-        if (obj is ThreadSafeDouble other)
-            return Value.Equals(other.Value);
-
-        return Value.Equals(obj);
+        return obj is ThreadSafeDouble other ? Value.Equals(other.Value) : Value.Equals(obj);
     }
 
     public override int GetHashCode()

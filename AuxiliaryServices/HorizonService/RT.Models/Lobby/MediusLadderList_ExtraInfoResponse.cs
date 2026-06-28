@@ -1,10 +1,12 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.LadderList_ExtraInfoResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.LadderList_ExtraInfoResponse
+    )]
     public class MediusLadderList_ExtraInfoResponse : BaseLobbyMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusLobbyMessageIds.LadderList_ExtraInfoResponse;
@@ -24,13 +26,10 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             reader.ReadBytes(3);
             StatusCode = reader.Read<MediusCallbackStatus>();
             LadderPosition = reader.ReadUInt32();
@@ -45,13 +44,10 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            // 
             writer.Write(new byte[3]);
             writer.Write(StatusCode);
             writer.Write(LadderPosition);
@@ -66,16 +62,17 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"LadderPosition: {LadderPosition} " +
-                $"LadderStat: {LadderStat} " +
-                $"AccountID: {AccountID} " +
-                $"AccountName: {AccountName} " +
-                $"AccountStats: {System.BitConverter.ToString(AccountStats)} " +
-                $"OnlineState: {OnlineState} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"LadderPosition: {LadderPosition} "
+                + $"LadderStat: {LadderStat} "
+                + $"AccountID: {AccountID} "
+                + $"AccountName: {AccountName} "
+                + $"AccountStats: {System.BitConverter.ToString(AccountStats)} "
+                + $"OnlineState: {OnlineState} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

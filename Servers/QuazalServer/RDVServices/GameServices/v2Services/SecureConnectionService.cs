@@ -1,9 +1,9 @@
-using QuazalServer.RDVServices.DDL.Models;
+using CustomLogger;
 using QuazalServer.QNetZ.Attributes;
+using QuazalServer.QNetZ.Connection;
 using QuazalServer.QNetZ.DDL;
 using QuazalServer.QNetZ.Interfaces;
-using QuazalServer.QNetZ.Connection;
-using CustomLogger;
+using QuazalServer.RDVServices.DDL.Models;
 
 namespace QuazalServer.RDVServices.GameServices.v2Services
 {
@@ -21,16 +21,18 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
                 // change address
                 StationURL rdvConnectionUrl = new(vecMyURLs.Last().ToString())
                 {
-                    Address = Context.Client.Endpoint.Address.ToString()
+                    Address = Context.Client.Endpoint.Address.ToString(),
                 };
                 rdvConnectionUrl["type"] = 3;
 
-                return Result(new RegisterResult()
-                {
-                    pidConnectionID = Context.Client.PlayerInfo.RVCID,
-                    retval = (int)ErrorCode.Core_NoError,
-                    urlPublic = rdvConnectionUrl
-                });
+                return Result(
+                    new RegisterResult()
+                    {
+                        pidConnectionID = Context.Client.PlayerInfo.RVCID,
+                        retval = (int)ErrorCode.Core_NoError,
+                        urlPublic = rdvConnectionUrl,
+                    }
+                );
             }
 
             return null;
@@ -49,26 +51,33 @@ namespace QuazalServer.RDVServices.GameServices.v2Services
         }
 
         [RMCMethod(4)]
-        public RMCResult RegisterEx(ICollection<StationURL> vecMyURLs, AnyData<LoginData> hCustomData)
+        public RMCResult RegisterEx(
+            ICollection<StationURL> vecMyURLs,
+            AnyData<LoginData> hCustomData
+        )
         {
             if (hCustomData.data != null && Context != null && Context.Client.PlayerInfo != null)
             {
                 // change address
                 StationURL rdvConnectionUrl = new(vecMyURLs.Last().ToString())
                 {
-                    Address = Context.Client.Endpoint.Address.ToString()
+                    Address = Context.Client.Endpoint.Address.ToString(),
                 };
                 rdvConnectionUrl["type"] = 3;
 
-                return Result(new RegisterResult()
-                {
-                    pidConnectionID = Context.Client.PlayerInfo.RVCID,
-                    retval = (int)ErrorCode.Core_NoError,
-                    urlPublic = rdvConnectionUrl
-                });
+                return Result(
+                    new RegisterResult()
+                    {
+                        pidConnectionID = Context.Client.PlayerInfo.RVCID,
+                        retval = (int)ErrorCode.Core_NoError,
+                        urlPublic = rdvConnectionUrl,
+                    }
+                );
             }
             else
-                LoggerAccessor.LogError($"[RMC Secure] Error: Unknown Custom Data class {hCustomData.className}");
+                LoggerAccessor.LogError(
+                    $"[RMC Secure] Error: Unknown Custom Data class {hCustomData.className}"
+                );
 
             return Error((int)ErrorCode.RendezVous_ClassNotFound);
         }

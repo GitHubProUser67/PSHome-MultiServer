@@ -10,6 +10,6 @@ namespace ApacheNet
     {
         Deny,
         Allow,
-        Redirect
+        Redirect,
     }
 }

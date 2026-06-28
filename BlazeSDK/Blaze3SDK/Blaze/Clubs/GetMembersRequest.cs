@@ -2,27 +2,25 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Clubs
 {
-	[TdfStruct]
-	public struct GetMembersRequest
-	{
+    [TdfStruct]
+    public struct GetMembersRequest
+    {
+        [TdfMember("CLID")]
+        public uint mClubId;
 
-		[TdfMember("CLID")]
-		public uint mClubId;
+        [TdfMember("MXRC")]
+        public uint mMaxResultCount;
 
-		[TdfMember("MXRC")]
-		public uint mMaxResultCount;
+        [TdfMember("FILM")]
+        public MemberTypeFilter mMemberType;
 
-		[TdfMember("FILM")]
-		public MemberTypeFilter mMemberType;
+        [TdfMember("OFRC")]
+        public uint mOffset;
 
-		[TdfMember("OFRC")]
-		public uint mOffset;
+        [TdfMember("ORDM")]
+        public OrderMode mOrderMode;
 
-		[TdfMember("ORDM")]
-		public OrderMode mOrderMode;
-
-		[TdfMember("ORDT")]
-		public MemberOrder mOrderType;
-
-	}
+        [TdfMember("ORDT")]
+        public MemberOrder mOrderType;
+    }
 }

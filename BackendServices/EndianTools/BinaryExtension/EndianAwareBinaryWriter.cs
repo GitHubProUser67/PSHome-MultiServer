@@ -1,19 +1,12 @@
-using System.IO;
-
 namespace EndianTools.BinaryExtension
 {
-    public abstract class EndianAwareBinaryWriter
+    public abstract class EndianAwareBinaryWriter(Stream output)
     {
-        public EndianAwareBinaryWriter(Stream output)
-        {
-            m_bw = new BinaryWriter(output);
-        }
-
         public static EndianAwareBinaryWriter Create(Stream output, Endianness endian)
         {
-            if (endian == Endianness.LittleEndian)
-                return new LEBinaryWriter(output);
-            return new BEBinaryWriter(output);
+            return endian == Endianness.LittleEndian
+                ? new LEBinaryWriter(output)
+                : new BEBinaryWriter(output);
         }
 
         public abstract void Write(byte[] bytes);
@@ -37,6 +30,6 @@ namespace EndianTools.BinaryExtension
             m_bw.Close();
         }
 
-        protected BinaryWriter m_bw;
+        protected BinaryWriter m_bw = new(output);
     }
 }

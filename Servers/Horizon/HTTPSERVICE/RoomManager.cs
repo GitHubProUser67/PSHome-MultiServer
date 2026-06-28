@@ -1,73 +1,30 @@
-using Horizon.SERVER;
+using Horizon.LIBRARY.Database.Entities;
+using Horizon.MEDIUS;
+using Horizon.MUM.Models;
 using MultiServerLibrary.Extension;
 using Newtonsoft.Json;
-using Horizon.MUM.Models;
-using static Horizon.MUM.Models.Game;
-using static Horizon.MUM.Models.Party;
 using WebAPIService.WebServices.WebCrypto;
 
 namespace Horizon.HTTPSERVICE
 {
     public static class RoomManager
     {
-        private static readonly byte[] RandSecSaltKey = ByteUtils.GenerateRandomBytes((ushort)NetObfuscator.SecSalt.Length);
+        private static readonly byte[] RandSecSaltKey = ByteUtils.GenerateRandomBytes(
+            (ushort)NetObfuscator.SecSalt.Length
+        );
 
-        private static readonly List<Room> rooms = new List<Room>();
+        private static readonly List<Room> rooms = new();
 
-        public static void UpdateOrCreateRoom(string appId, string? gameName, int? gameId, string? worldId, string? accountName, int accountDmeId, string? languageType, bool host)
+        public static void CreateRoom(string appId)
         {
             lock (rooms)
             {
-                Room? roomToUpdate = rooms.FirstOrDefault(r => r.AppId == appId);
+                var roomToUpdate = rooms.FirstOrDefault(r => r.AppId == appId);
 
                 if (roomToUpdate == null)
                 {
                     roomToUpdate = new Room { AppId = appId, Worlds = new List<World>() };
                     rooms.Add(roomToUpdate);
-                }
-
-                if (worldId != null)
-                {
-                    World? worldToUpdate = roomToUpdate.Worlds?.FirstOrDefault(w => w.WorldId == worldId);
-
-                    if (worldToUpdate == null && !string.IsNullOrEmpty(worldId))
-                    {
-                        worldToUpdate = new World { WorldId = worldId, GameSessions = new List<GameList>() };
-                        roomToUpdate.Worlds?.Add(worldToUpdate);
-                    }
-
-                    GameList? gameToUpdate = worldToUpdate?.GameSessions?.FirstOrDefault(w => w.Name == gameName);
-
-                    if (gameToUpdate == null && !string.IsNullOrEmpty(gameName) && gameId.HasValue)
-                    {
-                        gameToUpdate = new GameList { DmeWorldId = gameId.Value, Name = gameName, CreationDate = DateTime.Now.ToUniversalTime(), Clients = new List<Player>() };
-                        worldToUpdate?.GameSessions?.Add(gameToUpdate);
-                    }
-
-                    Player? playerToUpdate = gameToUpdate?.Clients?.FirstOrDefault(p => p.Name == accountName);
-
-                    if (playerToUpdate == null && !string.IsNullOrEmpty(gameToUpdate?.Name) && !string.IsNullOrEmpty(accountName) && !string.IsNullOrEmpty(languageType))
-                    {
-                        if (gameToUpdate.Name.Contains("AP|"))
-                        {
-                            Player? playerToUpdatehashed = gameToUpdate.Clients?.FirstOrDefault(p => p.Name == CipherString(accountName, HorizonServerConfiguration.MediusAPIKey));
-                            if (playerToUpdatehashed == null)
-                            {
-                                playerToUpdate = new Player { DmeId = accountDmeId, Name = CipherString(accountName, HorizonServerConfiguration.MediusAPIKey), Languages = languageType, Host = host };
-                                gameToUpdate.Clients?.Add(playerToUpdate);
-                            }
-                        }
-                        else
-                        {
-                            playerToUpdate = new Player { DmeId = accountDmeId, Name = accountName, Languages = languageType, Host = host };
-                            gameToUpdate.Clients?.Add(playerToUpdate);
-                        }
-                    }
-                    else if (playerToUpdate != null)
-                    {
-                        playerToUpdate.Host = host;
-                        playerToUpdate.Languages = languageType;
-                    }
                 }
             }
         }
@@ -80,29 +37,25 @@ namespace Horizon.HTTPSERVICE
 
                 foreach (var channel in channels)
                 {
-                    string appIdStr = channel.ApplicationId.ToString();
-                    string worldIdStr = channel.Id.ToString();
+                    var appIdStr = channel.ApplicationId.ToString();
+                    var worldIdStr = channel.Id.ToString();
 
-                    Room? room = rooms.FirstOrDefault(r => r.AppId == appIdStr);
+                    var room = rooms.FirstOrDefault(r => r.AppId == appIdStr);
                     if (room == null)
                     {
-                        room = new Room
-                        {
-                            AppId = appIdStr,
-                            Worlds = new List<World>()
-                        };
+                        room = new Room { AppId = appIdStr, Worlds = new List<World>() };
                         rooms.Add(room);
                     }
 
                     room.Worlds?.RemoveAll(w => !validWorldIds.Contains(w.WorldId!));
 
-                    World? world = room.Worlds!.FirstOrDefault(w => w.WorldId == worldIdStr);
+                    var world = room.Worlds!.FirstOrDefault(w => w.WorldId == worldIdStr);
                     if (world == null)
                     {
                         world = new World
                         {
                             WorldId = worldIdStr,
-                            GameSessions = new List<GameList>()
+                            GameSessions = new List<GameList>(),
                         };
                         room.Worlds!.Add(world);
                     }
@@ -113,24 +66,30 @@ namespace Horizon.HTTPSERVICE
                     world.GenericField3 = channel.GenericField3;
                     world.GenericField4 = channel.GenericField4;
                     world.WorldStatus = (int)channel.WorldStatus;
+                    world.NumOfGamesChannel = channel.GameCount;
 
-                    var incomingGames = channel.Games
-                            .Select(g => g.MediusWorldId)
-                            .ToList();
+                    bool hasGame = channel.Game != null,
+                        hasParty = channel.Party != null;
+                    var incomingGames = new List<int>();
 
-                    incomingGames.AddRange(channel.Parties
-                        .Select(g => g.MediusWorldId)
-                        .ToList());
+                    if (hasGame)
+                        incomingGames.Add(channel.Game!.MediusWorldId);
+                    if (hasParty)
+                        incomingGames.Add(channel.Party!.MediusWorldId);
 
                     world.GameSessions!.RemoveAll(p => !incomingGames.Contains(p.DmeWorldId));
 
-                    foreach (var game in channel.Games)
+                    if (hasGame)
                     {
-                        GameClient[] gameClients = game.LocalClients.ToArray();
+                        var game = channel.Game;
+
+                        var gameClients = game!.LocalClients.ToArray();
 
                         var incomingGameClients = gameClients.Select(c => c.DmeId).ToList();
 
-                        GameList? gameSession = world.GameSessions.FirstOrDefault(g => g.DmeWorldId == game.MediusWorldId);
+                        var gameSession = world.GameSessions.FirstOrDefault(g =>
+                            g.DmeWorldId == game.MediusWorldId
+                        );
                         if (gameSession == null)
                         {
                             gameSession = new GameList
@@ -138,7 +97,21 @@ namespace Horizon.HTTPSERVICE
                                 DmeWorldId = game.MediusWorldId,
                                 Name = game.GameName,
                                 CreationDate = game.utcTimeCreated,
-                                Clients = new List<Player>()
+                                RulesSet = game.RulesSet,
+                                GameLevel = game.GameLevel,
+                                PlayerSkillLevel = game.PlayerSkillLevel,
+                                MinPlayers = game.MinPlayers,
+                                MaxPlayers = game.MaxPlayers,
+                                GenericField1 = game.GenericField1,
+                                GenericField2 = game.GenericField2,
+                                GenericField3 = game.GenericField3,
+                                GenericField4 = game.GenericField4,
+                                GenericField5 = game.GenericField5,
+                                GenericField6 = game.GenericField6,
+                                GenericField7 = game.GenericField7,
+                                GenericField8 = game.GenericField8,
+                                WorldStatus = (int)game.WorldStatus,
+                                Clients = new List<Player>(),
                             };
                             world.GameSessions.Add(gameSession);
                         }
@@ -149,18 +122,26 @@ namespace Horizon.HTTPSERVICE
 
                         foreach (var client in gameClients)
                         {
-                            Player player = new Player
+                            var player = new Player
                             {
                                 DmeId = client.DmeId,
                                 Name = client.Client!.AccountName,
                                 Languages = client.Client.LanguageType.ToString(),
-                                Host = client.Client == game.Host
+                                Host = client.Client == game.Host,
                             };
 
-                            if (!string.IsNullOrEmpty(gameSession.Name) && gameSession.Name.Contains("AP|"))
-                                player.Name = CipherString(player.Name!, HorizonServerConfiguration.MediusAPIKey);
+                            if (
+                                !string.IsNullOrEmpty(gameSession.Name)
+                                && gameSession.Name.Contains("AP|")
+                            )
+                                player.Name = CipherString(
+                                    player.Name!,
+                                    HorizonServerConfiguration.MEDIUSAPIKey
+                                );
 
-                            var existingPlayer = gameSession.Clients!.FirstOrDefault(p => p.DmeId == player.DmeId);
+                            var existingPlayer = gameSession.Clients!.FirstOrDefault(p =>
+                                p.DmeId == player.DmeId
+                            );
                             if (existingPlayer == null)
                                 gameSession.Clients!.Add(player);
                             else
@@ -172,13 +153,17 @@ namespace Horizon.HTTPSERVICE
                         }
                     }
 
-                    foreach (var party in channel.Parties)
+                    if (hasParty)
                     {
-                        PartyClient[] partyClients = party.LocalClients.ToArray();
+                        var party = channel.Party;
+
+                        var partyClients = party!.LocalClients.ToArray();
 
                         var incomingPartyClients = partyClients.Select(c => c.DmeId).ToList();
 
-                        GameList? gameSession = world.GameSessions.FirstOrDefault(g => g.DmeWorldId == party.MediusWorldId);
+                        var gameSession = world.GameSessions.FirstOrDefault(g =>
+                            g.DmeWorldId == party.MediusWorldId
+                        );
                         if (gameSession == null)
                         {
                             gameSession = new GameList
@@ -186,29 +171,53 @@ namespace Horizon.HTTPSERVICE
                                 DmeWorldId = party.MediusWorldId,
                                 Name = party.PartyName,
                                 CreationDate = party.utcTimeCreated,
-                                Clients = new List<Player>()
+                                RulesSet = party.RulesSet,
+                                GameLevel = party.PartyLevel,
+                                PlayerSkillLevel = party.PlayerSkillLevel,
+                                MinPlayers = party.MinPlayers,
+                                MaxPlayers = party.MaxPlayers,
+                                GenericField1 = party.GenericField1,
+                                GenericField2 = party.GenericField2,
+                                GenericField3 = party.GenericField3,
+                                GenericField4 = party.GenericField4,
+                                GenericField5 = party.GenericField5,
+                                GenericField6 = party.GenericField6,
+                                GenericField7 = party.GenericField7,
+                                GenericField8 = party.GenericField8,
+                                WorldStatus = (int)party.WorldStatus,
+                                Clients = new List<Player>(),
                             };
                             world.GameSessions.Add(gameSession);
                         }
                         else
                             gameSession.Name = party.PartyName;
 
-                        gameSession.Clients!.RemoveAll(p => !incomingPartyClients.Contains(p.DmeId));
+                        gameSession.Clients!.RemoveAll(p =>
+                            !incomingPartyClients.Contains(p.DmeId)
+                        );
 
                         foreach (var client in partyClients)
                         {
-                            Player player = new Player
+                            var player = new Player
                             {
                                 DmeId = client.DmeId,
                                 Name = client.Client!.AccountName,
                                 Languages = client.Client.LanguageType.ToString(),
-                                Host = client.Client == party.Host
+                                Host = client.Client == party.Host,
                             };
 
-                            if (!string.IsNullOrEmpty(gameSession.Name) && gameSession.Name.Contains("AP|"))
-                                player.Name = CipherString(player.Name!, HorizonServerConfiguration.MediusAPIKey);
+                            if (
+                                !string.IsNullOrEmpty(gameSession.Name)
+                                && gameSession.Name.Contains("AP|")
+                            )
+                                player.Name = CipherString(
+                                    player.Name!,
+                                    HorizonServerConfiguration.MEDIUSAPIKey
+                                );
 
-                            var existingPlayer = gameSession.Clients!.FirstOrDefault(p => p.DmeId == player.DmeId);
+                            var existingPlayer = gameSession.Clients!.FirstOrDefault(p =>
+                                p.DmeId == player.DmeId
+                            );
                             if (existingPlayer == null)
                                 gameSession.Clients!.Add(player);
                             else
@@ -233,10 +242,12 @@ namespace Horizon.HTTPSERVICE
         {
             List<KeyValuePair<string, int>> usersList = new();
 
-            foreach (var user in MediusClass.Manager.GetClients(0))
+            foreach (var user in Program.MUMManager.GetClients(0))
             {
                 if (user.IsLoggedIn && !string.IsNullOrEmpty(user.AccountName))
-                    usersList.Add(new KeyValuePair<string, int>(user.AccountName, user.ApplicationId));
+                    usersList.Add(
+                        new KeyValuePair<string, int>(user.AccountName, user.ApplicationId)
+                    );
             }
 
             return usersList;
@@ -244,23 +255,33 @@ namespace Horizon.HTTPSERVICE
 
         public static string ToJson()
         {
-            return "{\"usernames\":" + JsonConvert.SerializeObject(GetAllLoggedInUsers()) + ",\"rooms\":" + JsonConvert.SerializeObject(GetAllRooms()) + "}";
+            return "{\"usernames\":"
+                + JsonConvert.SerializeObject(GetAllLoggedInUsers())
+                + ",\"rooms\":"
+                + JsonConvert.SerializeObject(GetAllRooms())
+                + "}";
         }
 
         private static string CipherString(string input, string key)
         {
             int i;
-            byte[] secSalt = new byte[RandSecSaltKey.Length];
+            var secSalt = new byte[RandSecSaltKey.Length];
 
             for (i = 0; i < RandSecSaltKey.Length; i++)
             {
-                if (i == 0)
-                    secSalt[i] = (byte)(NetObfuscator.SecSalt[i] ^ RandSecSaltKey[i] ^ (i * 2));
-                else
-                    secSalt[i] = (byte)(NetObfuscator.SecSalt[i] ^ RandSecSaltKey[i] ^ secSalt[i - 1]);
+                secSalt[i] =
+                    i == 0
+                        ? (byte)(NetObfuscator.SecSalt[i] ^ RandSecSaltKey[i] ^ (i * 2))
+                        : (byte)(NetObfuscator.SecSalt[i] ^ RandSecSaltKey[i] ^ secSalt[i - 1]);
             }
 
-            return $"<Secure RNG=\"{BitConverter.ToString(secSalt).Replace("-", string.Empty)}\">" + NetObfuscator.Encrypt(WebCryptoClass.EncryptCBC(input, key, WebCryptoClass.IdentIV), secSalt, (byte)key.Aggregate(0, (current, c) => current ^ c)) + "</Secure>";
+            return $"<Secure RNG=\"{BitConverter.ToString(secSalt).Replace("-", string.Empty)}\">"
+                + NetObfuscator.Encrypt(
+                    WebCryptoClass.EncryptCBC(input, key, WebCryptoClass.IdentIV),
+                    secSalt,
+                    (byte)key.Aggregate(0, (current, c) => current ^ c)
+                )
+                + "</Secure>";
         }
     }
 
@@ -280,6 +301,7 @@ namespace Horizon.HTTPSERVICE
         public ulong GenericField3 { get; set; }
         public ulong GenericField4 { get; set; }
         public int WorldStatus { get; set; }
+        public int NumOfGamesChannel { get; set; }
         public List<GameList>? GameSessions { get; set; }
     }
 
@@ -288,6 +310,20 @@ namespace Horizon.HTTPSERVICE
         public int DmeWorldId { get; set; }
         public string? Name { get; set; }
         public DateTime CreationDate { get; set; }
+        public int GameLevel { get; set; }
+        public int PlayerSkillLevel { get; set; }
+        public int RulesSet { get; set; }
+        public int MinPlayers { get; set; }
+        public int MaxPlayers { get; set; }
+        public int GenericField1 { get; set; }
+        public int GenericField2 { get; set; }
+        public int GenericField3 { get; set; }
+        public int GenericField4 { get; set; }
+        public int GenericField5 { get; set; }
+        public int GenericField6 { get; set; }
+        public int GenericField7 { get; set; }
+        public int GenericField8 { get; set; }
+        public int WorldStatus { get; set; }
         public List<Player>? Clients { get; set; }
     }
 

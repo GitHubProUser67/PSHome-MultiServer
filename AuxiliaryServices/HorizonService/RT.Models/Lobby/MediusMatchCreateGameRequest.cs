@@ -1,10 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.MatchCreateGameRequest)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.MatchCreateGameRequest
+    )]
     public class MediusMatchCreateGameRequest : BaseLobbyExtMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.MatchCreateGameRequest;
@@ -111,36 +113,37 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"SupersetID: {SupersetID} " +
-                $"ApplicationID: {ApplicationID} " +
-                $"MinPlayers: {MinPlayers} " +
-                $"MaxPlayers: {MaxPlayers} " +
-                $"GameLevel: {GameLevel} " +
-                $"GameName: {GameName} " +
-                $"GamePassword: {GamePassword} " +
-                $"SpectatorPassword: {SpectatorPassword} " +
-                $"PlayerSkillLevel: {PlayerSkillLevel} " +
-                $"RulesSet: {RulesSet} " +
-                $"GenericField1: {GenericField1} " +
-                $"GenericField2: {GenericField2} " +
-                $"GenericField3: {GenericField3} " +
-                $"GenericField4: {GenericField4} " +
-                $"GenericField5: {GenericField5} " +
-                $"GenericField6: {GenericField6} " +
-                $"GenericField7: {GenericField7} " +
-                $"GenericField8: {GenericField8} " +
-                $"GameHostType: {GameHostType} " +
-                $"WorldAttributesType: {WorldAttributesType} " +
-                $"MatchOptions: {MatchOptions} " +
-                $"ServerSessionKey: {ServerSessionKey} " +
-                $"RequestData: {RequestData} " +
-                $"GroupMemberListSize: {GroupMemberListSize} " +
-                $"ApplicationDataSize: {ApplicationDataSize} " +
-                $"GroupMemberAccountIDList: {GroupMemberAccountIDList} " +
-                $"ApplicationData: {string.Join(string.Empty, ApplicationData)}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"SupersetID: {SupersetID} "
+                + $"ApplicationID: {ApplicationID} "
+                + $"MinPlayers: {MinPlayers} "
+                + $"MaxPlayers: {MaxPlayers} "
+                + $"GameLevel: {GameLevel} "
+                + $"GameName: {GameName} "
+                + $"GamePassword: {GamePassword} "
+                + $"SpectatorPassword: {SpectatorPassword} "
+                + $"PlayerSkillLevel: {PlayerSkillLevel} "
+                + $"RulesSet: {RulesSet} "
+                + $"GenericField1: {GenericField1} "
+                + $"GenericField2: {GenericField2} "
+                + $"GenericField3: {GenericField3} "
+                + $"GenericField4: {GenericField4} "
+                + $"GenericField5: {GenericField5} "
+                + $"GenericField6: {GenericField6} "
+                + $"GenericField7: {GenericField7} "
+                + $"GenericField8: {GenericField8} "
+                + $"GameHostType: {GameHostType} "
+                + $"WorldAttributesType: {WorldAttributesType} "
+                + $"MatchOptions: {MatchOptions} "
+                + $"ServerSessionKey: {ServerSessionKey} "
+                + $"RequestData: {RequestData} "
+                + $"GroupMemberListSize: {GroupMemberListSize} "
+                + $"ApplicationDataSize: {ApplicationDataSize} "
+                + $"GroupMemberAccountIDList: {GroupMemberAccountIDList} "
+                + $"ApplicationData: {string.Join(string.Empty, ApplicationData)}";
         }
     }
 }

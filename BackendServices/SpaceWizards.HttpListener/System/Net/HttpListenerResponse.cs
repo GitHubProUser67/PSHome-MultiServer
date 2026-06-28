@@ -1,9 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Diagnostics;
-using System.IO;
 using System.Net;
 using System.Text;
 
@@ -17,7 +14,7 @@ namespace SpaceWizards.HttpListener
         private bool _keepAlive = true;
         private HttpResponseStream _responseStream;
         private string _statusDescription;
-        private WebHeaderCollection _webHeaders = new WebHeaderCollection();
+        private WebHeaderCollection _webHeaders = new();
 
         public WebHeaderCollection Headers
         {
@@ -25,7 +22,7 @@ namespace SpaceWizards.HttpListener
             set
             {
                 _webHeaders = new WebHeaderCollection();
-                foreach (string headerName in value.AllKeys)
+                foreach (var headerName in value.AllKeys)
                 {
                     _webHeaders.Add(headerName, value[headerName]);
                 }
@@ -62,7 +59,10 @@ namespace SpaceWizards.HttpListener
             {
                 CheckDisposed();
                 CheckSentHeaders();
-                if (value == EntitySendFormat.Chunked && HttpListenerRequest.ProtocolVersion.Minor == 0)
+                if (
+                    value == EntitySendFormat.Chunked
+                    && HttpListenerRequest.ProtocolVersion.Minor == 0
+                )
                 {
                     throw new ProtocolViolationException(SR.net_nochunkuploadonhttp10);
                 }
@@ -77,7 +77,10 @@ namespace SpaceWizards.HttpListener
         public bool SendChunked
         {
             get => EntitySendFormat == EntitySendFormat.Chunked;
-            set => EntitySendFormat = value ? EntitySendFormat.Chunked : EntitySendFormat.ContentLength;
+            set =>
+                EntitySendFormat = value
+                    ? EntitySendFormat.Chunked
+                    : EntitySendFormat.ContentLength;
         }
 
         // We MUST NOT send message-body when we send responses with these Status codes
@@ -85,7 +88,7 @@ namespace SpaceWizards.HttpListener
 
         private static bool CanSendResponseBody(int responseCode)
         {
-            for (int i = 0; i < s_noResponseBody.Length; i++)
+            for (var i = 0; i < s_noResponseBody.Length; i++)
             {
                 if (responseCode == s_noResponseBody[i])
                 {
@@ -116,7 +119,7 @@ namespace SpaceWizards.HttpListener
 
         public CookieCollection Cookies
         {
-            get => _cookies ?? (_cookies = new CookieCollection());
+            get => _cookies ??= new CookieCollection();
             set => _cookies = value;
         }
 
@@ -162,34 +165,28 @@ namespace SpaceWizards.HttpListener
         {
             get
             {
-                if (_statusDescription == null)
-                {
-                    // if the user hasn't set this, generated on the fly, if possible.
-                    // We know this one is safe, no need to verify it as in the setter.
-                    _statusDescription = HttpStatusDescription.Get(StatusCode);
-                }
-                if (_statusDescription == null)
-                {
-                    _statusDescription = string.Empty;
-                }
+                // if the user hasn't set this, generated on the fly, if possible.
+                // We know this one is safe, no need to verify it as in the setter.
+                _statusDescription ??= HttpStatusDescription.Get(StatusCode);
+                _statusDescription ??= string.Empty;
                 return _statusDescription;
             }
             set
             {
                 CheckDisposed();
-                if (value == null)
-                {
-                    throw new ArgumentNullException(nameof(value));
-                }
+                ArgumentNullException.ThrowIfNull(value);
 
                 // Need to verify the status description doesn't contain any control characters except HT.  We mask off the high
                 // byte since that's how it's encoded.
-                for (int i = 0; i < value.Length; i++)
+                for (var i = 0; i < value.Length; i++)
                 {
-                    char c = (char)(0x000000ff & (uint)value[i]);
+                    var c = (char)(0x000000ff & (uint)value[i]);
                     if ((c <= 31 && c != (byte)'\t') || c == 127)
                     {
-                        throw new ArgumentException(SR.net_WebHeaderInvalidControlChars, nameof(value));
+                        throw new ArgumentException(
+                            SR.net_WebHeaderInvalidControlChars,
+                            nameof(value)
+                        );
                     }
                 }
 
@@ -199,50 +196,58 @@ namespace SpaceWizards.HttpListener
 
         public void AddHeader(string name, string value)
         {
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"name={name}, value={value}");
+            if (NetEventSource.Log.IsEnabled())
+                NetEventSource.Info(this, $"name={name}, value={value}");
             Headers.Set(name, value);
         }
 
         public void AppendHeader(string name, string value)
         {
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"name={name}, value={value}");
+            if (NetEventSource.Log.IsEnabled())
+                NetEventSource.Info(this, $"name={name}, value={value}");
             Headers.Add(name, value);
         }
 
         public void AppendCookie(Cookie cookie)
         {
-            if (cookie == null)
-            {
-                throw new ArgumentNullException(nameof(cookie));
-            }
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"cookie: {cookie}");
+            ArgumentNullException.ThrowIfNull(cookie);
+            if (NetEventSource.Log.IsEnabled())
+                NetEventSource.Info(this, $"cookie: {cookie}");
             Cookies.Add(cookie);
         }
 
         private void ComputeCookies()
         {
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"Entering Set-Cookie: {Headers[HttpResponseHeader.SetCookie]}, Set-Cookie2: {Headers[HttpKnownHeaderNames.SetCookie2]}");
+            if (NetEventSource.Log.IsEnabled())
+                NetEventSource.Info(
+                    this,
+                    $"Entering Set-Cookie: {Headers[HttpResponseHeader.SetCookie]}, Set-Cookie2: {Headers[HttpKnownHeaderNames.SetCookie2]}"
+                );
 
             if (_cookies != null)
             {
                 // now go through the collection, and concatenate all the cookies in per-variant strings
-                string setCookie2 = null, setCookie = null;
-                for (int index = 0; index < _cookies.Count; index++)
+                string setCookie2 = null,
+                    setCookie = null;
+                for (var index = 0; index < _cookies.Count; index++)
                 {
-                    Cookie cookie = _cookies[index];
-                    string cookieString = cookie.ToServerString();
+                    var cookie = _cookies[index];
+                    var cookieString = cookie.ToServerString();
                     if (cookieString == null || cookieString.Length == 0)
                     {
                         continue;
                     }
-                    if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"Now looking at index:{index} cookie: {cookie}");
+                    if (NetEventSource.Log.IsEnabled())
+                        NetEventSource.Info(this, $"Now looking at index:{index} cookie: {cookie}");
                     if (cookie.IsRfc2965Variant())
                     {
-                        setCookie2 = setCookie2 == null ? cookieString : setCookie2 + ", " + cookieString;
+                        setCookie2 =
+                            setCookie2 == null ? cookieString : setCookie2 + ", " + cookieString;
                     }
                     else
                     {
-                        setCookie = setCookie == null ? cookieString : setCookie + ", " + cookieString;
+                        setCookie =
+                            setCookie == null ? cookieString : setCookie + ", " + cookieString;
                     }
                 }
 
@@ -265,12 +270,17 @@ namespace SpaceWizards.HttpListener
                 }
             }
 
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"Exiting Set-Cookie: {Headers[HttpResponseHeader.SetCookie]} Set-Cookie2: {Headers[HttpKnownHeaderNames.SetCookie2]}");
+            if (NetEventSource.Log.IsEnabled())
+                NetEventSource.Info(
+                    this,
+                    $"Exiting Set-Cookie: {Headers[HttpResponseHeader.SetCookie]} Set-Cookie2: {Headers[HttpKnownHeaderNames.SetCookie2]}"
+                );
         }
 
         public void Redirect(string url)
         {
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"url={url}");
+            if (NetEventSource.Log.IsEnabled())
+                NetEventSource.Info(this, $"url={url}");
             Headers[HttpResponseHeader.Location] = url;
             StatusCode = (int)HttpStatusCode.Redirect;
             StatusDescription = HttpStatusDescription.Get(StatusCode);
@@ -278,15 +288,13 @@ namespace SpaceWizards.HttpListener
 
         public void SetCookie(Cookie cookie)
         {
-            if (cookie == null)
-            {
-                throw new ArgumentNullException(nameof(cookie));
-            }
+            ArgumentNullException.ThrowIfNull(cookie);
 
-            Cookie newCookie = cookie.Clone();
-            int added = Cookies.InternalAdd(newCookie, true);
+            var newCookie = cookie.Clone();
+            var added = Cookies.InternalAdd(newCookie, true);
 
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"cookie: {cookie}");
+            if (NetEventSource.Log.IsEnabled())
+                NetEventSource.Info(this, $"cookie: {cookie}");
 
             if (added != 1)
             {
@@ -299,10 +307,7 @@ namespace SpaceWizards.HttpListener
 
         private void CheckDisposed()
         {
-            if (Disposed)
-            {
-                throw new ObjectDisposedException(GetType().FullName);
-            }
+            ObjectDisposedException.ThrowIf(Disposed, this);
         }
 
         private void CheckSentHeaders()

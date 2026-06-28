@@ -1,36 +1,37 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-
     [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.BinaryMessage1)]
     public class MediusBinaryMessage1 : BaseLobbyExtMessage
     {
-
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.BinaryMessage1;
-
 
         /// <summary>
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Session Key
         /// </summary>
         public string SessionKey; // SESSIONKEY_MAXLEN
+
         /// <summary>
         /// BinaryMessageType
         /// </summary>
         public MediusBinaryMessageType MessageType;
+
         /// <summary>
         /// TargetAccountID to send Binary Message to
         /// </summary>
         public int TargetAccountID;
+
         /// MessageSize of Game Developer binary message
         /// </summary>
         public int MessageSize;
+
         /// <summary>
         /// Game Developer binary message
         /// </summary>
@@ -63,16 +64,16 @@ namespace Horizon.RT.Models
             writer.Write(Message, MessageSize);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{MessageID} " +
-                $"SessionKey:{SessionKey} " +
-                $"MessageType:{MessageType} " +
-                $"TargetAccountID:{TargetAccountID} " +
-                $"MessageSize: {MessageSize} " +
-                $"Message:{string.Join(string.Empty, System.BitConverter.ToString(Message))}";
+            return base.ToString()
+                + " "
+                + $"MessageID:{MessageID} "
+                + $"SessionKey:{SessionKey} "
+                + $"MessageType:{MessageType} "
+                + $"TargetAccountID:{TargetAccountID} "
+                + $"MessageSize: {MessageSize} "
+                + $"Message:{string.Join(string.Empty, System.BitConverter.ToString(Message))}";
         }
     }
 }

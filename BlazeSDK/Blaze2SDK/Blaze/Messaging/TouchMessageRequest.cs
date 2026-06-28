@@ -5,7 +5,6 @@ namespace Blaze2SDK.Blaze.Messaging
     [TdfStruct]
     public struct TouchMessageRequest
     {
-
         [TdfMember("FLAG")]
         public MatchFlags mFlags;
 
@@ -32,6 +31,5 @@ namespace Blaze2SDK.Blaze.Messaging
 
         [TdfMember("TYPE")]
         public uint mType;
-
     }
 }

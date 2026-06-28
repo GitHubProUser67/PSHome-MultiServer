@@ -2,21 +2,19 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Util
 {
-	[TdfStruct]
-	public struct PostAuthResponse
-	{
+    [TdfStruct]
+    public struct PostAuthResponse
+    {
+        [TdfMember("PSS")]
+        public PssConfig mPssConfig;
 
-		[TdfMember("PSS")]
-		public PssConfig mPssConfig;
+        [TdfMember("TELE")]
+        public GetTelemetryServerResponse mTelemetryServer;
 
-		[TdfMember("TELE")]
-		public GetTelemetryServerResponse mTelemetryServer;
+        [TdfMember("TICK")]
+        public GetTickerServerResponse mTickerServer;
 
-		[TdfMember("TICK")]
-		public GetTickerServerResponse mTickerServer;
-
-		[TdfMember("UROP")]
-		public UserOptions mUserOptions;
-
-	}
+        [TdfMember("UROP")]
+        public UserOptions mUserOptions;
+    }
 }

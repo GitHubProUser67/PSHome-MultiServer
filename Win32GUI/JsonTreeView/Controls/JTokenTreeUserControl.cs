@@ -1,9 +1,4 @@
-﻿using System;
-using System.ComponentModel;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Windows.Forms;
+﻿using System.ComponentModel;
 using Newtonsoft.Json.Linq;
 using ZTn.Json.JsonTreeView.Linq;
 
@@ -43,18 +38,24 @@ namespace ZTn.Json.JsonTreeView.Controls
         #region >> Properties
 
         private JTokenRoot JsonEditorItem =>
-            jsonTreeView.Nodes.Count != 0 ? new JTokenRoot(((JTokenTreeNode)jsonTreeView.Nodes[0]).JTokenTag) : null;
+            jsonTreeView.Nodes.Count != 0
+                ? new JTokenRoot(((JTokenTreeNode)jsonTreeView.Nodes[0]).JTokenTag)
+                : null;
 
+        [Browsable(true)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public Font ExpandedFont
         {
-            get { return expandedFont ?? (expandedFont = new Font(Font, FontStyle.Underline)); }
-            set { expandedFont = value; }
+            get => expandedFont ?? new Font(Font, FontStyle.Underline);
+            set => expandedFont = value;
         }
 
+        [Browsable(true)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public Font CollapsedFont
         {
-            get { return collapsedFont ?? (collapsedFont = Font); }
-            set { collapsedFont = value; }
+            get => collapsedFont ?? Font;
+            set => collapsedFont = value;
         }
 
         #endregion
@@ -74,10 +75,7 @@ namespace ZTn.Json.JsonTreeView.Controls
         /// <param name="stream"></param>
         public void SetJsonSource(Stream stream)
         {
-            if (stream == null)
-            {
-                throw new ArgumentNullException(nameof(stream));
-            }
+            ArgumentNullException.ThrowIfNull(stream);
 
             JTokenRoot jsonEditorItem;
             try
@@ -86,14 +84,15 @@ namespace ZTn.Json.JsonTreeView.Controls
             }
             catch (Exception exception)
             {
-                throw new WrongJsonStreamException("Stream could not be parsed from json", exception);
+                throw new WrongJsonStreamException(
+                    "Stream could not be parsed from json",
+                    exception
+                );
             }
 
             jsonTreeView.Nodes.Clear();
             jsonTreeView.Nodes.Add(JsonTreeNodeFactory.Create(jsonEditorItem.JTokenValue, 2));
-            jsonTreeView.Nodes
-                .Cast<TreeNode>()
-                .ForEach(n => n.Expand());
+            jsonTreeView.Nodes.Cast<TreeNode>().ForEach(n => n.Expand());
         }
 
         /// <summary>
@@ -106,9 +105,7 @@ namespace ZTn.Json.JsonTreeView.Controls
 
             jsonTreeView.Nodes.Clear();
             jsonTreeView.Nodes.Add(JsonTreeNodeFactory.Create(jsonEditorItem.JTokenValue));
-            jsonTreeView.Nodes
-                .Cast<TreeNode>()
-                .ForEach(n => n.Expand());
+            jsonTreeView.Nodes.Cast<TreeNode>().ForEach(n => n.Expand());
         }
 
         /// <summary>
@@ -117,8 +114,7 @@ namespace ZTn.Json.JsonTreeView.Controls
         /// <param name="jsonString"></param>
         public void UpdateSelected(string jsonString)
         {
-            var node = jsonTreeView.SelectedNode as IJsonTreeNode;
-            if (node == null)
+            if (jsonTreeView.SelectedNode is not IJsonTreeNode node)
             {
                 return;
             }
@@ -162,42 +158,54 @@ namespace ZTn.Json.JsonTreeView.Controls
         // ReSharper disable once UnusedParameter.Local
         private void AfterSelectImplementation(TreeNode node, TreeViewEventArgs e)
         {
-            AfterSelect?.Invoke(this, new AfterSelectEventArgs(
-                $"{JTokenType.Undefined}: {node.GetType().FullName}",
-                $"{JTokenType.Undefined}: {node.GetType().FullName}",
-                () => ""));
+            AfterSelect?.Invoke(
+                this,
+                new AfterSelectEventArgs(
+                    $"{JTokenType.Undefined}: {node.GetType().FullName}",
+                    $"{JTokenType.Undefined}: {node.GetType().FullName}",
+                    () => ""
+                )
+            );
         }
 
         // ReSharper disable once UnusedParameter.Local
         private void AfterSelectImplementation(JTokenTreeNode node, TreeViewEventArgs e)
         {
-            AfterSelect?.Invoke(this, new AfterSelectEventArgs(
-               $"{node.JTokenTag.Type}",
-               $"{node.JTokenTag.Type}",
-               () => $"{node.JTokenTag}"));
+            AfterSelect?.Invoke(
+                this,
+                new AfterSelectEventArgs(
+                    $"{node.JTokenTag.Type}",
+                    $"{node.JTokenTag.Type}",
+                    () => $"{node.JTokenTag}"
+                )
+            );
         }
 
         // ReSharper disable once UnusedParameter.Local
         private void AfterSelectImplementation(JValueTreeNode node, TreeViewEventArgs e)
         {
-            AfterSelect?.Invoke(this, new AfterSelectEventArgs(
-               node.Tag.GetType().Name,
-               $"{node.JValueTag.Type}",
-               () =>
-               {
-                   switch (node.JValueTag.Type)
-                   {
-                       case JTokenType.String:
-                           return $@"""{node.JValueTag}""";
-                       case JTokenType.Boolean:
-                           return $"{node.JValueTag}".ToLower();
-                       default:
-                           return $"{node.JValueTag}";
-                   }
-               }));
+            AfterSelect?.Invoke(
+                this,
+                new AfterSelectEventArgs(
+                    node.Tag.GetType().Name,
+                    $"{node.JValueTag.Type}",
+                    () =>
+                    {
+                        return node.JValueTag.Type switch
+                        {
+                            JTokenType.String => $@"""{node.JValueTag}""",
+                            JTokenType.Boolean => $"{node.JValueTag}".ToLower(),
+                            _ => $"{node.JValueTag}",
+                        };
+                    }
+                )
+            );
         }
 
-        private void OnJsonTreeViewNodeMouseClick(object sender, TreeNodeMouseClickEventArgs eventArgs)
+        private void OnJsonTreeViewNodeMouseClick(
+            object sender,
+            TreeNodeMouseClickEventArgs eventArgs
+        )
         {
             jsonTreeView.SelectedNode = eventArgs.Node;
         }

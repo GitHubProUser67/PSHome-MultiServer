@@ -9,12 +9,23 @@ namespace System.Net
         {
             int result;
 
-            if ((result = string.Compare(left.Name, right.Name, StringComparison.OrdinalIgnoreCase)) != 0)
+            if (
+                (result = string.Compare(left.Name, right.Name, StringComparison.OrdinalIgnoreCase))
+                != 0
+            )
             {
                 return result;
             }
 
-            if ((result = string.Compare(left.Domain, right.Domain, StringComparison.OrdinalIgnoreCase)) != 0)
+            if (
+                (
+                    result = string.Compare(
+                        left.Domain,
+                        right.Domain,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                ) != 0
+            )
             {
                 return result;
             }

@@ -1,11 +1,10 @@
 ﻿using System.Collections.Concurrent;
-using System.Threading.Tasks;
 
-namespace System.Collections.Generic
+namespace MultiServerLibrary.Extension.NET
 {
     public class TimedDictionary<TKey, TValue>
     {
-        private readonly ConcurrentDictionary<TKey, TValue> _storage = new ConcurrentDictionary<TKey, TValue>();
+        private readonly ConcurrentDictionary<TKey, TValue> _storage = new();
 
         public void Set(TKey key, TValue value, int millisecondsExpiration)
         {
@@ -31,5 +30,4 @@ namespace System.Collections.Generic
 
         public bool Remove(TKey key) => _storage.TryRemove(key, out _);
     }
-
 }

@@ -38,5 +38,4 @@ namespace WebAPIService.GameServices.PSHOME.NDREAMS.Xi1
 
         public RecapVideo RecapVideoNum { get; set; } = RecapVideo.R13;
     }
-
 }

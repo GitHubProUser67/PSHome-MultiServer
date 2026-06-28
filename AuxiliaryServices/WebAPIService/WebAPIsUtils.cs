@@ -1,9 +1,7 @@
-using CustomLogger;
 using System.IO.Compression;
-using System.IO;
-using System;
-using NetHasher.CRC;
 using System.Text;
+using CastleLibrary.NetHasher.CRC;
+using CustomLogger;
 
 namespace WebAPIService
 {
@@ -11,7 +9,9 @@ namespace WebAPIService
     {
         public static string GenerateDynamicCacheFolder(string input)
         {
-            return CRC32.CreateCastagnoli(Encoding.ASCII.GetBytes(input + Guid.NewGuid())).ToString("x4");
+            return CRC32
+                .CreateCastagnoli(Encoding.ASCII.GetBytes(input + Guid.NewGuid()))
+                .ToString("x4");
         }
 
         public static void AddFileToZip(ZipArchive archive, string entryName, Stream contentStream)
@@ -19,11 +19,11 @@ namespace WebAPIService
             contentStream.Position = 0;
 
             // Create a new entry in the zip archive
-            ZipArchiveEntry entry = archive.CreateEntry(entryName);
+            var entry = archive.CreateEntry(entryName);
 
             // Write content to the entry
             using (contentStream)
-            using (Stream entryStream = entry.Open())
+            using (var entryStream = entry.Open())
                 contentStream.CopyTo(entryStream);
         }
 
@@ -35,7 +35,9 @@ namespace WebAPIService
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[WebAPIsUtils] - UncompressFile - An error occurred: {ex}");
+                LoggerAccessor.LogError(
+                    $"[WebAPIsUtils] - UncompressFile - An error occurred: {ex}"
+                );
             }
         }
 

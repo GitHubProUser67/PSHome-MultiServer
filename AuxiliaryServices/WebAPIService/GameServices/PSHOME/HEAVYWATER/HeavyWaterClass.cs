@@ -1,61 +1,53 @@
-﻿using CastleLibrary.S0ny.SSFW;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using CastleLibrary.S0ny.SSFW;
 using CastleLibrary.S0ny.XI5;
 using CustomLogger;
 using HttpMultipartParser;
-using Microsoft.EntityFrameworkCore;
 using MultiServerLibrary.Extension;
 using MultiServerLibrary.HTTP;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using WebAPIService.GameServices.PSHOME.HEAVYWATER.Entities;
 using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
 {
-    public class HeavyWaterClass
+    public partial class HeavyWaterClass(string method, string absolutepath, string apipath)
     {
         private static ScoreboardService<HexxScoreboardEntry> _hexx_leaderboard = null;
 
-        private string absolutepath;
-        private string method;
-        private string apipath;
+        private readonly string absolutepath = absolutepath;
+        private readonly string method = method;
+        private readonly string apipath = apipath;
 
-        public HeavyWaterClass(string method, string absolutepath, string apipath)
-        {
-            this.absolutepath = absolutepath;
-            this.method = method;
-            this.apipath = apipath;
-        }
-
-        public string ProcessRequest(IDictionary<string, string> QueryParameters, byte[] PostData, string ContentType)
+        public string ProcessRequest(
+            IDictionary<string, string> QueryParameters,
+            byte[] PostData,
+            string ContentType
+        )
         {
             const string playerPathern = @"/player/([^/]+)";
 
             try
             {
-                Match match = Regex.Match(absolutepath, playerPathern);
+                var match = MyRegex().Match(absolutepath);
 
                 switch (method)
                 {
                     case "GET":
                         if (match.Success)
                         {
-                            string id = match.Groups[1].Value;
+                            var id = match.Groups[1].Value;
 
                             if (absolutepath.Contains("/D2O/Avalon/"))
                             {
-                                string avalonProfilePath = apipath + $"/HEAVYWATER/Avalon_keep/{id}";
+                                var avalonProfilePath = apipath + $"/HEAVYWATER/Avalon_keep/{id}";
 
                                 if (absolutepath.EndsWith("/data/HouseData"))
                                 {
-                                    string house = "{\"House\":{\"AVALON\":true}}";
+                                    var house = "{\"House\":{\"AVALON\":true}}";
 
                                     if (File.Exists(avalonProfilePath + "/House.json"))
                                         house = File.ReadAllText(avalonProfilePath + "/House.json");
@@ -68,10 +60,12 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                                 }
                                 else if (absolutepath.EndsWith("/data/MyAvalonKeepData"))
                                 {
-                                    string AvalonKeepData = "{}";
+                                    var AvalonKeepData = "{}";
 
                                     if (File.Exists(avalonProfilePath + "/AvalonKeepData.json"))
-                                        AvalonKeepData = File.ReadAllText(avalonProfilePath + "/AvalonKeepData.json");
+                                        AvalonKeepData = File.ReadAllText(
+                                            avalonProfilePath + "/AvalonKeepData.json"
+                                        );
 
                                     return $@"{{
                                     ""STATUS"": ""SUCCESS"",
@@ -82,14 +76,16 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                             }
                             else if (absolutepath.Contains("/D2O/AvalonHexx/"))
                             {
-                                string hexxProfilePath = apipath + $"/HEAVYWATER/Avalon_hexx/{id}";
+                                var hexxProfilePath = apipath + $"/HEAVYWATER/Avalon_hexx/{id}";
 
                                 if (absolutepath.EndsWith("/data/MyAvalonHexxData"))
                                 {
-                                    string AvalonHexxData = "{}";
+                                    var AvalonHexxData = "{}";
 
                                     if (File.Exists(hexxProfilePath + "/HexxData.json"))
-                                        AvalonHexxData = File.ReadAllText(hexxProfilePath + "/HexxData.json");
+                                        AvalonHexxData = File.ReadAllText(
+                                            hexxProfilePath + "/HexxData.json"
+                                        );
 
                                     return $@"{{
                                         ""STATUS"": ""SUCCESS"",
@@ -100,14 +96,16 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                             }
                             else if (absolutepath.Contains("/D2O/EmoRay/"))
                             {
-                                string emorayProfilePath = apipath + $"/HEAVYWATER/EmoRay/{id}";
+                                var emorayProfilePath = apipath + $"/HEAVYWATER/EmoRay/{id}";
 
                                 if (absolutepath.EndsWith("/data/ProgressionData"))
                                 {
-                                    string emorayProgData = "{}";
+                                    var emorayProgData = "{}";
 
                                     if (File.Exists(emorayProfilePath + "/ProgressionData.json"))
-                                        emorayProgData = File.ReadAllText(emorayProfilePath + "/ProgressionData.json");
+                                        emorayProgData = File.ReadAllText(
+                                            emorayProfilePath + "/ProgressionData.json"
+                                        );
 
                                     return $@"{{
                                         ""STATUS"": ""SUCCESS"",
@@ -117,10 +115,12 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                                 }
                                 else if (absolutepath.EndsWith("/data/EquippedData"))
                                 {
-                                    string emorayEquippedData = "{}";
+                                    var emorayEquippedData = "{}";
 
                                     if (File.Exists(emorayProfilePath + "/EquippedData.json"))
-                                        emorayEquippedData = File.ReadAllText(emorayProfilePath + "/EquippedData.json");
+                                        emorayEquippedData = File.ReadAllText(
+                                            emorayProfilePath + "/EquippedData.json"
+                                        );
 
                                     return $@"{{
                                         ""STATUS"": ""SUCCESS"",
@@ -130,10 +130,12 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                                 }
                                 else if (absolutepath.EndsWith("/data/ScoresData"))
                                 {
-                                    string emorayScoresData = "{}";
+                                    var emorayScoresData = "{}";
 
                                     if (File.Exists(emorayProfilePath + "/ScoresData.json"))
-                                        emorayScoresData = File.ReadAllText(emorayProfilePath + "/ScoresData.json");
+                                        emorayScoresData = File.ReadAllText(
+                                            emorayProfilePath + "/ScoresData.json"
+                                        );
 
                                     return $@"{{
                                         ""STATUS"": ""SUCCESS"",
@@ -143,10 +145,12 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                                 }
                                 else if (absolutepath.EndsWith("/data/ControllerData"))
                                 {
-                                    string emorayControllerData = "{}";
+                                    var emorayControllerData = "{}";
 
                                     if (File.Exists(emorayProfilePath + "/ControllerData.json"))
-                                        emorayControllerData = File.ReadAllText(emorayProfilePath + "/ControllerData.json");
+                                        emorayControllerData = File.ReadAllText(
+                                            emorayProfilePath + "/ControllerData.json"
+                                        );
 
                                     return $@"{{
                                         ""STATUS"": ""SUCCESS"",
@@ -156,10 +160,12 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                                 }
                                 else if (absolutepath.EndsWith("/data/StoreProgressData"))
                                 {
-                                    string emorayStoreProgressData = "{}";
+                                    var emorayStoreProgressData = "{}";
 
                                     if (File.Exists(emorayProfilePath + "/StoreProgressData.json"))
-                                        emorayStoreProgressData = File.ReadAllText(emorayProfilePath + "/StoreProgressData.json");
+                                        emorayStoreProgressData = File.ReadAllText(
+                                            emorayProfilePath + "/StoreProgressData.json"
+                                        );
 
                                     return $@"{{
                                         ""STATUS"": ""SUCCESS"",
@@ -170,11 +176,11 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                             }
                             else if (absolutepath.Contains("/D2O/D2OUniverse/"))
                             {
-                                string ProfilePath = apipath + $"/HEAVYWATER/D2OUniverse/{id}";
+                                var ProfilePath = apipath + $"/HEAVYWATER/D2OUniverse/{id}";
 
                                 if (absolutepath.EndsWith("/data/D2OData"))
                                 {
-                                    string D2OData = "{}";
+                                    var D2OData = "{}";
 
                                     if (File.Exists(ProfilePath + "/D2OData.json"))
                                         D2OData = File.ReadAllText(ProfilePath + "/D2OData.json");
@@ -191,8 +197,9 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                         {
                             if (absolutepath.EndsWith("/contributions"))
                             {
-                                string ContribData = "{\"Contribution\":{}}";
-                                string ContribPath = apipath + $"/HEAVYWATER/Avalon_keep/contributions.json";
+                                var ContribData = "{\"Contribution\":{}}";
+                                var ContribPath =
+                                    apipath + $"/HEAVYWATER/Avalon_keep/contributions.json";
 
                                 if (File.Exists(ContribPath))
                                     ContribData = File.ReadAllText(ContribPath);
@@ -216,20 +223,28 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                                     ""result"":
                                       ""{GenerateD2OGuid(match.Groups[1].Value)}""
                                   }}";
-                            else if (absolutepath.EndsWith("Scores/") && QueryParameters.ContainsKey("limit") && int.TryParse(QueryParameters["limit"], out int limit))
+                            else if (
+                                absolutepath.EndsWith("Scores/")
+                                && QueryParameters.TryGetValue("limit", out var value)
+                                && int.TryParse(value, out var limit)
+                            )
                             {
-                                int i = 1;
-                                StringBuilder scoreboardData = new StringBuilder("{\"Scores\":{");
+                                var i = 1;
+                                var scoreboardData = new StringBuilder("{\"Scores\":{");
 
                                 var scoreData = _hexx_leaderboard.GetTopScoresAsync(limit).Result;
-                                int scoreDataCount = scoreData.Count();
+                                var scoreDataCount = scoreData.Count;
 
                                 foreach (var scoreKeyPair in scoreData)
                                 {
                                     if (i == scoreDataCount)
-                                        scoreboardData.Append($"\"{scoreKeyPair.PsnId}\":{(int)scoreKeyPair.Score}");
+                                        scoreboardData.Append(
+                                            $"\"{scoreKeyPair.PsnId}\":{(int)scoreKeyPair.Score}"
+                                        );
                                     else
-                                        scoreboardData.Append($"\"{scoreKeyPair.PsnId}\":{(int)scoreKeyPair.Score},");
+                                        scoreboardData.Append(
+                                            $"\"{scoreKeyPair.PsnId}\":{(int)scoreKeyPair.Score},"
+                                        );
 
                                     i++;
                                 }
@@ -243,8 +258,13 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                         }
                         else if (absolutepath.Contains("/D2O/EmoRay/"))
                         {
-                            if (absolutepath.EndsWith("Scores/") && QueryParameters.ContainsKey("limit") && QueryParameters.ContainsKey("range")
-                                && !string.IsNullOrEmpty(QueryParameters["range"]) && int.TryParse(QueryParameters["limit"], out int limit))
+                            if (
+                                absolutepath.EndsWith("Scores/")
+                                && QueryParameters.TryGetValue("limit", out var value)
+                                && QueryParameters.TryGetValue("range", out value)
+                                && !string.IsNullOrEmpty(value)
+                                && int.TryParse(value, out var limit)
+                            )
                             {
                                 // TODO, figure out leaderboards.
 
@@ -256,56 +276,82 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                         }
                         break;
                     case "POST":
-                        if (absolutepath.Contains("/D2O/Ticket/") && (absolutepath.Contains("validate/") || absolutepath.Contains("verify/")))
+                        if (
+                            absolutepath.Contains("/D2O/Ticket/")
+                            && (
+                                absolutepath.Contains("validate/")
+                                || absolutepath.Contains("verify/")
+                            )
+                        )
                         {
-                            using (MemoryStream copyStream = new MemoryStream(PostData))
+                            using (var copyStream = new MemoryStream(PostData))
                             {
-                                foreach (FilePart file in MultipartFormDataParser.Parse(copyStream, HTTPProcessor.ExtractBoundary(ContentType))
-                                    .Files.Where(x => x.FileName == "ticket.bin" && x.Name == "base64-ticket"))
+                                foreach (
+                                    var file in MultipartFormDataParser
+                                        .Parse(
+                                            copyStream,
+                                            HTTPProcessor.ExtractBoundary(ContentType)
+                                        )
+                                        .Files.Where(x =>
+                                            x.FileName == "ticket.bin" && x.Name == "base64-ticket"
+                                        )
+                                )
                                 {
-                                    using (Stream filedata = file.Data)
+                                    using (var filedata = file.Data)
                                     {
                                         filedata.Position = 0;
 
                                         // Find the number of bytes in the stream
-                                        int contentLength = (int)filedata.Length;
+                                        var contentLength = (int)filedata.Length;
 
                                         // Create a byte array
-                                        byte[] ticketData = new byte[contentLength];
+                                        var ticketData = new byte[contentLength];
 
                                         // Read the contents of the memory stream into the byte array
                                         filedata.Read(ticketData, 0, contentLength);
 
-                                        (bool, byte[]) isValidBase64Data = Encoding.ASCII.GetString(ticketData).IsBase64();
+                                        (bool, byte[]) isValidBase64Data = Encoding
+                                            .ASCII.GetString(ticketData)
+                                            .IsBase64();
 
                                         if (isValidBase64Data.Item1)
                                         {
                                             // get ticket
-                                            XI5Ticket ticket = XI5Ticket.ReadFromBytes(isValidBase64Data.Item2);
+                                            var ticket = XI5Ticket.ReadFromBytes(
+                                                isValidBase64Data.Item2
+                                            );
 
                                             // setup username
-                                            string username = ticket.Username;
+                                            var username = ticket.Username;
 
                                             // invalid ticket
                                             if (!ticket.Valid)
                                             {
                                                 // log to console
-                                                LoggerAccessor.LogWarn($"[HeavyWaterClass] : User {username} tried to alter their ticket data");
+                                                LoggerAccessor.LogWarn(
+                                                    $"[HeavyWaterClass] : User {username} tried to alter their ticket data"
+                                                );
 
                                                 return null;
                                             }
 
                                             // RPCN
                                             if (ticket.IsSignedByRPCN)
-                                                LoggerAccessor.LogInfo($"[HeavyWaterClass] : User {username} connected at: {DateTime.Now} and is on RPCN");
+                                                LoggerAccessor.LogInfo(
+                                                    $"[HeavyWaterClass] : User {username} connected at: {DateTime.Now} and is on RPCN"
+                                                );
                                             else if (username.EndsWith($"@{XI5Ticket.RPCNSigner}"))
                                             {
-                                                LoggerAccessor.LogError($"[HeavyWaterClass] : User {username} was caught using a RPCN suffix while not on it!");
+                                                LoggerAccessor.LogError(
+                                                    $"[HeavyWaterClass] : User {username} was caught using a RPCN suffix while not on it!"
+                                                );
 
                                                 return null;
                                             }
                                             else
-                                                LoggerAccessor.LogInfo($"[HeavyWaterClass] : User {username} connected at: {DateTime.Now} and is on PSN");
+                                                LoggerAccessor.LogInfo(
+                                                    $"[HeavyWaterClass] : User {username} connected at: {DateTime.Now} and is on PSN"
+                                                );
 
                                             return $@"{{
                                                     ""STATUS"": ""SUCCESS"",
@@ -320,25 +366,22 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                         }
                         break;
                     case "PUT":
-#if NET6_0_OR_GREATER
                         if (PostData.Length > 0 && PostData.Length <= Array.MaxLength)
-#else
-                        if (PostData.Length > 0 && PostData.Length <= 0x7FFFFFC7)
-#endif
                         {
                             if (match.Success)
                             {
-                                string id = match.Groups[1].Value;
+                                var id = match.Groups[1].Value;
 
                                 if (absolutepath.Contains("/D2O/Avalon/"))
                                 {
-                                    string avalonProfilePath = apipath + $"/HEAVYWATER/Avalon_keep/{id}";
+                                    var avalonProfilePath =
+                                        apipath + $"/HEAVYWATER/Avalon_keep/{id}";
 
                                     Directory.CreateDirectory(avalonProfilePath);
 
                                     if (absolutepath.EndsWith("/data/HouseData"))
                                     {
-                                        string house = Encoding.UTF8.GetString(PostData);
+                                        var house = Encoding.UTF8.GetString(PostData);
                                         File.WriteAllText(avalonProfilePath + "/House.json", house);
 
                                         return $@"{{
@@ -349,8 +392,11 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                                     }
                                     else if (absolutepath.EndsWith("/data/MyAvalonKeepData"))
                                     {
-                                        string AvalonKeepData = Encoding.UTF8.GetString(PostData);
-                                        File.WriteAllText(avalonProfilePath + "/AvalonKeepData.json", AvalonKeepData);
+                                        var AvalonKeepData = Encoding.UTF8.GetString(PostData);
+                                        File.WriteAllText(
+                                            avalonProfilePath + "/AvalonKeepData.json",
+                                            AvalonKeepData
+                                        );
 
                                         return $@"{{
                                             ""STATUS"": ""SUCCESS"",
@@ -361,14 +407,17 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                                 }
                                 else if (absolutepath.Contains("/D2O/AvalonHexx/"))
                                 {
-                                    string hexxProfilePath = apipath + $"/HEAVYWATER/Avalon_hexx/{id}";
+                                    var hexxProfilePath = apipath + $"/HEAVYWATER/Avalon_hexx/{id}";
 
                                     Directory.CreateDirectory(hexxProfilePath);
 
                                     if (absolutepath.EndsWith("/data/MyAvalonHexxData"))
                                     {
-                                        string AvalonHexxData = Encoding.UTF8.GetString(PostData);
-                                        File.WriteAllText(hexxProfilePath + "/AvalonHexxData.json", AvalonHexxData);
+                                        var AvalonHexxData = Encoding.UTF8.GetString(PostData);
+                                        File.WriteAllText(
+                                            hexxProfilePath + "/AvalonHexxData.json",
+                                            AvalonHexxData
+                                        );
 
                                         return $@"{{
                                             ""STATUS"": ""SUCCESS"",
@@ -379,14 +428,17 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                                 }
                                 else if (absolutepath.Contains("/D2O/EmoRay/"))
                                 {
-                                    string emorayProfilePath = apipath + $"/HEAVYWATER/EmoRay/{id}";
+                                    var emorayProfilePath = apipath + $"/HEAVYWATER/EmoRay/{id}";
 
                                     Directory.CreateDirectory(emorayProfilePath);
 
                                     if (absolutepath.EndsWith("/data/ProgressionData"))
                                     {
-                                        string emorayProgData = Encoding.UTF8.GetString(PostData);
-                                        File.WriteAllText(emorayProfilePath + "/ProgressionData.json", emorayProgData);
+                                        var emorayProgData = Encoding.UTF8.GetString(PostData);
+                                        File.WriteAllText(
+                                            emorayProfilePath + "/ProgressionData.json",
+                                            emorayProgData
+                                        );
 
                                         return $@"{{
                                             ""STATUS"": ""SUCCESS"",
@@ -396,8 +448,11 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                                     }
                                     else if (absolutepath.EndsWith("/data/EquippedData"))
                                     {
-                                        string emorayEquippedData = Encoding.UTF8.GetString(PostData);
-                                        File.WriteAllText(emorayProfilePath + "/EquippedData.json", emorayEquippedData);
+                                        var emorayEquippedData = Encoding.UTF8.GetString(PostData);
+                                        File.WriteAllText(
+                                            emorayProfilePath + "/EquippedData.json",
+                                            emorayEquippedData
+                                        );
 
                                         return $@"{{
                                             ""STATUS"": ""SUCCESS"",
@@ -407,8 +462,11 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                                     }
                                     else if (absolutepath.EndsWith("/data/ScoresData"))
                                     {
-                                        string emorayScoresData = Encoding.UTF8.GetString(PostData);
-                                        File.WriteAllText(emorayProfilePath + "/ScoresData.json", emorayScoresData);
+                                        var emorayScoresData = Encoding.UTF8.GetString(PostData);
+                                        File.WriteAllText(
+                                            emorayProfilePath + "/ScoresData.json",
+                                            emorayScoresData
+                                        );
 
                                         return $@"{{
                                             ""STATUS"": ""SUCCESS"",
@@ -418,8 +476,13 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                                     }
                                     else if (absolutepath.EndsWith("/data/ControllerData"))
                                     {
-                                        string emorayControllerData = Encoding.UTF8.GetString(PostData);
-                                        File.WriteAllText(emorayProfilePath + "/ControllerData.json", emorayControllerData);
+                                        var emorayControllerData = Encoding.UTF8.GetString(
+                                            PostData
+                                        );
+                                        File.WriteAllText(
+                                            emorayProfilePath + "/ControllerData.json",
+                                            emorayControllerData
+                                        );
 
                                         return $@"{{
                                             ""STATUS"": ""SUCCESS"",
@@ -429,8 +492,13 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                                     }
                                     else if (absolutepath.EndsWith("/data/StoreProgressData"))
                                     {
-                                        string emorayStoreProgressData = Encoding.UTF8.GetString(PostData);
-                                        File.WriteAllText(emorayProfilePath + "/StoreProgressData.json", emorayStoreProgressData);
+                                        var emorayStoreProgressData = Encoding.UTF8.GetString(
+                                            PostData
+                                        );
+                                        File.WriteAllText(
+                                            emorayProfilePath + "/StoreProgressData.json",
+                                            emorayStoreProgressData
+                                        );
 
                                         return $@"{{
                                             ""STATUS"": ""SUCCESS"",
@@ -441,13 +509,13 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                                 }
                                 else if (absolutepath.Contains("/D2O/D2OUniverse/"))
                                 {
-                                    string ProfilePath = apipath + $"/HEAVYWATER/D2OUniverse/{id}";
+                                    var ProfilePath = apipath + $"/HEAVYWATER/D2OUniverse/{id}";
 
                                     Directory.CreateDirectory(ProfilePath);
 
                                     if (absolutepath.EndsWith("/data/D2OData"))
                                     {
-                                        string D2OData = Encoding.UTF8.GetString(PostData);
+                                        var D2OData = Encoding.UTF8.GetString(PostData);
                                         File.WriteAllText(ProfilePath + "/D2OData.json", D2OData);
 
                                         return $@"{{
@@ -471,29 +539,48 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                                 {
                                     Directory.CreateDirectory(apipath + $"/HEAVYWATER/Avalon_keep");
 
-                                    string ContribPath = apipath + $"/HEAVYWATER/Avalon_keep/contributions.json";
+                                    var ContribPath =
+                                        apipath + $"/HEAVYWATER/Avalon_keep/contributions.json";
 
-                                    using (JsonDocument requestDoc = JsonDocument.Parse(Encoding.UTF8.GetString(PostData)))
+                                    using (
+                                        var requestDoc = JsonDocument.Parse(
+                                            Encoding.UTF8.GetString(PostData)
+                                        )
+                                    )
                                     {
-                                        JsonElement contribution = requestDoc.RootElement.GetProperty("Contribution");
-                                        string house = contribution.GetProperty("House").GetString();
-                                        int amount = contribution.GetProperty("Amount").GetInt32();
+                                        var contribution = requestDoc.RootElement.GetProperty(
+                                            "Contribution"
+                                        );
+                                        var house = contribution.GetProperty("House").GetString();
+                                        var amount = contribution.GetProperty("Amount").GetInt32();
 
                                         if (!File.Exists(ContribPath))
-                                            File.WriteAllText(ContribPath, $"{{\"Contribution\":{{\"{house}\":{amount}}}");
+                                            File.WriteAllText(
+                                                ContribPath,
+                                                $"{{\"Contribution\":{{\"{house}\":{amount}}}"
+                                            );
                                         else
                                         {
-                                            JObject existingData = JsonConvert.DeserializeObject<JObject>(File.ReadAllText(ContribPath));
+                                            var existingData =
+                                                JsonConvert.DeserializeObject<JObject>(
+                                                    File.ReadAllText(ContribPath)
+                                                );
 
-                                            JObject publicContribution = existingData["Contribution"] as JObject;
-                                            if (publicContribution != null)
+                                            if (
+                                                existingData["Contribution"]
+                                                is JObject publicContribution
+                                            )
                                             {
                                                 if (publicContribution[house] != null)
-                                                    amount += publicContribution[house].ToObject<int>();
+                                                    amount += publicContribution[house]
+                                                        .ToObject<int>();
 
                                                 publicContribution[house] = amount;
 
-                                                File.WriteAllText(ContribPath, existingData.ToString());
+                                                File.WriteAllText(
+                                                    ContribPath,
+                                                    existingData.ToString()
+                                                );
                                             }
                                         }
 
@@ -515,15 +602,23 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
                             {
                                 if (absolutepath.Contains("Scores/"))
                                 {
-                                    string hexxDataPath = apipath + $"/HEAVYWATER/Avalon_hexx";
-                                    string[] parts = absolutepath.Split('/');
+                                    var hexxDataPath = apipath + $"/HEAVYWATER/Avalon_hexx";
+                                    var parts = absolutepath.Split('/');
 
                                     Directory.CreateDirectory(hexxDataPath);
 
-                                    if (_hexx_leaderboard == null)
-                                        _hexx_leaderboard = new ScoreboardService<HexxScoreboardEntry>(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+                                    _hexx_leaderboard ??=
+                                        new ScoreboardService<HexxScoreboardEntry>(
+                                            LeaderboardDbContext.BuildOptions(
+                                                0,
+                                                $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}"
+                                            )
+                                        );
 
-                                    _ = _hexx_leaderboard.UpdateScoreAsync(parts[parts.Length - 2], int.Parse(parts[parts.Length - 1]));
+                                    _ = _hexx_leaderboard.UpdateScoreAsync(
+                                        parts[^2],
+                                        int.Parse(parts[^1])
+                                    );
 
                                     return @"{
                                         ""STATUS"": ""SUCCESS"",
@@ -556,7 +651,9 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[HeavyWaterClass] - ProcessRequest thrown an assertion. (Exception: {ex})");
+                LoggerAccessor.LogError(
+                    $"[HeavyWaterClass] - ProcessRequest thrown an assertion. (Exception: {ex})"
+                );
             }
 
             return null;
@@ -566,5 +663,8 @@ namespace WebAPIService.GameServices.PSHOME.HEAVYWATER
         {
             return GuidGenerator.SSFWGenerateGuid(input, "1amAH3vyFan?!0yY3ahhhhhhhh!!!!!");
         }
+
+        [GeneratedRegex("/player/([^/]+)")]
+        private static partial Regex MyRegex();
     }
 }

@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -16,18 +15,22 @@ namespace Horizon.RT.Models
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Session Key
         /// </summary>
         public string SessionKey; // SESSIONKEY_MAXLEN
+
         /// <summary>
         /// Medius Account type
         /// </summary>
         public MediusAccountType AccountType;
+
         /// <summary>
         /// Account Name requested
         /// </summary>
         public string AccountName; // ACCOUNTNAME_MAXLEN
+
         /// <summary>
         /// Password requested
         /// </summary>
@@ -63,12 +66,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"AccountType: {AccountType} " +
-                $"AccountName: {AccountName} " +
-                $"Password: {Password}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"AccountType: {AccountType} "
+                + $"AccountName: {AccountName} "
+                + $"Password: {Password}";
         }
     }
 }

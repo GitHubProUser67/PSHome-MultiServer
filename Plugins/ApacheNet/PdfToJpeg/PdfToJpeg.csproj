@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- "latest" works on local PC but not in build pipeline; Visual Studio version difference? Whatever, preview it is. -->
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Library</OutputType>
+    <IsPublishable>false</IsPublishable>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Servers\ApacheNet\ApacheNet.csproj" />
+    <PackageReference Include="PDFtoImage" Version="5.2.0" />
+    <PackageReference Include="Costura.Fody" Version="6.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <!--<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>-->
+    </PackageReference>
+  </ItemGroup>
+
+  <Target Name="CopyFilesTargetName" AfterTargets="AfterBuild">
+    <ItemGroup>
+      <FilesToCopy Include="$(OutDir)PdfToJpeg.pdb" />
+      <FilesToCopy Include="$(OutDir)PdfToJpeg.deps.json" />
+      <FilesToCopy Include="$(OutDir)PdfToJpeg.dll" />
+      <FilesToCopy1 Include="$(OutDir)WatsonWebserver.Core.dll" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <FilesExist Condition="Exists(@(FilesToCopy))">true</FilesExist>
+      <FilesExist Condition="Exists(@(FilesToCopy1))">true</FilesExist>
+    </PropertyGroup>
+
+    <Copy
+      SourceFiles="@(FilesToCopy)"
+      DestinationFolder="$(OutDir)\static\apachenet-plugins\PdfToJpeg\"
+      Condition="$(FilesExist)"
+    />
+    <Copy
+      SourceFiles="@(FilesToCopy1)"
+      DestinationFolder="$(OutDir)\static\apachenet-plugins\PdfToJpeg\"
+      Condition="$(FilesExist)"
+    />
+
+    <Delete Files="@(FilesToCopy)" Condition="$(FilesExist)" />
+  </Target>
+
+  <ItemGroup>
+    <Content Include="static\**\*.*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

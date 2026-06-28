@@ -7,14 +7,12 @@
 public abstract class MetricHandler : IMetricServer, IDisposable
 {
     // The token is cancelled when the handler is instructed to stop.
-    private CancellationTokenSource? _cts = new CancellationTokenSource();
+    private CancellationTokenSource? _cts = new();
 
     // This is the task started for the purpose of exporting metrics.
     private Task? _task;
 
-    protected MetricHandler()
-    {
-    }
+    protected MetricHandler() { }
 
     public IMetricServer Start()
     {
@@ -22,7 +20,9 @@ public abstract class MetricHandler : IMetricServer, IDisposable
             throw new InvalidOperationException("The metric server has already been started.");
 
         if (_cts == null)
-            throw new InvalidOperationException("The metric server has already been started and stopped. Create a new server if you want to start it again.");
+            throw new InvalidOperationException(
+                "The metric server has already been started and stopped. Create a new server if you want to start it again."
+            );
 
         _task = StartServer(_cts.Token);
         return this;

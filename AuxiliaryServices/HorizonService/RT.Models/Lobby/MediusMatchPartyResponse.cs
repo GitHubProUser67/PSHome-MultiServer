@@ -1,13 +1,14 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.MatchSetGameStateRequest)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.MatchSetGameStateRequest
+    )]
     public class MediusMatchPartyResponse : BaseLobbyExtMessage, IMediusResponse
     {
-
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.MatchSetGameStateRequest;
 
         public bool IsSuccess => StatusCode >= 0;
@@ -20,9 +21,9 @@ namespace Horizon.RT.Models
         public MediusCallbackStatus StatusCode;
         public int PluginSpecificStatusCode;
 
-        //MediusJoinAssignedGame 
+        //MediusJoinAssignedGame
         public int GameWorldID;
-        public string GamePassword = ""; //GAMEPASSWORD_MAXLEN
+        public string GamePassword = string.Empty; //GAMEPASSWORD_MAXLEN
         public MGCL_GAME_HOST_TYPE GameHostType;
         public NetAddressList AddressList;
         public int ApplicationDataSizeJAS;
@@ -34,7 +35,7 @@ namespace Horizon.RT.Models
         public int Parties;
 
         // MatchPartyInfo
-        public int NumPlayers; 
+        public int NumPlayers;
         public int Players;
 
         //MediusMatchTypeHostGame
@@ -44,9 +45,10 @@ namespace Horizon.RT.Models
 
         // MediusMatchTypeReferral
         /// <summary>
-        /// MatchingWorldUID to connect to 
+        /// MatchingWorldUID to connect to
         /// </summary>
         public int MatchingWorldUID;
+
         /// <summary>
         /// NetConnectionInfo of Medius Matchmaking Server
         /// </summary>
@@ -54,13 +56,10 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            //
             StatusCode = reader.Read<MediusCallbackStatus>();
             PluginSpecificStatusCode = reader.ReadInt32();
 
@@ -84,7 +83,6 @@ namespace Horizon.RT.Models
                 Parties = reader.ReadInt32();
             }
 
-
             //MediusMatchTypeHostGame
             if (StatusCode == MediusCallbackStatus.MediusMatchTypeHostGame)
             {
@@ -94,23 +92,19 @@ namespace Horizon.RT.Models
             }
 
             //MediusMatchTypeReferral
-            if(StatusCode == MediusCallbackStatus.MediusMatchTypeReferral)
+            if (StatusCode == MediusCallbackStatus.MediusMatchTypeReferral)
             {
                 MatchingWorldUID = reader.ReadInt32();
                 ConnectInfo = reader.Read<NetConnectionInfo>();
             }
-
         }
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            //
             writer.Write(MessageID ?? MessageId.Empty);
 
-            //
             writer.Write(StatusCode);
             writer.Write(PluginSpecificStatusCode);
 
@@ -147,47 +141,41 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            if (StatusCode == MediusCallbackStatus.MediusJoinAssignedGame)
-            {
-                return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"PluginSpecificStatusCode: {PluginSpecificStatusCode} " +
-                $"GameWorldID: {GameWorldID} " +
-                $"GamePassword: {GamePassword} " +
-                $"GameHostType: {GameHostType} " +
-                $"AddressList: {AddressList} " +
-                $"ApplicationDataSize: {ApplicationDataSizeJAS} " +
-                $"ApplicationData: {ApplicationDataJAS} " +
-                $"MatchRoster: {MatchRoster} " +
-                $"NumPlayers: {NumPlayers} " +
-                $"Players: {Players} " +
-                $"NumParties: {NumParties} " +
-                $"Parties: {Parties}";
-            }
-
-            if (StatusCode == MediusCallbackStatus.MediusMatchTypeHostGame)
-            {
-                return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"PluginSpecificStatusCode: {PluginSpecificStatusCode} " +
-                $"MatchGameID: {MatchGameID} " + 
-                $"ApplicationDataSize: {ApplicationDataSizeHG} " +
-                $"ApplicationData: {ApplicationDataHG}";
-            }
-
-            if (StatusCode == MediusCallbackStatus.MediusMatchTypeReferral)
-            {
-                return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"PluginSpecificStatusCode: {PluginSpecificStatusCode} " +
-                $"MatchingWorldUID: {MatchingWorldUID} " +
-                $"ConnectInfo: {ConnectInfo}";
-            }
-
-            return base.ToString();
+            return StatusCode == MediusCallbackStatus.MediusJoinAssignedGame
+                    ? base.ToString()
+                        + " "
+                        + $"MessageID: {MessageID} "
+                        + $"StatusCode: {StatusCode} "
+                        + $"PluginSpecificStatusCode: {PluginSpecificStatusCode} "
+                        + $"GameWorldID: {GameWorldID} "
+                        + $"GamePassword: {GamePassword} "
+                        + $"GameHostType: {GameHostType} "
+                        + $"AddressList: {AddressList} "
+                        + $"ApplicationDataSize: {ApplicationDataSizeJAS} "
+                        + $"ApplicationData: {ApplicationDataJAS} "
+                        + $"MatchRoster: {MatchRoster} "
+                        + $"NumPlayers: {NumPlayers} "
+                        + $"Players: {Players} "
+                        + $"NumParties: {NumParties} "
+                        + $"Parties: {Parties}"
+                : StatusCode == MediusCallbackStatus.MediusMatchTypeHostGame
+                    ? base.ToString()
+                        + " "
+                        + $"MessageID: {MessageID} "
+                        + $"StatusCode: {StatusCode} "
+                        + $"PluginSpecificStatusCode: {PluginSpecificStatusCode} "
+                        + $"MatchGameID: {MatchGameID} "
+                        + $"ApplicationDataSize: {ApplicationDataSizeHG} "
+                        + $"ApplicationData: {ApplicationDataHG}"
+                : StatusCode == MediusCallbackStatus.MediusMatchTypeReferral
+                    ? base.ToString()
+                        + " "
+                        + $"MessageID: {MessageID} "
+                        + $"StatusCode: {StatusCode} "
+                        + $"PluginSpecificStatusCode: {PluginSpecificStatusCode} "
+                        + $"MatchingWorldUID: {MatchingWorldUID} "
+                        + $"ConnectInfo: {ConnectInfo}"
+                : base.ToString();
         }
     }
 }

@@ -6,7 +6,6 @@ namespace Blaze2SDK.Blaze.GameManager
     [TdfStruct]
     public struct StartMatchmakingRequest
     {
-
         /// <summary>
         /// Max Key String Length: 32
         /// Max Value String Length: 256
@@ -80,6 +79,5 @@ namespace Blaze2SDK.Blaze.GameManager
 
         [TdfMember("VOIP")]
         public VoipTopology mVoipNetwork;
-
     }
 }

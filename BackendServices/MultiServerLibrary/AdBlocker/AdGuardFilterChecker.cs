@@ -1,10 +1,7 @@
+using System.Text.RegularExpressions;
 using CustomLogger;
 using MultiServerLibrary.Extension;
-using System;
-using System.Linq;
-using System.Net;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using MultiServerLibrary.Extension.NET;
 
 namespace MultiServerLibrary.AdBlocker
 {
@@ -14,6 +11,7 @@ namespace MultiServerLibrary.AdBlocker
 
         private string[] excludedUrls;
         private Regex[] regexRules;
+        private static readonly char[] separator = new[] { '\n', '\r' };
 
         // Download the AdGuard DNS filter list and parse the rules
         public async Task DownloadAndParseFilterListAsync()
@@ -21,7 +19,8 @@ namespace MultiServerLibrary.AdBlocker
             if (isLoaded)
                 return;
 
-            const string adGuardFilterUrl = "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt";
+            const string adGuardFilterUrl =
+                "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt";
 
             excludedUrls = Array.Empty<string>();
             regexRules = Array.Empty<Regex>();
@@ -32,26 +31,36 @@ namespace MultiServerLibrary.AdBlocker
                 using (FixedWebClient client = new FixedWebClient())
 #pragma warning restore
                 {
-                    foreach (string line in (await client.DownloadStringTaskAsync(adGuardFilterUrl).ConfigureAwait(false)).Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
+                    foreach (
+                        var line in (
+                            await client
+                                .DownloadStringTaskAsync(adGuardFilterUrl)
+                                .ConfigureAwait(false)
+                        ).Split(separator, StringSplitOptions.RemoveEmptyEntries)
+                    )
                     {
                         // If the line starts with "||" or "://", it is an excluded URL
                         if (line.StartsWith("||"))
                         {
-                            string processedLine = line.Substring(2).Trim();
-                            int lastSpaceIndex = processedLine.LastIndexOf('^');
+                            var processedLine = line.Substring(2).Trim();
+                            var lastSpaceIndex = processedLine.LastIndexOf('^');
 
                             if (lastSpaceIndex != -1)
-                                excludedUrls.AddElementToArray(processedLine.Substring(0, lastSpaceIndex));
+                                excludedUrls.AddElementToArray(
+                                    processedLine.Substring(0, lastSpaceIndex)
+                                );
                             else
                                 excludedUrls.AddElementToArray(processedLine);
                         }
                         else if (line.StartsWith("://"))
                         {
-                            string processedLine = line.Substring(3).Trim();
-                            int lastSpaceIndex = processedLine.LastIndexOf('^');
+                            var processedLine = line.Substring(3).Trim();
+                            var lastSpaceIndex = processedLine.LastIndexOf('^');
 
                             if (lastSpaceIndex != -1)
-                                excludedUrls.AddElementToArray(processedLine.Substring(0, lastSpaceIndex));
+                                excludedUrls.AddElementToArray(
+                                    processedLine.Substring(0, lastSpaceIndex)
+                                );
                             else
                                 excludedUrls.AddElementToArray(processedLine);
                         }
@@ -61,11 +70,15 @@ namespace MultiServerLibrary.AdBlocker
                             try
                             {
                                 // Validate and compile the regex (catching any potential errors)
-                                regexRules.AddElementToArray(new Regex(FormatRegexStr(line.Trim())));
+                                regexRules.AddElementToArray(
+                                    new Regex(FormatRegexStr(line.Trim()))
+                                );
                             }
                             catch (Exception ex)
                             {
-                                LoggerAccessor.LogError($"[AdGuardFilterChecker] - Invalid regex pattern: {ex.Message}");
+                                LoggerAccessor.LogError(
+                                    $"[AdGuardFilterChecker] - Invalid regex pattern: {ex.Message}"
+                                );
                             }
                         }
                     }
@@ -75,7 +88,9 @@ namespace MultiServerLibrary.AdBlocker
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[AdGuardFilterChecker] - Error while downloading the Adguard rules: {ex.Message}");
+                LoggerAccessor.LogError(
+                    $"[AdGuardFilterChecker] - Error while downloading the Adguard rules: {ex.Message}"
+                );
             }
         }
 
@@ -85,12 +100,9 @@ namespace MultiServerLibrary.AdBlocker
                 ^ excludedUrls.Any(excludedUrl => url.Contains(excludedUrl));
         }
 
-        private string FormatRegexStr(string regex)
+        private static string FormatRegexStr(string regex)
         {
-            if (regex.Length <= 2)
-                return regex;
-
-            return $@"{regex.Substring(1, regex.Length - 2)}";
+            return regex.Length <= 2 ? regex : $@"{regex.Substring(1, regex.Length - 2)}";
         }
     }
 }

@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.League
 {
-	[TdfStruct]
-	public struct GetInvitationsRequest
-	{
+    [TdfStruct]
+    public struct GetInvitationsRequest
+    {
+        [TdfMember("INVT")]
+        public InvitationsToGetType mInvitationsToGet;
 
-		[TdfMember("INVT")]
-		public InvitationsToGetType mInvitationsToGet;
-
-		[TdfMember("LGID")]
-		public uint mLeagueId;
-
-	}
+        [TdfMember("LGID")]
+        public uint mLeagueId;
+    }
 }

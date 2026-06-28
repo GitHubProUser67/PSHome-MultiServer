@@ -1,6 +1,5 @@
-using MultiServerLibrary.HTTP;
 using System.Globalization;
-using System.Linq;
+using MultiServerLibrary.HTTP;
 
 namespace WebAPIService.GameServices.PSHOME.VEEMEE.gofish
 {
@@ -8,31 +7,30 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.gofish
     {
         public static string SetUserDataPOST(byte[] PostData, string ContentType, string apiPath)
         {
-            string key = string.Empty;
-            string psnid = string.Empty;
-            string score = string.Empty;
-            string fishcount = string.Empty;
-            string biggestfishweight = string.Empty;
-            string totalfishweight = string.Empty;
-
             if (ContentType == "application/x-www-form-urlencoded" && PostData != null)
             {
                 var data = HTTPProcessor.ExtractAndSortUrlEncodedPOSTData(PostData);
-                key = data["key"].First();
+                var key = data["key"].First();
                 if (key != "tHeHuYUmuDa54qur")
                 {
-                    CustomLogger.LoggerAccessor.LogError("[VEEMEE] - gofish - Client tried to push invalid key! Invalidating request.");
+                    CustomLogger.LoggerAccessor.LogError(
+                        "[VEEMEE] - gofish - Client tried to push invalid key! Invalidating request."
+                    );
                     return null;
                 }
-                psnid = data["psnid"].First();
-                score = data["score"].First();
-                fishcount = data["fishcount"].First();
-                biggestfishweight = data["biggestfishweight"].First();
-                totalfishweight = data["totalfishweight"].First();
 
+                var psnid = data["psnid"].First();
+                var score = data["score"].First();
+                var fishcount = data["fishcount"].First();
+                var biggestfishweight = data["biggestfishweight"].First();
+                var totalfishweight = data["totalfishweight"].First();
                 GFLeaderboard.InitializeLeaderboard();
 
-                _ = GFLeaderboard.Leaderboard.UpdateScoreAsync(psnid, float.Parse(score, CultureInfo.InvariantCulture), new System.Collections.Generic.List<object> { fishcount, biggestfishweight, totalfishweight });
+                _ = GFLeaderboard.Leaderboard.UpdateScoreAsync(
+                    psnid,
+                    float.Parse(score, CultureInfo.InvariantCulture),
+                    [fishcount, biggestfishweight, totalfishweight]
+                );
 
                 return $"<psnid>{psnid}</psnid><score>{score}</score><fishcount>{fishcount}</fishcount><psnid>{psnid}</psnid><biggestfishweight>{biggestfishweight}</biggestfishweight><totalfishweight>{totalfishweight}</totalfishweight>";
             }
@@ -42,16 +40,17 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.gofish
 
         public static string GetUserDataPOST(byte[] PostData, string ContentType, string apiPath)
         {
-            string key = string.Empty;
-            string psnid = string.Empty;
+            var psnid = string.Empty;
 
             if (ContentType == "application/x-www-form-urlencoded" && PostData != null)
             {
                 var data = HTTPProcessor.ExtractAndSortUrlEncodedPOSTData(PostData);
-                key = data["key"].First();
+                var key = data["key"].First();
                 if (key != "tHeHuYUmuDa54qur")
                 {
-                    CustomLogger.LoggerAccessor.LogError("[VEEMEE] - gofish - Client tried to push invalid key! Invalidating request.");
+                    CustomLogger.LoggerAccessor.LogError(
+                        "[VEEMEE] - gofish - Client tried to push invalid key! Invalidating request."
+                    );
                     return null;
                 }
                 psnid = data["psnid"].First();

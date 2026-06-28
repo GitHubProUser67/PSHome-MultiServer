@@ -1,15 +1,11 @@
-using CustomLogger;
-using System;
-using System.Collections.Generic;
-using System.Net.Sockets;
+using System.Globalization;
 using System.Net;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
-using MultiServerLibrary.AdBlocker;
-using DNS.Protocol;
-using System.Linq;
-using MultiServerLibrary.Extension;
+using CustomLogger;
 using DNSLibrary;
-using System.Threading.Tasks;
+using MultiServerLibrary.AdBlocker;
+using MultiServerLibrary.Extension;
 
 namespace MitmDNS
 {
@@ -20,58 +16,110 @@ namespace MitmDNS
         public static AdGuardFilterChecker AdChecker { get; set; } = new AdGuardFilterChecker();
         public static DanPollockChecker DanChecker { get; set; } = new DanPollockChecker();
 
-        private static readonly UdpClientService _udpClientService = new UdpClientService(
-                    (int)TimeSpan.FromSeconds(5).TotalMilliseconds,
-                    (int)TimeSpan.FromSeconds(15).TotalMilliseconds,
-                    Environment.ProcessorCount * 4);
+        private static readonly UdpClientService _udpClientService = new(
+            (int)TimeSpan.FromSeconds(5).TotalMilliseconds,
+            (int)TimeSpan.FromSeconds(15).TotalMilliseconds,
+            Environment.ProcessorCount * 4
+        );
 
         public static async Task<byte[]> ProcRequest(byte[] DnsReq)
         {
-            bool treated = false;
+            var treated = false;
 
             try
             {
-                Request Req = Request.FromArray(DnsReq);
+                var Req = Request.FromArray(DnsReq);
 
                 if (Req.OperationCode == OperationCode.Query)
                 {
-                    Question question = Req.Questions.FirstOrDefault();
+                    var question = Req.Questions.FirstOrDefault();
 
                     if (question == null)
                         return null;
 
-                    string fullname = question.Name.ToString();
+                    var fullname = question.Name.ToString();
 
                     LoggerAccessor.LogInfo($"[DNSResolver] - Host: {fullname} was Requested.");
 
                     string url = null;
 
-                    if (fullname.Length > 13 && fullname.EndsWith("in-addr.arpa") && IPAddress.TryParse(fullname[..^13], out IPAddress arparuleaddr)) // IPV4 Only.
+                    if (fullname.EndsWith(".in-addr.arpa", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (arparuleaddr != null && arparuleaddr.AddressFamily == AddressFamily.InterNetwork)
-                        {
-                            // Split the IP address into octets
-                            string[] octets = arparuleaddr.ToString().Split('.');
+                        var ipPart = fullname[..^13];
 
-                            // Reverse the order of octets
+                        if (
+                            IPAddress.TryParse(ipPart, out var ipv4)
+                            && ipv4.AddressFamily == AddressFamily.InterNetwork
+                        )
+                        {
+                            var octets = ipv4.ToString().Split('.');
                             Array.Reverse(octets);
 
-                            // Join the octets back together
                             url = string.Join(".", octets);
-
                             treated = true;
+                        }
+                    }
+                    else if (fullname.EndsWith(".ip6.arpa", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var nibblePart = fullname[..^9];
+
+                        // remove dots
+                        var hexReversed = nibblePart.Replace(".", string.Empty);
+
+                        var isHexValid = true;
+
+                        // validate hex
+                        foreach (var c in hexReversed)
+                        {
+                            if (!Uri.IsHexDigit(c))
+                            {
+                                isHexValid = false;
+                                break;
+                            }
+                        }
+
+                        if (isHexValid && hexReversed.Length <= 32)
+                        {
+                            // pad missing leading zeros (zone delegation support)
+                            hexReversed = hexReversed.PadRight(32, '0');
+
+                            // reverse nibbles
+                            var chars = hexReversed.ToCharArray();
+                            Array.Reverse(chars);
+                            var hex = new string(chars);
+
+                            var bytes = new byte[16];
+                            for (var i = 0; i < 16; i++)
+                                bytes[i] = byte.Parse(
+                                    hex.Substring(i * 2, 2),
+                                    NumberStyles.HexNumber
+                                );
+
+                            var ipv6 = new IPAddress(bytes);
+
+                            if (ipv6.AddressFamily == AddressFamily.InterNetworkV6)
+                            {
+                                url = ipv6.ToString();
+                                treated = true;
+                            }
                         }
                     }
                     else
                     {
-                        if (MitmDNSServerConfiguration.EnableAdguardFiltering && AdChecker.isLoaded && AdChecker.IsDomainRefused(fullname))
+                        if (
+                            MitmDNSServerConfiguration.EnableAdguardFiltering
+                            && AdChecker.isLoaded
+                            && AdChecker.IsDomainRefused(fullname)
+                        )
                         {
                             url = "0.0.0.0";
                             treated = true;
                         }
-                        else if (MitmDNSServerConfiguration.EnableDanPollockHosts && DanChecker.isLoaded)
+                        else if (
+                            MitmDNSServerConfiguration.EnableDanPollockHosts && DanChecker.isLoaded
+                        )
                         {
-                            IPAddress danAddr = DanChecker.GetDomainIP(fullname);
+                            var danAddr = DanChecker.GetDomainIP(fullname);
                             if (danAddr != null)
                             {
                                 url = danAddr.ToString();
@@ -79,25 +127,35 @@ namespace MitmDNS
                             }
                         }
 
-                        if (!treated && DNSConfigProcessor.DicRules != null && DNSConfigProcessor.DicRules.TryGetValue(fullname, out DnsSettings value))
+                        if (
+                            !treated
+                            && DNSConfigProcessor.DicRules != null
+                            && DNSConfigProcessor.DicRules.TryGetValue(fullname, out var value)
+                        )
                         {
-                            if (value.Mode == HandleMode.Allow) url = fullname;
-                            else if (value.Mode == HandleMode.Redirect) url = value.Address ?? "127.0.0.1";
-                            else if (value.Mode == HandleMode.Deny) url = "NXDOMAIN";
+                            if (value.Mode == HandleMode.Allow)
+                                url = fullname;
+                            else if (value.Mode == HandleMode.Redirect)
+                                url = value.Address ?? "127.0.0.1";
+                            else if (value.Mode == HandleMode.Deny)
+                                url = "NXDOMAIN";
                             treated = true;
                         }
 
                         if (!treated && DNSConfigProcessor.StarRules != null)
                         {
-                            foreach (KeyValuePair<string, DnsSettings> rule in DNSConfigProcessor.StarRules)
+                            foreach (var rule in DNSConfigProcessor.StarRules)
                             {
-                                Regex regex = new Regex(rule.Key);
+                                var regex = new Regex(rule.Key);
                                 if (!regex.IsMatch(fullname))
                                     continue;
 
-                                if (rule.Value.Mode == HandleMode.Allow) url = fullname;
-                                else if (rule.Value.Mode == HandleMode.Redirect) url = rule.Value.Address ?? "127.0.0.1";
-                                else if (rule.Value.Mode == HandleMode.Deny) url = "NXDOMAIN";
+                                if (rule.Value.Mode == HandleMode.Allow)
+                                    url = fullname;
+                                else if (rule.Value.Mode == HandleMode.Redirect)
+                                    url = rule.Value.Address ?? "127.0.0.1";
+                                else if (rule.Value.Mode == HandleMode.Deny)
+                                    url = "NXDOMAIN";
                                 treated = true;
                                 break;
                             }
@@ -107,29 +165,60 @@ namespace MitmDNS
                     if (!treated && MitmDNSServerConfiguration.DNSAllowUnsafeRequests)
                     {
 #if DEBUG
-                        LoggerAccessor.LogInfo($"[DNSResolver] - Issuing mitm request for domain: {fullname}");
+                        LoggerAccessor.LogInfo(
+                            $"[DNSResolver] - Issuing mitm request for domain: {fullname}"
+                        );
 #endif
-                        var queueRes = _udpClientService.Dequeue();
+                        var queueRes = _udpClientService.TryDequeue();
                         if (queueRes.Item1)
                         {
-                            bool error = false;
+                            var error = false;
                             var udpClient = queueRes.Item2;
                             try
                             {
-                                await udpClient.SendAsync(DnsReq, DnsReq.Length).ConfigureAwait(false);
-
-                                var res = udpClient.BeginReceive(null, null);
-                                // begin recieve right after request
-                                if (res.AsyncWaitHandle.WaitOne(_udpClientService.SendTimeoutMs))
+                                if (
+                                    await udpClient
+                                        .SendAsync(DnsReq, DnsReq.Length)
+                                        .TryAwait(
+                                            TimeSpan.FromMilliseconds(
+                                                _udpClientService.SendTimeoutMs
+                                            )
+                                        )
+                                        .ConfigureAwait(false)
+                                )
                                 {
-                                    IPEndPoint remoteEP = udpClient.Client.RemoteEndPoint as IPEndPoint;
+                                    var res = udpClient.BeginReceive(null, null);
+                                    // begin recieve right after request
+                                    if (
+                                        res.AsyncWaitHandle.WaitOne(
+                                            _udpClientService.ReceiveTimeoutMs
+                                        )
+                                    )
+                                    {
+                                        var remoteEP =
+                                            udpClient.Client.RemoteEndPoint as IPEndPoint;
 #if DEBUG
-                                    LoggerAccessor.LogInfo($"[DNSResolver] - Recieved message from endpoint:{remoteEP}, returning...");
+                                        LoggerAccessor.LogInfo(
+                                            $"[DNSResolver] - Recieved message from endpoint:{remoteEP}, returning..."
+                                        );
 #endif
-                                    return udpClient.EndReceive(res, ref remoteEP);
+                                        return udpClient.EndReceive(res, ref remoteEP);
+                                    }
+                                    else
+                                    {
+                                        error = true;
+                                        LoggerAccessor.LogWarn(
+                                            $"[DNSResolver] - No Bytes Recieved from UdpRequest."
+                                        );
+                                    }
                                 }
                                 else
-                                    LoggerAccessor.LogWarn($"[DNSResolver] - No Bytes Recieved from UdpRequest.");
+                                {
+                                    error = true;
+                                    LoggerAccessor.LogWarn(
+                                        $"[DNSResolver] - No Bytes Sent from UdpRequest."
+                                    );
+                                }
                             }
                             catch
                             {
@@ -143,44 +232,55 @@ namespace MitmDNS
                     }
                     else
                     {
-                        List<IPAddress> Ips = new();
+                        List<IPAddress> Ips = [];
 
                         if (!string.IsNullOrEmpty(url) && url != "NXDOMAIN")
                         {
                             try
                             {
-                                if (!IPAddress.TryParse(url, out IPAddress address))
+                                if (!IPAddress.TryParse(url, out var address))
                                 {
-                                    foreach (var extractedIp in Dns.GetHostEntry(url).AddressList)
+                                    var (Success, Result) = await Dns.GetHostEntryAsync(url)
+                                        .TryAwaitWithResult(TimeSpan.FromSeconds(5))
+                                        .ConfigureAwait(false);
+
+                                    if (Success)
                                     {
-                                        Ips.Add(extractedIp);
+                                        foreach (var extractedIp in Result.AddressList)
+                                            Ips.Add(extractedIp);
                                     }
                                 }
-                                else Ips.Add(address);
+                                else
+                                    Ips.Add(address);
                             }
                             catch
                             {
                                 Ips.Clear();
                             }
 #if DEBUG
-                            LoggerAccessor.LogInfo($"[DNSResolver] - Resolved: {fullname} to: {string.Join(", ", Ips)}");
+                            LoggerAccessor.LogInfo(
+                                $"[DNSResolver] - Resolved: {fullname} to: {string.Join(", ", Ips)}"
+                            );
 #endif
-                            return Response.MakeType0DnsResponsePacket(DnsReq.Trim(), Ips);
                         }
                         else
-                        {
-                            LoggerAccessor.LogWarn($"[DNSResolver] - No domain found for: {fullname}");
+                            LoggerAccessor.LogWarn(
+                                $"[DNSResolver] - No domain found for: {fullname}"
+                            );
 
-                            return Response.MakeType0DnsResponsePacket(DnsReq.Trim(), Ips);
-                        }
+                        return Response.MakeType0DnsResponsePacket(DnsReq.Trim(), Ips);
                     }
                 }
                 else
-                    LoggerAccessor.LogWarn($"[DNSResolver] - The requested OperationCode: {Req.OperationCode} is not yet supported, report to GITHUB!");
+                    LoggerAccessor.LogWarn(
+                        $"[DNSResolver] - The requested OperationCode: {Req.OperationCode} is not yet supported, report to GITHUB!"
+                    );
             }
             catch (Exception e)
             {
-                LoggerAccessor.LogError($"[DNSResolver] - An assertion was thrown, not returning any results. (Exception:{e})");
+                LoggerAccessor.LogError(
+                    $"[DNSResolver] - An assertion was thrown, not returning any results. (Exception:{e})"
+                );
             }
 
             return null;

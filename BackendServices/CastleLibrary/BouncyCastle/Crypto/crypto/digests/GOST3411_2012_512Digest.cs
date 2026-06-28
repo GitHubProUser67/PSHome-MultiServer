@@ -1,0 +1,100 @@
+﻿using System;
+using Org.BouncyCastle.Utilities;
+
+namespace Org.BouncyCastle.Crypto.Digests
+{
+    public class Gost3411_2012_512Digest : Gost3411_2012Digest
+    {
+        private static readonly byte[] IV =
+        {
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+        };
+
+        public override string AlgorithmName
+        {
+            get { return "GOST3411-2012-512"; }
+        }
+
+        public Gost3411_2012_512Digest()
+            : base(IV) { }
+
+        public Gost3411_2012_512Digest(Gost3411_2012_512Digest other)
+            : base(IV)
+        {
+            Reset(other);
+        }
+
+        public override int GetDigestSize()
+        {
+            return 64;
+        }
+
+        public override IMemoable Copy()
+        {
+            return new Gost3411_2012_512Digest(this);
+        }
+    }
+}

@@ -1,8 +1,8 @@
-using CustomLogger;
-using MultiServerLibrary.GeoLocalization;
 using System.Data;
 using System.Data.SQLite;
 using System.Net;
+using CustomLogger;
+using MultiServerLibrary.GeoLocalization;
 
 namespace EdenServer.Database
 {
@@ -18,7 +18,7 @@ namespace EdenServer.Database
         private SQLiteCommand? _countUsers;
         private SQLiteCommand? _logUser;
 
-        private readonly object _dbLock = new object();
+        private readonly object _dbLock = new();
 
         public static void Initialize(string databasePath)
         {
@@ -33,7 +33,7 @@ namespace EdenServer.Database
 
             if (File.Exists(databasePath))
             {
-                SQLiteConnectionStringBuilder connBuilder = new SQLiteConnectionStringBuilder()
+                var connBuilder = new SQLiteConnectionStringBuilder()
                 {
                     DataSource = databasePath,
                     Version = 3,
@@ -41,7 +41,7 @@ namespace EdenServer.Database
                     CacheSize = 10000,
                     JournalMode = SQLiteJournalModeEnum.Wal,
                     LegacyFormat = false,
-                    DefaultTimeout = 500
+                    DefaultTimeout = 500,
                 };
 
                 _instance._db = new SQLiteConnection(connBuilder.ToString());
@@ -49,10 +49,15 @@ namespace EdenServer.Database
 
                 if (_instance._db.State == ConnectionState.Open)
                 {
-                    bool read = false;
-                    using (SQLiteCommand queryTables = new SQLiteCommand("SELECT * FROM sqlite_master WHERE type='table' AND name='users'", _instance._db))
+                    var read = false;
+                    using (
+                        var queryTables = new SQLiteCommand(
+                            "SELECT * FROM sqlite_master WHERE type='table' AND name='users'",
+                            _instance._db
+                        )
+                    )
                     {
-                        using (SQLiteDataReader reader = queryTables.ExecuteReader())
+                        using (var reader = queryTables.ExecuteReader())
                         {
                             while (reader.Read())
                             {
@@ -65,7 +70,9 @@ namespace EdenServer.Database
                     if (!read)
                     {
                         LoggerAccessor.LogWarn("[LoginDatabase] - No database found, creating now");
-                        using (SQLiteCommand createTables = new SQLiteCommand(@"CREATE TABLE users (
+                        using (
+                            var createTables = new SQLiteCommand(
+                                @"CREATE TABLE users (
                             id INTEGER PRIMARY KEY,
                             name TEXT NOT NULL,
                             password TEXT NOT NULL,
@@ -77,7 +84,10 @@ namespace EdenServer.Database
                             country TEXT NOT NULL,
                             lastip TEXT NOT NULL,
                             teamid INTEGER NOT NULL
-                        )", _instance._db))
+                        )",
+                                _instance._db
+                            )
+                        )
                         {
                             createTables.ExecuteNonQuery();
                         }
@@ -89,13 +99,21 @@ namespace EdenServer.Database
                     {
                         if (!ColumnExists(_instance._db, "users", "teamid"))
                         {
-                            LoggerAccessor.LogWarn("[LoginDatabase] - Migrating users table: adding teamid column");
+                            LoggerAccessor.LogWarn(
+                                "[LoginDatabase] - Migrating users table: adding teamid column"
+                            );
 
-                            using (var cmd = new SQLiteCommand(
-                                "ALTER TABLE users ADD COLUMN teamid INTEGER NOT NULL DEFAULT 0;", _instance._db))
+                            using (
+                                var cmd = new SQLiteCommand(
+                                    "ALTER TABLE users ADD COLUMN teamid INTEGER NOT NULL DEFAULT 0;",
+                                    _instance._db
+                                )
+                            )
                                 cmd.ExecuteNonQuery();
 
-                            LoggerAccessor.LogInfo("[LoginDatabase] - Migration completed: teamid added");
+                            LoggerAccessor.LogInfo(
+                                "[LoginDatabase] - Migration completed: teamid added"
+                            );
                         }
 
                         LoggerAccessor.LogInfo("[LoginDatabase] - Using " + databasePath);
@@ -117,7 +135,13 @@ namespace EdenServer.Database
             {
                 while (reader.Read())
                 {
-                    if (string.Equals(reader["name"].ToString(), columnName, StringComparison.OrdinalIgnoreCase))
+                    if (
+                        string.Equals(
+                            reader["name"].ToString(),
+                            columnName,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
                         return true;
                 }
             }
@@ -126,15 +150,24 @@ namespace EdenServer.Database
 
         private void PrepareStatements()
         {
-            _getUsersByName = new SQLiteCommand("SELECT id, password, userid, XUID, unk2, gamekey, megapackkey, teamid FROM users WHERE name=@name COLLATE NOCASE", _db);
+            _getUsersByName = new SQLiteCommand(
+                "SELECT id, password, userid, XUID, unk2, gamekey, megapackkey, teamid FROM users WHERE name=@name COLLATE NOCASE",
+                _db
+            );
             _getUsersByName.Parameters.Add("@name", DbType.String);
 
-            _updateUser = new SQLiteCommand("UPDATE users SET password=@pass, country=@country WHERE name=@name COLLATE NOCASE", _db);
+            _updateUser = new SQLiteCommand(
+                "UPDATE users SET password=@pass, country=@country WHERE name=@name COLLATE NOCASE",
+                _db
+            );
             _updateUser.Parameters.Add("@pass", DbType.String);
             _updateUser.Parameters.Add("@country", DbType.String);
             _updateUser.Parameters.Add("@name", DbType.String);
 
-            _createUser = new SQLiteCommand("INSERT INTO users (name, password, userid, XUID, unk2, gamekey, megapackkey, country, lastip, teamid) VALUES ( @name, @pass, @userid, @XUID, @unk2, @gamekey, @megapackkey, @country, @ip, @team)", _db);
+            _createUser = new SQLiteCommand(
+                "INSERT INTO users (name, password, userid, XUID, unk2, gamekey, megapackkey, country, lastip, teamid) VALUES ( @name, @pass, @userid, @XUID, @unk2, @gamekey, @megapackkey, @country, @ip, @team)",
+                _db
+            );
             _createUser.Parameters.Add("@name", DbType.String);
             _createUser.Parameters.Add("@pass", DbType.String);
             _createUser.Parameters.Add("@userid", DbType.UInt32);
@@ -146,10 +179,16 @@ namespace EdenServer.Database
             _createUser.Parameters.Add("@ip", DbType.String);
             _createUser.Parameters.Add("@team", DbType.UInt32);
 
-            _countUsers = new SQLiteCommand("SELECT COUNT(*) FROM users WHERE name=@name COLLATE NOCASE", _db);
+            _countUsers = new SQLiteCommand(
+                "SELECT COUNT(*) FROM users WHERE name=@name COLLATE NOCASE",
+                _db
+            );
             _countUsers.Parameters.Add("@name", DbType.String);
 
-            _logUser = new SQLiteCommand("UPDATE users SET lastip=@ip, country=@country WHERE name=@name COLLATE NOCASE", _db);
+            _logUser = new SQLiteCommand(
+                "UPDATE users SET lastip=@ip, country=@country WHERE name=@name COLLATE NOCASE",
+                _db
+            );
             _logUser.Parameters.Add("@ip", DbType.String);
             _logUser.Parameters.Add("@country", DbType.String);
             _logUser.Parameters.Add("@name", DbType.String);
@@ -207,9 +246,7 @@ namespace EdenServer.Database
                     }
                 }
             }
-            catch (Exception)
-            {
-            }
+            catch (Exception) { }
         }
 
         ~LoginDatabase()
@@ -226,12 +263,11 @@ namespace EdenServer.Database
         {
             get
             {
-                if (_instance == null)
-                {
-                    throw new ArgumentNullException("Instance", "Initialize() must be called first");
-                }
-
-                return _instance;
+                return _instance
+                    ?? throw new ArgumentNullException(
+                        "Instance",
+                        "Initialize() must be called first"
+                    );
             }
         }
 
@@ -247,7 +283,7 @@ namespace EdenServer.Database
             {
                 _getUsersByName.Parameters["@name"].Value = username;
 
-                using (SQLiteDataReader reader = _getUsersByName.ExecuteReader())
+                using (var reader = _getUsersByName.ExecuteReader())
                 {
                     if (reader.Read())
                     {
@@ -263,7 +299,7 @@ namespace EdenServer.Database
                             { "unk2", reader["unk2"] },
                             { "gamekey", reader["gamekey"] },
                             { "megapackkey", reader["megapackkey"] },
-                            { "teamid", reader["teamid"] }
+                            { "teamid", reader["teamid"] },
                         };
                     }
                 }
@@ -281,8 +317,12 @@ namespace EdenServer.Database
 
             lock (_dbLock)
             {
-                _updateUser.Parameters["@pass"].Value = data.ContainsKey("password") ? data["password"] : oldValues["password"];
-                _updateUser.Parameters["@country"].Value = data.ContainsKey("country") ? data["country"].ToString().ToUpperInvariant() : oldValues["country"];
+                _updateUser.Parameters["@pass"].Value = data.TryGetValue("password", out var value)
+                    ? value
+                    : oldValues["password"];
+                _updateUser.Parameters["@country"].Value = data.TryGetValue("country", out value)
+                    ? value.ToString().ToUpperInvariant()
+                    : oldValues["country"];
                 _updateUser.Parameters["@name"].Value = name;
 
                 _updateUser.ExecuteNonQuery();
@@ -298,7 +338,7 @@ namespace EdenServer.Database
             if (data == null)
                 return false;
 
-            string country = "??";
+            var country = "??";
             if (GeoIP.Instance != null && GeoIP.Instance.Reader != null)
             {
                 try
@@ -306,10 +346,7 @@ namespace EdenServer.Database
                     var isoCode = GeoIP.GetISOCodeFromIP(address);
                     country = string.IsNullOrEmpty(isoCode) ? "??" : isoCode.ToUpperInvariant();
                 }
-                catch
-                {
-
-                }
+                catch { }
             }
 
             lock (_dbLock)
@@ -324,7 +361,17 @@ namespace EdenServer.Database
             return true;
         }
 
-        public void CreateUser(string username, string password, uint userId, ulong XUID, byte unk2, string gameKey, string megapackKey, string country, IPAddress address)
+        public void CreateUser(
+            string username,
+            string password,
+            uint userId,
+            ulong XUID,
+            byte unk2,
+            string gameKey,
+            string megapackKey,
+            string country,
+            IPAddress address
+        )
         {
             if (_db == null)
                 return;
@@ -351,7 +398,7 @@ namespace EdenServer.Database
 
         public bool UserExists(string username)
         {
-            bool existing = false;
+            var existing = false;
 
             if (_db == null)
                 return false;
@@ -360,7 +407,7 @@ namespace EdenServer.Database
             {
                 _countUsers.Parameters["@name"].Value = username;
 
-                using (SQLiteDataReader reader = _countUsers.ExecuteReader())
+                using (var reader = _countUsers.ExecuteReader())
                 {
                     if (reader.Read())
                     {

@@ -1,6 +1,4 @@
-using Microsoft.EntityFrameworkCore;
 using MultiServerLibrary.HTTP;
-using System.Linq;
 using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.PSHOME.VEEMEE.gofish
@@ -11,26 +9,34 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.gofish
 
         public static void InitializeLeaderboard()
         {
-            if (Leaderboard == null)
-                Leaderboard = new GFScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options);
+            Leaderboard ??= new GFScoreBoardData(
+                LeaderboardDbContext.BuildOptions(
+                    0,
+                    $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}"
+                )
+            );
         }
 
-        public static string GetLeaderboardPOST(byte[] PostData, string ContentType, int mode, string apiPath)
+        public static string GetLeaderboardPOST(
+            byte[] PostData,
+            string ContentType,
+            int mode,
+            string apiPath
+        )
         {
-            string key = string.Empty;
-            string psnid = string.Empty;
-
             if (ContentType == "application/x-www-form-urlencoded" && PostData != null)
             {
                 var data = HTTPProcessor.ExtractAndSortUrlEncodedPOSTData(PostData);
-                key = data["key"].First();
+                var key = data["key"].First();
                 if (key != "tHeHuYUmuDa54qur")
                 {
-                    CustomLogger.LoggerAccessor.LogError("[VEEMEE] - gofish - Client tried to push invalid key! Invalidating request.");
+                    CustomLogger.LoggerAccessor.LogError(
+                        "[VEEMEE] - gofish - Client tried to push invalid key! Invalidating request."
+                    );
                     return null;
                 }
-                psnid = data["psnid"].First();
 
+                var psnid = data["psnid"].First();
                 InitializeLeaderboard();
 
                 switch (mode)

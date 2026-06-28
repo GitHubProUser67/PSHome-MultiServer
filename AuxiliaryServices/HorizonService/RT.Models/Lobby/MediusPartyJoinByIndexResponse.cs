@@ -1,10 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.PartyJoinResponse)] // Set GameState
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.PartyJoinResponse
+    )] // Set GameState
     public class MediusPartyJoinResponse : BaseLobbyExtMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.PartyJoinResponse; // Set GameState
@@ -15,14 +17,17 @@ namespace Horizon.RT.Models
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Response code for the request to join a party
         /// </summary>
         public MediusCallbackStatus StatusCode;
+
         /// <summary>
         /// PartyHostType
         /// </summary>
         public MGCL_GAME_HOST_TYPE PartyHostType;
+
         /// <summary>
         /// ConnectionInfo of the player to return for this session
         /// </summary>
@@ -32,7 +37,7 @@ namespace Horizon.RT.Models
         {
             base.Deserialize(reader);
 
-            MessageID = reader.Read<MessageId>(); 
+            MessageID = reader.Read<MessageId>();
             reader.ReadBytes(3);
 
             StatusCode = reader.Read<MediusCallbackStatus>();
@@ -56,11 +61,12 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"PartyHostType: {PartyHostType} " +
-                $"ConnectionInfo: {ConnectionInfo} ";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"PartyHostType: {PartyHostType} "
+                + $"ConnectionInfo: {ConnectionInfo} ";
             //$"GameState: {MatchGameState}";
         }
     }

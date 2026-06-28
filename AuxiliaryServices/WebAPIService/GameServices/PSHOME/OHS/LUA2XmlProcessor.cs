@@ -1,5 +1,4 @@
 ﻿using CustomLogger;
-using System;
 
 namespace WebAPIService.GameServices.PSHOME.OHS
 {
@@ -12,16 +11,20 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                 luaTableStr = LuaUtils.HotfixBooleanValuesForLUA(luaTableStr); // We lowercase boolean attributes.
 
                 // Execute the Lua script and get the result
-                object[] returnValues = LuaUtils.ExecuteLuaScript(LUA2XmlCode.lua2xml.Replace("PUT_CODE_HERE", luaTableStr));
+                var returnValues = LuaUtils.ExecuteLuaScript(
+                    LUA2XmlCode.lua2xml.Replace("PUT_CODE_HERE", luaTableStr)
+                );
 
-                string LuaReturn = returnValues[0].ToString();
+                var LuaReturn = returnValues[0].ToString();
 
                 if (!string.IsNullOrEmpty(LuaReturn))
                     return LuaReturn;
             }
             catch (Exception ex)
             {
-                LoggerAccessor.LogError($"[OHS] - LUA2XmlProcessor function TransformLuaTable failed - {ex}");
+                LoggerAccessor.LogError(
+                    $"[OHS] - LUA2XmlProcessor function TransformLuaTable failed - {ex}"
+                );
             }
 
             return null;

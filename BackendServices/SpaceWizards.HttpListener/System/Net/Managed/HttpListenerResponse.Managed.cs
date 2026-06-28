@@ -1,14 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-//
 // System.Net.HttpListenerResponse
-//
 // Author:
 //  Gonzalo Paniagua Javier (gonzalo@novell.com)
-//
 // Copyright (c) 2005 Novell, Inc. (http://www.novell.com)
-//
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
 // "Software"), to deal in the Software without restriction, including
@@ -16,10 +12,8 @@
 // distribute, sublicense, and/or sell copies of the Software, and to
 // permit persons to whom the Software is furnished to do so, subject to
 // the following conditions:
-//
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 // MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -27,11 +21,8 @@
 // LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-//
 
-using System;
 using System.Globalization;
-using System.IO;
 using System.Net;
 using System.Text;
 
@@ -42,7 +33,7 @@ namespace SpaceWizards.HttpListener
         private long _contentLength;
         private Version _version = HttpVersion.Version11;
         private int _statusCode = 200;
-        internal object _headersLock = new object();
+        internal object _headersLock = new();
         private bool _forceCloseChunked;
 
         internal HttpListenerResponse(HttpListenerContext context)
@@ -54,10 +45,7 @@ namespace SpaceWizards.HttpListener
 
         private void EnsureResponseStream()
         {
-            if (_responseStream == null)
-            {
-                _responseStream = _httpContext.Connection.GetResponseStream();
-            }
+            _responseStream ??= _httpContext.Connection.GetResponseStream();
         }
 
         public Version ProtocolVersion
@@ -66,10 +54,7 @@ namespace SpaceWizards.HttpListener
             set
             {
                 CheckDisposed();
-                if (value == null)
-                {
-                    throw new ArgumentNullException(nameof(value));
-                }
+                ArgumentNullException.ThrowIfNull(value);
                 if (value.Major != 1 || (value.Minor != 0 && value.Minor != 1))
                 {
                     throw new ArgumentException(SR.net_wrongversion, nameof(value));
@@ -121,10 +106,7 @@ namespace SpaceWizards.HttpListener
         {
             CheckDisposed();
 
-            if (responseEntity == null)
-            {
-                throw new ArgumentNullException(nameof(responseEntity));
-            }
+            ArgumentNullException.ThrowIfNull(responseEntity);
 
             if (!SentHeaders && _boundaryType != BoundaryType.Chunked)
             {
@@ -144,18 +126,24 @@ namespace SpaceWizards.HttpListener
             }
             else
             {
-                OutputStream.BeginWrite(responseEntity, 0, responseEntity.Length, iar =>
-                {
-                    var thisRef = (HttpListenerResponse)iar.AsyncState;
-                    try
+                OutputStream.BeginWrite(
+                    responseEntity,
+                    0,
+                    responseEntity.Length,
+                    iar =>
                     {
-                        thisRef.OutputStream.EndWrite(iar);
-                    }
-                    finally
-                    {
-                        thisRef.Close(false);
-                    }
-                }, this);
+                        var thisRef = (HttpListenerResponse)iar.AsyncState;
+                        try
+                        {
+                            thisRef.OutputStream.EndWrite(iar);
+                        }
+                        finally
+                        {
+                            thisRef.Close(false);
+                        }
+                    },
+                    this
+                );
             }
         }
 
@@ -176,12 +164,18 @@ namespace SpaceWizards.HttpListener
             {
                 if (_webHeaders[HttpKnownHeaderNames.Server] == null)
                 {
-                    _webHeaders.Set(HttpKnownHeaderNames.Server, HttpHeaderStrings.NetCoreServerName);
+                    _webHeaders.Set(
+                        HttpKnownHeaderNames.Server,
+                        HttpHeaderStrings.NetCoreServerName
+                    );
                 }
 
                 if (_webHeaders[HttpKnownHeaderNames.Date] == null)
                 {
-                    _webHeaders.Set(HttpKnownHeaderNames.Date, DateTime.UtcNow.ToString("r", CultureInfo.InvariantCulture));
+                    _webHeaders.Set(
+                        HttpKnownHeaderNames.Date,
+                        DateTime.UtcNow.ToString("r", CultureInfo.InvariantCulture)
+                    );
                 }
 
                 if (_boundaryType == BoundaryType.None)
@@ -210,12 +204,17 @@ namespace SpaceWizards.HttpListener
                 {
                     if (_boundaryType != BoundaryType.ContentLength && closing)
                     {
-                        _contentLength = CanSendResponseBody(_httpContext.Response.StatusCode) ? -1 : 0;
+                        _contentLength = CanSendResponseBody(_httpContext.Response.StatusCode)
+                            ? -1
+                            : 0;
                     }
 
                     if (_boundaryType == BoundaryType.ContentLength)
                     {
-                        _webHeaders.Set(HttpKnownHeaderNames.ContentLength, _contentLength.ToString("D", CultureInfo.InvariantCulture));
+                        _webHeaders.Set(
+                            HttpKnownHeaderNames.ContentLength,
+                            _contentLength.ToString("D", CultureInfo.InvariantCulture)
+                        );
                     }
                 }
 
@@ -228,10 +227,14 @@ namespace SpaceWizards.HttpListener
                  *    HttpStatusCode.InternalServerError      500
                  *    HttpStatusCode.ServiceUnavailable         503
                  */
-                bool conn_close = (_statusCode == (int)HttpStatusCode.BadRequest || _statusCode == (int)HttpStatusCode.RequestTimeout
-                        || _statusCode == (int)HttpStatusCode.LengthRequired || _statusCode == (int)HttpStatusCode.RequestEntityTooLarge
-                        || _statusCode == (int)HttpStatusCode.RequestUriTooLong || _statusCode == (int)HttpStatusCode.InternalServerError
-                        || _statusCode == (int)HttpStatusCode.ServiceUnavailable);
+                var conn_close =
+                    _statusCode == (int)HttpStatusCode.BadRequest
+                    || _statusCode == (int)HttpStatusCode.RequestTimeout
+                    || _statusCode == (int)HttpStatusCode.LengthRequired
+                    || _statusCode == (int)HttpStatusCode.RequestEntityTooLarge
+                    || _statusCode == (int)HttpStatusCode.RequestUriTooLong
+                    || _statusCode == (int)HttpStatusCode.InternalServerError
+                    || _statusCode == (int)HttpStatusCode.ServiceUnavailable;
 
                 if (!conn_close)
                 {
@@ -247,10 +250,13 @@ namespace SpaceWizards.HttpListener
 
                 if (SendChunked)
                 {
-                    _webHeaders.Set(HttpKnownHeaderNames.TransferEncoding, HttpHeaderStrings.Chunked);
+                    _webHeaders.Set(
+                        HttpKnownHeaderNames.TransferEncoding,
+                        HttpHeaderStrings.Chunked
+                    );
                 }
 
-                int reuses = _httpContext.Connection.Reuses;
+                var reuses = _httpContext.Connection.Reuses;
                 if (reuses >= 100)
                 {
                     _forceCloseChunked = true;
@@ -270,28 +276,27 @@ namespace SpaceWizards.HttpListener
 
                     if (!conn_close)
                     {
-                        _webHeaders.Set(HttpKnownHeaderNames.Connection, HttpHeaderStrings.KeepAlive);
+                        _webHeaders.Set(
+                            HttpKnownHeaderNames.Connection,
+                            HttpHeaderStrings.KeepAlive
+                        );
                     }
                 }
 
                 ComputeCookies();
             }
 
-            Encoding encoding = Encoding.Default;
-            StreamWriter writer = new StreamWriter(ms, encoding, 256);
+            var encoding = Encoding.Default;
+            var writer = new StreamWriter(ms, encoding, 256);
             writer.Write("HTTP/1.1 {0} ", _statusCode); // "1.1" matches Windows implementation, which ignores the response version
             writer.Flush();
-            byte[] statusDescriptionBytes = WebHeaderEncoding.GetBytes(StatusDescription);
+            var statusDescriptionBytes = WebHeaderEncoding.GetBytes(StatusDescription);
             ms.Write(statusDescriptionBytes, 0, statusDescriptionBytes.Length);
             writer.Write("\r\n");
 
             writer.Write(FormatHeaders(_webHeaders));
             writer.Flush();
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
-            int preamble = encoding.Preamble.Length;
-#else
-            int preamble = encoding.GetPreamble().Length;
-#endif
+            var preamble = encoding.Preamble.Length;
             EnsureResponseStream();
 
             /* Assumes that the ms was at position 0 */
@@ -306,24 +311,32 @@ namespace SpaceWizards.HttpListener
         {
             var sb = new StringBuilder();
 
-            for (int i = 0; i < headers.Count; i++)
+            for (var i = 0; i < headers.Count; i++)
             {
-                string key = headers.GetKey(i);
-                string[] values = headers.GetValues(i);
+                var key = headers.GetKey(i);
+                var values = headers.GetValues(i);
 
-                int startingLength = sb.Length;
+                var startingLength = sb.Length;
 
                 sb.Append(key).Append(": ");
-                bool anyValues = false;
-                for (int j = 0; j < values.Length; j++)
+                var anyValues = false;
+                for (var j = 0; j < values.Length; j++)
                 {
-                    string value = values[j];
+                    var value = values[j];
                     if (!string.IsNullOrWhiteSpace(value))
                     {
                         if (anyValues)
                         {
-                            if (key.Equals(HttpKnownHeaderNames.SetCookie, StringComparison.OrdinalIgnoreCase) ||
-                                key.Equals(HttpKnownHeaderNames.SetCookie2, StringComparison.OrdinalIgnoreCase))
+                            if (
+                                key.Equals(
+                                    HttpKnownHeaderNames.SetCookie,
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                                || key.Equals(
+                                    HttpKnownHeaderNames.SetCookie2,
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
                             {
                                 sb.Append("\r\n").Append(key).Append(": ");
                             }

@@ -1,40 +1,54 @@
+using System.Collections.Concurrent;
+using System.Net;
 using CustomLogger;
 using Horizon.RT.Common;
 using Horizon.RT.Models;
-using Horizon.SERVER;
 using MultiServerLibrary.Extension;
+using MultiServerLibrary.Extension.NET;
 using Newtonsoft.Json;
-using Org.BouncyCastle.Asn1.X509;
-using System.Collections.Concurrent;
 
 namespace Horizon.MUM.Models
 {
     public enum ChannelType
     {
         Lobby,
-        Game
+        Game,
     }
 
     public class Channel
     {
         [JsonIgnore]
-        private static object _Lock = new();
+        private static readonly Lock _Lock = new();
 
         [JsonIgnore]
-        private static ConcurrentDictionary<int, ConcurrentDictionary<int, bool>> _IdCounter = new();
+        private static readonly ConcurrentDictionary<
+            int,
+            ConcurrentDictionary<int, bool>
+        > _IdCounter = new();
 
         [JsonIgnore]
         public ConcurrentList<ClientObject> LocalClients = new();
+
         [JsonIgnore]
-        public ConcurrentList<Game> Games = new();
+        public Game? Game = null;
+
         [JsonIgnore]
-        public ConcurrentList<Party> Parties = new();
+        public Party? Party = null;
 
         public ConcurrentList<Channel> LocalChannels = new();
 
-        public string LobbyIp = MediusClass.SERVER_IP.ToString();
-        public string RegionCode = MultiServerLibrary.GeoLocalization.GeoIP.GetGeoCodeFromIP(MediusClass.SERVER_IP) ?? string.Empty;
-        public int LobbyPort = MediusClass.LobbyServer.TCPPort;
+        public static string LobbyIp
+        {
+            get
+            {
+                InternetProtocolUtils.TryGetServerIP(out var serverIP).Wait();
+                return serverIP;
+            }
+        }
+        public static string RegionCode =>
+            MultiServerLibrary.GeoLocalization.GeoIP.GetGeoCodeFromIP(IPAddress.Parse(LobbyIp))
+            ?? string.Empty;
+
         public int Id = 0;
         public int ApplicationId = 0;
         public int MediusVersion = 0;
@@ -47,23 +61,40 @@ namespace Horizon.MUM.Models
         public int PlayerSkillLevel = 0;
         public int RulesSet = 0;
         public MediusApplicationType AppType = MediusApplicationType.LobbyChatChannel;
-        public MediusWorldSecurityLevelType SecurityLevel = MediusWorldSecurityLevelType.WORLD_SECURITY_NONE;
-        public MediusLobbyFilterMaskLevelType LobbyFilterMaskLevelType = MediusLobbyFilterMaskLevelType.MediusLobbyFilterMaskLevel0;
+        public MediusWorldSecurityLevelType SecurityLevel =
+            MediusWorldSecurityLevelType.WORLD_SECURITY_NONE;
+        public MediusLobbyFilterMaskLevelType LobbyFilterMaskLevelType =
+            MediusLobbyFilterMaskLevelType.MediusLobbyFilterMaskLevel0;
         public ulong GenericField1 = 0;
         public ulong GenericField2 = 0;
         public ulong GenericField3 = 0;
         public ulong GenericField4 = 0;
-        public MediusWorldGenericFieldLevelType GenericFieldLevel = MediusWorldGenericFieldLevelType.MediusWorldGenericFieldLevel0;
+        public MediusWorldGenericFieldLevelType GenericFieldLevel =
+            MediusWorldGenericFieldLevelType.MediusWorldGenericFieldLevel0;
         public MGCL_GAME_HOST_TYPE GameHostType;
         public MediusWorldStatus WorldStatus;
 
         protected bool _removeChannel = false;
         public DateTime _timeCreated = DateTimeUtils.GetHighPrecisionUtcTime();
 
-        public virtual bool ReadyToDestroy => Type == ChannelType.Game && (_removeChannel || ((DateTimeUtils.GetHighPrecisionUtcTime() - _timeCreated).TotalSeconds > MediusClass.GetAppSettingsOrDefault(ApplicationId).GameTimeoutSeconds) && GameCount == 0 && PartyCount == 0);
+        public virtual bool ReadyToDestroy =>
+            Type == ChannelType.Game
+            && (
+                _removeChannel
+                || (
+                    (
+                        (DateTimeUtils.GetHighPrecisionUtcTime() - _timeCreated).TotalSeconds
+                        > DATABASE
+                            .DatabaseManager.GetAppSettingsOrDefault(ApplicationId)
+                            .GameTimeoutSeconds
+                    )
+                    && Game == null
+                    && Party == null
+                )
+            );
         public virtual int PlayerCount => LocalClients.Count;
-        public virtual int GameCount => Games.Count;
-        public virtual int PartyCount => Parties.Count;
+        public virtual int GameCount =>
+            LocalChannels.Where(c => c.Type == ChannelType.Game).Count();
 
         private static bool InitializeAppId(int ApplicationId, bool Pre108)
         {
@@ -89,12 +120,12 @@ namespace Horizon.MUM.Models
                 // If the ApplicationId does not exist, initialize it
                 InitializeAppId(ApplicationId, Pre108);
 
-                if (_IdCounter.TryGetValue(ApplicationId, out ConcurrentDictionary<int, bool>? intList))
+                if (_IdCounter.TryGetValue(ApplicationId, out var intList))
                 {
                     // Start at index 2, 1 is reserved.
                     for (index = 2; index < (Pre108 ? 255 : int.MaxValue); ++index)
                     {
-                        if (intList.TryGetValue(index, out bool isUsed) && !isUsed)
+                        if (intList.TryGetValue(index, out var isUsed) && !isUsed)
                         {
                             intList[index] = true;
                             return true;
@@ -121,7 +152,7 @@ namespace Horizon.MUM.Models
                 // If the ApplicationId does not exist, initialize it
                 InitializeAppId(ApplicationId, Pre108);
 
-                if (_IdCounter.TryGetValue(ApplicationId, out ConcurrentDictionary<int, bool>? intList))
+                if (_IdCounter.TryGetValue(ApplicationId, out var intList))
                 {
                     if (!intList.ContainsKey(idToAdd))
                         return intList.TryAdd(idToAdd, true);
@@ -138,7 +169,10 @@ namespace Horizon.MUM.Models
 
         public static void UnregisterId(int ApplicationId, int idToRemove)
         {
-            if (_IdCounter.TryGetValue(ApplicationId, out ConcurrentDictionary<int, bool>? intList) && intList.ContainsKey(idToRemove))
+            if (
+                _IdCounter.TryGetValue(ApplicationId, out var intList)
+                && intList.ContainsKey(idToRemove)
+            )
                 intList[idToRemove] = false;
         }
 
@@ -146,8 +180,10 @@ namespace Horizon.MUM.Models
 
         public Channel(int ApplicationId, int mediusVersion)
         {
-            if (!TryGetNextAvailableId(ApplicationId, mediusVersion <= 108, out int Id))
-                LoggerAccessor.LogError($"[Channel] - Failed to get a new Id in the MUM cache for AppId:{ApplicationId}!");
+            if (!TryGetNextAvailableId(ApplicationId, mediusVersion <= 108, out var Id))
+                LoggerAccessor.LogError(
+                    $"[Channel] - Failed to get a new Id in the MUM cache for AppId:{ApplicationId}!"
+                );
 
             this.Id = Id;
             MediusVersion = mediusVersion;
@@ -160,7 +196,9 @@ namespace Horizon.MUM.Models
         public Channel(int Id, int ApplicationId, int mediusVersion)
         {
             if (!TryRegisterNewId(ApplicationId, Id, mediusVersion <= 108))
-                LoggerAccessor.LogError($"[Channel] - Id:{Id} could not be added in the MUM cache for AppId:{ApplicationId}!");
+                LoggerAccessor.LogError(
+                    $"[Channel] - Id:{Id} could not be added in the MUM cache for AppId:{ApplicationId}!"
+                );
 
             this.Id = Id;
             MediusVersion = mediusVersion;
@@ -170,10 +208,25 @@ namespace Horizon.MUM.Models
             MumManager.channelsCreated.Inc();
         }
 
-        public Channel(int Id, int ApplicationId, int mediusVersion, string Name, string Password, int MaxPlayers, ulong GenericField1, ulong GenericField2, ulong GenericField3, ulong GenericField4, MediusWorldGenericFieldLevelType GenericFieldLevel, ChannelType type)
+        public Channel(
+            int Id,
+            int ApplicationId,
+            int mediusVersion,
+            string Name,
+            string Password,
+            int MaxPlayers,
+            ulong GenericField1,
+            ulong GenericField2,
+            ulong GenericField3,
+            ulong GenericField4,
+            MediusWorldGenericFieldLevelType GenericFieldLevel,
+            ChannelType type
+        )
         {
             if (!TryRegisterNewId(ApplicationId, Id, mediusVersion <= 108))
-                LoggerAccessor.LogError($"[Channel] - Id:{Id} could not be added in the MUM cache for AppId:{ApplicationId}!");
+                LoggerAccessor.LogError(
+                    $"[Channel] - Id:{Id} could not be added in the MUM cache for AppId:{ApplicationId}!"
+                );
 
             this.Id = Id;
             MediusVersion = mediusVersion;
@@ -181,7 +234,9 @@ namespace Horizon.MUM.Models
             this.ApplicationId = ApplicationId;
             this.Name = Name;
             this.Password = Password;
-            SecurityLevel = string.IsNullOrEmpty(Password) ? MediusWorldSecurityLevelType.WORLD_SECURITY_NONE : MediusWorldSecurityLevelType.WORLD_SECURITY_PLAYER_PASSWORD;
+            SecurityLevel = string.IsNullOrEmpty(Password)
+                ? MediusWorldSecurityLevelType.WORLD_SECURITY_NONE
+                : MediusWorldSecurityLevelType.WORLD_SECURITY_PLAYER_PASSWORD;
             this.MaxPlayers = MaxPlayers;
             this.GenericField1 = GenericField1;
             this.GenericField2 = GenericField2;
@@ -197,15 +252,19 @@ namespace Horizon.MUM.Models
         {
             ApplicationId = request.ApplicationID;
 
-            if (!TryGetNextAvailableId(ApplicationId, mediusVersion <= 108, out int Id))
-                LoggerAccessor.LogError($"[Channel] - Failed to get a new Id in the MUM cache for AppId:{ApplicationId}!");
+            if (!TryGetNextAvailableId(ApplicationId, mediusVersion <= 108, out var Id))
+                LoggerAccessor.LogError(
+                    $"[Channel] - Failed to get a new Id in the MUM cache for AppId:{ApplicationId}!"
+                );
 
             this.Id = Id;
             MediusVersion = mediusVersion;
 
             Name = request.LobbyName;
             Password = request.LobbyPassword;
-            SecurityLevel = string.IsNullOrEmpty(Password) ? MediusWorldSecurityLevelType.WORLD_SECURITY_NONE : MediusWorldSecurityLevelType.WORLD_SECURITY_PLAYER_PASSWORD;
+            SecurityLevel = string.IsNullOrEmpty(Password)
+                ? MediusWorldSecurityLevelType.WORLD_SECURITY_NONE
+                : MediusWorldSecurityLevelType.WORLD_SECURITY_PLAYER_PASSWORD;
             MaxPlayers = request.MaxPlayers;
             GenericField1 = request.GenericField1;
             GenericField2 = request.GenericField2;
@@ -220,8 +279,10 @@ namespace Horizon.MUM.Models
         {
             ApplicationId = request.ApplicationID;
 
-            if (!TryGetNextAvailableId(ApplicationId, mediusVersion <= 108, out int Id))
-                LoggerAccessor.LogError($"[Channel] - Failed to get a new Id in the MUM cache for AppId:{ApplicationId}!");
+            if (!TryGetNextAvailableId(ApplicationId, mediusVersion <= 108, out var Id))
+                LoggerAccessor.LogError(
+                    $"[Channel] - Failed to get a new Id in the MUM cache for AppId:{ApplicationId}!"
+                );
 
             this.Id = Id;
             MediusVersion = mediusVersion;
@@ -244,8 +305,10 @@ namespace Horizon.MUM.Models
         {
             ApplicationId = request.ApplicationID;
 
-            if (!TryGetNextAvailableId(ApplicationId, mediusVersion <= 108, out int Id))
-                LoggerAccessor.LogError($"[Channel] - Failed to get a new Id in the MUM cache for AppId:{ApplicationId}!");
+            if (!TryGetNextAvailableId(ApplicationId, mediusVersion <= 108, out var Id))
+                LoggerAccessor.LogError(
+                    $"[Channel] - Failed to get a new Id in the MUM cache for AppId:{ApplicationId}!"
+                );
 
             this.Id = Id;
             MediusVersion = mediusVersion;
@@ -260,16 +323,26 @@ namespace Horizon.MUM.Models
         public static Channel GetDefaultChannel(int ApplicationId, int mediusVersion)
         {
             //Eyetoy Chat
-            if (ApplicationId == 10550)
-                return new Channel(1, ApplicationId, mediusVersion) { Name = "Default", Type = ChannelType.Lobby, LobbyFilterMaskLevelType = MediusLobbyFilterMaskLevelType.MediusLobbyFilterMaskLevel1, GenericField1 = 1000 };
-            else
-                return new Channel(1, ApplicationId, mediusVersion) { Name = "Default", Type = ChannelType.Lobby };
+            return ApplicationId == 10550
+                ? new Channel(1, ApplicationId, mediusVersion)
+                {
+                    Name = "Default",
+                    Type = ChannelType.Lobby,
+                    LobbyFilterMaskLevelType =
+                        MediusLobbyFilterMaskLevelType.MediusLobbyFilterMaskLevel1,
+                    GenericField1 = 1000,
+                }
+                : new Channel(1, ApplicationId, mediusVersion)
+                {
+                    Name = "Default",
+                    Type = ChannelType.Lobby,
+                };
         }
 
         public virtual Task Tick()
         {
             // Remove inactive clients
-            for (int i = 0; i < LocalClients.Count; ++i)
+            for (var i = 0; i < LocalClients.Count; ++i)
             {
                 if (!LocalClients[i].IsConnected)
                 {
@@ -305,17 +378,14 @@ namespace Horizon.MUM.Models
         public virtual void RegisterParty(Party party)
         {
             _removeChannel = false; // If an other thread removed party but channel not closed yet.
-            Parties.Add(party);
+            Party = party;
         }
 
-        public virtual void UnregisterParty(Party party)
+        public virtual void UnregisterParty()
         {
-            // Remove Party
-            Parties.Remove(party);
-
-            // If empty, just end channel
-            if (Parties.Count == 0)
-                _removeChannel = true;
+            // Remove Party and end channel
+            Party = null;
+            _removeChannel = true;
         }
         #endregion
 
@@ -323,17 +393,24 @@ namespace Horizon.MUM.Models
         public virtual void RegisterGame(Game game)
         {
             _removeChannel = false; // If an other thread removed game but channel not closed yet.
-            Games.Add(game);
+            Game = game;
         }
 
-        public virtual void UnregisterGame(Game game)
+        public virtual void UnregisterGame()
         {
-            // Remove game
-            Games.Remove(game);
+            // Remove game and end channel
+            Game = null;
+            _removeChannel = true;
+        }
 
-            // If empty, just end channel
-            if (Games.Count == 0)
-                _removeChannel = true;
+        public virtual void RegisterGameSubChannel(Channel gameChannel)
+        {
+            OnChannelCreate(gameChannel);
+        }
+
+        public virtual void UnregisterGameSubChannel(Channel gameChannel)
+        {
+            LocalChannels.Remove(gameChannel);
         }
         #endregion
 
@@ -344,15 +421,21 @@ namespace Horizon.MUM.Models
         /// <param name="source">The client making the request for confirmation</param>
         /// <param name="accountToAdd">The account to add as a buddy on the client</param>
         /// <param name="msg"></param>
-        public void AddToBuddyListConfirmationSingleRequest(ClientObject source, ClientObject accountToAdd, MediusAddToBuddyListConfirmationRequest msg)
+        public static void AddToBuddyListConfirmationSingleRequest(
+            ClientObject source,
+            ClientObject accountToAdd,
+            MediusAddToBuddyListConfirmationRequest msg
+        )
         {
-            accountToAdd?.Queue(new MediusAddToBuddyListFwdConfirmationRequest()
-            {
-                MessageID = msg.MessageID,
-                OriginatorAccountID = source.AccountId,
-                OriginatorAccountName = source.AccountName,
-                AddType = MediusBuddyAddType.AddSingle,
-            });
+            accountToAdd?.Queue(
+                new MediusAddToBuddyListFwdConfirmationRequest()
+                {
+                    MessageID = msg.MessageID,
+                    OriginatorAccountID = source.AccountId,
+                    OriginatorAccountName = source.AccountName,
+                    AddType = MediusBuddyAddType.AddSingle,
+                }
+            );
         }
 
         /// <summary>
@@ -361,15 +444,21 @@ namespace Horizon.MUM.Models
         /// <param name="source">The client making the request for confirmation</param>
         /// <param name="accountToAdd">The account to add as a buddy on the client</param>
         /// <param name="msg"></param>
-        public void AddToBuddyListConfirmationSymmetricRequest(ClientObject source, ClientObject accountToAdd, MediusAddToBuddyListConfirmationRequest msg)
+        public static void AddToBuddyListConfirmationSymmetricRequest(
+            ClientObject source,
+            ClientObject accountToAdd,
+            MediusAddToBuddyListConfirmationRequest msg
+        )
         {
-            accountToAdd?.Queue(new MediusAddToBuddyListFwdConfirmationRequest()
-            {
-                MessageID = msg.MessageID,
-                OriginatorAccountID = source.AccountId,
-                OriginatorAccountName = source.AccountName,
-                AddType = MediusBuddyAddType.AddSymmetric,
-            });
+            accountToAdd?.Queue(
+                new MediusAddToBuddyListFwdConfirmationRequest()
+                {
+                    MessageID = msg.MessageID,
+                    OriginatorAccountID = source.AccountId,
+                    OriginatorAccountName = source.AccountName,
+                    AddType = MediusBuddyAddType.AddSymmetric,
+                }
+            );
         }
 
         /// <summary>
@@ -378,15 +467,21 @@ namespace Horizon.MUM.Models
         /// <param name="source">The client making the request for confirmation</param>
         /// <param name="accountToAdd">The account to add as a buddy on the client</param>
         /// <param name="msg"></param>
-        public void AddToBuddyListConfirmationSingleResponse(ClientObject source, ClientObject accountToAdd, MediusAddToBuddyListFwdConfirmationResponse msg)
+        public static void AddToBuddyListConfirmationSingleResponse(
+            ClientObject source,
+            ClientObject accountToAdd,
+            MediusAddToBuddyListFwdConfirmationResponse msg
+        )
         {
-            accountToAdd?.Queue(new MediusAddToBuddyListConfirmationResponse()
-            {
-                MessageID = msg.MessageID,
-                StatusCode = msg.StatusCode,
-                TargetAccountID = source.AccountId,
-                TargetAccountName = source.AccountName,
-            });
+            accountToAdd?.Queue(
+                new MediusAddToBuddyListConfirmationResponse()
+                {
+                    MessageID = msg.MessageID,
+                    StatusCode = msg.StatusCode,
+                    TargetAccountID = source.AccountId,
+                    TargetAccountName = source.AccountName,
+                }
+            );
         }
 
         /// <summary>
@@ -395,15 +490,21 @@ namespace Horizon.MUM.Models
         /// <param name="source">The client making the request for confirmation</param>
         /// <param name="accountToAdd">The account to add as a buddy on the client</param>
         /// <param name="msg"></param>
-        public void AddToBuddyListConfirmationSymmetricResponse(ClientObject source, ClientObject accountToAdd, MediusAddToBuddyListFwdConfirmationResponse msg)
+        public static void AddToBuddyListConfirmationSymmetricResponse(
+            ClientObject source,
+            ClientObject accountToAdd,
+            MediusAddToBuddyListFwdConfirmationResponse msg
+        )
         {
-            accountToAdd?.Queue(new MediusAddToBuddyListConfirmationResponse()
-            {
-                MessageID = msg.MessageID,
-                StatusCode = msg.StatusCode,
-                TargetAccountID = source.AccountId,
-                TargetAccountName = source.AccountName,
-            });
+            accountToAdd?.Queue(
+                new MediusAddToBuddyListConfirmationResponse()
+                {
+                    MessageID = msg.MessageID,
+                    StatusCode = msg.StatusCode,
+                    TargetAccountID = source.AccountId,
+                    TargetAccountName = source.AccountName,
+                }
+            );
         }
 
         #endregion
@@ -413,12 +514,14 @@ namespace Horizon.MUM.Models
         {
             foreach (var client in LocalClients.Where(x => x != source))
             {
-                client?.Queue(new MediusBinaryFwdMessage()
-                {
-                    MessageType = msg.MessageType,
-                    OriginatorAccountID = source.AccountId,
-                    Message = msg.Message
-                });
+                client?.Queue(
+                    new MediusBinaryFwdMessage()
+                    {
+                        MessageType = msg.MessageType,
+                        OriginatorAccountID = source.AccountId,
+                        Message = msg.Message,
+                    }
+                );
             }
 
             return Task.CompletedTask;
@@ -428,14 +531,16 @@ namespace Horizon.MUM.Models
         {
             foreach (var client in LocalClients.Where(x => x != source))
             {
-                client?.Queue(new MediusBinaryFwdMessage1()
-                {
-                    MessageID = msg.MessageID,
-                    MessageType = msg.MessageType,
-                    OriginatorAccountID = source.AccountId,
-                    MessageSize = msg.MessageSize,
-                    Message = msg.Message
-                });
+                client?.Queue(
+                    new MediusBinaryFwdMessage1()
+                    {
+                        MessageID = msg.MessageID,
+                        MessageType = msg.MessageType,
+                        OriginatorAccountID = source.AccountId,
+                        MessageSize = msg.MessageSize,
+                        Message = msg.Message,
+                    }
+                );
             }
 
             return Task.CompletedTask;
@@ -451,7 +556,10 @@ namespace Horizon.MUM.Models
             return Task.CompletedTask;
         }
 
-        public Task BroadcastDirectBinaryMessage(MediusBinaryFwdMessage1 msg, Action<MediusBinaryFwdMessage1, ClientObject>? modifyMessagePerClient = null)
+        public Task BroadcastDirectBinaryMessage(
+            MediusBinaryFwdMessage1 msg,
+            Action<MediusBinaryFwdMessage1, ClientObject>? modifyMessagePerClient = null
+        )
         {
             foreach (var client in LocalClients)
             {
@@ -464,93 +572,117 @@ namespace Horizon.MUM.Models
         }
 
         #region GenericChatMessages
-        public Task BroadcastChatMessage(IEnumerable<ClientObject> targets, ClientObject source, string message)
+        public static Task BroadcastChatMessage(
+            IEnumerable<ClientObject> targets,
+            ClientObject source,
+            string message
+        )
         {
             foreach (var target in targets)
             {
                 if (target.MediusVersion >= 112)
                 {
-                    target?.Queue(new MediusGenericChatFwdMessage1()
-                    {
-                        OriginatorAccountID = source.AccountId,
-                        OriginatorAccountName = source.AccountName,
-                        Message = message,
-                        MessageType = MediusChatMessageType.Broadcast,
-                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
-                    });
+                    target?.Queue(
+                        new MediusGenericChatFwdMessage1()
+                        {
+                            OriginatorAccountID = source.AccountId,
+                            OriginatorAccountName = source.AccountName,
+                            Message = message,
+                            MessageType = MediusChatMessageType.Broadcast,
+                            TimeStamp = DateTimeUtils.GetUnixTimeU32(),
+                        }
+                    );
                 }
                 else
                 {
-                    target?.Queue(new MediusGenericChatFwdMessage()
-                    {
-                        OriginatorAccountID = source.AccountId,
-                        OriginatorAccountName = source.AccountName,
-                        Message = message,
-                        MessageType = MediusChatMessageType.Broadcast,
-                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
-                    });
+                    target?.Queue(
+                        new MediusGenericChatFwdMessage()
+                        {
+                            OriginatorAccountID = source.AccountId,
+                            OriginatorAccountName = source.AccountName,
+                            Message = message,
+                            MessageType = MediusChatMessageType.Broadcast,
+                            TimeStamp = DateTimeUtils.GetUnixTimeU32(),
+                        }
+                    );
                 }
             }
 
             return Task.CompletedTask;
         }
 
-        public Task WhisperChatMessage(IEnumerable<ClientObject> targets, ClientObject source, string message)
+        public static Task WhisperChatMessage(
+            IEnumerable<ClientObject> targets,
+            ClientObject source,
+            string message
+        )
         {
             foreach (var target in targets)
             {
                 if (target.MediusVersion >= 112)
                 {
-                    target?.Queue(new MediusGenericChatFwdMessage1()
-                    {
-                        OriginatorAccountID = source.AccountId,
-                        OriginatorAccountName = source.AccountName,
-                        Message = message,
-                        MessageType = MediusChatMessageType.Whisper,
-                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
-                    });
+                    target?.Queue(
+                        new MediusGenericChatFwdMessage1()
+                        {
+                            OriginatorAccountID = source.AccountId,
+                            OriginatorAccountName = source.AccountName,
+                            Message = message,
+                            MessageType = MediusChatMessageType.Whisper,
+                            TimeStamp = DateTimeUtils.GetUnixTimeU32(),
+                        }
+                    );
                 }
                 else
                 {
-                    target?.Queue(new MediusGenericChatFwdMessage()
-                    {
-                        OriginatorAccountID = source.AccountId,
-                        OriginatorAccountName = source.AccountName,
-                        Message = message,
-                        MessageType = MediusChatMessageType.Whisper,
-                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
-                    });
+                    target?.Queue(
+                        new MediusGenericChatFwdMessage()
+                        {
+                            OriginatorAccountID = source.AccountId,
+                            OriginatorAccountName = source.AccountName,
+                            Message = message,
+                            MessageType = MediusChatMessageType.Whisper,
+                            TimeStamp = DateTimeUtils.GetUnixTimeU32(),
+                        }
+                    );
                 }
             }
 
             return Task.CompletedTask;
         }
 
-        public Task ClanChatMessage(IEnumerable<ClientObject> targets, ClientObject source, string message)
+        public static Task ClanChatMessage(
+            IEnumerable<ClientObject> targets,
+            ClientObject source,
+            string message
+        )
         {
             foreach (var target in targets)
             {
                 if (target.MediusVersion >= 112)
                 {
-                    target?.Queue(new MediusGenericChatFwdMessage1()
-                    {
-                        OriginatorAccountID = source.AccountId,
-                        OriginatorAccountName = source.AccountName,
-                        Message = message,
-                        MessageType = MediusChatMessageType.Clan,
-                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
-                    });
+                    target?.Queue(
+                        new MediusGenericChatFwdMessage1()
+                        {
+                            OriginatorAccountID = source.AccountId,
+                            OriginatorAccountName = source.AccountName,
+                            Message = message,
+                            MessageType = MediusChatMessageType.Clan,
+                            TimeStamp = DateTimeUtils.GetUnixTimeU32(),
+                        }
+                    );
                 }
                 else
                 {
-                    target?.Queue(new MediusGenericChatFwdMessage()
-                    {
-                        OriginatorAccountID = source.AccountId,
-                        OriginatorAccountName = source.AccountName,
-                        Message = message,
-                        MessageType = MediusChatMessageType.Clan,
-                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
-                    });
+                    target?.Queue(
+                        new MediusGenericChatFwdMessage()
+                        {
+                            OriginatorAccountID = source.AccountId,
+                            OriginatorAccountName = source.AccountName,
+                            Message = message,
+                            MessageType = MediusChatMessageType.Clan,
+                            TimeStamp = DateTimeUtils.GetUnixTimeU32(),
+                        }
+                    );
                 }
             }
 
@@ -559,87 +691,103 @@ namespace Horizon.MUM.Models
         #endregion
 
         /// <summary>
-        /// Send Server System Message 
+        /// Send Server System Message
         /// </summary>
         /// <param name="client"></param>
         /// <param name="message"></param>
-        public Task SendSystemMessage(ClientObject client, string message)
+        public static Task SendSystemMessage(ClientObject client, string message)
         {
             if (client.MediusVersion >= 112)
             {
-                client.Queue(new MediusGenericChatFwdMessage1()
-                {
-                    OriginatorAccountID = 95481,
-                    OriginatorAccountName = "SYSTEM",
-                    Message = message,
-                    MessageType = MediusChatMessageType.Broadcast,
-                    TimeStamp = DateTimeUtils.GetUnixTimeU32()
-                });
+                client.Queue(
+                    new MediusGenericChatFwdMessage1()
+                    {
+                        OriginatorAccountID = 95481,
+                        OriginatorAccountName = "SYSTEM",
+                        Message = message,
+                        MessageType = MediusChatMessageType.Broadcast,
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32(),
+                    }
+                );
             }
             else
             {
-                client.Queue(new MediusGenericChatFwdMessage()
-                {
-                    OriginatorAccountID = 95481,
-                    OriginatorAccountName = "SYSTEM",
-                    Message = message,
-                    MessageType = MediusChatMessageType.Broadcast,
-                    TimeStamp = DateTimeUtils.GetUnixTimeU32()
-                });
+                client.Queue(
+                    new MediusGenericChatFwdMessage()
+                    {
+                        OriginatorAccountID = 95481,
+                        OriginatorAccountName = "SYSTEM",
+                        Message = message,
+                        MessageType = MediusChatMessageType.Broadcast,
+                        TimeStamp = DateTimeUtils.GetUnixTimeU32(),
+                    }
+                );
             }
 
             return Task.CompletedTask;
         }
 
         /// <summary>
-        /// Send Server System Message 
+        /// Send Server System Message
         /// </summary>
         /// <param name="targets"></param>
         /// <param name="message"></param>
-        public Task BroadcastGenericChatMessage(IEnumerable<ClientObject> targets, string message)
+        public static Task BroadcastGenericChatMessage(
+            IEnumerable<ClientObject> targets,
+            string message
+        )
         {
             foreach (var target in targets)
             {
                 if (target.MediusVersion >= 112)
                 {
-                    target?.Queue(new MediusGenericChatFwdMessage1()
-                    {
-                        OriginatorAccountID = 95481,
-                        OriginatorAccountName = "SYSTEM",
-                        Message = message,
-                        MessageType = MediusChatMessageType.Broadcast,
-                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
-                    });
+                    target?.Queue(
+                        new MediusGenericChatFwdMessage1()
+                        {
+                            OriginatorAccountID = 95481,
+                            OriginatorAccountName = "SYSTEM",
+                            Message = message,
+                            MessageType = MediusChatMessageType.Broadcast,
+                            TimeStamp = DateTimeUtils.GetUnixTimeU32(),
+                        }
+                    );
                 }
                 else
                 {
-                    target?.Queue(new MediusGenericChatFwdMessage()
-                    {
-                        OriginatorAccountID = 95481,
-                        OriginatorAccountName = "SYSTEM",
-                        Message = message,
-                        MessageType = MediusChatMessageType.Broadcast,
-                        TimeStamp = DateTimeUtils.GetUnixTimeU32()
-                    });
+                    target?.Queue(
+                        new MediusGenericChatFwdMessage()
+                        {
+                            OriginatorAccountID = 95481,
+                            OriginatorAccountName = "SYSTEM",
+                            Message = message,
+                            MessageType = MediusChatMessageType.Broadcast,
+                            TimeStamp = DateTimeUtils.GetUnixTimeU32(),
+                        }
+                    );
                 }
             }
 
             return Task.CompletedTask;
         }
 
-
-        public Task BroadcastSystemMessage(IEnumerable<ClientObject> targets, string msg, byte severity)
+        public static Task BroadcastSystemMessage(
+            IEnumerable<ClientObject> targets,
+            string msg,
+            byte severity
+        )
         {
             foreach (var target in targets)
             {
-                target?.Queue(new RT_MSG_SERVER_SYSTEM_MESSAGE()
-                {
-                    Severity = severity,
-                    EncodingType = DME_SERVER_ENCODING_TYPE.DME_SERVER_ENCODING_UTF8,
-                    LanguageType = DME_SERVER_LANGUAGE_TYPE.DME_SERVER_LANGUAGE_US_ENGLISH,
-                    EndOfMessage = true,
-                    Message = msg
-                });
+                target?.Queue(
+                    new RT_MSG_SERVER_SYSTEM_MESSAGE()
+                    {
+                        Severity = severity,
+                        EncodingType = DME_SERVER_ENCODING_TYPE.DME_SERVER_ENCODING_UTF8,
+                        LanguageType = DME_SERVER_LANGUAGE_TYPE.DME_SERVER_LANGUAGE_US_ENGLISH,
+                        EndOfMessage = true,
+                        Message = msg,
+                    }
+                );
             }
 
             return Task.CompletedTask;

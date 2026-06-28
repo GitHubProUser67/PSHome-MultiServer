@@ -1,10 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.BuddySetListResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.BuddySetListResponse
+    )]
     public class MediusBuddySetListResponse : BaseLobbyExtMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusLobbyExtMessageIds.BuddySetListResponse;
@@ -13,7 +15,6 @@ namespace Horizon.RT.Models
 
         public MediusCallbackStatus StatusCode;
 
-
         public override void Deserialize(MessageReader reader)
         {
             base.Deserialize(reader);
@@ -21,7 +22,6 @@ namespace Horizon.RT.Models
             MessageID = reader.Read<MessageId>();
 
             StatusCode = reader.Read<MediusCallbackStatus>();
-
         }
 
         public override void Serialize(MessageWriter writer)
@@ -35,9 +35,7 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode}";
+            return base.ToString() + " " + $"MessageID: {MessageID} " + $"StatusCode: {StatusCode}";
         }
     }
 }

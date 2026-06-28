@@ -1,9 +1,8 @@
-using QuazalServer.QNetZ;
+using System.Net;
 using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.DDL;
 using QuazalServer.QNetZ.Interfaces;
 using QuazalServer.RDVServices.DDL.Models;
-using System.Net;
 
 namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
 {
@@ -16,24 +15,33 @@ namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
             // urlTargetList contains all player urls (basicmcnally given by MatchMakingService.GetSessionURLs)
             // Server sends InitiateProbe to all players in that url with those URLs
             // Then clients communicate with each other...
-            foreach (StationURL? urlTarget in urlTargetList)
+            foreach (var urlTarget in urlTargetList)
             {
-                QClient? qclient = Context?.Handler.GetQClientByEndPoint(new(IPAddress.Parse(urlTarget.Address), urlTarget.Parameters["port"]));
+                var qclient = Context?.Handler.GetQClientByEndPoint(
+                    new(IPAddress.Parse(urlTarget.Address), urlTarget.Parameters["port"])
+                );
 
                 if (qclient != null)
                 {
-                    QClient? thisClient = Context?.Client;
+                    var thisClient = Context?.Client;
                     if (thisClient != null && thisClient.PlayerInfo != null)
                     {
                         StationURL thisClientURL = new(
                             "prudp",
                             thisClient.Endpoint.Address.ToString(),
-                            new Dictionary<string, int>() {
+                            new Dictionary<string, int>()
+                            {
                                 { "port", thisClient.Endpoint.Port },
-                                { "RVCID", (int)thisClient.PlayerInfo.RVCID }
-                            });
+                                { "RVCID", (int)thisClient.PlayerInfo.RVCID },
+                            }
+                        );
 
-                        SendRMCCall(qclient, (ushort)RMCProtocolId.NATTraversalService, 2, thisClientURL);
+                        SendRMCCall(
+                            qclient,
+                            (ushort)RMCProtocolId.NATTraversalService,
+                            2,
+                            thisClientURL
+                        );
                     }
                 }
             }
@@ -49,7 +57,10 @@ namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
         }
 
         [RMCMethod(3)]
-        public RMCResult RequestProbeInitiationExt(IEnumerable<StationURL> urlTargetList, StationURL urlStationToProbe)
+        public RMCResult RequestProbeInitiationExt(
+            IEnumerable<StationURL> urlTargetList,
+            StationURL urlStationToProbe
+        )
         {
             UNIMPLEMENTED();
             return Error(0);
@@ -82,6 +93,5 @@ namespace QuazalServer.RDVServices.GameServices.PS3DriverServices
             UNIMPLEMENTED();
             return Error(0);
         }
-
     }
 }

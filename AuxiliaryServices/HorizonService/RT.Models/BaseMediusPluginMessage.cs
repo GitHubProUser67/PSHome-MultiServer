@@ -1,9 +1,7 @@
-using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
-using System.Collections.Generic;
-using System;
-using EndianTools.ZipperEndian;
+using System.Diagnostics.CodeAnalysis;
 using EndianTools;
+using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -13,10 +11,8 @@ namespace Horizon.RT.Models
         /// <summary>
         /// Message class.
         /// </summary>
-        public abstract byte IncomingMessage { get; }
-
         public abstract int Size { get; }
-
+        public abstract ushort ClientBufferSize { get; }
         public abstract byte PluginId { get; }
 
         /// <summary>
@@ -29,14 +25,12 @@ namespace Horizon.RT.Models
         /// </summary>
         public virtual bool SkipEncryption { get; set; } = false;
 #if DEBUG
-        private static bool debug = true;
+        private static readonly bool debug = true;
 #else
         private static bool debug = false;
 #endif
-        public BaseMediusPluginMessage()
-        {
 
-        }
+        public BaseMediusPluginMessage() { }
 
         #region Serialization
 
@@ -44,18 +38,12 @@ namespace Horizon.RT.Models
         /// Deserializes the plugin message from plaintext.
         /// </summary>
         /// <param name="reader"></param>
-        public virtual void DeserializePlugin(MessageReader reader)
-        {
-
-        }
+        public virtual void DeserializePlugin(MessageReader reader) { }
 
         /// <summary>
         /// Serialize contents of the plugin message.
         /// </summary>
-        public virtual void SerializePlugin(MessageWriter writer)
-        {
-
-        }
+        public virtual void SerializePlugin(MessageWriter writer) { }
 
         #endregion
 
@@ -63,48 +51,56 @@ namespace Horizon.RT.Models
 
         private static Dictionary<NetMessageTypeIds, Type> _netPluginMessageTypeById = null;
 
-        private static int _messageClassByIdLockValue = 0;
-        private static object _messageClassByIdLockObject = _messageClassByIdLockValue;
+        private static readonly int _messageClassByIdLockValue = 0;
+        private static readonly object _messageClassByIdLockObject = _messageClassByIdLockValue;
 
+        [RequiresUnreferencedCode("Calls System.Reflection.Assembly.GetTypes()")]
         private static void Initialize()
         {
             lock (_messageClassByIdLockObject)
             {
-                _netPluginMessageTypeById = new Dictionary<NetMessageTypeIds, Type>();
+                _netPluginMessageTypeById = [];
 
                 // Populate
-                var assembly = System.Reflection.Assembly.GetAssembly(typeof(BaseMediusPluginMessage));
-                var types = assembly.GetTypes();
-
-                foreach (Type classType in types)
+                foreach (var classType in System.Reflection.Assembly.GetAssembly(
+                    typeof(BaseMediusPluginMessage)
+                ).GetTypes())
                 {
                     // Objects by Id
-                    var attrs = (MediusMessageAttribute[])classType.GetCustomAttributes(typeof(MediusMessageAttribute), true);
+                    var attrs = (MediusMessageAttribute[])
+                        classType.GetCustomAttributes(typeof(MediusMessageAttribute), true);
                     if (attrs != null && attrs.Length > 0)
                     {
                         switch (attrs[0].MessageClass)
                         {
                             case NetMessageClass.MessageClassApplication:
-                                {
-                                    _netPluginMessageTypeById.Add((NetMessageTypeIds)attrs[0].MessageType, classType);
-                                    break;
-                                }
+                            {
+                                _netPluginMessageTypeById.Add(
+                                    (NetMessageTypeIds)attrs[0].MessageType,
+                                    classType
+                                );
+                                break;
+                            }
                         }
-
                     }
                 }
             }
         }
 
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public static BaseMediusPluginMessage InstantiateClientPlugin(MessageReader reader)
         {
             BaseMediusPluginMessage msg;
 
             Type classType = null;
 
-            byte[] buffer = reader.ReadBytes(3);
-            int msgSize = (buffer[0] << 16) | (buffer[1] << 8) | buffer[2];
-            NetMessageTypeIds msgType = (NetMessageTypeIds)EndianAwareConverter.ToUInt16(reader.ReadBytes(2), Endianness.BigEndian, 0);
+            var msgSize = EndianAwareConverter.ToUInt24(
+                reader.ReadBytes(3),
+                Endianness.BigEndian,
+                0
+            );
+            var msgType = (NetMessageTypeIds)
+                EndianAwareConverter.ToUInt16(reader.ReadBytes(2), Endianness.BigEndian, 0);
 
             // Init
             Initialize();
@@ -113,27 +109,41 @@ namespace Horizon.RT.Models
                 classType = null;
 
             // Instantiate
-            if (classType == null)
-                msg = new RawMediusClientMessage(msgSize, msgType);
-            else
-                msg = (BaseMediusPluginMessage)Activator.CreateInstance(classType);
+            msg =
+                classType == null
+                    ? new RawMediusClientMessage(msgSize, msgType)
+                    : (BaseMediusPluginMessage)Activator.CreateInstance(classType);
 
             // Deserialize
             msg.DeserializePlugin(reader);
             return msg;
         }
 
+        [RequiresUnreferencedCode("This method uses reflection and may break when trimmed.")]
         public static BaseMediusPluginMessage InstantiateServerPlugin(MessageReader reader)
         {
             BaseMediusPluginMessage msg;
 
             Type classType = null;
+            ushort clientBuffSize = 0;
+            byte PluginId = 0;
 
-            byte incomingMsg = reader.ReadByte();
-            ushort msgSize = EndianAwareConverter.ToUInt16(reader.ReadBytes(2), Endianness.BigEndian, 0);
-            byte PluginId = reader.ReadByte();
-            reader.ReadBytes(2);
-            NetMessageTypeIds msgType = (NetMessageTypeIds)EndianAwareConverter.ToUInt16(reader.ReadBytes(2), Endianness.BigEndian, 0);
+            var msgSize = EndianAwareConverter.ToUInt24(
+                reader.ReadBytes(3),
+                Endianness.BigEndian,
+                0
+            );
+            if (reader.RemainingBytes > 2)
+            {
+                clientBuffSize = EndianAwareConverter.ToUInt16(
+                    reader.ReadBytes(2),
+                    Endianness.BigEndian,
+                    0
+                );
+                PluginId = reader.ReadByte();
+            }
+            var msgType = (NetMessageTypeIds)
+                EndianAwareConverter.ToUInt16(reader.ReadBytes(2), Endianness.BigEndian, 0);
 
             // Init
             Initialize();
@@ -142,10 +152,10 @@ namespace Horizon.RT.Models
                 classType = null;
 
             // Instantiate
-            if (classType == null)
-                msg = new RawMediusServerMessage(incomingMsg, msgSize, PluginId, msgType);
-            else
-                msg = (BaseMediusPluginMessage)Activator.CreateInstance(classType);
+            msg =
+                classType == null
+                    ? new RawMediusServerMessage(msgSize, clientBuffSize, PluginId, msgType)
+                    : (BaseMediusPluginMessage)Activator.CreateInstance(classType);
 
             // Deserialize
             msg.DeserializePlugin(reader);

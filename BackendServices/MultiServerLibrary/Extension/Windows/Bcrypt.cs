@@ -1,29 +1,43 @@
-﻿using System;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
-namespace MultiServerLibrary.Extension.Microsoft
+namespace MultiServerLibrary.Extension.Windows
 {
     // From: https://github.com/PrivateServerEmulator/ME3PSE/blob/master/ME3Server_WV/SSL3SupportCheck.cs
-    public class Bcrypt
+    public partial class Bcrypt
     {
-        public const string ssl3serverpath = @"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\SSL 3.0\Server";
+        [LibraryImport("bcrypt.dll", StringMarshalling = StringMarshalling.Utf16)]
+        public static partial int BCryptAddContextFunction(
+            ConfigurationTable dwTable,
+            string pszContext,
+            CryptographicInterface dwInterface,
+            string pszFunction,
+            FunctionPosition dwPosition
+        );
 
-        [DllImport("bcrypt.dll", CharSet = CharSet.Unicode)]
-        public static extern int BCryptAddContextFunction(ConfigurationTable dwTable, string pszContext, CryptographicInterface dwInterface, string pszFunction, FunctionPosition dwPosition);
+        [LibraryImport("bcrypt.dll", StringMarshalling = StringMarshalling.Utf16)]
+        public static partial int BCryptRemoveContextFunction(
+            ConfigurationTable dwTable,
+            string pszContext,
+            CryptographicInterface dwInterface,
+            string pszFunction
+        );
 
-        [DllImport("bcrypt.dll", CharSet = CharSet.Unicode)]
-        public static extern int BCryptRemoveContextFunction(ConfigurationTable dwTable, string pszContext, CryptographicInterface dwInterface, string pszFunction);
+        [LibraryImport("bcrypt.dll", StringMarshalling = StringMarshalling.Utf16)]
+        public static partial int BCryptEnumContextFunctions(
+            ConfigurationTable dwTable,
+            string pszContext,
+            CryptographicInterface dwInterface,
+            ref uint pcbBuffer,
+            out IntPtr ppBuffer
+        );
 
-        [DllImport("bcrypt.dll", CharSet = CharSet.Unicode)]
-        public static extern int BCryptEnumContextFunctions(ConfigurationTable dwTable, string pszContext, CryptographicInterface dwInterface, ref uint pcbBuffer, out IntPtr ppBuffer);
-
-        [DllImport("bcrypt.dll")]
-        public static extern void BCryptFreeBuffer(IntPtr pvBuffer);
+        [LibraryImport("bcrypt.dll")]
+        public static partial void BCryptFreeBuffer(IntPtr pvBuffer);
 
         public enum FunctionPosition : uint
         {
             CRYPT_PRIORITY_TOP = 0x00000000,
-            CRYPT_PRIORITY_BOTTOM = 0xFFFFFFFF
+            CRYPT_PRIORITY_BOTTOM = 0xFFFFFFFF,
         }
 
         public enum CryptographicInterface : uint
@@ -36,13 +50,13 @@ namespace MultiServerLibrary.Extension.Microsoft
             BCRYPT_SIGNATURE_INTERFACE = 0x00000005,
             NCRYPT_KEY_STORAGE_INTERFACE = 0x00010001,
             NCRYPT_SCHANNEL_INTERFACE = 0x00010002,
-            NCRYPT_SCHANNEL_SIGNATURE_INTERFACE = 0x00010003
+            NCRYPT_SCHANNEL_SIGNATURE_INTERFACE = 0x00010003,
         }
 
         public enum ConfigurationTable : uint
         {
             CRYPT_LOCAL = 0x00000001,
-            CRYPT_DOMAIN = 0x00000002
+            CRYPT_DOMAIN = 0x00000002,
         }
 
         [StructLayout(LayoutKind.Sequential)]

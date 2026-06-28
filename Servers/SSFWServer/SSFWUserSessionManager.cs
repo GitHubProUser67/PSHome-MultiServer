@@ -1,21 +1,42 @@
+using System.Collections.Concurrent;
 using CustomLogger;
 using SSFWServer.Helpers.RegexHelper;
-using System.Collections.Concurrent;
 
 namespace SSFWServer
 {
     public class SSFWUserSessionManager
     {
-        private static ConcurrentDictionary<string, (int, UserSession, DateTime)> userSessions = new();
+        private static readonly ConcurrentDictionary<
+            string,
+            (int, UserSession, DateTime)
+        > userSessions = new();
 
-        public static void RegisterUser(string userName, string sessionid, string id, int realuserNameSize)
+        public static void RegisterUser(
+            string userName,
+            string sessionid,
+            string id,
+            int realuserNameSize
+        )
         {
-            if (userSessions.TryGetValue(sessionid, out (int, UserSession, DateTime) sessionEntry))
+            if (userSessions.TryGetValue(sessionid, out var sessionEntry))
                 UpdateKeepAliveTime(sessionid, sessionEntry);
-            else if (userSessions.TryAdd(sessionid, (realuserNameSize, new UserSession { Username = userName, Id = id }, DateTime.Now.AddMinutes(SSFWServerConfiguration.SSFWTTL))))
-                LoggerAccessor.LogInfo($"[UserSessionManager] - User '{userName}' successfully registered with SessionId '{sessionid}'.");
+            else if (
+                userSessions.TryAdd(
+                    sessionid,
+                    (
+                        realuserNameSize,
+                        new UserSession { Username = userName, Id = id },
+                        DateTime.Now.AddMinutes(SSFWServerConfiguration.SSFWTTL)
+                    )
+                )
+            )
+                LoggerAccessor.LogInfo(
+                    $"[UserSessionManager] - User '{userName}' successfully registered with SessionId '{sessionid}'."
+                );
             else
-                LoggerAccessor.LogError($"[UserSessionManager] - Failed to register User '{userName}' with SessionId '{sessionid}'.");
+                LoggerAccessor.LogError(
+                    $"[UserSessionManager] - Failed to register User '{userName}' with SessionId '{sessionid}'."
+                );
         }
 
         public static string? GetSessionIdByUsername(string? userName, bool rpcn)
@@ -25,12 +46,18 @@ namespace SSFWServer
 
             foreach (var kvp in userSessions)
             {
-                string sessionId = kvp.Key;
+                var sessionId = kvp.Key;
                 var (realSize, session, _) = kvp.Value;
 
-                string? realUsername = session.Username?.Substring(0, realSize);
+                var realUsername = session.Username?[..realSize];
 
-                if (string.Equals(realUsername + (rpcn ? "@RPCN" : string.Empty), userName, StringComparison.Ordinal))
+                if (
+                    string.Equals(
+                        realUsername + (rpcn ? "@RPCN" : string.Empty),
+                        userName,
+                        StringComparison.Ordinal
+                    )
+                )
                     return sessionId;
             }
 
@@ -39,13 +66,10 @@ namespace SSFWServer
 
         public static string? GetUsernameBySessionId(string? sessionId)
         {
-            if (string.IsNullOrEmpty(sessionId))
-                return null;
-
-            if (userSessions.TryGetValue(sessionId, out (int, UserSession, DateTime) sessionEntry))
-                return sessionEntry.Item2.Username;
-
-            return null;
+            return string.IsNullOrEmpty(sessionId) ? null
+                : userSessions.TryGetValue(sessionId, out var sessionEntry)
+                    ? sessionEntry.Item2.Username
+                : null;
         }
 
         public static string? GetFormatedUsernameBySessionId(string? sessionId)
@@ -53,12 +77,12 @@ namespace SSFWServer
             if (string.IsNullOrEmpty(sessionId))
                 return null;
 
-            if (userSessions.TryGetValue(sessionId, out (int, UserSession, DateTime) sessionEntry))
+            if (userSessions.TryGetValue(sessionId, out var sessionEntry))
             {
-                string? userName = sessionEntry.Item2.Username;
+                var userName = sessionEntry.Item2.Username;
 
                 if (!string.IsNullOrEmpty(userName) && userName.Length > sessionEntry.Item1)
-                    userName = userName.Substring(0, sessionEntry.Item1);
+                    userName = userName[..sessionEntry.Item1];
 
                 return userName;
             }
@@ -79,11 +103,12 @@ namespace SSFWServer
             foreach (var entry in userSessions.Values)
             {
                 if (!string.IsNullOrEmpty(entry.Item2.Username))
-
                     // Check if session is still valid and username matches
-                    if (entry.Item3 > DateTime.Now
+                    if (
+                        entry.Item3 > DateTime.Now
                         && entry.Item2.Username.StartsWith(userName)
-                        && HasMinimumClientVersion(userName))
+                        && HasMinimumClientVersion(userName)
+                    )
                     {
                         return entry.Item2.Id;
                     }
@@ -105,10 +130,11 @@ namespace SSFWServer
             foreach (var entry in userSessions.Values)
             {
                 if (!string.IsNullOrEmpty(entry.Item2.Username))
-
-                    if (entry.Item3 > DateTime.Now
+                    if (
+                        entry.Item3 > DateTime.Now
                         && entry.Item2.Username.StartsWith(userName)
-                        && HasMinimumClientVersion(userName))
+                        && HasMinimumClientVersion(userName)
+                    )
                     {
                         return entry.Item2;
                     }
@@ -117,21 +143,20 @@ namespace SSFWServer
             return null;
         }
 
-
         public static string? GetIdBySessionId(string? sessionId)
         {
             if (string.IsNullOrEmpty(sessionId))
                 return null;
 
-            (bool, string?) sessionTuple = IsSessionValid(sessionId, false);
+            var sessionTuple = IsSessionValid(sessionId, false);
 
-            if (sessionTuple.Item1)
-                return sessionTuple.Item2;
-
-            return null;
+            return sessionTuple.Item1 ? sessionTuple.Item2 : null;
         }
 
-        public static bool UpdateKeepAliveTime(string sessionid, (int, UserSession, DateTime) sessionEntry = default)
+        public static bool UpdateKeepAliveTime(
+            string sessionid,
+            (int, UserSession, DateTime) sessionEntry = default
+        )
         {
             if (sessionEntry == default)
             {
@@ -139,28 +164,31 @@ namespace SSFWServer
                     return false;
             }
 
-            DateTime KeepAliveTime = DateTime.Now.AddMinutes(SSFWServerConfiguration.SSFWTTL);
+            var KeepAliveTime = DateTime.Now.AddMinutes(SSFWServerConfiguration.SSFWTTL);
 
             sessionEntry.Item3 = KeepAliveTime;
 
             if (userSessions.ContainsKey(sessionid))
             {
-                LoggerAccessor.LogInfo($"[SSFWUserSessionManager] - Updating: {sessionEntry.Item2?.Username} session with id: {sessionEntry.Item2?.Id} keep-alive time to:{KeepAliveTime}.");
+                LoggerAccessor.LogInfo(
+                    $"[SSFWUserSessionManager] - Updating: {sessionEntry.Item2?.Username} session with id: {sessionEntry.Item2?.Id} keep-alive time to:{KeepAliveTime}."
+                );
                 userSessions[sessionid] = sessionEntry;
                 return true;
             }
 
-            LoggerAccessor.LogError($"[SSFWUserSessionManager] - Failed to update: {sessionEntry.Item2?.Username} session with id: {sessionEntry.Item2?.Id} keep-alive time.");
+            LoggerAccessor.LogError(
+                $"[SSFWUserSessionManager] - Failed to update: {sessionEntry.Item2?.Username} session with id: {sessionEntry.Item2?.Id} keep-alive time."
+            );
             return false;
         }
-
 
         public static (bool, string?) IsSessionValid(string? sessionId, bool cleanupDeadSessions)
         {
             if (string.IsNullOrEmpty(sessionId))
                 return (false, null);
 
-            if (userSessions.TryGetValue(sessionId, out (int, UserSession, DateTime) sessionEntry))
+            if (userSessions.TryGetValue(sessionId, out var sessionEntry))
             {
                 if (sessionEntry.Item3 > DateTime.Now)
                     return (true, sessionEntry.Item2.Id);
@@ -168,9 +196,13 @@ namespace SSFWServer
                 {
                     // Clean up expired entry.
                     if (userSessions.TryRemove(sessionId, out sessionEntry))
-                        LoggerAccessor.LogWarn($"[SSFWUserSessionManager] - Cleaned: {sessionEntry.Item2.Username} session with id: {sessionEntry.Item2.Id}...");
+                        LoggerAccessor.LogWarn(
+                            $"[SSFWUserSessionManager] - Cleaned: {sessionEntry.Item2.Username} session with id: {sessionEntry.Item2.Id}..."
+                        );
                     else
-                        LoggerAccessor.LogError($"[SSFWUserSessionManager] - Failed to clean: {sessionEntry.Item2.Username} session with id: {sessionEntry.Item2.Id}...");
+                        LoggerAccessor.LogError(
+                            $"[SSFWUserSessionManager] - Failed to clean: {sessionEntry.Item2.Username} session with id: {sessionEntry.Item2.Id}..."
+                        );
                 }
             }
 
@@ -191,11 +223,9 @@ namespace SSFWServer
         private static bool HasMinimumClientVersion(string username, int minimumVersion = 016531)
         {
             var match = GUIDValidator.VersionFilter.Match(username);
-            if (match.Success && int.TryParse(match.Value, out int version))
-            {
-                return version >= minimumVersion;
-            }
-            return false;
+            return match.Success
+                && int.TryParse(match.Value, out var version)
+                && version >= minimumVersion;
         }
     }
 
@@ -204,5 +234,4 @@ namespace SSFWServer
         public string? Username { get; set; }
         public string? Id { get; set; }
     }
-
 }

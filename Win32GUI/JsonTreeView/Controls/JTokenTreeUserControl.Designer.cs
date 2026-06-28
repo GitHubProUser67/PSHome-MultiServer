@@ -32,9 +32,7 @@ namespace ZTn.Json.JsonTreeView.Controls
         {
             this.jsonTreeView = new JTokenTreeView();
             this.SuspendLayout();
-            // 
             // jsonTreeView
-            // 
             this.jsonTreeView.AllowDrop = true;
             this.jsonTreeView.Dock = System.Windows.Forms.DockStyle.Fill;
             this.jsonTreeView.HideSelection = false;
@@ -44,9 +42,7 @@ namespace ZTn.Json.JsonTreeView.Controls
             this.jsonTreeView.Size = new System.Drawing.Size(320, 240);
             this.jsonTreeView.TabIndex = 1;
             this.jsonTreeView.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.OnJsonTreeViewNodeMouseClick);
-            // 
             // JTokenTreeUserControl
-            // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.jsonTreeView);

@@ -1,16 +1,22 @@
-using System;
-using System.Threading.Tasks;
 using System.Net;
 
 namespace MultiServerLibrary.HTTP
 {
     public static class DefaultHTMLPages
     {
-        public static Task<string> GenerateErrorPageAsync(HttpStatusCode status, string absolutepathUrl,
-            string urlBase, string HttpRootFolder, string serverSignature, string host,
-            int serverPort, Exception ex = null)
+        public static Task<string> GenerateErrorPageAsync(
+            HttpStatusCode status,
+            string absolutepathUrl,
+            string urlBase,
+            string HttpRootFolder,
+            string serverSignature,
+            string host,
+            int serverPort,
+            Exception ex = null
+        )
         {
-            string HTMLContent = $@"<!DOCTYPE html PUBLIC ""-//IETF//DTD HTML 2.0//EN"">
+            var HTMLContent =
+                $@"<!DOCTYPE html PUBLIC ""-//IETF//DTD HTML 2.0//EN"">
                                 <html><head><meta http-equiv=""Content-Type"" content=""text/html; charset=windows-1252"">
                                 <title>{(int)status} {status}</title>
                                 <style>.hiclass {{background-color: rgb(51, 144, 255); color: white}}</style>
@@ -25,7 +31,8 @@ namespace MultiServerLibrary.HTTP
 
             if (status == HttpStatusCode.NotFound)
             {
-                HTMLContent += $@"<p>The requested URL was not found on this server.</p>
+                HTMLContent +=
+                    $@"<p>The requested URL was not found on this server.</p>
                                   <hr>
                                   <address>{serverSignature} Server at {host} Port {serverPort}</address></body></html>";
 
@@ -36,7 +43,8 @@ namespace MultiServerLibrary.HTTP
                 HTMLContent += $@"<p>An unexpected error occurred on the server.</p>";
 
                 if (ex != null)
-                    HTMLContent += $@"<p><strong>Error Details:</strong></p>
+                    HTMLContent +=
+                        $@"<p><strong>Error Details:</strong></p>
                               <pre>{ex.Message}</pre>
                               <p><strong>Help Link:</strong></p>
                               <pre>{ex.HelpLink}</pre>
@@ -44,8 +52,11 @@ namespace MultiServerLibrary.HTTP
                               <pre>{ex.StackTrace}</pre>";
             }
 
-            return Task.FromResult(HTMLContent += $@"<hr>
-                          <address>{serverSignature} Server at {host} Port {serverPort}</address></body></html>");
+            return Task.FromResult(
+                HTMLContent +=
+                    $@"<hr>
+                          <address>{serverSignature} Server at {host} Port {serverPort}</address></body></html>"
+            );
         }
     }
 }

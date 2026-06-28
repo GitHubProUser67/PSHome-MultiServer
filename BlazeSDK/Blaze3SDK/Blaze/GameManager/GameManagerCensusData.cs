@@ -2,24 +2,22 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct(0x21239231)]
-	public struct GameManagerCensusData
-	{
+    [TdfStruct(0x21239231)]
+    public struct GameManagerCensusData
+    {
+        [TdfMember("GACD")]
+        public List<GameAttributeCensusData> mGameAttributesData;
 
-		[TdfMember("GACD")]
-		public List<GameAttributeCensusData> mGameAttributesData;
+        [TdfMember("AGN")]
+        public uint mNumOfActiveGame;
 
-		[TdfMember("AGN")]
-		public uint mNumOfActiveGame;
+        [TdfMember("JPN")]
+        public uint mNumOfJoinedPlayer;
 
-		[TdfMember("JPN")]
-		public uint mNumOfJoinedPlayer;
+        [TdfMember("LSN")]
+        public uint mNumOfLoggedSession;
 
-		[TdfMember("LSN")]
-		public uint mNumOfLoggedSession;
-
-		[TdfMember("MMSN")]
-		public uint mNumOfMatchmakingSession;
-
-	}
+        [TdfMember("MMSN")]
+        public uint mNumOfMatchmakingSession;
+    }
 }

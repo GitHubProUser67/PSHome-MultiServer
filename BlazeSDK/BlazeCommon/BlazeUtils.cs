@@ -1,12 +1,16 @@
-using CustomLogger;
-using System.Net;
+﻿using System.Net;
 using System.Text;
+using CustomLogger;
 
 namespace BlazeCommon
 {
     public static class BlazeUtils
     {
-        internal static string LogPacket(IBlazeComponent? component, IBlazePacket packet, bool inbound)
+        internal static string LogPacket(
+            IBlazeComponent? component,
+            IBlazePacket packet,
+            bool inbound
+        )
         {
             string message;
 
@@ -27,52 +31,53 @@ namespace BlazeCommon
 
         public static IPAddress ToIpAddress(uint ip)
         {
-            byte[] bytes = BitConverter.GetBytes(ip);
-            if (BitConverter.IsLittleEndian)
+            var bytes = BitConverter.GetBytes(ip);
+            if (EndianTools.EndianAwareConverter.isLittleEndianSystem)
                 Array.Reverse(bytes);
             return new IPAddress(bytes);
         }
 
         public static string ToLocaleString(uint locale)
         {
-            byte[] bytes = BitConverter.GetBytes(locale);
-            if (BitConverter.IsLittleEndian)
+            var bytes = BitConverter.GetBytes(locale);
+            if (EndianTools.EndianAwareConverter.isLittleEndianSystem)
                 Array.Reverse(bytes);
             return Encoding.ASCII.GetString(bytes);
         }
 
         public static DateTime DateTimeFromUnixSeconds(long seconds)
         {
-            DateTimeOffset dateTimeOffset = DateTimeOffset.FromUnixTimeSeconds(seconds);
+            var dateTimeOffset = DateTimeOffset.FromUnixTimeSeconds(seconds);
             return dateTimeOffset.UtcDateTime;
         }
 
         public static long DateTimeToUnixSeconds(DateTime dateTime)
         {
-            DateTimeOffset dateTimeOffset = new DateTimeOffset(dateTime);
+            var dateTimeOffset = new DateTimeOffset(dateTime);
             return dateTimeOffset.ToUnixTimeSeconds();
         }
 
         public static DateTime DateTimeFromUnixMilliseconds(long milliseconds)
         {
-            DateTimeOffset dateTimeOffset = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
+            var dateTimeOffset = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
             return dateTimeOffset.UtcDateTime;
         }
 
         public static long DateTimeToUnixMilliseconds(DateTime dateTime)
         {
-            DateTimeOffset dateTimeOffset = new DateTimeOffset(dateTime);
+            var dateTimeOffset = new DateTimeOffset(dateTime);
             return dateTimeOffset.ToUnixTimeMilliseconds();
         }
 
         public static DateTime DateTimeFromUnixMicroseconds(long microseconds)
         {
-            DateTimeOffset dateTimeOffset = DateTimeOffset.FromUnixTimeMilliseconds(microseconds / 1000);
+            var dateTimeOffset = DateTimeOffset.FromUnixTimeMilliseconds(microseconds / 1000);
             return dateTimeOffset.UtcDateTime;
         }
+
         public static long DateTimeToUnixMicroseconds(DateTime dateTime)
         {
-            DateTimeOffset dateTimeOffset = new DateTimeOffset(dateTime);
+            var dateTimeOffset = new DateTimeOffset(dateTime);
             return dateTimeOffset.ToUnixTimeMilliseconds() * 1000;
         }
     }

@@ -1,11 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
-using System.Collections.Generic;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.GetAnnouncementsResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.GetAnnouncementsResponse
+    )]
     public class MediusGetAnnouncementsResponse : BaseLobbyMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusLobbyMessageIds.GetAnnouncementsResponse;
@@ -19,7 +20,22 @@ namespace Horizon.RT.Models
         public string Announcement; // ANNOUNCEMENT_MAXLEN
         public bool EndOfList;
 
-        public List<int> old113AnnouncementMaxLenAppIds = new List<int>() { 21564, 21574, 21584, 21594, 22274, 22284, 22294, 22304, 20040, 20041, 20042, 20043, 20044 };
+        public List<int> old113AnnouncementMaxLenAppIds = new()
+        {
+            21564,
+            21574,
+            21584,
+            21594,
+            22274,
+            22284,
+            22294,
+            22304,
+            20040,
+            20041,
+            20042,
+            20043,
+            20044,
+        };
 
         public override void Deserialize(MessageReader reader)
         {
@@ -31,17 +47,13 @@ namespace Horizon.RT.Models
             StatusCode = reader.Read<MediusCallbackStatus>();
             AnnouncementID = reader.ReadInt32();
 
-            if (reader.MediusVersion <= 112)
-                Announcement = reader.ReadString(Constants.ANNOUNCEMENT_MAXLEN);
-            else if (reader.MediusVersion == 113)
-            {
-                if (old113AnnouncementMaxLenAppIds.Contains(reader.AppId))
-                    Announcement = reader.ReadString(Constants.ANNOUNCEMENT_MAXLEN);
-                else
-                    Announcement = reader.ReadString(Constants.ANNOUNCEMENT1_MAXLEN);
-            }
-            else
-                Announcement = reader.ReadString(Constants.ANNOUNCEMENT_MAXLEN);
+            Announcement =
+                reader.MediusVersion <= 112 ? reader.ReadString(Constants.ANNOUNCEMENT_MAXLEN)
+                : reader.MediusVersion == 113
+                    ? old113AnnouncementMaxLenAppIds.Contains(reader.AppId)
+                            ? reader.ReadString(Constants.ANNOUNCEMENT_MAXLEN)
+                        : reader.ReadString(Constants.ANNOUNCEMENT1_MAXLEN)
+                : reader.ReadString(Constants.ANNOUNCEMENT_MAXLEN);
 
             EndOfList = reader.ReadBoolean();
             reader.ReadBytes(3);
@@ -74,12 +86,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"AnnouncementID: {AnnouncementID} " +
-                $"Announcement: {Announcement} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"AnnouncementID: {AnnouncementID} "
+                + $"Announcement: {Announcement} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

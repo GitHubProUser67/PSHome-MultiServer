@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Messaging
 {
-	[TdfStruct]
-	public struct MasterMessage
-	{
+    [TdfStruct]
+    public struct MasterMessage
+    {
+        [TdfMember("SMSG")]
+        public SlaveMessage mSlaveMessage;
 
-		[TdfMember("SMSG")]
-		public SlaveMessage mSlaveMessage;
-
-		[TdfMember("TIME")]
-		public List<uint> mTargetSlaveIds;
-
-	}
+        [TdfMember("TIME")]
+        public List<uint> mTargetSlaveIds;
+    }
 }

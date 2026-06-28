@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Clubs
 {
-	[TdfStruct]
-	public struct UpdateCachedClubForUsersRequest
-	{
+    [TdfStruct]
+    public struct UpdateCachedClubForUsersRequest
+    {
+        [TdfMember("CLID")]
+        public uint mClubId;
 
-		[TdfMember("CLID")]
-		public uint mClubId;
+        [TdfMember("MBMI")]
+        public SortedDictionary<long, ReplicatedCachedMemberInfo> mMapBlazeIdToMemberInfo;
 
-		[TdfMember("MBMI")]
-		public SortedDictionary<long, ReplicatedCachedMemberInfo> mMapBlazeIdToMemberInfo;
-
-		[TdfMember("UPRS")]
-		public UpdateReason mReason;
-
-	}
+        [TdfMember("UPRS")]
+        public UpdateReason mReason;
+    }
 }

@@ -1,9 +1,7 @@
-using System;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
 
 namespace NetCoreServer
 {
@@ -19,26 +17,34 @@ namespace NetCoreServer
         /// <param name="context">SSL context</param>
         /// <param name="address">IP address</param>
         /// <param name="port">Port number</param>
-        public SslServer(SslContext context, IPAddress address, int port) : this(context, new IPEndPoint(address, port)) {}
+        public SslServer(SslContext context, IPAddress address, int port)
+            : this(context, new IPEndPoint(address, port)) { }
+
         /// <summary>
         /// Initialize SSL server with a given IP address and port number
         /// </summary>
         /// <param name="context">SSL context</param>
         /// <param name="address">IP address</param>
         /// <param name="port">Port number</param>
-        public SslServer(SslContext context, string address, int port) : this(context, new IPEndPoint(IPAddress.Parse(address), port)) {}
+        public SslServer(SslContext context, string address, int port)
+            : this(context, new IPEndPoint(IPAddress.Parse(address), port)) { }
+
         /// <summary>
         /// Initialize SSL server with a given DNS endpoint
         /// </summary>
         /// <param name="context">SSL context</param>
         /// <param name="endpoint">DNS endpoint</param>
-        public SslServer(SslContext context, DnsEndPoint endpoint) : this(context, endpoint as EndPoint, endpoint.Host, endpoint.Port) {}
+        public SslServer(SslContext context, DnsEndPoint endpoint)
+            : this(context, endpoint as EndPoint, endpoint.Host, endpoint.Port) { }
+
         /// <summary>
         /// Initialize SSL server with a given IP endpoint
         /// </summary>
         /// <param name="context">SSL context</param>
         /// <param name="endpoint">IP endpoint</param>
-        public SslServer(SslContext context, IPEndPoint endpoint) : this(context, endpoint as EndPoint, endpoint.Address.ToString(), endpoint.Port) {}
+        public SslServer(SslContext context, IPEndPoint endpoint)
+            : this(context, endpoint as EndPoint, endpoint.Address.ToString(), endpoint.Port) { }
+
         /// <summary>
         /// Initialize SSL server with a given SSL context, endpoint, address and port
         /// </summary>
@@ -64,14 +70,17 @@ namespace NetCoreServer
         /// SSL server address
         /// </summary>
         public string Address { get; }
+
         /// <summary>
         /// SSL server port
         /// </summary>
         public int Port { get; }
+
         /// <summary>
         /// SSL context
         /// </summary>
         public SslContext Context { get; }
+
         /// <summary>
         /// Endpoint
         /// </summary>
@@ -80,19 +89,34 @@ namespace NetCoreServer
         /// <summary>
         /// Number of sessions connected to the server
         /// </summary>
-        public long ConnectedSessions { get { return Sessions.Count; } }
+        public long ConnectedSessions
+        {
+            get { return Sessions.Count; }
+        }
+
         /// <summary>
         /// Number of bytes pending sent by the server
         /// </summary>
-        public long BytesPending { get { return _bytesPending; } }
+        public long BytesPending
+        {
+            get { return _bytesPending; }
+        }
+
         /// <summary>
         /// Number of bytes sent by the server
         /// </summary>
-        public long BytesSent { get { return _bytesSent; } }
+        public long BytesSent
+        {
+            get { return _bytesSent; }
+        }
+
         /// <summary>
         /// Number of bytes received by the server
         /// </summary>
-        public long BytesReceived { get { return _bytesReceived; } }
+        public long BytesReceived
+        {
+            get { return _bytesReceived; }
+        }
 
         /// <summary>
         /// Option: acceptor backlog size
@@ -101,6 +125,7 @@ namespace NetCoreServer
         /// This option will set the listening socket's backlog size
         /// </remarks>
         public int OptionAcceptorBacklog { get; set; } = 1024;
+
         /// <summary>
         /// Option: dual mode socket
         /// </summary>
@@ -109,6 +134,7 @@ namespace NetCoreServer
         /// Will work only if socket is bound on IPv6 address.
         /// </remarks>
         public bool OptionDualMode { get; set; }
+
         /// <summary>
         /// Option: keep alive
         /// </summary>
@@ -116,6 +142,7 @@ namespace NetCoreServer
         /// This option will setup SO_KEEPALIVE if the OS support this feature
         /// </remarks>
         public bool OptionKeepAlive { get; set; }
+
         /// <summary>
         /// Option: TCP keep alive time
         /// </summary>
@@ -123,6 +150,7 @@ namespace NetCoreServer
         /// The number of seconds a TCP connection will remain alive/idle before keepalive probes are sent to the remote
         /// </remarks>
         public int OptionTcpKeepAliveTime { get; set; } = -1;
+
         /// <summary>
         /// Option: TCP keep alive interval
         /// </summary>
@@ -130,6 +158,7 @@ namespace NetCoreServer
         /// The number of seconds a TCP connection will wait for a keepalive response before sending another keepalive probe
         /// </remarks>
         public int OptionTcpKeepAliveInterval { get; set; } = -1;
+
         /// <summary>
         /// Option: TCP keep alive retry count
         /// </summary>
@@ -137,6 +166,7 @@ namespace NetCoreServer
         /// The number of TCP keep alive probes that will be sent before the connection is terminated
         /// </remarks>
         public int OptionTcpKeepAliveRetryCount { get; set; } = -1;
+
         /// <summary>
         /// Option: no delay
         /// </summary>
@@ -144,6 +174,7 @@ namespace NetCoreServer
         /// This option will enable/disable Nagle's algorithm for SSL protocol
         /// </remarks>
         public bool OptionNoDelay { get; set; }
+
         /// <summary>
         /// Option: reuse address
         /// </summary>
@@ -151,6 +182,7 @@ namespace NetCoreServer
         /// This option will enable/disable SO_REUSEADDR if the OS support this feature
         /// </remarks>
         public bool OptionReuseAddress { get; set; }
+
         /// <summary>
         /// Option: enables a socket to be bound for exclusive access
         /// </summary>
@@ -158,10 +190,12 @@ namespace NetCoreServer
         /// This option will enable/disable SO_EXCLUSIVEADDRUSE if the OS support this feature
         /// </remarks>
         public bool OptionExclusiveAddressUse { get; set; }
+
         /// <summary>
         /// Option: receive buffer size
         /// </summary>
         public int OptionReceiveBufferSize { get; set; } = 8192;
+
         /// <summary>
         /// Option: send buffer size
         /// </summary>
@@ -182,6 +216,7 @@ namespace NetCoreServer
         /// Is the server started?
         /// </summary>
         public bool IsStarted { get; private set; }
+
         /// <summary>
         /// Is the server accepting new clients?
         /// </summary>
@@ -219,9 +254,17 @@ namespace NetCoreServer
             IsSocketDisposed = false;
 
             // Apply the option: reuse address
-            _acceptorSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, OptionReuseAddress);
+            _acceptorSocket.SetSocketOption(
+                SocketOptionLevel.Socket,
+                SocketOptionName.ReuseAddress,
+                OptionReuseAddress
+            );
             // Apply the option: exclusive address use
-            _acceptorSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, OptionExclusiveAddressUse);
+            _acceptorSocket.SetSocketOption(
+                SocketOptionLevel.Socket,
+                SocketOptionName.ExclusiveAddressUse,
+                OptionExclusiveAddressUse
+            );
             // Apply the option: dual mode (this option must be applied before listening)
             if (_acceptorSocket.AddressFamily == AddressFamily.InterNetworkV6)
                 _acceptorSocket.DualMode = OptionDualMode;
@@ -287,7 +330,7 @@ namespace NetCoreServer
                 // Update the acceptor socket disposed flag
                 IsSocketDisposed = true;
             }
-            catch (ObjectDisposedException) {}
+            catch (ObjectDisposedException) { }
 
             // Disconnect all sessions
             DisconnectAll();
@@ -377,7 +420,10 @@ namespace NetCoreServer
         /// Create SSL session factory method
         /// </summary>
         /// <returns>SSL session</returns>
-        protected virtual SslSession CreateSession() { return new SslSession(this); }
+        protected virtual SslSession CreateSession()
+        {
+            return new SslSession(this);
+        }
 
         #endregion
 
@@ -386,7 +432,7 @@ namespace NetCoreServer
         /// <summary>
         /// Server sessions
         /// </summary>
-        protected readonly ConcurrentDictionary<Guid, SslSession> Sessions = new ConcurrentDictionary<Guid, SslSession>();
+        protected readonly ConcurrentDictionary<Guid, SslSession> Sessions = new();
 
         /// <summary>
         /// Disconnect all connected sessions
@@ -412,7 +458,7 @@ namespace NetCoreServer
         public SslSession FindSession(Guid id)
         {
             // Try to find the required session
-            return Sessions.TryGetValue(id, out SslSession result) ? result : null;
+            return Sessions.TryGetValue(id, out var result) ? result : null;
         }
 
         /// <summary>
@@ -432,7 +478,7 @@ namespace NetCoreServer
         internal void UnregisterSession(Guid id)
         {
             // Unregister session by Id
-            Sessions.TryRemove(id, out SslSession _);
+            Sessions.TryRemove(id, out var _);
         }
 
         #endregion
@@ -453,7 +499,8 @@ namespace NetCoreServer
         /// <param name="offset">Buffer offset</param>
         /// <param name="size">Buffer size</param>
         /// <returns>'true' if the data was successfully multicasted, 'false' if the data was not multicasted</returns>
-        public virtual bool Multicast(byte[] buffer, long offset, long size) => Multicast(buffer.AsSpan((int)offset, (int)size));
+        public virtual bool Multicast(byte[] buffer, long offset, long size) =>
+            Multicast(buffer.AsSpan((int)offset, (int)size));
 
         /// <summary>
         /// Multicast data to all connected clients
@@ -487,7 +534,8 @@ namespace NetCoreServer
         /// </summary>
         /// <param name="text">Text to multicast as a span of characters</param>
         /// <returns>'true' if the text was successfully multicasted, 'false' if the text was not multicasted</returns>
-        public virtual bool Multicast(ReadOnlySpan<char> text) => Multicast(Encoding.UTF8.GetBytes(text.ToArray()));
+        public virtual bool Multicast(ReadOnlySpan<char> text) =>
+            Multicast(Encoding.UTF8.GetBytes(text.ToArray()));
 
         #endregion
 
@@ -496,63 +544,94 @@ namespace NetCoreServer
         /// <summary>
         /// Handle server starting notification
         /// </summary>
-        protected virtual void OnStarting() {}
+        protected virtual void OnStarting() { }
+
         /// <summary>
         /// Handle server started notification
         /// </summary>
-        protected virtual void OnStarted() {}
+        protected virtual void OnStarted() { }
+
         /// <summary>
         /// Handle server stopping notification
         /// </summary>
-        protected virtual void OnStopping() {}
+        protected virtual void OnStopping() { }
+
         /// <summary>
         /// Handle server stopped notification
         /// </summary>
-        protected virtual void OnStopped() {}
+        protected virtual void OnStopped() { }
 
         /// <summary>
         /// Handle session connecting notification
         /// </summary>
         /// <param name="session">Connecting session</param>
-        protected virtual void OnConnecting(SslSession session) {}
+        protected virtual void OnConnecting(SslSession session) { }
+
         /// <summary>
         /// Handle session connected notification
         /// </summary>
         /// <param name="session">Connected session</param>
-        protected virtual void OnConnected(SslSession session) {}
+        protected virtual void OnConnected(SslSession session) { }
+
         /// <summary>
         /// Handle session handshaking notification
         /// </summary>
         /// <param name="session">Handshaking session</param>
-        protected virtual void OnHandshaking(SslSession session) {}
+        protected virtual void OnHandshaking(SslSession session) { }
+
         /// <summary>
         /// Handle session handshaked notification
         /// </summary>
         /// <param name="session">Handshaked session</param>
-        protected virtual void OnHandshaked(SslSession session) {}
+        protected virtual void OnHandshaked(SslSession session) { }
+
         /// <summary>
         /// Handle session disconnecting notification
         /// </summary>
         /// <param name="session">Disconnecting session</param>
-        protected virtual void OnDisconnecting(SslSession session) {}
+        protected virtual void OnDisconnecting(SslSession session) { }
+
         /// <summary>
         /// Handle session disconnected notification
         /// </summary>
         /// <param name="session">Disconnected session</param>
-        protected virtual void OnDisconnected(SslSession session) {}
+        protected virtual void OnDisconnected(SslSession session) { }
 
         /// <summary>
         /// Handle error notification
         /// </summary>
         /// <param name="error">Socket error code</param>
-        protected virtual void OnError(SocketError error) {}
+        protected virtual void OnError(SocketError error) { }
 
-        internal void OnConnectingInternal(SslSession session) { OnConnecting(session); }
-        internal void OnConnectedInternal(SslSession session) { OnConnected(session); }
-        internal void OnHandshakingInternal(SslSession session) { OnHandshaking(session); }
-        internal void OnHandshakedInternal(SslSession session) { OnHandshaked(session); }
-        internal void OnDisconnectingInternal(SslSession session) { OnDisconnecting(session); }
-        internal void OnDisconnectedInternal(SslSession session) { OnDisconnected(session); }
+        internal void OnConnectingInternal(SslSession session)
+        {
+            OnConnecting(session);
+        }
+
+        internal void OnConnectedInternal(SslSession session)
+        {
+            OnConnected(session);
+        }
+
+        internal void OnHandshakingInternal(SslSession session)
+        {
+            OnHandshaking(session);
+        }
+
+        internal void OnHandshakedInternal(SslSession session)
+        {
+            OnHandshaked(session);
+        }
+
+        internal void OnDisconnectingInternal(SslSession session)
+        {
+            OnDisconnecting(session);
+        }
+
+        internal void OnDisconnectedInternal(SslSession session)
+        {
+            OnDisconnected(session);
+        }
 
         #endregion
 
@@ -565,11 +644,13 @@ namespace NetCoreServer
         private void SendError(SocketError error)
         {
             // Skip disconnect errors
-            if ((error == SocketError.ConnectionAborted) ||
-                (error == SocketError.ConnectionRefused) ||
-                (error == SocketError.ConnectionReset) ||
-                (error == SocketError.OperationAborted) ||
-                (error == SocketError.Shutdown))
+            if (
+                (error == SocketError.ConnectionAborted)
+                || (error == SocketError.ConnectionRefused)
+                || (error == SocketError.ConnectionReset)
+                || (error == SocketError.OperationAborted)
+                || (error == SocketError.Shutdown)
+            )
                 return;
 
             OnError(error);

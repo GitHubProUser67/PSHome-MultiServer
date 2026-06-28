@@ -1,5 +1,5 @@
-using BlazeCommon.PacketDisplayAttributes;
 using System.ComponentModel.DataAnnotations;
+using BlazeCommon.PacketDisplayAttributes;
 using Tdf;
 
 namespace Blaze2SDK.Blaze.Util
@@ -7,7 +7,6 @@ namespace Blaze2SDK.Blaze.Util
     [TdfStruct]
     public struct GetTelemetryServerResponse
     {
-
         /// <summary>
         /// Max String Length: 64
         /// </summary>
@@ -58,6 +57,5 @@ namespace Blaze2SDK.Blaze.Util
 
         [TdfMember("SPCT")]
         public uint mSendPercentage;
-
     }
 }

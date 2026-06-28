@@ -2,18 +2,16 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Redirector
 {
-	[TdfStruct]
-	public struct XboxServerAddress
-	{
+    [TdfStruct]
+    public struct XboxServerAddress
+    {
+        [TdfMember("PORT")]
+        public ushort mPort;
 
-		[TdfMember("PORT")]
-		public ushort mPort;
+        [TdfMember("SID")]
+        public uint mServiceId;
 
-		[TdfMember("SID")]
-		public uint mServiceId;
-
-		[TdfMember("SITE")]
-		public string mSiteName;
-
-	}
+        [TdfMember("SITE")]
+        public string mSiteName;
+    }
 }

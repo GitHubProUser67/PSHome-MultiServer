@@ -5,8 +5,9 @@ using System.Diagnostics.Tracing;
 
 namespace System.Net
 {
-    [EventSource(Name = "Private.InternalDiagnostics.SpaceWizards.HttpListener", LocalizationResources = "FxResources.SpaceWizards.HttpListener.SR")]
-    internal sealed partial class NetEventSource : EventSource
-    {
-    }
+    [EventSource(
+        Name = "Private.InternalDiagnostics.SpaceWizards.HttpListener",
+        LocalizationResources = "FxResources.SpaceWizards.HttpListener.SR"
+    )]
+    internal sealed partial class NetEventSource : EventSource { }
 }

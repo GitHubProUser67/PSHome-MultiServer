@@ -4,7 +4,7 @@ public interface IHistogram : IObserver
 {
     /// <summary>
     /// Observe multiple events with a given value.
-    /// 
+    ///
     /// Intended to support high frequency or batch processing use cases utilizing pre-aggregation.
     /// </summary>
     /// <param name="val">Measured value.</param>
@@ -21,7 +21,7 @@ public interface IHistogram : IObserver
     /// Pass Exemplar.None to explicitly record an observation without an exemplar.
     /// </param>
     void Observe(double val, Exemplar? exemplar);
-    
+
     /// <summary>
     /// Gets the sum of all observed events.
     /// </summary>

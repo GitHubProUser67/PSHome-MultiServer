@@ -2,21 +2,19 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct NotifyPlayerRemoved
-	{
+    [TdfStruct]
+    public struct NotifyPlayerRemoved
+    {
+        [TdfMember("GID")]
+        public uint mGameId;
 
-		[TdfMember("GID")]
-		public uint mGameId;
+        [TdfMember("PID")]
+        public long mPlayerId;
 
-		[TdfMember("PID")]
-		public long mPlayerId;
+        [TdfMember("REAS")]
+        public PlayerRemovedReason mPlayerRemovedReason;
 
-		[TdfMember("REAS")]
-		public PlayerRemovedReason mPlayerRemovedReason;
-
-		[TdfMember("CNTX")]
-		public ushort mPlayerRemovedTitleContext;
-
-	}
+        [TdfMember("CNTX")]
+        public ushort mPlayerRemovedTitleContext;
+    }
 }

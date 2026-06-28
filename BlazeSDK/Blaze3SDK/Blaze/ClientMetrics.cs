@@ -2,30 +2,28 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze
 {
-	[TdfStruct]
-	public struct ClientMetrics
-	{
+    [TdfStruct]
+    public struct ClientMetrics
+    {
+        [TdfMember("UBFL")]
+        public BlazeUpnpFlags mBlazeFlags;
 
-		[TdfMember("UBFL")]
-		public BlazeUpnpFlags mBlazeFlags;
+        [TdfMember("UDEV")]
+        public string mDeviceInfo;
 
-		[TdfMember("UDEV")]
-		public string mDeviceInfo;
+        [TdfMember("UFLG")]
+        public ushort mFlags;
 
-		[TdfMember("UFLG")]
-		public ushort mFlags;
+        [TdfMember("ULRC")]
+        public int mLastRsltCode;
 
-		[TdfMember("ULRC")]
-		public int mLastRsltCode;
+        [TdfMember("UNAT")]
+        public ushort mNatType;
 
-		[TdfMember("UNAT")]
-		public ushort mNatType;
+        [TdfMember("USTA")]
+        public UpnpStatus mStatus;
 
-		[TdfMember("USTA")]
-		public UpnpStatus mStatus;
-
-		[TdfMember("UWAN")]
-		public uint mWanIpAddr;
-
-	}
+        [TdfMember("UWAN")]
+        public uint mWanIpAddr;
+    }
 }

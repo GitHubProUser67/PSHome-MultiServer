@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace WebAPIService.LeaderboardService.Context.Entities
+﻿namespace WebAPIService.LeaderboardService.Context.Entities
 {
     public abstract class ScoreboardEntryBase
     {

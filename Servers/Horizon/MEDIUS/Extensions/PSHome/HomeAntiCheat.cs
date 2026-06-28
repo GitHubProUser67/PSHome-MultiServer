@@ -1,0 +1,1006 @@
+﻿using CastleLibrary.Utils;
+using CustomLogger;
+using DotNetty.Transport.Channels;
+using EndianTools;
+using Horizon.MEDIUS.Models;
+using Horizon.MUM.Models;
+using Horizon.RT.Common;
+using Horizon.RT.Models;
+using MultiServerLibrary.Extension;
+
+namespace Horizon.MEDIUS.Extensions.PSHome
+{
+    public class HomeAntiCheat
+    {
+        #region Anticheat References
+
+        private static readonly byte[] Ref1 = "j1S4yArhxE6OW2ZPQzq+oA==".IsBase64().DecodedBytes;
+
+        private static readonly byte[] Ref2 = "XtKRFh5cJ/iW3RzTcyHa8g==".IsBase64().DecodedBytes;
+
+        private static readonly byte[] Ref3 = "VDQrkh5H7aV9T/GbaDwNUw==".IsBase64().DecodedBytes;
+
+        private static readonly byte[] Ref4 = "FA5bx20s0liKa36ROeQ8Lw==".IsBase64().DecodedBytes;
+
+        private static readonly byte[] Ref5 = "gjhutOUMfyuOPC5gjtt9/Q==".IsBase64().DecodedBytes;
+
+        private static readonly byte[] Ref6 = "AAAAAAAAAAE=".IsBase64().DecodedBytes;
+
+        private static readonly List<byte[]> ForceInviteRefs = new()
+        {
+            "B4A08C784F3097477A95BAE6ED2360B8".HexStrToBytes(),
+            "5FB36D34F9C08B51C653602A9A1E0EE2".HexStrToBytes(),
+            "3190194C117C510E0414DF77B4BEE615".HexStrToBytes(),
+            "090276717FA70EAEBCA71218898D226F".HexStrToBytes(),
+        };
+
+        #endregion
+
+        protected virtual Task QueueBanMessage(
+            ChannelData? data,
+            string msg = "You have been caught cheating!"
+        )
+        {
+            // Send ban message
+            data?.SendQueue.Enqueue(
+                new RT_MSG_SERVER_SYSTEM_MESSAGE()
+                {
+                    Severity = (byte)
+                        DATABASE
+                            .DatabaseManager.GetAppSettingsOrDefault(data.ApplicationId)
+                            .BanSystemMessageSeverity,
+                    EncodingType = DME_SERVER_ENCODING_TYPE.DME_SERVER_ENCODING_UTF8,
+                    LanguageType = DME_SERVER_LANGUAGE_TYPE.DME_SERVER_LANGUAGE_US_ENGLISH,
+                    EndOfMessage = true,
+                    Message = msg,
+                }
+            );
+
+            return Task.CompletedTask;
+        }
+
+        public async void ProcessAntiCheatQuery(
+            ChannelData data,
+            RT_MSG_SERVER_CHEAT_QUERY clientCheatQuery,
+            IChannel? clientChannel
+        )
+        {
+            // client channel is null, don't process
+            if (clientChannel == null)
+                return;
+
+            // clientCheatQuery.Data is null, don't process
+            if (clientCheatQuery.Data == null)
+                return;
+
+            var client = data.ClientObject;
+            var QueryData = clientCheatQuery.Data;
+
+            if (client != null && client.ClientHomeData != null)
+            {
+                switch (client.ClientHomeData.Type)
+                {
+                    case "HDK With Offline":
+                        switch (client.ClientHomeData.Version)
+                        {
+                            case "01.86.09":
+                                switch (clientCheatQuery.StartAddress)
+                                {
+                                    case 0x101590b0:
+                                        if (
+                                            clientCheatQuery.QueryType
+                                                == CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH
+                                            && (QueryData.Length != 16 || !QueryData.EqualsTo(Ref3))
+                                        )
+                                        {
+                                            var anticheatMsg =
+                                                $"[SECURITY] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: FREEZE ATTEMPT) - User:{client.IP + ":" + client.AccountName} CID:{data.MachineId}";
+
+                                            _ = Channel.BroadcastSystemMessage(
+                                                client.CurrentChannel.LocalClients.Where(x =>
+                                                    x != client
+                                                ),
+                                                anticheatMsg,
+                                                byte.MaxValue
+                                            );
+
+                                            LoggerAccessor.LogError(anticheatMsg);
+
+                                            await HorizonServerConfiguration
+                                                .Database.BanIp(client.IP)
+                                                .ContinueWith(
+                                                    (r) =>
+                                                    {
+                                                        if (r.IsCompletedSuccessfully && r.Result)
+                                                        {
+                                                            // Banned
+                                                            QueueBanMessage(data);
+                                                        }
+                                                        client.ForceDisconnect();
+                                                        _ = client.Logout();
+                                                    }
+                                                );
+                                        }
+                                        break;
+                                    case 0x0016cb68:
+                                        if (
+                                            clientCheatQuery.QueryType
+                                                == CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH
+                                            && (
+                                                QueryData.Length != 16
+                                                || !QueryData.EqualsTo(ForceInviteRefs[0])
+                                            )
+                                        )
+                                        {
+                                            var anticheatMsg =
+                                                $"[SECURITY] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: FORCE INVITE BYPASS ATTEMPT) - User:{client.IP + ":" + client.AccountName} CID:{data.MachineId}";
+
+                                            _ = Channel.BroadcastSystemMessage(
+                                                client.CurrentChannel.LocalClients.Where(x =>
+                                                    x != client
+                                                ),
+                                                anticheatMsg,
+                                                byte.MaxValue
+                                            );
+
+                                            LoggerAccessor.LogError(anticheatMsg);
+
+                                            await HorizonServerConfiguration
+                                                .Database.BanIp(client.IP)
+                                                .ContinueWith(
+                                                    (r) =>
+                                                    {
+                                                        if (r.IsCompletedSuccessfully && r.Result)
+                                                        {
+                                                            // Banned
+                                                            QueueBanMessage(data);
+                                                        }
+                                                        client.ForceDisconnect();
+                                                        _ = client.Logout();
+                                                    }
+                                                );
+                                        }
+                                        break;
+                                    case 0x10480d30:
+                                        if (
+                                            clientCheatQuery.QueryType
+                                                == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY
+                                            && QueryData.Length == 4
+                                        )
+                                        {
+                                            if (client.Hub_LocalPerson_ms_pInstance == 0)
+                                            {
+                                                client.SetPointer(
+                                                    BitConverter.ToUInt32(
+                                                        EndianTools
+                                                            .EndianAwareConverter
+                                                            .isLittleEndianSystem
+                                                            ? EndianUtils.ReverseArray(QueryData)
+                                                            : QueryData
+                                                    )
+                                                );
+
+                                                client.TryAddTask(
+                                                    "1.86 HDK ANTI FREEZE",
+                                                    () =>
+                                                    {
+                                                        while (true)
+                                                        {
+                                                            if (client.IsInGame)
+                                                            {
+                                                                CheatQuery(
+                                                                    client.Hub_LocalPerson_ms_pInstance
+                                                                        + 5300U,
+                                                                    8,
+                                                                    client,
+                                                                    CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY
+                                                                );
+                                                                CheatQuery(
+                                                                    client.Hub_LocalPerson_ms_pInstance
+                                                                        + 6928U,
+                                                                    84,
+                                                                    client,
+                                                                    CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH
+                                                                );
+
+                                                                Thread.Sleep(3500);
+                                                            }
+                                                            else
+                                                                Thread.Sleep(6000);
+                                                        }
+                                                    }
+                                                );
+                                            }
+                                        }
+                                        break;
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    case "HDK Online Only":
+                        switch (client.ClientHomeData.Version)
+                        {
+                            default:
+                                break;
+                        }
+                        break;
+                    case "HDK Online Only (Dbg Symbols)":
+                        switch (client.ClientHomeData.Version)
+                        {
+                            case "01.82.09":
+                                switch (clientCheatQuery.StartAddress)
+                                {
+                                    case 0x0016b490:
+                                        if (
+                                            clientCheatQuery.QueryType
+                                                == CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH
+                                            && (
+                                                QueryData.Length != 16
+                                                || !QueryData.EqualsTo(ForceInviteRefs[1])
+                                            )
+                                        )
+                                        {
+                                            var anticheatMsg =
+                                                $"[SECURITY] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: FORCE INVITE BYPASS ATTEMPT) - User:{client.IP + ":" + client.AccountName} CID:{data.MachineId}";
+
+                                            _ = Channel.BroadcastSystemMessage(
+                                                client.CurrentChannel.LocalClients.Where(x =>
+                                                    x != client
+                                                ),
+                                                anticheatMsg,
+                                                byte.MaxValue
+                                            );
+
+                                            LoggerAccessor.LogError(anticheatMsg);
+
+                                            await HorizonServerConfiguration
+                                                .Database.BanIp(client.IP)
+                                                .ContinueWith(
+                                                    (r) =>
+                                                    {
+                                                        if (r.IsCompletedSuccessfully && r.Result)
+                                                        {
+                                                            // Banned
+                                                            QueueBanMessage(data);
+                                                        }
+                                                        client.ForceDisconnect();
+                                                        _ = client.Logout();
+                                                    }
+                                                );
+                                        }
+                                        break;
+                                    case 0x10470990:
+                                        if (
+                                            clientCheatQuery.QueryType
+                                                == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY
+                                            && QueryData.Length == 4
+                                        )
+                                        {
+                                            if (client.Hub_LocalPerson_ms_pInstance == 0)
+                                            {
+                                                client.SetPointer(
+                                                    BitConverter.ToUInt32(
+                                                        EndianTools
+                                                            .EndianAwareConverter
+                                                            .isLittleEndianSystem
+                                                            ? EndianUtils.ReverseArray(QueryData)
+                                                            : QueryData
+                                                    )
+                                                );
+
+                                                client.TryAddTask(
+                                                    "1.82 HDK Online (Dbg Symbols) ANTI FREEZE",
+                                                    () =>
+                                                    {
+                                                        while (true)
+                                                        {
+                                                            if (client.IsInGame)
+                                                            {
+                                                                CheatQuery(
+                                                                    client.Hub_LocalPerson_ms_pInstance
+                                                                        + 5300U,
+                                                                    8,
+                                                                    client,
+                                                                    CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY
+                                                                );
+                                                                CheatQuery(
+                                                                    client.Hub_LocalPerson_ms_pInstance
+                                                                        + 6928U,
+                                                                    84,
+                                                                    client,
+                                                                    CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH
+                                                                );
+
+                                                                Thread.Sleep(3500);
+                                                            }
+                                                            else
+                                                                Thread.Sleep(6000);
+                                                        }
+                                                    }
+                                                );
+                                            }
+                                        }
+                                        break;
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    case "Online Debug":
+                    case "Online Debug (QA)":
+                        switch (client.ClientHomeData.Version)
+                        {
+                            case "01.83.12":
+                                switch (clientCheatQuery.StartAddress)
+                                {
+                                    case 0x001709a0:
+                                        if (
+                                            clientCheatQuery.QueryType
+                                                == CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH
+                                            && (
+                                                QueryData.Length != 16
+                                                || !QueryData.EqualsTo(ForceInviteRefs[2])
+                                            )
+                                        )
+                                        {
+                                            var anticheatMsg =
+                                                $"[SECURITY] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: FORCE INVITE BYPASS ATTEMPT) - User:{client.IP + ":" + client.AccountName} CID:{data.MachineId}";
+
+                                            _ = Channel.BroadcastSystemMessage(
+                                                client.CurrentChannel.LocalClients.Where(x =>
+                                                    x != client
+                                                ),
+                                                anticheatMsg,
+                                                byte.MaxValue
+                                            );
+
+                                            LoggerAccessor.LogError(anticheatMsg);
+
+                                            await HorizonServerConfiguration
+                                                .Database.BanIp(client.IP)
+                                                .ContinueWith(
+                                                    (r) =>
+                                                    {
+                                                        if (r.IsCompletedSuccessfully && r.Result)
+                                                        {
+                                                            // Banned
+                                                            QueueBanMessage(data);
+                                                        }
+                                                        client.ForceDisconnect();
+                                                        _ = client.Logout();
+                                                    }
+                                                );
+                                        }
+                                        break;
+                                    case 0x104809f0:
+                                        if (
+                                            clientCheatQuery.QueryType
+                                                == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY
+                                            && QueryData.Length == 4
+                                        )
+                                        {
+                                            if (client.Hub_LocalPerson_ms_pInstance == 0)
+                                            {
+                                                client.SetPointer(
+                                                    BitConverter.ToUInt32(
+                                                        EndianTools
+                                                            .EndianAwareConverter
+                                                            .isLittleEndianSystem
+                                                            ? EndianUtils.ReverseArray(QueryData)
+                                                            : QueryData
+                                                    )
+                                                );
+
+                                                client.TryAddTask(
+                                                    "1.83 QA ANTI FREEZE",
+                                                    () =>
+                                                    {
+                                                        while (true)
+                                                        {
+                                                            if (client.IsInGame)
+                                                            {
+                                                                CheatQuery(
+                                                                    client.Hub_LocalPerson_ms_pInstance
+                                                                        + 5300U,
+                                                                    8,
+                                                                    client,
+                                                                    CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY
+                                                                );
+                                                                CheatQuery(
+                                                                    client.Hub_LocalPerson_ms_pInstance
+                                                                        + 6928U,
+                                                                    84,
+                                                                    client,
+                                                                    CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH
+                                                                );
+
+                                                                Thread.Sleep(3500);
+                                                            }
+                                                            else
+                                                                Thread.Sleep(6000);
+                                                        }
+                                                    }
+                                                );
+                                            }
+                                        }
+                                        break;
+                                }
+                                break;
+                            case "01.86.09":
+                                switch (clientCheatQuery.StartAddress)
+                                {
+                                    case 0x0016da80:
+                                        if (
+                                            clientCheatQuery.QueryType
+                                                == CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH
+                                            && (
+                                                QueryData.Length != 16
+                                                || !QueryData.EqualsTo(ForceInviteRefs[3])
+                                            )
+                                        )
+                                        {
+                                            var anticheatMsg =
+                                                $"[SECURITY] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: FORCE INVITE BYPASS ATTEMPT) - User:{client.IP + ":" + client.AccountName} CID:{data.MachineId}";
+
+                                            _ = Channel.BroadcastSystemMessage(
+                                                client.CurrentChannel.LocalClients.Where(x =>
+                                                    x != client
+                                                ),
+                                                anticheatMsg,
+                                                byte.MaxValue
+                                            );
+
+                                            LoggerAccessor.LogError(anticheatMsg);
+
+                                            await HorizonServerConfiguration
+                                                .Database.BanIp(client.IP)
+                                                .ContinueWith(
+                                                    (r) =>
+                                                    {
+                                                        if (r.IsCompletedSuccessfully && r.Result)
+                                                        {
+                                                            // Banned
+                                                            QueueBanMessage(data);
+                                                        }
+                                                        client.ForceDisconnect();
+                                                        _ = client.Logout();
+                                                    }
+                                                );
+                                        }
+                                        break;
+                                    case 0x10480b58:
+                                        if (
+                                            clientCheatQuery.QueryType
+                                                == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY
+                                            && QueryData.Length == 4
+                                        )
+                                        {
+                                            if (client.Hub_LocalPerson_ms_pInstance == 0)
+                                            {
+                                                client.SetPointer(
+                                                    BitConverter.ToUInt32(
+                                                        EndianTools
+                                                            .EndianAwareConverter
+                                                            .isLittleEndianSystem
+                                                            ? EndianUtils.ReverseArray(QueryData)
+                                                            : QueryData
+                                                    )
+                                                );
+
+                                                client.TryAddTask(
+                                                    "1.86 QA ANTI FREEZE",
+                                                    () =>
+                                                    {
+                                                        while (true)
+                                                        {
+                                                            if (client.IsInGame)
+                                                            {
+                                                                CheatQuery(
+                                                                    client.Hub_LocalPerson_ms_pInstance
+                                                                        + 5300U,
+                                                                    8,
+                                                                    client,
+                                                                    CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY
+                                                                );
+                                                                CheatQuery(
+                                                                    client.Hub_LocalPerson_ms_pInstance
+                                                                        + 6928U,
+                                                                    84,
+                                                                    client,
+                                                                    CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH
+                                                                );
+
+                                                                Thread.Sleep(3500);
+                                                            }
+                                                            else
+                                                                Thread.Sleep(6000);
+                                                        }
+                                                    }
+                                                );
+                                            }
+                                        }
+                                        break;
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    case "Retail":
+                        switch (client.ClientHomeData.Version)
+                        {
+                            case "01.86.09":
+                                switch (clientCheatQuery.StartAddress)
+                                {
+                                    case 268759069U:
+                                        if (
+                                            clientCheatQuery.QueryType
+                                                == CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH
+                                            && QueryData.Length == 16
+                                            && (
+                                                QueryData.EqualsTo(Ref1)
+                                                || QueryData.EqualsTo(Ref2)
+                                                || QueryData.EqualsTo(Ref4)
+                                            )
+                                        )
+                                        {
+                                            var anticheatMsg =
+                                                $"[SECURITY] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: UNAUTHORIZED TOOL USAGE) - User:{client.IP + ":" + client.AccountName} CID:{data.MachineId}";
+
+                                            _ = Channel.BroadcastSystemMessage(
+                                                client.CurrentChannel.LocalClients.Where(x =>
+                                                    x != client
+                                                ),
+                                                anticheatMsg,
+                                                byte.MaxValue
+                                            );
+
+                                            LoggerAccessor.LogError(anticheatMsg);
+
+                                            await HorizonServerConfiguration
+                                                .Database.BanIp(client.IP)
+                                                .ContinueWith(
+                                                    (r) =>
+                                                    {
+                                                        if (r.IsCompletedSuccessfully && r.Result)
+                                                        {
+                                                            // Banned
+                                                            QueueBanMessage(data);
+                                                        }
+                                                        client.ForceDisconnect();
+                                                        _ = client.Logout();
+                                                    }
+                                                );
+                                        }
+                                        break;
+                                    case 0x100BA820:
+                                        if (
+                                            clientCheatQuery.QueryType
+                                                == CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH
+                                            && (QueryData.Length != 16 || !QueryData.EqualsTo(Ref3))
+                                        )
+                                        {
+                                            var anticheatMsg =
+                                                $"[SECURITY] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: FREEZE ATTEMPT) - User:{client.IP + ":" + client.AccountName} CID:{data.MachineId}";
+
+                                            _ = Channel.BroadcastSystemMessage(
+                                                client.CurrentChannel.LocalClients.Where(x =>
+                                                    x != client
+                                                ),
+                                                anticheatMsg,
+                                                byte.MaxValue
+                                            );
+
+                                            LoggerAccessor.LogError(anticheatMsg);
+
+                                            await HorizonServerConfiguration
+                                                .Database.BanIp(client.IP)
+                                                .ContinueWith(
+                                                    (r) =>
+                                                    {
+                                                        if (r.IsCompletedSuccessfully && r.Result)
+                                                        {
+                                                            // Banned
+                                                            QueueBanMessage(data);
+                                                        }
+                                                        client.ForceDisconnect();
+                                                        _ = client.Logout();
+                                                    }
+                                                );
+                                        }
+                                        break;
+                                    case 0x104F7320:
+                                        if (
+                                            clientCheatQuery.QueryType
+                                                == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY
+                                            && QueryData.Length == 4
+                                        )
+                                        {
+                                            if (client.Hub_LocalPerson_ms_pInstance == 0)
+                                            {
+                                                client.SetPointer(
+                                                    BitConverter.ToUInt32(
+                                                        EndianTools
+                                                            .EndianAwareConverter
+                                                            .isLittleEndianSystem
+                                                            ? EndianUtils.ReverseArray(QueryData)
+                                                            : QueryData
+                                                    )
+                                                );
+
+                                                client.TryAddTask(
+                                                    "1.86 Retail ANTI FREEZE",
+                                                    () =>
+                                                    {
+                                                        while (true)
+                                                        {
+                                                            if (client.IsInGame)
+                                                            {
+                                                                CheatQuery(
+                                                                    client.Hub_LocalPerson_ms_pInstance
+                                                                        + 5300U,
+                                                                    8,
+                                                                    client,
+                                                                    CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY
+                                                                );
+                                                                CheatQuery(
+                                                                    client.Hub_LocalPerson_ms_pInstance
+                                                                        + 6928U,
+                                                                    84,
+                                                                    client,
+                                                                    CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH
+                                                                );
+
+                                                                Thread.Sleep(3500);
+                                                            }
+                                                            else
+                                                                Thread.Sleep(6000);
+                                                        }
+                                                    }
+                                                );
+                                            }
+                                        }
+                                        break;
+                                    default:
+                                        if (client != null)
+                                        {
+                                            if (
+                                                clientCheatQuery.StartAddress
+                                                    == client.Hub_LocalPerson_ms_pInstance + 6928U
+                                                && clientCheatQuery.QueryType
+                                                    == CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH
+                                                && QueryData.Length == 16
+                                                && QueryData.EqualsTo(Ref5)
+                                            )
+                                            {
+                                                var anticheatMsg =
+                                                    $"[SECURITY] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: LAG FREEZE ATTEMPT) - User:{client.IP + ":" + client.AccountName} CID:{data.MachineId}";
+
+                                                _ = Channel.BroadcastSystemMessage(
+                                                    client.CurrentChannel.LocalClients.Where(x =>
+                                                        x != client
+                                                    ),
+                                                    anticheatMsg,
+                                                    byte.MaxValue
+                                                );
+
+                                                LoggerAccessor.LogError(anticheatMsg);
+
+                                                await HorizonServerConfiguration
+                                                    .Database.BanIp(client.IP)
+                                                    .ContinueWith(
+                                                        (r) =>
+                                                        {
+                                                            if (
+                                                                r.IsCompletedSuccessfully
+                                                                && r.Result
+                                                            )
+                                                            {
+                                                                // Banned
+                                                                QueueBanMessage(data);
+                                                            }
+                                                            client.ForceDisconnect();
+                                                            _ = client.Logout();
+                                                        }
+                                                    );
+                                            }
+                                            else if (
+                                                clientCheatQuery.StartAddress
+                                                    == client.Hub_LocalPerson_ms_pInstance + 5300U
+                                                && clientCheatQuery.QueryType
+                                                    == CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY
+                                                && QueryData.Length == 8
+                                                && QueryData.EqualsTo(Ref6)
+                                            )
+                                            {
+                                                var anticheatMsg =
+                                                    $"[SECURITY] - HOME ANTI-CHEAT - DETECTED MALICIOUS USAGE (Reason: FREEZE ATTEMPT) - User:{client.IP + ":" + client.AccountName} CID:{data.MachineId}";
+
+                                                _ = Channel.BroadcastSystemMessage(
+                                                    client.CurrentChannel.LocalClients.Where(x =>
+                                                        x != client
+                                                    ),
+                                                    anticheatMsg,
+                                                    byte.MaxValue
+                                                );
+
+                                                LoggerAccessor.LogError(anticheatMsg);
+
+                                                await HorizonServerConfiguration
+                                                    .Database.BanIp(client.IP)
+                                                    .ContinueWith(
+                                                        (r) =>
+                                                        {
+                                                            if (
+                                                                r.IsCompletedSuccessfully
+                                                                && r.Result
+                                                            )
+                                                            {
+                                                                // Banned
+                                                                QueueBanMessage(data);
+                                                            }
+                                                            client.ForceDisconnect();
+                                                            _ = client.Logout();
+                                                        }
+                                                    );
+                                            }
+                                        }
+                                        break;
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                }
+            }
+        }
+
+        public static List<(uint, int, CheatQueryType, int)> ProcessAntiCheatRequest(
+            ClientObject? client,
+            string HomeUserEntry
+        )
+        {
+            List<(uint, int, CheatQueryType, int)> results = new();
+
+            if (client?.ClientHomeData != null)
+            {
+                switch (client.ClientHomeData.Type)
+                {
+                    case "HDK With Offline":
+                        switch (client.ClientHomeData.Version)
+                        {
+                            case "01.86.09":
+                                results.Add(
+                                    (
+                                        0x101590b0,
+                                        20,
+                                        CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH,
+                                        1
+                                    )
+                                );
+                                if (
+                                    HorizonServerConfiguration.MEDIUSPlaystationHomeForceInviteExploitPatch
+                                )
+                                    results.Add(
+                                        (
+                                            0x0016cb68,
+                                            364,
+                                            CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH,
+                                            1
+                                        )
+                                    );
+                                results.Add(
+                                    (
+                                        0x10480d30,
+                                        4,
+                                        CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY,
+                                        1
+                                    )
+                                );
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    case "HDK Online Only":
+                        switch (client.ClientHomeData.Version)
+                        {
+                            default:
+                                break;
+                        }
+                        break;
+                    case "HDK Online Only (Dbg Symbols)":
+                        switch (client.ClientHomeData.Version)
+                        {
+                            case "01.82.09":
+                                if (
+                                    HorizonServerConfiguration.MEDIUSPlaystationHomeForceInviteExploitPatch
+                                )
+                                    results.Add(
+                                        (
+                                            0x0016b490,
+                                            172,
+                                            CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH,
+                                            1
+                                        )
+                                    );
+                                results.Add(
+                                    (
+                                        0x10470990,
+                                        4,
+                                        CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY,
+                                        1
+                                    )
+                                );
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    case "Online Debug":
+                    case "Online Debug (QA)":
+                        switch (client.ClientHomeData.Version)
+                        {
+                            case "01.83.12":
+                                if (
+                                    HorizonServerConfiguration.MEDIUSPlaystationHomeForceInviteExploitPatch
+                                )
+                                    results.Add(
+                                        (
+                                            0x001709a0,
+                                            168,
+                                            CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH,
+                                            1
+                                        )
+                                    );
+                                results.Add(
+                                    (
+                                        0x104809f0,
+                                        4,
+                                        CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY,
+                                        1
+                                    )
+                                );
+                                break;
+                            case "01.86.09":
+                                if (
+                                    HorizonServerConfiguration.MEDIUSPlaystationHomeForceInviteExploitPatch
+                                )
+                                    results.Add(
+                                        (
+                                            0x0016da80,
+                                            168,
+                                            CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH,
+                                            1
+                                        )
+                                    );
+                                results.Add(
+                                    (
+                                        0x10480b58,
+                                        4,
+                                        CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY,
+                                        1
+                                    )
+                                );
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    case "Retail":
+                        switch (client.ClientHomeData.Version)
+                        {
+                            case "01.86.09":
+                                if (
+                                    HorizonServerConfiguration.MEDIUSPlaystationHomeUsersServersAccessList.TryGetValue(
+                                        HomeUserEntry,
+                                        out var value
+                                    ) && !string.IsNullOrEmpty(value)
+                                )
+                                {
+                                    switch (value)
+                                    {
+                                        case "RTM":
+                                            break;
+                                        default:
+                                            results.Add(
+                                                (
+                                                    268759069U,
+                                                    27,
+                                                    CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH,
+                                                    1
+                                                )
+                                            );
+                                            break;
+                                    }
+                                }
+                                else
+                                    results.Add(
+                                        (
+                                            268759069U,
+                                            27,
+                                            CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH,
+                                            1
+                                        )
+                                    );
+                                results.Add(
+                                    (
+                                        0x100BA820,
+                                        20,
+                                        CheatQueryType.DME_SERVER_CHEAT_QUERY_SHA1_HASH,
+                                        1
+                                    )
+                                );
+                                results.Add(
+                                    (
+                                        0x104F7320,
+                                        4,
+                                        CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY,
+                                        1
+                                    )
+                                );
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                }
+            }
+
+            return results;
+        }
+
+        #region PokeEngine
+        private static bool CheatQuery(
+            uint address,
+            int Length,
+            ClientObject client,
+            CheatQueryType Type = CheatQueryType.DME_SERVER_CHEAT_QUERY_RAW_MEMORY,
+            int SequenceId = 1
+        )
+        {
+            // address = 0, don't read
+            if (address == 0)
+                return false;
+
+            // read client memory
+            client.Queue(
+                new RT_MSG_SERVER_CHEAT_QUERY()
+                {
+                    QueryType = Type,
+                    SequenceId = SequenceId,
+                    StartAddress = address,
+                    Length = Length,
+                }
+            );
+
+            // return read
+            return true;
+        }
+
+        private static bool PokeAddress(uint patchLocation, byte[] Payload, ClientObject client)
+        {
+            // patch location = 0, don't patch
+            if (patchLocation == 0)
+                return false;
+
+            // poke client memory
+            client.Queue(
+                new RT_MSG_SERVER_MEMORY_POKE()
+                {
+                    start_Address = patchLocation,
+                    Payload = Payload,
+                    SkipEncryption = false,
+                }
+            );
+
+            // return patched
+            return true;
+        }
+        #endregion
+    }
+}

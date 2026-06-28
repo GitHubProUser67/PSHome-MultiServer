@@ -1,10 +1,12 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.GetMyClanMessagesResponse)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.GetMyClanMessagesResponse
+    )]
     public class MediusGetMyClanMessagesResponse : BaseLobbyMessage, IMediusResponse
     {
         public override byte PacketType => (byte)MediusLobbyMessageIds.GetMyClanMessagesResponse;
@@ -25,7 +27,7 @@ namespace Horizon.RT.Models
             MessageID = reader.Read<MessageId>();
             StatusCode = reader.Read<MediusCallbackStatus>();
             ClanID = reader.ReadInt32();
-            
+
             if (reader.MediusVersion == 113)
             {
                 ClanMessageID = reader.ReadInt32();
@@ -44,7 +46,7 @@ namespace Horizon.RT.Models
             writer.Write(MessageID ?? MessageId.Empty);
             writer.Write(StatusCode);
             writer.Write(ClanID);
-            
+
             if (writer.MediusVersion == 113)
             {
                 writer.Write(ClanMessageID);
@@ -58,13 +60,14 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"StatusCode: {StatusCode} " +
-                $"ClanID: {ClanID} " +
-                $"ClanMessageID: {ClanMessageID} " +
-                $"Message: {Message} " +
-                $"EndOfList: {EndOfList}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"StatusCode: {StatusCode} "
+                + $"ClanID: {ClanID} "
+                + $"ClanMessageID: {ClanMessageID} "
+                + $"Message: {Message} "
+                + $"EndOfList: {EndOfList}";
         }
     }
 }

@@ -1,27 +1,28 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.AnonymousLogin)]
     public class MediusAnonymousLoginRequest : BaseLobbyMessage, IMediusRequest
     {
-
         public override byte PacketType => (byte)MediusLobbyMessageIds.AnonymousLogin;
 
         /// <summary>
         /// Message ID
         /// </summary>
         public MessageId MessageID { get; set; }
+
         /// <summary>
         /// Session Key
         /// </summary>
         public string SessionKey; // SESSIONKEY_MAXLEN
+
         /// <summary>
         /// SessionDisplayName
         /// </summary>
         public string SessionDisplayName; // ACCOUNTNAME_MAXLEN
+
         /// <summary>
         /// SessionDisplayStats
         /// </summary>
@@ -49,14 +50,14 @@ namespace Horizon.RT.Models
             writer.Write(SessionDisplayStats, Constants.ACCOUNTSTATS_MAXLEN);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"SessionKey: {SessionKey} " +
-                $"SessionDisplayName: {SessionDisplayName} " +
-                $"SessionDisplayStats: {string.Join("", SessionDisplayStats)}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"SessionKey: {SessionKey} "
+                + $"SessionDisplayName: {SessionDisplayName} "
+                + $"SessionDisplayStats: {string.Join("", SessionDisplayStats)}";
         }
     }
 }

@@ -1,50 +1,47 @@
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Xml.Linq;
+using Microsoft.EntityFrameworkCore;
 using WebAPIService.GameServices.PSHOME.VEEMEE.olm.Entities;
 using WebAPIService.LeaderboardService;
 
 namespace WebAPIService.GameServices.PSHOME.VEEMEE.olm
 {
-    internal class OLMScoreBoardData
-    : ScoreboardService<OLMScoreboardEntry>
+    internal class OLMScoreBoardData(
+        DbContextOptions<LeaderboardDbContext> options,
+        object obj = null
+    ) : ScoreboardService<OLMScoreboardEntry>(options)
     {
-        public OLMScoreBoardData(DbContextOptions options, object obj = null)
-            : base(options)
-        {
-        }
-
         public OLMScoreboardEntry GetEntryForUser(string userName)
         {
-            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            using (var db = new LeaderboardDbContext(_dboptions))
             {
                 db.Database.Migrate();
                 return db.Set<OLMScoreboardEntry>()
-                 .Where(x => x.PlayerId == userName)
-                 .FirstOrDefault();
+                    .Where(x => x.PlayerId == userName)
+                    .FirstOrDefault();
             }
         }
 
-        public override async Task UpdateScoreAsync(string playerId, float newScore, List<object> extraData = null)
+        public override async Task UpdateScoreAsync(
+            string playerId,
+            float newScore,
+            List<object> extraData = null
+        )
         {
             if (string.IsNullOrEmpty(playerId))
                 return;
 
-            string throws = (string)extraData[0];
+            var throws = (string)extraData[0];
 
-            using (LeaderboardDbContext db = new LeaderboardDbContext(_dboptions))
+            using (var db = new LeaderboardDbContext(_dboptions))
             {
                 db.Database.Migrate();
                 var set = db.Set<OLMScoreboardEntry>();
-                DateTime now = DateTime.UtcNow; // use UTC for consistency
+                var now = DateTime.UtcNow; // use UTC for consistency
 
-                var existing = await set
-                    .FirstOrDefaultAsync(e =>
-                    e.PlayerId != null &&
-                    e.PlayerId.ToLower() == playerId.ToLower()).ConfigureAwait(false);
+                var existing = await set.FirstOrDefaultAsync(e =>
+                        e.PlayerId != null && e.PlayerId.ToLower() == playerId.ToLower()
+                    )
+                    .ConfigureAwait(false);
 
                 if (existing != null)
                 {
@@ -59,13 +56,16 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.olm
                 }
                 else
                 {
-                    await set.AddAsync(new OLMScoreboardEntry
-                    {
-                        throws = throws,
-                        PlayerId = playerId,
-                        Score = newScore,
-                        UpdatedAt = now // set timestamp for new entry
-                    }).ConfigureAwait(false);
+                    await set.AddAsync(
+                            new OLMScoreboardEntry
+                            {
+                                throws = throws,
+                                PlayerId = playerId,
+                                Score = newScore,
+                                UpdatedAt = now, // set timestamp for new entry
+                            }
+                        )
+                        .ConfigureAwait(false);
                     await db.SaveChangesAsync().ConfigureAwait(false);
                 }
             }
@@ -73,26 +73,30 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.olm
 
         public override async Task<string> SerializeToString(string gameName, int max = 20)
         {
-            XElement xmlScoreboard = new XElement(gameName);
+            var xmlScoreboard = new XElement(gameName);
 
             foreach (var entry in await GetTodayScoresAsync(max))
             {
-                XElement xmlEntry = new XElement("player",
+                var xmlEntry = new XElement(
+                    "player",
                     new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
                     new XElement("score", entry.Score.ToString().Replace(",", ".")),
-                    new XElement("throws", entry.throws ?? "0"));
+                    new XElement("throws", entry.throws ?? "0")
+                );
 
                 xmlScoreboard.Add(xmlEntry);
             }
 
-            XElement xmlGameboard = new XElement("games");
+            var xmlGameboard = new XElement("games");
 
             foreach (var entry in await GetTodayScoresAsync(max))
             {
-                XElement xmlEntry = new XElement("game",
+                var xmlEntry = new XElement(
+                    "game",
                     new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
                     new XElement("score", entry.Score.ToString().Replace(",", ".")),
-                    new XElement("throws", entry.throws ?? "0"));
+                    new XElement("throws", entry.throws ?? "0")
+                );
 
                 xmlGameboard.Add(xmlEntry);
             }
@@ -104,26 +108,30 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.olm
 
         public override async Task<string> SerializeToDailyString(string gameName, int max = 20)
         {
-            XElement xmlScoreboard = new XElement(gameName);
+            var xmlScoreboard = new XElement(gameName);
 
             foreach (var entry in await GetTodayScoresAsync(max))
             {
-                XElement xmlEntry = new XElement("player",
+                var xmlEntry = new XElement(
+                    "player",
                     new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
                     new XElement("score", entry.Score.ToString().Replace(",", ".")),
-                    new XElement("throws", entry.throws ?? "0"));
+                    new XElement("throws", entry.throws ?? "0")
+                );
 
                 xmlScoreboard.Add(xmlEntry);
             }
 
-            XElement xmlGameboard = new XElement("games");
+            var xmlGameboard = new XElement("games");
 
             foreach (var entry in await GetTodayScoresAsync(max))
             {
-                XElement xmlEntry = new XElement("game",
+                var xmlEntry = new XElement(
+                    "game",
                     new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
                     new XElement("score", entry.Score.ToString().Replace(",", ".")),
-                    new XElement("throws", entry.throws ?? "0"));
+                    new XElement("throws", entry.throws ?? "0")
+                );
 
                 xmlGameboard.Add(xmlEntry);
             }
@@ -135,26 +143,30 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE.olm
 
         public override async Task<string> SerializeToWeeklyString(string gameName, int max = 20)
         {
-            XElement xmlScoreboard = new XElement(gameName);
+            var xmlScoreboard = new XElement(gameName);
 
             foreach (var entry in await GetCurrentWeekScoresAsync(max))
             {
-                XElement xmlEntry = new XElement("player",
+                var xmlEntry = new XElement(
+                    "player",
                     new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
                     new XElement("score", entry.Score.ToString().Replace(",", ".")),
-                    new XElement("throws", entry.throws ?? "0"));
+                    new XElement("throws", entry.throws ?? "0")
+                );
 
                 xmlScoreboard.Add(xmlEntry);
             }
 
-            XElement xmlGameboard = new XElement("games");
+            var xmlGameboard = new XElement("games");
 
             foreach (var entry in await GetCurrentWeekScoresAsync(max))
             {
-                XElement xmlEntry = new XElement("game",
+                var xmlEntry = new XElement(
+                    "game",
                     new XElement("psnid", entry.PsnId ?? "Voodooperson05"),
                     new XElement("score", entry.Score.ToString().Replace(",", ".")),
-                    new XElement("throws", entry.throws ?? "0"));
+                    new XElement("throws", entry.throws ?? "0")
+                );
 
                 xmlGameboard.Add(xmlEntry);
             }

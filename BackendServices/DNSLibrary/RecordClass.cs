@@ -1,6 +1,8 @@
-﻿namespace DNS.Protocol {
-    public enum RecordClass {
+﻿namespace DNSLibrary
+{
+    public enum RecordClass
+    {
         IN = 1,
-        ANY = 255,
+        ANY = byte.MaxValue,
     }
 }

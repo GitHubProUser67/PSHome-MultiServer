@@ -1,15 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-//
 // System.Net.ListenerPrefix
-//
 // Author:
 //  Gonzalo Paniagua Javier (gonzalo@novell.com)
 //  Oleg Mihailik (mihailik gmail co_m)
-//
 // Copyright (c) 2005 Novell, Inc. (http://www.novell.com)
-//
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
 // "Software"), to deal in the Software without restriction, including
@@ -17,10 +13,8 @@
 // distribute, sublicense, and/or sell copies of the Software, and to
 // permit persons to whom the Software is furnished to do so, subject to
 // the following conditions:
-//
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 // MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -28,19 +22,15 @@
 // LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-//
 
-using System;
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
-#endif
 using System.Net;
 
 namespace SpaceWizards.HttpListener
 {
     internal sealed class ListenerPrefix
     {
-        private string _original;
+        private readonly string _original;
         private string _host;
         private ushort _port;
         private string _path;
@@ -85,17 +75,10 @@ namespace SpaceWizards.HttpListener
         }
 
         // Equals and GetHashCode are required to detect duplicates in HttpListenerPrefixCollection.
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
         public override bool Equals([NotNullWhen(true)] object o)
-#else
-        public override bool Equals(object o)
-#endif
         {
-            ListenerPrefix other = o as ListenerPrefix;
-            if (other == null)
-                return false;
-
-            return (_original == other._original);
+            var other = o as ListenerPrefix;
+            return other != null && _original == other._original;
         }
 
         public override int GetHashCode()
@@ -112,26 +95,18 @@ namespace SpaceWizards.HttpListener
                 _secure = true;
             }
 
-            int length = uri.Length;
-            int start_host = uri.IndexOf(':') + 3;
+            var length = uri.Length;
+            var start_host = uri.IndexOf(':') + 3;
             if (start_host >= length)
                 throw new ArgumentException(SR.net_listener_host);
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
-            int end_host = ServiceNameStore.FindEndOfHostname(uri, start_host);
-#else
-            int end_host = ServiceNameStore.FindEndOfHostname(uri.AsSpan(), start_host);
-#endif
+            var end_host = ServiceNameStore.FindEndOfHostname(uri, start_host);
             int root;
             if (uri[end_host] == ':')
             {
                 _host = uri.Substring(start_host, end_host - start_host);
                 root = uri.IndexOf('/', end_host, length - end_host);
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
                 _port = (ushort)int.Parse(uri.AsSpan(end_host + 1, root - end_host - 1));
-#else
-                _port = (ushort)int.Parse(uri.AsSpan(end_host + 1, root - end_host - 1).ToString());
-#endif
                 _path = uri.Substring(root);
             }
             else

@@ -1,6 +1,6 @@
 /*
  *   Mentalis.org Security Library
- * 
+ *
  *     Copyright � 2002-2005, The Mentalis.org Team
  *     All rights reserved.
  *     http://www.mentalis.org/
@@ -11,11 +11,11 @@
  *   are met:
  *
  *     - Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer. 
+ *        notice, this list of conditions and the following disclaimer.
  *
  *     - Neither the name of the Mentalis.org Team, nor the names of its contributors
  *        may be used to endorse or promote products derived from this
- *        software without specific prior written permission. 
+ *        software without specific prior written permission.
  *
  *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -31,47 +31,54 @@
  *   OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-using System;
-
-namespace Org.Mentalis.Security.Ssl.Shared
+namespace CastleLibrary.FixedSsl.Security.Ssl.Shared
 {
-    internal class RecordMessage {
-		public RecordMessage(MessageType messageType, ContentType contentType, ProtocolVersion version, byte[] bytes) {
-			this.messageType = messageType;
-			this.contentType = contentType;
-			this.version = version;
-			if (bytes != null)
-				this.fragment = bytes;
-			else
-				this.fragment = new byte[0];
-			this.length = (ushort)this.fragment.Length;
-		}
-		public RecordMessage(byte[] bytes, int offset) {
-			if (bytes == null)
-				throw new ArgumentNullException();
-			if (offset < 0 || offset >= bytes.Length)
-				throw new ArgumentException();
-			this.messageType = MessageType.Encrypted;
-			this.contentType = (ContentType)bytes[offset];
-			this.version = new ProtocolVersion(bytes[offset + 1], bytes[offset + 2]);
-			this.length = (ushort)(bytes[offset + 3] * 256 + bytes[offset + 4]);
-			this.fragment = new byte[this.length];
-			Array.Copy(bytes, offset + 5, this.fragment, 0, this.length);
-		}
-		public byte[] ToBytes() {
-			byte[] ret = new byte[fragment.Length + 5];
-			ret[0] = (byte)contentType;
-			ret[1] = version.major;
-			ret[2] = version.minor;
-			ret[3] = (byte)(length / 256);
-			ret[4] = (byte)(length % 256);
-			Array.Copy(fragment, 0, ret, 5, fragment.Length);
-			return ret;
-		}
-		public MessageType messageType;
-		public ContentType contentType;
-		public ProtocolVersion version;
-		public ushort length;
-		public byte[] fragment;
-	}
+    internal class RecordMessage
+    {
+        public RecordMessage(
+            MessageType messageType,
+            ContentType contentType,
+            ProtocolVersion version,
+            byte[] bytes
+        )
+        {
+            this.messageType = messageType;
+            this.contentType = contentType;
+            this.version = version;
+            fragment = bytes ?? Array.Empty<byte>();
+            length = (ushort)fragment.Length;
+        }
+
+        public RecordMessage(byte[] bytes, int offset)
+        {
+            if (bytes == null)
+                throw new ArgumentNullException();
+            else if (offset < 0 || offset >= bytes.Length)
+                throw new ArgumentException();
+            messageType = MessageType.Encrypted;
+            contentType = (ContentType)bytes[offset];
+            version = new ProtocolVersion(bytes[offset + 1], bytes[offset + 2]);
+            length = (ushort)((bytes[offset + 3] * 256) + bytes[offset + 4]);
+            fragment = new byte[length];
+            Array.Copy(bytes, offset + 5, fragment, 0, length);
+        }
+
+        public byte[] ToBytes()
+        {
+            var ret = new byte[fragment.Length + 5];
+            ret[0] = (byte)contentType;
+            ret[1] = version.major;
+            ret[2] = version.minor;
+            ret[3] = (byte)(length / 256);
+            ret[4] = (byte)(length % 256);
+            Array.Copy(fragment, 0, ret, 5, fragment.Length);
+            return ret;
+        }
+
+        public MessageType messageType;
+        public ContentType contentType;
+        public ProtocolVersion version;
+        public ushort length;
+        public byte[] fragment;
+    }
 }

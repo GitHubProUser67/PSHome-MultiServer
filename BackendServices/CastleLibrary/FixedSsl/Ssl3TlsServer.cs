@@ -1,74 +1,58 @@
-using Org.BouncyCastle.Crypto;
+using CastleLibrary.FixedSsl.Crypto;
 using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
-using System.Linq;
 
-namespace FixedSsl;
-
-public class Ssl3TlsServer : DefaultTlsServer
+namespace CastleLibrary.FixedSsl
 {
-    private readonly Certificate _serverCertificate;
-    private readonly AsymmetricKeyParameter _serverPrivateKey;
-    private readonly BcTlsCrypto _crypto;
-
-    public Ssl3TlsServer(BcTlsCrypto crypto, Certificate serverCertificate, AsymmetricKeyParameter serverPrivateKey) : base(crypto)
+    public class Ssl3TlsServer(BCSSLCertificate certificate) : DefaultTlsServer(_crypto)
     {
-        _crypto = crypto;
-        _serverCertificate = serverCertificate;
-        _serverPrivateKey = serverPrivateKey;
-    }
+        private static readonly Rc4TlsCrypto _crypto =
+#if DEBUG
+        new(true)
+#else
+        new(false)
+#endif
+        ;
+        private readonly BCSSLCertificate _certificate = certificate;
 
-    public static readonly int[] AESCipherSuites = new int[]
-    {
-        CipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA,
-        CipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA,
-    };
+        public static ProtocolVersion[] SupportedProtocols => ProtoSSL.SupportedProtocols;
+        public ProtocolVersion ServerVersion { get; internal set; } = ProtocolVersion.SSLv3; // Minimum version
 
-    public static readonly int[] RC4CipherSuites = new int[]
-    {
-        CipherSuite.TLS_RSA_WITH_RC4_128_MD5,
-        CipherSuite.TLS_RSA_WITH_RC4_128_SHA
-    };
+        public override ProtocolVersion GetServerVersion() => ServerVersion;
 
-    private static readonly ProtocolVersion[] _supportedVersions = new ProtocolVersion[]
-    {
-        ProtocolVersion.SSLv3,
-        ProtocolVersion.TLSv10,
-        ProtocolVersion.TLSv11
-    };
+        protected override ProtocolVersion[] GetSupportedVersions() => SupportedProtocols;
 
-    public override ProtocolVersion GetServerVersion()
-    {
-        return _supportedVersions[0];
-    }
+        public override int[] GetCipherSuites() => ProtoSSL.GetCipherSuites(GetSupportedVersions());
 
-    protected override ProtocolVersion[] GetSupportedVersions()
-    {
-        return _supportedVersions;
-    }
+        protected override int[] GetSupportedCipherSuites() =>
+            TlsUtilities.GetSupportedCipherSuites(_crypto, GetCipherSuites());
 
-    public override int[] GetCipherSuites()
-    {
-        return AESCipherSuites.Concat(RC4CipherSuites).ToArray();
-    }
-
-    protected override int[] GetSupportedCipherSuites()
-    {
-        return AESCipherSuites.Concat(RC4CipherSuites).ToArray();
-    }
-
-    public override void NotifySecureRenegotiation(bool secureRenegotiation)
-    {
-        if (!secureRenegotiation)
+        protected override bool SelectCipherSuite(int cipherSuite)
         {
-            secureRenegotiation = true;
+            int keyExchangeAlgorithm = TlsUtilities.GetKeyExchangeAlgorithm(cipherSuite);
+
+            if (KeyExchangeAlgorithm.IsAnonymous(keyExchangeAlgorithm))
+                return base.SelectCipherSuite(cipherSuite);
+
+            if (keyExchangeAlgorithm != KeyExchangeAlgorithm.RSA)
+                return false;
+
+            return base.SelectCipherSuite(cipherSuite);
         }
 
-        base.NotifySecureRenegotiation(secureRenegotiation);
-    }
+        public override void NotifySecureRenegotiation(bool secureRenegotiation)
+        {
+            secureRenegotiation = true;
+            base.NotifySecureRenegotiation(secureRenegotiation);
+        }
 
-    protected override TlsCredentialedDecryptor GetRsaEncryptionCredentials()
-    {
-        return new BcDefaultTlsCredentialedDecryptor(_crypto, _serverCertificate, _serverPrivateKey);
+        protected override TlsCredentialedDecryptor GetRsaEncryptionCredentials()
+        {
+            return new BcDefaultTlsCredentialedDecryptor(
+                _crypto,
+                _certificate.Certificate,
+                _certificate.PrivateKey
+            );
+        }
     }
 }

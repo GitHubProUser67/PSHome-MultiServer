@@ -1,9 +1,8 @@
-#if NET6_0_OR_GREATER
-using CustomLogger;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using System.Text;
+using CustomLogger;
 
 namespace Prometheus;
 
@@ -41,7 +40,8 @@ public sealed class MeterAdapter : IDisposable
         _registry = options.Registry;
 
         var baseFactory = options.MetricFactory ?? Metrics.WithCustomRegistry(_options.Registry);
-        _factory = (ManagedLifetimeMetricFactory)baseFactory.WithManagedLifetime(expiresAfter: options.MetricsExpireAfter);
+        _factory = (ManagedLifetimeMetricFactory)
+            baseFactory.WithManagedLifetime(expiresAfter: options.MetricsExpireAfter);
 
         _inheritedStaticLabelNames = _factory.GetAllStaticLabelNames().ToArray();
 
@@ -56,21 +56,26 @@ public sealed class MeterAdapter : IDisposable
         _listener.SetMeasurementEventCallback<decimal>(OnMeasurementRecorded);
 
         var regularFactory = Metrics.WithCustomRegistry(_registry);
-        _instrumentsConnected = regularFactory.CreateGauge("prometheus_net_meteradapter_instruments_connected", "Number of instruments that are currently connected to the adapter.");
+        _instrumentsConnected = regularFactory.CreateGauge(
+            "prometheus_net_meteradapter_instruments_connected",
+            "Number of instruments that are currently connected to the adapter."
+        );
 
         _listener.Start();
 
-        _registry.AddBeforeCollectCallback(delegate
-        {
-            // ICollectorRegistry does not support unregistering the callback, so we just no-op when disposed.
-            // The expected pattern is that any disposal of the pipeline also throws away the ICollectorRegistry.
-            lock (_disposedLock)
-                if (_disposed)
-                    return;
+        _registry.AddBeforeCollectCallback(
+            delegate
+            {
+                // ICollectorRegistry does not support unregistering the callback, so we just no-op when disposed.
+                // The expected pattern is that any disposal of the pipeline also throws away the ICollectorRegistry.
+                lock (_disposedLock)
+                    if (_disposed)
+                        return;
 
-            // Seems OK to call even when _listener has been disposed.
-            _listener.RecordObservableInstruments();
-        });
+                // Seems OK to call even when _listener has been disposed.
+                _listener.RecordObservableInstruments();
+            }
+        );
     }
 
     private readonly MeterAdapterOptions _options;
@@ -81,7 +86,7 @@ public sealed class MeterAdapter : IDisposable
 
     private readonly Gauge _instrumentsConnected;
 
-    private readonly MeterListener _listener = new MeterListener();
+    private readonly MeterListener _listener = new();
 
     private bool _disposed;
     private readonly object _disposedLock = new();
@@ -106,8 +111,14 @@ public sealed class MeterAdapter : IDisposable
 
         _instrumentsConnected.Inc();
 
-        _instrumentPrometheusNames.TryAdd(instrument, TranslateInstrumentNameToPrometheusName(instrument));
-        _instrumentPrometheusHelp.TryAdd(instrument, TranslateInstrumentDescriptionToPrometheusHelp(instrument));
+        _instrumentPrometheusNames.TryAdd(
+            instrument,
+            TranslateInstrumentNameToPrometheusName(instrument)
+        );
+        _instrumentPrometheusHelp.TryAdd(
+            instrument,
+            TranslateInstrumentDescriptionToPrometheusHelp(instrument)
+        );
 
         try
         {
@@ -118,7 +129,9 @@ public sealed class MeterAdapter : IDisposable
         {
             // Eat exceptions here to ensure no harm comes of failed enabling.
             // The previous generation EventCounter infrastructure has proven quite buggy and while Meters may not be afflicted with the same problems, let's be paranoid.
-            LoggerAccessor.LogError($"[MeterAdapter] - OnInstrumentPublished: Failed to enable Meter listening for {instrument.Name}: {ex.Message}");
+            LoggerAccessor.LogError(
+                $"[MeterAdapter] - OnInstrumentPublished: Failed to enable Meter listening for {instrument.Name}: {ex.Message}"
+            );
         }
     }
 
@@ -126,7 +139,8 @@ public sealed class MeterAdapter : IDisposable
         Instrument instrument,
         TMeasurement measurement,
         ReadOnlySpan<KeyValuePair<string, object?>> tags,
-        object? state)
+        object? state
+    )
         where TMeasurement : struct
     {
         // NOTE: If we throw an exception from this, it can lead to the instrument becoming inoperable (no longer measured). Let's not do that.
@@ -137,17 +151,21 @@ public sealed class MeterAdapter : IDisposable
 
         try
         {
-            double value = unchecked(measurement switch
-            {
-                byte x => x,
-                short x => x,
-                int x => x,
-                long x => x,
-                float x => (double)x,
-                double x => x,
-                decimal x => (double)x,
-                _ => throw new NotSupportedException($"Measurement type {typeof(TMeasurement).Name} is not supported.")
-            });
+            var value = unchecked(
+                measurement switch
+                {
+                    byte x => x,
+                    short x => x,
+                    int x => x,
+                    long x => x,
+                    float x => (double)x,
+                    double x => x,
+                    decimal x => (double)x,
+                    _ => throw new NotSupportedException(
+                        $"Measurement type {typeof(TMeasurement).Name} is not supported."
+                    ),
+                }
+            );
 
             // We do not represent any of the "counter" style .NET meter types as counters because
             // they may be re-created on the .NET Meters side at any time, decrementing the value!
@@ -155,7 +173,11 @@ public sealed class MeterAdapter : IDisposable
             if (instrument is Counter<TMeasurement>)
             {
                 var context = GetOrCreateGaugeContext(instrument, tags);
-                var labelValues = CopyTagValuesToLabelValues(context.PrometheusLabelValueIndexes, tags, labelValuesBuffer.AsSpan());
+                var labelValues = CopyTagValuesToLabelValues(
+                    context.PrometheusLabelValueIndexes,
+                    tags,
+                    labelValuesBuffer.AsSpan()
+                );
 
                 // A measurement is the increment.
                 context.MetricInstanceHandle.WithLease(_incrementGaugeFunc, value, labelValues);
@@ -163,29 +185,37 @@ public sealed class MeterAdapter : IDisposable
             else if (instrument is ObservableCounter<TMeasurement>)
             {
                 var context = GetOrCreateGaugeContext(instrument, tags);
-                var labelValues = CopyTagValuesToLabelValues(context.PrometheusLabelValueIndexes, tags, labelValuesBuffer.AsSpan());
+                var labelValues = CopyTagValuesToLabelValues(
+                    context.PrometheusLabelValueIndexes,
+                    tags,
+                    labelValuesBuffer.AsSpan()
+                );
 
                 // A measurement is the current value. We transform it into a Set() to allow the counter to reset itself (unusual but who are we to say no).
                 context.MetricInstanceHandle.WithLease(_setGaugeFunc, value, labelValues);
             }
-#if NET7_0_OR_GREATER
             else if (instrument is UpDownCounter<TMeasurement>)
             {
                 var context = GetOrCreateGaugeContext(instrument, tags);
-                var labelValues = CopyTagValuesToLabelValues(context.PrometheusLabelValueIndexes, tags, labelValuesBuffer.AsSpan());
+                var labelValues = CopyTagValuesToLabelValues(
+                    context.PrometheusLabelValueIndexes,
+                    tags,
+                    labelValuesBuffer.AsSpan()
+                );
 
                 // A measurement is the increment.
                 context.MetricInstanceHandle.WithLease(_incrementGaugeFunc, value, labelValues);
             }
-#endif
-            else if (instrument is ObservableGauge<TMeasurement>
-#if NET7_0_OR_GREATER
-                or ObservableUpDownCounter<TMeasurement>
-#endif
-                )
+            else if (
+                instrument is ObservableGauge<TMeasurement> or ObservableUpDownCounter<TMeasurement>
+            )
             {
                 var context = GetOrCreateGaugeContext(instrument, tags);
-                var labelValues = CopyTagValuesToLabelValues(context.PrometheusLabelValueIndexes, tags, labelValuesBuffer.AsSpan());
+                var labelValues = CopyTagValuesToLabelValues(
+                    context.PrometheusLabelValueIndexes,
+                    tags,
+                    labelValuesBuffer.AsSpan()
+                );
 
                 // A measurement is the current value.
                 context.MetricInstanceHandle.WithLease(_setGaugeFunc, value, labelValues);
@@ -193,17 +223,25 @@ public sealed class MeterAdapter : IDisposable
             else if (instrument is Histogram<TMeasurement>)
             {
                 var context = GetOrCreateHistogramContext(instrument, tags);
-                var labelValues = CopyTagValuesToLabelValues(context.PrometheusLabelValueIndexes, tags, labelValuesBuffer.AsSpan());
+                var labelValues = CopyTagValuesToLabelValues(
+                    context.PrometheusLabelValueIndexes,
+                    tags,
+                    labelValuesBuffer.AsSpan()
+                );
 
                 // A measurement is the observed value.
                 context.MetricInstanceHandle.WithLease(_observeHistogramFunc, value, labelValues);
             }
             else
-                LoggerAccessor.LogWarn($"[MeterAdapter] - OnMeasurementRecorded: Instrument {instrument.Name} is of an unsupported type: {instrument.GetType().Name}.");
+                LoggerAccessor.LogWarn(
+                    $"[MeterAdapter] - OnMeasurementRecorded: Instrument {instrument.Name} is of an unsupported type: {instrument.GetType().Name}."
+                );
         }
         catch (Exception ex)
         {
-            LoggerAccessor.LogError($"[MeterAdapter] - OnMeasurementRecorded: {instrument.Name} collection failed: {ex.Message}");
+            LoggerAccessor.LogError(
+                $"[MeterAdapter] - OnMeasurementRecorded: {instrument.Name} collection failed: {ex.Message}"
+            );
         }
         finally
         {
@@ -212,17 +250,22 @@ public sealed class MeterAdapter : IDisposable
     }
 
     private static void IncrementGauge(double value, IGauge gauge) => gauge.Inc(value);
+
     private static readonly Action<double, IGauge> _incrementGaugeFunc = IncrementGauge;
 
     private static void SetGauge(double value, IGauge gauge) => gauge.Set(value);
+
     private static readonly Action<double, IGauge> _setGaugeFunc = SetGauge;
 
-    private static void ObserveHistogram(double value, IHistogram histogram) => histogram.Observe(value);
+    private static void ObserveHistogram(double value, IHistogram histogram) =>
+        histogram.Observe(value);
+
     private static readonly Action<double, IHistogram> _observeHistogramFunc = ObserveHistogram;
 
     // Cache key: Instrument + user-ordered list of label names.
     //   NB! The same Instrument may be cached multiple times, with the same label names in a different order!
-    private readonly struct CacheKey(Instrument instrument, StringSequence meterLabelNames) : IEquatable<CacheKey>
+    private readonly struct CacheKey(Instrument instrument, StringSequence meterLabelNames)
+        : IEquatable<CacheKey>
     {
         public Instrument Instrument { get; } = instrument;
 
@@ -232,54 +275,104 @@ public sealed class MeterAdapter : IDisposable
         public override readonly bool Equals(object? obj) => obj is CacheKey other && Equals(other);
 
         public override readonly int GetHashCode() => _hashCode;
+
         private readonly int _hashCode = HashCode.Combine(instrument, meterLabelNames);
 
-        public readonly bool Equals(CacheKey other) => Instrument == other.Instrument && MeterLabelNames.Equals(other.MeterLabelNames);
+        public readonly bool Equals(CacheKey other) =>
+            Instrument == other.Instrument && MeterLabelNames.Equals(other.MeterLabelNames);
     }
 
     // Cache value: Prometheus metric handle + Prometheus-ordered indexes into original Meters tags list.
     //   Not all Meter tags may be preserved, as some may have conflicted with static labels and been filtered out.
     private sealed class MetricContext<TMetricInterface>(
         IManagedLifetimeMetricHandle<TMetricInterface> metricInstanceHandle,
-        int[] prometheusLabelValueIndexes)
+        int[] prometheusLabelValueIndexes
+    )
         where TMetricInterface : ICollectorChild
     {
-        public IManagedLifetimeMetricHandle<TMetricInterface> MetricInstanceHandle { get; } = metricInstanceHandle;
+        public IManagedLifetimeMetricHandle<TMetricInterface> MetricInstanceHandle { get; } =
+            metricInstanceHandle;
 
         // Index into the .NET Meters API labels list, indicating which original label to take the value from.
         public int[] PrometheusLabelValueIndexes { get; } = prometheusLabelValueIndexes;
     }
 
-    private readonly Dictionary<CacheKey, MetricContext<IGauge>> _gaugeCache = new();
+    private readonly Dictionary<CacheKey, MetricContext<IGauge>> _gaugeCache = [];
     private readonly ReaderWriterLockSlim _gaugeCacheLock = new();
 
-    private readonly Dictionary<CacheKey, MetricContext<IHistogram>> _histogramCache = new();
+    private readonly Dictionary<CacheKey, MetricContext<IHistogram>> _histogramCache = [];
     private readonly ReaderWriterLockSlim _histogramCacheLock = new();
 
-    private MetricContext<IGauge> GetOrCreateGaugeContext(Instrument instrument, in ReadOnlySpan<KeyValuePair<string, object?>> tags)
-        => GetOrCreateMetricContext(instrument, tags, _createGaugeFunc, _gaugeCacheLock, _gaugeCache);
+    private MetricContext<IGauge> GetOrCreateGaugeContext(
+        Instrument instrument,
+        in ReadOnlySpan<KeyValuePair<string, object?>> tags
+    ) => GetOrCreateMetricContext(instrument, tags, _createGaugeFunc, _gaugeCacheLock, _gaugeCache);
 
-    private MetricContext<IHistogram> GetOrCreateHistogramContext(Instrument instrument, in ReadOnlySpan<KeyValuePair<string, object?>> tags)
-        => GetOrCreateMetricContext(instrument, tags, _createHistogramFunc, _histogramCacheLock, _histogramCache);
+    private MetricContext<IHistogram> GetOrCreateHistogramContext(
+        Instrument instrument,
+        in ReadOnlySpan<KeyValuePair<string, object?>> tags
+    ) =>
+        GetOrCreateMetricContext(
+            instrument,
+            tags,
+            _createHistogramFunc,
+            _histogramCacheLock,
+            _histogramCache
+        );
 
-    private IManagedLifetimeMetricHandle<IGauge> CreateGauge(Instrument instrument, string name, string help, string[] labelNames)
-        => _factory.CreateGauge(name, help, labelNames, null);
-    private readonly Func<Instrument, string, string, string[], IManagedLifetimeMetricHandle<IGauge>> _createGaugeFunc;
+    private IManagedLifetimeMetricHandle<IGauge> CreateGauge(
+        Instrument instrument,
+        string name,
+        string help,
+        string[] labelNames
+    ) => _factory.CreateGauge(name, help, labelNames, null);
 
-    private IManagedLifetimeMetricHandle<IHistogram> CreateHistogram(Instrument instrument, string name, string help, string[] labelNames)
-        => _factory.CreateHistogram(name, help, labelNames, new HistogramConfiguration
-        {
-            // We outsource the bucket definition to the callback in options, as it might need to be different for different instruments.
-            Buckets = _options.ResolveHistogramBuckets(instrument)
-        });
-    private readonly Func<Instrument, string, string, string[], IManagedLifetimeMetricHandle<IHistogram>> _createHistogramFunc;
+    private readonly Func<
+        Instrument,
+        string,
+        string,
+        string[],
+        IManagedLifetimeMetricHandle<IGauge>
+    > _createGaugeFunc;
+
+    private IManagedLifetimeMetricHandle<IHistogram> CreateHistogram(
+        Instrument instrument,
+        string name,
+        string help,
+        string[] labelNames
+    ) =>
+        _factory.CreateHistogram(
+            name,
+            help,
+            labelNames,
+            new HistogramConfiguration
+            {
+                // We outsource the bucket definition to the callback in options, as it might need to be different for different instruments.
+                Buckets = _options.ResolveHistogramBuckets(instrument),
+            }
+        );
+
+    private readonly Func<
+        Instrument,
+        string,
+        string,
+        string[],
+        IManagedLifetimeMetricHandle<IHistogram>
+    > _createHistogramFunc;
 
     private MetricContext<TMetricInstance> GetOrCreateMetricContext<TMetricInstance>(
         Instrument instrument,
         in ReadOnlySpan<KeyValuePair<string, object?>> tags,
-        Func<Instrument, string, string, string[], IManagedLifetimeMetricHandle<TMetricInstance>> metricFactory,
+        Func<
+            Instrument,
+            string,
+            string,
+            string[],
+            IManagedLifetimeMetricHandle<TMetricInstance>
+        > metricFactory,
         ReaderWriterLockSlim cacheLock,
-        Dictionary<CacheKey, MetricContext<TMetricInstance>> cache)
+        Dictionary<CacheKey, MetricContext<TMetricInstance>> cache
+    )
         where TMetricInstance : ICollectorChild
     {
         // Use a pooled array for the cache key if we are performing a lookup.
@@ -292,7 +385,9 @@ public sealed class MeterAdapter : IDisposable
             for (var i = 0; i < tags.Length; i++)
                 meterLabelNamesBuffer[i] = tags[i].Key;
 
-            var meterLabelNames = StringSequence.From(meterLabelNamesBuffer.AsMemory(0, meterLabelNamesCount));
+            var meterLabelNames = StringSequence.From(
+                meterLabelNamesBuffer.AsMemory(0, meterLabelNamesCount)
+            );
             var cacheKey = new CacheKey(instrument, meterLabelNames);
 
             cacheLock.EnterReadLock();
@@ -320,9 +415,16 @@ public sealed class MeterAdapter : IDisposable
     private MetricContext<TMetricInstance> CreateMetricContext<TMetricInstance>(
         Instrument instrument,
         in ReadOnlySpan<KeyValuePair<string, object?>> tags,
-        Func<Instrument, string, string, string[], IManagedLifetimeMetricHandle<TMetricInstance>> metricFactory,
+        Func<
+            Instrument,
+            string,
+            string,
+            string[],
+            IManagedLifetimeMetricHandle<TMetricInstance>
+        > metricFactory,
         ReaderWriterLockSlim cacheLock,
-        Dictionary<CacheKey, MetricContext<TMetricInstance>> cache)
+        Dictionary<CacheKey, MetricContext<TMetricInstance>> cache
+    )
         where TMetricInstance : ICollectorChild
     {
         var meterLabelNamesBuffer = new string[tags.Length];
@@ -334,28 +436,28 @@ public sealed class MeterAdapter : IDisposable
         var cacheKey = new CacheKey(instrument, meterLabelNames);
 
         // Create the context before taking any locks, to avoid holding the cache too long.
-        DeterminePrometheusLabels(tags, out var prometheusLabelNames, out var prometheusLabelValueIndexes);
-        var metricHandle = metricFactory(instrument, _instrumentPrometheusNames[instrument], _instrumentPrometheusHelp[instrument], prometheusLabelNames);
-        var newContext = new MetricContext<TMetricInstance>(metricHandle, prometheusLabelValueIndexes);
+        DeterminePrometheusLabels(
+            tags,
+            out var prometheusLabelNames,
+            out var prometheusLabelValueIndexes
+        );
+        var metricHandle = metricFactory(
+            instrument,
+            _instrumentPrometheusNames[instrument],
+            _instrumentPrometheusHelp[instrument],
+            prometheusLabelNames
+        );
+        var newContext = new MetricContext<TMetricInstance>(
+            metricHandle,
+            prometheusLabelValueIndexes
+        );
 
         cacheLock.EnterWriteLock();
 
         try
         {
-#if NET
             // It could be that someone beats us to it! Probably not, though.
-            if (cache.TryAdd(cacheKey, newContext))
-                return newContext;
-
-            return cache[cacheKey];
-#else
-            // On .NET Fx we need to do the pessimistic case first because there is no TryAdd().
-            if (cache.TryGetValue(cacheKey, out var context))
-                return context;
-
-            cache.Add(cacheKey, newContext);
-            return newContext;
-#endif
+            return cache.TryAdd(cacheKey, newContext) ? newContext : cache[cacheKey];
         }
         finally
         {
@@ -366,7 +468,8 @@ public sealed class MeterAdapter : IDisposable
     private void DeterminePrometheusLabels(
         in ReadOnlySpan<KeyValuePair<string, object?>> tags,
         out string[] prometheusLabelNames,
-        out int[] prometheusLabelValueIndexes)
+        out int[] prometheusLabelValueIndexes
+    )
     {
         var originalsCount = tags.Length;
 
@@ -381,7 +484,10 @@ public sealed class MeterAdapter : IDisposable
         {
             for (var i = 0; i < tags.Length; i++)
             {
-                var prometheusName = _tagPrometheusNames.GetOrAdd(tags[i].Key, _translateTagNameToPrometheusNameFunc);
+                var prometheusName = _tagPrometheusNames.GetOrAdd(
+                    tags[i].Key,
+                    _translateTagNameToPrometheusNameFunc
+                );
 
                 namesBuffer[i] = prometheusName;
                 indexesBuffer[i] = i;
@@ -389,7 +495,13 @@ public sealed class MeterAdapter : IDisposable
 
             // The order of labels matters in the prometheus-net API. However, in .NET Meters the tags are unordered.
             // Therefore, we need to sort the labels to ensure that we always create metrics with the same order.
-            Array.Sort(keys: namesBuffer, items: indexesBuffer, index: 0, length: originalsCount, StringComparer.Ordinal);
+            Array.Sort(
+                keys: namesBuffer,
+                items: indexesBuffer,
+                index: 0,
+                length: originalsCount,
+                StringComparer.Ordinal
+            );
 
             // NOTE: As we accept random input from external code here, there is no guarantee that the labels in this code
             // do not conflict with existing static labels. We must therefore take explicit action here to prevent conflict
@@ -400,7 +512,10 @@ public sealed class MeterAdapter : IDisposable
 
             for (var i = 0; i < tags.Length; i++)
             {
-                skipFlagsBuffer[i] = _inheritedStaticLabelNames.Contains(namesBuffer[i], StringComparer.Ordinal);
+                skipFlagsBuffer[i] = _inheritedStaticLabelNames.Contains(
+                    namesBuffer[i],
+                    StringComparer.Ordinal
+                );
 
                 if (skipFlagsBuffer[i] == false)
                     preservedLabelCount++;
@@ -444,7 +559,8 @@ public sealed class MeterAdapter : IDisposable
     private static ReadOnlySpan<string> CopyTagValuesToLabelValues(
         int[] prometheusLabelValueIndexes,
         ReadOnlySpan<KeyValuePair<string, object?>> tags,
-        Span<string> labelValues)
+        Span<string> labelValues
+    )
     {
         for (var i = 0; i < prometheusLabelValueIndexes.Length; i++)
         {
@@ -456,8 +572,10 @@ public sealed class MeterAdapter : IDisposable
     }
 
     // We use these dictionaries to register Prometheus metrics on-demand for different instruments.
-    private static readonly ConcurrentDictionary<Instrument, string> _instrumentPrometheusNames = new();
-    private static readonly ConcurrentDictionary<Instrument, string> _instrumentPrometheusHelp = new();
+    private static readonly ConcurrentDictionary<Instrument, string> _instrumentPrometheusNames =
+        new();
+    private static readonly ConcurrentDictionary<Instrument, string> _instrumentPrometheusHelp =
+        new();
 
     // We use this dictionary to translate tag names on-demand.
     // Immortal set, we assume we do not get an infinite mix of tag names.
@@ -468,7 +586,9 @@ public sealed class MeterAdapter : IDisposable
         // Example input: meter "Foo.Bar.Baz" with instrument "walla-walla"
         // Example output: foo_bar_baz_walla_walla
 
-        return PrometheusNameHelpers.TranslateNameToPrometheusName($"{instrument.Meter.Name}_{instrument.Name}");
+        return PrometheusNameHelpers.TranslateNameToPrometheusName(
+            $"{instrument.Meter.Name}_{instrument.Name}"
+        );
     }
 
     private static string TranslateTagNameToPrometheusName(string tagName)
@@ -479,7 +599,8 @@ public sealed class MeterAdapter : IDisposable
         return PrometheusNameHelpers.TranslateNameToPrometheusName(tagName);
     }
 
-    private static readonly Func<string, string> _translateTagNameToPrometheusNameFunc = TranslateTagNameToPrometheusName;
+    private static readonly Func<string, string> _translateTagNameToPrometheusNameFunc =
+        TranslateTagNameToPrometheusName;
 
     [ThreadStatic]
     private static StringBuilder? _prometheusHelpBuilder;
@@ -510,4 +631,3 @@ public sealed class MeterAdapter : IDisposable
         return result;
     }
 }
-#endif

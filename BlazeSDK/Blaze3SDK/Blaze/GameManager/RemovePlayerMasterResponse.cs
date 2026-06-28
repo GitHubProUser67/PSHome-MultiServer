@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct RemovePlayerMasterResponse
-	{
+    [TdfStruct]
+    public struct RemovePlayerMasterResponse
+    {
+        [TdfMember("GID")]
+        public uint mGameId;
 
-		[TdfMember("GID")]
-		public uint mGameId;
-
-		[TdfMember("GPLY")]
-		public ReplicatedGamePlayer mPlayer;
-
-	}
+        [TdfMember("GPLY")]
+        public ReplicatedGamePlayer mPlayer;
+    }
 }

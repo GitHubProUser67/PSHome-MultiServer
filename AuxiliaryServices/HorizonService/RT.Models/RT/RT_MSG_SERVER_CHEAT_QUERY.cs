@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -36,12 +35,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"QueryType: {QueryType} " +
-                $"SequenceId: {SequenceId} " +
-                $"StartAddress: {StartAddress:X8} " +
-                $"Length: {Length} " +
-                $"Data :{(Data == null ? "" : System.BitConverter.ToString(Data))}";
+            return base.ToString()
+                + " "
+                + $"QueryType: {QueryType} "
+                + $"SequenceId: {SequenceId} "
+                + $"StartAddress: {StartAddress:X8} "
+                + $"Length: {Length} "
+                + $"Data :{(Data == null ? "" : System.BitConverter.ToString(Data))}";
         }
     }
 }

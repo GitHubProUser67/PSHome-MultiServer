@@ -1,11 +1,11 @@
-﻿
-namespace ZTn.Json.JsonTreeView.Generic
+﻿namespace ZTn.Json.JsonTreeView.Generic
 {
     /// <summary>
     /// Simple singleton allowing unicity insurance of a generic type <typeparamref name="T"/> instance.
     /// </summary>
     /// <typeparam name="T">Type of the unique instance.</typeparam>
-    sealed class SingleInstanceProvider<T> where T : class, new()
+    sealed class SingleInstanceProvider<T>
+        where T : class, new()
     {
         #region >> Fields
 
@@ -19,7 +19,7 @@ namespace ZTn.Json.JsonTreeView.Generic
         /// Get the <typeparamref name="T"/> instance stored in this singleton.
         /// The instance is created on the first call.
         /// </summary>
-        public static T Value => _instance ?? (_instance = new T());
+        public static T Value => _instance ??= new T();
 
         #endregion
     }

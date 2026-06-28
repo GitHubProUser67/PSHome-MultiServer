@@ -1,13 +1,14 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyReport, MediusMGCLMessageIds.ServerCreateGameRequest)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyReport,
+        MediusMGCLMessageIds.ServerCreateGameRequest
+    )]
     public class MediusServerCreateGameRequest : BaseMGCLMessage, IMediusRequest
     {
-
         public override byte PacketType => (byte)MediusMGCLMessageIds.ServerCreateGameRequest;
 
         public MessageId MessageID { get; set; }
@@ -34,13 +35,13 @@ namespace Horizon.RT.Models
             writer.Write(MaxClients);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"ApplicationID: {ApplicationID} " +
-                $"MaxClients: {MaxClients}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"ApplicationID: {ApplicationID} "
+                + $"MaxClients: {MaxClients}";
         }
     }
 }

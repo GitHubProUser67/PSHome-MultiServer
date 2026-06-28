@@ -1,7 +1,7 @@
-using CustomLogger;
-using QuazalServer.QNetZ;
 using System.Reflection;
 using System.Text;
+using CustomLogger;
+using QuazalServer.QNetZ;
 
 namespace QuazalServer.RDVServices.RMC
 {
@@ -50,7 +50,9 @@ namespace QuazalServer.RDVServices.RMC
                 }
                 catch
                 {
-                    LoggerAccessor.LogError("[RMC Packet] - Unknown RMC packet protocol 0x" + b.ToString("X2"));
+                    LoggerAccessor.LogError(
+                        "[RMC Packet] - Unknown RMC packet protocol 0x" + b.ToString("X2")
+                    );
                     return;
                 }
 
@@ -82,9 +84,12 @@ namespace QuazalServer.RDVServices.RMC
 
         public override string ToString()
         {
-            string methodName = methodID.ToString();
+            var methodName = methodID.ToString();
 
-            var serviceFactory = handler.Factory.Item2.GetServiceFactory(proto, handler.Factory.Item1);
+            var serviceFactory = handler.Factory.Item2.GetServiceFactory(
+                proto,
+                handler.Factory.Item1
+            );
             MethodInfo? bestMethod = null;
             if (serviceFactory != null)
             {
@@ -113,17 +118,17 @@ namespace QuazalServer.RDVServices.RMC
             if (proto < 0x7F)
             {
                 // request has 0x80 flag
-                uint protoIdent = (uint)proto | (isRequest ? 0x80u : 0x0u);
+                var protoIdent = (uint)proto | (isRequest ? 0x80u : 0x0u);
                 Helper.WriteU8(packetData, (byte)protoIdent);
             }
             else
             {
-                uint protoIdent = 0x7Fu | (isRequest ? 0x80u : 0x0u);
+                var protoIdent = 0x7Fu | (isRequest ? 0x80u : 0x0u);
                 Helper.WriteU8(packetData, (byte)protoIdent);
                 Helper.WriteU16(packetData, proto);
             }
 
-            byte[] buff = Array.Empty<byte>();
+            var buff = Array.Empty<byte>();
 
             if (isRequest && request != null)
             {

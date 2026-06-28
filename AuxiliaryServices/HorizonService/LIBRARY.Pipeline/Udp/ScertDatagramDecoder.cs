@@ -6,9 +6,6 @@ using DotNetty.Transport.Channels.Sockets;
 using Horizon.RT.Common;
 using Horizon.RT.Cryptography;
 using Horizon.RT.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Horizon.LIBRARY.Pipeline.Udp
 {
@@ -28,14 +25,20 @@ namespace Horizon.LIBRARY.Pipeline.Udp
 
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            LoggerAccessor.LogWarn($"[ScertDecoder] - Udp: Failed to decode a SCERT message. (Exception:{exception})");
+            LoggerAccessor.LogWarn(
+                $"[ScertDecoder] - Udp: Failed to decode a SCERT message. (Exception:{exception})"
+            );
         }
 
-        protected override void Decode(IChannelHandlerContext context, DatagramPacket message, List<object> output)
+        protected override void Decode(
+            IChannelHandlerContext context,
+            DatagramPacket message,
+            List<object> output
+        )
         {
             while (message.Content.IsReadable())
             {
-                object decoded = Decode(context, message);
+                var decoded = Decode(context, message);
                 if (decoded == null)
                     break;
 
@@ -54,19 +57,28 @@ namespace Horizon.LIBRARY.Pipeline.Udp
         /// <returns>The <see cref="IByteBuffer" /> which represents the frame or <c>null</c> if no frame could be created.</returns>
         protected virtual object Decode(IChannelHandlerContext context, DatagramPacket input)
         {
-            byte id = input.Content.GetByte(input.Content.ReaderIndex);
+            var id = input.Content.GetByte(input.Content.ReaderIndex);
             byte[] hash = null;
             long frameLength = input.Content.GetShortLE(input.Content.ReaderIndex + 1);
-            int headerLength = 3;
+            var headerLength = 3;
 
             if (!context.HasAttribute(Constants.SCERT_CLIENT))
-                context.GetAttribute(Constants.SCERT_CLIENT).Set(new Attribute.ScertClientAttribute());
-            Attribute.ScertClientAttribute scertClient = context.GetAttribute(Constants.SCERT_CLIENT).Get();
+                context
+                    .GetAttribute(Constants.SCERT_CLIENT)
+                    .Set(new Attribute.ScertClientAttribute());
+            var scertClient = context.GetAttribute(Constants.SCERT_CLIENT).Get();
 
             if (frameLength <= 0)
             {
                 input.Content.SetReaderIndex(input.Content.ReaderIndex + headerLength);
-                return BaseScertMessage.Instantiate((RT_MSG_TYPE)(id & 0x7F), null, Array.Empty<byte>(), scertClient.MediusVersion != null ? (int)scertClient.MediusVersion : 108, scertClient.ApplicationID, scertClient.CipherService);
+                return BaseScertMessage.Instantiate(
+                    (RT_MSG_TYPE)(id & 0x7F),
+                    null,
+                    Array.Empty<byte>(),
+                    scertClient.MediusVersion != null ? (int)scertClient.MediusVersion : 108,
+                    scertClient.ApplicationID,
+                    scertClient.CipherService
+                );
             }
 
             if (id >= 0x80)
@@ -78,20 +90,33 @@ namespace Horizon.LIBRARY.Pipeline.Udp
             }
 
             if (frameLength < 0)
-                throw new InvalidOperationException("negative pre-adjustment length field: " + frameLength);
+                throw new InvalidOperationException(
+                    "negative pre-adjustment length field: " + frameLength
+                );
 
             // never overflows because it's less than maxFrameLength
-            int frameLengthInt = (int)frameLength;
+            var frameLengthInt = (int)frameLength;
             if (input.Content.ReadableBytes < frameLengthInt)
                 return null;
 
             // extract frame
-            byte[] messageContents = new byte[frameLengthInt];
+            var messageContents = new byte[frameLengthInt];
             input.Content.GetBytes(input.Content.ReaderIndex + headerLength, messageContents);
 
-            int totalFrameLength = headerLength + frameLengthInt;
+            var totalFrameLength = headerLength + frameLengthInt;
             input.Content.SetReaderIndex(input.Content.ReaderIndex + totalFrameLength);
-            return new ScertDatagramPacket(BaseScertMessage.Instantiate((RT_MSG_TYPE)id, hash, messageContents, scertClient.MediusVersion != null ? (int)scertClient.MediusVersion : 108, scertClient.ApplicationID, scertClient.CipherService), null, input.Sender);
+            return new ScertDatagramPacket(
+                BaseScertMessage.Instantiate(
+                    (RT_MSG_TYPE)id,
+                    hash,
+                    messageContents,
+                    scertClient.MediusVersion != null ? (int)scertClient.MediusVersion : 108,
+                    scertClient.ApplicationID,
+                    scertClient.CipherService
+                ),
+                null,
+                input.Sender
+            );
         }
     }
 }

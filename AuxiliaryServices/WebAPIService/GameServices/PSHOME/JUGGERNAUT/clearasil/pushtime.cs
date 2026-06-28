@@ -1,20 +1,19 @@
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
 using System.Xml;
 using WebAPIService.LeaderboardService;
+
 namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil
 {
     public class pushtime
     {
-        public static string ProcessPushTime(IDictionary<string, string> QueryParameters, string apiPath)
+        public static string ProcessPushTime(
+            IDictionary<string, string> QueryParameters,
+            string apiPath
+        )
         {
             if (QueryParameters != null)
             {
-                string user = QueryParameters["user"];
-                string time = QueryParameters["time"];
+                var user = QueryParameters["user"];
+                var time = QueryParameters["time"];
 
                 if (!string.IsNullOrEmpty(user) && !string.IsNullOrEmpty(time))
                 {
@@ -23,15 +22,14 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil
                     if (File.Exists($"{apiPath}/juggernaut/clearasil/space_access/{user}.xml"))
                     {
                         // Load the XML string into an XmlDocument
-                        XmlDocument xmlDoc = new XmlDocument();
+                        var xmlDoc = new XmlDocument();
                         xmlDoc.Load($"{apiPath}/juggernaut/clearasil/space_access/{user}.xml");
 
                         // Find the <phase2> element
-                        XmlElement phase2Element = xmlDoc.SelectSingleNode("/xml/phase2") as XmlElement;
 
-                        if (phase2Element != null)
+                        if (xmlDoc.SelectSingleNode("/xml/phase2") is XmlElement phase2Element)
                         {
-                            bool phase2 = phase2Element.InnerText != "0";
+                            var phase2 = phase2Element.InnerText != "0";
                             ClearasilScoreBoardData scoreboard;
 
                             lock (pushscore.Leaderboards)
@@ -40,7 +38,13 @@ namespace WebAPIService.GameServices.PSHOME.JUGGERNAUT.clearasil
 
                                 if (scoreboard == null)
                                 {
-                                    scoreboard = new ClearasilScoreBoardData(LeaderboardDbContext.OnContextBuilding(new DbContextOptionsBuilder<LeaderboardDbContext>(), 0, $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}").Options, phase2 ? "phase2" : "phase1");
+                                    scoreboard = new ClearasilScoreBoardData(
+                                        LeaderboardDbContext.BuildOptions(
+                                            0,
+                                            $"Data Source={LeaderboardDbContext.GetDefaultDbPath()}"
+                                        ),
+                                        phase2 ? "phase2" : "phase1"
+                                    );
                                     pushscore.Leaderboards[phase2 ? 1 : 0] = scoreboard;
                                 }
                             }

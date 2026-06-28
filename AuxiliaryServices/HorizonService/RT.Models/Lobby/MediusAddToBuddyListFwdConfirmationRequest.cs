@@ -1,14 +1,16 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobbyExt, MediusLobbyExtMessageIds.AddToBuddyListFwdConfirmation)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobbyExt,
+        MediusLobbyExtMessageIds.AddToBuddyListFwdConfirmation
+    )]
     public class MediusAddToBuddyListFwdConfirmationRequest : BaseLobbyExtMessage, IMediusRequest
     {
-
-        public override byte PacketType => (byte)MediusLobbyExtMessageIds.AddToBuddyListFwdConfirmation;
+        public override byte PacketType =>
+            (byte)MediusLobbyExtMessageIds.AddToBuddyListFwdConfirmation;
 
         public MessageId MessageID { get; set; }
 
@@ -42,11 +44,12 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"OriginatorAccountID: {OriginatorAccountID} " +
-                $"OriginatorAccountName: {OriginatorAccountName} " +
-                $"AddType: {AddType}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"OriginatorAccountID: {OriginatorAccountID} "
+                + $"OriginatorAccountName: {OriginatorAccountName} "
+                + $"AddType: {AddType}";
         }
     }
 }

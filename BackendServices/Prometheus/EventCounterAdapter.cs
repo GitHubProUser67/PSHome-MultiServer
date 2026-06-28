@@ -1,7 +1,7 @@
-using CustomLogger;
 using System.Collections.Concurrent;
 using System.Diagnostics.Tracing;
 using System.Globalization;
+using CustomLogger;
 
 namespace Prometheus;
 
@@ -13,7 +13,8 @@ namespace Prometheus;
 /// </remarks>
 public sealed class EventCounterAdapter : IDisposable
 {
-    public static IDisposable StartListening() => StartListening(EventCounterAdapterOptions.Default);
+    public static IDisposable StartListening() =>
+        StartListening(EventCounterAdapterOptions.Default);
 
     public static IDisposable StartListening(EventCounterAdapterOptions options)
     {
@@ -37,11 +38,19 @@ public sealed class EventCounterAdapter : IDisposable
         _options = options;
         _metricFactory = _options.MetricFactory ?? Metrics.WithCustomRegistry(_options.Registry);
 
-        _eventSourcesConnected = _metricFactory.CreateGauge("prometheus_net_eventcounteradapter_sources_connected_total", "Number of event sources that are currently connected to the adapter.");
+        _eventSourcesConnected = _metricFactory.CreateGauge(
+            "prometheus_net_eventcounteradapter_sources_connected_total",
+            "Number of event sources that are currently connected to the adapter."
+        );
 
         EventCounterAdapterMemoryWarden.EnsureStarted();
 
-        _listener = new Listener(ShouldUseEventSource, ConfigureEventSource, options.UpdateInterval, OnEventWritten);
+        _listener = new Listener(
+            ShouldUseEventSource,
+            ConfigureEventSource,
+            options.UpdateInterval,
+            OnEventWritten
+        );
     }
 
     public void Dispose()
@@ -60,7 +69,7 @@ public sealed class EventCounterAdapter : IDisposable
 
     private bool ShouldUseEventSource(EventSource source)
     {
-        bool connect = _options.EventSourceFilterPredicate(source.Name);
+        var connect = _options.EventSourceFilterPredicate(source.Name);
 
         if (connect)
             _eventSourcesConnected.Inc();
@@ -98,9 +107,7 @@ public sealed class EventCounterAdapter : IDisposable
                 if (!e.TryGetValue("Name", out var nameWrapper))
                     continue;
 
-                var name = nameWrapper as string;
-
-                if (name == null)
+                if (nameWrapper is not string name)
                     continue; // What? Whatever.
 
                 if (!e.TryGetValue("DisplayName", out var displayNameWrapper))
@@ -109,12 +116,18 @@ public sealed class EventCounterAdapter : IDisposable
                 var displayName = displayNameWrapper as string ?? "";
 
                 // If there is a DisplayUnits, prefix it to the help text.
-                if (e.TryGetValue("DisplayUnits", out var displayUnitsWrapper) && !string.IsNullOrWhiteSpace(displayUnitsWrapper as string))
+                if (
+                    e.TryGetValue("DisplayUnits", out var displayUnitsWrapper)
+                    && !string.IsNullOrWhiteSpace(displayUnitsWrapper as string)
+                )
                     displayName = $"({(string)displayUnitsWrapper}) {displayName}";
 
                 var mergedName = $"{eventSourceName}_{name}";
 
-                var prometheusName = _counterPrometheusName.GetOrAdd(mergedName, PrometheusNameHelpers.TranslateNameToPrometheusName);
+                var prometheusName = _counterPrometheusName.GetOrAdd(
+                    mergedName,
+                    PrometheusNameHelpers.TranslateNameToPrometheusName
+                );
 
                 // The event counter can either be
                 // 1) an aggregating counter (in which case we use the mean); or
@@ -132,9 +145,11 @@ public sealed class EventCounterAdapter : IDisposable
                     // If the underlying metric is exposing a rate then this can result in some strange terminology like "rate_total".
                     // We will remove the "rate" from the name to be more understandable - you'll get the rate when you apply the Prometheus rate() function, the raw value is not the rate.
                     if (prometheusName.EndsWith(RateSuffix))
-                        prometheusName = prometheusName.Remove(prometheusName.Length - RateSuffix.Length);
+                        prometheusName = prometheusName[..^RateSuffix.Length];
 
-                    _metricFactory.CreateCounter(prometheusName + "_total", displayName).Inc(value.Value);
+                    _metricFactory
+                        .CreateCounter(prometheusName + "_total", displayName)
+                        .Inc(value.Value);
                 }
                 else if (e.TryGetValue("Mean", out var mean))
                 {
@@ -152,7 +167,9 @@ public sealed class EventCounterAdapter : IDisposable
         catch (Exception ex)
         {
             // We do not want to throw any exceptions if we fail to handle this event because who knows what it messes up upstream.
-            LoggerAccessor.LogError($"[EventCounterAdapter] - OnEventWritten: Failed to parse EventCounter event: {ex.Message}");
+            LoggerAccessor.LogError(
+                $"[EventCounterAdapter] - OnEventWritten: Failed to parse EventCounter event: {ex.Message}"
+            );
         }
     }
 
@@ -165,7 +182,8 @@ public sealed class EventCounterAdapter : IDisposable
             Func<EventSource, bool> shouldUseEventSource,
             Func<EventSource, EventCounterAdapterEventSourceSettings> configureEventSosurce,
             TimeSpan updateInterval,
-            Action<EventWrittenEventArgs> onEventWritten)
+            Action<EventWrittenEventArgs> onEventWritten
+        )
         {
             _shouldUseEventSource = shouldUseEventSource;
             _configureEventSosurce = configureEventSosurce;
@@ -178,10 +196,13 @@ public sealed class EventCounterAdapter : IDisposable
             _preRegisteredEventSources.Clear();
         }
 
-        private readonly List<EventSource> _preRegisteredEventSources = new List<EventSource>();
+        private readonly List<EventSource> _preRegisteredEventSources = [];
 
         private readonly Func<EventSource, bool> _shouldUseEventSource;
-        private readonly Func<EventSource, EventCounterAdapterEventSourceSettings> _configureEventSosurce;
+        private readonly Func<
+            EventSource,
+            EventCounterAdapterEventSourceSettings
+        > _configureEventSosurce;
         private readonly TimeSpan _updateInterval;
         private readonly Action<EventWrittenEventArgs> _onEventWritten;
 
@@ -203,16 +224,25 @@ public sealed class EventCounterAdapter : IDisposable
             {
                 var options = _configureEventSosurce(eventSource);
 
-                EnableEvents(eventSource, options.MinimumLevel, options.MatchKeywords, new Dictionary<string, string?>()
-                {
-                    ["EventCounterIntervalSec"] = ((int)Math.Max(1, _updateInterval.TotalSeconds)).ToString(CultureInfo.InvariantCulture),
-                });
+                EnableEvents(
+                    eventSource,
+                    options.MinimumLevel,
+                    options.MatchKeywords,
+                    new Dictionary<string, string?>()
+                    {
+                        ["EventCounterIntervalSec"] = (
+                            (int)Math.Max(1, _updateInterval.TotalSeconds)
+                        ).ToString(CultureInfo.InvariantCulture),
+                    }
+                );
             }
             catch (Exception ex)
             {
                 // Eat exceptions here to ensure no harm comes of failed enabling.
                 // The EventCounter infrastructure has proven quite buggy and while it is not certain that this may throw, let's be paranoid.
-                LoggerAccessor.LogError($"[EventCounterAdapter] - Listener: Failed to enable EventCounter listening for {eventSource.Name}: {ex.Message}");
+                LoggerAccessor.LogError(
+                    $"[EventCounterAdapter] - Listener: Failed to enable EventCounter listening for {eventSource.Name}: {ex.Message}"
+                );
             }
         }
 
@@ -226,13 +256,14 @@ public sealed class EventCounterAdapter : IDisposable
     /// By default we enable event sources that start with any of these strings. This is a manually curated list to try enable some useful ones
     /// without just enabling everything under the sky (because .NET has no way to say "enable only the event counters", you have to enable all diagnostic events).
     /// </summary>
-    private static readonly IReadOnlyList<string> DefaultEventSourcePrefixes = new[]
-    {
+    private static readonly IReadOnlyList<string> DefaultEventSourcePrefixes =
+    [
         "System.Runtime",
         "Microsoft-AspNetCore",
         "Microsoft.AspNetCore",
-        "System.Net"
-    };
+        "System.Net",
+    ];
 
-    public static readonly Func<string, bool> DefaultEventSourceFilterPredicate = name => DefaultEventSourcePrefixes.Any(x => name.StartsWith(x, StringComparison.Ordinal));
+    public static readonly Func<string, bool> DefaultEventSourceFilterPredicate = name =>
+        DefaultEventSourcePrefixes.Any(x => name.StartsWith(x, StringComparison.Ordinal));
 }

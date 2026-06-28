@@ -1,8 +1,8 @@
+using System.Collections.Concurrent;
 using CustomLogger;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Groups;
 using Horizon.RT.Models;
-using System;
 
 namespace Horizon.LIBRARY.Pipeline.Tcp
 {
@@ -10,36 +10,43 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
     {
         public override bool IsSharable => true;
 
-        public IChannelGroup Group = null;
+        private IChannelGroup Group = null;
+        private readonly ConcurrentDictionary<string, IChannel> _channels =
+            new ConcurrentDictionary<string, IChannel>();
 
         public Action<IChannel> OnChannelActive;
         public Action<IChannel> OnChannelInactive;
         public Action<IChannel, BaseScertMessage> OnChannelMessage;
 
+        public bool HasGroup() => Group != null;
+
+        public IChannel[] Channels => _channels.Values.ToArray();
+
         public override void ChannelActive(IChannelHandlerContext ctx)
         {
-            IChannelGroup g = Group;
+            var g = Group;
             if (g == null)
             {
                 lock (this)
-                {
-                    if (Group == null)
-                        Group = g = new DefaultChannelGroup(ctx.Executor);
-                }
+                    Group ??= g = new DefaultChannelGroup(ctx.Executor);
             }
             else
                 g = Group;
 
             // Detect when client disconnects
-            ctx.Channel.CloseCompletion.ContinueWith((x) =>
-            {
-                LoggerAccessor.LogWarn("[ScertServerHandler] - Tcp: Channel Closed");
-                g?.Remove(ctx.Channel);
-                OnChannelInactive?.Invoke(ctx.Channel);
-            });
+            ctx.Channel.CloseCompletion.ContinueWith(
+                (x) =>
+                {
+                    LoggerAccessor.LogWarn("[ScertServerHandler] - Tcp: Channel Closed");
+                    g?.Remove(ctx.Channel);
+                    _channels.TryRemove(ctx.Channel.Id.AsLongText(), out _);
+                    OnChannelInactive?.Invoke(ctx.Channel);
+                }
+            );
 
             // Add to channels list
             g?.Add(ctx.Channel);
+            _channels[ctx.Channel.Id.AsLongText()] = ctx.Channel;
 
             // Send event upstream
             OnChannelActive?.Invoke(ctx.Channel);
@@ -48,12 +55,13 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
         // The Channel is closed hence the connection is closed
         public override void ChannelInactive(IChannelHandlerContext ctx)
         {
-            IChannelGroup g = Group;
+            var g = Group;
 
             LoggerAccessor.LogWarn("[ScertServerHandler] - Tcp: Client disconnected");
 
             // Remove
             g?.Remove(ctx.Channel);
+            _channels.TryRemove(ctx.Channel.Id.AsLongText(), out _);
 
             // Send event upstream
             OnChannelInactive?.Invoke(ctx.Channel);
@@ -74,7 +82,9 @@ namespace Horizon.LIBRARY.Pipeline.Tcp
 
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            LoggerAccessor.LogError($"[ScertServerHandler] - Tcp: An assertion was caught. (Exception:{exception})");
+            LoggerAccessor.LogError(
+                $"[ScertServerHandler] - Tcp: An assertion was caught. (Exception:{exception})"
+            );
             _ = context.CloseAsync();
         }
     }

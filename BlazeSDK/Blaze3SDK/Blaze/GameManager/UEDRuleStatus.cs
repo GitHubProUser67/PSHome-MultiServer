@@ -2,21 +2,19 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.GameManager
 {
-	[TdfStruct]
-	public struct UEDRuleStatus
-	{
+    [TdfStruct]
+    public struct UEDRuleStatus
+    {
+        [TdfMember("AMAX")]
+        public long mMaxUEDAccepted;
 
-		[TdfMember("AMAX")]
-		public long mMaxUEDAccepted;
+        [TdfMember("AMIN")]
+        public long mMinUEDAccepted;
 
-		[TdfMember("AMIN")]
-		public long mMinUEDAccepted;
+        [TdfMember("MUED")]
+        public long mMyUEDValue;
 
-		[TdfMember("MUED")]
-		public long mMyUEDValue;
-
-		[TdfMember("NAME")]
-		public string mRuleName;
-
-	}
+        [TdfMember("NAME")]
+        public string mRuleName;
+    }
 }

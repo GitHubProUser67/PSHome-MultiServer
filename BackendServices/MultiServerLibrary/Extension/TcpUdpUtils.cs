@@ -1,5 +1,3 @@
-using System;
-using System.Linq;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 
@@ -14,7 +12,6 @@ namespace MultiServerLibrary.Extension
 
         [DllImport(netDll, SetLastError = true)]
         private static extern uint GetUdpTable(IntPtr pUdpTable, ref uint dwOutBufLen, bool order);
-
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
         internal struct MibTcpTable
@@ -61,11 +58,11 @@ namespace MultiServerLibrary.Extension
         /// <returns>A array of int.</returns>
         private static int[] GetWindowsTcpTable()
         {
-            int[] ports = Array.Empty<int>();
+            var ports = Array.Empty<int>();
             uint dwOutBufLen = 0;
-            IntPtr pTcpTable = IntPtr.Zero;
+            var pTcpTable = IntPtr.Zero;
 
-            uint result = GetTcpTable(IntPtr.Zero, ref dwOutBufLen, true);
+            var result = GetTcpTable(IntPtr.Zero, ref dwOutBufLen, true);
 
             if (result == 0x7a) // ERROR_INSUFFICIENT_BUFFER
             {
@@ -76,19 +73,27 @@ namespace MultiServerLibrary.Extension
 
                     if (result == 0)
                     {
-                        IntPtr handle = pTcpTable;
-                        MibTcpTable table = (MibTcpTable)Marshal.PtrToStructure(handle, typeof(MibTcpTable));
+                        var handle = pTcpTable;
+                        var table = (MibTcpTable)
+                            Marshal.PtrToStructure(handle, typeof(MibTcpTable));
 
                         if (table.numberOfEntries > 0)
                         {
                             ports = new int[table.numberOfEntries];
-                            handle = (IntPtr)((long)handle + Marshal.SizeOf(table.numberOfEntries));
+                            handle = checked(
+                                (IntPtr)((long)handle + Marshal.SizeOf(table.numberOfEntries))
+                            );
 
-                            for (int i = 0; i < table.numberOfEntries; i++)
+                            for (var i = 0; i < table.numberOfEntries; i++)
                             {
-                                MibTcpRow row = (MibTcpRow)Marshal.PtrToStructure(handle, typeof(MibTcpRow));
-                                ports[i] = row.localPort3 << 24 | row.localPort4 << 16 | row.localPort1 << 8 | row.localPort2;
-                                handle = (IntPtr)((long)handle + Marshal.SizeOf(row));
+                                var row = (MibTcpRow)
+                                    Marshal.PtrToStructure(handle, typeof(MibTcpRow));
+                                ports[i] =
+                                    (row.localPort3 << 24)
+                                    | (row.localPort4 << 16)
+                                    | (row.localPort1 << 8)
+                                    | row.localPort2;
+                                handle = checked((IntPtr)((long)handle + Marshal.SizeOf(row)));
                             }
                         }
                     }
@@ -109,11 +114,11 @@ namespace MultiServerLibrary.Extension
         /// <returns>A array of int.</returns>
         private static int[] GetWindowsUdpTable()
         {
-            int[] ports = Array.Empty<int>();
+            var ports = Array.Empty<int>();
             uint dwOutBufLen = 0;
-            IntPtr pUdpTable = IntPtr.Zero;
+            var pUdpTable = IntPtr.Zero;
 
-            uint result = GetUdpTable(IntPtr.Zero, ref dwOutBufLen, true);
+            var result = GetUdpTable(IntPtr.Zero, ref dwOutBufLen, true);
 
             if (result == 0x7A) // ERROR_INSUFFICIENT_BUFFER
             {
@@ -124,19 +129,27 @@ namespace MultiServerLibrary.Extension
 
                     if (result == 0)
                     {
-                        IntPtr handle = pUdpTable;
-                        MibUdpTable table = (MibUdpTable)Marshal.PtrToStructure(handle, typeof(MibUdpTable));
+                        var handle = pUdpTable;
+                        var table = (MibUdpTable)
+                            Marshal.PtrToStructure(handle, typeof(MibUdpTable));
 
                         if (table.numberOfEntries > 0)
                         {
                             ports = new int[table.numberOfEntries];
-                            handle = (IntPtr)((long)handle + Marshal.SizeOf(table.numberOfEntries));
+                            handle = checked(
+                                (IntPtr)((long)handle + Marshal.SizeOf(table.numberOfEntries))
+                            );
 
-                            for (int i = 0; i < table.numberOfEntries; i++)
+                            for (var i = 0; i < table.numberOfEntries; i++)
                             {
-                                MibUdpRow row = (MibUdpRow)Marshal.PtrToStructure(handle, typeof(MibUdpRow));
-                                ports[i] = row.localPort3 << 24 | row.localPort4 << 16 | row.localPort1 << 8 | row.localPort2;
-                                handle = (IntPtr)((long)handle + Marshal.SizeOf(row));
+                                var row = (MibUdpRow)
+                                    Marshal.PtrToStructure(handle, typeof(MibUdpRow));
+                                ports[i] =
+                                    (row.localPort3 << 24)
+                                    | (row.localPort4 << 16)
+                                    | (row.localPort1 << 8)
+                                    | row.localPort2;
+                                handle = checked((IntPtr)((long)handle + Marshal.SizeOf(row)));
                             }
                         }
                     }
@@ -151,7 +164,6 @@ namespace MultiServerLibrary.Extension
             return ports;
         }
 
-
         /// <summary>
         /// Get the next available TCP port on the system (Windows only).
         /// <para>(Seulement sur Windows) Obtiens le prochain port TCP disponible.</para>
@@ -161,17 +173,16 @@ namespace MultiServerLibrary.Extension
         /// <returns>A int.</returns>
         public static int GetNextVacantTCPPort(int sourceport, uint attemptcount)
         {
-            if (Microsoft.Win32API.IsWindows)
+            if (Windows.Win32API.IsWindows)
             {
-                if (attemptcount == 0)
-                    throw new ArgumentOutOfRangeException("attemptcount");
+                ArgumentOutOfRangeException.ThrowIfZero(attemptcount);
 
-                foreach (int port in GetWindowsTcpTable())
+                foreach (var port in GetWindowsTcpTable())
                 {
                     if (sourceport == port)
                     {
-                        sourceport ++;
-                        attemptcount --;
+                        sourceport++;
+                        attemptcount--;
 
                         if (sourceport >= ushort.MaxValue && attemptcount > 0)
                             sourceport = 1;
@@ -185,7 +196,9 @@ namespace MultiServerLibrary.Extension
                 return sourceport;
             }
 
-            throw new PlatformNotSupportedException("[TcpUdpUtils] - GetNextVacantTCPPort is only supported on Windows.");
+            throw new PlatformNotSupportedException(
+                "[TcpUdpUtils] - GetNextVacantTCPPort is only supported on Windows."
+            );
         }
 
         /// <summary>
@@ -197,13 +210,14 @@ namespace MultiServerLibrary.Extension
         /// <returns>A int.</returns>
         public static int GetNextVacantUDPPort(int sourceport, uint attemptcount)
         {
-            if (!Microsoft.Win32API.IsWindows)
-                throw new PlatformNotSupportedException("[TcpUdpUtils] - GetNextVacantUDPPort is only supported on Windows.");
+            if (!Windows.Win32API.IsWindows)
+                throw new PlatformNotSupportedException(
+                    "[TcpUdpUtils] - GetNextVacantUDPPort is only supported on Windows."
+                );
 
-            if (attemptcount == 0)
-                throw new ArgumentOutOfRangeException(nameof(attemptcount));
+            ArgumentOutOfRangeException.ThrowIfZero(attemptcount);
 
-            foreach (int port in GetWindowsUdpTable())
+            foreach (var port in GetWindowsUdpTable())
             {
                 if (sourceport == port)
                 {
@@ -222,6 +236,46 @@ namespace MultiServerLibrary.Extension
             return sourceport;
         }
 
+        /// <summary>
+        /// Get the next available UDP port on the system (Windows only).
+        /// <para>(Seulement sur Windows) Obtiens le prochain port UDP disponible.</para>
+        /// </summary>
+        /// <param name="sourceport">The initial port to start with.</param>
+        /// <returns>A int.</returns>
+        public static int GetNextVacantUDPPort(int sourceport)
+        {
+            if (!Windows.Win32API.IsWindows)
+                throw new PlatformNotSupportedException(
+                    "[TcpUdpUtils] - GetNextVacantUDPPort is only supported on Windows."
+                );
+
+            int startPort = sourceport;
+
+            while (true)
+            {
+                bool used = false;
+
+                foreach (var port in GetWindowsUdpTable())
+                {
+                    if (port == sourceport)
+                    {
+                        used = true;
+                        break;
+                    }
+                }
+
+                if (!used)
+                    return sourceport;
+
+                sourceport++;
+
+                if (sourceport >= ushort.MaxValue)
+                    sourceport = 1;
+
+                if (sourceport == startPort)
+                    return -1; // no ports available
+            }
+        }
 
         /// <summary>
         /// Know if the given TCP port is available.
@@ -238,9 +292,16 @@ namespace MultiServerLibrary.Extension
             // by the netstat command line application, just in .Net strongly-typed object
             // form.  We will look through the list, and if our port we would like to use
             // in our TcpClient is occupied, we will set isAvailable to false.
-            bool isAvailable = !IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners().Any(p => p.Port == port);
+            var isAvailable = !IPGlobalProperties
+                .GetIPGlobalProperties()
+                .GetActiveTcpListeners()
+                .Any(p => p.Port == port);
 #if DEBUG
-            CustomLogger.LoggerAccessor.LogInfo("[TcpUdpUtils] - TCP Port {0} available = {1}", port, isAvailable);
+            CustomLogger.LoggerAccessor.LogInfo(
+                "[TcpUdpUtils] - TCP Port {0} available = {1}",
+                port,
+                isAvailable
+            );
 #endif
             return isAvailable;
         }
@@ -260,9 +321,16 @@ namespace MultiServerLibrary.Extension
             // by the netstat command line application, just in .Net strongly-typed object
             // form.  We will look through the list, and if our port we would like to use
             // in our UdpClient is occupied, we will set isAvailable to false.
-            bool isAvailable = !IPGlobalProperties.GetIPGlobalProperties().GetActiveUdpListeners().Any(p => p.Port == port);
+            var isAvailable = !IPGlobalProperties
+                .GetIPGlobalProperties()
+                .GetActiveUdpListeners()
+                .Any(p => p.Port == port);
 #if DEBUG
-            CustomLogger.LoggerAccessor.LogInfo("[TcpUdpUtils] - UDP Port {0} available = {1}", port, isAvailable);
+            CustomLogger.LoggerAccessor.LogInfo(
+                "[TcpUdpUtils] - UDP Port {0} available = {1}",
+                port,
+                isAvailable
+            );
 #endif
             return isAvailable;
         }

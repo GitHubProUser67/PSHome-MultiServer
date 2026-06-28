@@ -1,8 +1,6 @@
-using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
-using System;
-using EndianTools.ZipperEndian;
 using EndianTools;
+using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -18,15 +16,19 @@ namespace Horizon.RT.Models
             get => Message?.SkipEncryption ?? base.SkipEncryption;
             set
             {
-                if (Message != null) { Message.SkipEncryption = value; }
+                if (Message != null)
+                {
+                    Message.SkipEncryption = value;
+                }
                 base.SkipEncryption = value;
             }
         }
 #if DEBUG
-        private static bool debug = true;
+        private static readonly bool debug = true;
 #else
-        private static bool debug = false;
+        private static readonly bool debug = false;
 #endif
+
         public override void Deserialize(MessageReader reader)
         {
             Message = BaseMediusPluginMessage.InstantiateServerPlugin(reader);
@@ -36,14 +38,23 @@ namespace Horizon.RT.Models
         {
             if (Message != null)
             {
-                byte[] buffer = new byte[2];
-                EndianAwareConverter.WriteUInt16(buffer, Endianness.BigEndian, 0, (ushort)Message.Size);
-                byte[] buffer1 = new byte[2];
-                EndianAwareConverter.WriteUInt16(buffer1, Endianness.BigEndian, 0, (ushort)Message.PacketType);
-                writer.Write(Message.IncomingMessage);
+                var buffer = new byte[3];
+                EndianAwareConverter.WriteUInt24(buffer, Endianness.BigEndian, 0, Message.Size);
+                var buffer1 = new byte[2];
+                EndianAwareConverter.WriteUInt16(
+                    buffer1,
+                    Endianness.BigEndian,
+                    0,
+                    (ushort)Message.PacketType
+                );
                 writer.Write(buffer, buffer.Length);
-                writer.Write(Message.PluginId);
-                writer.Write(new byte[2]);
+
+                // Sometimes, the client will not expect the ClientBufferSize and PluginId fields, so we only write them if they are non-zero.
+                if (Message.ClientBufferSize != 0)
+                    writer.Write(Message.ClientBufferSize);
+                if (Message.PluginId != 0)
+                    writer.Write(Message.PluginId);
+
                 writer.Write(buffer1, buffer1.Length);
                 Message.SerializePlugin(writer);
             }
@@ -60,8 +71,7 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"Message: {Message}";
+            return base.ToString() + " " + $"Message: {Message}";
         }
     }
 }

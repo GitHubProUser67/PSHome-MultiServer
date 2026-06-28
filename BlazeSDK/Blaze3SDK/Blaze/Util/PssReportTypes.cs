@@ -7,6 +7,6 @@ namespace Blaze3SDK.Blaze.Util
         PssTypePurchases = 1,
         PssTypeFriendsList = 2,
         PssTypeAchievements = 4,
-        PssTypeConsumables = 8
+        PssTypeConsumables = 8,
     }
 }

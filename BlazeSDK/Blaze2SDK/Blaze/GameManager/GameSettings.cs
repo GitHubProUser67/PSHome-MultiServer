@@ -15,6 +15,6 @@ namespace Blaze2SDK.Blaze.GameManager
         JoinInProgressSupported = 0x100,
         AdminInvitesOnlyIgnoreEntryChecks = 0x200,
         EnablePersistedGameId = 0x400,
-        AllowSameTeamId = 0x800
+        AllowSameTeamId = 0x800,
     }
 }

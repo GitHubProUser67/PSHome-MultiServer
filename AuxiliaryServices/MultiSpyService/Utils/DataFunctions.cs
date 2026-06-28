@@ -1,19 +1,18 @@
-﻿using MultiServerLibrary.Extension;
-using System;
-using System.Text;
+﻿using System.Text;
+using MultiServerLibrary.Extension;
 
 namespace MultiSpyService.Utils
 {
     public static class DataFunctions
     {
-        private static readonly object _InternalLock = new object();
+        private static readonly object _InternalLock = new();
 
         public static string GetString(this Random rand, int length)
         {
-            char[] array = new char[length];
+            var array = new char[length];
             lock (_InternalLock)
             {
-                for (int i = 0; i < length; i++)
+                for (var i = 0; i < length; i++)
                 {
                     array[i] = FileSystemUtils.ASCIIChars[rand.Next(62)];
                 }
@@ -23,10 +22,10 @@ namespace MultiSpyService.Utils
 
         public static string GetString(this Random rand, int length, string chars)
         {
-            char[] array = new char[length];
+            var array = new char[length];
             lock (_InternalLock)
             {
-                for (int i = 0; i < length; i++)
+                for (var i = 0; i < length; i++)
                 {
                     array[i] = chars[rand.Next(chars.Length)];
                 }

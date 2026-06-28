@@ -1,9 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections;
-using System.Collections.Generic;
 
 namespace SpaceWizards.HttpListener
 {
@@ -39,10 +37,7 @@ namespace SpaceWizards.HttpListener
         public void CopyTo(Array array, int offset)
         {
             _httpListener.CheckDisposed();
-            if (array == null)
-            {
-                throw new ArgumentNullException(nameof(array));
-            }
+            ArgumentNullException.ThrowIfNull(array);
             if (Count > array.Length)
             {
                 throw new ArgumentOutOfRangeException(nameof(array), SR.net_array_too_small);
@@ -51,7 +46,7 @@ namespace SpaceWizards.HttpListener
             {
                 throw new ArgumentOutOfRangeException(nameof(offset));
             }
-            int index = 0;
+            var index = 0;
             foreach (string uriPrefix in _httpListener.PrefixCollection)
             {
                 array.SetValue(uriPrefix, offset + index++);
@@ -61,10 +56,7 @@ namespace SpaceWizards.HttpListener
         public void CopyTo(string[] array, int offset)
         {
             _httpListener.CheckDisposed();
-            if (array == null)
-            {
-                throw new ArgumentNullException(nameof(array));
-            }
+            ArgumentNullException.ThrowIfNull(array);
             if (Count > array.Length)
             {
                 throw new ArgumentOutOfRangeException(nameof(array), SR.net_array_too_small);
@@ -73,7 +65,7 @@ namespace SpaceWizards.HttpListener
             {
                 throw new ArgumentOutOfRangeException(nameof(offset));
             }
-            int index = 0;
+            var index = 0;
             foreach (string uriPrefix in _httpListener.PrefixCollection)
             {
                 array[offset + index++] = uriPrefix;
@@ -82,7 +74,7 @@ namespace SpaceWizards.HttpListener
 
         public int Count => _httpListener.PrefixCollection.Count;
 
-        public bool IsSynchronized => false;
+        public static bool IsSynchronized => false;
 
         public bool IsReadOnly => false;
 

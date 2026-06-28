@@ -23,7 +23,6 @@ $propertiesToRemove = @(
     "CustomLogger/1.0.0",
     "MultiServerLibrary/1.0.0",
     "EndianTools/1.0.0",
-    "FixedSsl/1.0.0",
 	"Tdf/1.0.0",
 	"TechnitiumLibrary.Net/5.0.0",
 	"TechnitiumLibrary.Net.Firewall/5.0.0"

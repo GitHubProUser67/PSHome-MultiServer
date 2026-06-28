@@ -1,6 +1,5 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
@@ -11,14 +10,14 @@ namespace Horizon.RT.Models
         public NetAddressList()
         {
             AddressList = new NetAddress[Constants.NET_ADDRESS_LIST_COUNT];
-            for (int i = 0; i < Constants.NET_ADDRESS_LIST_COUNT; ++i)
+            for (var i = 0; i < Constants.NET_ADDRESS_LIST_COUNT; ++i)
                 AddressList[i] = new NetAddress();
         }
 
         public void Deserialize(BinaryReader reader)
         {
             AddressList = new NetAddress[Constants.NET_ADDRESS_LIST_COUNT];
-            for (int i = 0; i < Constants.NET_ADDRESS_LIST_COUNT; ++i)
+            for (var i = 0; i < Constants.NET_ADDRESS_LIST_COUNT; ++i)
             {
                 AddressList[i] = reader.Read<NetAddress>();
             }
@@ -26,9 +25,13 @@ namespace Horizon.RT.Models
 
         public void Serialize(BinaryWriter writer)
         {
-            for (int i = 0; i < Constants.NET_ADDRESS_LIST_COUNT; ++i)
+            for (var i = 0; i < Constants.NET_ADDRESS_LIST_COUNT; ++i)
             {
-                writer.Write((AddressList == null || i >= AddressList.Length) ? NetAddress.Empty : AddressList[i]);
+                writer.Write(
+                    (AddressList == null || i >= AddressList.Length)
+                        ? NetAddress.Empty
+                        : AddressList[i]
+                );
             }
         }
     }

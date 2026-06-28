@@ -1,11 +1,10 @@
-﻿using System.Threading.Tasks;
 using CustomLogger;
 
 namespace NetCoreServer.CustomServers
 {
     public class NCHTTPServer
     {
-        private readonly object _Lock = new object();
+        private readonly Lock _Lock = new();
 
         public bool IsStarted { get; private set; } = false;
 
@@ -25,10 +24,7 @@ namespace NetCoreServer.CustomServers
                 _server = server;
                 _secureServer = secureServer;
 
-                Parallel.Invoke(
-                        () => _server.Start(),
-                        () => _secureServer.Start()
-                    );
+                Parallel.Invoke(() => _server.Start(), () => _secureServer.Start());
 
                 IsStarted = true;
             }

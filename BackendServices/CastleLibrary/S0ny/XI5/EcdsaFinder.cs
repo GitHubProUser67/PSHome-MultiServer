@@ -1,4 +1,4 @@
-﻿/*
+/*
 This is free and unencumbered software released into the public domain.
 
 Anyone is free to copy, modify, publish, use, compile, sell, or
@@ -26,39 +26,40 @@ For more information, please refer to <https://unlicense.org>
 */
 using CustomLogger;
 using Org.BouncyCastle.Asn1.X9;
-using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Math.EC;
 using Org.BouncyCastle.Security;
-using System;
-using System.Collections.Generic;
-#if !NET6_0_OR_GREATER
-using System.Linq;
-#endif
+
 namespace CastleLibrary.S0ny.XI5
 {
     public static class EcdsaFinder
     {
         private static ECDomainParameters FromX9EcParams(X9ECParameters param) =>
-            new ECDomainParameters(param.Curve, param.G, param.N, param.H, param.GetSeed());
+            new(param.Curve, param.G, param.N, param.H, param.GetSeed());
 
-        public static ECDomainParameters CurveFromName(string name) => FromX9EcParams(ECNamedCurveTable.GetByName(name));
+        public static ECDomainParameters CurveFromName(string name) =>
+            FromX9EcParams(ECNamedCurveTable.GetByName(name));
 
-        public static IEnumerable<ECPoint> RecoverPublicKey(ECDomainParameters curve, XI5Ticket ticket, bool verifyResult = true)
+        public static IEnumerable<ECPoint> RecoverPublicKey(
+            ECDomainParameters curve,
+            XI5Ticket ticket,
+            bool verifyResult = true
+        )
         {
             var points = new List<ECPoint>();
-            for (int i = 0; i < 4; i++)
+            for (var i = 0; i < 4; i++)
             {
                 try
                 {
-                    ECPoint p = RecoverPubKey(curve, ticket.R, ticket.S, ticket.HashedMessage, i);
-                    if (p == null) continue;
+                    var p = RecoverPubKey(curve, ticket.R, ticket.S, ticket.HashedMessage, i);
+                    if (p == null)
+                        continue;
 
                     if (verifyResult)
                     {
-                        ECPublicKeyParameters pubKey = new ECPublicKeyParameters(p.Normalize(), curve);
-                        ISigner signer = SignerUtilities.GetSigner(ticket.HashName + "withECDSA");
+                        var pubKey = new ECPublicKeyParameters(p.Normalize(), curve);
+                        var signer = SignerUtilities.GetSigner(ticket.HashName + "withECDSA");
                         signer.Init(false, pubKey);
                         signer.BlockUpdate(ticket.Message, 0, ticket.Message.Length);
                         if (signer.VerifySignature(ticket.SignatureData))
@@ -76,26 +77,28 @@ namespace CastleLibrary.S0ny.XI5
             return points;
         }
 
-        private static ECPoint RecoverPubKey(ECDomainParameters curveParam, BigInteger r, BigInteger s, byte[] hashedMsg, int j)
+        private static ECPoint RecoverPubKey(
+            ECDomainParameters curveParam,
+            BigInteger r,
+            BigInteger s,
+            byte[] hashedMsg,
+            int j
+        )
         {
             if ((3 & j) != j)
-                LoggerAccessor.LogWarn("[EcdsaFinder] - RecoverPubKey: The recovery param is more than 2 bits");
+                LoggerAccessor.LogError(
+                    "[EcdsaFinder] - RecoverPubKey: The recovery param is more than 2 bits"
+                );
 
-            BigInteger n = curveParam.N;
-            bool isYOdd = (j & 1) > 0;
-            bool isSecondKey = j >> 1 > 0;
+            var n = curveParam.N;
+            var isYOdd = (j & 1) > 0;
+            var isSecondKey = j >> 1 > 0;
             if (r.SignValue <= 0 || r.CompareTo(n) >= 0)
-            {
-                Console.WriteLine("Invalid r value");
-                return null;
-            }
+                throw new Exception("[EcdsaFinder] - Invalid r value");
             if (s.SignValue <= 0 || s.CompareTo(n) >= 0)
-            {
-                Console.WriteLine("Invalid s value");
-                return null;
-            }
+                throw new Exception("[EcdsaFinder] - Invalid s value");
 
-            BigInteger x = isSecondKey ? r.Add(n) : r;
+            var x = isSecondKey ? r.Add(n) : r;
             ECPoint rPoint = null;
             try
             {
@@ -109,28 +112,38 @@ namespace CastleLibrary.S0ny.XI5
             if (rPoint == null)
                 return null;
 
-            ECPoint nR = rPoint.Multiply(n);
+            var nR = rPoint.Multiply(n);
             if (!nR.Equals(curveParam.Curve.Infinity) || !nR.IsValid())
-                throw new Exception("[EcdsaFinder] - RecoverPubKey: TnR is not a valid curve point");
+                throw new Exception(
+                    "[EcdsaFinder] - RecoverPubKey: TnR is not a valid curve point"
+                );
 
-            BigInteger rInv = r.ModInverse(n);
-#if NET6_0_OR_GREATER
-            string hex = Convert.ToHexString(hashedMsg);
-#else
-            string hex = string.Concat(hashedMsg.Select(b => b.ToString("x2")));
-#endif
-            BigInteger z = new BigInteger(hex, 16);
+            var rInv = r.ModInverse(n);
+            var hex = Convert.ToHexString(hashedMsg);
+            var z = new BigInteger(hex, 16);
             if (z.BitLength > n.BitLength)
                 z = z.ShiftRight(z.BitLength - n.BitLength);
 
-            return MultiplyTwo(curveParam, curveParam.G, n.Subtract(z).Multiply(rInv).Mod(n), rPoint, s.Multiply(rInv).Mod(n));
+            return MultiplyTwo(
+                curveParam,
+                curveParam.G,
+                n.Subtract(z).Multiply(rInv).Mod(n),
+                rPoint,
+                s.Multiply(rInv).Mod(n)
+            );
         }
 
         private static ECPoint PointFromX(ECDomainParameters domain, BigInteger x, bool isOdd)
         {
-            BigInteger p = domain.Curve.Field.Characteristic;
+            var p = domain.Curve.Field.Characteristic;
 
-            BigInteger beta = IntegerFunctions.Ressol(x.Pow(3).Add(domain.Curve.A.Multiply(domain.Curve.FromBigInteger(x)).ToBigInteger()).Add(domain.Curve.B.ToBigInteger()).Mod(p), p);
+            var beta = IntegerFunctions.Ressol(
+                x.Pow(3)
+                    .Add(domain.Curve.A.Multiply(domain.Curve.FromBigInteger(x)).ToBigInteger())
+                    .Add(domain.Curve.B.ToBigInteger())
+                    .Mod(p),
+                p
+            );
 
             if (beta.Mod(BigInteger.Two).Equals(BigInteger.Zero) ^ !isOdd)
                 beta = p.Subtract(beta); // -y % p
@@ -139,15 +152,21 @@ namespace CastleLibrary.S0ny.XI5
         }
 
         // p * j + x * k
-        private static ECPoint MultiplyTwo(ECDomainParameters curve, ECPoint p, BigInteger j, ECPoint x, BigInteger k)
+        private static ECPoint MultiplyTwo(
+            ECDomainParameters curve,
+            ECPoint p,
+            BigInteger j,
+            ECPoint x,
+            BigInteger k
+        )
         {
-            int i = Math.Max(j.BitLength, k.BitLength) - 1;
-            ECPoint r = curve.Curve.Infinity;
-            ECPoint both = p.Add(x);
+            var i = Math.Max(j.BitLength, k.BitLength) - 1;
+            var r = curve.Curve.Infinity;
+            var both = p.Add(x);
 
             while (i >= 0)
             {
-                bool kBit = k.TestBit(i);
+                var kBit = k.TestBit(i);
 
                 r = r.Twice();
 

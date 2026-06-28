@@ -14,15 +14,14 @@ namespace Alcatraz.Context.Migrations
                 name: "UbiData",
                 table: "Users",
                 type: "TEXT",
-                nullable: true);
+                nullable: true
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "UbiData",
-                table: "Users");
+            migrationBuilder.DropColumn(name: "UbiData", table: "Users");
         }
     }
 }

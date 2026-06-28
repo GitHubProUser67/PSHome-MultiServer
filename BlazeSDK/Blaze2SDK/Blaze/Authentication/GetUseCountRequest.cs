@@ -6,37 +6,35 @@ namespace Blaze2SDK.Blaze.Authentication
     [TdfStruct]
     public struct GetUseCountRequest
     {
-        
         [TdfMember("BUID")]
         public uint mUserId;
-        
+
         /// <summary>
         /// Max String Length: 64
         /// </summary>
         [TdfMember("ETAG")]
         [StringLength(64)]
         public string mEntitlementTag;
-        
+
         /// <summary>
         /// Max String Length: 64
         /// </summary>
         [TdfMember("GNAM")]
         [StringLength(64)]
         public string mGroupName;
-        
+
         /// <summary>
         /// Max String Length: 64
         /// </summary>
         [TdfMember("PJID")]
         [StringLength(64)]
         public string mProjectId;
-        
+
         /// <summary>
         /// Max String Length: 64
         /// </summary>
         [TdfMember("PRID")]
         [StringLength(64)]
         public string mProductId;
-        
     }
 }

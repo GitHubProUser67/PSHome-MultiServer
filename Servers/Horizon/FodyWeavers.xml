@@ -1,3 +1,7 @@
-﻿<Weavers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="FodyWeavers.xsd">
-  <Costura />
+﻿<Weavers
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="FodyWeavers.xsd"
+>
+  <!-- Horizon pushes costura fody to the breaking point (libraries loading in the wrong order) -->
+  <Costura CreateTemporaryAssemblies="true" />
 </Weavers>

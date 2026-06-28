@@ -1,6 +1,4 @@
-using System;
 using System.Net;
-using System.IO;
 
 namespace NetCoreServer
 {
@@ -15,23 +13,42 @@ namespace NetCoreServer
         /// </summary>
         /// <param name="address">IP address</param>
         /// <param name="port">Port number</param>
-        public HttpServer(IPAddress address, int port) : base(address, port) { Cache = new FileCache(); }
+        public HttpServer(IPAddress address, int port)
+            : base(address, port)
+        {
+            Cache = new FileCache();
+        }
+
         /// <summary>
         /// Initialize HTTP server with a given IP address and port number
         /// </summary>
         /// <param name="address">IP address</param>
         /// <param name="port">Port number</param>
-        public HttpServer(string address, int port) : base(address, port) { Cache = new FileCache(); }
+        public HttpServer(string address, int port)
+            : base(address, port)
+        {
+            Cache = new FileCache();
+        }
+
         /// <summary>
         /// Initialize HTTP server with a given DNS endpoint
         /// </summary>
         /// <param name="endpoint">DNS endpoint</param>
-        public HttpServer(DnsEndPoint endpoint) : base(endpoint) { Cache = new FileCache(); }
+        public HttpServer(DnsEndPoint endpoint)
+            : base(endpoint)
+        {
+            Cache = new FileCache();
+        }
+
         /// <summary>
         /// Initialize HTTP server with a given IP endpoint
         /// </summary>
         /// <param name="endpoint">IP endpoint</param>
-        public HttpServer(IPEndPoint endpoint) : base(endpoint) { Cache = new FileCache(); }
+        public HttpServer(IPEndPoint endpoint)
+            : base(endpoint)
+        {
+            Cache = new FileCache();
+        }
 
         /// <summary>
         /// Get the static content cache
@@ -45,7 +62,12 @@ namespace NetCoreServer
         /// <param name="prefix">Cache prefix (default is "/")</param>
         /// <param name="filter">Cache filter (default is "*.*")</param>
         /// <param name="timeout">Refresh cache timeout (default is 1 hour)</param>
-        public void AddStaticContent(string path, string prefix = "/", string filter = "*.*", TimeSpan? timeout = null)
+        public void AddStaticContent(
+            string path,
+            string prefix = "/",
+            string filter = "*.*",
+            TimeSpan? timeout = null
+        )
         {
             timeout ??= TimeSpan.FromHours(1);
 
@@ -61,17 +83,28 @@ namespace NetCoreServer
 
             Cache.InsertPath(path, prefix, filter, timeout.Value, Handler);
         }
+
         /// <summary>
         /// Remove static content cache
         /// </summary>
         /// <param name="path">Static content path</param>
-        public void RemoveStaticContent(string path) { Cache.RemovePath(path); }
+        public void RemoveStaticContent(string path)
+        {
+            Cache.RemovePath(path);
+        }
+
         /// <summary>
         /// Clear static content cache
         /// </summary>
-        public void ClearStaticContent() { Cache.Clear(); }
+        public void ClearStaticContent()
+        {
+            Cache.Clear();
+        }
 
-        protected override TcpSession CreateSession() { return new HttpSession(this); }
+        protected override TcpSession CreateSession()
+        {
+            return new HttpSession(this);
+        }
 
         #region IDisposable implementation
 

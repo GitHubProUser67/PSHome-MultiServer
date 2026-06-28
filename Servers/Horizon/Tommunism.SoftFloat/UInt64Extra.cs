@@ -39,37 +39,100 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endregion
 
 using System;
+using System.Diagnostics;
 
-namespace Tommunism.SoftFloat
+namespace Tommunism.SoftFloat;
+
+internal struct UInt64Extra : IEquatable<UInt64Extra>
 {
-    internal struct UInt64Extra : IEquatable<UInt64Extra>
+    #region Fields
+
+    public ulong Extra;
+    public ulong V;
+
+    #endregion
+
+    #region Constructors
+
+    public UInt64Extra(ulong v)
+        : this(v, 0) { }
+
+    public UInt64Extra(ulong v, ulong extra)
     {
-        public ulong Extra;
-        public ulong V;
-
-        public UInt64Extra(ulong extra, ulong v)
-        {
-            Extra = extra;
-            V = v;
-        }
-
-        public void Deconstruct(out ulong extra, out ulong v)
-        {
-            extra = Extra;
-            v = V;
-        }
-
-        public override bool Equals(object obj) => obj is UInt64Extra extra && Equals(extra);
-
-        public bool Equals(UInt64Extra other) => Extra == other.Extra && V == other.V;
-
-        public override int GetHashCode() => HashCode.Combine(Extra, V);
-
-        public override string ToString() => $"0x{V:x16}:{Extra:x16}";
-
-        public static bool operator ==(UInt64Extra left, UInt64Extra right) => left.Equals(right);
-
-        public static bool operator !=(UInt64Extra left, UInt64Extra right) => !(left == right);
+        Extra = extra;
+        V = v;
     }
 
+    #endregion
+
+    #region Methods
+
+    public void Deconstruct(out ulong extra, out ulong v)
+    {
+        extra = Extra;
+        v = V;
+    }
+
+    public override bool Equals(object? obj) => obj is UInt64Extra extra && Equals(extra);
+
+    public bool Equals(UInt64Extra other) => Extra == other.Extra && V == other.V;
+
+    public override int GetHashCode() => HashCode.Combine(Extra, V);
+
+    // softfloat_shiftRightJam64Extra
+    /// <summary>
+    /// Shifts the 128 bits formed by concatenating <see cref="V"/> and <see cref="Extra"/> right by 64 <i>plus</i> the number of bits
+    /// given in <paramref name="dist"/>, which must not be zero. This shifted value is at most 64 nonzero bits and is returned in the
+    /// <see cref="V"/> field of the <see cref="UInt64Extra"/> result. The 64-bit <see cref="Extra"/> field of the result contains a value
+    /// formed as follows from the bits that were shifted off: The <i>last</i> bit shifted off is the most-significant bit of the
+    /// <see cref="Extra"/> field, and the other 63 bits of the <see cref="Extra"/> field are all zero if and only if <i>all but the
+    /// last</i> bits shifted off were all zero.</summary>
+    /// <remarks>
+    /// This function makes more sense if <see cref="V"/> and <see cref="Extra"/> are considered to form an unsigned fixed-point number
+    /// with binary point between <see cref="V"/> and <see cref="Extra"/>. This fixed-point value is shifted right by the number of bits
+    /// given in <paramref name="dist"/>, and the integer part of this shifted value is returned in the <see cref="V"/> field of the
+    /// result. The fractional part of the shifted value is modified as described above and returned in the <see cref="Extra"/> field of
+    /// the result.
+    /// </remarks>
+    public UInt64Extra ShiftRightJam(int dist)
+    {
+        Debug.Assert(dist > 0, "Shift amount is out of range.");
+
+        UInt64Extra z;
+        if (dist < 64)
+        {
+            z.V = V >> dist;
+            z.Extra = V << (-dist);
+        }
+        else
+        {
+            z.V = 0;
+            z.Extra = (dist == 64) ? V : (V != 0 ? 1UL : 0UL);
+        }
+
+        z.Extra |= Extra != 0 ? 1UL : 0UL;
+        return z;
+    }
+
+    // softfloat_shortShiftRightJam64Extra
+    /// <summary>
+    /// This function is the same as <see cref="ShiftRightJam(int)"/>, except that <paramref name="dist"/> must be in the range 1 to 63.
+    /// </summary>
+    public UInt64Extra ShortShiftRightJam(int dist)
+    {
+        Debug.Assert(dist is > 0 and < 64, "Shift amount is out of range.");
+
+        UInt64Extra z;
+        z.V = V >> dist;
+        z.Extra = (V << -dist) | (Extra != 0 ? 1UL : 0UL);
+        return z;
+    }
+
+    public override string ToString() => $"0x{V:x16}:{Extra:x16}";
+
+    public static bool operator ==(UInt64Extra left, UInt64Extra right) => left.Equals(right);
+
+    public static bool operator !=(UInt64Extra left, UInt64Extra right) => !(left == right);
+
+    #endregion
 }

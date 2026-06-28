@@ -1,38 +1,39 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
-using System.IO;
-using System.Windows.Forms;
+﻿using System.Diagnostics;
 
 namespace RemoteControl
-{ 
+{
     // A simple process manager class to keep track of processes made using ChatGPT
     public static class ProcessManager
     {
-        private static readonly object _lock = new object();
-        public static readonly Dictionary<uint, Process> Processes = new Dictionary<uint, Process>();
+        private static readonly object _lock = new();
+        public static readonly Dictionary<uint, Process> Processes = [];
 
-        public static void StartupProgram(ControlWriter writer, TextBox textBox, GroupBox groupBox, string appPrefix, string exePath, uint appid)
+        public static void StartupProgram(
+            ControlWriter writer,
+            TextBox textBox,
+            GroupBox groupBox,
+            string appPrefix,
+            string exePath,
+            uint appid
+        )
         {
             // Start the process in the background
-            ProcessStartInfo startInfo = new ProcessStartInfo()
+            var startInfo = new ProcessStartInfo()
             {
                 FileName = exePath,
                 WorkingDirectory = Path.GetDirectoryName(exePath),
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
             };
 
-            if (MultiServerLibrary.Extension.Microsoft.Win32API.IsWindows && MultiServerLibrary.Extension.Microsoft.Win32API.IsAdministrator())
+            if (
+                MultiServerLibrary.Extension.Windows.Win32API.IsWindows
+                && MultiServerLibrary.Extension.Windows.Win32API.IsAdministrator()
+            )
                 startInfo.Verb = "runas";
 
-            Process process = new Process()
-            {
-                StartInfo = startInfo,
-                EnableRaisingEvents = true
-            };
+            var process = new Process() { StartInfo = startInfo, EnableRaisingEvents = true };
 
             process.OutputDataReceived += (sender, e) =>
             {
@@ -44,15 +45,21 @@ namespace RemoteControl
                 writer.WriteLine($"[{appid}] Process exited with code {process.ExitCode}");
                 if (ShutdownProcess(appid))
                 {
-                    textBox.Invoke(new Action(() =>
-                    {
-                        textBox.Text = "Gracefully Shutdown";
-                    }));
-                    groupBox.Invoke(new Action(() =>
-                    {
-                        groupBox.BackColor = Color.Yellow;
-                    }));
-                    CustomLogger.LoggerAccessor.LogWarn($"[{appPrefix}] - Server shutdown at:{DateTime.Now}!");
+                    textBox.Invoke(
+                        new Action(() =>
+                        {
+                            textBox.Text = "Gracefully Shutdown";
+                        })
+                    );
+                    groupBox.Invoke(
+                        new Action(() =>
+                        {
+                            groupBox.BackColor = Color.Yellow;
+                        })
+                    );
+                    CustomLogger.LoggerAccessor.LogWarn(
+                        $"[{appPrefix}] - Server shutdown at:{DateTime.Now}!"
+                    );
                 }
             };
 
@@ -74,7 +81,7 @@ namespace RemoteControl
         {
             lock (_lock)
             {
-                if (Processes.TryGetValue(appid, out Process process) && process != null)
+                if (Processes.TryGetValue(appid, out var process) && process != null)
                 {
                     process.CloseMainWindow(); // Try to close the main window gracefully
 

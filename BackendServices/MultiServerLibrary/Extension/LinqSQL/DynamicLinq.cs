@@ -6,17 +6,13 @@
 * as well as various changes in order to support the filter strings GameSpy sends
 */
 
-using MultiServerLibrary.Extension.LinqSQL;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
+using MultiServerLibrary.Extension.LinqSQL;
 
 namespace MultiServerLibrary.Extension.LinqSQL
 {
@@ -32,15 +28,16 @@ namespace MultiServerLibrary.Extension.LinqSQL
             this IEnumerable<T> source,
             TAccume seed,
             Func<TAccume, T, TAccume> accumulator,
-            Func<TAccume, T, bool> predicate)
+            Func<TAccume, T, bool> predicate
+        )
         {
             using (var iterator = source.GetEnumerator())
             {
                 if (!iterator.MoveNext())
                     yield break;
 
-                List<T> list = new List<T>() { iterator.Current };
-                TAccume accume = accumulator(seed, iterator.Current);
+                var list = new List<T>() { iterator.Current };
+                var accume = accumulator(seed, iterator.Current);
                 while (iterator.MoveNext())
                 {
                     accume = accumulator(accume, iterator.Current);
@@ -57,104 +54,100 @@ namespace MultiServerLibrary.Extension.LinqSQL
             }
         }
 
-#if !NET6_0_OR_GREATER
-		/// <summary>
-        /// By user Ash on
-        /// https://stackoverflow.com/questions/914109/how-to-use-linq-to-select-object-with-minimum-or-maximum-property-value
-        /// </summary>
-        public static TSource MinBy<TSource, TKey>(this IEnumerable<TSource> source,
-    Func<TSource, TKey> selector)
-        {
-            return source.MinBy(selector, null);
-        }
-
-        public static TSource MinBy<TSource, TKey>(this IEnumerable<TSource> source,
-            Func<TSource, TKey> selector, IComparer<TKey> comparer)
-        {
-            if (source != null && selector != null)
-            {
-                comparer = comparer ?? Comparer<TKey>.Default;
-
-                using (var sourceIterator = source.GetEnumerator())
-                {
-                    if (sourceIterator.MoveNext())
-                    {
-                        var min = sourceIterator.Current;
-                        var minKey = selector(min);
-                        while (sourceIterator.MoveNext())
-                        {
-                            var candidate = sourceIterator.Current;
-                            var candidateProjected = selector(candidate);
-                            if (comparer.Compare(candidateProjected, minKey) < 0)
-                            {
-                                min = candidate;
-                                minKey = candidateProjected;
-                            }
-                        }
-                        return min;
-                    }
-                }
-            }
-
-            return default;
-        }
-#endif
         #endregion
     }
 
     public static class DynamicQueryable
     {
-        public static IQueryable<T> Where<T>(this IQueryable<T> source, string predicate, params object[] values)
+        public static IQueryable<T> Where<T>(
+            this IQueryable<T> source,
+            string predicate,
+            params object[] values
+        )
         {
             return (IQueryable<T>)((IQueryable)source).Where(predicate, values);
         }
 
-        public static IQueryable Where(this IQueryable source, string predicate, params object[] values)
+        public static IQueryable Where(
+            this IQueryable source,
+            string predicate,
+            params object[] values
+        )
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (predicate == null) throw new ArgumentNullException("predicate");
-            LambdaExpression lambda = DynamicExpression.ParseLambda(source.ElementType, typeof(bool), predicate, values);
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(predicate);
+            var lambda = DynamicExpression.ParseLambda(
+                source.ElementType,
+                typeof(bool),
+                predicate,
+                values
+            );
             return source.Provider.CreateQuery(
                 Expression.Call(
-                    typeof(Queryable), "Where",
+                    typeof(Queryable),
+                    "Where",
                     new Type[] { source.ElementType },
-                    source.Expression, Expression.Quote(lambda)));
+                    source.Expression,
+                    Expression.Quote(lambda)
+                )
+            );
         }
 
-        public static IQueryable Select(this IQueryable source, string selector, params object[] values)
+        public static IQueryable Select(
+            this IQueryable source,
+            string selector,
+            params object[] values
+        )
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (selector == null) throw new ArgumentNullException("selector");
-            LambdaExpression lambda = DynamicExpression.ParseLambda(source.ElementType, null, selector, values);
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(selector);
+            var lambda = DynamicExpression.ParseLambda(source.ElementType, null, selector, values);
             return source.Provider.CreateQuery(
                 Expression.Call(
-                    typeof(Queryable), "Select",
+                    typeof(Queryable),
+                    "Select",
                     new Type[] { source.ElementType, lambda.Body.Type },
-                    source.Expression, Expression.Quote(lambda)));
+                    source.Expression,
+                    Expression.Quote(lambda)
+                )
+            );
         }
 
-        public static IQueryable<T> OrderBy<T>(this IQueryable<T> source, string ordering, params object[] values)
+        public static IQueryable<T> OrderBy<T>(
+            this IQueryable<T> source,
+            string ordering,
+            params object[] values
+        )
         {
             return (IQueryable<T>)((IQueryable)source).OrderBy(ordering, values);
         }
 
-        public static IQueryable OrderBy(this IQueryable source, string ordering, params object[] values)
+        public static IQueryable OrderBy(
+            this IQueryable source,
+            string ordering,
+            params object[] values
+        )
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (ordering == null) throw new ArgumentNullException("ordering");
-            ParameterExpression[] parameters = new ParameterExpression[] {
-                Expression.Parameter(source.ElementType, "") };
-            ExpressionParser parser = new ExpressionParser(parameters, ordering, values);
-            IEnumerable<DynamicOrdering> orderings = parser.ParseOrdering();
-            Expression queryExpr = source.Expression;
-            string methodAsc = "OrderBy";
-            string methodDesc = "OrderByDescending";
-            foreach (DynamicOrdering o in orderings)
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(ordering);
+            var parameters = new ParameterExpression[]
+            {
+                Expression.Parameter(source.ElementType, ""),
+            };
+            var parser = new ExpressionParser(parameters, ordering, values);
+            var orderings = parser.ParseOrdering();
+            var queryExpr = source.Expression;
+            var methodAsc = "OrderBy";
+            var methodDesc = "OrderByDescending";
+            foreach (var o in orderings)
             {
                 queryExpr = Expression.Call(
-                    typeof(Queryable), o.Ascending ? methodAsc : methodDesc,
+                    typeof(Queryable),
+                    o.Ascending ? methodAsc : methodDesc,
                     new Type[] { source.ElementType, o.Selector?.Type },
-                    queryExpr, Expression.Quote(Expression.Lambda(o.Selector, parameters)));
+                    queryExpr,
+                    Expression.Quote(Expression.Lambda(o.Selector, parameters))
+                );
                 methodAsc = "ThenBy";
                 methodDesc = "ThenByDescending";
             }
@@ -163,54 +156,92 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         public static IQueryable Take(this IQueryable source, int count)
         {
-            if (source == null) throw new ArgumentNullException("source");
+            ArgumentNullException.ThrowIfNull(source);
             return source.Provider.CreateQuery(
                 Expression.Call(
-                    typeof(Queryable), "Take",
+                    typeof(Queryable),
+                    "Take",
                     new Type[] { source.ElementType },
-                    source.Expression, Expression.Constant(count)));
+                    source.Expression,
+                    Expression.Constant(count)
+                )
+            );
         }
 
         public static IQueryable Skip(this IQueryable source, int count)
         {
-            if (source == null) throw new ArgumentNullException("source");
+            ArgumentNullException.ThrowIfNull(source);
             return source.Provider.CreateQuery(
                 Expression.Call(
-                    typeof(Queryable), "Skip",
+                    typeof(Queryable),
+                    "Skip",
                     new Type[] { source.ElementType },
-                    source.Expression, Expression.Constant(count)));
+                    source.Expression,
+                    Expression.Constant(count)
+                )
+            );
         }
 
-        public static IQueryable GroupBy(this IQueryable source, string keySelector, string elementSelector, params object[] values)
+        public static IQueryable GroupBy(
+            this IQueryable source,
+            string keySelector,
+            string elementSelector,
+            params object[] values
+        )
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (keySelector == null) throw new ArgumentNullException("keySelector");
-            if (elementSelector == null) throw new ArgumentNullException("elementSelector");
-            LambdaExpression keyLambda = DynamicExpression.ParseLambda(source.ElementType, null, keySelector, values);
-            LambdaExpression elementLambda = DynamicExpression.ParseLambda(source.ElementType, null, elementSelector, values);
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(keySelector);
+            ArgumentNullException.ThrowIfNull(elementSelector);
+            var keyLambda = DynamicExpression.ParseLambda(
+                source.ElementType,
+                null,
+                keySelector,
+                values
+            );
+            var elementLambda = DynamicExpression.ParseLambda(
+                source.ElementType,
+                null,
+                elementSelector,
+                values
+            );
             return source.Provider.CreateQuery(
                 Expression.Call(
-                    typeof(Queryable), "GroupBy",
+                    typeof(Queryable),
+                    "GroupBy",
                     new Type[] { source.ElementType, keyLambda.Body.Type, elementLambda.Body.Type },
-                    source.Expression, Expression.Quote(keyLambda), Expression.Quote(elementLambda)));
+                    source.Expression,
+                    Expression.Quote(keyLambda),
+                    Expression.Quote(elementLambda)
+                )
+            );
         }
 
         public static bool? Any(this IQueryable source)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            return (bool?)source.Provider.Execute(
-                Expression.Call(
-                    typeof(Queryable), "Any",
-                    new Type[] { source.ElementType }, source.Expression));
+            ArgumentNullException.ThrowIfNull(source);
+            return (bool?)
+                source.Provider.Execute(
+                    Expression.Call(
+                        typeof(Queryable),
+                        "Any",
+                        new Type[] { source.ElementType },
+                        source.Expression
+                    )
+                );
         }
 
         public static int? Count(this IQueryable source)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            return (int?)source.Provider.Execute(
-                Expression.Call(
-                    typeof(Queryable), "Count",
-                    new Type[] { source.ElementType }, source.Expression));
+            ArgumentNullException.ThrowIfNull(source);
+            return (int?)
+                source.Provider.Execute(
+                    Expression.Call(
+                        typeof(Queryable),
+                        "Count",
+                        new Type[] { source.ElementType },
+                        source.Expression
+                    )
+                );
         }
     }
 
@@ -218,12 +249,13 @@ namespace MultiServerLibrary.Extension.LinqSQL
     {
         public override string ToString()
         {
-            PropertyInfo[] props = GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public);
-            StringBuilder sb = new StringBuilder();
+            var props = GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public);
+            var sb = new StringBuilder();
             sb.Append('{');
-            for (int i = 0; i < props.Length; i++)
+            for (var i = 0; i < props.Length; i++)
             {
-                if (i > 0) sb.Append(", ");
+                if (i > 0)
+                    sb.Append(", ");
                 sb.Append(props[i].Name);
                 sb.Append('=');
                 sb.Append(props[i].GetValue(this, null));
@@ -240,8 +272,8 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         public DynamicProperty(string name, Type type)
         {
-            if (name == null) throw new ArgumentNullException("name");
-            if (type == null) throw new ArgumentNullException("type");
+            ArgumentNullException.ThrowIfNull(name);
+            ArgumentNullException.ThrowIfNull(type);
             this.name = name;
             this.type = type;
         }
@@ -261,22 +293,40 @@ namespace MultiServerLibrary.Extension.LinqSQL
     {
         public static Expression Parse(Type resultType, string expression, params object[] values)
         {
-            ExpressionParser parser = new ExpressionParser(null, expression, values);
+            var parser = new ExpressionParser(null, expression, values);
             return parser.Parse(resultType);
         }
 
-        public static LambdaExpression ParseLambda(Type itType, Type resultType, string expression, params object[] values)
+        public static LambdaExpression ParseLambda(
+            Type itType,
+            Type resultType,
+            string expression,
+            params object[] values
+        )
         {
-            return ParseLambda(new ParameterExpression[] { Expression.Parameter(itType, string.Empty) }, resultType, expression, values);
+            return ParseLambda(
+                new ParameterExpression[] { Expression.Parameter(itType, string.Empty) },
+                resultType,
+                expression,
+                values
+            );
         }
 
-        public static LambdaExpression ParseLambda(ParameterExpression[] parameters, Type resultType, string expression, params object[] values)
+        public static LambdaExpression ParseLambda(
+            ParameterExpression[] parameters,
+            Type resultType,
+            string expression,
+            params object[] values
+        )
         {
-            ExpressionParser parser = new ExpressionParser(parameters, expression, values);
+            var parser = new ExpressionParser(parameters, expression, values);
             return Expression.Lambda(parser.Parse(resultType), parameters);
         }
 
-        public static Expression<Func<T, S>> ParseLambda<T, S>(string expression, params object[] values)
+        public static Expression<Func<T, S>> ParseLambda<T, S>(
+            string expression,
+            params object[] values
+        )
         {
             return (Expression<Func<T, S>>)ParseLambda(typeof(T), typeof(S), expression, values);
         }
@@ -307,7 +357,7 @@ namespace MultiServerLibrary.Extension.LinqSQL
         {
             this.properties = properties.ToArray();
             hashCode = 0;
-            foreach (DynamicProperty p in properties)
+            foreach (var p in properties)
             {
                 hashCode ^= p.Name.GetHashCode() ^ p.Type.GetHashCode();
             }
@@ -325,11 +375,15 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         public bool Equals(Signature other)
         {
-            if (properties.Length != other?.properties.Length) return false;
-            for (int i = 0; i < properties.Length; i++)
+            if (properties.Length != other?.properties.Length)
+                return false;
+            for (var i = 0; i < properties.Length; i++)
             {
-                if (properties[i].Name != other?.properties[i].Name ||
-                    properties[i].Type != other?.properties[i].Type) return false;
+                if (
+                    properties[i].Name != other?.properties[i].Name
+                    || properties[i].Type != other?.properties[i].Type
+                )
+                    return false;
             }
             return true;
         }
@@ -337,9 +391,9 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
     internal class ClassFactory
     {
-        public static readonly ClassFactory Instance = new ClassFactory();
+        public static readonly ClassFactory Instance = new();
 
-        static ClassFactory() { }  // Trigger lazy initialization of static fields
+        static ClassFactory() { } // Trigger lazy initialization of static fields
 
         readonly ModuleBuilder module;
         readonly Dictionary<Signature, Type> classes;
@@ -348,21 +402,13 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         private ClassFactory()
         {
-            AssemblyName name = new AssemblyName("DynamicClasses");
-            AssemblyBuilder assembly = AssemblyBuilder.DefineDynamicAssembly(name, AssemblyBuilderAccess.Run);
-#if ENABLE_LINQ_PARTIAL_TRUST
-			new ReflectionPermission(PermissionState.Unrestricted).Assert();
-#endif
+            var name = new AssemblyName("DynamicClasses");
+            var assembly = AssemblyBuilder.DefineDynamicAssembly(name, AssemblyBuilderAccess.Run);
             try
             {
                 module = assembly.DefineDynamicModule("Module");
             }
-            finally
-            {
-#if ENABLE_LINQ_PARTIAL_TRUST
-				PermissionSet.RevertAssert();
-#endif
-            }
+            finally { }
             classes = new Dictionary<Signature, Type>();
             rwLock = new ReaderWriterLock();
         }
@@ -372,7 +418,7 @@ namespace MultiServerLibrary.Extension.LinqSQL
             rwLock.AcquireReaderLock(Timeout.Infinite);
             try
             {
-                Signature signature = new Signature(properties);
+                var signature = new Signature(properties);
                 Type type;
                 if (!classes.TryGetValue(signature, out type))
                 {
@@ -389,34 +435,25 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         private Type CreateDynamicClass(DynamicProperty[] properties)
         {
-            LockCookie cookie = rwLock.UpgradeToWriterLock(Timeout.Infinite);
+            var cookie = rwLock.UpgradeToWriterLock(Timeout.Infinite);
             try
             {
-                string typeName = "DynamicClass" + (classCount + 1);
-#if ENABLE_LINQ_PARTIAL_TRUST
-				new ReflectionPermission(PermissionState.Unrestricted).Assert();
-#endif
+                var typeName = "DynamicClass" + (classCount + 1);
                 try
                 {
-                    TypeBuilder tb = module.DefineType(typeName, TypeAttributes.Class |
-                        TypeAttributes.Public, typeof(DynamicClass));
-                    FieldInfo[] fields = GenerateProperties(tb, properties);
+                    var tb = module.DefineType(
+                        typeName,
+                        TypeAttributes.Class | TypeAttributes.Public,
+                        typeof(DynamicClass)
+                    );
+                    var fields = GenerateProperties(tb, properties);
                     GenerateEquals(tb, fields);
                     GenerateGetHashCode(tb, fields);
-#if NETSTANDARD2_1_OR_GREATER || NETFRAMEWORK || NETCOREAPP2_0_OR_GREATER
-                    Type result = tb.CreateType();
-#else
-                    Type result = tb.CreateTypeInfo();
-#endif
+                    var result = tb.CreateType();
                     classCount++;
                     return result;
                 }
-                finally
-                {
-#if ENABLE_LINQ_PARTIAL_TRUST
-					PermissionSet.RevertAssert();
-#endif
-                }
+                finally { }
             }
             finally
             {
@@ -427,22 +464,32 @@ namespace MultiServerLibrary.Extension.LinqSQL
         private static FieldInfo[] GenerateProperties(TypeBuilder tb, DynamicProperty[] properties)
         {
             FieldInfo[] fields = new FieldBuilder[properties.Length];
-            for (int i = 0; i < properties.Length; i++)
+            for (var i = 0; i < properties.Length; i++)
             {
-                DynamicProperty dp = properties[i];
-                FieldBuilder fb = tb.DefineField("_" + dp.Name, dp.Type, FieldAttributes.Private);
-                PropertyBuilder pb = tb.DefineProperty(dp.Name, PropertyAttributes.HasDefault, dp.Type, null);
-                MethodBuilder mbGet = tb.DefineMethod("get_" + dp.Name,
-                    MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig,
-                    dp.Type, Type.EmptyTypes);
-                ILGenerator genGet = mbGet.GetILGenerator();
+                var dp = properties[i];
+                var fb = tb.DefineField("_" + dp.Name, dp.Type, FieldAttributes.Private);
+                var pb = tb.DefineProperty(dp.Name, PropertyAttributes.HasDefault, dp.Type, null);
+                var mbGet = tb.DefineMethod(
+                    "get_" + dp.Name,
+                    MethodAttributes.Public
+                        | MethodAttributes.SpecialName
+                        | MethodAttributes.HideBySig,
+                    dp.Type,
+                    Type.EmptyTypes
+                );
+                var genGet = mbGet.GetILGenerator();
                 genGet.Emit(OpCodes.Ldarg_0);
                 genGet.Emit(OpCodes.Ldfld, fb);
                 genGet.Emit(OpCodes.Ret);
-                MethodBuilder mbSet = tb.DefineMethod("set_" + dp.Name,
-                    MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig,
-                    null, new Type[] { dp.Type });
-                ILGenerator genSet = mbSet.GetILGenerator();
+                var mbSet = tb.DefineMethod(
+                    "set_" + dp.Name,
+                    MethodAttributes.Public
+                        | MethodAttributes.SpecialName
+                        | MethodAttributes.HideBySig,
+                    null,
+                    new Type[] { dp.Type }
+                );
+                var genSet = mbSet.GetILGenerator();
                 genSet.Emit(OpCodes.Ldarg_0);
                 genSet.Emit(OpCodes.Ldarg_1);
                 genSet.Emit(OpCodes.Stfld, fb);
@@ -456,13 +503,18 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         private static void GenerateEquals(TypeBuilder tb, FieldInfo[] fields)
         {
-            MethodBuilder mb = tb.DefineMethod("Equals",
-                MethodAttributes.Public | MethodAttributes.ReuseSlot |
-                MethodAttributes.Virtual | MethodAttributes.HideBySig,
-                typeof(bool), new Type[] { typeof(object) });
-            ILGenerator gen = mb.GetILGenerator();
-            LocalBuilder other = gen.DeclareLocal(tb);
-            Label next = gen.DefineLabel();
+            var mb = tb.DefineMethod(
+                "Equals",
+                MethodAttributes.Public
+                    | MethodAttributes.ReuseSlot
+                    | MethodAttributes.Virtual
+                    | MethodAttributes.HideBySig,
+                typeof(bool),
+                new Type[] { typeof(object) }
+            );
+            var gen = mb.GetILGenerator();
+            var other = gen.DeclareLocal(tb);
+            var next = gen.DefineLabel();
             gen.Emit(OpCodes.Ldarg_1);
             gen.Emit(OpCodes.Isinst, tb);
             gen.Emit(OpCodes.Stloc, other);
@@ -471,10 +523,10 @@ namespace MultiServerLibrary.Extension.LinqSQL
             gen.Emit(OpCodes.Ldc_I4_0);
             gen.Emit(OpCodes.Ret);
             gen.MarkLabel(next);
-            foreach (FieldInfo field in fields)
+            foreach (var field in fields)
             {
-                Type ft = field.FieldType;
-                Type ct = typeof(EqualityComparer<>).MakeGenericType(ft);
+                var ft = field.FieldType;
+                var ct = typeof(EqualityComparer<>).MakeGenericType(ft);
                 next = gen.DefineLabel();
                 gen.EmitCall(OpCodes.Call, ct.GetMethod("get_Default"), null);
                 gen.Emit(OpCodes.Ldarg_0);
@@ -493,20 +545,29 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         private static void GenerateGetHashCode(TypeBuilder tb, FieldInfo[] fields)
         {
-            MethodBuilder mb = tb.DefineMethod("GetHashCode",
-                MethodAttributes.Public | MethodAttributes.ReuseSlot |
-                MethodAttributes.Virtual | MethodAttributes.HideBySig,
-                typeof(int), Type.EmptyTypes);
-            ILGenerator gen = mb.GetILGenerator();
+            var mb = tb.DefineMethod(
+                "GetHashCode",
+                MethodAttributes.Public
+                    | MethodAttributes.ReuseSlot
+                    | MethodAttributes.Virtual
+                    | MethodAttributes.HideBySig,
+                typeof(int),
+                Type.EmptyTypes
+            );
+            var gen = mb.GetILGenerator();
             gen.Emit(OpCodes.Ldc_I4_0);
-            foreach (FieldInfo field in fields)
+            foreach (var field in fields)
             {
-                Type ft = field.FieldType;
-                Type ct = typeof(EqualityComparer<>).MakeGenericType(ft);
+                var ft = field.FieldType;
+                var ct = typeof(EqualityComparer<>).MakeGenericType(ft);
                 gen.EmitCall(OpCodes.Call, ct.GetMethod("get_Default"), null);
                 gen.Emit(OpCodes.Ldarg_0);
                 gen.Emit(OpCodes.Ldfld, field);
-                gen.EmitCall(OpCodes.Callvirt, ct.GetMethod("GetHashCode", new Type[] { ft }), null);
+                gen.EmitCall(
+                    OpCodes.Callvirt,
+                    ct.GetMethod("GetHashCode", new Type[] { ft }),
+                    null
+                );
                 gen.Emit(OpCodes.Xor);
             }
             gen.Emit(OpCodes.Ret);
@@ -534,7 +595,7 @@ namespace MultiServerLibrary.Extension.LinqSQL
         }
     }
 
-    internal class ExpressionParser
+    internal partial class ExpressionParser
     {
         struct Token
         {
@@ -579,7 +640,7 @@ namespace MultiServerLibrary.Extension.LinqSQL
             GreaterThanEqual,
             DoubleBar,
             Like,
-            NotLike
+            NotLike,
         }
 
         interface ILogicalSignatures
@@ -689,7 +750,8 @@ namespace MultiServerLibrary.Extension.LinqSQL
             void Average(decimal? selector);
         }
 
-        static readonly Type[] predefinedTypes = {
+        static readonly Type[] predefinedTypes =
+        {
             typeof(object),
             typeof(bool),
             typeof(char),
@@ -709,7 +771,7 @@ namespace MultiServerLibrary.Extension.LinqSQL
             typeof(TimeSpan),
             typeof(Guid),
             typeof(Math),
-            typeof(Convert)
+            typeof(Convert),
         };
 
         static readonly Expression trueLiteral = Expression.Constant(true);
@@ -732,14 +794,20 @@ namespace MultiServerLibrary.Extension.LinqSQL
         char ch;
         Token token;
 
-        public ExpressionParser(ParameterExpression[] parameters, string expression, object[] values)
+        public ExpressionParser(
+            ParameterExpression[] parameters,
+            string expression,
+            object[] values
+        )
         {
-            if (expression == null) throw new ArgumentNullException("expression");
-            if (keywords == null) keywords = CreateKeywords();
+            ArgumentNullException.ThrowIfNull(expression);
+            keywords ??= CreateKeywords();
             symbols = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
             literals = new Dictionary<Expression, string>();
-            if (parameters != null) ProcessParameters(parameters);
-            if (values != null) ProcessValues(values);
+            if (parameters != null)
+                ProcessParameters(parameters);
+            if (values != null)
+                ProcessValues(values);
             text = expression;
             textLen = text.Length;
             SetTextPos(0);
@@ -748,7 +816,7 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         void ProcessParameters(ParameterExpression[] parameters)
         {
-            foreach (ParameterExpression pe in parameters)
+            foreach (var pe in parameters)
                 if (!string.IsNullOrEmpty(pe.Name))
                     AddSymbol(pe.Name, pe);
             if (parameters.Length == 1 && string.IsNullOrEmpty(parameters[0].Name))
@@ -757,9 +825,9 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         void ProcessValues(object[] values)
         {
-            for (int i = 0; i < values.Length; i++)
+            for (var i = 0; i < values.Length; i++)
             {
-                object value = values[i];
+                var value = values[i];
                 if (i == values.Length - 1 && value is IDictionary<string, object>)
                 {
                     externals = (IDictionary<string, object>)value;
@@ -780,8 +848,8 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         public Expression Parse(Type resultType)
         {
-            int exprPos = token.pos;
-            Expression expr = ParseExpression();
+            var exprPos = token.pos;
+            var expr = ParseExpression();
             if (resultType != null)
                 if ((expr = PromoteExpression(expr, resultType, true)) == null)
                     throw ParseError(exprPos, Res.ExpressionTypeMismatch, GetTypeName(resultType));
@@ -792,11 +860,11 @@ namespace MultiServerLibrary.Extension.LinqSQL
 #pragma warning disable 0219
         public IEnumerable<DynamicOrdering> ParseOrdering()
         {
-            List<DynamicOrdering> orderings = new List<DynamicOrdering>();
+            var orderings = new List<DynamicOrdering>();
             while (true)
             {
-                Expression expr = ParseExpression();
-                bool ascending = true;
+                var expr = ParseExpression();
+                var ascending = true;
                 if (TokenIdentifierIs("asc") || TokenIdentifierIs("ascending"))
                 {
                     NextToken();
@@ -807,7 +875,8 @@ namespace MultiServerLibrary.Extension.LinqSQL
                     ascending = false;
                 }
                 orderings.Add(new DynamicOrdering { Selector = expr, Ascending = ascending });
-                if (token.id != TokenId.Comma) break;
+                if (token.id != TokenId.Comma)
+                    break;
                 NextToken();
             }
             ValidateToken(TokenId.End, Res.SyntaxError);
@@ -818,15 +887,15 @@ namespace MultiServerLibrary.Extension.LinqSQL
         // ?: operator
         Expression ParseExpression()
         {
-            int errorPos = token.pos;
-            Expression expr = ParseLogicalOr();
+            var errorPos = token.pos;
+            var expr = ParseLogicalOr();
             if (token.id == TokenId.Question)
             {
                 NextToken();
-                Expression expr1 = ParseExpression();
+                var expr1 = ParseExpression();
                 ValidateToken(TokenId.Colon, Res.ColonExpected);
                 NextToken();
-                Expression expr2 = ParseExpression();
+                var expr2 = ParseExpression();
                 expr = GenerateConditional(expr, expr1, expr2, errorPos);
             }
             return expr;
@@ -835,13 +904,19 @@ namespace MultiServerLibrary.Extension.LinqSQL
         // ||, or operator
         Expression ParseLogicalOr()
         {
-            Expression left = ParseLogicalAnd();
+            var left = ParseLogicalAnd();
             while (token.id == TokenId.DoubleBar || TokenIdentifierIs("or"))
             {
-                Token op = token;
+                var op = token;
                 NextToken();
-                Expression right = ParseLogicalAnd();
-                CheckAndPromoteOperands(typeof(ILogicalSignatures), op.text, ref left, ref right, op.pos);
+                var right = ParseLogicalAnd();
+                CheckAndPromoteOperands(
+                    typeof(ILogicalSignatures),
+                    op.text,
+                    ref left,
+                    ref right,
+                    op.pos
+                );
                 left = Expression.OrElse(left, right);
             }
             return left;
@@ -850,13 +925,19 @@ namespace MultiServerLibrary.Extension.LinqSQL
         // &&, and operator
         Expression ParseLogicalAnd()
         {
-            Expression left = ParseComparison();
+            var left = ParseComparison();
             while (token.id == TokenId.DoubleAmphersand || TokenIdentifierIs("and"))
             {
-                Token op = token;
+                var op = token;
                 NextToken();
-                Expression right = ParseComparison();
-                CheckAndPromoteOperands(typeof(ILogicalSignatures), op.text, ref left, ref right, op.pos);
+                var right = ParseComparison();
+                CheckAndPromoteOperands(
+                    typeof(ILogicalSignatures),
+                    op.text,
+                    ref left,
+                    ref right,
+                    op.pos
+                );
                 left = Expression.AndAlso(left, right);
             }
             return left;
@@ -865,18 +946,28 @@ namespace MultiServerLibrary.Extension.LinqSQL
         // =, ==, !=, <>, >, >=, <, <= operators
         Expression ParseComparison()
         {
-            Expression left = ParseAdditive();
-            while (token.id == TokenId.Equal || token.id == TokenId.DoubleEqual ||
-                token.id == TokenId.ExclamationEqual || token.id == TokenId.LessGreater ||
-                token.id == TokenId.GreaterThan || token.id == TokenId.GreaterThanEqual ||
-                token.id == TokenId.LessThan || token.id == TokenId.LessThanEqual ||
-                token.id == TokenId.Like || token.id == TokenId.NotLike)
+            var left = ParseAdditive();
+            while (
+                token.id == TokenId.Equal
+                || token.id == TokenId.DoubleEqual
+                || token.id == TokenId.ExclamationEqual
+                || token.id == TokenId.LessGreater
+                || token.id == TokenId.GreaterThan
+                || token.id == TokenId.GreaterThanEqual
+                || token.id == TokenId.LessThan
+                || token.id == TokenId.LessThanEqual
+                || token.id == TokenId.Like
+                || token.id == TokenId.NotLike
+            )
             {
-                Token op = token;
+                var op = token;
                 NextToken();
-                Expression right = ParseAdditive();
-                bool isEquality = op.id == TokenId.Equal || op.id == TokenId.DoubleEqual ||
-                    op.id == TokenId.ExclamationEqual || op.id == TokenId.LessGreater;
+                var right = ParseAdditive();
+                var isEquality =
+                    op.id == TokenId.Equal
+                    || op.id == TokenId.DoubleEqual
+                    || op.id == TokenId.ExclamationEqual
+                    || op.id == TokenId.LessGreater;
                 if (isEquality && !left.Type.IsValueType && !right.Type.IsValueType)
                 {
                     if (left.Type != right.Type)
@@ -885,13 +976,11 @@ namespace MultiServerLibrary.Extension.LinqSQL
                         {
                             right = Expression.Convert(right, left.Type);
                         }
-                        else if (right.Type.IsAssignableFrom(left.Type))
-                        {
-                            left = Expression.Convert(left, right.Type);
-                        }
                         else
                         {
-                            throw IncompatibleOperandsError(op.text, left, right, op.pos);
+                            left = right.Type.IsAssignableFrom(left.Type)
+                                ? (Expression)Expression.Convert(left, right.Type)
+                                : throw IncompatibleOperandsError(op.text, left, right, op.pos);
                         }
                     }
                 }
@@ -904,20 +993,24 @@ namespace MultiServerLibrary.Extension.LinqSQL
                         {
                             right = e;
                         }
-                        else if ((e = PromoteExpression(left, right.Type, true)) != null)
-                        {
-                            left = e;
-                        }
                         else
                         {
-                            throw IncompatibleOperandsError(op.text, left, right, op.pos);
+                            left =
+                                (e = PromoteExpression(left, right.Type, true)) != null
+                                    ? e
+                                    : throw IncompatibleOperandsError(op.text, left, right, op.pos);
                         }
                     }
                 }
                 else
                 {
-                    CheckAndPromoteOperands(isEquality ? typeof(IEqualitySignatures) : typeof(IRelationalSignatures),
-                        op.text, ref left, ref right, op.pos);
+                    CheckAndPromoteOperands(
+                        isEquality ? typeof(IEqualitySignatures) : typeof(IRelationalSignatures),
+                        op.text,
+                        ref left,
+                        ref right,
+                        op.pos
+                    );
                 }
                 switch (op.id)
                 {
@@ -957,23 +1050,38 @@ namespace MultiServerLibrary.Extension.LinqSQL
         // +, -, & operators
         Expression ParseAdditive()
         {
-            Expression left = ParseMultiplicative();
-            while (token.id == TokenId.Plus || token.id == TokenId.Minus ||
-                token.id == TokenId.Amphersand)
+            var left = ParseMultiplicative();
+            while (
+                token.id == TokenId.Plus
+                || token.id == TokenId.Minus
+                || token.id == TokenId.Amphersand
+            )
             {
-                Token op = token;
+                var op = token;
                 NextToken();
-                Expression right = ParseMultiplicative();
+                var right = ParseMultiplicative();
                 switch (op.id)
                 {
                     case TokenId.Plus:
                         if (left.Type == typeof(string) || right.Type == typeof(string))
                             goto case TokenId.Amphersand;
-                        CheckAndPromoteOperands(typeof(IAddSignatures), op.text, ref left, ref right, op.pos);
+                        CheckAndPromoteOperands(
+                            typeof(IAddSignatures),
+                            op.text,
+                            ref left,
+                            ref right,
+                            op.pos
+                        );
                         left = GenerateAdd(left, right);
                         break;
                     case TokenId.Minus:
-                        CheckAndPromoteOperands(typeof(ISubtractSignatures), op.text, ref left, ref right, op.pos);
+                        CheckAndPromoteOperands(
+                            typeof(ISubtractSignatures),
+                            op.text,
+                            ref left,
+                            ref right,
+                            op.pos
+                        );
                         left = GenerateSubtract(left, right);
                         break;
                     case TokenId.Amphersand:
@@ -989,14 +1097,24 @@ namespace MultiServerLibrary.Extension.LinqSQL
         // *, /, %, mod operators
         Expression ParseMultiplicative()
         {
-            Expression left = ParseUnary();
-            while (token.id == TokenId.Asterisk || token.id == TokenId.Slash ||
-                token.id == TokenId.Percent || TokenIdentifierIs("mod"))
+            var left = ParseUnary();
+            while (
+                token.id == TokenId.Asterisk
+                || token.id == TokenId.Slash
+                || token.id == TokenId.Percent
+                || TokenIdentifierIs("mod")
+            )
             {
-                Token op = token;
+                var op = token;
                 NextToken();
-                Expression right = ParseUnary();
-                CheckAndPromoteOperands(typeof(IArithmeticSignatures), op.text, ref left, ref right, op.pos);
+                var right = ParseUnary();
+                CheckAndPromoteOperands(
+                    typeof(IArithmeticSignatures),
+                    op.text,
+                    ref left,
+                    ref right,
+                    op.pos
+                );
                 switch (op.id)
                 {
                     case TokenId.Asterisk:
@@ -1019,19 +1137,24 @@ namespace MultiServerLibrary.Extension.LinqSQL
         // -, !, not unary operators
         Expression ParseUnary()
         {
-            if (token.id == TokenId.Minus || token.id == TokenId.Exclamation ||
-                TokenIdentifierIs("not"))
+            if (
+                token.id == TokenId.Minus
+                || token.id == TokenId.Exclamation
+                || TokenIdentifierIs("not")
+            )
             {
-                Token op = token;
+                var op = token;
                 NextToken();
-                if (op.id == TokenId.Minus && (token.id == TokenId.IntegerLiteral ||
-                    token.id == TokenId.RealLiteral))
+                if (
+                    op.id == TokenId.Minus
+                    && (token.id == TokenId.IntegerLiteral || token.id == TokenId.RealLiteral)
+                )
                 {
                     token.text = "-" + token.text;
                     token.pos = op.pos;
                     return ParsePrimary();
                 }
-                Expression expr = ParseUnary();
+                var expr = ParseUnary();
                 if (op.id == TokenId.Minus)
                 {
                     CheckAndPromoteOperand(typeof(INegationSignatures), op.text, ref expr, op.pos);
@@ -1049,7 +1172,7 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         Expression ParsePrimary()
         {
-            Expression expr = ParsePrimaryStart();
+            var expr = ParsePrimaryStart();
             while (true)
             {
                 if (token.id == TokenId.Dot)
@@ -1093,27 +1216,26 @@ namespace MultiServerLibrary.Extension.LinqSQL
         Expression ParseStringEscaped()
         {
             ValidateToken(TokenId.StringEscaped);
-            char quote = token.text[0];
-            string s = token.text.Substring(1, token.text.Length - 2);
-            int start = 0;
+            var quote = token.text[0];
+            var s = token.text.Substring(1, token.text.Length - 2);
+            var start = 0;
             while (true)
             {
-                int i = s.IndexOf(quote, start);
-                if (i < 0) break;
-                if (i >= 1 && i < s.Length - 1 && s[i - 1] == '[' && s[i + 1] == ']')
-                {
-                }
+                var i = s.IndexOf(quote, start);
+                if (i < 0)
+                    break;
+                if (i >= 1 && i < s.Length - 1 && s[i - 1] == '[' && s[i + 1] == ']') { }
                 else
                     s = s.Remove(i, 1);
                 start = i + 1;
             }
             /*if (quote == '\'') {
-				if (s.Length != 1)
-					throw ParseError(Res.InvalidCharacterLiteral);
-				NextToken();
-				return CreateLiteral(s[0], s);
-			}*/
-            s = Regex.Replace(s, @"\[(.*?)\]", "$1");
+                if (s.Length != 1)
+                    throw ParseError(Res.InvalidCharacterLiteral);
+                NextToken();
+                return CreateLiteral(s[0], s);
+            }*/
+            s = MyRegex().Replace(s, "$1");
             NextToken();
             return CreateLiteral(s, s);
         }
@@ -1121,22 +1243,23 @@ namespace MultiServerLibrary.Extension.LinqSQL
         Expression ParseStringLiteral()
         {
             ValidateToken(TokenId.StringLiteral);
-            char quote = token.text[0];
-            string s = token.text.Substring(1, token.text.Length - 2);
-            int start = 0;
+            var quote = token.text[0];
+            var s = token.text.Substring(1, token.text.Length - 2);
+            var start = 0;
             while (true)
             {
-                int i = s.IndexOf(quote, start);
-                if (i < 0) break;
+                var i = s.IndexOf(quote, start);
+                if (i < 0)
+                    break;
                 s = s.Remove(i, 1);
                 start = i + 1;
             }
             /*if (quote == '\'') {
-				if (s.Length != 1)
-					throw ParseError(Res.InvalidCharacterLiteral);
-				NextToken();
-				return CreateLiteral(s[0], s);
-			}*/
+                if (s.Length != 1)
+                    throw ParseError(Res.InvalidCharacterLiteral);
+                NextToken();
+                return CreateLiteral(s[0], s);
+            }*/
             NextToken();
             return CreateLiteral(s, s);
         }
@@ -1144,50 +1267,53 @@ namespace MultiServerLibrary.Extension.LinqSQL
         Expression ParseIntegerLiteral()
         {
             ValidateToken(TokenId.IntegerLiteral);
-            string text = token.text.Trim(new char[] { '\'', '"' });
+            var text = token.text.Trim(trimChars);
             if (text[0] != '-')
             {
-                if (!ulong.TryParse(text, out ulong value))
+                if (!ulong.TryParse(text, out var value))
                     throw ParseError(Res.InvalidIntegerLiteral, text);
                 NextToken();
-                if (value <= int.MaxValue) return CreateLiteral((int)value, text);
-                if (value <= uint.MaxValue) return CreateLiteral((uint)value, text);
-                if (value <= long.MaxValue) return CreateLiteral((long)value, text);
-                return CreateLiteral(value, text);
+                return value <= int.MaxValue ? CreateLiteral((int)value, text)
+                    : value <= uint.MaxValue ? CreateLiteral((uint)value, text)
+                    : value <= long.MaxValue ? CreateLiteral((long)value, text)
+                    : CreateLiteral(value, text);
             }
             else
             {
-                if (!long.TryParse(text, out long value))
+                if (!long.TryParse(text, out var value))
                     throw ParseError(Res.InvalidIntegerLiteral, text);
                 NextToken();
-                if (value >= int.MinValue && value <= int.MaxValue)
-                    return CreateLiteral((int)value, text);
-                return CreateLiteral(value, text);
+                return value >= int.MinValue && value <= int.MaxValue
+                    ? CreateLiteral((int)value, text)
+                    : CreateLiteral(value, text);
             }
         }
 
         Expression ParseRealLiteral()
         {
             ValidateToken(TokenId.RealLiteral);
-            string text = token.text;
+            var text = token.text;
             object value = null;
-            char last = text[text.Length - 1];
+            var last = text[text.Length - 1];
             if (last == 'F' || last == 'f')
             {
-                if (float.TryParse(text.Substring(0, text.Length - 1), out float f)) value = f;
+                if (float.TryParse(text.AsSpan(0, text.Length - 1), out var f))
+                    value = f;
             }
             else
             {
-                if (double.TryParse(text, out double d)) value = d;
+                if (double.TryParse(text, out var d))
+                    value = d;
             }
-            if (value == null) throw ParseError(Res.InvalidRealLiteral, text);
+            if (value == null)
+                throw ParseError(Res.InvalidRealLiteral, text);
             NextToken();
             return CreateLiteral(value, text);
         }
 
         Expression CreateLiteral(object value, string text)
         {
-            ConstantExpression expr = Expression.Constant(value);
+            var expr = Expression.Constant(value);
             literals.Add(expr, text);
             return expr;
         }
@@ -1196,7 +1322,7 @@ namespace MultiServerLibrary.Extension.LinqSQL
         {
             ValidateToken(TokenId.OpenParen, Res.OpenParenExpected);
             NextToken();
-            Expression e = ParseExpression();
+            var e = ParseExpression();
             ValidateToken(TokenId.CloseParen, Res.CloseParenOrOperatorExpected);
             NextToken();
             return e;
@@ -1205,17 +1331,23 @@ namespace MultiServerLibrary.Extension.LinqSQL
         Expression ParseIdentifier()
         {
             ValidateToken(TokenId.Identifier);
-            if (keywords.TryGetValue(token.text, out object value))
+            if (keywords.TryGetValue(token.text, out var value))
             {
-                if (value is Type type) return ParseTypeAccess(type);
-                if (value == (object)keywordIt) return ParseIt();
-                if (value == (object)keywordIif) return ParseIif();
-                if (value == (object)keywordNew) return ParseNew();
+                if (value is Type type)
+                    return ParseTypeAccess(type);
+                if (value == (object)keywordIt)
+                    return ParseIt();
+                if (value == (object)keywordIif)
+                    return ParseIif();
+                if (value == (object)keywordNew)
+                    return ParseNew();
                 NextToken();
                 return (Expression)value;
             }
-            if (symbols.TryGetValue(token.text, out value) ||
-                externals != null && externals.TryGetValue(token.text, out value))
+            if (
+                symbols.TryGetValue(token.text, out value)
+                || (externals != null && externals.TryGetValue(token.text, out value))
+            )
             {
                 if (!(value is Expression expr))
                     expr = Expression.Constant(value);
@@ -1224,8 +1356,9 @@ namespace MultiServerLibrary.Extension.LinqSQL
                 NextToken();
                 return expr;
             }
-            if (it != null) return ParseMemberAccess(null, it);
-            throw ParseError(Res.UnknownIdentifier, token.text);
+            return it != null
+                ? ParseMemberAccess(null, it)
+                : throw ParseError(Res.UnknownIdentifier, token.text);
         }
 
         Expression ParseIt()
@@ -1238,22 +1371,29 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         Expression ParseIif()
         {
-            int errorPos = token.pos;
+            var errorPos = token.pos;
             NextToken();
-            Expression[] args = ParseArgumentList();
-            if (args.Length != 3)
-                throw ParseError(errorPos, Res.IifRequiresThreeArgs);
-            return GenerateConditional(args[0], args[1], args[2], errorPos);
+            var args = ParseArgumentList();
+            return args.Length != 3
+                ? throw ParseError(errorPos, Res.IifRequiresThreeArgs)
+                : GenerateConditional(args[0], args[1], args[2], errorPos);
         }
 
-        Expression GenerateConditional(Expression test, Expression expr1, Expression expr2, int errorPos)
+        Expression GenerateConditional(
+            Expression test,
+            Expression expr1,
+            Expression expr2,
+            int errorPos
+        )
         {
             if (test.Type != typeof(bool))
                 throw ParseError(errorPos, Res.FirstExprMustBeBool);
             if (expr1.Type != expr2.Type)
             {
-                Expression expr1as2 = expr2 != nullLiteral ? PromoteExpression(expr1, expr2.Type, true) : null;
-                Expression expr2as1 = expr1 != nullLiteral ? PromoteExpression(expr2, expr1.Type, true) : null;
+                var expr1as2 =
+                    expr2 != nullLiteral ? PromoteExpression(expr1, expr2.Type, true) : null;
+                var expr2as1 =
+                    expr1 != nullLiteral ? PromoteExpression(expr2, expr1.Type, true) : null;
                 if (expr1as2 != null && expr2as1 == null)
                 {
                     expr1 = expr1as2;
@@ -1264,8 +1404,8 @@ namespace MultiServerLibrary.Extension.LinqSQL
                 }
                 else
                 {
-                    string type1 = expr1 != nullLiteral ? expr1.Type.Name : "null";
-                    string type2 = expr2 != nullLiteral ? expr2.Type.Name : "null";
+                    var type1 = expr1 != nullLiteral ? expr1.Type.Name : "null";
+                    var type2 = expr2 != nullLiteral ? expr2.Type.Name : "null";
                     if (expr1as2 != null && expr2as1 != null)
                         throw ParseError(errorPos, Res.BothTypesConvertToOther, type1, type2);
                     throw ParseError(errorPos, Res.NeitherTypeConvertsToOther, type1, type2);
@@ -1279,12 +1419,12 @@ namespace MultiServerLibrary.Extension.LinqSQL
             NextToken();
             ValidateToken(TokenId.OpenParen, Res.OpenParenExpected);
             NextToken();
-            List<DynamicProperty> properties = new List<DynamicProperty>();
-            List<Expression> expressions = new List<Expression>();
+            var properties = new List<DynamicProperty>();
+            var expressions = new List<Expression>();
             while (true)
             {
-                int exprPos = token.pos;
-                Expression expr = ParseExpression();
+                var exprPos = token.pos;
+                var expr = ParseExpression();
                 string propName;
                 if (TokenIdentifierIs("as"))
                 {
@@ -1294,36 +1434,38 @@ namespace MultiServerLibrary.Extension.LinqSQL
                 }
                 else
                 {
-                    MemberExpression me = expr as MemberExpression ?? throw ParseError(exprPos, Res.MissingAsClause);
+                    var me =
+                        expr as MemberExpression ?? throw ParseError(exprPos, Res.MissingAsClause);
                     propName = me.Member.Name;
                 }
                 expressions.Add(expr);
                 properties.Add(new DynamicProperty(propName, expr.Type));
-                if (token.id != TokenId.Comma) break;
+                if (token.id != TokenId.Comma)
+                    break;
                 NextToken();
             }
             ValidateToken(TokenId.CloseParen, Res.CloseParenOrCommaExpected);
             NextToken();
-            Type type = DynamicExpression.CreateClass(properties);
-            MemberBinding[] bindings = new MemberBinding[properties.Count];
-            for (int i = 0; i < bindings.Length; i++)
+            var type = DynamicExpression.CreateClass(properties);
+            var bindings = new MemberBinding[properties.Count];
+            for (var i = 0; i < bindings.Length; i++)
                 bindings[i] = Expression.Bind(type.GetProperty(properties[i].Name), expressions[i]);
             return Expression.MemberInit(Expression.New(type), bindings);
         }
 
         Expression ParseLambdaInvocation(LambdaExpression lambda)
         {
-            int errorPos = token.pos;
+            var errorPos = token.pos;
             NextToken();
-            Expression[] args = ParseArgumentList();
-            if (FindMethod(lambda.Type, "Invoke", false, args, out _) != 1)
-                throw ParseError(errorPos, Res.ArgsIncompatibleWithLambda);
-            return Expression.Invoke(lambda, args);
+            var args = ParseArgumentList();
+            return FindMethod(lambda.Type, "Invoke", false, args, out _) != 1
+                ? throw ParseError(errorPos, Res.ArgsIncompatibleWithLambda)
+                : (Expression)Expression.Invoke(lambda, args);
         }
 
         Expression ParseTypeAccess(Type type)
         {
-            int errorPos = token.pos;
+            var errorPos = token.pos;
             NextToken();
             if (token.id == TokenId.Question)
             {
@@ -1334,8 +1476,8 @@ namespace MultiServerLibrary.Extension.LinqSQL
             }
             if (token.id == TokenId.OpenParen)
             {
-                Expression[] args = ParseArgumentList();
-                switch (FindBestMethod(type.GetConstructors(), args, out MethodBase method))
+                var args = ParseArgumentList();
+                switch (FindBestMethod(type.GetConstructors(), args, out var method))
                 {
                     case 0:
                         if (args.Length == 1)
@@ -1344,7 +1486,11 @@ namespace MultiServerLibrary.Extension.LinqSQL
                     case 1:
                         return Expression.New((ConstructorInfo)method, args);
                     default:
-                        throw ParseError(errorPos, Res.AmbiguousConstructorInvocation, GetTypeName(type));
+                        throw ParseError(
+                            errorPos,
+                            Res.AmbiguousConstructorInvocation,
+                            GetTypeName(type)
+                        );
                 }
             }
             ValidateToken(TokenId.Dot, Res.DotOrOpenParenExpected);
@@ -1354,68 +1500,98 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         static Expression GenerateConversion(Expression expr, Type type, int errorPos)
         {
-            Type exprType = expr.Type;
-            if (exprType == type) return expr;
+            var exprType = expr.Type;
+            if (exprType == type)
+                return expr;
             if (exprType.IsValueType && type.IsValueType)
             {
-                if ((IsNullableType(exprType) || IsNullableType(type)) &&
-                    GetNonNullableType(exprType) == GetNonNullableType(type))
+                if (
+                    (IsNullableType(exprType) || IsNullableType(type))
+                    && GetNonNullableType(exprType) == GetNonNullableType(type)
+                )
                     return Expression.Convert(expr, type);
-                if ((IsNumericType(exprType) || IsEnumType(exprType).Value) &&
-                    IsNumericType(type) || IsEnumType(type).Value)
+                if (
+                    ((IsNumericType(exprType) || IsEnumType(exprType).Value) && IsNumericType(type))
+                    || IsEnumType(type).Value
+                )
                     return Expression.ConvertChecked(expr, type);
             }
-            if (exprType.IsAssignableFrom(type) || type.IsAssignableFrom(exprType) ||
-                exprType.IsInterface || type.IsInterface)
-                return Expression.Convert(expr, type);
-            throw ParseError(errorPos, Res.CannotConvertValue,
-                GetTypeName(exprType), GetTypeName(type));
+            return
+                exprType.IsAssignableFrom(type)
+                || type.IsAssignableFrom(exprType)
+                || exprType.IsInterface
+                || type.IsInterface
+                ? (Expression)Expression.Convert(expr, type)
+                : throw ParseError(
+                    errorPos,
+                    Res.CannotConvertValue,
+                    GetTypeName(exprType),
+                    GetTypeName(type)
+                );
         }
 
         Expression ParseMemberAccess(Type type, Expression instance)
         {
-            if (instance != null) type = instance.Type;
-            int errorPos = token.pos;
-            string id = GetIdentifier();
+            if (instance != null)
+                type = instance.Type;
+            var errorPos = token.pos;
+            var id = GetIdentifier();
             NextToken();
             if (token.id == TokenId.OpenParen)
             {
                 if (instance != null && type != typeof(string))
                 {
-                    Type enumerableType = FindGenericType(typeof(IEnumerable<>), type);
+                    var enumerableType = FindGenericType(typeof(IEnumerable<>), type);
                     if (enumerableType != null)
                     {
-                        Type elementType = enumerableType.GetGenericArguments()[0];
+                        var elementType = enumerableType.GetGenericArguments()[0];
                         return ParseAggregate(instance, elementType, id, errorPos);
                     }
                 }
-                Expression[] args = ParseArgumentList();
+                var args = ParseArgumentList();
                 MethodBase mb;
                 switch (FindMethod(type, id, instance == null, args, out mb))
                 {
                     case 0:
-                        throw ParseError(errorPos, Res.NoApplicableMethod,
-                            id, GetTypeName(type));
+                        throw ParseError(errorPos, Res.NoApplicableMethod, id, GetTypeName(type));
                     case 1:
-                        MethodInfo method = (MethodInfo)mb;
+                        var method = (MethodInfo)mb;
                         if (!IsPredefinedType(method.DeclaringType))
-                            throw ParseError(errorPos, Res.MethodsAreInaccessible, GetTypeName(method.DeclaringType));
+                            throw ParseError(
+                                errorPos,
+                                Res.MethodsAreInaccessible,
+                                GetTypeName(method.DeclaringType)
+                            );
                         if (method.ReturnType == typeof(void))
-                            throw ParseError(errorPos, Res.MethodIsVoid,
-                                id, GetTypeName(method.DeclaringType));
+                            throw ParseError(
+                                errorPos,
+                                Res.MethodIsVoid,
+                                id,
+                                GetTypeName(method.DeclaringType)
+                            );
                         return Expression.Call(instance, method, args);
                     default:
-                        throw ParseError(errorPos, Res.AmbiguousMethodInvocation,
-                            id, GetTypeName(type));
+                        throw ParseError(
+                            errorPos,
+                            Res.AmbiguousMethodInvocation,
+                            id,
+                            GetTypeName(type)
+                        );
                 }
             }
             else
             {
-                MemberInfo member = FindPropertyOrField(type, id, instance == null) ?? throw ParseError(errorPos, Res.UnknownPropertyOrField,
-                        id, GetTypeName(type));
-                return member is PropertyInfo info ?
-                    Expression.Property(instance, info) :
-                    Expression.Field(instance, (FieldInfo)member);
+                var member =
+                    FindPropertyOrField(type, id, instance == null)
+                    ?? throw ParseError(
+                        errorPos,
+                        Res.UnknownPropertyOrField,
+                        id,
+                        GetTypeName(type)
+                    );
+                return member is PropertyInfo info
+                    ? Expression.Property(instance, info)
+                    : Expression.Field(instance, (FieldInfo)member);
             }
         }
 
@@ -1423,13 +1599,15 @@ namespace MultiServerLibrary.Extension.LinqSQL
         {
             while (type != null && type != typeof(object))
             {
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == generic) return type;
+                if (type.IsGenericType && type.GetGenericTypeDefinition() == generic)
+                    return type;
                 if (generic.IsInterface)
                 {
-                    foreach (Type intfType in type.GetInterfaces())
+                    foreach (var intfType in type.GetInterfaces())
                     {
-                        Type found = FindGenericType(generic, intfType);
-                        if (found != null) return found;
+                        var found = FindGenericType(generic, intfType);
+                        if (found != null)
+                            return found;
                     }
                 }
                 type = type.BaseType;
@@ -1437,33 +1615,32 @@ namespace MultiServerLibrary.Extension.LinqSQL
             return null;
         }
 
-        Expression ParseAggregate(Expression instance, Type elementType, string methodName, int errorPos)
+        Expression ParseAggregate(
+            Expression instance,
+            Type elementType,
+            string methodName,
+            int errorPos
+        )
         {
-            ParameterExpression outerIt = it;
-            ParameterExpression innerIt = Expression.Parameter(elementType, "");
+            var outerIt = it;
+            var innerIt = Expression.Parameter(elementType, "");
             it = innerIt;
-            Expression[] args = ParseArgumentList();
+            var args = ParseArgumentList();
             it = outerIt;
             MethodBase signature;
-            if (FindMethod(typeof(IEnumerableSignatures), methodName, false, args, out signature) != 1)
+            if (
+                FindMethod(typeof(IEnumerableSignatures), methodName, false, args, out signature)
+                != 1
+            )
                 throw ParseError(errorPos, Res.NoApplicableAggregate, methodName);
-            Type[] typeArgs;
-            if (signature.Name == "Min" || signature.Name == "Max")
-            {
-                typeArgs = new Type[] { elementType, args[0].Type };
-            }
-            else
-            {
-                typeArgs = new Type[] { elementType };
-            }
-            if (args.Length == 0)
-            {
-                args = new Expression[] { instance };
-            }
-            else
-            {
-                args = new Expression[] { instance, Expression.Lambda(args[0], innerIt) };
-            }
+            var typeArgs =
+                signature.Name == "Min" || signature.Name == "Max"
+                    ? (new Type[] { elementType, args[0].Type })
+                    : (new Type[] { elementType });
+            args =
+                args.Length == 0
+                    ? (new Expression[] { instance })
+                    : (new Expression[] { instance, Expression.Lambda(args[0], innerIt) });
             return Expression.Call(typeof(Enumerable), signature.Name, typeArgs, args);
         }
 
@@ -1471,7 +1648,8 @@ namespace MultiServerLibrary.Extension.LinqSQL
         {
             ValidateToken(TokenId.OpenParen, Res.OpenParenExpected);
             NextToken();
-            Expression[] args = token.id != TokenId.CloseParen ? ParseArguments() : new Expression[0];
+            var args =
+                token.id != TokenId.CloseParen ? ParseArguments() : Array.Empty<Expression>();
             ValidateToken(TokenId.CloseParen, Res.CloseParenOrCommaExpected);
             NextToken();
             return args;
@@ -1479,11 +1657,12 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         Expression[] ParseArguments()
         {
-            List<Expression> argList = new List<Expression>();
+            var argList = new List<Expression>();
             while (true)
             {
                 argList.Add(ParseExpression());
-                if (token.id != TokenId.Comma) break;
+                if (token.id != TokenId.Comma)
+                    break;
                 NextToken();
             }
             return argList.ToArray();
@@ -1491,38 +1670,44 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         Expression ParseElementAccess(Expression expr)
         {
-            int errorPos = token.pos;
+            var errorPos = token.pos;
             ValidateToken(TokenId.OpenBracket, Res.OpenParenExpected);
             NextToken();
-            Expression[] args = ParseArguments();
+            var args = ParseArguments();
             ValidateToken(TokenId.CloseBracket, Res.CloseBracketOrCommaExpected);
             NextToken();
             if (expr.Type.IsArray)
             {
                 if (expr.Type.GetArrayRank() != 1 || args.Length != 1)
                     throw ParseError(errorPos, Res.CannotIndexMultiDimArray);
-                Expression index = PromoteExpression(args[0], typeof(int), true) ?? throw ParseError(errorPos, Res.InvalidIndex);
+                var index =
+                    PromoteExpression(args[0], typeof(int), true)
+                    ?? throw ParseError(errorPos, Res.InvalidIndex);
                 return Expression.ArrayIndex(expr, index);
             }
             else
             {
-                switch (FindIndexer(expr.Type, args, out MethodBase mb))
+                switch (FindIndexer(expr.Type, args, out var mb))
                 {
                     case 0:
-                        throw ParseError(errorPos, Res.NoApplicableIndexer,
-                            GetTypeName(expr.Type));
+                        throw ParseError(errorPos, Res.NoApplicableIndexer, GetTypeName(expr.Type));
                     case 1:
                         return Expression.Call(expr, (MethodInfo)mb, args);
                     default:
-                        throw ParseError(errorPos, Res.AmbiguousIndexerInvocation,
-                            GetTypeName(expr.Type));
+                        throw ParseError(
+                            errorPos,
+                            Res.AmbiguousIndexerInvocation,
+                            GetTypeName(expr.Type)
+                        );
                 }
             }
         }
 
         static bool IsPredefinedType(Type type)
         {
-            foreach (Type t in predefinedTypes) if (t == type) return true;
+            foreach (var t in predefinedTypes)
+                if (t == type)
+                    return true;
             return false;
         }
 
@@ -1538,9 +1723,10 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         static string GetTypeName(Type type)
         {
-            Type baseType = GetNonNullableType(type);
-            string s = baseType?.Name;
-            if (type != baseType) s += '?';
+            var baseType = GetNonNullableType(type);
+            var s = baseType?.Name;
+            if (type != baseType)
+                s += '?';
             return s;
         }
 
@@ -1562,7 +1748,8 @@ namespace MultiServerLibrary.Extension.LinqSQL
         static int GetNumericTypeKind(Type type)
         {
             type = GetNonNullableType(type);
-            if (type.IsEnum) return 0;
+            if (type.IsEnum)
+                return 0;
             switch (Type.GetTypeCode(type))
             {
                 case TypeCode.Char:
@@ -1590,34 +1777,52 @@ namespace MultiServerLibrary.Extension.LinqSQL
             return GetNonNullableType(type)?.IsEnum;
         }
 
-        void CheckAndPromoteOperand(Type signatures, string opName, ref Expression expr, int errorPos)
+        void CheckAndPromoteOperand(
+            Type signatures,
+            string opName,
+            ref Expression expr,
+            int errorPos
+        )
         {
-            Expression[] args = new Expression[] { expr };
+            var args = new Expression[] { expr };
             if (FindMethod(signatures, "F", false, args, out _) != 1)
-                throw ParseError(errorPos, Res.IncompatibleOperand,
-                    opName, GetTypeName(args[0].Type));
+                throw ParseError(
+                    errorPos,
+                    Res.IncompatibleOperand,
+                    opName,
+                    GetTypeName(args[0].Type)
+                );
             expr = args[0];
         }
 
-        void CheckAndPromoteOperands(Type signatures, string opName, ref Expression left, ref Expression right, int errorPos)
+        void CheckAndPromoteOperands(
+            Type signatures,
+            string opName,
+            ref Expression left,
+            ref Expression right,
+            int errorPos
+        )
         {
             // bool == int
             // bool == '1'/'0' instead of true/false
             if (left.Type == typeof(bool) && right.Type == typeof(int))
             {
-                bool newRight = right.ToString() != "0";
+                var newRight = right.ToString() != "0";
                 right = Expression.Convert(Expression.Constant(newRight), left.Type);
             }
 
             if (left.Type == typeof(bool) && right.Type == typeof(string))
             {
-                string r = right.ToString();
-                if (r.StartsWith("\"") && r.EndsWith("\"") || r.StartsWith("'") && r.EndsWith("'"))
+                var r = right.ToString();
+                if (
+                    (r.StartsWith("\"") && r.EndsWith("\""))
+                    || (r.StartsWith("'") && r.EndsWith("'"))
+                )
                 {
                     r = r.Substring(1, r.Length - 2);
                 }
 
-                bool newRight = false;
+                var newRight = false;
                 if (r == "true" || r == "1")
                     newRight = true;
 
@@ -1625,52 +1830,95 @@ namespace MultiServerLibrary.Extension.LinqSQL
             }
 
             // Int32/Double == String
-            if ((left.Type == typeof(int) || left.Type == typeof(double)) && right.Type == typeof(string))
+            if (
+                (left.Type == typeof(int) || left.Type == typeof(double))
+                && right.Type == typeof(string)
+            )
             {
-                string r = right.ToString();
-                if (r.StartsWith("\"") && r.EndsWith("\"") || r.StartsWith("'") && r.EndsWith("'"))
+                var r = right.ToString();
+                if (
+                    (r.StartsWith("\"") && r.EndsWith("\""))
+                    || (r.StartsWith("'") && r.EndsWith("'"))
+                )
                     r = r.Substring(1, r.Length - 2);
 
-                if (double.TryParse(r, NumberStyles.Number, CultureInfo.InvariantCulture, out double newRight))
+                if (
+                    double.TryParse(
+                        r,
+                        NumberStyles.Number,
+                        CultureInfo.InvariantCulture,
+                        out var newRight
+                    )
+                )
                     right = Expression.Convert(Expression.Constant(newRight), left.Type);
             }
 
-            Expression[] args = new Expression[] { left, right };
+            var args = new Expression[] { left, right };
             if (FindMethod(signatures, "F", false, args, out _) != 1)
                 throw IncompatibleOperandsError(opName, left, right, errorPos);
             left = args[0];
             right = args[1];
         }
 
-        static Exception IncompatibleOperandsError(string opName, Expression left, Expression right, int pos)
+        static Exception IncompatibleOperandsError(
+            string opName,
+            Expression left,
+            Expression right,
+            int pos
+        )
         {
-            return ParseError(pos, Res.IncompatibleOperands,
-                opName, GetTypeName(left.Type), GetTypeName(right.Type));
+            return ParseError(
+                pos,
+                Res.IncompatibleOperands,
+                opName,
+                GetTypeName(left.Type),
+                GetTypeName(right.Type)
+            );
         }
 
         static MemberInfo FindPropertyOrField(Type type, string memberName, bool staticAccess)
         {
-            BindingFlags flags = BindingFlags.Public | BindingFlags.DeclaredOnly |
-                (staticAccess ? BindingFlags.Static : BindingFlags.Instance);
-            foreach (Type t in SelfAndBaseTypes(type))
+            var flags =
+                BindingFlags.Public
+                | BindingFlags.DeclaredOnly
+                | (staticAccess ? BindingFlags.Static : BindingFlags.Instance);
+            foreach (var t in SelfAndBaseTypes(type))
             {
-                MemberInfo[] members = t.FindMembers(MemberTypes.Property | MemberTypes.Field,
-                    flags, Type.FilterNameIgnoreCase, memberName);
-                if (members.Length != 0) return members[0];
+                var members = t.FindMembers(
+                    MemberTypes.Property | MemberTypes.Field,
+                    flags,
+                    Type.FilterNameIgnoreCase,
+                    memberName
+                );
+                if (members.Length != 0)
+                    return members[0];
             }
             return null;
         }
 
-        int FindMethod(Type type, string methodName, bool staticAccess, Expression[] args, out MethodBase method)
+        int FindMethod(
+            Type type,
+            string methodName,
+            bool staticAccess,
+            Expression[] args,
+            out MethodBase method
+        )
         {
-            BindingFlags flags = BindingFlags.Public | BindingFlags.DeclaredOnly |
-                (staticAccess ? BindingFlags.Static : BindingFlags.Instance);
-            foreach (Type t in SelfAndBaseTypes(type))
+            var flags =
+                BindingFlags.Public
+                | BindingFlags.DeclaredOnly
+                | (staticAccess ? BindingFlags.Static : BindingFlags.Instance);
+            foreach (var t in SelfAndBaseTypes(type))
             {
-                MemberInfo[] members = t.FindMembers(MemberTypes.Method,
-                    flags, Type.FilterNameIgnoreCase, methodName);
-                int count = FindBestMethod(members.Cast<MethodBase>(), args, out method);
-                if (count != 0) return count;
+                var members = t.FindMembers(
+                    MemberTypes.Method,
+                    flags,
+                    Type.FilterNameIgnoreCase,
+                    methodName
+                );
+                var count = FindBestMethod(members.Cast<MethodBase>(), args, out method);
+                if (count != 0)
+                    return count;
             }
             method = null;
             return 0;
@@ -1678,17 +1926,18 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         int FindIndexer(Type type, Expression[] args, out MethodBase method)
         {
-            foreach (Type t in SelfAndBaseTypes(type))
+            foreach (var t in SelfAndBaseTypes(type))
             {
-                MemberInfo[] members = t.GetDefaultMembers();
+                var members = t.GetDefaultMembers();
                 if (members.Length != 0)
                 {
-                    IEnumerable<MethodBase> methods = members.
-                        OfType<PropertyInfo>().
-                        Select(p => (MethodBase)p.GetGetMethod()).
-                        Where(m => m != null);
-                    int count = FindBestMethod(methods, args, out method);
-                    if (count != 0) return count;
+                    var methods = members
+                        .OfType<PropertyInfo>()
+                        .Select(p => (MethodBase)p.GetGetMethod())
+                        .Where(m => m != null);
+                    var count = FindBestMethod(methods, args, out method);
+                    if (count != 0)
+                        return count;
                 }
             }
             method = null;
@@ -1699,7 +1948,7 @@ namespace MultiServerLibrary.Extension.LinqSQL
         {
             if (type.IsInterface)
             {
-                List<Type> types = new List<Type>();
+                var types = new List<Type>();
                 AddInterface(types, type);
                 return types;
             }
@@ -1720,7 +1969,8 @@ namespace MultiServerLibrary.Extension.LinqSQL
             if (!types.Contains(type))
             {
                 types.Add(type);
-                foreach (Type t in type.GetInterfaces()) AddInterface(types, t);
+                foreach (var t in type.GetInterfaces())
+                    AddInterface(types, t);
             }
         }
 
@@ -1731,24 +1981,29 @@ namespace MultiServerLibrary.Extension.LinqSQL
             public Expression[] Args;
         }
 
-        int FindBestMethod(IEnumerable<MethodBase> methods, Expression[] args, out MethodBase method)
+        int FindBestMethod(
+            IEnumerable<MethodBase> methods,
+            Expression[] args,
+            out MethodBase method
+        )
         {
-            MethodData[] applicable = methods?.
-                Select(m => new MethodData { MethodBase = m, Parameters = m.GetParameters() }).
-                Where(m => IsApplicable(m, args)).
-                ToArray();
+            var applicable = methods
+                ?.Select(m => new MethodData { MethodBase = m, Parameters = m.GetParameters() })
+                .Where(m => IsApplicable(m, args))
+                .ToArray();
             if (applicable != null)
             {
                 if (applicable.Length > 1)
                 {
-                    applicable = applicable.
-                        Where(m => applicable.All(n => m == n || IsBetterThan(args, m, n))).
-                        ToArray();
+                    applicable = applicable
+                        .Where(m => applicable.All(n => m == n || IsBetterThan(args, m, n)))
+                        .ToArray();
                 }
                 if (applicable.Length == 1)
                 {
-                    MethodData md = applicable[0];
-                    for (int i = 0; i < args.Length; i++) args[i] = md.Args?[i];
+                    var md = applicable[0];
+                    for (var i = 0; i < args.Length; i++)
+                        args[i] = md.Args?[i];
                     method = md.MethodBase;
                 }
                 else
@@ -1764,14 +2019,17 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         bool IsApplicable(MethodData method, Expression[] args)
         {
-            if (method.Parameters.Length != args.Length) return false;
-            Expression[] promotedArgs = new Expression[args.Length];
-            for (int i = 0; i < args.Length; i++)
+            if (method.Parameters.Length != args.Length)
+                return false;
+            var promotedArgs = new Expression[args.Length];
+            for (var i = 0; i < args.Length; i++)
             {
-                ParameterInfo pi = method.Parameters[i];
-                if (pi.IsOut) return false;
-                Expression promoted = PromoteExpression(args[i], pi.ParameterType, false);
-                if (promoted == null) return false;
+                var pi = method.Parameters[i];
+                if (pi.IsOut)
+                    return false;
+                var promoted = PromoteExpression(args[i], pi.ParameterType, false);
+                if (promoted == null)
+                    return false;
                 promotedArgs[i] = promoted;
             }
             method.Args = promotedArgs;
@@ -1780,7 +2038,8 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         Expression PromoteExpression(Expression expr, Type type, bool exact)
         {
-            if (expr.Type == type) return expr;
+            if (expr.Type == type)
+                return expr;
             if (expr is ConstantExpression ce)
             {
                 if (ce == nullLiteral)
@@ -1790,9 +2049,9 @@ namespace MultiServerLibrary.Extension.LinqSQL
                 }
                 else
                 {
-                    if (literals.TryGetValue(ce, out string text))
+                    if (literals.TryGetValue(ce, out var text))
                     {
-                        Type target = GetNonNullableType(type);
+                        var target = GetNonNullableType(type);
                         object value = null;
                         switch (Type.GetTypeCode(ce.Type))
                         {
@@ -1803,7 +2062,8 @@ namespace MultiServerLibrary.Extension.LinqSQL
                                 value = ParseNumber(text, target);
                                 break;
                             case TypeCode.Double:
-                                if (target == typeof(decimal)) value = ParseNumber(text, target);
+                                if (target == typeof(decimal))
+                                    value = ParseNumber(text, target);
                                 break;
                             case TypeCode.String:
                                 value = ParseEnum(text, target);
@@ -1816,12 +2076,11 @@ namespace MultiServerLibrary.Extension.LinqSQL
                     }
                 }
             }
-            if (IsCompatibleWith(expr.Type, type))
-            {
-                if (type.IsValueType || exact) return Expression.Convert(expr, type);
-                return expr;
-            }
-            return null;
+            return IsCompatibleWith(expr.Type, type)
+                ? type.IsValueType || exact
+                    ? Expression.Convert(expr, type)
+                    : expr
+                : null;
         }
 
         static object ParseNumber(string text, Type type)
@@ -1830,47 +2089,58 @@ namespace MultiServerLibrary.Extension.LinqSQL
             {
                 case TypeCode.SByte:
                     sbyte sb;
-                    if (sbyte.TryParse(text, out sb)) return sb;
+                    if (sbyte.TryParse(text, out sb))
+                        return sb;
                     break;
                 case TypeCode.Byte:
                     byte b;
-                    if (byte.TryParse(text, out b)) return b;
+                    if (byte.TryParse(text, out b))
+                        return b;
                     break;
                 case TypeCode.Int16:
                     short s;
-                    if (short.TryParse(text, out s)) return s;
+                    if (short.TryParse(text, out s))
+                        return s;
                     break;
                 case TypeCode.UInt16:
                     ushort us;
-                    if (ushort.TryParse(text, out us)) return us;
+                    if (ushort.TryParse(text, out us))
+                        return us;
                     break;
                 case TypeCode.Int32:
                     int i;
-                    if (int.TryParse(text, out i)) return i;
+                    if (int.TryParse(text, out i))
+                        return i;
                     break;
                 case TypeCode.UInt32:
                     uint ui;
-                    if (uint.TryParse(text, out ui)) return ui;
+                    if (uint.TryParse(text, out ui))
+                        return ui;
                     break;
                 case TypeCode.Int64:
                     long l;
-                    if (long.TryParse(text, out l)) return l;
+                    if (long.TryParse(text, out l))
+                        return l;
                     break;
                 case TypeCode.UInt64:
                     ulong ul;
-                    if (ulong.TryParse(text, out ul)) return ul;
+                    if (ulong.TryParse(text, out ul))
+                        return ul;
                     break;
                 case TypeCode.Single:
                     float f;
-                    if (float.TryParse(text, out f)) return f;
+                    if (float.TryParse(text, out f))
+                        return f;
                     break;
                 case TypeCode.Double:
                     double d;
-                    if (double.TryParse(text, out d)) return d;
+                    if (double.TryParse(text, out d))
+                        return d;
                     break;
                 case TypeCode.Decimal:
                     decimal e;
-                    if (decimal.TryParse(text, out e)) return e;
+                    if (decimal.TryParse(text, out e))
+                        return e;
                     break;
                 default:
                     break;
@@ -1882,23 +2152,30 @@ namespace MultiServerLibrary.Extension.LinqSQL
         {
             if (type.IsEnum)
             {
-                MemberInfo[] memberInfos = type.FindMembers(MemberTypes.Field,
+                var memberInfos = type.FindMembers(
+                    MemberTypes.Field,
                     BindingFlags.Public | BindingFlags.DeclaredOnly | BindingFlags.Static,
-                    Type.FilterNameIgnoreCase, name);
-                if (memberInfos.Length != 0) return ((FieldInfo)memberInfos[0]).GetValue(null);
+                    Type.FilterNameIgnoreCase,
+                    name
+                );
+                if (memberInfos.Length != 0)
+                    return ((FieldInfo)memberInfos[0]).GetValue(null);
             }
             return null;
         }
 
         static bool IsCompatibleWith(Type source, Type target)
         {
-            if (source == target) return true;
-            if (!target.IsValueType) return target.IsAssignableFrom(source);
-            Type st = GetNonNullableType(source);
-            Type tt = GetNonNullableType(target);
-            if (st != source && tt == target) return false;
-            TypeCode sc = st.IsEnum ? TypeCode.Object : Type.GetTypeCode(st);
-            TypeCode tc = tt.IsEnum ? TypeCode.Object : Type.GetTypeCode(tt);
+            if (source == target)
+                return true;
+            if (!target.IsValueType)
+                return target.IsAssignableFrom(source);
+            var st = GetNonNullableType(source);
+            var tt = GetNonNullableType(target);
+            if (st != source && tt == target)
+                return false;
+            var sc = st.IsEnum ? TypeCode.Object : Type.GetTypeCode(st);
+            var tc = tt.IsEnum ? TypeCode.Object : Type.GetTypeCode(tt);
             switch (sc)
             {
                 case TypeCode.SByte:
@@ -2026,7 +2303,8 @@ namespace MultiServerLibrary.Extension.LinqSQL
                     }
                     break;
                 default:
-                    if (st == tt) return true;
+                    if (st == tt)
+                        return true;
                     break;
             }
             return false;
@@ -2034,14 +2312,18 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         static bool IsBetterThan(Expression[] args, MethodData m1, MethodData m2)
         {
-            bool better = false;
-            for (int i = 0; i < args.Length; i++)
+            var better = false;
+            for (var i = 0; i < args.Length; i++)
             {
-                int c = CompareConversions(args[i]?.Type,
+                var c = CompareConversions(
+                    args[i]?.Type,
                     m1.Parameters?[i].ParameterType,
-                    m2.Parameters?[i].ParameterType);
-                if (c < 0) return false;
-                if (c > 0) better = true;
+                    m2.Parameters?[i].ParameterType
+                );
+                if (c < 0)
+                    return false;
+                if (c > 0)
+                    better = true;
             }
             return better;
         }
@@ -2051,16 +2333,20 @@ namespace MultiServerLibrary.Extension.LinqSQL
         // Return 0 if neither conversion is better
         static int CompareConversions(Type s, Type t1, Type t2)
         {
-            if (t1 == t2) return 0;
-            if (s == t1) return 1;
-            if (s == t2) return -1;
-            bool t1t2 = IsCompatibleWith(t1, t2);
-            bool t2t1 = IsCompatibleWith(t2, t1);
-            if (t1t2 && !t2t1) return 1;
-            if (t2t1 && !t1t2) return -1;
-            if (IsSignedIntegralType(t1) && IsUnsignedIntegralType(t2)) return 1;
-            if (IsSignedIntegralType(t2) && IsUnsignedIntegralType(t1)) return -1;
-            return 0;
+            if (t1 == t2)
+                return 0;
+            if (s == t1)
+                return 1;
+            if (s == t2)
+                return -1;
+            var t1t2 = IsCompatibleWith(t1, t2);
+            var t2t1 = IsCompatibleWith(t2, t1);
+            if (t1t2 && !t2t1)
+                return 1;
+            return t2t1 && !t1t2 ? -1
+                : IsSignedIntegralType(t1) && IsUnsignedIntegralType(t2) ? 1
+                : IsSignedIntegralType(t2) && IsUnsignedIntegralType(t1) ? -1
+                : 0;
         }
 
         static Expression GenerateEqual(Expression left, Expression right)
@@ -2075,91 +2361,88 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         static Expression GenerateGreaterThan(Expression left, Expression right)
         {
-            if (left.Type == typeof(string))
-            {
-                return Expression.GreaterThan(
+            return left.Type == typeof(string)
+                ? Expression.GreaterThan(
                     GenerateStaticMethodCall("Compare", left, right),
                     Expression.Constant(0)
-                );
-            }
-            return Expression.GreaterThan(left, right);
+                )
+                : Expression.GreaterThan(left, right);
         }
 
         static Expression GenerateGreaterThanEqual(Expression left, Expression right)
         {
-            if (left.Type == typeof(string))
-            {
-                return Expression.GreaterThanOrEqual(
+            return left.Type == typeof(string)
+                ? Expression.GreaterThanOrEqual(
                     GenerateStaticMethodCall("Compare", left, right),
                     Expression.Constant(0)
-                );
-            }
-            return Expression.GreaterThanOrEqual(left, right);
+                )
+                : Expression.GreaterThanOrEqual(left, right);
         }
 
         static Expression GenerateLessThan(Expression left, Expression right)
         {
-            if (left.Type == typeof(string))
-            {
-                return Expression.LessThan(
+            return left.Type == typeof(string)
+                ? Expression.LessThan(
                     GenerateStaticMethodCall("Compare", left, right),
                     Expression.Constant(0)
-                );
-            }
-            return Expression.LessThan(left, right);
+                )
+                : Expression.LessThan(left, right);
         }
 
         static Expression GenerateLessThanEqual(Expression left, Expression right)
         {
-            if (left.Type == typeof(string))
-            {
-                return Expression.LessThanOrEqual(
+            return left.Type == typeof(string)
+                ? Expression.LessThanOrEqual(
                     GenerateStaticMethodCall("Compare", left, right),
                     Expression.Constant(0)
-                );
-            }
-            return Expression.LessThanOrEqual(left, right);
+                )
+                : Expression.LessThanOrEqual(left, right);
         }
 
         static Expression GenerateLike(Expression left, Expression right)
         {
-            if (left.Type != typeof(string))
-                throw new Exception("Only strings supported by like operand");
-
-            return IsLike(left, right);
+            return left.Type != typeof(string)
+                ? throw new Exception("Only strings supported by like operand")
+                : IsLike(left, right);
         }
 
         static MethodInfo IsLikeMethodInfo = null;
+
         static Expression IsLike(Expression left, Expression right)
         {
             if (IsLikeMethodInfo == null)
-                IsLikeMethodInfo = typeof(SQLMethods).GetMethod("EvaluateIsLike", new Type[] { typeof(string), typeof(string) });
+                IsLikeMethodInfo = typeof(SQLMethods).GetMethod(
+                    "EvaluateIsLike",
+                    new Type[] { typeof(string), typeof(string) }
+                );
             return Expression.Call(IsLikeMethodInfo, left, right);
         }
 
         static Expression GenerateNotLike(Expression left, Expression right)
         {
-            if (left.Type != typeof(string))
-                throw new Exception("Only strings supported by not like operand");
-
-            return IsNotLike(left, right);
+            return left.Type != typeof(string)
+                ? throw new Exception("Only strings supported by not like operand")
+                : IsNotLike(left, right);
         }
 
         static MethodInfo IsNotLikeMethodInfo = null;
+        internal static readonly char[] trimChars = new char[] { '\'', '"' };
+
         static Expression IsNotLike(Expression left, Expression right)
         {
             if (IsNotLikeMethodInfo == null)
-                IsNotLikeMethodInfo = typeof(SQLMethods).GetMethod("EvaluateIsNotLike", new Type[] { typeof(string), typeof(string) });
+                IsNotLikeMethodInfo = typeof(SQLMethods).GetMethod(
+                    "EvaluateIsNotLike",
+                    new Type[] { typeof(string), typeof(string) }
+                );
             return Expression.Call(IsNotLikeMethodInfo, left, right);
         }
 
         static Expression GenerateAdd(Expression left, Expression right)
         {
-            if (left.Type == typeof(string) && right.Type == typeof(string))
-            {
-                return GenerateStaticMethodCall("Concat", left, right);
-            }
-            return Expression.Add(left, right);
+            return left.Type == typeof(string) && right.Type == typeof(string)
+                ? GenerateStaticMethodCall("Concat", left, right)
+                : Expression.Add(left, right);
         }
 
         static Expression GenerateSubtract(Expression left, Expression right)
@@ -2172,7 +2455,8 @@ namespace MultiServerLibrary.Extension.LinqSQL
             return Expression.Call(
                 null,
                 typeof(string).GetMethod("Concat", new[] { typeof(object), typeof(object) }),
-                new[] { left, right });
+                new[] { left, right }
+            );
         }
 
         static MethodInfo GetStaticMethod(string methodName, Expression left, Expression right)
@@ -2180,9 +2464,17 @@ namespace MultiServerLibrary.Extension.LinqSQL
             return left.Type.GetMethod(methodName, new[] { left.Type, right.Type });
         }
 
-        static Expression GenerateStaticMethodCall(string methodName, Expression left, Expression right)
+        static Expression GenerateStaticMethodCall(
+            string methodName,
+            Expression left,
+            Expression right
+        )
         {
-            return Expression.Call(null, GetStaticMethod(methodName, left, right), new[] { left, right });
+            return Expression.Call(
+                null,
+                GetStaticMethod(methodName, left, right),
+                new[] { left, right }
+            );
         }
 
         void SetTextPos(int pos)
@@ -2193,15 +2485,17 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         void NextChar()
         {
-            if (textPos < textLen) textPos++;
+            if (textPos < textLen)
+                textPos++;
             ch = textPos < textLen ? text[textPos] : '\0';
         }
 
         void NextToken()
         {
-            while (char.IsWhiteSpace(ch)) NextChar();
+            while (char.IsWhiteSpace(ch))
+                NextChar();
             TokenId t;
-            int tokenPos = textPos;
+            var tokenPos = textPos;
             switch (ch)
             {
                 case '!':
@@ -2335,21 +2629,27 @@ namespace MultiServerLibrary.Extension.LinqSQL
                     break;
                 case '"':
                 case '\'':
-                    char quote = ch;
-                    TokenId t2 = TokenId.StringLiteral;
-                    TokenId tp = t2;
-                    bool isReallyString = false;
+                    var quote = ch;
+                    var t2 = TokenId.StringLiteral;
+                    var tp = t2;
+                    var isReallyString = false;
                     if (tokenPos > 6)
                     {
-                        string checktext = text.Substring(tokenPos - 5, 4).ToLower();
+                        var checktext = text.Substring(tokenPos - 5, 4).ToLower();
                         if (checktext.Equals("like"))
                             isReallyString = true;
                     }
                     do
                     {
-                        int charIndex = 1;
+                        var charIndex = 1;
                         NextChar();
-                        while (textPos < textLen && (textPos + 2 < textLen && text.Substring(textPos, 2) != quote + " " || textPos + 2 >= textLen && ch != quote))
+                        while (
+                            textPos < textLen
+                            && (
+                                (textPos + 2 < textLen && text.Substring(textPos, 2) != quote + " ")
+                                || (textPos + 2 >= textLen && ch != quote)
+                            )
+                        )
                         {
                             if (char.IsDigit(ch) && !isReallyString && charIndex == 1)
                             {
@@ -2405,7 +2705,7 @@ namespace MultiServerLibrary.Extension.LinqSQL
                             NextChar();
                         } while (char.IsLetterOrDigit(ch) || ch == '_');
 
-                        string checktext = text.Substring(tokenPos, textPos - tokenPos).ToLower();
+                        var checktext = text.Substring(tokenPos, textPos - tokenPos).ToLower();
                         if (checktext == "not" && textPos - tokenPos + 5 < text.Length)
                         {
                             checktext = text.Substring(tokenPos, textPos - tokenPos + 5).ToLower();
@@ -2417,10 +2717,8 @@ namespace MultiServerLibrary.Extension.LinqSQL
                             else
                                 t = TokenId.Identifier;
                         }
-                        else if (checktext == "like")
-                            t = TokenId.Like;
                         else
-                            t = TokenId.Identifier;
+                            t = checktext == "like" ? TokenId.Like : TokenId.Identifier;
                         break;
                     }
                     if (char.IsDigit(ch))
@@ -2444,14 +2742,16 @@ namespace MultiServerLibrary.Extension.LinqSQL
                         {
                             t = TokenId.RealLiteral;
                             NextChar();
-                            if (ch == '+' || ch == '-') NextChar();
+                            if (ch == '+' || ch == '-')
+                                NextChar();
                             ValidateDigit();
                             do
                             {
                                 NextChar();
                             } while (char.IsDigit(ch));
                         }
-                        if (ch == 'F' || ch == 'f') NextChar();
+                        if (ch == 'F' || ch == 'f')
+                            NextChar();
                         break;
                     }
                     if (textPos == textLen)
@@ -2465,40 +2765,54 @@ namespace MultiServerLibrary.Extension.LinqSQL
             token.text = text.Substring(tokenPos, textPos - tokenPos);
             token.pos = tokenPos;
 
-            if ((token.id == TokenId.StringLiteral || token.id == TokenId.StringEscaped) &&
-                (token.text.StartsWith("'") || token.text.StartsWith("\"")) &&
-                (token.text.EndsWith("'") || token.text.EndsWith("\"")))
+            if (
+                (token.id == TokenId.StringLiteral || token.id == TokenId.StringEscaped)
+                && (token.text.StartsWith("'") || token.text.StartsWith("\""))
+                && (token.text.EndsWith("'") || token.text.EndsWith("\""))
+            )
             {
-                token.text = token.text.Substring(0, 1) + token.text.Substring(1, token.text.Length - 2).Replace("'", "_").Replace("\"", "_") + token.text.Substring(token.text.Length - 1, 1);
+                token.text = string.Concat(
+                    token.text.AsSpan(0, 1),
+                    token
+                        .text.Substring(1, token.text.Length - 2)
+                        .Replace("'", "_")
+                        .Replace("\"", "_"),
+                    token.text.AsSpan(token.text.Length - 1, 1)
+                );
             }
         }
 
         bool TokenIdentifierIs(string id)
         {
-            return token.id == TokenId.Identifier && string.Equals(id, token.text, StringComparison.OrdinalIgnoreCase);
+            return token.id == TokenId.Identifier
+                && string.Equals(id, token.text, StringComparison.OrdinalIgnoreCase);
         }
 
         string GetIdentifier()
         {
             ValidateToken(TokenId.Identifier, Res.IdentifierExpected);
-            string id = token.text;
-            if (id.Length > 1 && id[0] == '@') id = id.Substring(1);
+            var id = token.text;
+            if (id.Length > 1 && id[0] == '@')
+                id = id.Substring(1);
             return id;
         }
 
         void ValidateDigit()
         {
-            if (!char.IsDigit(ch)) throw ParseError(textPos, Res.DigitExpected);
+            if (!char.IsDigit(ch))
+                throw ParseError(textPos, Res.DigitExpected);
         }
 
         void ValidateToken(TokenId t, string errorMessage)
         {
-            if (token.id != t) throw ParseError(errorMessage);
+            if (token.id != t)
+                throw ParseError(errorMessage);
         }
 
         void ValidateToken(TokenId t)
         {
-            if (token.id != t) throw ParseError(Res.SyntaxError);
+            if (token.id != t)
+                throw ParseError(Res.SyntaxError);
         }
 
         Exception ParseError(string format, params object[] args)
@@ -2513,18 +2827,22 @@ namespace MultiServerLibrary.Extension.LinqSQL
 
         static Dictionary<string, object> CreateKeywords()
         {
-            Dictionary<string, object> d = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            var d = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
             {
                 { "true", trueLiteral },
                 { "false", falseLiteral },
                 { "null", nullLiteral },
                 { keywordIt, keywordIt },
                 { keywordIif, keywordIif },
-                { keywordNew, keywordNew }
+                { keywordNew, keywordNew },
             };
-            foreach (Type type in predefinedTypes) d.Add(type.Name, type);
+            foreach (var type in predefinedTypes)
+                d.Add(type.Name, type);
             return d;
         }
+
+        [GeneratedRegex(@"\[(.*?)\]")]
+        private static partial Regex MyRegex();
     }
 
     static class Res
@@ -2532,33 +2850,45 @@ namespace MultiServerLibrary.Extension.LinqSQL
         public const string DuplicateIdentifier = "The identifier '{0}' was defined more than once";
         public const string ExpressionTypeMismatch = "Expression of type '{0}' expected";
         public const string ExpressionExpected = "Expression expected";
-        public const string InvalidCharacterLiteral = "Character literal must contain exactly one character";
+        public const string InvalidCharacterLiteral =
+            "Character literal must contain exactly one character";
         public const string InvalidIntegerLiteral = "Invalid integer literal '{0}'";
         public const string InvalidRealLiteral = "Invalid real literal '{0}'";
         public const string UnknownIdentifier = "Unknown identifier '{0}'";
         public const string NoItInScope = "No 'it' is in scope";
         public const string IifRequiresThreeArgs = "The 'iif' function requires three arguments";
         public const string FirstExprMustBeBool = "The first expression must be of type 'Boolean'";
-        public const string BothTypesConvertToOther = "Both of the types '{0}' and '{1}' convert to the other";
-        public const string NeitherTypeConvertsToOther = "Neither of the types '{0}' and '{1}' converts to the other";
+        public const string BothTypesConvertToOther =
+            "Both of the types '{0}' and '{1}' convert to the other";
+        public const string NeitherTypeConvertsToOther =
+            "Neither of the types '{0}' and '{1}' converts to the other";
         public const string MissingAsClause = "Expression is missing an 'as' clause";
-        public const string ArgsIncompatibleWithLambda = "Argument list incompatible with lambda expression";
+        public const string ArgsIncompatibleWithLambda =
+            "Argument list incompatible with lambda expression";
         public const string TypeHasNoNullableForm = "Type '{0}' has no nullable form";
         public const string NoMatchingConstructor = "No matching constructor in type '{0}'";
-        public const string AmbiguousConstructorInvocation = "Ambiguous invocation of '{0}' constructor";
-        public const string CannotConvertValue = "A value of type '{0}' cannot be converted to type '{1}'";
+        public const string AmbiguousConstructorInvocation =
+            "Ambiguous invocation of '{0}' constructor";
+        public const string CannotConvertValue =
+            "A value of type '{0}' cannot be converted to type '{1}'";
         public const string NoApplicableMethod = "No applicable method '{0}' exists in type '{1}'";
         public const string MethodsAreInaccessible = "Methods on type '{0}' are not accessible";
         public const string MethodIsVoid = "Method '{0}' in type '{1}' does not return a value";
-        public const string AmbiguousMethodInvocation = "Ambiguous invocation of method '{0}' in type '{1}'";
-        public const string UnknownPropertyOrField = "No property or field '{0}' exists in type '{1}'";
+        public const string AmbiguousMethodInvocation =
+            "Ambiguous invocation of method '{0}' in type '{1}'";
+        public const string UnknownPropertyOrField =
+            "No property or field '{0}' exists in type '{1}'";
         public const string NoApplicableAggregate = "No applicable aggregate method '{0}' exists";
-        public const string CannotIndexMultiDimArray = "Indexing of multi-dimensional arrays is not supported";
+        public const string CannotIndexMultiDimArray =
+            "Indexing of multi-dimensional arrays is not supported";
         public const string InvalidIndex = "Array index must be an integer expression";
         public const string NoApplicableIndexer = "No applicable indexer exists in type '{0}'";
-        public const string AmbiguousIndexerInvocation = "Ambiguous invocation of indexer in type '{0}'";
-        public const string IncompatibleOperand = "Operator '{0}' incompatible with operand type '{1}'";
-        public const string IncompatibleOperands = "Operator '{0}' incompatible with operand types '{1}' and '{2}'";
+        public const string AmbiguousIndexerInvocation =
+            "Ambiguous invocation of indexer in type '{0}'";
+        public const string IncompatibleOperand =
+            "Operator '{0}' incompatible with operand type '{1}'";
+        public const string IncompatibleOperands =
+            "Operator '{0}' incompatible with operand types '{1}' and '{2}'";
         public const string UnterminatedStringLiteral = "Unterminated string literal";
         public const string UnterminatedStringEscaped = "Unterminated string escaped";
         public const string InvalidCharacter = "Syntax error '{0}'";

@@ -1,16 +1,15 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
-    [MediusMessage(NetMessageClass.MessageClassLobby, MediusLobbyMessageIds.GetClanTeamChallengeHistory)]
+    [MediusMessage(
+        NetMessageClass.MessageClassLobby,
+        MediusLobbyMessageIds.GetClanTeamChallengeHistory
+    )]
     public class MediusGetClanTeamChallengeHistoryRequest : BaseLobbyMessage, IMediusRequest
     {
         public override byte PacketType => (byte)MediusLobbyMessageIds.GetClanTeamChallengeHistory;
-
-
-
         public MessageId MessageID { get; set; }
         public string SessionKey; // SESSIONKEY_MAXLEN
         public int ClanID;
@@ -20,10 +19,8 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            // 
             MessageID = reader.Read<MessageId>();
             SessionKey = reader.ReadString(Constants.SESSIONKEY_MAXLEN);
             reader.ReadBytes(2);
@@ -35,10 +32,8 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
-            // 
             writer.Write(MessageID ?? MessageId.Empty);
             writer.Write(SessionKey, Constants.SESSIONKEY_MAXLEN);
             writer.Write(new byte[2]);
@@ -48,16 +43,21 @@ namespace Horizon.RT.Models
             writer.Write(PageSize);
         }
 
-
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID:{MessageID}" + " " +
-                $"SessionKey:{SessionKey}" + " " +
-                $"ClanID:{ClanID}" + " " +
-                $"ThisClanIsChallenger:{ThisClanIsChallenger}" + " " +
-                $"Start:{Start}" + " " +
-                $"PageSize:{PageSize}";
+            return base.ToString()
+                + " "
+                + $"MessageID:{MessageID}"
+                + " "
+                + $"SessionKey:{SessionKey}"
+                + " "
+                + $"ClanID:{ClanID}"
+                + " "
+                + $"ThisClanIsChallenger:{ThisClanIsChallenger}"
+                + " "
+                + $"Start:{Start}"
+                + " "
+                + $"PageSize:{PageSize}";
         }
     }
 }

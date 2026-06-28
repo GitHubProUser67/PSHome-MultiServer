@@ -2,7 +2,6 @@ using QuazalServer.QNetZ.Attributes;
 using QuazalServer.QNetZ.DDL;
 using QuazalServer.QNetZ.Interfaces;
 using QuazalServer.RDVServices.DDL.Models;
-using QuazalServer.RDVServices.RMC;
 
 namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
 {
@@ -10,7 +9,12 @@ namespace QuazalServer.RDVServices.GameServices.PS3SparkServices
     public class AccountManagementService : RMCServiceBase
     {
         [RMCMethod(1)]
-        public RMCResult CreateAccount(string strPrincipalName, string strKey, uint uiGroups, string strEmail)
+        public RMCResult CreateAccount(
+            string strPrincipalName,
+            string strKey,
+            uint uiGroups,
+            string strEmail
+        )
         {
             UNIMPLEMENTED();
             return Error(0);

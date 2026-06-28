@@ -1,0 +1,150 @@
+using System;
+using System.IO;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Security;
+
+namespace Org.BouncyCastle.Bcpg.OpenPgp
+{
+    /// <summary>A one pass signature object.</summary>
+    public class PgpOnePassSignature
+    {
+        private static OnePassSignaturePacket Cast(Packet packet)
+        {
+            if (packet is OnePassSignaturePacket onePassSignaturePacket)
+                return onePassSignaturePacket;
+
+            throw new IOException("unexpected packet in stream: " + packet);
+        }
+
+        private readonly OnePassSignaturePacket sigPack;
+        private readonly int signatureType;
+
+        private ISigner sig;
+        private byte lastb;
+
+        internal PgpOnePassSignature(BcpgInputStream bcpgInput)
+            : this(Cast(bcpgInput.ReadPacket())) { }
+
+        internal PgpOnePassSignature(OnePassSignaturePacket sigPack)
+        {
+            this.sigPack = sigPack;
+            this.signatureType = sigPack.SignatureType;
+        }
+
+        /// <summary>Initialise the signature object for verification.</summary>
+        public void InitVerify(PgpPublicKey pubKey)
+        {
+            lastb = 0;
+            AsymmetricKeyParameter key = pubKey.GetKey();
+
+            try
+            {
+                sig = PgpUtilities.CreateSigner(sigPack.KeyAlgorithm, sigPack.HashAlgorithm, key);
+            }
+            catch (Exception e)
+            {
+                throw new PgpException("can't set up signature object.", e);
+            }
+
+            try
+            {
+                sig.Init(false, key);
+            }
+            catch (InvalidKeyException e)
+            {
+                throw new PgpException("invalid key.", e);
+            }
+        }
+
+        public void Update(byte b)
+        {
+            if (signatureType == PgpSignature.CanonicalTextDocument)
+            {
+                DoCanonicalUpdateByte(b);
+            }
+            else
+            {
+                sig.Update(b);
+            }
+        }
+
+        private void DoCanonicalUpdateByte(byte b)
+        {
+            if (b == '\r')
+            {
+                DoUpdateCRLF();
+            }
+            else if (b == '\n')
+            {
+                if (lastb != '\r')
+                {
+                    DoUpdateCRLF();
+                }
+            }
+            else
+            {
+                sig.Update(b);
+            }
+
+            lastb = b;
+        }
+
+        private void DoUpdateCRLF()
+        {
+            sig.Update((byte)'\r');
+            sig.Update((byte)'\n');
+        }
+
+        public void Update(params byte[] bytes) => Update(bytes, 0, bytes.Length);
+
+        public void Update(byte[] bytes, int off, int length)
+        {
+            Update(bytes.AsSpan(off, length));
+        }
+
+        public void Update(ReadOnlySpan<byte> input)
+        {
+            if (signatureType == PgpSignature.CanonicalTextDocument)
+            {
+                for (int i = 0; i < input.Length; ++i)
+                {
+                    DoCanonicalUpdateByte(input[i]);
+                }
+            }
+            else
+            {
+                sig.BlockUpdate(input);
+            }
+        }
+
+        /// <summary>Verify the calculated signature against the passed in PgpSignature.</summary>
+        public bool Verify(PgpSignature pgpSig)
+        {
+            byte[] trailer = pgpSig.GetSignatureTrailer();
+
+            sig.BlockUpdate(trailer, 0, trailer.Length);
+
+            return sig.VerifySignature(pgpSig.GetSignature());
+        }
+
+        /// <remarks>
+        /// A Key ID is an 8-octet scalar. We convert it (big-endian) to an Int64 (UInt64 is not CLS compliant).
+        /// </remarks>
+        public long KeyId => sigPack.KeyId;
+
+        public int SignatureType => sigPack.SignatureType;
+
+        public HashAlgorithmTag HashAlgorithm => sigPack.HashAlgorithm;
+
+        public PublicKeyAlgorithmTag KeyAlgorithm => sigPack.KeyAlgorithm;
+
+        public byte[] GetEncoded()
+        {
+            var bOut = new MemoryStream();
+            Encode(bOut);
+            return bOut.ToArray();
+        }
+
+        public void Encode(Stream outStr) => sigPack.Encode(BcpgOutputStream.Wrap(outStr));
+    }
+}

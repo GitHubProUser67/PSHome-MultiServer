@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 
 namespace QuazalServer.AtariMelbourneHouse
 {
@@ -6,14 +6,14 @@ namespace QuazalServer.AtariMelbourneHouse
     {
         public static bool TryConvertIpAddressToHex(string ipAddressString, out uint result)
         {
-            if (IPAddress.TryParse(ipAddressString, out IPAddress? ipAddress))
+            if (IPAddress.TryParse(ipAddressString, out var ipAddress))
             {
-                byte[] ipBytes = ipAddress.GetAddressBytes();
+                var ipBytes = ipAddress.GetAddressBytes();
 
                 // If it's an IPv4 address, pass. EdNet is not IPV6 compatible.
                 if (ipBytes.Length == 4)
                 {
-                    if (!BitConverter.IsLittleEndian)
+                    if (!EndianTools.EndianAwareConverter.isLittleEndianSystem)
                         Array.Reverse(ipBytes);
 
                     result = BitConverter.ToUInt32(ipBytes, 0);

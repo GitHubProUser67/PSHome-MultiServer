@@ -6,23 +6,22 @@ namespace Blaze2SDK.Blaze.Clubs
     [TdfStruct]
     public struct Club
     {
-        
         [TdfMember("CLID")]
         public uint mClubId;
-        
+
         [TdfMember("CLIN")]
         public ClubInfo mClubInfo;
-        
+
         [TdfMember("CLST")]
         public ClubSettings mClubSettings;
-        
+
         /// <summary>
         /// Max String Length: 30
         /// </summary>
         [TdfMember("NAME")]
         [StringLength(30)]
         public string mName;
-        
+
         public enum ClubConfigParams : int
         {
             CLUBS_MAX_MEMBER_COUNT = 0x0,
@@ -33,7 +32,7 @@ namespace Blaze2SDK.Blaze.Clubs
             CLUBS_MAX_INACTIVE_DAYS = 0x5,
             CLUBS_PURGE_HOUR = 0x6,
         }
-        
+
         public enum ClubOnlineStatusUpdateReason : int
         {
             CLUBS_USER_SESSION_CREATED = 0x0,
@@ -46,6 +45,5 @@ namespace Blaze2SDK.Blaze.Clubs
             CLUBS_CLUB_SETTINGS_UPDATED = 0x7,
             CLUBS_USER_PROMOTED_TO_GM = 0x8,
         }
-        
     }
 }

@@ -1,6 +1,5 @@
-using System.IO;
+﻿using Horizon.LIBRARY.Common.Stream;
 using Horizon.RT.Common;
-using Horizon.LIBRARY.Common.Stream;
 
 namespace Horizon.RT.Models
 {
@@ -16,33 +15,29 @@ namespace Horizon.RT.Models
 
         public override void Deserialize(MessageReader reader)
         {
-            // 
             base.Deserialize(reader);
 
-            //
             MessageID = reader.Read<MessageId>();
 
-            // 
             AccountID_or_ClanID = reader.ReadInt32();
         }
 
         public override void Serialize(MessageWriter writer)
         {
-            // 
             base.Serialize(writer);
 
             writer.Write(MessageID ?? MessageId.Empty);
 
-            //
             writer.Write(AccountID_or_ClanID);
         }
 
         public override string ToString()
         {
-            return base.ToString() + " " +
-                $"MessageID: {MessageID} " +
-                $"AccountID_or_ClanID: {AccountID_or_ClanID} " +
-                $"LadderType: {LadderType}";
+            return base.ToString()
+                + " "
+                + $"MessageID: {MessageID} "
+                + $"AccountID_or_ClanID: {AccountID_or_ClanID} "
+                + $"LadderType: {LadderType}";
         }
     }
 }

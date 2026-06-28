@@ -1,6 +1,4 @@
-﻿using System;
-using System.Windows.Forms;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 
 namespace ZTn.Json.JsonTreeView
 {
@@ -16,9 +14,21 @@ namespace ZTn.Json.JsonTreeView
         public JArrayContextMenuStrip()
         {
             ArrayToolStripItem = new ToolStripMenuItem(Resources.Lang.JsonArray);
-            InsertArrayToolStripItem = new ToolStripMenuItem(Resources.Lang.InsertArray, null, InsertArray_Click);
-            InsertObjectToolStripItem = new ToolStripMenuItem(Resources.Lang.InsertObject, null, InsertObject_Click);
-            InsertValueToolStripItem = new ToolStripMenuItem(Resources.Lang.InsertValue, null, InsertValue_Click);
+            InsertArrayToolStripItem = new ToolStripMenuItem(
+                Resources.Lang.InsertArray,
+                null,
+                InsertArray_Click
+            );
+            InsertObjectToolStripItem = new ToolStripMenuItem(
+                Resources.Lang.InsertObject,
+                null,
+                InsertObject_Click
+            );
+            InsertValueToolStripItem = new ToolStripMenuItem(
+                Resources.Lang.InsertValue,
+                null,
+                InsertValue_Click
+            );
 
             ArrayToolStripItem.DropDownItems.Add(InsertArrayToolStripItem);
             ArrayToolStripItem.DropDownItems.Add(InsertObjectToolStripItem);
@@ -64,16 +74,14 @@ namespace ZTn.Json.JsonTreeView
         /// <param name="newJToken"></param>
         private void InsertJToken(JToken newJToken)
         {
-            var jArrayTreeNode = JTokenNode as JArrayTreeNode;
-
-            if (jArrayTreeNode == null)
+            if (JTokenNode is not JArrayTreeNode jArrayTreeNode)
             {
                 return;
             }
 
             jArrayTreeNode.JArrayTag.AddFirst(newJToken);
 
-            TreeNode newTreeNode = JsonTreeNodeFactory.Create(newJToken);
+            var newTreeNode = JsonTreeNodeFactory.Create(newJToken);
             jArrayTreeNode.Nodes.Insert(0, newTreeNode);
 
             jArrayTreeNode.TreeView.SelectedNode = newTreeNode;

@@ -2,15 +2,13 @@ using Tdf;
 
 namespace Blaze3SDK.Blaze.Util
 {
-	[TdfStruct]
-	public struct LocalizeStringsRequest
-	{
+    [TdfStruct]
+    public struct LocalizeStringsRequest
+    {
+        [TdfMember("LANG")]
+        public uint mLocale;
 
-		[TdfMember("LANG")]
-		public uint mLocale;
-
-		[TdfMember("LSID")]
-		public List<string> mStringIds;
-
-	}
+        [TdfMember("LSID")]
+        public List<string> mStringIds;
+    }
 }

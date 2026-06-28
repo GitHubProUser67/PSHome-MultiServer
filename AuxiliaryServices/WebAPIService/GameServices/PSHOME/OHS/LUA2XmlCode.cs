@@ -2,7 +2,8 @@
 {
     public static class LUA2XmlCode
     {
-        public const string lua2xml = @"--[[--------------------------------]]--
+        public const string lua2xml =
+            @"--[[--------------------------------]]--
 --[[ XmlConvert.lua	(modified)  	]]--
 --[[		                        ]]--
 --[[ GitHubProUser67		        ]]--

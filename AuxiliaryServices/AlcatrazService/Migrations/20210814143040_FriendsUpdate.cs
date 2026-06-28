@@ -9,7 +9,8 @@ namespace Alcatraz.Context.Migrations
             migrationBuilder.RenameColumn(
                 name: "Status",
                 table: "UserRelationships",
-                newName: "Details");
+                newName: "Details"
+            );
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
@@ -17,7 +18,8 @@ namespace Alcatraz.Context.Migrations
             migrationBuilder.RenameColumn(
                 name: "Details",
                 table: "UserRelationships",
-                newName: "Status");
+                newName: "Status"
+            );
         }
     }
 }

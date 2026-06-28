@@ -1,13 +1,11 @@
-using System.IO;
-using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
+using Horizon.RT.Common;
 
 namespace Horizon.RT.Models
 {
     [ScertMessage(RT_MSG_TYPE.RT_MSG_CLIENT_CONNECT_READY_REQUIRE)]
     public class RT_MSG_CLIENT_CONNECT_READY_REQUIRE : BaseScertMessage
     {
-
         public override RT_MSG_TYPE Id => RT_MSG_TYPE.RT_MSG_CLIENT_CONNECT_READY_REQUIRE;
 
         public byte ServReq;
@@ -26,7 +24,7 @@ namespace Horizon.RT.Models
 
         public override void Serialize(MessageWriter writer)
         {
-            writer.Write(ServReq); 
+            writer.Write(ServReq);
             if (ServReq != 0)
             {
                 writer.Write(Password_Len);
@@ -36,16 +34,13 @@ namespace Horizon.RT.Models
 
         public override string ToString()
         {
-            if(ServReq != 0)
-            {
-                return base.ToString() + " " +
-                    $"ServReq: {ServReq} " +
-                    $"PW Length: {Password_Len} " +
-                    $"Password: {new string(Password)}";
-            } else {
-                return base.ToString() + " " +
-                    $"ServReq: {ServReq} ";
-            }
+            return ServReq != 0
+                ? base.ToString()
+                    + " "
+                    + $"ServReq: {ServReq} "
+                    + $"PW Length: {Password_Len} "
+                    + $"Password: {new string(Password)}"
+                : base.ToString() + " " + $"ServReq: {ServReq} ";
         }
     }
 }
