@@ -67,15 +67,28 @@ namespace MultiSocks.Aries.Components
 
                                 foreach (var game in MatchingList)
                                 {
+                                    var gameCustFlags = string.IsNullOrEmpty(game.CustFlags) ? 0 : int.Parse(game.CustFlags);
+                                    bool isFriendsOnly = false, isPrivate = false;
+                                    var bit0 = (gameCustFlags & (1 << 0)) != 0;
+                                    var bit1 = (gameCustFlags & (1 << 1)) != 0;
+
+                                    if (!bit0 && !bit1)
+                                    {
+                                        // Public.
+                                    }
+                                    else if (bit0 && !bit1)
+                                        isFriendsOnly = true;
+                                    else if (!bit0 && bit1)
+                                        isPrivate = true;
+
                                     // Friends only.
-                                    if (
-                                        game.GPSHost != null
-                                        && game.MatchesCustFlags("1", "1")
-                                        && user.Friends.Contains(game.GPSHost.Username)
-                                    )
-                                        filteredBurnoutGames.Add(game);
+                                    if (isFriendsOnly)
+                                    {
+                                        if (game.GPSHost != null && user.Friends.Contains(game.GPSHost.Username))
+                                            filteredBurnoutGames.Add(game);
+                                    }
                                     // Not private.
-                                    else if (!game.MatchesCustFlags("2", "2"))
+                                    else if (!isPrivate)
                                         filteredBurnoutGames.Add(game);
                                 }
 
