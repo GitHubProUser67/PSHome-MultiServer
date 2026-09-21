@@ -29,6 +29,7 @@ using WebAPIService.GameServices.PSHOME.JUGGERNAUT;
 using WebAPIService.GameServices.PSHOME.LOOT;
 using WebAPIService.GameServices.PSHOME.NDREAMS;
 using WebAPIService.GameServices.PSHOME.OHS;
+using WebAPIService.GameServices.PSHOME.OSHABERI;
 using WebAPIService.GameServices.PSHOME.OUWF;
 using WebAPIService.GameServices.PSHOME.PREMIUMAGENCY;
 using WebAPIService.GameServices.PSHOME.RCHOME;
@@ -874,6 +875,41 @@ namespace ApacheNet.BuildIn.RouteHandlers.GameRoutes
                                     return ctx.Response.SendChunk(!string.IsNullOrEmpty(res) ? Encoding.UTF8.GetBytes(res) : null, true).Result;
                                 else
                                     return ctx.Response.Send(res).Result;
+                    }
+                },
+                new() {
+                    Name = "OSHABERI Farm API",
+                    UrlRegex = @".*/game/app/.*",
+                    Hosts = new[] {
+                        "homect-scej.jp",
+                        "qa-homect-scej.jp",
+                        "oc.homect-scej.jp"
+                    },
+                    Callable = (ctx) => {
+                        HttpStatusCode statusCode;
+                        ctx.Response.ChunkedTransfer = ctx.AcceptChunked;
+
+                        string? res = new OSHABERIClass(ctx.Request.Method.ToString(), ctx.AbsolutePath, ApacheNetServerConfiguration.APIStaticFolder, ctx.FullUrl).ProcessRequest(ctx.Request.DataAsBytes, ctx.Request.ContentType);
+                        if (string.IsNullOrEmpty(res))
+                        {
+                            ctx.Response.ContentType = "text/plain";
+                            statusCode = HttpStatusCode.InternalServerError;
+                        }
+                        else
+                        {
+                            ctx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                            ctx.Response.ContentType = "application/json";
+                            statusCode = HttpStatusCode.OK;
+                        }
+                        ctx.Response.StatusCode = (int)statusCode;
+                        byte[]? responseBytes = !string.IsNullOrEmpty(res)
+                            ? new UTF8Encoding(false).GetBytes(res)
+                            : null;
+
+                        if (ctx.Response.ChunkedTransfer)
+                            return ctx.Response.SendChunk(responseBytes, true).Result;
+                        else
+                            return ctx.Response.Send(responseBytes).Result;
                     }
                 },
                 new() {

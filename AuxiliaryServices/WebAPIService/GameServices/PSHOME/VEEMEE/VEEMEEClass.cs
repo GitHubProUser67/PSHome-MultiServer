@@ -1,5 +1,6 @@
 using MultiServerLibrary.HTTP;
 using System.Text;
+using System.IO;
 using WebAPIService.GameServices.PSHOME.VEEMEE.accorn;
 using WebAPIService.GameServices.PSHOME.VEEMEE.audi_sled;
 using WebAPIService.GameServices.PSHOME.VEEMEE.audi_vrun;
@@ -93,11 +94,11 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE
                             resultContentType = "text/xml";
                             break;
                         case "/MetaScores/setScore.php":
-                            result = MetaScores.SetUserDataPOST(postData, contentType, apiPath);
+                            result = MetaScores.SetUserDataPOST(postData, HTTPProcessor.ExtractBoundary(contentType), apiPath);
                             resultContentType = "text/xml";
                             break;
                         case "/MetaScores/getScore.php":
-                            result = MetaScores.GetUserDataPOST(postData, contentType, apiPath);
+                            result = MetaScores.GetUserDataPOST(postData, HTTPProcessor.ExtractBoundary(contentType), apiPath);
                             resultContentType = "text/xml";
                             break;
                         case "/MetaScores/getTrophies.php":
@@ -109,11 +110,19 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE
                             resultContentType = "text/xml";
                             break;
                         case "/MetaScores/getHighScores.php":
+                            result = MetaScores.GetHighScoresPOST(postData, HTTPProcessor.ExtractBoundary(contentType), apiPath, filter: 0, friends: false);
+                            resultContentType = "text/xml";
+                            break;
                         case "/MetaScores/getHighScoresToday.php":
+                            result = MetaScores.GetHighScoresPOST(postData, HTTPProcessor.ExtractBoundary(contentType), apiPath, filter: 1, friends: false);
+                            resultContentType = "text/xml";
+                            break;
                         case "/MetaScores/getHighScoresYesterday.php":
+                            result = MetaScores.GetHighScoresPOST(postData, HTTPProcessor.ExtractBoundary(contentType), apiPath, filter: 2, friends: false);
+                            resultContentType = "text/xml";
+                            break;
                         case "/MetaScores/getHighScoresFriends.php":
-                            // TODO: Implements MetaScores dynamic leaderboards!
-                            result = "<leaderboard></leaderboard>";
+                            result = MetaScores.GetHighScoresPOST(postData, HTTPProcessor.ExtractBoundary(contentType), apiPath, filter: 0, friends: true);
                             resultContentType = "text/xml";
                             break;
                         case "/player_profiles/setPlayerProfile.php":
@@ -304,6 +313,14 @@ namespace WebAPIService.GameServices.PSHOME.VEEMEE
                             break;
                         case "/stats/getconfig.php":
                             result = Stats.GetConfig(true, postData, contentType, apiPath);
+                            break;
+                        case "/screens.php":
+                            string screensPath = $"{apiPath}/VEEMEE/screens/screens.xml"; // Just a Big Screenlinks File
+                            if (File.Exists(screensPath))
+                                result = File.ReadAllText(screensPath);
+                            else
+                                result = "<XML></XML>";
+                            resultContentType = "text/xml";
                             break;
                         default:
                             break;
