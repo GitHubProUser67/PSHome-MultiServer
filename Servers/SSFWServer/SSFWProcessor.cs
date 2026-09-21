@@ -164,7 +164,21 @@ namespace SSFWServer
 #else
                     LoggerAccessor.LogInfo($"[SSFWProcessor] - Home Client Requested the SSFW Server with URL : {request.Method} {absolutepath}");
 #endif
-                    if (!string.IsNullOrEmpty(UserAgent))
+                    if (
+                        !Path.GetFullPath(
+                        Path.Combine(SSFWServerConfiguration.SSFWStaticFolder, absolutepath[1..])
+                    ).StartsWith(
+                            Path.GetFullPath(SSFWServerConfiguration.SSFWStaticFolder),
+                            StringComparison.Ordinal
+                        )
+                    )
+                    {
+                        Response.Clear();
+                        Response.SetBegin((int)HttpStatusCode.Forbidden);
+                        Response.SetBody();
+                        return Response;
+                    }
+                    else if (!string.IsNullOrEmpty(UserAgent))
                     {
                         // PSHome
                         if (UserAgent.Contains("PSHome"))

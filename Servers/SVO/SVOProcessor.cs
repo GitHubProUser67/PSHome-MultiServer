@@ -187,33 +187,45 @@ namespace SVO
                             // Only meant to be used with fairly small files.
                             string filePath = Path.Combine(SVOServerConfiguration.SVOStaticFolder, absolutepath[1..]);
 
-                            if (File.Exists(filePath))
+                            if (
+                                !Path.GetFullPath(
+                                Path.Combine(SVOServerConfiguration.SVOStaticFolder, absolutepath[1..])
+                            ).StartsWith(
+                                    Path.GetFullPath(SVOServerConfiguration.SVOStaticFolder),
+                                    StringComparison.Ordinal
+                                )
+                            )
+                                listenerCtx.Response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                            else
                             {
-                                listenerCtx.Response.StatusCode = (int)System.Net.HttpStatusCode.OK;
-                                listenerCtx.Response.ContentType = HTTPProcessor.GetMimeType(Path.GetExtension(filePath), HTTPProcessor.MimeTypes);
-
-                                listenerCtx.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-                                listenerCtx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
-                                listenerCtx.Response.Headers.Add("ETag", Guid.NewGuid().ToString()); // Well, kinda wanna avoid client caching.
-                                listenerCtx.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(filePath).ToString("r"));
-
-                                byte[] FileContent = await File.ReadAllBytesAsync(filePath).ConfigureAwait(false);
-
-                                if (listenerCtx.Response.OutputStream.CanWrite)
+                                if (File.Exists(filePath))
                                 {
-                                    try
+                                    listenerCtx.Response.StatusCode = (int)System.Net.HttpStatusCode.OK;
+                                    listenerCtx.Response.ContentType = HTTPProcessor.GetMimeType(Path.GetExtension(filePath), HTTPProcessor.MimeTypes);
+
+                                    listenerCtx.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                                    listenerCtx.Response.Headers.Add("Date", DateTime.Now.ToString("r"));
+                                    listenerCtx.Response.Headers.Add("ETag", Guid.NewGuid().ToString()); // Well, kinda wanna avoid client caching.
+                                    listenerCtx.Response.Headers.Add("Last-Modified", File.GetLastWriteTime(filePath).ToString("r"));
+
+                                    byte[] FileContent = await File.ReadAllBytesAsync(filePath).ConfigureAwait(false);
+
+                                    if (listenerCtx.Response.OutputStream.CanWrite)
                                     {
-                                        listenerCtx.Response.ContentLength64 = FileContent.Length;
-                                        await listenerCtx.Response.OutputStream.WriteAsync(FileContent).ConfigureAwait(false);
-                                    }
-                                    catch
-                                    {
-                                        // Not Important.
+                                        try
+                                        {
+                                            listenerCtx.Response.ContentLength64 = FileContent.Length;
+                                            await listenerCtx.Response.OutputStream.WriteAsync(FileContent).ConfigureAwait(false);
+                                        }
+                                        catch
+                                        {
+                                            // Not Important.
+                                        }
                                     }
                                 }
+                                else
+                                    listenerCtx.Response.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
                             }
-                            else
-                                listenerCtx.Response.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
                         }
                     }
                     else

@@ -285,6 +285,26 @@ namespace ApacheNet
                     // Split the URL into segments
                     string[] segments = absolutepath.Trim('/').Split('/');
 
+                    if (
+                        !Path.GetFullPath(
+                        Path.Combine(ApacheNetServerConfiguration.HTTPStaticFolder, absolutepath[1..])
+                    ).StartsWith(
+                            Path.GetFullPath(ApacheNetServerConfiguration.HTTPStaticFolder),
+                            StringComparison.Ordinal
+                        )
+                        || !Path.GetFullPath(
+                        Path.Combine(ApacheNetServerConfiguration.APIStaticFolder, absolutepath[1..])
+                    ).StartsWith(
+                            Path.GetFullPath(ApacheNetServerConfiguration.APIStaticFolder),
+                            StringComparison.Ordinal
+                        )
+                    )
+                    {
+                        apacheContext.StatusCode = HttpStatusCode.Forbidden;
+                        await apacheContext.SendImmediate().ConfigureAwait(false);
+                        return;
+                    }
+
                     // Combine the folder segments into a directory path
                     apacheContext.DirectoryPath = Path.Combine(ApacheNetServerConfiguration.HTTPStaticFolder, string.Join("/", segments.Take(segments.Length - 1).ToArray()));
 
