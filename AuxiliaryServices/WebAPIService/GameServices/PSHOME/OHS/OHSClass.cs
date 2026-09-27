@@ -24,7 +24,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             { "/user/getmany/", (post, ct, dir, game) => User.GetMany(post, ct, dir, string.Empty, false, game) },
             { "/usercounter/set/", (post, ct, dir, game) => UserCounter.Set(post, ct, dir, string.Empty, game) },
             { "/usercounter/getall/", (post, ct, dir, game) => UserCounter.Get_All(post, ct, dir, string.Empty, game) },
-            { "usercounter/getmany/", (post, ct, dir, game) => UserCounter.Get_Many(post, ct, dir, string.Empty, game) },
+            { "/usercounter/getmany/", (post, ct, dir, game) => UserCounter.Get_Many(post, ct, dir, string.Empty, game) },
             { "/usercounter/get/", (post, ct, dir, game) => UserCounter.Get(post, ct, dir, string.Empty, game) },
             { "/usercounter/increment/", (post, ct, dir, game) => UserCounter.Increment(post, ct, dir, string.Empty, game, false) },
             { "/userinventory/addglobalitems/", (post, ct, dir, game) => UserInventory.AddGlobalItems(post, ct, dir, string.Empty, game) },
@@ -60,7 +60,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             foreach (var route in _handlers)
             {
                 if (absolutepath.Contains(route.Key))
-                    return route.Value(PostData, ContentType, directoryPath, game);
+                    return route.Value(PostData, ContentType, directoryPath.Replace('\\', '/'), game);
             }
 
             return null;
@@ -71,7 +71,7 @@ namespace WebAPIService.GameServices.PSHOME.OHS
             string modifiedInput = input;
 
             foreach (string pattern in _handlers.Keys)
-                modifiedInput = Regex.Replace(modifiedInput, Regex.Escape(pattern), string.Empty);
+                modifiedInput = Regex.Replace(modifiedInput, Regex.Escape(pattern).Replace("/", @"[\\/]"), string.Empty);
 
             return modifiedInput;
         }
