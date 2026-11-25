@@ -485,7 +485,7 @@ namespace Horizon.DME.Models
                 // Tell other clients
                 foreach (var client in _clients)
                 {
-                    if (!client.Value.HasJoined || client.Value == player || (player.ApplicationId != 23360 && !client.Value.HasRecvFlag(RT_RECV_FLAG.RECV_NOTIFICATION)))
+                    if (!client.Value.HasJoined || client.Value == player || !client.Value.HasRecvFlag(RT_RECV_FLAG.RECV_NOTIFICATION))
                         continue;
 
                     client.Value.EnqueueTcp(new RT_MSG_SERVER_CONNECT_NOTIFY()
