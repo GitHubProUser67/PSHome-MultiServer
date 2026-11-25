@@ -470,10 +470,22 @@ namespace Horizon.DME.Models
                     Game = this
                 }).Wait();
 
+                // WipEout 2048 (PS Vita) never sets the notification receive flag and learns its peers only from CONNECT_NOTIFY messages,
+                // so tell the joining player about the players already in the world, and notify the existing players whatever their flags.
+                if (player.ApplicationId == 23360)
+                    foreach (var other in _clients)
+                        if (other.Value.HasJoined && other.Value != player && other.Value.RemoteUdpEndpoint != null)
+                            player.EnqueueTcp(new RT_MSG_SERVER_CONNECT_NOTIFY()
+                            {
+                                PlayerIndex = (short)other.Value.DmeId,
+                                ScertId = (short)other.Value.ScertId,
+                                IP = other.Value.RemoteUdpEndpoint.Address
+                            });
+
                 // Tell other clients
                 foreach (var client in _clients)
                 {
-                    if (!client.Value.HasJoined || client.Value == player || !client.Value.HasRecvFlag(RT_RECV_FLAG.RECV_NOTIFICATION))
+                    if (!client.Value.HasJoined || client.Value == player || (player.ApplicationId != 23360 && !client.Value.HasRecvFlag(RT_RECV_FLAG.RECV_NOTIFICATION)))
                         continue;
 
                     client.Value.EnqueueTcp(new RT_MSG_SERVER_CONNECT_NOTIFY()
