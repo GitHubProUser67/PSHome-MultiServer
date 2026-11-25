@@ -45,6 +45,14 @@ namespace Horizon.RT.Models.Lobby
         public uint AppDataSize;
         public string AppData;
 
+        // Size in bytes of the game record the WipEout 2048 (PS Vita) client keeps in memory, without its AppData: the 0x1E0 bytes sent on the wire
+        // plus the 4-byte AppData pointer. The client reads this size, plus AppDataSize, as an int in front of the game record.
+        private const int WipeoutVitaRecordSize = 0x1E4;
+
+        // After a JoinAssignedGame status, the WipEout 2048 (PS Vita) client reads that record size before GameWorldID.
+        // Set by MLS.AssignGameToJoin for that title only, other titles are unchanged.
+        public bool WithRecordSize;
+
         public override void Deserialize(MessageReader reader)
         {
             base.Deserialize(reader);
@@ -57,6 +65,8 @@ namespace Horizon.RT.Models.Lobby
 
             if (StatusCode == MediusCallbackStatus.MediusJoinAssignedGame)
             {
+                if (WithRecordSize)
+                    reader.ReadInt32();
                 GameWorldID = reader.ReadUInt32();
                 TeamID = reader.ReadUInt32();
                 PlayerCount = reader.ReadInt32();
@@ -97,6 +107,8 @@ namespace Horizon.RT.Models.Lobby
 
             if (StatusCode == MediusCallbackStatus.MediusJoinAssignedGame)
             {
+                if (WithRecordSize)
+                    writer.Write(WipeoutVitaRecordSize + (int)AppDataSize);
                 writer.Write(GameWorldID);
                 writer.Write(TeamID);
                 writer.Write(PlayerCount);

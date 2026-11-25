@@ -10090,6 +10090,7 @@ LoggerAccessor.LogWarn($"[MLS] - ProcessGenericChatMessage - Unhandled generic c
                         AssignedGameMessageID = 0,
                         AssignedGameType = MediusAssignedGameType.AssignedGameTypeMMS,
                         StatusCode = MediusCallbackStatus.MediusJoinAssignedGame,
+                        WithRecordSize = clientObject.ApplicationId == 23360,
                         SystemSpecificStatusCode = 0,
                         GameWorldID = 0,//(uint)gameInfo.Id, //TEMP
                         TeamID = 0,
@@ -10137,6 +10138,7 @@ LoggerAccessor.LogWarn($"[MLS] - ProcessGenericChatMessage - Unhandled generic c
                         AssignedGameMessageID = 2,
                         AssignedGameType = MediusAssignedGameType.AssignedGameTypeMMS,
                         StatusCode = MediusCallbackStatus.MediusJoinAssignedGame,
+                        WithRecordSize = clientObject.ApplicationId == 23360,
                         SystemSpecificStatusCode = 0,
 
                         GameWorldID = (ushort)gameMatchFound.MediusWorldId, // TEMP
