@@ -10029,10 +10029,50 @@ LoggerAccessor.LogWarn($"[MLS] - ProcessGenericChatMessage - Unhandled generic c
         }
         #endregion
 
+        // The WipEout 2048 (PS Vita) client treats any MatchFindGame answer other than a joinable game as a fatal matchmaking error, and it hosts only
+        // when it is the first client of its game's DME world. A lone player therefore gets a game created for it: the player is the host,
+        // as if it had sent a CreateGame request, and the usual assigned-game reply is sent for that game.
+        async Task AssignHostedGame(ClientObject client, MediusMatchFindGameRequest find)
+        {
+            if (!client.IsConnected)
+                return;
+
+            Game? game = null;
+
+            try
+            {
+                var dme = MediusClass.ProxyServer.GetFreeDme(client.ApplicationId, client.LocationId) ?? throw new Exception("no free DME");
+                var req = new MediusCreateGameRequest() { MessageID = find.MessageID, ApplicationID = client.ApplicationId, MinPlayers = 1, MaxPlayers = find.MaxPlayers > 0 ? (int)find.MaxPlayers : 8, GameLevel = 3, GameName = $"W2048 campaign~{client.AccountId}", GamePassword = string.Empty, SpectatorPassword = string.Empty, PlayerSkillLevel = 2, RulesSet = 0x10, GenericField1 = 1, GameHostType = MGCL_GAME_HOST_TYPE.MGCLGameHostClientServerUDP };
+                game = new Game(client, req, dme);
+                await MediusClass.Manager.AddGame(game);
+                dme.Queue(new MediusServerCreateGameWithAttributesRequest() { MessageID = new MessageId($"{game.MediusWorldId}-{client.AccountId}-{find.MessageID}-0"), WorldID = game.GameChannel!.Id, Attributes = game.Attributes, ApplicationID = client.ApplicationId, MaxClients = game.MaxPlayers });
+                await Task.Delay(500); // Give the DME time to register the world before the client is sent to it.
+                LoggerAccessor.LogInfo($"[MLS] - Created game {game.MediusWorldId} for a lone MatchFindGame from {client}");
+                // The game has no player yet, so lift its minimum player count for the lookup in AssignGameToJoin.
+                game.MinPlayers = 0;
+                AssignGameToJoin(client, find);
+            }
+            catch (Exception e)
+            {
+                LoggerAccessor.LogError($"[MLS] - AssignHostedGame: {e}");
+            }
+            finally
+            {
+                if (game != null)
+                    game.MinPlayers = 1;
+            }
+        }
+
         public void AssignGameToJoin(ClientObject clientObject, MediusMatchFindGameRequest matchFindGameRequest)
         {
             //We Sleep for a bit so we return another packet for the matchmaked game we may have found!
             uint gameCount = MediusClass.Manager.GetGameCount(clientObject.ApplicationId);
+
+            if (gameCount == 0 && clientObject.ApplicationId == 23360)
+            {
+                _ = AssignHostedGame(clientObject, matchFindGameRequest);
+                return;
+            }
 			
             if (gameCount == 0)
             {
