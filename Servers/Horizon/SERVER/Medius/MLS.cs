@@ -6564,6 +6564,14 @@ LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {endGa
                             break;
                         }
 
+                        // WipEout 2048 (PS Vita): every client posts an EndGameReport when it leaves, right after closing its DME connection.
+                        // If the DME has not processed that disconnect yet, a guest's report would end the game for everyone, so only the host's report ends it.
+                        if (data.ApplicationId == 23360 && data.ClientObject.CurrentGame != null && data.ClientObject.CurrentGame.Host != data.ClientObject)
+                        {
+                            LoggerAccessor.LogInfo($"[MLS] - Ignoring EndGameReport from non-host {data.ClientObject.AccountId} for world {endGameReport.MediusWorldID}");
+                            break;
+                        }
+
                         if (data.ClientObject.CurrentGame != null)
                             await data.ClientObject.CurrentGame.OnEndGameReport(endGameReport, data.ApplicationId);
 
