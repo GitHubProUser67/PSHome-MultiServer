@@ -480,6 +480,11 @@ namespace Horizon.DME.Models
             if (MediusVersion <= 108)
                 return true;
 
+            // WipEout 2048 (PS Vita) announces itself with the broadcast and single flags only and never sends SET_RECV_FLAG,
+            // yet it sends its player and game info as list messages. Treat it as always accepting lists, or they are dropped for every receiver.
+            if (ApplicationId == 23360 && flag == RT_RECV_FLAG.RECV_LIST)
+                return true;
+
             return RecvFlag.HasFlag(flag);
         }
 
