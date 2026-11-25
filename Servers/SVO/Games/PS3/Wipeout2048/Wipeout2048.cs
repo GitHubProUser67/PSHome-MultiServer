@@ -758,7 +758,11 @@ namespace SVO.Games.PS3
                                         ms.Read(buffer, 0, contentLength);
 
                                         // get ticket
-                                        XI5Ticket ticket = XI5Ticket.ReadFromBytes(buffer);
+                                        // The PS Vita client of WipEout 2048 sends version 4.0 tickets, which the default enabled-version mask refuses.
+                                        bool vitaTicket = string.Equals(request.Headers["X-SCEE-Platform"], "PSVITA", StringComparison.OrdinalIgnoreCase);
+                                        XI5Ticket ticket = vitaTicket
+                                            ? XI5Ticket.ReadFromBytes(buffer, CastleLibrary.S0ny.XI5.Types.PayloadVersionsEnum.V20 | CastleLibrary.S0ny.XI5.Types.PayloadVersionsEnum.V21 | CastleLibrary.S0ny.XI5.Types.PayloadVersionsEnum.V30 | CastleLibrary.S0ny.XI5.Types.PayloadVersionsEnum.V40)
+                                            : XI5Ticket.ReadFromBytes(buffer);
 
                                         // setup username
                                         psnname = ticket.Username;
