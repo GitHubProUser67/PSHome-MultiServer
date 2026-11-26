@@ -181,6 +181,26 @@ Below are two quotes from a Warhawk HTML sample DEMO file that describe SVO :
 Used heavily in older versions of PlayStation®Home from 1.65 and below; The transition from SVO to SSFW migration started in version 1.65.
 Used heavily in Buzz Quiz Player, Starhawk, Socom: Confrontation, Warhawk, Killzone series
 
+WipEout 2048 (PS Vita):
+
+The PS Vita client's TLS stack offers TLS 1.2 (down to 1.0) with RSA key exchange and AES-CBC cipher suites and no extensions. SVO already enables TLS 1.0-1.2, but OpenSSL's default security level on current Linux distributions refuses those suites, and PSH has no setting for it. Allow them for the SVO process only, with an OpenSSL configuration file selected through the OPENSSL_CONF environment variable:
+
+```
+openssl_conf = default_conf
+
+[default_conf]
+ssl_conf = ssl_sect
+
+[ssl_sect]
+system_default = system_default_sect
+
+[system_default_sect]
+MinProtocol = TLSv1
+CipherString = DEFAULT:@SECLEVEL=0
+```
+
+Start the SVO server with `OPENSSL_CONF=/path/to/that/file`. Use a certificate with an RSA key, as the client does not negotiate ECDSA.
+
 # 5) SSFW --> 
 
 JSON HTTP / HTTPS web server that handles PlayStation®Home's save data services including user settings, avatar layouts, wardrobe saves, clans, apartment layouts, rewards, and save data generated from the save data LUA libraries. This replaced SVO entirely from 1.70 and onward.

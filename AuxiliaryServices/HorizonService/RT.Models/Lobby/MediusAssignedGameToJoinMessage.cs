@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
@@ -45,6 +46,10 @@ namespace Horizon.RT.Models.Lobby
         public uint AppDataSize;
         public string AppData;
 
+        // Size in bytes of each title's in-memory game record without its AppData, by appid. The client reads this size plus AppDataSize
+        // as an int in front of the game record (after a JoinAssignedGame status); titles not listed do not.
+        static readonly Dictionary<int, int> RecordSizes = new() { { 23360, 0x1E4 } }; // WipEout 2048 (PS Vita)
+
         public override void Deserialize(MessageReader reader)
         {
             base.Deserialize(reader);
@@ -57,6 +62,8 @@ namespace Horizon.RT.Models.Lobby
 
             if (StatusCode == MediusCallbackStatus.MediusJoinAssignedGame)
             {
+                if (RecordSizes.ContainsKey(reader.AppId))
+                    reader.ReadInt32();
                 GameWorldID = reader.ReadUInt32();
                 TeamID = reader.ReadUInt32();
                 PlayerCount = reader.ReadInt32();
@@ -97,6 +104,8 @@ namespace Horizon.RT.Models.Lobby
 
             if (StatusCode == MediusCallbackStatus.MediusJoinAssignedGame)
             {
+                if (RecordSizes.TryGetValue(writer.AppId, out int size))
+                    writer.Write(size + (int)AppDataSize);
                 writer.Write(GameWorldID);
                 writer.Write(TeamID);
                 writer.Write(PlayerCount);

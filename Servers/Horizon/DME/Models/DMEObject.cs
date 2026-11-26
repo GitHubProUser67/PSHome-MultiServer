@@ -72,7 +72,19 @@ namespace Horizon.DME.Models
         /// <summary>
         /// 
         /// </summary>
-        public RT_RECV_FLAG RecvFlag { get; set; } = RT_RECV_FLAG.RECV_SINGLE | RT_RECV_FLAG.RECV_LIST;
+        public RT_RECV_FLAG RecvFlag
+        {
+            get => _recvFlag;
+            set => _recvFlag = value | (ForcedRecvFlags.TryGetValue(ApplicationId, out var forced) ? forced : 0);
+        }
+
+        private RT_RECV_FLAG _recvFlag = RT_RECV_FLAG.RECV_SINGLE | RT_RECV_FLAG.RECV_LIST;
+
+        // Flags forced on per application id: WipEout 2048 (PS Vita, Medius 3.3 / protocol 113 client) never sends SET_RECV_FLAG yet expects lists and notifications.
+        private static readonly Dictionary<int, RT_RECV_FLAG> ForcedRecvFlags = new()
+        {
+            { 23360, RT_RECV_FLAG.RECV_LIST | RT_RECV_FLAG.RECV_NOTIFICATION }
+        };
 
         /// <summary>
         /// 

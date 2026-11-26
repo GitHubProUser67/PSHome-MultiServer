@@ -1121,13 +1121,13 @@ LoggerAccessor.LogWarn($"[MPS] - Unhandled Medius Message: {message}");
                  * But in some rare cases (Ratchet UYA Beta Trial/Press) the server is SO OLD that is requires it's own packet format.
                    This option allows us to return only our "modern" server, to save on reverse-engineering efforts ;). */
                 if (appId == 10680 || appId == 10681)
-                    return _scertHandler?.Group?
+                    return _scertHandler?.Group?.ToArray()
                         .Select(x => _channelDatas[x.Id.AsLongText()]?.ClientObject)
                         .Where(x => x is not null && x.LocationId == preferredLocation && (x.ApplicationId == appId || x.ApplicationId == 0) && x.IsActiveServer && x.IP.Equals(DmeClass.SERVER_IP))
                         .OrderBy(x => x!.TimeCreated) // If on same computer as the client.
                         .FirstOrDefault();
                 else
-                    return _scertHandler?.Group?
+                    return _scertHandler?.Group?.ToArray()
                         .Select(x => _channelDatas[x.Id.AsLongText()]?.ClientObject)
                         .Where(x => x is not null && x.LocationId == preferredLocation && (x.ApplicationId == appId || x.ApplicationId == 0) && x.IsActiveServer)
                         .MinBy(x => x!.CurrentWorlds);
@@ -1142,13 +1142,13 @@ LoggerAccessor.LogWarn($"[MPS] - Unhandled Medius Message: {message}");
                  * But in some rare cases (Ratchet UYA Beta Trial/Press) the server is SO OLD that is requires it's own packet format.
                    This option allows us to return only our "modern" server, to save on reverse-engineering efforts ;). */
                 if (appId == 10680 || appId == 10681)
-                    return _scertHandler?.Group?
+                    return _scertHandler?.Group?.ToArray()
                         .Select(x => _channelDatas[x.Id.AsLongText()]?.ClientObject)
                         .Where(x => x is not null && (x.ApplicationId == appId || x.ApplicationId == 0) && x.IsActiveServer && x.IP.Equals(DmeClass.SERVER_IP))
                         .OrderBy(x => x!.TimeCreated) // If on same computer as the client.
                         .FirstOrDefault();
                 else
-                    return _scertHandler?.Group?
+                    return _scertHandler?.Group?.ToArray()
                         .Select(x => _channelDatas[x.Id.AsLongText()]?.ClientObject)
                         .Where(x => x is not null && (x.ApplicationId == appId || x.ApplicationId == 0) && x.IsActiveServer)
                         .MinBy(x => x!.CurrentWorlds);

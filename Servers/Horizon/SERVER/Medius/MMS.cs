@@ -148,7 +148,7 @@ LoggerAccessor.LogInfo($"[MMS] - MMS RECV {channel}: {message}");
             if (_scertHandler == null || _scertHandler.Group == null)
                 return;
 
-            await Task.WhenAll(_scertHandler.Group.Select(c => Tick(c)));
+            await Task.WhenAll(_scertHandler.Group.ToArray().Select(c => Tick(c)));
         }
 
         private async Task Tick(IChannel clientChannel)

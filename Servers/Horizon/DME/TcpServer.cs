@@ -183,7 +183,7 @@ namespace Horizon.DME
             /* ToArray() is necessary, else, weird issues happens in NET8.0+ (https://github.com/dotnet/runtime/issues/105576) */
             await Task.WhenAll(_scertHandler.Group.ToArray().Select(c => HandleIncomingMessages(c)));
 #else
-            await Task.WhenAll(_scertHandler.Group.Select(c => HandleIncomingMessages(c)));
+            await Task.WhenAll(_scertHandler.Group.ToArray().Select(c => HandleIncomingMessages(c)));
 #endif
         }
 
@@ -199,7 +199,7 @@ namespace Horizon.DME
             /* ToArray() is necessary, else, weird issues happens in NET8.0+ (https://github.com/dotnet/runtime/issues/105576) */
             await Task.WhenAll(_scertHandler.Group.ToArray().Select(c => HandleOutgoingMessages(c)));
 #else
-            await Task.WhenAll(_scertHandler.Group.Select(c => HandleOutgoingMessages(c)));
+            await Task.WhenAll(_scertHandler.Group.ToArray().Select(c => HandleOutgoingMessages(c)));
 #endif
 
             // Disconnect and remove timedout unauthenticated channels

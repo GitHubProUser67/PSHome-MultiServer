@@ -758,7 +758,11 @@ namespace SVO.Games.PS3
                                         ms.Read(buffer, 0, contentLength);
 
                                         // get ticket
-                                        XI5Ticket ticket = XI5Ticket.ReadFromBytes(buffer);
+                                        // The PS Vita client of WipEout 2048 sends version 4.0 tickets, which the default enabled-version mask refuses.
+                                        bool vitaTicket = string.Equals(request.Headers["X-SCEE-Platform"], "PSVITA", StringComparison.OrdinalIgnoreCase);
+                                        XI5Ticket ticket = vitaTicket
+                                            ? XI5Ticket.ReadFromBytes(buffer, CastleLibrary.S0ny.XI5.Types.PayloadVersionsEnum.V20 | CastleLibrary.S0ny.XI5.Types.PayloadVersionsEnum.V21 | CastleLibrary.S0ny.XI5.Types.PayloadVersionsEnum.V30 | CastleLibrary.S0ny.XI5.Types.PayloadVersionsEnum.V40)
+                                            : XI5Ticket.ReadFromBytes(buffer);
 
                                         // setup username
                                         psnname = ticket.Username;
@@ -793,11 +797,15 @@ namespace SVO.Games.PS3
                                         ms.Flush();
                                     }
 
+                                    // The PS Vita client registers on Medius as "<onlineId>+Vita" and expects the reply as <account name id/> + <status value/>.
+                                    bool isVita = string.Equals(request.Headers["X-SCEE-Platform"], "PSVITA", StringComparison.OrdinalIgnoreCase);
+                                    string accountName = isVita ? $"{psnname}+Vita" : psnname;
+
                                     string langId = "0";
 
                                     try
                                     {
-                                        await SVOServerConfiguration.Database.GetAccountByName(psnname, 23360).ContinueWith((r) =>
+                                        await SVOServerConfiguration.Database.GetAccountByName(accountName, 23360).ContinueWith((r) =>
                                         {
                                             //Found in database so keep.
                                             langId = request.Url.Query.Substring(94, request.Url.Query.Length - 94);
@@ -811,6 +819,15 @@ namespace SVO.Games.PS3
                                         accountId = 0;
                                     }
 
+                                    // No account known yet: answer a stable positive id derived from the account name, so the client can complete its login.
+                                    if (isVita && accountId <= 0)
+                                    {
+                                        uint h = 2166136261; // FNV-1a over the account name
+                                        foreach (byte c in Encoding.UTF8.GetBytes(accountName))
+                                            h = (h ^ c) * 16777619;
+                                        accountId = 1 + (int)(h % 100000000u);
+                                    }
+
                                     response.AddHeader("Set-Cookie", $"id=ddb4fac6-f908-33e5-80f9-febd2e2ef58f; Path=/");
                                     response.AppendHeader("Set-Cookie", $"name={(psnname.EndsWith($"@{XI5Ticket.RPCNSigner}") ? psnname.Replace($"@{XI5Ticket.RPCNSigner}", string.Empty) : psnname)}; Path=/");
                                     response.AppendHeader("Set-Cookie", $"authKey=2b8e1723-9e40-41e6-a740-05ddefacfe94; Path=/");
@@ -820,7 +837,13 @@ namespace SVO.Games.PS3
                                     response.Headers.Set("Content-Type", "application/xml;charset=UTF-8");
                                     response.Headers.Set("Content-Language", string.Empty);
 
-                                    byte[] TicketLoginActionData = Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                    byte[] TicketLoginActionData = isVita
+                                        ? Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+                                            "<SP_Login>" +
+                                            $"<account name=\"{System.Security.SecurityElement.Escape(accountName)}\" id=\"{accountId}\"/>" +
+                                            "<status value=\"0\"/>" +
+                                            "</SP_Login>")
+                                        : Encoding.UTF8.GetBytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
                                         "<SP_Login>\r\n" +
                                         "   <status> \r\n" +
                                         "        <id>1</id> \r\n" +

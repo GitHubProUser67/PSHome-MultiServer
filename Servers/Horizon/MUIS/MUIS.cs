@@ -147,7 +147,7 @@ namespace Horizon.MUIS
             /* ToArray() is necessary, else, weird issues happens in NET8.0+ (https://github.com/dotnet/runtime/issues/105576) */
             await Task.WhenAll(_scertHandler.Group.ToArray().Select(c => Tick(c)));
 #else
-            await Task.WhenAll(_scertHandler.Group.Select(c => Tick(c)));
+            await Task.WhenAll(_scertHandler.Group.ToArray().Select(c => Tick(c)));
 #endif
         }
 
