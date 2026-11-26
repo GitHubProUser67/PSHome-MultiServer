@@ -6564,9 +6564,9 @@ LoggerAccessor.LogError($"[MLS] - INVALID OPERATION: {clientChannel} sent {endGa
                             break;
                         }
 
-                        // WipEout 2048 (PS Vita): every client posts an EndGameReport when it leaves, right after closing its DME connection.
-                        // If the DME has not processed that disconnect yet, a guest's report would end the game for everyone, so only the host's report ends it.
-                        if (data.ApplicationId == 23360 && data.ClientObject.CurrentGame != null && data.ClientObject.CurrentGame.Host != data.ClientObject)
+                        // A client may post an EndGameReport when it leaves, right after closing its DME connection. If the DME has not processed that disconnect
+                        // yet, a guest's report would end the game for everyone, so only the host's report ends a game that has a known host.
+                        if (data.ClientObject.CurrentGame != null && data.ClientObject.CurrentGame.Host != null && data.ClientObject.CurrentGame.Host != data.ClientObject)
                         {
                             LoggerAccessor.LogInfo($"[MLS] - Ignoring EndGameReport from non-host {data.ClientObject.AccountId} for world {endGameReport.MediusWorldID}");
                             break;
@@ -10029,9 +10029,59 @@ LoggerAccessor.LogWarn($"[MLS] - ProcessGenericChatMessage - Unhandled generic c
         }
         #endregion
 
-        // The WipEout 2048 (PS Vita) client treats any MatchFindGame answer other than a joinable game as a fatal matchmaking error, and it hosts only
-        // when it is the first client of its game's DME world. A lone player therefore gets a game created for it: the player is the host,
-        // as if it had sent a CreateGame request, and the usual assigned-game reply is sent for that game.
+        // Some clients (WipEout 2048 on PS Vita among them) treat any MatchFindGame answer other than a joinable game as a fatal matchmaking error, and host only
+        // when they are the first client of their game's DME world. When no game exists, a game is therefore created for the player, as if it had sent a CreateGame
+        // request, and the usual assigned-game reply is sent for it. The game is built from the find request with neutral values; a title that needs
+        // other values has an entry in HostedGameOverrides.
+        static readonly Dictionary<int, (string NamePrefix, int GameLevel, int PlayerSkillLevel, int RulesSet, int GenericField1)> HostedGameOverrides = new()
+        {
+            { 23360, ("W2048 campaign", 3, 2, 0x10, 1) }, // WipEout 2048 (PS Vita)
+        };
+
+        void SendNoGameFound(ClientObject clientObject)
+        {
+            clientObject.Queue(new MediusAssignedGameToJoinMessage()
+            {
+                AssignedGameMessageRequestData = new byte[Constants.REQUESTDATA_MAXLEN],
+                AssignedGameMessageID = 0,
+                AssignedGameType = MediusAssignedGameType.AssignedGameTypeMMS,
+                StatusCode = MediusCallbackStatus.MediusNoResult,
+                SystemSpecificStatusCode = 0,
+
+                GameWorldID = 0, //TEMP
+                TeamID = 0,
+                PlayerCount = 0,
+                GameName = string.Empty,
+                GameStats = new byte[Constants.GAMESTATS_MAXLEN],
+                MinPlayers = 0,
+                MaxPlayers = 0,
+                GameLevel = 0,
+                PlayerSkillLevel = 0,
+                GenericField1 = 0,
+                GenericField2 = 0,
+                GenericField3 = 0,
+                GenericField4 = 0,
+                GenericField5 = 0,
+                GenericField6 = 0,
+                GenericField7 = 0,
+                GenericField8 = 0,
+                WorldStatus = MediusWorldStatus.WorldInactive,
+                JoinType = MediusJoinType.MediusJoinAsPlayer,
+                GamePassword = string.Empty,
+                GameHostType = MGCL_GAME_HOST_TYPE.MGCLGameHostClientServer,
+                AddressList = new NetAddressList()
+                {
+                    AddressList = new NetAddress[Constants.NET_ADDRESS_LIST_COUNT]
+                    {
+                        new NetAddress() { AddressType = NetAddressType.NetAddressNone },
+                        new NetAddress() { AddressType = NetAddressType.NetAddressNone }
+                     }
+                },
+                AppDataSize = 0,
+                AppData = string.Empty
+            });
+        }
+
         async Task AssignHostedGame(ClientObject client, MediusMatchFindGameRequest find)
         {
             if (!client.IsConnected)
@@ -10042,7 +10092,15 @@ LoggerAccessor.LogWarn($"[MLS] - ProcessGenericChatMessage - Unhandled generic c
             try
             {
                 var dme = MediusClass.ProxyServer.GetFreeDme(client.ApplicationId, client.LocationId) ?? throw new Exception("no free DME");
-                var req = new MediusCreateGameRequest() { MessageID = find.MessageID, ApplicationID = client.ApplicationId, MinPlayers = 1, MaxPlayers = find.MaxPlayers > 0 ? (int)find.MaxPlayers : 8, GameLevel = 3, GameName = $"W2048 campaign~{client.AccountId}", GamePassword = string.Empty, SpectatorPassword = string.Empty, PlayerSkillLevel = 2, RulesSet = 0x10, GenericField1 = 1, GameHostType = MGCL_GAME_HOST_TYPE.MGCLGameHostClientServerUDP };
+                var req = new MediusCreateGameRequest() { MessageID = find.MessageID, ApplicationID = client.ApplicationId, MinPlayers = find.MinPlayers > 0 ? (int)find.MinPlayers : 1, MaxPlayers = find.MaxPlayers > 0 ? (int)find.MaxPlayers : 8, GameLevel = 0, GameName = $"Game~{client.AccountId}", GamePassword = string.Empty, SpectatorPassword = string.Empty, PlayerSkillLevel = 0, RulesSet = 0, GenericField1 = 0, GameHostType = MGCL_GAME_HOST_TYPE.MGCLGameHostClientServerUDP };
+                if (HostedGameOverrides.TryGetValue(client.ApplicationId, out var ov))
+                {
+                    req.GameName = $"{ov.NamePrefix}~{client.AccountId}";
+                    req.GameLevel = ov.GameLevel;
+                    req.PlayerSkillLevel = ov.PlayerSkillLevel;
+                    req.RulesSet = ov.RulesSet;
+                    req.GenericField1 = ov.GenericField1;
+                }
                 game = new Game(client, req, dme);
                 await MediusClass.Manager.AddGame(game);
                 dme.Queue(new MediusServerCreateGameWithAttributesRequest() { MessageID = new MessageId($"{game.MediusWorldId}-{client.AccountId}-{find.MessageID}-0"), WorldID = game.GameChannel!.Id, Attributes = game.Attributes, ApplicationID = client.ApplicationId, MaxClients = game.MaxPlayers });
@@ -10050,11 +10108,12 @@ LoggerAccessor.LogWarn($"[MLS] - ProcessGenericChatMessage - Unhandled generic c
                 LoggerAccessor.LogInfo($"[MLS] - Created game {game.MediusWorldId} for a lone MatchFindGame from {client}");
                 // The game has no player yet, so lift its minimum player count for the lookup in AssignGameToJoin.
                 game.MinPlayers = 0;
-                AssignGameToJoin(client, find);
+                AssignGameToJoin(client, find, true); // hostedAlready: one find request creates at most one game
             }
             catch (Exception e)
             {
                 LoggerAccessor.LogError($"[MLS] - AssignHostedGame: {e}");
+                SendNoGameFound(client);
             }
             finally
             {
@@ -10063,61 +10122,24 @@ LoggerAccessor.LogWarn($"[MLS] - ProcessGenericChatMessage - Unhandled generic c
             }
         }
 
-        public void AssignGameToJoin(ClientObject clientObject, MediusMatchFindGameRequest matchFindGameRequest)
+        public void AssignGameToJoin(ClientObject clientObject, MediusMatchFindGameRequest matchFindGameRequest, bool hostedAlready = false)
         {
             //We Sleep for a bit so we return another packet for the matchmaked game we may have found!
             uint gameCount = MediusClass.Manager.GetGameCount(clientObject.ApplicationId);
 
-            if (gameCount == 0 && clientObject.ApplicationId == 23360)
+            if (gameCount == 0 && hostedAlready) // a game was just created for this request: do not create another
+            {
+                SendNoGameFound(clientObject);
+                return;
+            }
+
+            if (gameCount == 0)
             {
                 _ = AssignHostedGame(clientObject, matchFindGameRequest);
                 return;
             }
-			
-            if (gameCount == 0)
-            {
-                clientObject.Queue(new MediusAssignedGameToJoinMessage()
-                {
-                    AssignedGameMessageRequestData = new byte[Constants.REQUESTDATA_MAXLEN],
-                    AssignedGameMessageID = 0,
-                    AssignedGameType = MediusAssignedGameType.AssignedGameTypeMMS,
-                    StatusCode = MediusCallbackStatus.MediusNoResult,
-                    SystemSpecificStatusCode = 0,
 
-                    GameWorldID = 0, //TEMP
-                    TeamID = 0,
-                    PlayerCount = 0,
-                    GameName = string.Empty,
-                    GameStats = new byte[Constants.GAMESTATS_MAXLEN],
-                    MinPlayers = 0,
-                    MaxPlayers = 0,
-                    GameLevel = 0,
-                    PlayerSkillLevel = 0,
-                    GenericField1 = 0,
-                    GenericField2 = 0,
-                    GenericField3 = 0,
-                    GenericField4 = 0,
-                    GenericField5 = 0,
-                    GenericField6 = 0,
-                    GenericField7 = 0,
-                    GenericField8 = 0,
-                    WorldStatus = MediusWorldStatus.WorldInactive,
-                    JoinType = MediusJoinType.MediusJoinAsPlayer,
-                    GamePassword = string.Empty,
-                    GameHostType = MGCL_GAME_HOST_TYPE.MGCLGameHostClientServer,
-                    AddressList = new NetAddressList()
-                    {
-                        AddressList = new NetAddress[Constants.NET_ADDRESS_LIST_COUNT]
-                        {
-                            new NetAddress() { AddressType = NetAddressType.NetAddressNone },
-                            new NetAddress() { AddressType = NetAddressType.NetAddressNone }
-                         }
-                    },
-                    AppDataSize = 0,
-                    AppData = string.Empty
-                });
-            }
-            else if (matchFindGameRequest.MediusWorldID != 0)
+            if (matchFindGameRequest.MediusWorldID != 0)
                 {
                     var gameInfo = MediusClass.Manager.GetGameByGameId(matchFindGameRequest.MediusWorldID);
 
@@ -10130,7 +10152,6 @@ LoggerAccessor.LogWarn($"[MLS] - ProcessGenericChatMessage - Unhandled generic c
                         AssignedGameMessageID = 0,
                         AssignedGameType = MediusAssignedGameType.AssignedGameTypeMMS,
                         StatusCode = MediusCallbackStatus.MediusJoinAssignedGame,
-                        WithRecordSize = clientObject.ApplicationId == 23360,
                         SystemSpecificStatusCode = 0,
                         GameWorldID = 0,//(uint)gameInfo.Id, //TEMP
                         TeamID = 0,
@@ -10178,7 +10199,6 @@ LoggerAccessor.LogWarn($"[MLS] - ProcessGenericChatMessage - Unhandled generic c
                         AssignedGameMessageID = 2,
                         AssignedGameType = MediusAssignedGameType.AssignedGameTypeMMS,
                         StatusCode = MediusCallbackStatus.MediusJoinAssignedGame,
-                        WithRecordSize = clientObject.ApplicationId == 23360,
                         SystemSpecificStatusCode = 0,
 
                         GameWorldID = (ushort)gameMatchFound.MediusWorldId, // TEMP

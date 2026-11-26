@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using Horizon.RT.Common;
 using Horizon.LIBRARY.Common.Stream;
@@ -49,9 +50,8 @@ namespace Horizon.RT.Models.Lobby
         // plus the 4-byte AppData pointer. The client reads this size, plus AppDataSize, as an int in front of the game record.
         private const int WipeoutVitaRecordSize = 0x1E4;
 
-        // After a JoinAssignedGame status, the WipEout 2048 (PS Vita) client reads that record size before GameWorldID.
-        // Set by MLS.AssignGameToJoin for that title only, other titles are unchanged.
-        public bool WithRecordSize;
+        // After a JoinAssignedGame status, these titles (WipEout 2048 on PS Vita) read that record size before GameWorldID; other titles do not.
+        List<int> recordSizeAppIds = new List<int> { 23360 };
 
         public override void Deserialize(MessageReader reader)
         {
@@ -65,7 +65,7 @@ namespace Horizon.RT.Models.Lobby
 
             if (StatusCode == MediusCallbackStatus.MediusJoinAssignedGame)
             {
-                if (WithRecordSize)
+                if (recordSizeAppIds.Contains(reader.AppId))
                     reader.ReadInt32();
                 GameWorldID = reader.ReadUInt32();
                 TeamID = reader.ReadUInt32();
@@ -107,7 +107,7 @@ namespace Horizon.RT.Models.Lobby
 
             if (StatusCode == MediusCallbackStatus.MediusJoinAssignedGame)
             {
-                if (WithRecordSize)
+                if (recordSizeAppIds.Contains(writer.AppId))
                     writer.Write(WipeoutVitaRecordSize + (int)AppDataSize);
                 writer.Write(GameWorldID);
                 writer.Write(TeamID);
