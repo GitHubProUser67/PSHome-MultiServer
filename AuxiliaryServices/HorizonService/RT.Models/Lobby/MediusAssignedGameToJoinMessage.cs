@@ -46,12 +46,9 @@ namespace Horizon.RT.Models.Lobby
         public uint AppDataSize;
         public string AppData;
 
-        // Size in bytes of the game record the WipEout 2048 (PS Vita) client keeps in memory, without its AppData: the 0x1E0 bytes sent on the wire
-        // plus the 4-byte AppData pointer. The client reads this size, plus AppDataSize, as an int in front of the game record.
-        private const int WipeoutVitaRecordSize = 0x1E4;
-
-        // After a JoinAssignedGame status, these titles (WipEout 2048 on PS Vita) read that record size before GameWorldID; other titles do not.
-        List<int> recordSizeAppIds = new List<int> { 23360 };
+        // Size in bytes of each title's in-memory game record without its AppData, by appid. The client reads this size plus AppDataSize
+        // as an int in front of the game record (after a JoinAssignedGame status); titles not listed do not.
+        static readonly Dictionary<int, int> RecordSizes = new() { { 23360, 0x1E4 } }; // WipEout 2048 (PS Vita)
 
         public override void Deserialize(MessageReader reader)
         {
@@ -65,7 +62,7 @@ namespace Horizon.RT.Models.Lobby
 
             if (StatusCode == MediusCallbackStatus.MediusJoinAssignedGame)
             {
-                if (recordSizeAppIds.Contains(reader.AppId))
+                if (RecordSizes.ContainsKey(reader.AppId))
                     reader.ReadInt32();
                 GameWorldID = reader.ReadUInt32();
                 TeamID = reader.ReadUInt32();
@@ -107,8 +104,8 @@ namespace Horizon.RT.Models.Lobby
 
             if (StatusCode == MediusCallbackStatus.MediusJoinAssignedGame)
             {
-                if (recordSizeAppIds.Contains(writer.AppId))
-                    writer.Write(WipeoutVitaRecordSize + (int)AppDataSize);
+                if (RecordSizes.TryGetValue(writer.AppId, out int size))
+                    writer.Write(size + (int)AppDataSize);
                 writer.Write(GameWorldID);
                 writer.Write(TeamID);
                 writer.Write(PlayerCount);
