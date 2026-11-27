@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "psh-multiserver-tests"
+version = "0.1.0"
+description = "Scripted Medius/Horizon clients and per-title integration tests for PSHome-MultiServer"
+requires-python = ">=3.8"
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=7", "ruff"]
+
+[tool.setuptools]
+packages = ["pshclient"]
+py-modules = ["wipeout2048_constants"]
+
+[tool.setuptools.package-dir]
+pshclient = "shared/pshclient"
+"" = "Vita/WipEout2048"
+
+[tool.pytest.ini_options]
+testpaths = ["Vita"]
+pythonpath = ["shared", "Vita/WipEout2048"]
+norecursedirs = ["_legacy", ".venv", "build"]
+# importlib: two titles may each have a test_login.py (sibling directories without __init__.py would clash otherwise)
+addopts = "--import-mode=importlib"
+markers = [
+    "live: needs a running PSHome-MultiServer (Horizon)",
+    "legacy_path: exercises a message the shipped game does not use (MediusTicketLogin); kept as server coverage",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+extend-exclude = ["_legacy"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "SIM"]
