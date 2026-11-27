@@ -541,6 +541,11 @@ namespace WebAPIService.GameServices.PSHOME.OHS
                                             if (directorypath.Contains("casino"))
                                                 output = "nil";
                                             break;
+                                        case "CONTROLS":
+                                            if (directorypath.Contains("EmergencyState"))
+                                                output = "{ [\"VIBRATION\"] = true, [\"AIM_INVERT\"] = false, " +
+                                                         "[\"AIM_SENSITIVITY\"] = 0.5, [\"TURN_SENSITIVITY\"] = 0.5 }";
+                                            break;
                                         case "GameState":
                                             if (directorypath.Contains("shooter_game"))
                                                 output = "{ [\"currentLevel\"] = 1, [\"currentMaxLevel\"] = 50, [\"items\"] = {\t{ type = \"guns\"  \t\t , name=\"repeater\"\t\t\t, level=1 , inUse = false }\r\n" +
