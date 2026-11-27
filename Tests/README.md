@@ -21,7 +21,6 @@ How to write a test: [CONTRIBUTING.md](CONTRIBUTING.md).
 | Python 3.8+ with venv | distribution package (Debian/Ubuntu: `sudo apt install python3 python3-venv`) | python.org installer or `winget install Python.Python.3.12` (adds the `py` launcher) |
 | .NET 8 or newer (`dotnet`), to build and start the servers | [dotnet.microsoft.com](https://dotnet.microsoft.com/download) or the distribution package | same, or `winget search Microsoft.DotNet` and install the .NET 8 package |
 | pytest | installed into the venv by the commands below | same |
-| openssl (optional) | usually present | not needed; one SVO check only logs a note without it |
 
 Horizon targets `net6.0`. The tests do not build it: build once (and again after server changes), then the `horizon`
 fixture starts the newest `Servers/Horizon/bin/Release/*/Horizon.dll` with `DOTNET_ROLL_FORWARD=Major`, so any newer .NET
